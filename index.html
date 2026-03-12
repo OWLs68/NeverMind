@@ -204,6 +204,8 @@ body {
   transform: translateY(6px);
   transition: opacity 0.3s ease, transform 0.3s ease;
   scrollbar-width: none;
+  z-index: 0;
+  visibility: hidden;
 }
 .page::-webkit-scrollbar { display: none; }
 .page.active {
@@ -211,6 +213,7 @@ body {
   pointer-events: all;
   transform: translateY(0);
   z-index: 2;
+  visibility: visible;
 }
 
 /* === PAGE HEADER === */
