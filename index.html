@@ -1418,7 +1418,7 @@ function switchTab(tab) {
 
   // Tab-specific actions
   if (tab === 'tasks') renderTasks();
-  if (tab === 'notes') { renderNotes(); autoRefreshNoteFolders(); }
+  if (tab === 'notes') { renderNotes(); }
   if (tab === 'me') { renderMe(); renderHabits(); }
   if (tab === 'evening') renderEvening();
 
@@ -2980,6 +2980,13 @@ function init() {
   try { setupSW(); } catch(e) {}
   try { setupKeyboardAvoiding(); } catch(e) {}
   try { applyTheme('inbox'); } catch(e) {}
+  // Force inbox tab active on every load
+  try {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-inbox').classList.add('active');
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab-item[data-tab="inbox"]').classList.add('active');
+  } catch(e) {}
   try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
   try { renderInbox(); } catch(e) {}
   try { updateAiBarVisibility(); } catch(e) {}
