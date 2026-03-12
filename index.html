@@ -2219,6 +2219,7 @@ function noteMenuMove() {
     showToast(`✓ Переміщено в "${newFolder.trim()}"`);
   }
 }
+async function checkAndSuggestFolders() {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const lastTs = localStorage.getItem('nm_notes_folders_ts');
