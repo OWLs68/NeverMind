@@ -98,6 +98,9 @@ body {
   transform: scale(1.04);
   pointer-events: none;
 }
+#splash.gone {
+  display: none;
+}
 .splash-logo {
   font-family: var(--font-display);
   font-size: 26px;
@@ -1641,7 +1644,7 @@ function setupPWA() {
   const manifest = {
     name: 'NeverMind',
     short_name: 'NeverMind',
-    start_url: '.',
+    start_url: '/',
     display: 'standalone',
     background_color: '#faf9ff',
     theme_color: '#f5f1ff',
@@ -2992,20 +2995,17 @@ function init() {
 
 function showApp() {
   const splash = document.getElementById('splash');
-  const app = document.getElementById('app');
-  if (splash) { splash.classList.add('hide'); setTimeout(() => { splash.style.display = 'none'; }, 600); }
-  if (app) app.classList.add('visible');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.classList.add('gone'), 600);
+  }
   try { checkOnboarding(); } catch(e) {}
 }
 
 // === SPLASH → APP ===
 window.addEventListener('DOMContentLoaded', () => {
   try { init(); } catch(e) { console.error('init error:', e); }
-  setTimeout(() => {
-    const splash = document.getElementById('splash');
-    if (splash) { splash.style.opacity = '0'; setTimeout(() => splash.remove(), 500); }
-    try { checkOnboarding(); } catch(e) {}
-  }, 1000);
+  setTimeout(showApp, 1000);
 });
 </script>
 
