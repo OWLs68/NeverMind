@@ -2081,19 +2081,14 @@ function renderNotes(searchQuery = '') {
   const STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 днів
 
   content.innerHTML = Object.entries(byFolder).map(([folder, items]) => {
-    const staleCount = items.filter(n => (now - (n.lastViewed || n.ts)) > STALE_MS).length;
     return `
       <div style="margin:0 14px 14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
           <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.1em">${escapeHtml(folder)}</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            ${staleCount > 0 ? `<div style="font-size:10px;color:#ef4444;font-weight:700">${staleCount} застарілих</div>` : ''}
-            <div style="font-size:10px;color:rgba(30,16,64,0.3)">${items.length}</div>
-          </div>
+          <div style="font-size:10px;color:rgba(30,16,64,0.3)">${items.length}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${items.map(n => {
-            const isStale = (now - (n.lastViewed || n.ts)) > STALE_MS;
             const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
             return `
               <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:13px;overflow:hidden">
@@ -2104,7 +2099,7 @@ function renderNotes(searchQuery = '') {
                   ontouchstart="noteSwipeStart(event,${n.id})"
                   ontouchmove="noteSwipeMove(event,${n.id})"
                   ontouchend="noteSwipeEnd(event,${n.id})"
-                  style="position:relative;background:rgba(255,255,255,${isStale ? '0.5' : '0.78'});border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 13px;${isStale ? 'opacity:0.6' : ''}">
+                  style="position:relative;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 13px;">
                   <div onclick="openEditNote(${n.id})" style="cursor:pointer">
                     <div style="font-size:13px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2442,7 +2437,7 @@ function renderTasks() {
         <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
           <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
             <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:${s.done ? 'rgba(234,88,12,0.1)' : 'white'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#ea580c">${s.done ? '✓' : ''}</div>
@@ -2451,6 +2446,7 @@ function renderTasks() {
           `).join('')}
         </div>
       ` : ''}
+      <button onclick="openTaskChat(${t.id})" style="width:100%;background:rgba(234,88,12,0.07);border:1px solid rgba(234,88,12,0.15);border-radius:10px;padding:8px;font-size:12px;font-weight:700;color:#ea580c;cursor:pointer;text-align:center">✦ Обговорити з ШІ</button>
     </div>`;
   }).join('');
 }
@@ -2994,6 +2990,104 @@ function animateTabSwitch(newTab) {
   currentTabForAnim = newTab;
 }
 
+// === TASK CHAT ===
+let taskChatId = null;
+let taskChatHistory = [];
+let taskChatLoading = false;
+
+function openTaskChat(id) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  taskChatId = id;
+  taskChatHistory = [];
+
+  document.getElementById('task-chat-title').textContent = t.title;
+  document.getElementById('task-chat-messages').innerHTML = '';
+  document.getElementById('task-chat-input').value = '';
+  document.getElementById('task-chat-modal').style.display = 'flex';
+
+  // Перше повідомлення від агента — конкретний аналіз задачі
+  const steps = (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з ШІ.');
+    return;
+  }
+
+  addTaskChatMsg('agent', '…', 'task-chat-intro');
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — жорсткий особистий коуч. Аналізуєш конкретну задачу користувача і допомагаєш її реально виконати. Говориш чесно, конкретно, без загальних фраз. Перше повідомлення: коротко (2-3 речення) дай чесну оцінку задачі — чи вона чітка, чи реалістична, де потенційні проблеми. Потім запитай що конкретно заважає або що вже зроблено. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
+
+  callAI(systemPrompt, taskInfo, {}).then(reply => {
+    const el = document.getElementById('task-chat-intro');
+    if (el) el.textContent = reply || 'Розкажи більше про цю задачу.';
+    taskChatHistory.push({ role: 'assistant', content: reply || '' });
+  });
+}
+
+function closeTaskChat() {
+  document.getElementById('task-chat-modal').style.display = 'none';
+  taskChatId = null;
+  taskChatHistory = [];
+}
+
+function addTaskChatMsg(role, text, id = '') {
+  const el = document.getElementById('task-chat-messages');
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(234,88,12,0.07)' : '#ea580c'};color:${isAgent ? '#7c2d12' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:10px 13px;font-size:13px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') taskChatHistory.push({ role: 'user', content: text });
+}
+
+async function sendTaskChatMessage() {
+  if (taskChatLoading) return;
+  const input = document.getElementById('task-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addTaskChatMsg('user', text);
+  taskChatLoading = true;
+
+  const btn = document.getElementById('task-chat-send');
+  btn.disabled = true;
+
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === taskChatId);
+  const steps = t ? (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n') : '';
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — жорсткий особистий коуч. Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш чесно, конкретно, без води. Короткі відповіді (2-4 речення). Якщо бачиш відмазки — кажи прямо. Фокус на реальних наступних діях. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, ...taskChatHistory.slice(-12)],
+        max_tokens: 300,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) addTaskChatMsg('agent', reply);
+    else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+  } catch {
+    addTaskChatMsg('agent', 'Мережева помилка.');
+  }
+  taskChatLoading = false;
+  btn.disabled = false;
+}
+
 // === INIT ===
 function init() {
   try { setupPWA(); } catch(e) {}
@@ -3029,5 +3123,26 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-</body>
+<!-- TASK CHAT MODAL -->
+<div id="task-chat-modal" style="display:none;position:fixed;inset:0;z-index:300;flex-direction:column;background:white;">
+  <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 12px;border-bottom:1px solid rgba(30,16,64,0.08);flex-shrink:0">
+    <button onclick="closeTaskChat()" style="background:none;border:none;font-size:22px;cursor:pointer;color:rgba(30,16,64,0.4);padding:0;line-height:1">←</button>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Обговорення задачі</div>
+      <div id="task-chat-title" style="font-size:14px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    </div>
+  </div>
+  <div id="task-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+  <div style="padding:12px 16px;border-top:1px solid rgba(30,16,64,0.08);flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
+    <textarea id="task-chat-input" rows="1" placeholder="Запитай або розкажи деталі…"
+      oninput="autoResizeTextarea(this)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage();}"
+      style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
+    <button onclick="sendTaskChatMessage()" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
+
+
 </html>
