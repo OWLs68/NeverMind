@@ -210,6 +210,7 @@ body {
   opacity: 1;
   pointer-events: all;
   transform: translateY(0);
+  z-index: 2;
 }
 
 /* === PAGE HEADER === */
@@ -1418,7 +1419,7 @@ function switchTab(tab) {
 
   // Tab-specific actions
   if (tab === 'tasks') renderTasks();
-  if (tab === 'notes') { renderNotes(); }
+  if (tab === 'notes') { renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderHabits(); }
   if (tab === 'evening') renderEvening();
 
@@ -1515,7 +1516,7 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2'];
   keys.forEach(k => {
     const v = localStorage.getItem(k);
     if (v) data[k] = JSON.parse(v);
@@ -1533,7 +1534,7 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done'];
   keys.forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
   closeSettings();
@@ -2148,7 +2149,8 @@ function noteSwipeEnd(e, id) {
       el.style.opacity = '0';
     }
     setTimeout(() => {
-      deleteNote(id);
+      saveNotes(getNotes().filter(x => x.id !== id));
+      renderNotes();
     }, 200);
   } else {
     if (el) {
@@ -2172,8 +2174,9 @@ function closeNoteMenu() {
   activeNoteMenuId = null;
 }
 function noteMenuEdit() {
+  const id = activeNoteMenuId;
   closeNoteMenu();
-  openEditNote(activeNoteMenuId);
+  openEditNote(id);
 }
 function noteMenuDelete() {
   const id = activeNoteMenuId;
@@ -2251,11 +2254,27 @@ async function suggestNoteFolders() {
 
 function applyFolderSuggestion() {
   if (!pendingFolderSuggestion) return;
-  // Показуємо список папок — користувач сам перекладає нотатки
-  document.getElementById('notes-ai-banner').style.display = 'none';
-  showToast('✓ Папки збережено як орієнтир');
-  // Оновлюємо datalist для нових папок
+  const notes = getNotes();
+  let changed = 0;
+  notes.forEach(n => {
+    if (!n.folder || n.folder === 'Загальне') {
+      // Знаходимо найближчу папку по ключовим словам з опису
+      for (const f of pendingFolderSuggestion) {
+        const keywords = f.description.toLowerCase().split(/[\s,]+/);
+        const noteText = n.text.toLowerCase();
+        if (keywords.some(kw => kw.length > 3 && noteText.includes(kw))) {
+          n.folder = f.folder;
+          changed++;
+          break;
+        }
+      }
+    }
+  });
+  saveNotes(notes);
+  renderNotes();
   updateFolderSuggestions();
+  document.getElementById('notes-ai-banner').style.display = 'none';
+  showToast(changed > 0 ? `✓ Розкладено ${changed} нотаток по папках` : '✓ Папки збережено як орієнтир');
 }
 
 // === TASKS ===
@@ -2959,15 +2978,13 @@ function setupKeyboardAvoiding() {
 // === PAGE TRANSITIONS ===
 let currentTabForAnim = 'inbox';
 function animateTabSwitch(newTab) {
-  const pages = document.querySelectorAll('.page');
   const oldPage = document.getElementById(`page-${currentTabForAnim}`);
   const newPage = document.getElementById(`page-${newTab}`);
   if (!oldPage || !newPage || oldPage === newPage) return;
   oldPage.classList.add('page-exit');
-  newPage.classList.add('page-enter');
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      newPage.classList.remove('page-enter');
+      // nothing needed here — active class handles visibility
     });
   });
   setTimeout(() => { oldPage.classList.remove('page-exit'); }, 230);
