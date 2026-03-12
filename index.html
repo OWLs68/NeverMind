@@ -1,0 +1,3008 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NeverMind">
+<meta name="theme-color" content="#f5f1ff">
+<meta name="description" content="Персональний ШІ-агент для продуктивності">
+<title>NeverMind</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23c4b5fd'/><stop offset='1' stop-color='%237c3aed'/></linearGradient></defs><rect width='180' height='180' rx='40' fill='url(%23g)'/><text x='90' y='125' text-anchor='middle' font-size='88' font-family='serif'>✦</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;700;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* === RESET & BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(30, 16, 64, 0.85);
+}
+
+/* === CSS VARIABLES — DESIGN SYSTEM === */
+:root {
+  /* Inbox — warm cream */
+  --inbox-bg: linear-gradient(160deg, #faf7f2, #f5f0e8, #f0f4f8);
+  --inbox-accent: #8b6914;
+  --inbox-accent2: #d4a857;
+  --inbox-orb: rgba(251,191,36,0.10);
+  --inbox-tab-bg: rgba(250,247,242,0.88);
+
+  /* Morning — peach gold */
+  --morning-bg: linear-gradient(160deg, #fffaf3, #fff4e6, #fdf6ff);
+  --morning-accent: #c47d0a;
+  --morning-accent2: #fbbf24;
+  --morning-orb: rgba(251,191,36,0.15);
+  --morning-tab-bg: rgba(255,250,243,0.88);
+
+  /* Habits — fresh green */
+  --habits-bg: linear-gradient(160deg, #f3faf5, #eaf5ee, #f0f8f5);
+  --habits-accent: #16a34a;
+  --habits-accent2: #22c55e;
+  --habits-orb: rgba(34,197,94,0.12);
+  --habits-tab-bg: rgba(243,250,245,0.88);
+
+  /* Evening — soft purple */
+  --evening-bg: linear-gradient(160deg, #f5f2ff, #ede8ff, #eef2ff);
+  --evening-accent: #7c5cbf;
+  --evening-accent2: #9b7de0;
+  --evening-orb: rgba(180,155,255,0.15);
+  --evening-tab-bg: rgba(245,242,255,0.88);
+
+  /* Cards */
+  --card-bg: rgba(255,255,255,0.5);
+  --card-border: rgba(255,255,255,0.82);
+  --card-radius: 18px;
+  --card-blur: blur(16px);
+  --card-shadow: 0 4px 20px rgba(100,70,200,0.06);
+
+  /* Typography */
+  --font-display: 'Unbounded', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --text-primary: rgba(30,16,64,0.88);
+  --text-secondary: rgba(30,16,64,0.55);
+  --text-ai: rgba(30,16,64,0.75);
+
+  /* Active tab accent (changes per tab) */
+  --active-accent: #8b6914;
+  --active-accent2: #d4a857;
+}
+
+/* === SPLASH SCREEN === */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(160deg, #faf9ff, #f5f1ff, #f0f5ff);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+#splash.hide {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+.splash-logo {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  color: #1a0e40;
+  letter-spacing: -0.5px;
+}
+.splash-line {
+  width: 24px;
+  height: 2px;
+  background: linear-gradient(90deg, #a78bfa, #818cf8);
+  border-radius: 2px;
+}
+.splash-tagline {
+  font-style: italic;
+  font-size: 12.5px;
+  color: rgba(26,14,64,0.35);
+  font-weight: 300;
+  letter-spacing: 0.2px;
+}
+.splash-loader {
+  margin-top: 8px;
+  width: 28px;
+  height: 2px;
+  background: rgba(167,139,250,0.18);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.splash-loader::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, #a78bfa, transparent);
+  animation: sweep 1.2s ease-in-out infinite;
+}
+@keyframes sweep {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* === APP SHELL === */
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.1s;
+}
+#app.visible { opacity: 1; }
+
+/* === BACKGROUND (changes per tab) === */
+#bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  transition: background 0.5s ease;
+  background: var(--inbox-bg);
+}
+
+/* Decorative orbs */
+#bg::before, #bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  transition: background 0.5s ease;
+  pointer-events: none;
+}
+#bg::before {
+  width: 260px; height: 260px;
+  top: -60px; right: -60px;
+  background: var(--inbox-orb);
+}
+#bg::after {
+  width: 200px; height: 200px;
+  bottom: 100px; left: -40px;
+  background: var(--inbox-orb);
+}
+
+/* === SCROLL CONTAINER === */
+#scroll-wrap {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* === PAGES === */
+.page {
+  position: absolute;
+  inset: 0;
+  bottom: 82px; /* tab-bar height */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 24px 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  scrollbar-width: none;
+}
+.page::-webkit-scrollbar { display: none; }
+.page.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+/* === PAGE HEADER === */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 56px 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.page-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  opacity: 0.7;
+  z-index: -1;
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.65); }
+
+/* === GLASS CARD === */
+.card {
+  margin: 8px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  pointer-events: none;
+}
+.card-body { padding: 16px; }
+
+/* Empty state placeholder */
+.page-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 60vh;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+.page-placeholder .placeholder-icon { font-size: 36px; opacity: 0.4; }
+
+/* === TAB BAR === */
+#tab-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  padding: 10px 8px max(28px, env(safe-area-inset-bottom));
+  background: var(--inbox-tab-bg);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-top: 1px solid rgba(255,255,255,0.7);
+  transition: background 0.5s ease;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s;
+}
+.tab-item:active { transform: scale(0.88); }
+.tab-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s;
+  opacity: 0.38;
+  color: var(--text-primary);
+}
+.tab-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  letter-spacing: 0.1px;
+  transition: opacity 0.2s, color 0.2s;
+}
+.tab-item.active .tab-icon {
+  opacity: 1;
+  color: var(--active-accent);
+  transform: scale(1.12) translateY(-2px);
+}
+.tab-item.active .tab-label {
+  opacity: 1;
+  color: var(--active-accent);
+}
+
+/* === SETTINGS OVERLAY === */
+#settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#settings-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20,10,50,0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.settings-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  background: linear-gradient(160deg, #faf9ff, #f5f2ff);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 20px 40px;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+#settings-overlay.open .settings-panel {
+  transform: translateY(0);
+}
+.settings-handle {
+  width: 36px; height: 4px;
+  background: rgba(100,70,200,0.18);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.settings-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+}
+.settings-section {
+  margin-bottom: 20px;
+}
+.settings-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(100,70,200,0.5);
+  margin-bottom: 8px;
+}
+.settings-input {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-size: 16px; /* 16px prevents iOS auto-zoom */
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 2px 12px rgba(100,70,200,0.05);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.settings-input:focus {
+  border-color: rgba(167,139,250,0.6);
+  box-shadow: 0 2px 16px rgba(100,70,200,0.12);
+}
+.settings-input[type="password"] {
+  letter-spacing: 2px;
+}
+.settings-input[type="password"]::placeholder {
+  letter-spacing: 0;
+}
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #a78bfa, #818cf8);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 16px rgba(129,140,248,0.35);
+}
+.btn-primary:active { opacity: 0.88; transform: scale(0.98); }
+
+.btn-ghost {
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(100,70,200,0.15);
+  background: rgba(255,255,255,0.4);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  margin-top: 10px;
+}
+.btn-ghost:active { background: rgba(255,255,255,0.7); transform: scale(0.98); }
+
+.btn-danger {
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(239,68,68,0.18);
+  background: rgba(254,226,226,0.4);
+  color: rgba(185,28,28,0.8);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  margin-top: 10px;
+}
+.btn-danger:active { background: rgba(254,226,226,0.7); transform: scale(0.98); }
+
+.settings-divider {
+  height: 1px;
+  background: rgba(100,70,200,0.08);
+  margin: 20px 0;
+}
+
+/* Key status badge */
+.key-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-top: 8px;
+}
+.key-status.has-key {
+  background: rgba(34,197,94,0.1);
+  color: #16a34a;
+}
+.key-status.no-key {
+  background: rgba(251,191,36,0.12);
+  color: #92400e;
+}
+
+/* Toast notification */
+#toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  z-index: 600;
+  background: rgba(26,14,64,0.88);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 24px;
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
+#page-inbox .page-header { background: linear-gradient(to bottom, rgba(250,247,242,0.95), transparent); }
+#page-tasks .page-header { background: linear-gradient(to bottom, rgba(255,248,240,0.95), transparent); }
+#page-notes .page-header { background: linear-gradient(to bottom, rgba(240,244,255,0.95), transparent); }
+#page-me .page-header { background: linear-gradient(to bottom, rgba(240,253,244,0.95), transparent); }
+#page-evening .page-header { background: linear-gradient(to bottom, rgba(245,242,255,0.95), transparent); }
+
+/* === INBOX === */
+
+/* === INBOX LIST === */
+#inbox-list { padding: 0 0 200px 0; }
+
+/* Category selector chips */
+.cat-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cat-chips::-webkit-scrollbar { display: none; }
+.cat-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  border: 1px solid rgba(139,105,20,0.15);
+  background: rgba(255,255,255,0.4);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cat-chip.active {
+  background: rgba(212,168,87,0.18);
+  border-color: rgba(212,168,87,0.4);
+  color: #8b6914;
+}
+
+/* Inbox entry item */
+.inbox-item-wrap {
+  margin: 6px 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--card-radius);
+}
+.inbox-item-delete-bg {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 80px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 20px;
+  border-radius: var(--card-radius);
+  font-size: 20px;
+  color: white;
+  pointer-events: none;
+}
+.inbox-item {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s;
+  cursor: pointer;
+  will-change: transform;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.inbox-item::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  pointer-events: none;
+}
+.inbox-item-inner {
+  padding: 13px 14px;
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.inbox-item-cat-dot {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.inbox-item-body { flex: 1; min-width: 0; }
+.inbox-item-text {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+  word-break: break-word;
+}
+.inbox-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+}
+.inbox-item-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+.inbox-item-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+/* Category colors */
+.cat-idea   { background: rgba(196,181,253,0.18); color: #6d28d9; }
+.cat-task   { background: rgba(251,191,36,0.14); color: #92400e; }
+.cat-habit  { background: rgba(34,197,94,0.12); color: #15803d; }
+.cat-note   { background: rgba(0,0,0,0.05); color: rgba(30,16,64,0.5); }
+.cat-event  { background: rgba(147,197,253,0.15); color: #1e40af; }
+
+.cat-dot-idea  { background: rgba(196,181,253,0.25); }
+.cat-dot-task  { background: rgba(251,191,36,0.18); }
+.cat-dot-habit { background: rgba(34,197,94,0.15); }
+.cat-dot-note  { background: rgba(0,0,0,0.05); }
+.cat-dot-event { background: rgba(147,197,253,0.2); }
+
+/* Inbox empty state */
+.inbox-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.inbox-empty-icon { font-size: 40px; opacity: 0.3; }
+.inbox-empty-title { font-size: 15px; font-weight: 600; opacity: 0.6; }
+.inbox-empty-sub { font-size: 12.5px; opacity: 0.4; line-height: 1.5; }
+
+/* === AI BAR (Inbox) — always visible === */
+#inbox-ai-bar {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: 88px;
+  z-index: 50;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.88);
+  border-radius: 22px;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 0 8px 32px rgba(100,70,200,0.13), 0 2px 8px rgba(100,70,200,0.07);
+  padding: 12px 12px 10px;
+  display: none; /* shown via JS only on inbox tab */
+}
+#inbox-ai-bar.bar-visible { display: block; }
+#inbox-ai-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+  border-radius: 22px 22px 0 0;
+  pointer-events: none;
+}
+
+.ai-bar-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding-bottom: 2px;
+}
+.ai-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa, #818cf8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(129,140,248,0.35);
+}
+.ai-bar-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-ai);
+  flex: 1;
+}
+
+/* Habit day buttons */
+.habit-day-btn {
+  flex:1;padding:8px 0;font-size:11px;font-weight:700;border-radius:9px;
+  background:rgba(30,16,64,0.05);border:1.5px solid transparent;
+  color:rgba(30,16,64,0.35);cursor:pointer;font-family:inherit;
+  transition:all 0.15s;
+}
+.habit-day-btn.active {
+  background:rgba(22,163,74,0.12);border-color:rgba(22,163,74,0.4);color:#16a34a;
+}
+
+/* Page transition */
+.page { opacity:1; transform:translateX(0); transition:opacity 0.22s ease, transform 0.22s ease; }
+.page.page-exit { opacity:0; transform:translateX(-16px); pointer-events:none; }
+.page.page-enter { opacity:0; transform:translateX(16px); }
+
+/* Keyboard avoiding */
+@supports (height: 100dvh) {
+  #app { height: 100dvh; }
+}
+
+
+
+.ai-bar-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.ai-bar-input {
+  flex: 1;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(139,105,20,0.14);
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 16px; /* мінімум 16px — інакше iOS зумує */
+  color: var(--text-primary);
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: none;
+  min-height: 40px;
+  max-height: 100px;
+  overflow-y: auto;
+  line-height: 1.45;
+}
+.ai-bar-input::placeholder { color: rgba(30,16,64,0.3); font-size: 15px; }
+.ai-bar-input:focus {
+  border-color: rgba(212,168,87,0.45);
+  box-shadow: 0 0 0 3px rgba(212,168,87,0.08);
+}
+
+.inbox-add-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #d4a857, #c47d0a);
+  color: #fff;
+  font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(196,125,10,0.28);
+  transition: transform 0.15s, opacity 0.15s;
+}
+.inbox-add-btn:active { transform: scale(0.88); opacity: 0.85; }
+
+.ai-send-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #a78bfa, #818cf8);
+  color: white;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(129,140,248,0.3);
+  transition: transform 0.15s, opacity 0.15s;
+}
+.ai-send-btn:active { transform: scale(0.88); }
+.ai-send-btn:disabled { opacity: 0.4; }
+
+/* AI typing dots */
+.ai-typing {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  padding: 2px 0;
+}
+.ai-typing span {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(129,140,248,0.6);
+  animation: blink 1.2s ease-in-out infinite;
+}
+.ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.card { animation: fadeUp 0.35s ease both; }
+.card:nth-child(2) { animation-delay: 0.05s; }
+.card:nth-child(3) { animation-delay: 0.10s; }
+.card:nth-child(4) { animation-delay: 0.15s; }
+
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">NeverMind</div>
+  <div class="splash-line"></div>
+  <div class="splash-tagline">Забий на хаос. Просто роби.</div>
+  <div class="splash-loader"></div>
+</div>
+
+<div id="splash">
+  <div class="splash-logo">NeverMind</div>
+  <div class="splash-line"></div>
+  <div class="splash-tagline">Забий на хаос. Просто роби.</div>
+  <div class="splash-loader"></div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboarding" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f5f1ff,#ede9ff,#e0d9ff);overflow-y:auto">
+  <div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px 60px">
+    <div style="font-size:52px;margin-bottom:16px">✦</div>
+    <div style="font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;color:#1e1040;text-align:center;margin-bottom:8px">NeverMind</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45);text-align:center;margin-bottom:36px">Твій особистий ШІ-агент</div>
+
+    <div id="ob-step-1" style="width:100%;max-width:360px">
+      <div style="font-size:17px;font-weight:700;color:#1e1040;margin-bottom:6px">Як тебе звати?</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.45);margin-bottom:20px">Агент звертатиметься до тебе на ім'я</div>
+      <input id="ob-name" type="text" placeholder="Ім'я або нікнейм" autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
+      <input id="ob-age" type="number" placeholder="Вік (необов'язково)" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
+      <button onclick="obNext(1)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;color:white;cursor:pointer">Далі →</button>
+    </div>
+
+    <div id="ob-step-2" style="display:none;width:100%;max-width:360px">
+      <div style="font-size:17px;font-weight:700;color:#1e1040;margin-bottom:6px">API ключ OpenAI</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.45);margin-bottom:6px">Потрібен для роботи агента</div>
+      <div style="font-size:12px;color:rgba(124,58,237,0.7);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
+      <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
+      <button onclick="obNext(2)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Розпочати</button>
+      <button onclick="obSkipKey()" style="width:100%;background:none;border:none;font-size:13px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
+    </div>
+
+    <div id="ob-step-3" style="display:none;width:100%;max-width:360px;text-align:center">
+      <div style="font-size:40px;margin-bottom:16px">🎯</div>
+      <div style="font-size:17px;font-weight:700;color:#1e1040;margin-bottom:10px" id="ob-welcome-text">Привіт!</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);line-height:1.6;margin-bottom:28px">Агент готовий. Пиши в Inbox будь-що — думки, задачі, ідеї. Він розбереться.</div>
+      <button onclick="obFinish()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;color:white;cursor:pointer">Почати →</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- BACKGROUND -->
+  <div id="bg"></div>
+
+  <!-- SCROLL WRAP -->
+  <div id="scroll-wrap">
+
+    <!-- PAGE: INBOX -->
+    <div class="page active" id="page-inbox">
+      <div class="page-header">
+        <div>
+          <span class="page-title">Inbox</span>
+          <span id="inbox-count" style="margin-left:8px;font-size:12px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div id="inbox-list"></div>
+    </div>
+
+    <!-- AI BAR — одне поле, одна кнопка, ШІ вирішує все -->
+    <div id="inbox-ai-bar">
+
+      <!-- AI відповідь -->
+      <div id="ai-bar-response" style="display:none">
+        <div class="ai-bar-preview">
+          <div class="ai-avatar">✦</div>
+          <div class="ai-bar-text" id="ai-bar-text"></div>
+        </div>
+        <div style="height:8px"></div>
+      </div>
+
+      <!-- Єдине поле вводу -->
+      <div class="ai-bar-input-row">
+        <textarea class="ai-bar-input" id="inbox-input"
+          placeholder="Напиши що завгодно — ШІ розбереться…" rows="1"
+          oninput="autoResizeTextarea(this)"
+          onkeydown="unifiedInputKeydown(event)"></textarea>
+        <button class="ai-send-btn" id="ai-send-btn" onclick="sendToAI()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PAGE: TASKS -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <span class="page-title">Задачі</span>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openAddTask()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+        </div>
+      </div>
+      <div id="tasks-ai-comment" style="display:none;margin:8px 16px 0;background:rgba(255,255,255,0.7);border:1px solid rgba(234,88,12,0.15);border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5;color:#9a3412;font-weight:500"></div>
+      <div id="tasks-list" style="padding:8px 0 120px"></div>
+      <div id="tasks-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
+        <div style="font-size:40px;margin-bottom:12px;opacity:0.3">▣</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Немає задач</div>
+        <div style="font-size:13px">Натисни + щоб додати першу</div>
+      </div>
+    </div>
+
+    <!-- PAGE: NOTES -->
+    <div class="page" id="page-notes">
+      <div class="page-header">
+        <span class="page-title">Нотатки</span>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div style="padding:4px 14px 8px">
+        <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.95);border-radius:12px;padding:9px 13px;backdrop-filter:blur(10px)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.35)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input id="notes-search" type="text" placeholder="Пошук по нотатках…" oninput="filterNotes()" style="border:none;background:none;outline:none;font-size:13px;font-family:inherit;color:#1e1040;flex:1;font-weight:500" autocomplete="off" autocorrect="off" spellcheck="false">
+          <span id="notes-search-clear" onclick="clearNotesSearch()" style="display:none;cursor:pointer;font-size:16px;color:rgba(30,16,64,0.3)">×</span>
+        </div>
+      </div>
+
+      <!-- AI suggestion banner -->
+      <div id="notes-ai-banner" style="display:none;margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">✦ Пропозиція ШІ</div>
+        <div id="notes-ai-text" style="font-size:13px;line-height:1.5;color:#3730a3;font-weight:500"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="applyFolderSuggestion()" style="flex:1;background:#4f46e5;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:white;cursor:pointer">Застосувати</button>
+          <button onclick="document.getElementById('notes-ai-banner').style.display='none'" style="flex:1;background:rgba(79,70,229,0.1);border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#4f46e5;cursor:pointer">Пізніше</button>
+        </div>
+      </div>
+
+      <!-- Folders + notes list -->
+      <div id="notes-content" style="padding:0 0 120px"></div>
+
+      <!-- Empty state -->
+      <div id="notes-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
+        <div style="font-size:40px;margin-bottom:12px;opacity:0.3">◫</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Нотатки порожні</div>
+        <div style="font-size:13px">Записи з Inbox або натисни +</div>
+      </div>
+    </div>
+
+    <!-- PAGE: ME -->
+    <div class="page" id="page-me">
+      <div class="page-header">
+        <span class="page-title">Я</span>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+        </div>
+      </div>
+      <!-- PAGE: ME content -->
+      <div id="me-content" style="padding:8px 0 120px">
+
+        <!-- Week grid -->
+        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Цей тиждень</div>
+          <div id="me-week-grid" style="display:flex;gap:6px;justify-content:space-between"></div>
+        </div>
+
+        <!-- Habits -->
+        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Звички</div>
+            <button onclick="openAddHabit()" style="font-size:11px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+          </div>
+          <div id="habits-list">
+            <div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:13px">Додай першу звичку</div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:flex;gap:8px;margin:0 14px 10px">
+          <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
+            <div id="me-stat-inbox" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#1e1040">0</div>
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:3px">записів</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
+            <div id="me-stat-tasks" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#ea580c">0</div>
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:3px">задач активних</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
+            <div id="me-stat-notes" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#4f46e5">0</div>
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:3px">нотаток</div>
+          </div>
+        </div>
+
+        <!-- Inbox categories breakdown -->
+        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Що записував</div>
+          <div id="me-categories" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <!-- Activity last 14 days -->
+        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Активність за 14 днів</div>
+          <div id="me-activity" style="display:flex;gap:4px;align-items:flex-end;height:48px"></div>
+        </div>
+
+        <!-- AI weekly summary -->
+        <div style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:10px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">✦ Аналіз агента</div>
+            <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:11px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
+          </div>
+          <div id="me-ai-analysis" style="font-size:13px;line-height:1.6;color:#14532d;font-weight:500">Накопич більше даних — і агент дасть чесний аналіз.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PAGE: EVENING -->
+    <div class="page" id="page-evening">
+      <div class="page-header">
+        <span class="page-title">Вечір</span>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+        </div>
+      </div>
+
+      <!-- Day score -->
+      <div style="padding:0 0 120px;overflow-y:auto">
+      <div style="margin:8px 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px;display:flex;align-items:center;gap:14px">
+        <div id="evening-ring" style="position:relative;width:60px;height:60px;flex-shrink:0">
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="5"/>
+            <circle id="evening-ring-arc" cx="30" cy="30" r="25" fill="none" stroke="#7c3aed" stroke-width="5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" transform="rotate(-90 30 30)" style="transition:stroke-dashoffset 1s ease"/>
+          </svg>
+          <div id="evening-ring-pct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:11px;font-weight:900;color:#7c3aed">0%</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Продуктивність дня</div>
+          <div id="evening-score-desc" style="font-size:14px;font-weight:700;color:#1e1040;margin-top:3px">Додай записи щоб побачити</div>
+        </div>
+      </div>
+
+      <!-- Moments -->
+      <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Моменти дня</div>
+          <button onclick="openAddMoment()" style="font-size:11px;font-weight:700;color:#7c3aed;background:rgba(124,58,237,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+        </div>
+        <div id="evening-moments" style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:12px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>
+        </div>
+      </div>
+
+      <!-- AI summary -->
+      <div style="margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(124,58,237,0.15);border-radius:16px;padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">✦ ШІ на вечір</div>
+          <button onclick="generateEveningSummary()" id="evening-summary-btn" style="font-size:11px;font-weight:700;color:#7c3aed;background:none;border:none;cursor:pointer">↻</button>
+        </div>
+        <div id="evening-summary" style="font-size:13px;line-height:1.6;color:#4c1d95;font-weight:500">Натисни ↻ щоб отримати підсумок дня від агента.</div>
+      </div>
+
+      <!-- Dialog button -->
+      <div onclick="openEveningDialog()" style="margin:0 14px;background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+        <div style="font-size:14px;font-weight:700;color:#7c3aed">✦ Вечірній діалог з агентом</div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
+      </div><!-- /evening scroll -->
+    </div>
+
+  </div><!-- /scroll-wrap -->
+
+  <!-- TAB BAR -->
+  <nav id="tab-bar">
+    <div class="tab-item active" data-tab="inbox" onclick="switchTab('inbox')">
+      <span class="tab-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+      </span>
+      <span class="tab-label">Inbox</span>
+    </div>
+    <div class="tab-item" data-tab="tasks" onclick="switchTab('tasks')">
+      <span class="tab-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      </span>
+      <span class="tab-label">Задачі</span>
+    </div>
+    <div class="tab-item" data-tab="notes" onclick="switchTab('notes')">
+      <span class="tab-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      </span>
+      <span class="tab-label">Нотатки</span>
+    </div>
+    <div class="tab-item" data-tab="me" onclick="switchTab('me')">
+      <span class="tab-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      </span>
+      <span class="tab-label">Я</span>
+    </div>
+    <div class="tab-item" data-tab="evening" onclick="switchTab('evening')">
+      <span class="tab-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </span>
+      <span class="tab-label">Вечір</span>
+    </div>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- HABIT MODAL -->
+<div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+  <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div id="habit-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
+    <input id="habit-input-name" type="text" placeholder="Назва звички (напр: Читати 20 хв)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
+    <input id="habit-input-emoji" type="text" placeholder="Емодзі (необов'язково)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Дні тижня</div>
+    <div style="display:flex;gap:6px;margin-bottom:20px" id="habit-days-row">
+      <button class="habit-day-btn active" data-day="0">Пн</button>
+      <button class="habit-day-btn active" data-day="1">Вт</button>
+      <button class="habit-day-btn active" data-day="2">Ср</button>
+      <button class="habit-day-btn active" data-day="3">Чт</button>
+      <button class="habit-day-btn active" data-day="4">Пт</button>
+      <button class="habit-day-btn" data-day="5">Сб</button>
+      <button class="habit-day-btn" data-day="6">Нд</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeHabitModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveHabit()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOMENT MODAL -->
+<div id="moment-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+  <div onclick="closeMomentModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="setMomentMood('positive')" id="mood-positive" style="flex:1;border:2px solid rgba(22,163,74,0.3);background:rgba(22,163,74,0.06);border-radius:10px;padding:9px;font-size:12px;font-weight:700;color:#16a34a;cursor:pointer">😊 Добре</button>
+      <button onclick="setMomentMood('neutral')" id="mood-neutral" style="flex:1;border:2px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);border-radius:10px;padding:9px;font-size:12px;font-weight:700;color:#d97706;cursor:pointer">😐 Нейтрально</button>
+      <button onclick="setMomentMood('negative')" id="mood-negative" style="flex:1;border:2px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);border-radius:10px;padding:9px;font-size:12px;font-weight:700;color:#ef4444;cursor:pointer">😞 Погано</button>
+    </div>
+    <textarea id="moment-input-text" rows="3" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Що сталося? Що відчував?"></textarea>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeMomentModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveMoment()" style="flex:2;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENING DIALOG -->
+<div id="evening-dialog" style="display:none;position:fixed;inset:0;z-index:200;flex-direction:column">
+  <div onclick="closeEveningDialog()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px)"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:white;border-radius:24px 24px 0 0;height:80vh;display:flex;flex-direction:column">
+    <div style="padding:16px 20px 0;flex-shrink:0">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:#1e1040">✦ Агент</div>
+        <div onclick="closeEveningDialog()" style="font-size:22px;color:rgba(30,16,64,0.3);cursor:pointer">×</div>
+      </div>
+    </div>
+    <div id="dialog-messages" style="flex:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="padding:12px 16px 32px;border-top:1px solid rgba(30,16,64,0.06);flex-shrink:0;display:flex;gap:8px">
+      <textarea id="dialog-input" rows="1" style="flex:1;border:1.5px solid rgba(124,58,237,0.2);border-radius:12px;padding:10px 13px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px" placeholder="Напиши агенту…" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDialogMessage()}"></textarea>
+      <button onclick="sendDialogMessage()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE CONTEXT MENU -->
+<div id="note-menu" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center">
+  <div onclick="closeNoteMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:12px 12px 40px;z-index:1">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 12px"></div>
+    <button onclick="noteMenuEdit()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      Редагувати
+    </button>
+    <button onclick="noteMenuMove()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      Перемістити в папку
+    </button>
+    <button onclick="noteMenuCopy()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Скопіювати текст
+    </button>
+    <div style="height:1px;background:rgba(30,16,64,0.06);margin:4px 16px"></div>
+    <button onclick="noteMenuDelete()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#ef4444;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+      Видалити
+    </button>
+  </div>
+</div>
+
+<!-- NOTE MODAL -->
+<div id="note-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+  <div onclick="closeNoteModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div id="note-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
+    <input id="note-input-folder" type="text" list="folder-suggestions" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Папка (наприклад: Ідеї, Навчання…)">
+    <datalist id="folder-suggestions"></datalist>
+    <textarea id="note-input-text" rows="5" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;line-height:1.6;margin-bottom:14px" placeholder="Текст нотатки…"></textarea>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeNoteModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveNote()" style="flex:2;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+  <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div id="task-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
+    <input id="task-input-title" type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…">
+    <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Опис або мета (необов'язково)…"></textarea>
+    <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
+    <div id="task-steps-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…">
+      <button onclick="addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;color:#ea580c;cursor:pointer">+</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeTaskModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveTask()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS OVERLAY -->
+<div id="settings-overlay">
+  <div class="settings-backdrop" onclick="closeSettings()"></div>
+  <div class="settings-panel">
+    <div class="settings-handle"></div>
+    <div class="settings-title">Налаштування</div>
+
+    <!-- API Key -->
+    <div class="settings-section">
+      <div class="settings-label">OpenAI API ключ</div>
+      <input class="settings-input" type="password" id="input-api-key"
+             placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <div id="key-status" class="key-status no-key">⚠️ Ключ не встановлено</div>
+    </div>
+
+    <!-- Profile -->
+    <div class="settings-section">
+      <div class="settings-label">Профіль</div>
+      <input class="settings-input" type="text" id="input-name" placeholder="Ім'я">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="settings-input" type="number" id="input-age" placeholder="Вік" style="flex:1">
+        <input class="settings-input" type="number" id="input-weight" placeholder="Вага (кг)" style="flex:1">
+        <input class="settings-input" type="number" id="input-height" placeholder="Зріст (см)" style="flex:1">
+      </div>
+      <textarea class="settings-input" id="input-profile-notes" placeholder="Додаткова інфо про себе — цілі, особливості, що важливо знати агенту…" rows="3" style="margin-top:8px;resize:none;font-family:inherit;font-size:13px;line-height:1.5"></textarea>
+    </div>
+
+    <button class="btn-primary" onclick="saveSettings()">Зберегти налаштування</button>
+
+    <div class="settings-divider"></div>
+
+    <!-- Memory -->
+    <div class="settings-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="settings-label" style="margin-bottom:0">Пам'ять агента</div>
+        <button onclick="refreshMemory()" id="memory-refresh-btn" style="font-size:11px;font-weight:700;color:var(--active-accent);background:none;border:none;cursor:pointer;padding:4px 0">↻ Оновити</button>
+      </div>
+      <div id="memory-last-updated" style="font-size:11px;color:rgba(30,16,64,0.35);margin-bottom:6px"></div>
+      <textarea class="settings-input" id="input-memory" placeholder="Агент ще не сформував уявлення про вас. Напишіть кілька записів в Inbox — і він навчиться." rows="6" style="resize:none;font-family:inherit;font-size:12px;line-height:1.6"></textarea>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:5px">Агент читає цей текст при кожному запиті. Можна редагувати вручну.</div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <!-- Export / Clear -->
+    <div class="settings-section">
+      <div class="settings-label">Дані</div>
+      <button class="btn-ghost" onclick="exportData()">📤 Експортувати дані (JSON)</button>
+      <button class="btn-danger" onclick="clearAllData()">🗑️ Очистити всі дані</button>
+    </div>
+
+    <!-- App info -->
+    <div style="text-align:center;margin-top:28px;color:rgba(100,70,200,0.35);font-size:11px;">
+      <span style="font-family:var(--font-display);font-weight:900;font-size:13px;color:rgba(26,14,64,0.3)">NeverMind</span><br>
+      <span style="font-style:italic;">Забий на хаос. Просто роби.</span>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// === TAB THEMES ===
+const TAB_THEMES = {
+  inbox: {
+    bg: 'linear-gradient(160deg, #faf7f2, #f5f0e8, #f0f4f8)',
+    orb: 'rgba(251,191,36,0.10)',
+    tabBg: 'rgba(250,247,242,0.88)',
+    accent: '#8b6914',
+    accent2: '#d4a857',
+  },
+  tasks: {
+    bg: 'linear-gradient(160deg, #fff8f0, #fff2e6, #fdf5ff)',
+    orb: 'rgba(234,88,12,0.10)',
+    tabBg: 'rgba(255,248,240,0.88)',
+    accent: '#ea580c',
+    accent2: '#f97316',
+  },
+  notes: {
+    bg: 'linear-gradient(160deg, #f0f4ff, #edf2ff, #f5f0ff)',
+    orb: 'rgba(99,102,241,0.10)',
+    tabBg: 'rgba(240,244,255,0.88)',
+    accent: '#4f46e5',
+    accent2: '#818cf8',
+  },
+  me: {
+    bg: 'linear-gradient(160deg, #f0fdf4, #ecfdf5, #f0f9ff)',
+    orb: 'rgba(34,197,94,0.12)',
+    tabBg: 'rgba(240,253,244,0.88)',
+    accent: '#16a34a',
+    accent2: '#22c55e',
+  },
+  evening: {
+    bg: 'linear-gradient(160deg, #f5f2ff, #ede8ff, #eef2ff)',
+    orb: 'rgba(180,155,255,0.15)',
+    tabBg: 'rgba(245,242,255,0.88)',
+    accent: '#7c5cbf',
+    accent2: '#9b7de0',
+  },
+};
+
+// === CURRENT STATE ===
+let currentTab = 'inbox';
+
+// === SWITCH TAB ===
+function switchTab(tab) {
+  if (tab === currentTab) return;
+  animateTabSwitch(tab);
+  currentTab = tab;
+
+  // Update pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${tab}`).classList.add('active');
+
+  // Update tab items
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active');
+
+  // Apply theme
+  applyTheme(tab);
+
+  // Tab-specific actions
+  if (tab === 'tasks') renderTasks();
+  if (tab === 'notes') { renderNotes(); autoRefreshNoteFolders(); }
+  if (tab === 'me') { renderMe(); renderHabits(); }
+  if (tab === 'evening') renderEvening();
+
+  // Show/hide AI bar (inbox only)
+  updateAiBarVisibility();
+}
+
+function applyTheme(tab) {
+  const theme = TAB_THEMES[tab];
+  const bg = document.getElementById('bg');
+  const tabBar = document.getElementById('tab-bar');
+  const root = document.documentElement;
+
+  bg.style.background = theme.bg;
+  // Update orb colors via pseudo-elements trick (CSS vars)
+  root.style.setProperty('--active-accent', theme.accent);
+  root.style.setProperty('--active-accent2', theme.accent2);
+  tabBar.style.background = theme.tabBg;
+
+  // Orbs via custom properties on bg element
+  bg.style.setProperty('--orb-color', theme.orb);
+  bg.setAttribute('data-tab', tab);
+}
+
+// === SETTINGS ===
+function openSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  overlay.classList.add('open');
+
+  const key = localStorage.getItem('nm_gemini_key') || '';
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const memory = localStorage.getItem('nm_memory') || '';
+  const memoryTs = localStorage.getItem('nm_memory_ts');
+
+  document.getElementById('input-api-key').value = key;
+  document.getElementById('input-name').value = settings.name || '';
+  document.getElementById('input-age').value = settings.age || '';
+  document.getElementById('input-weight').value = settings.weight || '';
+  document.getElementById('input-height').value = settings.height || '';
+  document.getElementById('input-profile-notes').value = settings.profileNotes || '';
+  document.getElementById('input-memory').value = memory;
+
+  const tsEl = document.getElementById('memory-last-updated');
+  if (memoryTs) {
+    const d = new Date(parseInt(memoryTs));
+    tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
+  } else {
+    tsEl.textContent = 'Ще не оновлювалась';
+  }
+
+  updateKeyStatus(!!key);
+}
+
+function closeSettings() {
+  // Save memory edits before closing
+  const memory = document.getElementById('input-memory').value;
+  localStorage.setItem('nm_memory', memory);
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function updateKeyStatus(hasKey) {
+  const el = document.getElementById('key-status');
+  if (hasKey) {
+    el.className = 'key-status has-key';
+    el.textContent = '✓ API ключ збережено';
+  } else {
+    el.className = 'key-status no-key';
+    el.textContent = '⚠️ Ключ не встановлено';
+  }
+}
+
+function saveSettings() {
+  const key = document.getElementById('input-api-key').value.trim();
+  const name = document.getElementById('input-name').value.trim();
+  const age = document.getElementById('input-age').value.trim();
+  const weight = document.getElementById('input-weight').value.trim();
+  const height = document.getElementById('input-height').value.trim();
+  const profileNotes = document.getElementById('input-profile-notes').value.trim();
+  const memory = document.getElementById('input-memory').value.trim();
+
+  if (key) localStorage.setItem('nm_gemini_key', key);
+  else localStorage.removeItem('nm_gemini_key');
+
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  Object.assign(settings, { name, age, weight, height, profileNotes });
+  localStorage.setItem('nm_settings', JSON.stringify(settings));
+
+  if (memory) localStorage.setItem('nm_memory', memory);
+
+  updateKeyStatus(!!key);
+  showToast('✓ Збережено');
+  setTimeout(() => document.getElementById('settings-overlay').classList.remove('open'), 600);
+}
+
+function exportData() {
+  const data = {};
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory'];
+  keys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) data[k] = JSON.parse(v);
+  });
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 Дані експортовано');
+}
+
+function clearAllData() {
+  if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts'];
+  keys.forEach(k => localStorage.removeItem(k));
+  showToast('🗑️ Всі дані видалено');
+  closeSettings();
+}
+
+// === MEMORY SYSTEM ===
+function getProfile() {
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const parts = [];
+  if (s.name) parts.push(`Ім'я: ${s.name}`);
+  if (s.age) parts.push(`Вік: ${s.age}`);
+  if (s.weight) parts.push(`Вага: ${s.weight} кг`);
+  if (s.height) parts.push(`Зріст: ${s.height} см`);
+  if (s.profileNotes) parts.push(`Про себе: ${s.profileNotes}`);
+  return parts.join(', ');
+}
+
+function shouldRefreshMemory() {
+  const lastTs = localStorage.getItem('nm_memory_ts');
+  if (!lastTs) return true;
+  const last = new Date(parseInt(lastTs));
+  const now = new Date();
+  return last.toDateString() !== now.toDateString();
+}
+
+async function autoRefreshMemory() {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  if (!shouldRefreshMemory()) return;
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  if (inbox.length < 3) return; // недостатньо даних
+  await doRefreshMemory(false);
+}
+
+async function refreshMemory() {
+  const btn = document.getElementById('memory-refresh-btn');
+  btn.textContent = '…';
+  btn.disabled = true;
+  await doRefreshMemory(true);
+  btn.textContent = '↻ Оновити';
+  btn.disabled = false;
+}
+
+async function doRefreshMemory(showResult) {
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const profile = getProfile();
+
+  const recentInbox = inbox.slice(-50).map(i => `[${i.category}] ${i.text}`).join('\n');
+  const tasksList = tasks.map(t => `${t.title} (${t.status})`).join('\n');
+
+  const systemPrompt = `Ти — аналітик особистості. Твоє завдання: на основі записів користувача сформувати стислий профіль — що це за людина, які в неї патерни поведінки, звички, цілі, слабкі місця. Без прикрас, без підлабузництва. Чесно і конкретно. Відповідай ТІЛЬКИ текстом профілю, без вступів і пояснень. Максимум 300 слів.`;
+
+  const userMsg = `Профіль користувача: ${profile || 'не заповнено'}
+
+Останні записи в Inbox:
+${recentInbox || 'порожньо'}
+
+Активні задачі:
+${tasksList || 'немає'}
+
+Сформуй актуальний профіль користувача.`;
+
+  const result = await callAI(systemPrompt, userMsg, {});
+  if (!result) return;
+
+  localStorage.setItem('nm_memory', result);
+  localStorage.setItem('nm_memory_ts', Date.now().toString());
+
+  // Оновити поле якщо відкрите
+  const memEl = document.getElementById('input-memory');
+  if (memEl) memEl.value = result;
+
+  const tsEl = document.getElementById('memory-last-updated');
+  if (tsEl) {
+    const d = new Date();
+    tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
+  }
+
+  if (showResult) showToast('✓ Пам\'ять оновлено');
+}
+
+// Додаємо профіль і пам'ять до кожного AI запиту
+function getAIContext() {
+  const profile = getProfile();
+  const memory = localStorage.getItem('nm_memory') || '';
+  const parts = [];
+  if (profile) parts.push(`Профіль користувача: ${profile}`);
+  if (memory) parts.push(`Що агент знає про користувача:\n${memory}`);
+  return parts.join('\n\n');
+}
+function showToast(msg, duration = 2000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// === PWA MANIFEST ===
+function setupPWA() {
+  const manifest = {
+    name: 'NeverMind',
+    short_name: 'NeverMind',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#faf9ff',
+    theme_color: '#f5f1ff',
+    icons: [{
+      src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="%23a78bfa"/><text x="96" y="130" text-anchor="middle" font-size="100" font-family="serif">✦</text></svg>',
+      sizes: '192x192',
+      type: 'image/svg+xml'
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+}
+
+// === SERVICE WORKER ===
+function setupSW() {
+  if (!('serviceWorker' in navigator)) return;
+  const swCode = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => clients.claim());
+    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+
+// === GEMINI API ===
+const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
+Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія або просто питання.
+
+ЯКЩО це запис (думка, задача, ідея, звичка, подія, нотатка) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "save",
+  "category": "idea|task|habit|note|event",
+  "folder": "назва папки українською",
+  "text": "очищений текст запису",
+  "comment": "коротка відповідь або порада (1-2 речення)"
+}
+
+ЯКЩО це питання або розмова (не запис) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "reply",
+  "comment": "відповідь українською, 2-4 речення"
+}
+
+Правила визначення категорії:
+- task: є дія яку треба зробити ("зателефонувати", "купити", "зробити")
+- habit: регулярна дія ("щодня", "кожен ранок", "тренування")
+- event: прив'язано до часу ("в п'ятницю", "завтра", "о 18:00")
+- idea: думка, ідея, натхнення
+- note: все інше — факти, спостереження, їжа, витрати, нотатки
+
+Правила визначення папки (для category=note або idea):
+- "Харчування" — їжа, напої, калорії, рецепти, продукти
+- "Фінанси" — витрати, доходи, ціни, гроші
+- "Здоров'я" — самопочуття, симптоми, ліки, спорт, тренування
+- "Робота" — робочі думки, проекти, колеги, зустрічі
+- "Навчання" — що вивчаю, книги, курси, інсайти
+- "Ідеї" — творчі ідеї, плани, натхнення (якщо category=idea)
+- "Особисте" — стосунки, емоції, особисті думки
+- "Подорожі" — місця, маршрути, враження
+- Якщо не підходить жодна — придумай коротку логічну назву українською
+- Якщо category=task або habit або event — поле folder не потрібне (пиши null)
+
+ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
+
+async function callAI(systemPrompt, userMessage, contextData = {}) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000);
+    return null;
+  }
+  if (location.protocol === 'file:') {
+    showToast('⚠️ Відкрий файл через сервер, не file://', 5000);
+    return null;
+  }
+  const context = Object.keys(contextData).length > 0
+    ? `\n\nКонтекст:\n${JSON.stringify(contextData, null, 2)}`
+    : '';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage + context }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);
+      return null;
+    }
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) { showToast('❌ Порожня відповідь від ШІ', 3000); return null; }
+    return text;
+  } catch (e) {
+    if (e.message === 'Load failed' || e.message.includes('Failed to fetch')) {
+      showToast('❌ Мережева помилка. Перевір інтернет', 4000);
+    } else {
+      showToast('❌ ' + e.message, 4000);
+    }
+    return null;
+  }
+}
+
+// === INBOX ===
+const CAT_META = {
+  idea:  { icon: '💡', label: 'Ідея',    dotClass: 'cat-dot-idea',  tagClass: 'cat-idea'  },
+  task:  { icon: '📌', label: 'Задача',  dotClass: 'cat-dot-task',  tagClass: 'cat-task'  },
+  habit: { icon: '🌱', label: 'Звичка',  dotClass: 'cat-dot-habit', tagClass: 'cat-habit' },
+  note:  { icon: '📝', label: 'Нотатка', dotClass: 'cat-dot-note',  tagClass: 'cat-note'  },
+  event: { icon: '📅', label: 'Подія',   dotClass: 'cat-dot-event', tagClass: 'cat-event' },
+};
+
+function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
+function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
+
+function autoResizeTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// Офлайн-fallback: зберігає миттєво як нотатку
+function saveOffline(text) {
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text, category: 'note', ts: Date.now(), processed: false });
+  saveInbox(items);
+  renderInbox();
+  showToast('📝 Збережено (офлайн)');
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'щойно';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' хв тому';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' год тому';
+  return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderInbox() {
+  const items = getInbox();
+  const list = document.getElementById('inbox-list');
+  const countEl = document.getElementById('inbox-count');
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="inbox-empty">
+      <div class="inbox-empty-icon">📥</div>
+      <div class="inbox-empty-title">Inbox порожній</div>
+      <div class="inbox-empty-sub">Напиши що завгодно — ШІ розбереться</div>
+    </div>`;
+    countEl.style.display = 'none';
+    return;
+  }
+  countEl.style.display = 'inline';
+  countEl.textContent = items.length;
+
+  list.innerHTML = items.map(item => {
+    const meta = CAT_META[item.category] || CAT_META.note;
+    return `<div class="inbox-item-wrap" id="wrap-${item.id}">
+      <div class="inbox-item-delete-bg">🗑️</div>
+      <div class="inbox-item" id="item-${item.id}" data-id="${item.id}"
+           ontouchstart="swipeStart(event,${item.id})"
+           ontouchmove="swipeMove(event,${item.id})"
+           ontouchend="swipeEnd(event,${item.id})">
+        <div class="inbox-item-inner">
+          <div class="inbox-item-cat-dot ${meta.dotClass}">${meta.icon}</div>
+          <div class="inbox-item-body">
+            <div class="inbox-item-text">${escapeHtml(item.text)}</div>
+            <div class="inbox-item-meta">
+              <span class="inbox-item-time">${formatTime(item.ts)}</span>
+              <span class="inbox-item-tag ${meta.tagClass}">${meta.label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// === SWIPE TO DELETE ===
+const swipeState = {};
+const SWIPE_THRESHOLD = 72;
+
+function swipeStart(e, id) {
+  const t = e.touches[0];
+  swipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function swipeMove(e, id) {
+  const s = swipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById(`item-${id}`);
+  if (el) el.style.transform = `translateX(${s.dx}px)`;
+}
+function swipeEnd(e, id) {
+  const s = swipeState[id]; if (!s) return;
+  const el = document.getElementById(`item-${id}`);
+  if (s.dx < -SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => { saveInbox(getInbox().filter(i => i.id !== id)); renderInbox(); }, 220);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'translateX(0)'; setTimeout(() => { if (el) el.style.transition = ''; }, 300); }
+  }
+  delete swipeState[id];
+}
+
+// === UNIFIED SEND TO AI ===
+let aiLoading = false;
+const SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+
+function unifiedInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
+}
+
+function updateAiBarVisibility() {
+  const bar = document.getElementById('inbox-ai-bar');
+  if (!bar) return;
+  if (currentTab === 'inbox') bar.classList.add('bar-visible');
+  else bar.classList.remove('bar-visible');
+}
+
+async function sendToAI() {
+  if (aiLoading) return;
+  const input = document.getElementById('inbox-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const key = localStorage.getItem('nm_gemini_key');
+
+  // Немає ключа або file:// — зберігаємо офлайн миттєво
+  if (!key || location.protocol === 'file:') {
+    saveOffline(text);
+    input.value = ''; input.style.height = 'auto';
+    return;
+  }
+
+  aiLoading = true;
+  input.value = ''; input.style.height = 'auto';
+
+  const btn = document.getElementById('ai-send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="ai-typing" style="transform:scale(0.65)"><span></span><span></span><span></span></div>';
+
+  const responseArea = document.getElementById('ai-bar-response');
+  const textEl = document.getElementById('ai-bar-text');
+  responseArea.style.display = 'block';
+  textEl.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
+
+  const aiContext = getAIContext();
+  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
+  const reply = await callAI(fullPrompt, text, {});
+
+  if (reply) {
+    try {
+      const clean = reply.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      if (parsed.action === 'save') {
+        const cat = ['idea','task','habit','note','event'].includes(parsed.category) ? parsed.category : 'note';
+        const savedText = parsed.text || text;
+        const folder = parsed.folder || null; // папка від агента
+        const items = getInbox();
+        items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
+        saveInbox(items);
+        renderInbox();
+        // Дублюємо нотатки та ідеї в Нотатки з правильною папкою
+        if (cat === 'note' || cat === 'idea') {
+          addNoteFromInbox(savedText, cat, folder);
+        }
+        if (parsed.comment) {
+          textEl.textContent = parsed.comment;
+        } else {
+          responseArea.style.display = 'none';
+        }
+      } else {
+        // action === 'reply' — просто відповідь
+        textEl.textContent = parsed.comment || reply;
+      }
+    } catch {
+      // JSON не розпарсився — зберігаємо офлайн
+      saveOffline(text);
+      textEl.textContent = reply.substring(0, 200);
+    }
+  } else {
+    saveOffline(text);
+    responseArea.style.display = 'none';
+  }
+
+  aiLoading = false;
+  btn.disabled = false;
+  btn.innerHTML = SEND_SVG;
+}
+
+// === NOTES ===
+let editingNoteId = null;
+let pendingFolderSuggestion = null;
+
+function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
+function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); }
+
+function getFolders() {
+  const notes = getNotes();
+  const set = new Set(notes.map(n => n.folder || 'Загальне'));
+  return [...set].sort();
+}
+
+function addNoteFromInbox(text, category, folder = null) {
+  const notes = getNotes();
+  // Папка від агента має пріоритет, інакше fallback
+  const resolvedFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
+  notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source: 'inbox', ts: Date.now(), lastViewed: Date.now() });
+  saveNotes(notes);
+}
+
+function openAddNote() {
+  editingNoteId = null;
+  document.getElementById('note-modal-title').textContent = 'Нова нотатка';
+  document.getElementById('note-input-text').value = '';
+  document.getElementById('note-input-folder').value = '';
+  updateFolderSuggestions();
+  document.getElementById('note-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('note-input-text').focus(), 100);
+}
+
+function openEditNote(id) {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  editingNoteId = id;
+  document.getElementById('note-modal-title').textContent = 'Редагувати нотатку';
+  document.getElementById('note-input-text').value = n.text;
+  document.getElementById('note-input-folder').value = n.folder || '';
+  updateFolderSuggestions();
+  document.getElementById('note-modal').style.display = 'flex';
+  // Оновлюємо час перегляду
+  n.lastViewed = Date.now();
+  saveNotes(notes);
+}
+
+function closeNoteModal() {
+  document.getElementById('note-modal').style.display = 'none';
+}
+
+function updateFolderSuggestions() {
+  const dl = document.getElementById('folder-suggestions');
+  dl.innerHTML = getFolders().map(f => `<option value="${f}">`).join('');
+}
+
+function saveNote() {
+  const text = document.getElementById('note-input-text').value.trim();
+  if (!text) { showToast('Введіть текст нотатки'); return; }
+  const folder = document.getElementById('note-input-folder').value.trim() || 'Загальне';
+  const notes = getNotes();
+
+  if (editingNoteId) {
+    const idx = notes.findIndex(x => x.id === editingNoteId);
+    if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
+  } else {
+    notes.unshift({ id: Date.now(), text, folder, source: 'manual', ts: Date.now(), lastViewed: Date.now() });
+  }
+  saveNotes(notes);
+  closeNoteModal();
+  renderNotes();
+  showToast(editingNoteId ? '✓ Нотатку оновлено' : '✓ Нотатку збережено');
+}
+
+function deleteNote(id) {
+  if (!confirm('Видалити нотатку?')) return;
+  saveNotes(getNotes().filter(x => x.id !== id));
+  renderNotes();
+  showToast('🗑️ Видалено');
+}
+
+function filterNotes() {
+  const q = document.getElementById('notes-search').value.trim();
+  document.getElementById('notes-search-clear').style.display = q ? 'block' : 'none';
+  renderNotes(q);
+}
+
+function clearNotesSearch() {
+  document.getElementById('notes-search').value = '';
+  document.getElementById('notes-search-clear').style.display = 'none';
+  renderNotes();
+}
+
+function renderNotes(searchQuery = '') {
+  let notes = getNotes();
+  const content = document.getElementById('notes-content');
+  const empty = document.getElementById('notes-empty');
+
+  if (notes.length === 0) {
+    content.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Фільтрація по пошуку
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    notes = notes.filter(n => n.text.toLowerCase().includes(q) || (n.folder || '').toLowerCase().includes(q));
+    if (notes.length === 0) {
+      content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:13px">Нічого не знайдено</div>`;
+      return;
+    }
+  }
+
+  // Групуємо по папках
+  const byFolder = {};
+  notes.forEach(n => {
+    const f = n.folder || 'Загальне';
+    if (!byFolder[f]) byFolder[f] = [];
+    byFolder[f].push(n);
+  });
+
+  const now = Date.now();
+  const STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 днів
+
+  content.innerHTML = Object.entries(byFolder).map(([folder, items]) => {
+    const staleCount = items.filter(n => (now - (n.lastViewed || n.ts)) > STALE_MS).length;
+    return `
+      <div style="margin:0 14px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
+          <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.1em">${escapeHtml(folder)}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${staleCount > 0 ? `<div style="font-size:10px;color:#ef4444;font-weight:700">${staleCount} застарілих</div>` : ''}
+            <div style="font-size:10px;color:rgba(30,16,64,0.3)">${items.length}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${items.map(n => {
+            const isStale = (now - (n.lastViewed || n.ts)) > STALE_MS;
+            const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
+            return `
+              <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:13px;overflow:hidden">
+                <div class="note-delete-bg" style="position:absolute;inset:0;background:#ef4444;display:flex;align-items:center;justify-content:right;padding-right:20px;border-radius:13px">
+                  <span style="color:white;font-size:13px;font-weight:700">Видалити</span>
+                </div>
+                <div id="note-item-${n.id}"
+                  ontouchstart="noteSwipeStart(event,${n.id})"
+                  ontouchmove="noteSwipeMove(event,${n.id})"
+                  ontouchend="noteSwipeEnd(event,${n.id})"
+                  style="position:relative;background:rgba(255,255,255,${isStale ? '0.5' : '0.78'});border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 13px;${isStale ? 'opacity:0.6' : ''}">
+                  <div onclick="openEditNote(${n.id})" style="cursor:pointer">
+                    <div style="font-size:13px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                      <div style="font-size:10px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
+                      <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:2px 6px;cursor:pointer;color:rgba(30,16,64,0.3);font-size:18px;line-height:1">···</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// === NOTE SWIPE TO DELETE ===
+const noteSwipeState = {};
+const NOTE_SWIPE_THRESHOLD = 80;
+
+function noteSwipeStart(e, id) {
+  const t = e.touches[0];
+  noteSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function noteSwipeMove(e, id) {
+  const s = noteSwipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById(`note-item-${id}`);
+  if (el) el.style.transform = `translateX(${s.dx}px)`;
+}
+function noteSwipeEnd(e, id) {
+  const s = noteSwipeState[id]; if (!s) return;
+  const el = document.getElementById(`note-item-${id}`);
+  if (s.dx < -NOTE_SWIPE_THRESHOLD) {
+    if (el) {
+      el.style.transition = 'transform 0.2s ease, opacity 0.2s';
+      el.style.transform = 'translateX(-110%)';
+      el.style.opacity = '0';
+    }
+    setTimeout(() => {
+      deleteNote(id);
+    }, 200);
+  } else {
+    if (el) {
+      el.style.transition = 'transform 0.3s ease';
+      el.style.transform = 'translateX(0)';
+      setTimeout(() => { el.style.transition = ''; }, 300);
+    }
+  }
+  delete noteSwipeState[id];
+}
+
+// === NOTE CONTEXT MENU ===
+let activeNoteMenuId = null;
+
+function openNoteMenu(id) {
+  activeNoteMenuId = id;
+  document.getElementById('note-menu').style.display = 'flex';
+}
+function closeNoteMenu() {
+  document.getElementById('note-menu').style.display = 'none';
+  activeNoteMenuId = null;
+}
+function noteMenuEdit() {
+  closeNoteMenu();
+  openEditNote(activeNoteMenuId);
+}
+function noteMenuDelete() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  deleteNote(id);
+}
+function noteMenuCopy() {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteMenuId);
+  if (!n) return;
+  closeNoteMenu();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(n.text).then(() => showToast('✓ Скопійовано'));
+  } else {
+    showToast('Копіювання недоступне');
+  }
+}
+function noteMenuMove() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  const folders = getFolders();
+  const current = n.folder || 'Загальне';
+  const folderList = folders.filter(f => f !== current);
+  if (folderList.length === 0) {
+    showToast('Немає інших папок');
+    return;
+  }
+  // Simple prompt for now
+  const newFolder = prompt(`Перемістити в папку:\n${folderList.join(', ')}\n\nПоточна: ${current}\nВведіть назву:`, current);
+  if (newFolder && newFolder.trim() && newFolder.trim() !== current) {
+    const idx = notes.findIndex(x => x.id === id);
+    if (idx !== -1) notes[idx].folder = newFolder.trim();
+    saveNotes(notes);
+    renderNotes();
+    showToast(`✓ Переміщено в "${newFolder.trim()}"`);
+  }
+}
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const lastTs = localStorage.getItem('nm_notes_folders_ts');
+  if (lastTs) {
+    const last = new Date(parseInt(lastTs));
+    if (last.toDateString() === new Date().toDateString()) return;
+  }
+  const notes = getNotes();
+  if (notes.length < 5) return;
+  await suggestNoteFolders();
+}
+
+async function suggestNoteFolders() {
+  const notes = getNotes();
+  if (notes.length === 0) return;
+  const sample = notes.slice(0, 40).map(n => `"${n.text.substring(0, 60)}"`).join('\n');
+  const systemPrompt = `Ти — організатор нотаток. Проаналізуй записи і запропонуй оптимальну структуру папок (3-6 папок). Відповідай ТІЛЬКИ JSON масивом: [{"folder":"Назва","description":"коротко що сюди входить"}]. Без markdown, без тексту поза JSON.`;
+  const reply = await callAI(systemPrompt, `Нотатки:\n${sample}`, {});
+  if (!reply) return;
+  try {
+    const clean = reply.replace(/```json|```/g, '').trim();
+    const folders = JSON.parse(clean);
+    pendingFolderSuggestion = folders;
+    localStorage.setItem('nm_notes_folders_ts', Date.now().toString());
+    const banner = document.getElementById('notes-ai-banner');
+    const textEl = document.getElementById('notes-ai-text');
+    if (banner && textEl) {
+      const names = folders.map(f => `📁 ${f.folder} — ${f.description}`).join('\n');
+      textEl.textContent = `Пропоную структуру:\n${names}`;
+      banner.style.display = 'block';
+    }
+  } catch { /* ігноруємо */ }
+}
+
+function applyFolderSuggestion() {
+  if (!pendingFolderSuggestion) return;
+  // Показуємо список папок — користувач сам перекладає нотатки
+  document.getElementById('notes-ai-banner').style.display = 'none';
+  showToast('✓ Папки збережено як орієнтир');
+  // Оновлюємо datalist для нових папок
+  updateFolderSuggestions();
+}
+
+// === TASKS ===
+let editingTaskId = null;
+let tempSteps = [];
+
+function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
+function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); }
+
+function openAddTask() {
+  editingTaskId = null;
+  tempSteps = [];
+  document.getElementById('task-modal-title').textContent = 'Нова задача';
+  document.getElementById('task-input-title').value = '';
+  document.getElementById('task-input-desc').value = '';
+  document.getElementById('task-step-input').value = '';
+  renderTempSteps();
+  document.getElementById('task-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('task-input-title').focus(), 100);
+}
+
+function openEditTask(id) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  editingTaskId = id;
+  tempSteps = [...(t.steps || [])];
+  document.getElementById('task-modal-title').textContent = 'Редагувати задачу';
+  document.getElementById('task-input-title').value = t.title;
+  document.getElementById('task-input-desc').value = t.desc || '';
+  document.getElementById('task-step-input').value = '';
+  renderTempSteps();
+  document.getElementById('task-modal').style.display = 'flex';
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').style.display = 'none';
+}
+
+function addTaskStep() {
+  const inp = document.getElementById('task-step-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  tempSteps.push({ id: Date.now(), text: val, done: false });
+  inp.value = '';
+  renderTempSteps();
+}
+
+function toggleTempStep(id) {
+  const s = tempSteps.find(x => x.id === id);
+  if (s) s.done = !s.done;
+  renderTempSteps();
+}
+
+function removeTempStep(id) {
+  tempSteps = tempSteps.filter(x => x.id !== id);
+  renderTempSteps();
+}
+
+function renderTempSteps() {
+  const el = document.getElementById('task-steps-list');
+  if (tempSteps.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = tempSteps.map(s => `
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(30,16,64,0.03);border-radius:8px;padding:8px 10px">
+      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:${s.done ? 'rgba(234,88,12,0.1)' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;color:#ea580c">${s.done ? '✓' : ''}</div>
+      <div style="flex:1;font-size:13px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+      <div onclick="removeTempStep(${s.id})" style="font-size:16px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
+    </div>
+  `).join('');
+}
+
+function saveTask() {
+  const title = document.getElementById('task-input-title').value.trim();
+  if (!title) { showToast('Введіть назву задачі'); return; }
+  const desc = document.getElementById('task-input-desc').value.trim();
+  const tasks = getTasks();
+
+  if (editingTaskId) {
+    const idx = tasks.findIndex(x => x.id === editingTaskId);
+    if (idx !== -1) {
+      tasks[idx] = { ...tasks[idx], title, desc, steps: tempSteps, updatedAt: Date.now() };
+    }
+  } else {
+    tasks.unshift({ id: Date.now(), title, desc, steps: tempSteps, status: 'active', createdAt: Date.now() });
+  }
+
+  saveTasks(tasks);
+  closeTaskModal();
+  renderTasks();
+  showToast(editingTaskId ? '✓ Задачу оновлено' : '✓ Задачу додано');
+
+  // Тихий AI коментар для нової задачі
+  if (!editingTaskId) askAIAboutTask(title, desc, tempSteps);
+}
+
+function toggleTaskStep(taskId, stepId) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === taskId);
+  if (!t) return;
+  const s = (t.steps || []).find(x => x.id === stepId);
+  if (s) s.done = !s.done;
+
+  // Перевіряємо чи всі кроки виконані
+  const allDone = t.steps.length > 0 && t.steps.every(x => x.done);
+  if (allDone) t.status = 'done';
+
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function deleteTask(id) {
+  if (!confirm('Видалити задачу?')) return;
+  saveTasks(getTasks().filter(x => x.id !== id));
+  renderTasks();
+  showToast('🗑️ Видалено');
+}
+
+function toggleTaskStatus(id) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  t.status = t.status === 'done' ? 'active' : 'done';
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function renderTasks() {
+  const tasks = getTasks();
+  const list = document.getElementById('tasks-list');
+  const empty = document.getElementById('tasks-empty');
+
+  if (tasks.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const active = tasks.filter(t => t.status !== 'done');
+  const done = tasks.filter(t => t.status === 'done');
+  const sorted = [...active, ...done];
+
+  list.innerHTML = sorted.map(t => {
+    const steps = t.steps || [];
+    const doneCount = steps.filter(s => s.done).length;
+    const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
+    const isDone = t.status === 'done';
+
+    return `<div style="margin:0 14px 10px;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.6' : '1'}">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
+        <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:${isDone ? 'rgba(234,88,12,0.12)' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:11px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
+          ${t.desc ? `<div style="font-size:12px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <div onclick="openEditTask(${t.id})" style="font-size:14px;cursor:pointer;opacity:0.3;padding:2px">✎</div>
+          <div onclick="deleteTask(${t.id})" style="font-size:14px;cursor:pointer;opacity:0.3;padding:2px">×</div>
+        </div>
+      </div>
+      ${steps.length > 0 ? `
+        <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          ${steps.map(s => `
+            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:${s.done ? 'rgba(234,88,12,0.1)' : 'white'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#ea580c">${s.done ? '✓' : ''}</div>
+              <div style="font-size:12px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function askAIAboutTask(title, desc, steps) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — жорсткий але справедливий особистий тренер. Користувач щойно додав задачу. Дай коротку (1-2 речення) чесну оцінку або пораду. Без підлабузництва. Якщо задача розпливчаста — скажи. Якщо схожа на щось що людина вже давно відкладає — тисни на це. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const steps_text = steps.length ? `\nКроки: ${steps.map(s => s.text).join(', ')}` : '';
+  const reply = await callAI(systemPrompt, `Задача: ${title}${desc ? '\nОпис: ' + desc : ''}${steps_text}`, {});
+  if (!reply) return;
+  const commentEl = document.getElementById('tasks-ai-comment');
+  if (commentEl) {
+    commentEl.textContent = '✦ ' + reply;
+    commentEl.style.display = 'block';
+  }
+}
+
+// Відкриваємо задачі при переключенні вкладки — через хук в renderTasks
+
+// === ME TAB ===
+function renderMe() {
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
+
+  // Stats
+  document.getElementById('me-stat-inbox').textContent = inbox.length;
+  document.getElementById('me-stat-tasks').textContent = tasks.filter(t => t.status !== 'done').length;
+  document.getElementById('me-stat-notes').textContent = notes.length;
+
+  // Week grid — активність по дням (inbox записи)
+  const weekEl = document.getElementById('me-week-grid');
+  const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  const now = new Date();
+  const todayDow = (now.getDay() + 6) % 7; // 0=Пн
+  weekEl.innerHTML = days.map((d, i) => {
+    const daysAgo = todayDow - i;
+    const date = new Date(now);
+    date.setDate(now.getDate() - daysAgo);
+    const dateStr = date.toDateString();
+    const count = inbox.filter(item => new Date(item.ts).toDateString() === dateStr).length;
+    const future = daysAgo < 0;
+    let bg = 'rgba(30,16,64,0.05)', color = 'rgba(30,16,64,0.2)';
+    if (!future && count > 0) { bg = count >= 5 ? '#16a34a' : count >= 2 ? 'rgba(22,163,74,0.4)' : 'rgba(22,163,74,0.2)'; color = count >= 5 ? 'white' : '#16a34a'; }
+    const isToday = daysAgo === 0;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35)">${d}</div>
+      <div style="width:32px;height:32px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${color};${isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.4)' : ''}">${future ? '–' : count || '·'}</div>
+    </div>`;
+  }).join('');
+
+  // Categories breakdown
+  const catEl = document.getElementById('me-categories');
+  const catCount = {};
+  inbox.forEach(i => { catCount[i.category] = (catCount[i.category] || 0) + 1; });
+  const total = inbox.length || 1;
+  const catColors = { note:'#6366f1', idea:'#f59e0b', task:'#ea580c', habit:'#16a34a', event:'#0ea5e9' };
+  const catLabels = { note:'Нотатки', idea:'Ідеї', task:'Задачі', habit:'Звички', event:'Події' };
+  catEl.innerHTML = Object.entries(catCount).sort((a,b) => b[1]-a[1]).map(([cat, cnt]) => {
+    const pct = Math.round(cnt / total * 100);
+    const color = catColors[cat] || '#888';
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5);width:52px">${catLabels[cat]||cat}</div>
+      <div style="flex:1;height:6px;background:rgba(0,0,0,0.05);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.6s ease"></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);width:28px;text-align:right">${cnt}</div>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:rgba(30,16,64,0.3)">Немає даних</div>';
+
+  // Activity last 14 days
+  const actEl = document.getElementById('me-activity');
+  const days14 = Array.from({length:14}, (_,i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (13 - i));
+    return d.toDateString();
+  });
+  const maxAct = Math.max(1, ...days14.map(ds => inbox.filter(i => new Date(i.ts).toDateString() === ds).length));
+  actEl.innerHTML = days14.map((ds, i) => {
+    const cnt = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
+    const h = Math.max(4, Math.round(cnt / maxAct * 44));
+    const isToday = i === 13;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px">
+      <div style="width:100%;height:${h}px;background:${isToday ? '#16a34a' : 'rgba(22,163,74,0.3)'};border-radius:3px;transition:height 0.5s ease"></div>
+    </div>`;
+  }).join('');
+}
+
+async function refreshMeAnalysis() {
+  const btn = document.getElementById('me-refresh-btn');
+  const el = document.getElementById('me-ai-analysis');
+  btn.textContent = '…';
+  btn.disabled = true;
+  el.textContent = '…';
+
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
+  const aiContext = getAIContext();
+
+  const systemPrompt = `Ти — жорсткий але справедливий особистий аналітик. Проаналізуй дані користувача і дай чесний короткий аналіз (3-5 речень). Без підлабузництва. Говори конкретно: що добре, що погано, що треба змінити. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  const userData = `Записів в Inbox: ${inbox.length}
+Активних задач: ${tasks.filter(t=>t.status!=='done').length}
+Виконаних задач: ${tasks.filter(t=>t.status==='done').length}
+Нотаток: ${notes.length}
+Останні 10 записів: ${inbox.slice(0,10).map(i=>`[${i.category}] ${i.text}`).join('; ')}`;
+
+  const reply = await callAI(systemPrompt, userData, {});
+  el.textContent = reply || 'Не вдалось отримати аналіз. Спробуй ще раз.';
+  btn.textContent = '↻';
+  btn.disabled = false;
+}
+
+// === EVENING TAB ===
+let currentMomentMood = 'positive';
+let dialogHistory = [];
+let dialogLoading = false;
+
+function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
+function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); }
+
+function renderEvening() {
+  const moments = getMoments();
+  const today = new Date().toDateString();
+  const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === today);
+
+  // Score — based on today's positive vs negative moments
+  const pos = todayMoments.filter(m => m.mood === 'positive').length;
+  const neg = todayMoments.filter(m => m.mood === 'negative').length;
+  const total = todayMoments.length;
+  const score = total > 0 ? Math.round((pos / total) * 100) : 0;
+
+  const arc = document.getElementById('evening-ring-arc');
+  const pctEl = document.getElementById('evening-ring-pct');
+  const descEl = document.getElementById('evening-score-desc');
+
+  if (arc) {
+    const offset = 157 - (157 * score / 100);
+    setTimeout(() => { arc.style.strokeDashoffset = offset; }, 100);
+    pctEl.textContent = score + '%';
+    descEl.textContent = total === 0 ? 'Додай моменти дня' :
+      score >= 70 ? 'Гарний день 💪' : score >= 40 ? 'Середній день' : 'Важкий день';
+  }
+
+  // Moments list
+  const momEl = document.getElementById('evening-moments');
+  if (todayMoments.length === 0) {
+    momEl.innerHTML = '<div style="font-size:12px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>';
+  } else {
+    const moodColors = { positive:'#16a34a', neutral:'#d97706', negative:'#ef4444' };
+    momEl.innerHTML = todayMoments.map(m => `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
+        <div style="width:8px;height:8px;border-radius:50%;background:${moodColors[m.mood]||'#888'};margin-top:5px;flex-shrink:0"></div>
+        <div style="flex:1;font-size:13px;color:#1e1040;line-height:1.5">${escapeHtml(m.text)}</div>
+        <div onclick="deleteMoment(${m.id})" style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>
+      </div>
+    `).join('');
+  }
+}
+
+function openAddMoment() {
+  currentMomentMood = 'positive';
+  document.getElementById('moment-input-text').value = '';
+  updateMoodButtons();
+  document.getElementById('moment-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('moment-input-text').focus(), 100);
+}
+
+function closeMomentModal() {
+  document.getElementById('moment-modal').style.display = 'none';
+}
+
+function setMomentMood(mood) {
+  currentMomentMood = mood;
+  updateMoodButtons();
+}
+
+function updateMoodButtons() {
+  ['positive','neutral','negative'].forEach(m => {
+    const btn = document.getElementById('mood-' + m);
+    if (!btn) return;
+    btn.style.opacity = currentMomentMood === m ? '1' : '0.4';
+    btn.style.transform = currentMomentMood === m ? 'scale(1.04)' : 'scale(1)';
+  });
+}
+
+function saveMoment() {
+  const text = document.getElementById('moment-input-text').value.trim();
+  if (!text) { showToast('Введіть текст моменту'); return; }
+  const moments = getMoments();
+  moments.push({ id: Date.now(), text, mood: currentMomentMood, ts: Date.now() });
+  saveMoments(moments);
+  closeMomentModal();
+  renderEvening();
+  showToast('✓ Момент збережено');
+}
+
+function deleteMoment(id) {
+  saveMoments(getMoments().filter(m => m.id !== id));
+  renderEvening();
+}
+
+async function generateEveningSummary() {
+  const btn = document.getElementById('evening-summary-btn');
+  const el = document.getElementById('evening-summary');
+  btn.textContent = '…';
+  btn.disabled = true;
+  el.textContent = '…';
+
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const aiContext = getAIContext();
+
+  const systemPrompt = `Ти — жорсткий але справедливий особистий агент. Зроби короткий підсумок дня (3-4 речення). Без підлабузництва — якщо день був поганий, скажи це. Якщо є патерни що повторюються — тисни на них. Скажи конкретно що зробити завтра. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
+Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
+
+  const reply = await callAI(systemPrompt, dayData, {});
+  el.textContent = reply || 'Не вдалось отримати підсумок.';
+  btn.textContent = '↻';
+  btn.disabled = false;
+}
+
+// Evening dialog
+function openEveningDialog() {
+  dialogHistory = [];
+  document.getElementById('evening-dialog').style.display = 'flex';
+  document.getElementById('dialog-messages').innerHTML = '';
+  document.getElementById('dialog-input').value = '';
+
+  // Перше повідомлення від агента
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const name = settings.name ? `, ${settings.name}` : '';
+  addDialogMessage('agent', `Привіт${name}. Розкажи як пройшов день — що вийшло, що ні. Без прикрас.`);
+}
+
+function closeEveningDialog() {
+  document.getElementById('evening-dialog').style.display = 'none';
+}
+
+function addDialogMessage(role, text) {
+  const el = document.getElementById('dialog-messages');
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:80%;background:${isAgent ? 'rgba(237,233,255,0.9)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};padding:10px 13px;font-size:13px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  dialogHistory.push({ role: isAgent ? 'assistant' : 'user', content: text });
+}
+
+async function sendDialogMessage() {
+  if (dialogLoading) return;
+  const input = document.getElementById('dialog-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  addDialogMessage('user', text);
+  dialogLoading = true;
+
+  const aiContext = getAIContext();
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const systemPrompt = `Ти — жорсткий але справедливий особистий агент для вечірнього діалогу. Говориш чесно, без підлабузництва. Короткі відповіді (1-3 речення). Якщо бачиш патерн — говори прямо. Мотивуєш дією, не словами. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
+Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
+
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addDialogMessage('agent', 'Введи OpenAI ключ в налаштуваннях.'); dialogLoading = false; return; }
+
+  // Відправляємо всю історію
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...dialogHistory.slice(-10) // останні 10 повідомлень
+  ];
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 200, temperature: 0.8 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) addDialogMessage('agent', reply);
+    else addDialogMessage('agent', 'Щось пішло не так. Спробуй ще раз.');
+  } catch {
+    addDialogMessage('agent', 'Мережева помилка.');
+  }
+  dialogLoading = false;
+}
+
+// === ONBOARDING ===
+function checkOnboarding() {
+  const done = localStorage.getItem('nm_onboarding_done');
+  if (!done) {
+    document.getElementById('onboarding').style.display = 'block';
+    return true;
+  }
+  return false;
+}
+
+function obNext(step) {
+  if (step === 1) {
+    const name = document.getElementById('ob-name').value.trim();
+    const age = document.getElementById('ob-age').value.trim();
+    if (!name) { showToast('Введи ім\'я'); return; }
+    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    settings.name = name;
+    if (age) settings.age = age;
+    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    document.getElementById('ob-step-1').style.display = 'none';
+    document.getElementById('ob-step-2').style.display = 'block';
+  } else if (step === 2) {
+    const key = document.getElementById('ob-key').value.trim();
+    if (key) localStorage.setItem('nm_gemini_key', key);
+    obShowWelcome();
+  }
+}
+
+function obSkipKey() {
+  obShowWelcome();
+}
+
+function obShowWelcome() {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  document.getElementById('ob-welcome-text').textContent = `Привіт, ${settings.name || 'друже'}! 👋`;
+  document.getElementById('ob-step-2').style.display = 'none';
+  document.getElementById('ob-step-3').style.display = 'block';
+}
+
+function obFinish() {
+  localStorage.setItem('nm_onboarding_done', '1');
+  const ob = document.getElementById('onboarding');
+  ob.style.opacity = '0';
+  ob.style.transition = 'opacity 0.4s ease';
+  setTimeout(() => { ob.style.display = 'none'; }, 400);
+  updateKeyStatus(!!localStorage.getItem('nm_gemini_key'));
+}
+
+// === HABITS ===
+let editingHabitId = null;
+
+function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
+function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
+function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
+function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
+
+function openAddHabit() {
+  editingHabitId = null;
+  document.getElementById('habit-modal-title').textContent = 'Нова звичка';
+  document.getElementById('habit-input-name').value = '';
+  document.getElementById('habit-input-emoji').value = '';
+  document.querySelectorAll('.habit-day-btn').forEach((b, i) => {
+    b.classList.toggle('active', i < 5);
+  });
+  document.getElementById('habit-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('habit-input-name').focus(), 100);
+}
+
+function openEditHabit(id) {
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  if (!h) return;
+  editingHabitId = id;
+  document.getElementById('habit-modal-title').textContent = 'Редагувати звичку';
+  document.getElementById('habit-input-name').value = h.name;
+  document.getElementById('habit-input-emoji').value = h.emoji || '';
+  document.querySelectorAll('.habit-day-btn').forEach(b => {
+    b.classList.toggle('active', (h.days || [0,1,2,3,4]).includes(parseInt(b.dataset.day)));
+  });
+  document.getElementById('habit-modal').style.display = 'flex';
+}
+
+function closeHabitModal() {
+  document.getElementById('habit-modal').style.display = 'none';
+}
+
+// Toggle day button
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('habit-day-btn')) {
+    e.target.classList.toggle('active');
+  }
+});
+
+function saveHabit() {
+  const name = document.getElementById('habit-input-name').value.trim();
+  if (!name) { showToast('Введи назву звички'); return; }
+  const emoji = document.getElementById('habit-input-emoji').value.trim() || '⭕';
+  const days = [...document.querySelectorAll('.habit-day-btn.active')].map(b => parseInt(b.dataset.day));
+  const habits = getHabits();
+
+  if (editingHabitId) {
+    const idx = habits.findIndex(x => x.id === editingHabitId);
+    if (idx !== -1) habits[idx] = { ...habits[idx], name, emoji, days };
+  } else {
+    habits.push({ id: Date.now(), name, emoji, days, createdAt: Date.now() });
+  }
+  saveHabits(habits);
+  closeHabitModal();
+  renderHabits();
+  showToast(editingHabitId ? '✓ Звичку оновлено' : '✓ Звичку додано');
+}
+
+function deleteHabit(id) {
+  if (!confirm('Видалити звичку?')) return;
+  saveHabits(getHabits().filter(h => h.id !== id));
+  renderHabits();
+}
+
+function toggleHabitToday(id) {
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  log[today][id] = !log[today][id];
+  saveHabitLog(log);
+  renderHabits();
+}
+
+function getHabitStreak(id) {
+  const log = getHabitLog();
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  if (!h) return 0;
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 60; i++) {
+    const ds = d.toDateString();
+    const dow = (d.getDay() + 6) % 7;
+    if ((h.days || [0,1,2,3,4]).includes(dow)) {
+      if (log[ds]?.[id]) streak++;
+      else if (i > 0) break;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function getHabitPct(id, days30) {
+  const log = getHabitLog();
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  if (!h) return 0;
+  let done = 0, total = 0;
+  const d = new Date();
+  for (let i = 0; i < 30; i++) {
+    const ds = d.toDateString();
+    const dow = (d.getDay() + 6) % 7;
+    if ((h.days || [0,1,2,3,4]).includes(dow)) {
+      total++;
+      if (log[ds]?.[id]) done++;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return total > 0 ? Math.round(done / total * 100) : 0;
+}
+
+function renderHabits() {
+  const habits = getHabits();
+  const el = document.getElementById('habits-list');
+  if (!el) return;
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+
+  if (habits.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:13px">Додай першу звичку</div>';
+    return;
+  }
+
+  el.innerHTML = habits.map(h => {
+    const isDoneToday = !!log[today]?.[h.id];
+    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    const streak = getHabitStreak(h.id);
+    const pct = getHabitPct(h.id);
+    const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
+        <div onclick="${isScheduledToday ? `toggleHabitToday(${h.id})` : ''}"
+          style="width:36px;height:36px;border-radius:50%;border:2px solid ${isDoneToday ? '#16a34a' : isScheduledToday ? 'rgba(22,163,74,0.3)' : 'rgba(30,16,64,0.1)'};
+          background:${isDoneToday ? '#16a34a' : 'transparent'};
+          display:flex;align-items:center;justify-content:center;font-size:16px;
+          cursor:${isScheduledToday ? 'pointer' : 'default'};flex-shrink:0;transition:all 0.2s">
+          ${isDoneToday ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : `<span style="opacity:${isScheduledToday ? '1' : '0.3'}">${h.emoji || '⭕'}</span>`}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+            <span style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(h.name)}</span>
+            ${streak >= 2 ? `<span style="font-size:10px;font-weight:700;color:#f59e0b">🔥${streak}</span>` : ''}
+          </div>
+          <div style="height:4px;background:rgba(30,16,64,0.06);border-radius:3px;overflow:hidden;margin-bottom:3px">
+            <div style="height:100%;width:${pct}%;background:#16a34a;border-radius:3px;transition:width 0.5s ease"></div>
+          </div>
+          <div style="font-size:10px;color:rgba(30,16,64,0.3)">${pct}% за 30 днів · ${dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ')}</div>
+        </div>
+        <div onclick="openEditHabit(${h.id})" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// === KEYBOARD AVOIDING ===
+function setupKeyboardAvoiding() {
+  if (!window.visualViewport) return;
+  window.visualViewport.addEventListener('resize', () => {
+    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+    const aiBar = document.getElementById('inbox-ai-bar');
+    const tabBar = document.getElementById('tab-bar');
+    if (keyboardHeight > 100) {
+      // Keyboard is open
+      if (aiBar) aiBar.style.bottom = (keyboardHeight + 8) + 'px';
+      if (tabBar) tabBar.style.transform = `translateY(${keyboardHeight}px)`;
+    } else {
+      if (aiBar) aiBar.style.bottom = '88px';
+      if (tabBar) tabBar.style.transform = 'translateY(0)';
+    }
+  });
+}
+
+// === PAGE TRANSITIONS ===
+let currentTabForAnim = 'inbox';
+function animateTabSwitch(newTab) {
+  const pages = document.querySelectorAll('.page');
+  const oldPage = document.getElementById(`page-${currentTabForAnim}`);
+  const newPage = document.getElementById(`page-${newTab}`);
+  if (!oldPage || !newPage || oldPage === newPage) return;
+  oldPage.classList.add('page-exit');
+  newPage.classList.add('page-enter');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      newPage.classList.remove('page-enter');
+    });
+  });
+  setTimeout(() => { oldPage.classList.remove('page-exit'); }, 230);
+  currentTabForAnim = newTab;
+}
+
+// === INIT ===
+function init() {
+  setupPWA();
+  setupSW();
+  setupKeyboardAvoiding();
+  applyTheme('inbox');
+  updateKeyStatus(!!localStorage.getItem('nm_gemini_key'));
+  renderInbox();
+  updateAiBarVisibility();
+  // Авто-оновлення пам'яті раз на день
+  setTimeout(autoRefreshMemory, 3000);
+}
+
+// === SPLASH → APP ===
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    document.getElementById('app').classList.add('visible');
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      checkOnboarding();
+    }, 600);
+  }, 1500);
+});
+</script>
+
+</body>
+</html>
