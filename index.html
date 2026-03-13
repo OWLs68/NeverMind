@@ -386,13 +386,13 @@ body {
   background: linear-gradient(160deg, #faf9ff, #f5f2ff);
   border-radius: 24px 24px 0 0;
   padding: 12px 20px 40px;
-  transform: translateY(100%);
-  transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+  margin-bottom: -100%;
+  transition: margin-bottom 0.4s cubic-bezier(0.32,0.72,0,1);
   max-height: 85vh;
   overflow-y: auto;
 }
 #settings-overlay.open .settings-panel {
-  transform: translateY(0);
+  margin-bottom: 0;
 }
 .settings-handle {
   width: 36px; height: 4px;
@@ -961,7 +961,7 @@ body {
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
       </div>
-      <div id="tasks-ai-comment" style="display:none;margin:8px 16px 0;background:rgba(255,255,255,0.7);border:1px solid rgba(234,88,12,0.15);border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5;color:#9a3412;font-weight:500"></div>
+      <div id="tasks-ai-comment" style="display:none;margin:8px 16px 0;background:rgba(255,255,255,0.7);border:1px solid rgba(234,88,12,0.15);border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.6;color:#3d2060;font-weight:500"></div>
       <div id="tasks-list" style="padding:8px 0 120px"></div>
       <div id="tasks-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
         <div style="font-size:40px;margin-bottom:12px;opacity:0.3">▣</div>
@@ -1074,7 +1074,13 @@ body {
             <div style="font-size:10px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">✦ Аналіз агента</div>
             <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:11px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
           </div>
-          <div id="me-ai-analysis" style="font-size:13px;line-height:1.6;color:#14532d;font-weight:500">Накопич більше даних — і агент дасть чесний аналіз.</div>
+          <div id="me-ai-analysis" style="font-size:15px;line-height:1.7;color:#14532d;font-weight:500">Накопич більше даних — і агент дасть чесний аналіз.</div>
+        </div>
+
+        <!-- AI Поради -->
+        <div id="me-advice-block" style="display:none;margin:0 14px 10px;background:rgba(255,248,240,0.9);border:1px solid rgba(234,88,12,0.15);border-radius:16px;padding:14px">
+          <div style="font-size:10px;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">💡 3 конкретні поради</div>
+          <div id="me-ai-advice" style="font-size:14px;line-height:1.7;color:#7c2d12;font-weight:500"></div>
         </div>
 
       </div>
@@ -1122,7 +1128,7 @@ body {
           <div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">✦ ШІ на вечір</div>
           <button onclick="generateEveningSummary()" id="evening-summary-btn" style="font-size:11px;font-weight:700;color:#7c3aed;background:none;border:none;cursor:pointer">↻</button>
         </div>
-        <div id="evening-summary" style="font-size:13px;line-height:1.6;color:#4c1d95;font-weight:500">Натисни ↻ щоб отримати підсумок дня від агента.</div>
+        <div id="evening-summary" style="font-size:15px;line-height:1.7;color:#4c1d95;font-weight:500">Натисни ↻ щоб отримати підсумок дня від агента.</div>
       </div>
 
       <!-- Dialog button -->
@@ -1279,16 +1285,16 @@ body {
 
 <!-- TASK MODAL -->
 <div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
-  <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="task-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
-    <input id="task-input-title" type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…">
-    <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Опис або мета (необов'язково)…"></textarea>
+    <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…" ontouchend="this.focus()">
+    <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Опис або мета (необов'язково)…" ontouchend="this.focus()"></textarea>
     <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
     <div id="task-steps-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…">
+      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()">
       <button onclick="addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;color:#ea580c;cursor:pointer">+</button>
     </div>
     <div style="display:flex;gap:8px">
@@ -1336,7 +1342,7 @@ body {
         <button onclick="refreshMemory()" id="memory-refresh-btn" style="font-size:11px;font-weight:700;color:var(--active-accent);background:none;border:none;cursor:pointer;padding:4px 0">↻ Оновити</button>
       </div>
       <div id="memory-last-updated" style="font-size:11px;color:rgba(30,16,64,0.35);margin-bottom:6px"></div>
-      <textarea class="settings-input" id="input-memory" placeholder="Агент ще не сформував уявлення про вас. Напишіть кілька записів в Inbox — і він навчиться." rows="6" style="resize:none;font-family:inherit;font-size:12px;line-height:1.6"></textarea>
+      <textarea class="settings-input" id="input-memory" placeholder="Агент ще не сформував уявлення про тебе. Напиши кілька записів в Inbox — і він навчиться." rows="6" style="resize:none;font-family:inherit;font-size:12px;line-height:1.6"></textarea>
       <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:5px">Агент читає цей текст при кожному запиті. Можна редагувати вручну.</div>
     </div>
 
@@ -1584,12 +1590,15 @@ async function refreshMemory() {
 async function doRefreshMemory(showResult) {
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
   const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
   const profile = getProfile();
 
   const recentInbox = inbox.slice(-50).map(i => `[${i.category}] ${i.text}`).join('\n');
   const tasksList = tasks.map(t => `${t.title} (${t.status})`).join('\n');
+  // Передаємо нотатки — помічаємо оновлені
+  const notesList = notes.slice(-20).map(n => `[${n.folder||'Загальне'}]${n.updatedAt ? ' (оновлено)' : ''} ${n.text.substring(0,80)}`).join('\n');
 
-  const systemPrompt = `Ти — аналітик особистості. Твоє завдання: на основі записів користувача сформувати стислий профіль — що це за людина, які в неї патерни поведінки, звички, цілі, слабкі місця. Без прикрас, без підлабузництва. Чесно і конкретно. Відповідай ТІЛЬКИ текстом профілю, без вступів і пояснень. Максимум 300 слів.`;
+  const systemPrompt = `Ти — персональний агент NeverMind. Сформуй короткий профіль людини на основі її записів. ОБОВЯЗКОВО звертайся до неї на "ти" в тексті профілю (наприклад: "ти схильний до...", "твої цілі...", "ти активний..."). Визнач патерни поведінки, звички, цілі. Чесно але з повагою — без зайвого негативу. Відповідай ТІЛЬКИ текстом профілю, без вступів. Максимум 300 слів.`;
 
   const userMsg = `Профіль користувача: ${profile || 'не заповнено'}
 
@@ -1598,6 +1607,9 @@ ${recentInbox || 'порожньо'}
 
 Активні задачі:
 ${tasksList || 'немає'}
+
+Нотатки:
+${notesList || 'немає'}
 
 Сформуй актуальний профіль користувача.`;
 
@@ -1927,6 +1939,12 @@ async function sendToAI() {
         items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
         saveInbox(items);
         renderInbox();
+        // Дублюємо задачі у вкладку Задачі
+        if (cat === 'task') {
+          const tasks = getTasks();
+          tasks.unshift({ id: Date.now(), title: savedText, desc: '', steps: [], status: 'active', createdAt: Date.now() });
+          saveTasks(tasks);
+        }
         // Дублюємо нотатки та ідеї в Нотатки з правильною папкою
         if (cat === 'note' || cat === 'idea') {
           addNoteFromInbox(savedText, cat, folder);
@@ -1983,7 +2001,7 @@ function openAddNote() {
   document.getElementById('note-input-folder').value = '';
   updateFolderSuggestions();
   document.getElementById('note-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('note-input-text').focus(), 100);
+  setTimeout(() => { const el = document.getElementById('note-input-text'); el.removeAttribute('readonly'); el.focus(); }, 350);
 }
 
 function openEditNote(id) {
@@ -2100,7 +2118,7 @@ function renderNotes(searchQuery = '') {
                   ontouchmove="noteSwipeMove(event,${n.id})"
                   ontouchend="noteSwipeEnd(event,${n.id})"
                   style="position:relative;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 13px;">
-                  <div onclick="openEditNote(${n.id})" style="cursor:pointer">
+                  <div onclick="openNoteView(${n.id})" style="cursor:pointer">
                     <div style="font-size:13px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
                       <div style="font-size:10px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
@@ -2291,7 +2309,7 @@ function openAddTask() {
   document.getElementById('task-step-input').value = '';
   renderTempSteps();
   document.getElementById('task-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('task-input-title').focus(), 100);
+  setTimeout(() => { const el = document.getElementById('task-input-title'); el.removeAttribute('readonly'); el.focus(); }, 350);
 }
 
 function openEditTask(id) {
@@ -2337,7 +2355,7 @@ function renderTempSteps() {
   if (tempSteps.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = tempSteps.map(s => `
     <div style="display:flex;align-items:center;gap:8px;background:rgba(30,16,64,0.03);border-radius:8px;padding:8px 10px">
-      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:${s.done ? 'rgba(234,88,12,0.1)' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;color:#ea580c">${s.done ? '✓' : ''}</div>
+      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;color:#ea580c">${s.done ? '✓' : ''}</div>
       <div style="flex:1;font-size:13px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
       <div onclick="removeTempStep(${s.id})" style="font-size:16px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
     </div>
@@ -2423,8 +2441,8 @@ function renderTasks() {
 
     return `<div style="margin:0 14px 10px;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.6' : '1'}">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:${isDone ? 'rgba(234,88,12,0.12)' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:11px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
-        <div style="flex:1">
+        <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:11px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div style="flex:1;cursor:pointer" onclick="openTaskChat(${t.id})" title="Обговорити з ШІ">
           <div style="font-size:14px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:12px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
         </div>
@@ -2440,7 +2458,7 @@ function renderTasks() {
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
             <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:${s.done ? 'rgba(234,88,12,0.1)' : 'white'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#ea580c">${s.done ? '✓' : ''}</div>
+              <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="font-size:12px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
           `).join('')}
@@ -2455,7 +2473,7 @@ async function askAIAboutTask(title, desc, steps) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — жорсткий але справедливий особистий тренер. Користувач щойно додав задачу. Дай коротку (1-2 речення) чесну оцінку або пораду. Без підлабузництва. Якщо задача розпливчаста — скажи. Якщо схожа на щось що людина вже давно відкладає — тисни на це. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `Ти — мотивуючий особистий коуч в NeverMind. Користувач щойно додав задачу. Дай коротку (1-2 речення) підтримуючу пораду. Звертайся на "ти". Фокус на тому ЯК досягти мети, а не на ризиках чи проблемах. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const steps_text = steps.length ? `\nКроки: ${steps.map(s => s.text).join(', ')}` : '';
   const reply = await callAI(systemPrompt, `Задача: ${title}${desc ? '\nОпис: ' + desc : ''}${steps_text}`, {});
   if (!reply) return;
@@ -2548,8 +2566,17 @@ async function refreshMeAnalysis() {
   const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
   const notes = getNotes();
   const aiContext = getAIContext();
+  const totalRecords = inbox.length + tasks.length + notes.length;
 
-  const systemPrompt = `Ти — жорсткий але справедливий особистий аналітик. Проаналізуй дані користувача і дай чесний короткий аналіз (3-5 речень). Без підлабузництва. Говори конкретно: що добре, що погано, що треба змінити. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  if (totalRecords < 3) {
+    el.textContent = 'Ще замало даних для аналізу. Додай кілька записів в Inbox, створи задачі або нотатки — і я дам тобі корисний аналіз.';
+    btn.textContent = '↻';
+    btn.disabled = false;
+    return;
+  }
+
+  const dataNote = totalRecords < 10 ? 'УВАГА: даних мало, не роби глибоких висновків про особистість — просто опиши що бачиш і запропонуй що додати.' : '';
+  const systemPrompt = `Ти — особистий аналітик і коуч в NeverMind. Проаналізуй дані та дай короткий аналіз (3-5 речень). Звертайся на "ти". Починай з позитивного — що вдається добре. Потім конкретно що можна покращити. ${dataNote} Завершуй конкретною мотивуючою порадою. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   const userData = `Записів в Inbox: ${inbox.length}
 Активних задач: ${tasks.filter(t=>t.status!=='done').length}
@@ -2561,6 +2588,25 @@ async function refreshMeAnalysis() {
   el.textContent = reply || 'Не вдалось отримати аналіз. Спробуй ще раз.';
   btn.textContent = '↻';
   btn.disabled = false;
+
+  // Генеруємо 3 поради окремим запитом
+  if (reply && totalRecords >= 5) {
+    const adviceEl = document.getElementById('me-ai-advice');
+    const adviceBlock = document.getElementById('me-advice-block');
+    if (adviceEl && adviceBlock) {
+      adviceEl.textContent = '…';
+      adviceBlock.style.display = 'block';
+      const advicePrompt = `Ти — особистий коуч в NeverMind. На основі аналізу дай рівно 3 конкретні, практичні поради для цієї людини. Кожна порада — одне речення, максимально конкретна і дієва. Формат відповіді: "1. [порада]\n2. [порада]\n3. [порада]". Звертайся на "ти". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+      const adviceReply = await callAI(advicePrompt, `Аналіз: ${reply}
+
+Дані: ${userData}`, {});
+      if (adviceReply) {
+        adviceEl.innerHTML = adviceReply.split('\n').filter(l => l.trim()).map(l => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join('');
+      } else {
+        adviceBlock.style.display = 'none';
+      }
+    }
+  }
 }
 
 // === EVENING TAB ===
@@ -2575,6 +2621,15 @@ function renderEvening() {
   const moments = getMoments();
   const today = new Date().toDateString();
   const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === today);
+
+  // Відновлюємо збережений підсумок
+  try {
+    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if (saved && saved.date === today && saved.text) {
+      const el = document.getElementById('evening-summary');
+      if (el && el.textContent.includes('Натисни')) el.textContent = saved.text;
+    }
+  } catch(e) {}
 
   // Score — based on today's positive vs negative moments
   const pos = todayMoments.filter(m => m.mood === 'positive').length;
@@ -2615,7 +2670,7 @@ function openAddMoment() {
   document.getElementById('moment-input-text').value = '';
   updateMoodButtons();
   document.getElementById('moment-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('moment-input-text').focus(), 100);
+  setTimeout(() => { const el = document.getElementById('moment-input-text'); el.removeAttribute('readonly'); el.focus(); }, 350);
 }
 
 function closeMomentModal() {
@@ -2664,13 +2719,16 @@ async function generateEveningSummary() {
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
   const aiContext = getAIContext();
 
-  const systemPrompt = `Ти — жорсткий але справедливий особистий агент. Зроби короткий підсумок дня (3-4 речення). Без підлабузництва — якщо день був поганий, скажи це. Якщо є патерни що повторюються — тисни на них. Скажи конкретно що зробити завтра. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `Ти — особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно але по-доброму. Завершуй конкретною порадою або мотивуючою думкою на завтра. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
 Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
 
   const reply = await callAI(systemPrompt, dayData, {});
-  el.textContent = reply || 'Не вдалось отримати підсумок.';
+  const text = reply || 'Не вдалось отримати підсумок.';
+  el.textContent = text;
+  // Зберігаємо підсумок в localStorage — відновиться після перезапуску
+  localStorage.setItem('nm_evening_summary', JSON.stringify({ text, date: today }));
   btn.textContent = '↻';
   btn.disabled = false;
 }
@@ -2716,7 +2774,7 @@ async function sendDialogMessage() {
   const aiContext = getAIContext();
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const systemPrompt = `Ти — жорсткий але справедливий особистий агент для вечірнього діалогу. Говориш чесно, без підлабузництва. Короткі відповіді (1-3 речення). Якщо бачиш патерн — говори прямо. Мотивуєш дією, не словами. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
+  const systemPrompt = `Ти — особистий агент NeverMind у вечірньому діалозі. Звертаєшся на "ти". Говориш тепло і чесно. Короткі відповіді (1-3 речення). Мотивуєш конкретними кроками. Підтримуєш і надихаєш. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
 Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
 
   const key = localStorage.getItem('nm_gemini_key');
@@ -2809,7 +2867,7 @@ function openAddHabit() {
     b.classList.toggle('active', i < 5);
   });
   document.getElementById('habit-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('habit-input-name').focus(), 100);
+  setTimeout(() => { const el = document.getElementById('habit-input-name'); el.removeAttribute('readonly'); el.focus(); }, 350);
 }
 
 function openEditHabit(id) {
@@ -3017,7 +3075,7 @@ function openTaskChat(id) {
 
   addTaskChatMsg('agent', '…', 'task-chat-intro');
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — жорсткий особистий коуч. Аналізуєш конкретну задачу користувача і допомагаєш її реально виконати. Говориш чесно, конкретно, без загальних фраз. Перше повідомлення: коротко (2-3 речення) дай чесну оцінку задачі — чи вона чітка, чи реалістична, де потенційні проблеми. Потім запитай що конкретно заважає або що вже зроблено. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `Ти — особистий коуч в NeverMind. Допомагаєш реально виконати задачу. Звертаєшся на "ти". Перше повідомлення: коротко (2-3 речення) дай позитивну оцінку — що сильного в задачі, чи вона чітка. Якщо нечітка — запропонуй як уточнити. Потім запитай що вже зроблено або який перший крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
 
   callAI(systemPrompt, taskInfo, {}).then(reply => {
@@ -3038,7 +3096,7 @@ function addTaskChatMsg(role, text, id = '') {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(234,88,12,0.07)' : '#ea580c'};color:${isAgent ? '#7c2d12' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:10px 13px;font-size:13px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#ea580c'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:11px 14px;font-size:14px;line-height:1.6;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskChatHistory.push({ role: 'user', content: text });
@@ -3064,7 +3122,9 @@ async function sendTaskChatMessage() {
   const t = tasks.find(x => x.id === taskChatId);
   const steps = t ? (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n') : '';
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — жорсткий особистий коуч. Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш чесно, конкретно, без води. Короткі відповіді (2-4 речення). Якщо бачиш відмазки — кажи прямо. Фокус на реальних наступних діях. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком/i.test(text);
+  const stepInstruction = wantsSteps ? ' Якщо просять кроки — відповідай ТІЛЬКИ JSON без тексту: {"steps":["крок 1","крок 2",...]}' : '';
+  const systemPrompt = `Ти — особистий коуч в NeverMind. Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Звертаєшся на "ти". Говориш конкретно і тепло. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках. Підтримуєш і мотивуєш до дії.\${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -3079,7 +3139,28 @@ async function sendTaskChatMessage() {
     });
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content;
-    if (reply) addTaskChatMsg('agent', reply);
+    if (reply) {
+      // Check if reply is JSON with steps
+      try {
+        const parsed = JSON.parse(reply.trim());
+        if (parsed.steps && Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+          // Add steps to task
+          const allTasks = getTasks();
+          const taskIdx = allTasks.findIndex(x => x.id === taskChatId);
+          if (taskIdx !== -1) {
+            const newSteps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+            allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
+            saveTasks(allTasks);
+            const stepList = parsed.steps.map((s,j) => `${j+1}. ${s}`).join('\n');
+            addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроки до задачі:\n${stepList}`);
+          }
+        } else {
+          addTaskChatMsg('agent', reply);
+        }
+      } catch {
+        addTaskChatMsg('agent', reply);
+      }
+    }
     else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
   } catch {
     addTaskChatMsg('agent', 'Мережева помилка.');
@@ -3088,11 +3169,196 @@ async function sendTaskChatMessage() {
   btn.disabled = false;
 }
 
+
+// === NOTE VIEW MODAL (F2) ===
+let activeNoteViewId = null;
+let noteChatHistory = [];
+let noteChatLoading = false;
+
+function openNoteView(id) {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  activeNoteViewId = id;
+  noteChatHistory = [];
+  noteChatLoading = false;
+
+  document.getElementById('note-view-folder').textContent = n.folder || 'Загальне';
+  const preview = n.text.length > 50 ? n.text.substring(0, 50) + '…' : n.text;
+  document.getElementById('note-view-preview').textContent = preview;
+  document.getElementById('note-view-text').textContent = n.text;
+  document.getElementById('note-chat-messages').innerHTML = '';
+
+  // Update lastViewed
+  n.lastViewed = Date.now();
+  const allNotes = getNotes();
+  const idx = allNotes.findIndex(x => x.id === id);
+  if (idx !== -1) { allNotes[idx].lastViewed = Date.now(); saveNotes(allNotes); }
+
+  switchNoteViewTab('note');
+  document.getElementById('note-view-modal').style.display = 'flex';
+}
+
+function closeNoteView() {
+  document.getElementById('note-view-modal').style.display = 'none';
+  activeNoteViewId = null;
+  noteChatHistory = [];
+}
+
+function openEditNoteFromView() {
+  const id = activeNoteViewId;
+  closeNoteView();
+  openEditNote(id);
+}
+
+function switchNoteViewTab(tab) {
+  const notePanel = document.getElementById('note-view-panel-note');
+  const chatPanel = document.getElementById('note-view-panel-chat');
+  const inputArea = document.getElementById('note-chat-input-area');
+  const tabNote = document.getElementById('note-view-tab-note');
+  const tabChat = document.getElementById('note-view-tab-chat');
+
+  if (tab === 'note') {
+    notePanel.style.display = 'block';
+    chatPanel.style.display = 'none';
+    inputArea.style.display = 'none';
+    tabNote.style.color = '#4f46e5';
+    tabNote.style.borderBottomColor = '#4f46e5';
+    tabChat.style.color = 'rgba(30,16,64,0.4)';
+    tabChat.style.borderBottomColor = 'transparent';
+  } else {
+    notePanel.style.display = 'none';
+    chatPanel.style.display = 'flex';
+    chatPanel.style.flexDirection = 'column';
+    inputArea.style.display = 'flex';
+    tabNote.style.color = 'rgba(30,16,64,0.4)';
+    tabNote.style.borderBottomColor = 'transparent';
+    tabChat.style.color = '#4f46e5';
+    tabChat.style.borderBottomColor = '#4f46e5';
+
+    // Auto-greet if first open
+    if (noteChatHistory.length === 0) {
+      const notes = getNotes();
+      const n = notes.find(x => x.id === activeNoteViewId);
+      if (n) initNoteChatGreeting(n);
+    }
+  }
+}
+
+async function initNoteChatGreeting(note) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з агентом.');
+    return;
+  }
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — персональний асистент в NeverMind. Тебе попросили поговорити про конкретну нотатку. Прочитай її і скажи коротко (1-2 речення): що це за нотатка і як ти можеш допомогти з нею. Звертайся на "ти". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const greeting = await callAI(systemPrompt, `Нотатка: ${note.text}`, {});
+  if (greeting) addNoteChatMsg('agent', greeting);
+}
+
+function addNoteChatMsg(role, text) {
+  const el = document.getElementById('note-chat-messages');
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#4f46e5'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:11px 14px;font-size:14px;line-height:1.6;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') noteChatHistory.push({ role: 'user', content: text });
+}
+
+async function sendNoteChatMessage() {
+  if (noteChatLoading) return;
+  const input = document.getElementById('note-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addNoteChatMsg('user', text);
+  noteChatLoading = true;
+
+  const btn = document.getElementById('note-chat-send');
+  btn.disabled = true;
+
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteViewId);
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — персональний асистент в NeverMind. Обговорюєш нотатку користувача. Звертаєшся на "ти". Короткі відповіді (2-4 речення). Допомагаєш розвинути думку, знайти рішення, структурувати ідею. Якщо просять зберегти відповідь — скажи що можна натиснути "Зберегти як нотатку".${aiContext ? '\n\n' + aiContext : ''}`;
+  const noteContext = `Нотатка: ${n?.text || ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: noteContext },
+          ...noteChatHistory.slice(-10)
+        ],
+        max_tokens: 300,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) {
+      addNoteChatMsg('agent', reply);
+      noteChatHistory.push({ role: 'assistant', content: reply });
+      // Show save button if meaningful response
+      showSaveAsNoteBtn(reply);
+    } else {
+      addNoteChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+    }
+  } catch {
+    addNoteChatMsg('agent', 'Мережева помилка.');
+  }
+  noteChatLoading = false;
+  btn.disabled = false;
+}
+
+function showSaveAsNoteBtn(replyText) {
+  const el = document.getElementById('note-chat-messages');
+  // Remove previous save btn if exists
+  const old = document.getElementById('note-chat-save-btn');
+  if (old) old.remove();
+  const btn = document.createElement('div');
+  btn.id = 'note-chat-save-btn';
+  btn.style.cssText = 'display:flex;justify-content:flex-end;margin-top:-4px';
+  btn.innerHTML = `<button onclick="saveAgentResponseAsNote('${replyText.replace(/'/g,"&#39;").replace(/\n/g,' ')}')" style="background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;color:#4f46e5;cursor:pointer">+ Зберегти як нотатку</button>`;
+  el.appendChild(btn);
+  el.scrollTop = el.scrollHeight;
+}
+
+function saveAgentResponseAsNote(text) {
+  const notes = getNotes();
+  const originalNote = notes.find(x => x.id === activeNoteViewId);
+  const folder = originalNote?.folder || 'Загальне';
+  notes.unshift({ id: Date.now(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
+  saveNotes(notes);
+  showToast('✓ Збережено як нотатку');
+  document.getElementById('note-chat-save-btn')?.remove();
+}
+
 // === INIT ===
 function init() {
   try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
   try { setupKeyboardAvoiding(); } catch(e) {}
+  // iOS Safari fix: inputs in fixed/transformed containers don't get focus on tap
+  try {
+    document.addEventListener('touchend', function(e) {
+      const el = e.target;
+      if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.readOnly) {
+        setTimeout(() => el.focus(), 50);
+      }
+    }, { passive: true });
+  } catch(e) {}
   try { applyTheme('inbox'); } catch(e) {}
   // Force inbox tab active on every load
   try {
@@ -3117,16 +3383,34 @@ function showApp() {
 }
 
 // === SPLASH → APP ===
-window.addEventListener('DOMContentLoaded', () => {
+function bootApp() {
   try { init(); } catch(e) { console.error('init error:', e); }
-  setTimeout(showApp, 1000);
-});
+  // Show app after brief splash — use both timer and readyState check
+  const delay = document.readyState === 'complete' ? 800 : 1200;
+  setTimeout(showApp, delay);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  // Already loaded (e.g. Chrome with cached page)
+  bootApp();
+}
+
+// Fallback: force hide splash after 3s no matter what
+setTimeout(() => {
+  const splash = document.getElementById('splash');
+  if (splash && !splash.classList.contains('gone')) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.classList.add('gone'), 600);
+  }
+}, 3000);
 </script>
 
 <!-- TASK CHAT MODAL -->
 <div id="task-chat-modal" style="display:none;position:fixed;inset:0;z-index:300;flex-direction:column;background:white;">
-  <div style="display:flex;align-items:center;gap:12px;padding:16px 16px 12px;border-bottom:1px solid rgba(30,16,64,0.08);flex-shrink:0">
-    <button onclick="closeTaskChat()" style="background:none;border:none;font-size:22px;cursor:pointer;color:rgba(30,16,64,0.4);padding:0;line-height:1">←</button>
+  <div style="display:flex;align-items:center;gap:12px;padding:max(56px, calc(env(safe-area-inset-top) + 16px)) 16px 12px;border-bottom:1px solid rgba(30,16,64,0.08);flex-shrink:0;background:white;">
+    <button onclick="closeTaskChat()" style="background:rgba(234,88,12,0.1);border:none;font-size:20px;cursor:pointer;color:#ea580c;padding:8px 12px;line-height:1;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
     <div style="flex:1;min-width:0">
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Обговорення задачі</div>
       <div id="task-chat-title" style="font-size:14px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
@@ -3139,6 +3423,46 @@ window.addEventListener('DOMContentLoaded', () => {
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage();}"
       style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
     <button onclick="sendTaskChatMessage()" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
+
+<!-- NOTE VIEWER MODAL (F2) -->
+<div id="note-view-modal" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:linear-gradient(160deg,#f0f4ff,#e8ecff);">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:max(56px,calc(env(safe-area-inset-top)+16px)) 16px 12px;border-bottom:1px solid rgba(79,70,229,0.12);flex-shrink:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);">
+    <button onclick="closeNoteView()" style="background:rgba(79,70,229,0.1);border:none;font-size:20px;cursor:pointer;color:#4f46e5;padding:8px 12px;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
+    <div style="flex:1;min-width:0">
+      <div id="note-view-folder" style="font-size:10px;font-weight:800;color:rgba(79,70,229,0.5);text-transform:uppercase;letter-spacing:0.08em"></div>
+      <div style="font-size:13px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="note-view-preview"></div>
+    </div>
+    <button onclick="openEditNoteFromView()" style="background:rgba(79,70,229,0.1);border:none;font-size:14px;cursor:pointer;color:#4f46e5;padding:8px 10px;border-radius:10px;font-weight:700">✎</button>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;border-bottom:1px solid rgba(79,70,229,0.1);background:rgba(255,255,255,0.7);flex-shrink:0">
+    <button id="note-view-tab-note" onclick="switchNoteViewTab('note')" style="flex:1;padding:10px;font-size:12px;font-weight:700;color:#4f46e5;background:none;border:none;border-bottom:2px solid #4f46e5;cursor:pointer">📝 Нотатка</button>
+    <button id="note-view-tab-chat" onclick="switchNoteViewTab('chat')" style="flex:1;padding:10px;font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">💬 Агент</button>
+  </div>
+
+  <!-- Note content panel -->
+  <div id="note-view-panel-note" style="flex:1;overflow-y:auto;padding:20px 16px;">
+    <div id="note-view-text" style="font-size:15px;line-height:1.8;color:#1e1040;font-weight:400;white-space:pre-wrap;word-break:break-word"></div>
+  </div>
+
+  <!-- Chat panel -->
+  <div id="note-view-panel-chat" style="display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0">
+    <div id="note-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:0"></div>
+  </div>
+
+  <!-- Chat input (visible in chat tab) -->
+  <div id="note-chat-input-area" style="display:none;padding:12px 16px;border-top:1px solid rgba(79,70,229,0.1);flex-shrink:0;display:none;gap:8px;align-items:flex-end;background:rgba(255,255,255,0.85);">
+    <textarea id="note-chat-input" rows="1" placeholder="Запитай про цю нотатку…"
+      oninput="autoResizeTextarea(this)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNoteChatMessage();}"
+      style="flex:1;border:1.5px solid rgba(79,70,229,0.2);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:white;"></textarea>
+    <button onclick="sendNoteChatMessage()" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
