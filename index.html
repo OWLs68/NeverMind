@@ -1768,27 +1768,22 @@ function getAIContext() {
 }
 
 function getMeStatsContext() {
-  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 20);
-  const notes = getNotes().slice(0, 20);
-  const inbox = getInbox().slice(0, 10);
+  // Короткий контекст — не більше 800 символів щоб не ламати JSON-режим
+  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 10);
   const habits = getHabits();
   const log = getHabitLog();
   const today = new Date().toDateString();
 
   const parts = [];
-  if (tasks.length > 0) parts.push(`Активні задачі (${tasks.length}):\n${tasks.map(t => `- ${t.title}`).join('\n')}`);
-  if (notes.length > 0) parts.push(`Нотатки (${notes.length}):\n${notes.map(n => `- [${n.folder||'Загальне'}] ${n.text.substring(0,80)}`).join('\n')}`);
-  if (inbox.length > 0) parts.push(`Останні записи Inbox:\n${inbox.map(i => `- [${i.category}] ${i.text}`).join('\n')}`);
+  if (tasks.length > 0) parts.push(`Задачі: ${tasks.map(t => t.title).join(', ')}`);
   if (habits.length > 0) {
     const habitStats = habits.map(h => {
-      const pct = getHabitPct(h.id);
-      const streak = getHabitStreak(h.id);
       const doneToday = !!log[today]?.[h.id];
-      return `- ${h.name}: ${pct}% за 30 днів, streak ${streak}, сьогодні ${doneToday ? 'виконано' : 'не виконано'}`;
-    }).join('\n');
-    parts.push(`Звички:\n${habitStats}`);
+      return `${h.name}(${doneToday ? '✓' : '✗'})`;
+    }).join(', ');
+    parts.push(`Звички сьогодні: ${habitStats}`);
   }
-  return parts.length > 0 ? parts.join('\n\n') : '';
+  return parts.length > 0 ? parts.join('\n') : '';
 }
 
 
@@ -2097,9 +2092,7 @@ async function sendToAI() {
   textEl.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
 
   const aiContext = getAIContext();
-  const statsContext = getMeStatsContext();
-  const fullContext = [aiContext, statsContext].filter(Boolean).join('\n\n');
-  const fullPrompt = fullContext ? `${INBOX_SYSTEM_PROMPT}\n\n${fullContext}` : INBOX_SYSTEM_PROMPT;
+  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
   // Build history for context — but keep it short so JSON format is not broken
   inboxChatHistory.push({ role: 'user', content: text });
   if (inboxChatHistory.length > 12) inboxChatHistory = inboxChatHistory.slice(-12);
@@ -2131,6 +2124,16 @@ async function sendToAI() {
         // Дублюємо нотатки та ідеї в Нотатки з правильною папкою
         if (cat === 'note' || cat === 'idea') {
           addNoteFromInbox(savedText, cat, folder);
+        }
+        // Дублюємо звички у вкладку Продуктивність
+        if (cat === 'habit') {
+          const habits = getHabits();
+          // Перевіряємо чи такої звички ще немає
+          const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
+          if (!exists) {
+            habits.push({ id: Date.now(), name: savedText, emoji: '⭕', days: [0,1,2,3,4,5,6], createdAt: Date.now() });
+            saveHabits(habits);
+          }
         }
         // Дублюємо події/моменти у вкладку Вечір
         if (cat === 'event') {
@@ -3533,15 +3536,22 @@ async function sendNoteChatMessage() {
   btn.disabled = false;
 }
 
+// Зберігаємо текст у closure — безпечно для будь-яких символів
+let _pendingAgentNote = '';
+
 function showSaveAsNoteBtn(replyText) {
   const el = document.getElementById('note-chat-messages');
-  // Remove previous save btn if exists
   const old = document.getElementById('note-chat-save-btn');
   if (old) old.remove();
+  _pendingAgentNote = replyText;
   const btn = document.createElement('div');
   btn.id = 'note-chat-save-btn';
   btn.style.cssText = 'display:flex;justify-content:flex-end;margin-top:-4px';
-  btn.innerHTML = `<button onclick="saveAgentResponseAsNote('${replyText.replace(/'/g,"&#39;").replace(/\n/g,' ')}')" style="background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer">+ Зберегти як нотатку</button>`;
+  const button = document.createElement('button');
+  button.textContent = '+ Зберегти як нотатку';
+  button.style.cssText = 'background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer';
+  button.addEventListener('click', () => saveAgentResponseAsNote(_pendingAgentNote));
+  btn.appendChild(button);
   el.appendChild(btn);
   el.scrollTop = el.scrollHeight;
 }
@@ -3554,6 +3564,7 @@ function saveAgentResponseAsNote(text) {
   saveNotes(notes);
   showToast('✓ Збережено як нотатку');
   document.getElementById('note-chat-save-btn')?.remove();
+  _pendingAgentNote = '';
 }
 
 
