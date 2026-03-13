@@ -1849,11 +1849,13 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 }
 
 Правила визначення категорії:
-- task: є дія яку треба зробити ("зателефонувати", "купити", "зробити")
-- habit: регулярна дія ("щодня", "кожен ранок", "тренування")
-- event: прив'язано до часу ("в п'ятницю", "завтра", "о 18:00") АБО це момент/подія дня ("сьогодні зробив", "відбулось", "стався", "зустрів", "пішов", "поїхав", "відвідав")
-- idea: думка, ідея, натхнення
-- note: все інше — факти, спостереження, їжа, витрати, нотатки
+- task: є конкретна дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити")
+- habit: регулярна повторювана дія ("щодня", "кожен ранок", "щотижня", "тренуватись")
+- event: ТІЛЬКИ короткий факт події без емоцій і роздумів ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції, оцінки, роздуми, висновки — це НЕ event
+- idea: творча думка, ідея, план, натхнення
+- note: рефлексія, особисті думки, емоції, висновки, спостереження, факти, їжа, витрати. ЯКЩО людина ділиться переживаннями або робить висновки — завжди note, навіть якщо є згадка часу ("завтра", "вчора")
+
+Пріоритет: якщо є сумнів між event і note — обирай note з папкою "Особисте".
 
 Правила визначення папки (для category=note або idea):
 - "Харчування" — їжа, напої, калорії, рецепти, продукти
@@ -3225,6 +3227,41 @@ function getHabitPct(id, days30) {
   return total > 0 ? Math.round(done / total * 100) : 0;
 }
 
+
+// Повертає масив індексів днів цього тижня (0=Пн..6=Нд) коли звичка була виконана
+function getHabitWeekDays(id) {
+  const log = getHabitLog();
+  const done = [];
+  const today = new Date();
+  const todayDow = (today.getDay() + 6) % 7;
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - todayDow);
+  weekStart.setHours(0,0,0,0);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const ds = d.toDateString();
+    if (log[ds]?.[id]) done.push(i);
+  }
+  return done;
+}
+
+function makeHabitDayDots(h, weekDone, todayDow) {
+  const labels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  return labels.map(function(label, i) {
+    const isPlanned = (h.days || [0,1,2,3,4]).includes(i);
+    const isDone = weekDone.includes(i);
+    const isToday = i === todayDow;
+    let bg, border, color;
+    if (isDone) { bg = '#16a34a'; border = '#16a34a'; color = 'white'; }
+    else if (isPlanned) { bg = 'transparent'; border = 'rgba(30,16,64,0.2)'; color = 'rgba(30,16,64,0.4)'; }
+    else { bg = 'transparent'; border = 'rgba(30,16,64,0.08)'; color = 'rgba(30,16,64,0.15)'; }
+    const shadow = isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.3);' : '';
+    const text = isDone ? '✓' : label.charAt(0);
+    return '<div style="width:24px;height:24px;border-radius:50%;background:' + bg + ';border:1.5px solid ' + border + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:' + color + ';' + shadow + '">' + text + '</div>';
+  }).join('');
+}
+
 function renderHabits() {
   const habits = getHabits();
   const el = document.getElementById('habits-list');
@@ -3238,39 +3275,44 @@ function renderHabits() {
     return;
   }
 
-  el.innerHTML = habits.map(h => {
+  el.innerHTML = habits.map(function(h) {
     const isDoneToday = !!log[today]?.[h.id];
     const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
     const streak = getHabitStreak(h.id);
     const pct = getHabitPct(h.id);
-    const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+    const weekDone = getHabitWeekDays(h.id);
+    const shortName = h.name.split(' ').slice(0,4).join(' ');
+    const dayDots = makeHabitDayDots(h, weekDone, todayDow);
+    const checkBtn = isDoneToday
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+      : '<span style="opacity:' + (isScheduledToday ? '1' : '0.3') + '">' + (h.emoji || '⭕') + '</span>';
+    const btnBorder = isDoneToday ? '#16a34a' : isScheduledToday ? 'rgba(22,163,74,0.3)' : 'rgba(30,16,64,0.1)';
+    const btnBg = isDoneToday ? '#16a34a' : 'transparent';
+    const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
+    const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥' + streak + '</span>' : '';
+    const onclickCheck = isScheduledToday ? 'toggleHabitToday(' + h.id + ')' : '';
 
-    return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
-        <div onclick="${isScheduledToday ? `toggleHabitToday(${h.id})` : ''}"
-          style="width:36px;height:36px;border-radius:50%;border:2px solid ${isDoneToday ? '#16a34a' : isScheduledToday ? 'rgba(22,163,74,0.3)' : 'rgba(30,16,64,0.1)'};
-          background:${isDoneToday ? '#16a34a' : 'transparent'};
-          display:flex;align-items:center;justify-content:center;font-size:18px;
-          cursor:${isScheduledToday ? 'pointer' : 'default'};flex-shrink:0;transition:all 0.2s">
-          ${isDoneToday ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : `<span style="opacity:${isScheduledToday ? '1' : '0.3'}">${h.emoji || '⭕'}</span>`}
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-            <span style="font-size:15px;font-weight:700;color:#1e1040">${escapeHtml(h.name)}</span>
-            ${streak >= 2 ? `<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥${streak}</span>` : ''}
-          </div>
-          <div style="height:4px;background:rgba(30,16,64,0.06);border-radius:3px;overflow:hidden;margin-bottom:3px">
-            <div style="height:100%;width:${pct}%;background:#16a34a;border-radius:3px;transition:width 0.5s ease"></div>
-          </div>
-          <div style="font-size:12px;color:rgba(30,16,64,0.3)">${pct}% за 30 днів · ${dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ')}</div>
-        </div>
-        <div onclick="openEditHabit(${h.id})" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-        </div>
-      </div>
-    `;
+    return '<div style="padding:10px 0;border-bottom:1px solid rgba(30,16,64,0.05)">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+        + '<div onclick="' + onclickCheck + '" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;font-size:18px;cursor:' + (isScheduledToday ? 'pointer' : 'default') + ';flex-shrink:0;transition:all 0.2s">'
+          + checkBtn
+        + '</div>'
+        + '<div style="flex:1;min-width:0">'
+          + '<div style="display:flex;align-items:center;gap:6px">'
+            + '<span style="font-size:15px;font-weight:700;color:#1e1040">' + escapeHtml(shortName) + '</span>'
+            + streakHtml
+          + '</div>'
+          + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
+        + '</div>'
+        + '<div onclick="openEditHabit(' + h.id + ')" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">'
+          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>'
+        + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + '</div>'
+    + '</div>';
   }).join('');
 }
+
 
 // === KEYBOARD AVOIDING ===
 function setupKeyboardAvoiding() {
@@ -3701,21 +3743,30 @@ function renderProdHabits() {
     const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
     const schedDays = dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ');
 
-    const detailsText = h.details ? h.details.substring(0, 50) : '';
-    return `
-    <div onclick="openEditHabit(${h.id})" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid rgba(30,16,64,0.05);cursor:pointer">
-      <div style="font-size:26px;flex-shrink:0">${h.emoji || '⭕'}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:2px">${escapeHtml(h.name)}</div>
-        <div style="font-size:12px;color:rgba(30,16,64,0.35)">${streak >= 2 ? `🔥 ${streak} · ` : ''}${schedDays}${detailsText ? ' · ' + escapeHtml(detailsText) : ''}</div>
-      </div>
-      <div onclick="event.stopPropagation();${isScheduledToday ? `toggleProdHabitToday(${h.id})` : ''}"
-        style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:${isScheduledToday ? 'pointer' : 'default'};
-        display:flex;align-items:center;justify-content:center;transition:all 0.2s;
-        ${isDoneToday ? 'background:#16a34a;' : isScheduledToday ? 'background:rgba(30,16,64,0.05);border:2px dashed rgba(30,16,64,0.2)' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.1)'}">
-        ${isDoneToday ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
-      </div>
-    </div>`;
+    const weekDone = getHabitWeekDays(h.id);
+    const shortName2 = h.name.split(' ').slice(0,4).join(' ');
+    const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
+    const pctColor2 = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
+    const streakTxt = streak >= 2 ? '🔥 ' + streak + ' · ' : '';
+    const checkBtnProd = isDoneToday
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+      : '';
+    const checkBgProd = isDoneToday ? 'background:#16a34a;' : isScheduledToday ? 'background:rgba(30,16,64,0.05);border:2px dashed rgba(30,16,64,0.2)' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.1)';
+    const onclickProd = isScheduledToday ? 'event.stopPropagation();toggleProdHabitToday(' + h.id + ')' : 'event.stopPropagation()';
+
+    return '<div style="padding:12px 14px;border-bottom:1px solid rgba(30,16,64,0.05)">'
+      + '<div onclick="openEditHabit(' + h.id + ')" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer">'
+        + '<div style="font-size:24px;flex-shrink:0">' + (h.emoji || '⭕') + '</div>'
+        + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:1px">' + escapeHtml(shortName2) + '</div>'
+          + '<div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + pct + '% за 30 днів</div>'
+        + '</div>'
+        + '<div onclick="' + onclickProd + '" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:' + (isScheduledToday ? 'pointer' : 'default') + ';display:flex;align-items:center;justify-content:center;transition:all 0.2s;' + checkBgProd + '">'
+          + checkBtnProd
+        + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px;padding-left:36px">' + dayDots2 + '</div>'
+    + '</div>';
   }).join('');
 }
 
