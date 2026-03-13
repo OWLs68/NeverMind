@@ -595,7 +595,7 @@ body {
   position: absolute;
   right: 0; top: 0; bottom: 0;
   width: 80px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, #94a3b8, #64748b);
   display: flex; align-items: center; justify-content: flex-end;
   padding-right: 20px;
   border-radius: var(--card-radius);
@@ -742,7 +742,7 @@ body {
 
 /* Habit day buttons */
 .habit-day-btn {
-  flex:1;padding:8px 0;font-size:11px;font-weight:700;border-radius:9px;
+  flex:1;padding:8px 0;font-size:13px;font-weight:700;border-radius:9px;
   background:rgba(30,16,64,0.05);border:1.5px solid transparent;
   color:rgba(30,16,64,0.35);cursor:pointer;font-family:inherit;
   transition:all 0.15s;
@@ -868,32 +868,32 @@ body {
 <!-- ONBOARDING -->
 <div id="onboarding" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f5f1ff,#ede9ff,#e0d9ff);overflow-y:auto">
   <div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px 60px">
-    <div style="font-size:52px;margin-bottom:16px">✦</div>
-    <div style="font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;color:#1e1040;text-align:center;margin-bottom:8px">NeverMind</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45);text-align:center;margin-bottom:36px">Твій особистий ШІ-агент</div>
+    <div style="font-size:60px;margin-bottom:16px">✦</div>
+    <div style="font-family:'Unbounded',sans-serif;font-size:25px;font-weight:900;color:#1e1040;text-align:center;margin-bottom:8px">NeverMind</div>
+    <div style="font-size:15px;color:rgba(30,16,64,0.45);text-align:center;margin-bottom:36px">Твій особистий ШІ-агент</div>
 
     <div id="ob-step-1" style="width:100%;max-width:360px">
-      <div style="font-size:17px;font-weight:700;color:#1e1040;margin-bottom:6px">Як тебе звати?</div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.45);margin-bottom:20px">Агент звертатиметься до тебе на ім'я</div>
-      <input id="ob-name" type="text" placeholder="Ім'я або нікнейм" autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
-      <input id="ob-age" type="number" placeholder="Вік (необов'язково)" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(1)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;color:white;cursor:pointer">Далі →</button>
+      <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">Як тебе звати?</div>
+      <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:20px">Агент звертатиметься до тебе на ім'я</div>
+      <input id="ob-name" type="text" placeholder="Ім'я або нікнейм" autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
+      <input id="ob-age" type="number" placeholder="Вік (необов'язково)" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
+      <button onclick="obNext(1)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
     </div>
 
     <div id="ob-step-2" style="display:none;width:100%;max-width:360px">
-      <div style="font-size:17px;font-weight:700;color:#1e1040;margin-bottom:6px">API ключ OpenAI</div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.45);margin-bottom:6px">Потрібен для роботи агента</div>
-      <div style="font-size:12px;color:rgba(124,58,237,0.7);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
-      <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(2)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Розпочати</button>
-      <button onclick="obSkipKey()" style="width:100%;background:none;border:none;font-size:13px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
+      <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">API ключ OpenAI</div>
+      <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:6px">Потрібен для роботи агента</div>
+      <div style="font-size:14px;color:rgba(124,58,237,0.7);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
+      <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
+      <button onclick="obNext(2)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Розпочати</button>
+      <button onclick="obSkipKey()" style="width:100%;background:none;border:none;font-size:15px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
     </div>
 
     <div id="ob-step-3" style="display:none;width:100%;max-width:360px;text-align:center">
-      <div style="font-size:40px;margin-bottom:16px">🎯</div>
-      <div style="font-size:17px;font-weight:700;color:#1e1040;margin-bottom:10px" id="ob-welcome-text">Привіт!</div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);line-height:1.6;margin-bottom:28px">Агент готовий. Пиши в Inbox будь-що — думки, задачі, ідеї. Він розбереться.</div>
-      <button onclick="obFinish()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;color:white;cursor:pointer">Почати →</button>
+      <div style="font-size:46px;margin-bottom:16px">🎯</div>
+      <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:10px" id="ob-welcome-text">Привіт!</div>
+      <div style="font-size:15px;color:rgba(30,16,64,0.5);line-height:1.6;margin-bottom:28px">Агент готовий. Пиши в Inbox будь-що — думки, задачі, ідеї. Він розбереться.</div>
+      <button onclick="obFinish()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Почати →</button>
     </div>
   </div>
 </div>
@@ -912,7 +912,7 @@ body {
       <div class="page-header">
         <div>
           <span class="page-title">Inbox</span>
-          <span id="inbox-count" style="margin-left:8px;font-size:12px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
+          <span id="inbox-count" style="margin-left:8px;font-size:14px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
         </div>
         <div class="header-actions">
           <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
@@ -953,20 +953,55 @@ body {
     <!-- PAGE: TASKS -->
     <div class="page" id="page-tasks">
       <div class="page-header">
-        <span class="page-title">Задачі</span>
+        <span class="page-title">Продуктивність</span>
         <div class="header-actions">
-          <button class="icon-btn" onclick="openAddTask()">
+          <button class="icon-btn" id="prod-add-btn" onclick="openAddTask()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
       </div>
-      <div id="tasks-ai-comment" style="display:none;margin:8px 16px 0;background:rgba(255,255,255,0.7);border:1px solid rgba(234,88,12,0.15);border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.6;color:#3d2060;font-weight:500"></div>
-      <div id="tasks-list" style="padding:8px 0 120px"></div>
-      <div id="tasks-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
-        <div style="font-size:40px;margin-bottom:12px;opacity:0.3">▣</div>
-        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Немає задач</div>
-        <div style="font-size:13px">Натисни + щоб додати першу</div>
+
+      <!-- Inner tabs: Задачі / Звички -->
+      <div style="display:flex;margin:4px 14px 8px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px">
+        <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
+          style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;background:white;color:#ea580c;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s">
+          ✅ Задачі
+        </div>
+        <div id="prod-tab-habits" onclick="switchProdTab('habits')"
+          style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4);transition:all 0.2s">
+          🌱 Звички
+        </div>
+      </div>
+
+      <!-- TASKS SUB-PAGE -->
+      <div id="prod-page-tasks">
+        <div id="tasks-ai-comment" style="display:none;margin:0 16px 8px;background:rgba(255,255,255,0.7);border:1px solid rgba(234,88,12,0.15);border-radius:14px;padding:12px 14px;font-size:19px;line-height:1.8;color:#3d2060;font-weight:400"></div>
+        <div id="tasks-list" style="padding:0 0 120px"></div>
+        <div id="tasks-empty" style="display:none;text-align:center;padding:60px 32px;color:rgba(30,16,64,0.35)">
+          <div style="font-size:46px;margin-bottom:12px;opacity:0.3">▣</div>
+          <div style="font-weight:700;font-size:17px;margin-bottom:6px">Немає задач</div>
+          <div style="font-size:15px">Натисни + щоб додати першу</div>
+        </div>
+      </div>
+
+      <!-- HABITS SUB-PAGE -->
+      <div id="prod-page-habits" style="display:none;padding:0 0 120px">
+        <!-- Day progress bar -->
+        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.8);border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px rgba(234,88,12,0.06)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.5)">Звички сьогодні</span>
+            <span id="habits-today-count" style="font-size:14px;font-weight:800;color:#ea580c">0 / 0</span>
+          </div>
+          <div style="height:6px;background:rgba(30,16,64,0.06);border-radius:3px">
+            <div id="habits-today-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.4s ease"></div>
+          </div>
+        </div>
+        <!-- Habits list -->
+        <div id="prod-habits-list"></div>
+        <div style="margin:0 14px">
+          <button onclick="openAddHabit()" style="width:100%;padding:12px;background:rgba(22,163,74,0.08);border:1.5px dashed rgba(22,163,74,0.3);border-radius:12px;font-size:14px;font-weight:700;color:#16a34a;cursor:pointer">+ Додати звичку</button>
+        </div>
       </div>
     </div>
 
@@ -986,18 +1021,18 @@ body {
       <div style="padding:4px 14px 8px">
         <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.95);border-radius:12px;padding:9px 13px;backdrop-filter:blur(10px)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.35)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input id="notes-search" type="text" placeholder="Пошук по нотатках…" oninput="filterNotes()" style="border:none;background:none;outline:none;font-size:13px;font-family:inherit;color:#1e1040;flex:1;font-weight:500" autocomplete="off" autocorrect="off" spellcheck="false">
-          <span id="notes-search-clear" onclick="clearNotesSearch()" style="display:none;cursor:pointer;font-size:16px;color:rgba(30,16,64,0.3)">×</span>
+          <input id="notes-search" type="text" placeholder="Пошук по нотатках…" oninput="filterNotes()" style="border:none;background:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;flex:1;font-weight:500" autocomplete="off" autocorrect="off" spellcheck="false">
+          <span id="notes-search-clear" onclick="clearNotesSearch()" style="display:none;cursor:pointer;font-size:18px;color:rgba(30,16,64,0.3)">×</span>
         </div>
       </div>
 
       <!-- AI suggestion banner -->
       <div id="notes-ai-banner" style="display:none;margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:12px 14px">
-        <div style="font-size:11px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">✦ Пропозиція ШІ</div>
-        <div id="notes-ai-text" style="font-size:13px;line-height:1.5;color:#3730a3;font-weight:500"></div>
+        <div style="font-size:13px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">✦ Пропозиція ШІ</div>
+        <div id="notes-ai-text" style="font-size:15px;line-height:1.5;color:#3730a3;font-weight:500"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
-          <button onclick="applyFolderSuggestion()" style="flex:1;background:#4f46e5;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:white;cursor:pointer">Застосувати</button>
-          <button onclick="document.getElementById('notes-ai-banner').style.display='none'" style="flex:1;background:rgba(79,70,229,0.1);border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#4f46e5;cursor:pointer">Пізніше</button>
+          <button onclick="applyFolderSuggestion()" style="flex:1;background:#4f46e5;border:none;border-radius:9px;padding:8px;font-size:14px;font-weight:700;color:white;cursor:pointer">Застосувати</button>
+          <button onclick="document.getElementById('notes-ai-banner').style.display='none'" style="flex:1;background:rgba(79,70,229,0.1);border:none;border-radius:9px;padding:8px;font-size:14px;font-weight:700;color:#4f46e5;cursor:pointer">Пізніше</button>
         </div>
       </div>
 
@@ -1006,9 +1041,9 @@ body {
 
       <!-- Empty state -->
       <div id="notes-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
-        <div style="font-size:40px;margin-bottom:12px;opacity:0.3">◫</div>
-        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Нотатки порожні</div>
-        <div style="font-size:13px">Записи з Inbox або натисни +</div>
+        <div style="font-size:46px;margin-bottom:12px;opacity:0.3">◫</div>
+        <div style="font-weight:700;font-size:17px;margin-bottom:6px">Нотатки порожні</div>
+        <div style="font-size:15px">Записи з Inbox або натисни +</div>
       </div>
     </div>
 
@@ -1025,62 +1060,80 @@ body {
 
         <!-- Week grid -->
         <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
-          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Цей тиждень</div>
+          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Цей тиждень</div>
           <div id="me-week-grid" style="display:flex;gap:6px;justify-content:space-between"></div>
         </div>
 
         <!-- Habits -->
         <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Звички</div>
-            <button onclick="openAddHabit()" style="font-size:11px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+            <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Звички</div>
+            <button onclick="openAddHabit()" style="font-size:13px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
           </div>
           <div id="habits-list">
-            <div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:13px">Додай першу звичку</div>
+            <div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">Додай першу звичку</div>
           </div>
         </div>
 
         <!-- Stats row -->
         <div style="display:flex;gap:8px;margin:0 14px 10px">
           <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
-            <div id="me-stat-inbox" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#1e1040">0</div>
-            <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:3px">записів</div>
+            <div id="me-stat-inbox" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#1e1040">0</div>
+            <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">записів</div>
           </div>
           <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
-            <div id="me-stat-tasks" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#ea580c">0</div>
-            <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:3px">задач активних</div>
+            <div id="me-stat-tasks" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#ea580c">0</div>
+            <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">задач активних</div>
           </div>
           <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
-            <div id="me-stat-notes" style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#4f46e5">0</div>
-            <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:3px">нотаток</div>
+            <div id="me-stat-notes" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#4f46e5">0</div>
+            <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">нотаток</div>
           </div>
         </div>
 
         <!-- Inbox categories breakdown -->
         <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
-          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Що записував</div>
+          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Що записував</div>
           <div id="me-categories" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
         <!-- Activity last 14 days -->
         <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
-          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Активність за 14 днів</div>
+          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Активність за 14 днів</div>
           <div id="me-activity" style="display:flex;gap:4px;align-items:flex-end;height:48px"></div>
         </div>
 
         <!-- AI weekly summary -->
         <div style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:10px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">✦ Аналіз агента</div>
-            <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:11px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
+            <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">✦ Аналіз агента</div>
+            <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:13px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
           </div>
-          <div id="me-ai-analysis" style="font-size:15px;line-height:1.7;color:#14532d;font-weight:500">Накопич більше даних — і агент дасть чесний аналіз.</div>
+          <div id="me-ai-analysis" style="font-size:19px;line-height:1.8;color:#14532d;font-weight:400">Накопич більше даних — і агент дасть чесний аналіз.</div>
         </div>
 
         <!-- AI Поради -->
         <div id="me-advice-block" style="display:none;margin:0 14px 10px;background:rgba(255,248,240,0.9);border:1px solid rgba(234,88,12,0.15);border-radius:16px;padding:14px">
-          <div style="font-size:10px;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">💡 3 конкретні поради</div>
-          <div id="me-ai-advice" style="font-size:14px;line-height:1.7;color:#7c2d12;font-weight:500"></div>
+          <div style="font-size:12px;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">💡 3 конкретні поради</div>
+          <div id="me-ai-advice" style="font-size:19px;line-height:1.8;color:#7c2d12;font-weight:400"></div>
+        </div>
+
+        <!-- Habits stats -->
+        <div id="me-habits-stats" style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
+          <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📊 Статистика звичок</div>
+          <div id="me-habits-stats-list"></div>
+        </div>
+
+        <!-- Me AI Chat -->
+        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.8);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
+          <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✦ Поговорити з агентом</div>
+          <div id="me-chat-messages" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;min-height:0"></div>
+          <div style="display:flex;gap:8px">
+            <input id="me-chat-input" type="text" placeholder="Запитай агента про себе..." style="flex:1;padding:10px 14px;border:1.5px solid rgba(22,163,74,0.2);border-radius:12px;font-size:16px;background:rgba(255,255,255,0.9);outline:none;font-family:inherit">
+            <button onclick="sendMeChatMessage()" style="width:44px;height:44px;border-radius:12px;background:#16a34a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -1103,37 +1156,37 @@ body {
             <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="5"/>
             <circle id="evening-ring-arc" cx="30" cy="30" r="25" fill="none" stroke="#7c3aed" stroke-width="5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" transform="rotate(-90 30 30)" style="transition:stroke-dashoffset 1s ease"/>
           </svg>
-          <div id="evening-ring-pct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:11px;font-weight:900;color:#7c3aed">0%</div>
+          <div id="evening-ring-pct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;font-weight:900;color:#7c3aed">0%</div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Продуктивність дня</div>
-          <div id="evening-score-desc" style="font-size:14px;font-weight:700;color:#1e1040;margin-top:3px">Додай записи щоб побачити</div>
+          <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Продуктивність дня</div>
+          <div id="evening-score-desc" style="font-size:16px;font-weight:700;color:#1e1040;margin-top:3px">Додай записи щоб побачити</div>
         </div>
       </div>
 
       <!-- Moments -->
       <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Моменти дня</div>
-          <button onclick="openAddMoment()" style="font-size:11px;font-weight:700;color:#7c3aed;background:rgba(124,58,237,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Моменти дня</div>
+          <button onclick="openAddMoment()" style="font-size:13px;font-weight:700;color:#7c3aed;background:rgba(124,58,237,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
         </div>
         <div id="evening-moments" style="display:flex;flex-direction:column;gap:6px">
-          <div style="font-size:12px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>
+          <div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>
         </div>
       </div>
 
       <!-- AI summary -->
       <div style="margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(124,58,237,0.15);border-radius:16px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">✦ ШІ на вечір</div>
-          <button onclick="generateEveningSummary()" id="evening-summary-btn" style="font-size:11px;font-weight:700;color:#7c3aed;background:none;border:none;cursor:pointer">↻</button>
+          <div style="font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">✦ ШІ на вечір</div>
+          <button onclick="generateEveningSummary()" id="evening-summary-btn" style="font-size:13px;font-weight:700;color:#7c3aed;background:none;border:none;cursor:pointer">↻</button>
         </div>
-        <div id="evening-summary" style="font-size:15px;line-height:1.7;color:#4c1d95;font-weight:500">Натисни ↻ щоб отримати підсумок дня від агента.</div>
+        <div id="evening-summary" style="font-size:19px;line-height:1.8;color:#4c1d95;font-weight:400">Натисни ↻ щоб отримати підсумок дня від агента.</div>
       </div>
 
       <!-- Dialog button -->
       <div onclick="openEveningDialog()" style="margin:0 14px;background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-        <div style="font-size:14px;font-weight:700;color:#7c3aed">✦ Вечірній діалог з агентом</div>
+        <div style="font-size:16px;font-weight:700;color:#7c3aed">✦ Вечірній діалог з агентом</div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </div>
       </div><!-- /evening scroll -->
@@ -1151,9 +1204,9 @@ body {
     </div>
     <div class="tab-item" data-tab="tasks" onclick="switchTab('tasks')">
       <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
       </span>
-      <span class="tab-label">Задачі</span>
+      <span class="tab-label">Продукт.</span>
     </div>
     <div class="tab-item" data-tab="notes" onclick="switchTab('notes')">
       <span class="tab-icon">
@@ -1182,10 +1235,10 @@ body {
   <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div id="habit-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
-    <input id="habit-input-name" type="text" placeholder="Назва звички (напр: Читати 20 хв)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
-    <input id="habit-input-emoji" type="text" placeholder="Емодзі (необов'язково)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Дні тижня</div>
+    <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
+    <input id="habit-input-name" type="text" placeholder="Назва звички (напр: Читати 20 хв)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
+    <input id="habit-input-emoji" type="text" placeholder="Емодзі (необов'язково)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Дні тижня</div>
     <div style="display:flex;gap:6px;margin-bottom:20px" id="habit-days-row">
       <button class="habit-day-btn active" data-day="0">Пн</button>
       <button class="habit-day-btn active" data-day="1">Вт</button>
@@ -1196,8 +1249,8 @@ body {
       <button class="habit-day-btn" data-day="6">Нд</button>
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="closeHabitModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveHabit()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button onclick="closeHabitModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveHabit()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
@@ -1207,16 +1260,16 @@ body {
   <div onclick="closeMomentModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button onclick="setMomentMood('positive')" id="mood-positive" style="flex:1;border:2px solid rgba(22,163,74,0.3);background:rgba(22,163,74,0.06);border-radius:10px;padding:9px;font-size:12px;font-weight:700;color:#16a34a;cursor:pointer">😊 Добре</button>
-      <button onclick="setMomentMood('neutral')" id="mood-neutral" style="flex:1;border:2px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);border-radius:10px;padding:9px;font-size:12px;font-weight:700;color:#d97706;cursor:pointer">😐 Нейтрально</button>
-      <button onclick="setMomentMood('negative')" id="mood-negative" style="flex:1;border:2px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);border-radius:10px;padding:9px;font-size:12px;font-weight:700;color:#ef4444;cursor:pointer">😞 Погано</button>
+      <button onclick="setMomentMood('positive')" id="mood-positive" style="flex:1;border:2px solid rgba(22,163,74,0.3);background:rgba(22,163,74,0.06);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#16a34a;cursor:pointer">😊 Добре</button>
+      <button onclick="setMomentMood('neutral')" id="mood-neutral" style="flex:1;border:2px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#d97706;cursor:pointer">😐 Нейтрально</button>
+      <button onclick="setMomentMood('negative')" id="mood-negative" style="flex:1;border:2px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#ef4444;cursor:pointer">😞 Погано</button>
     </div>
-    <textarea id="moment-input-text" rows="3" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Що сталося? Що відчував?"></textarea>
+    <textarea id="moment-input-text" rows="3" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Що сталося? Що відчував?"></textarea>
     <div style="display:flex;gap:8px">
-      <button onclick="closeMomentModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveMoment()" style="flex:2;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button onclick="closeMomentModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveMoment()" style="flex:2;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
@@ -1228,13 +1281,13 @@ body {
     <div style="padding:16px 20px 0;flex-shrink:0">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:#1e1040">✦ Агент</div>
-        <div onclick="closeEveningDialog()" style="font-size:22px;color:rgba(30,16,64,0.3);cursor:pointer">×</div>
+        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:#1e1040">✦ Агент</div>
+        <div onclick="closeEveningDialog()" style="font-size:25px;color:rgba(30,16,64,0.3);cursor:pointer">×</div>
       </div>
     </div>
     <div id="dialog-messages" style="flex:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:10px"></div>
     <div style="padding:12px 16px 32px;border-top:1px solid rgba(30,16,64,0.06);flex-shrink:0;display:flex;gap:8px">
-      <textarea id="dialog-input" rows="1" style="flex:1;border:1.5px solid rgba(124,58,237,0.2);border-radius:12px;padding:10px 13px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px" placeholder="Напиши агенту…" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDialogMessage()}"></textarea>
+      <textarea id="dialog-input" rows="1" style="flex:1;border:1.5px solid rgba(124,58,237,0.2);border-radius:12px;padding:10px 13px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px" placeholder="Напиши агенту…" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDialogMessage()}"></textarea>
       <button onclick="sendDialogMessage()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
       </button>
@@ -1247,20 +1300,20 @@ body {
   <div onclick="closeNoteMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:12px 12px 40px;z-index:1">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 12px"></div>
-    <button onclick="noteMenuEdit()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+    <button onclick="noteMenuEdit()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
       Редагувати
     </button>
-    <button onclick="noteMenuMove()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+    <button onclick="noteMenuMove()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
       Перемістити в папку
     </button>
-    <button onclick="noteMenuCopy()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+    <button onclick="noteMenuCopy()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
       Скопіювати текст
     </button>
     <div style="height:1px;background:rgba(30,16,64,0.06);margin:4px 16px"></div>
-    <button onclick="noteMenuDelete()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:15px;font-family:inherit;color:#ef4444;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
+    <button onclick="noteMenuDelete()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#ef4444;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
       Видалити
     </button>
@@ -1272,13 +1325,13 @@ body {
   <div onclick="closeNoteModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div id="note-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
-    <input id="note-input-folder" type="text" list="folder-suggestions" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Папка (наприклад: Ідеї, Навчання…)">
+    <div id="note-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
+    <input id="note-input-folder" type="text" list="folder-suggestions" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Папка (наприклад: Ідеї, Навчання…)">
     <datalist id="folder-suggestions"></datalist>
-    <textarea id="note-input-text" rows="5" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;line-height:1.6;margin-bottom:14px" placeholder="Текст нотатки…"></textarea>
+    <textarea id="note-input-text" rows="5" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;line-height:1.6;margin-bottom:14px" placeholder="Текст нотатки…"></textarea>
     <div style="display:flex;gap:8px">
-      <button onclick="closeNoteModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveNote()" style="flex:2;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button onclick="closeNoteModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveNote()" style="flex:2;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
@@ -1288,18 +1341,18 @@ body {
   <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div id="task-modal-title" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
-    <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…" ontouchend="this.focus()">
-    <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Опис або мета (необов'язково)…" ontouchend="this.focus()"></textarea>
-    <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
+    <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
+    <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…" ontouchend="this.focus()">
+    <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px" placeholder="Опис або мета (необов'язково)…" ontouchend="this.focus()"></textarea>
+    <div style="font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
     <div id="task-steps-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()">
-      <button onclick="addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;color:#ea580c;cursor:pointer">+</button>
+      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()">
+      <button onclick="addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:700;color:#ea580c;cursor:pointer">+</button>
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="closeTaskModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveTask()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button onclick="closeTaskModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveTask()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
@@ -1307,8 +1360,8 @@ body {
 <!-- SETTINGS OVERLAY -->
 <div id="settings-overlay">
   <div class="settings-backdrop" onclick="closeSettings()"></div>
-  <div class="settings-panel">
-    <div class="settings-handle"></div>
+  <div class="settings-panel" id="settings-panel-el">
+    <div class="settings-handle" style="cursor:grab"></div>
     <div class="settings-title">Налаштування</div>
 
     <!-- API Key -->
@@ -1328,7 +1381,7 @@ body {
         <input class="settings-input" type="number" id="input-weight" placeholder="Вага (кг)" style="flex:1">
         <input class="settings-input" type="number" id="input-height" placeholder="Зріст (см)" style="flex:1">
       </div>
-      <textarea class="settings-input" id="input-profile-notes" placeholder="Додаткова інфо про себе — цілі, особливості, що важливо знати агенту…" rows="3" style="margin-top:8px;resize:none;font-family:inherit;font-size:13px;line-height:1.5"></textarea>
+      <textarea class="settings-input" id="input-profile-notes" placeholder="Додаткова інфо про себе — цілі, особливості, що важливо знати агенту…" rows="3" style="margin-top:8px;resize:none;font-family:inherit;font-size:15px;line-height:1.5"></textarea>
     </div>
 
     <button class="btn-primary" onclick="saveSettings()">Зберегти налаштування</button>
@@ -1339,11 +1392,11 @@ body {
     <div class="settings-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div class="settings-label" style="margin-bottom:0">Пам'ять агента</div>
-        <button onclick="refreshMemory()" id="memory-refresh-btn" style="font-size:11px;font-weight:700;color:var(--active-accent);background:none;border:none;cursor:pointer;padding:4px 0">↻ Оновити</button>
+        <button onclick="refreshMemory()" id="memory-refresh-btn" style="font-size:13px;font-weight:700;color:var(--active-accent);background:none;border:none;cursor:pointer;padding:4px 0">↻ Оновити</button>
       </div>
-      <div id="memory-last-updated" style="font-size:11px;color:rgba(30,16,64,0.35);margin-bottom:6px"></div>
-      <textarea class="settings-input" id="input-memory" placeholder="Агент ще не сформував уявлення про тебе. Напиши кілька записів в Inbox — і він навчиться." rows="6" style="resize:none;font-family:inherit;font-size:12px;line-height:1.6"></textarea>
-      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:5px">Агент читає цей текст при кожному запиті. Можна редагувати вручну.</div>
+      <div id="memory-last-updated" style="font-size:13px;color:rgba(30,16,64,0.35);margin-bottom:6px"></div>
+      <textarea class="settings-input" id="input-memory" placeholder="Агент ще не сформував уявлення про тебе. Напиши кілька записів в Inbox — і він навчиться." rows="6" style="resize:none;font-family:inherit;font-size:14px;line-height:1.6"></textarea>
+      <div style="font-size:13px;color:rgba(30,16,64,0.35);margin-top:5px">Агент читає цей текст при кожному запиті. Можна редагувати вручну.</div>
     </div>
 
     <div class="settings-divider"></div>
@@ -1356,8 +1409,8 @@ body {
     </div>
 
     <!-- App info -->
-    <div style="text-align:center;margin-top:28px;color:rgba(100,70,200,0.35);font-size:11px;">
-      <span style="font-family:var(--font-display);font-weight:900;font-size:13px;color:rgba(26,14,64,0.3)">NeverMind</span><br>
+    <div style="text-align:center;margin-top:28px;color:rgba(100,70,200,0.35);font-size:13px;">
+      <span style="font-family:var(--font-display);font-weight:900;font-size:15px;color:rgba(26,14,64,0.3)">NeverMind</span><br>
       <span style="font-style:italic;">Забий на хаос. Просто роби.</span>
     </div>
   </div>
@@ -1427,9 +1480,9 @@ function switchTab(tab) {
   applyTheme(tab);
 
   // Tab-specific actions
-  if (tab === 'tasks') renderTasks();
+  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); }
   if (tab === 'notes') { renderNotes(); checkAndSuggestFolders(); }
-  if (tab === 'me') { renderMe(); renderHabits(); }
+  if (tab === 'me') { renderMe(); renderHabits(); renderMeHabitsStats(); }
   if (tab === 'evening') renderEvening();
 
   // Show/hide AI bar (inbox only)
@@ -1633,6 +1686,78 @@ ${notesList || 'немає'}
 }
 
 // Додаємо профіль і пам'ять до кожного AI запиту
+
+// === ME TAB CHAT ===
+let meChatHistory = [];
+
+function renderMeHabitsStats() {
+  const habits = getHabits();
+  const el = document.getElementById('me-habits-stats-list');
+  const block = document.getElementById('me-habits-stats');
+  if (!el) return;
+  if (habits.length === 0) {
+    if (block) block.style.display = 'none';
+    return;
+  }
+  if (block) block.style.display = 'block';
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+
+  el.innerHTML = habits.map(h => {
+    const pct = getHabitPct(h.id);
+    const streak = getHabitStreak(h.id);
+    const isDoneToday = !!log[today]?.[h.id];
+    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    return `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || '⭕'} ${escapeHtml(h.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626'}">${pct}%</span>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
+        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#ef4444'};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `🔥 ${streak} дні поспіль · ` : ''}за 30 днів${isScheduledToday ? (isDoneToday ? ' · ✅ сьогодні виконано' : ' · ⏳ сьогодні ще не виконано') : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function sendMeChatMessage() {
+  const input = document.getElementById('me-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addMeChatMsg('user', text);
+  meChatHistory.push({ role: 'user', content: text });
+
+  const loadId = 'me-chat-load-' + Date.now();
+  addMeChatMsg('agent', '…', loadId);
+
+  const context = getAIContext();
+  const stats = getMeStatsContext();
+  const systemPrompt = `Ти — особистий AI-коуч в NeverMind. Аналізуєш дані користувача і даєш чесний, корисний зворотній зв'язок. Звертаєшся на "ти". Відповіді — 2-4 речення, конкретно і по ділу. Не лестиш. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+
+  const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
+  const loadEl = document.getElementById(loadId);
+  if (loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
+  if (reply) meChatHistory.push({ role: 'assistant', content: reply });
+  if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+}
+
+function addMeChatMsg(role, text, id = '') {
+  const el = document.getElementById('me-chat-messages');
+  if (!el) return;
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(22,163,74,0.08)' : '#16a34a'};color:${isAgent ? '#14532d' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:10px 14px;font-size:16px;line-height:1.6;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
 function getAIContext() {
   const profile = getProfile();
   const memory = localStorage.getItem('nm_memory') || '';
@@ -1641,6 +1766,32 @@ function getAIContext() {
   if (memory) parts.push(`Що агент знає про користувача:\n${memory}`);
   return parts.join('\n\n');
 }
+
+function getMeStatsContext() {
+  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 20);
+  const notes = getNotes().slice(0, 20);
+  const inbox = getInbox().slice(0, 10);
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+
+  const parts = [];
+  if (tasks.length > 0) parts.push(`Активні задачі (${tasks.length}):\n${tasks.map(t => `- ${t.title}`).join('\n')}`);
+  if (notes.length > 0) parts.push(`Нотатки (${notes.length}):\n${notes.map(n => `- [${n.folder||'Загальне'}] ${n.text.substring(0,80)}`).join('\n')}`);
+  if (inbox.length > 0) parts.push(`Останні записи Inbox:\n${inbox.map(i => `- [${i.category}] ${i.text}`).join('\n')}`);
+  if (habits.length > 0) {
+    const habitStats = habits.map(h => {
+      const pct = getHabitPct(h.id);
+      const streak = getHabitStreak(h.id);
+      const doneToday = !!log[today]?.[h.id];
+      return `- ${h.name}: ${pct}% за 30 днів, streak ${streak}, сьогодні ${doneToday ? 'виконано' : 'не виконано'}`;
+    }).join('\n');
+    parts.push(`Звички:\n${habitStats}`);
+  }
+  return parts.length > 0 ? parts.join('\n\n') : '';
+}
+
+
 function showToast(msg, duration = 2000) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -1704,7 +1855,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 Правила визначення категорії:
 - task: є дія яку треба зробити ("зателефонувати", "купити", "зробити")
 - habit: регулярна дія ("щодня", "кожен ранок", "тренування")
-- event: прив'язано до часу ("в п'ятницю", "завтра", "о 18:00")
+- event: прив'язано до часу ("в п'ятницю", "завтра", "о 18:00") АБО це момент/подія дня ("сьогодні зробив", "відбулось", "стався", "зустрів", "пішов", "поїхав", "відвідав")
 - idea: думка, ідея, натхнення
 - note: все інше — факти, спостереження, їжа, витрати, нотатки
 
@@ -1882,6 +2033,7 @@ function swipeEnd(e, id) {
 
 // === UNIFIED SEND TO AI ===
 let aiLoading = false;
+let inboxChatHistory = []; // зберігає останні 6 обмінів
 const SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
 
 function unifiedInputKeydown(e) {
@@ -1894,6 +2046,30 @@ function updateAiBarVisibility() {
   if (currentTab === 'inbox') bar.classList.add('bar-visible');
   else bar.classList.remove('bar-visible');
 }
+
+async function callAIWithHistory(systemPrompt, history) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
+  if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, ...history],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || null;
+    // Add assistant reply to history
+    if (reply) inboxChatHistory.push({ role: 'assistant', content: reply });
+    return reply;
+  } catch { return null; }
+}
+
 
 async function sendToAI() {
   if (aiLoading) return;
@@ -1923,8 +2099,13 @@ async function sendToAI() {
   textEl.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
 
   const aiContext = getAIContext();
-  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
-  const reply = await callAI(fullPrompt, text, {});
+  const statsContext = getMeStatsContext();
+  const fullContext = [aiContext, statsContext].filter(Boolean).join('\n\n');
+  const fullPrompt = fullContext ? `${INBOX_SYSTEM_PROMPT}\n\n${fullContext}` : INBOX_SYSTEM_PROMPT;
+  // Add to history and call with context
+  inboxChatHistory.push({ role: 'user', content: text });
+  if (inboxChatHistory.length > 12) inboxChatHistory = inboxChatHistory.slice(-12);
+  const reply = await callAIWithHistory(fullPrompt, inboxChatHistory);
 
   if (reply) {
     try {
@@ -1948,6 +2129,14 @@ async function sendToAI() {
         // Дублюємо нотатки та ідеї в Нотатки з правильною папкою
         if (cat === 'note' || cat === 'idea') {
           addNoteFromInbox(savedText, cat, folder);
+        }
+        // Дублюємо події/моменти у вкладку Вечір
+        if (cat === 'event') {
+          const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
+                       /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
+          const moments = getMoments();
+          moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
+          saveMoments(moments);
         }
         if (parsed.comment) {
           textEl.textContent = parsed.comment;
@@ -2082,7 +2271,7 @@ function renderNotes(searchQuery = '') {
     const q = searchQuery.toLowerCase();
     notes = notes.filter(n => n.text.toLowerCase().includes(q) || (n.folder || '').toLowerCase().includes(q));
     if (notes.length === 0) {
-      content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:13px">Нічого не знайдено</div>`;
+      content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">Нічого не знайдено</div>`;
       return;
     }
   }
@@ -2102,16 +2291,16 @@ function renderNotes(searchQuery = '') {
     return `
       <div style="margin:0 14px 14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
-          <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.1em">${escapeHtml(folder)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.3)">${items.length}</div>
+          <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.1em">${escapeHtml(folder)}</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.3)">${items.length}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${items.map(n => {
             const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
             return `
               <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:13px;overflow:hidden">
-                <div class="note-delete-bg" style="position:absolute;inset:0;background:#ef4444;display:flex;align-items:center;justify-content:right;padding-right:20px;border-radius:13px">
-                  <span style="color:white;font-size:13px;font-weight:700">Видалити</span>
+                <div class="note-delete-bg" style="position:absolute;inset:0;background:#94a3b8;display:flex;align-items:center;justify-content:right;padding-right:20px;border-radius:13px">
+                  <span style="color:white;font-size:15px;font-weight:700">Видалити</span>
                 </div>
                 <div id="note-item-${n.id}"
                   ontouchstart="noteSwipeStart(event,${n.id})"
@@ -2119,10 +2308,10 @@ function renderNotes(searchQuery = '') {
                   ontouchend="noteSwipeEnd(event,${n.id})"
                   style="position:relative;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 13px;">
                   <div onclick="openNoteView(${n.id})" style="cursor:pointer">
-                    <div style="font-size:13px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
+                    <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
-                      <div style="font-size:10px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
-                      <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:2px 6px;cursor:pointer;color:rgba(30,16,64,0.3);font-size:18px;line-height:1">···</div>
+                      <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
+                      <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:2px 6px;cursor:pointer;color:rgba(30,16,64,0.3);font-size:21px;line-height:1">···</div>
                     </div>
                   </div>
                 </div>
@@ -2355,9 +2544,9 @@ function renderTempSteps() {
   if (tempSteps.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = tempSteps.map(s => `
     <div style="display:flex;align-items:center;gap:8px;background:rgba(30,16,64,0.03);border-radius:8px;padding:8px 10px">
-      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;color:#ea580c">${s.done ? '✓' : ''}</div>
-      <div style="flex:1;font-size:13px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
-      <div onclick="removeTempStep(${s.id})" style="font-size:16px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
+      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? '✓' : ''}</div>
+      <div style="flex:1;font-size:15px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+      <div onclick="removeTempStep(${s.id})" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
     </div>
   `).join('');
 }
@@ -2441,14 +2630,14 @@ function renderTasks() {
 
     return `<div style="margin:0 14px 10px;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.6' : '1'}">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:11px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:13px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         <div style="flex:1;cursor:pointer" onclick="openTaskChat(${t.id})" title="Обговорити з ШІ">
-          <div style="font-size:14px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
-          ${t.desc ? `<div style="font-size:12px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
+          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
+          ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px">
-          <div onclick="openEditTask(${t.id})" style="font-size:14px;cursor:pointer;opacity:0.3;padding:2px">✎</div>
-          <div onclick="deleteTask(${t.id})" style="font-size:14px;cursor:pointer;opacity:0.3;padding:2px">×</div>
+          <div onclick="openEditTask(${t.id})" style="font-size:16px;cursor:pointer;opacity:0.3;padding:2px">✎</div>
+          <div onclick="deleteTask(${t.id})" style="font-size:16px;cursor:pointer;opacity:0.3;padding:2px">×</div>
         </div>
       </div>
       ${steps.length > 0 ? `
@@ -2458,13 +2647,13 @@ function renderTasks() {
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
             <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#ea580c">${s.done ? '✓' : ''}</div>
-              <div style="font-size:12px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+              <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:#ea580c">${s.done ? '✓' : ''}</div>
+              <div style="font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
           `).join('')}
         </div>
       ` : ''}
-      <button onclick="openTaskChat(${t.id})" style="width:100%;background:rgba(234,88,12,0.07);border:1px solid rgba(234,88,12,0.15);border-radius:10px;padding:8px;font-size:12px;font-weight:700;color:#ea580c;cursor:pointer;text-align:center">✦ Обговорити з ШІ</button>
+      <button onclick="openTaskChat(${t.id})" style="width:100%;background:rgba(234,88,12,0.07);border:1px solid rgba(234,88,12,0.15);border-radius:10px;padding:8px;font-size:14px;font-weight:700;color:#ea580c;cursor:pointer;text-align:center">✦ Обговорити з ШІ</button>
     </div>`;
   }).join('');
 }
@@ -2513,8 +2702,8 @@ function renderMe() {
     if (!future && count > 0) { bg = count >= 5 ? '#16a34a' : count >= 2 ? 'rgba(22,163,74,0.4)' : 'rgba(22,163,74,0.2)'; color = count >= 5 ? 'white' : '#16a34a'; }
     const isToday = daysAgo === 0;
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35)">${d}</div>
-      <div style="width:32px;height:32px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${color};${isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.4)' : ''}">${future ? '–' : count || '·'}</div>
+      <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35)">${d}</div>
+      <div style="width:32px;height:32px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};${isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.4)' : ''}">${future ? '–' : count || '·'}</div>
     </div>`;
   }).join('');
 
@@ -2529,13 +2718,13 @@ function renderMe() {
     const pct = Math.round(cnt / total * 100);
     const color = catColors[cat] || '#888';
     return `<div style="display:flex;align-items:center;gap:8px">
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5);width:52px">${catLabels[cat]||cat}</div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);width:52px">${catLabels[cat]||cat}</div>
       <div style="flex:1;height:6px;background:rgba(0,0,0,0.05);border-radius:4px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.6s ease"></div>
       </div>
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);width:28px;text-align:right">${cnt}</div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);width:28px;text-align:right">${cnt}</div>
     </div>`;
-  }).join('') || '<div style="font-size:12px;color:rgba(30,16,64,0.3)">Немає даних</div>';
+  }).join('') || '<div style="font-size:14px;color:rgba(30,16,64,0.3)">Немає даних</div>';
 
   // Activity last 14 days
   const actEl = document.getElementById('me-activity');
@@ -2652,14 +2841,14 @@ function renderEvening() {
   // Moments list
   const momEl = document.getElementById('evening-moments');
   if (todayMoments.length === 0) {
-    momEl.innerHTML = '<div style="font-size:12px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>';
+    momEl.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>';
   } else {
     const moodColors = { positive:'#16a34a', neutral:'#d97706', negative:'#ef4444' };
     momEl.innerHTML = todayMoments.map(m => `
       <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
         <div style="width:8px;height:8px;border-radius:50%;background:${moodColors[m.mood]||'#888'};margin-top:5px;flex-shrink:0"></div>
-        <div style="flex:1;font-size:13px;color:#1e1040;line-height:1.5">${escapeHtml(m.text)}</div>
-        <div onclick="deleteMoment(${m.id})" style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>
+        <div style="flex:1;font-size:15px;color:#1e1040;line-height:1.5">${escapeHtml(m.text)}</div>
+        <div onclick="deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>
       </div>
     `).join('');
   }
@@ -2755,7 +2944,7 @@ function addDialogMessage(role, text) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:80%;background:${isAgent ? 'rgba(237,233,255,0.9)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};padding:10px 13px;font-size:13px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div style="max-width:80%;background:${isAgent ? 'rgba(237,233,255,0.9)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};padding:10px 13px;font-size:15px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   dialogHistory.push({ role: isAgent ? 'assistant' : 'user', content: text });
@@ -2976,7 +3165,7 @@ function renderHabits() {
   const todayDow = (new Date().getDay() + 6) % 7;
 
   if (habits.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:13px">Додай першу звичку</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">Додай першу звичку</div>';
     return;
   }
 
@@ -2992,19 +3181,19 @@ function renderHabits() {
         <div onclick="${isScheduledToday ? `toggleHabitToday(${h.id})` : ''}"
           style="width:36px;height:36px;border-radius:50%;border:2px solid ${isDoneToday ? '#16a34a' : isScheduledToday ? 'rgba(22,163,74,0.3)' : 'rgba(30,16,64,0.1)'};
           background:${isDoneToday ? '#16a34a' : 'transparent'};
-          display:flex;align-items:center;justify-content:center;font-size:16px;
+          display:flex;align-items:center;justify-content:center;font-size:18px;
           cursor:${isScheduledToday ? 'pointer' : 'default'};flex-shrink:0;transition:all 0.2s">
           ${isDoneToday ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : `<span style="opacity:${isScheduledToday ? '1' : '0.3'}">${h.emoji || '⭕'}</span>`}
         </div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-            <span style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(h.name)}</span>
-            ${streak >= 2 ? `<span style="font-size:10px;font-weight:700;color:#f59e0b">🔥${streak}</span>` : ''}
+            <span style="font-size:15px;font-weight:700;color:#1e1040">${escapeHtml(h.name)}</span>
+            ${streak >= 2 ? `<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥${streak}</span>` : ''}
           </div>
           <div style="height:4px;background:rgba(30,16,64,0.06);border-radius:3px;overflow:hidden;margin-bottom:3px">
             <div style="height:100%;width:${pct}%;background:#16a34a;border-radius:3px;transition:width 0.5s ease"></div>
           </div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.3)">${pct}% за 30 днів · ${dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ')}</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.3)">${pct}% за 30 днів · ${dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ')}</div>
         </div>
         <div onclick="openEditHabit(${h.id})" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
@@ -3058,14 +3247,21 @@ function openTaskChat(id) {
   const t = tasks.find(x => x.id === id);
   if (!t) return;
   taskChatId = id;
-  taskChatHistory = [];
 
   document.getElementById('task-chat-title').textContent = t.title;
   document.getElementById('task-chat-messages').innerHTML = '';
   document.getElementById('task-chat-input').value = '';
   document.getElementById('task-chat-modal').style.display = 'flex';
 
-  // Перше повідомлення від агента — конкретний аналіз задачі
+  // Restore saved chat history
+  const savedChat = JSON.parse(localStorage.getItem('nm_task_chat_' + id) || 'null');
+  if (savedChat && savedChat.messages && savedChat.messages.length > 0) {
+    taskChatHistory = savedChat.history || [];
+    savedChat.messages.forEach(m => addTaskChatMsg(m.role, m.text));
+    return;
+  }
+
+  taskChatHistory = [];
   const steps = (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
@@ -3082,10 +3278,22 @@ function openTaskChat(id) {
     const el = document.getElementById('task-chat-intro');
     if (el) el.textContent = reply || 'Розкажи більше про цю задачу.';
     taskChatHistory.push({ role: 'assistant', content: reply || '' });
+    saveTaskChatHistory();
   });
 }
 
+function saveTaskChatHistory() {
+  if (!taskChatId) return;
+  const messages = Array.from(document.getElementById('task-chat-messages').children).map(div => {
+    const bubble = div.querySelector('div');
+    const isAgent = div.style.justifyContent !== 'flex-end';
+    return { role: isAgent ? 'agent' : 'user', text: bubble ? bubble.textContent : '' };
+  }).filter(m => m.text && m.text !== '…');
+  localStorage.setItem('nm_task_chat_' + taskChatId, JSON.stringify({ messages, history: taskChatHistory }));
+}
+
 function closeTaskChat() {
+  saveTaskChatHistory();
   document.getElementById('task-chat-modal').style.display = 'none';
   taskChatId = null;
   taskChatHistory = [];
@@ -3096,7 +3304,7 @@ function addTaskChatMsg(role, text, id = '') {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#ea580c'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:11px 14px;font-size:14px;line-height:1.6;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#ea580c'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskChatHistory.push({ role: 'user', content: text });
@@ -3122,9 +3330,9 @@ async function sendTaskChatMessage() {
   const t = tasks.find(x => x.id === taskChatId);
   const steps = t ? (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n') : '';
   const aiContext = getAIContext();
-  const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком/i.test(text);
-  const stepInstruction = wantsSteps ? ' Якщо просять кроки — відповідай ТІЛЬКИ JSON без тексту: {"steps":["крок 1","крок 2",...]}' : '';
-  const systemPrompt = `Ти — особистий коуч в NeverMind. Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Звертаєшся на "ти". Говориш конкретно і тепло. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках. Підтримуєш і мотивуєш до дії.\${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
+  const stepInstruction = wantsSteps ? ' ВАЖЛИВО: користувач просить кроки. Відповідай ТІЛЬКИ валідним JSON і нічим іншим: {"steps":["крок 1","крок 2","крок 3"]}. Жодного тексту до або після JSON.' : '';
+  const systemPrompt = `Ти — особистий коуч в NeverMind. Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Звертаєшся на "ти". Говориш конкретно і тепло. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках. Підтримуєш і мотивуєш до дії.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -3167,6 +3375,7 @@ async function sendTaskChatMessage() {
   }
   taskChatLoading = false;
   btn.disabled = false;
+  saveTaskChatHistory();
 }
 
 
@@ -3262,7 +3471,7 @@ function addNoteChatMsg(role, text) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#4f46e5'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:11px 14px;font-size:14px;line-height:1.6;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#4f46e5'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') noteChatHistory.push({ role: 'user', content: text });
@@ -3330,7 +3539,7 @@ function showSaveAsNoteBtn(replyText) {
   const btn = document.createElement('div');
   btn.id = 'note-chat-save-btn';
   btn.style.cssText = 'display:flex;justify-content:flex-end;margin-top:-4px';
-  btn.innerHTML = `<button onclick="saveAgentResponseAsNote('${replyText.replace(/'/g,"&#39;").replace(/\n/g,' ')}')" style="background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;color:#4f46e5;cursor:pointer">+ Зберегти як нотатку</button>`;
+  btn.innerHTML = `<button onclick="saveAgentResponseAsNote('${replyText.replace(/'/g,"&#39;").replace(/\n/g,' ')}')" style="background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer">+ Зберегти як нотатку</button>`;
   el.appendChild(btn);
   el.scrollTop = el.scrollHeight;
 }
@@ -3345,11 +3554,160 @@ function saveAgentResponseAsNote(text) {
   document.getElementById('note-chat-save-btn')?.remove();
 }
 
+
+// === SETTINGS SWIPE TO CLOSE ===
+function setupSettingsSwipe() {
+  const panel = document.getElementById('settings-panel-el');
+  if (!panel) return;
+  let startY = 0, startScrollTop = 0;
+  panel.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    startScrollTop = panel.scrollTop;
+  }, { passive: true });
+  panel.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - startY;
+    // Close only if swiped down >80px AND panel is scrolled to top
+    if (dy > 80 && startScrollTop === 0) {
+      closeSettings();
+    }
+  }, { passive: true });
+}
+
+
+
+// === PRODUCTIVITY INNER TABS ===
+let currentProdTab = 'tasks';
+
+function switchProdTab(tab) {
+  currentProdTab = tab;
+  const isHabits = tab === 'habits';
+
+  // Update inner tab styles
+  document.getElementById('prod-tab-tasks').style.cssText = `flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;${!isHabits ? 'background:white;color:#ea580c;box-shadow:0 2px 8px rgba(0,0,0,0.08)' : 'color:rgba(30,16,64,0.4)'}`;
+  document.getElementById('prod-tab-habits').style.cssText = `flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;${isHabits ? 'background:white;color:#16a34a;box-shadow:0 2px 8px rgba(0,0,0,0.08)' : 'color:rgba(30,16,64,0.4)'}`;
+
+  document.getElementById('prod-page-tasks').style.display = isHabits ? 'none' : 'block';
+  document.getElementById('prod-page-habits').style.display = isHabits ? 'block' : 'none';
+
+  // Update + button action
+  const addBtn = document.getElementById('prod-add-btn');
+  if (addBtn) addBtn.onclick = isHabits ? openAddHabit : openAddTask;
+
+  if (isHabits) renderProdHabits();
+}
+
+function renderProdHabits() {
+  const habits = getHabits();
+  const el = document.getElementById('prod-habits-list');
+  if (!el) return;
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+
+  // Update progress bar
+  const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+  const doneTodayCount = todayHabits.filter(h => !!log[today]?.[h.id]).length;
+  const countEl = document.getElementById('habits-today-count');
+  const barEl = document.getElementById('habits-today-bar');
+  if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
+  if (barEl) barEl.style.width = todayHabits.length > 0 ? `${Math.round(doneTodayCount/todayHabits.length*100)}%` : '0%';
+
+  if (habits.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще немає звичок<br>Натисни + щоб додати</div>';
+    return;
+  }
+
+  el.innerHTML = habits.map(h => {
+    const isDoneToday = !!log[today]?.[h.id];
+    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    const streak = getHabitStreak(h.id);
+    const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+    const schedDays = dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ');
+
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid rgba(30,16,64,0.05)">
+      <div style="font-size:26px;flex-shrink:0">${h.emoji || '⭕'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:2px">${escapeHtml(h.name)}</div>
+        <div style="font-size:12px;color:rgba(30,16,64,0.35)">${streak >= 2 ? `🔥 ${streak} дні · ` : ''}${schedDays}</div>
+      </div>
+      <div onclick="${isScheduledToday ? `toggleProdHabitToday(${h.id})` : ''}"
+        style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:${isScheduledToday ? 'pointer' : 'default'};
+        display:flex;align-items:center;justify-content:center;transition:all 0.2s;
+        ${isDoneToday ? 'background:#16a34a;' : isScheduledToday ? 'background:rgba(30,16,64,0.05);border:2px dashed rgba(30,16,64,0.2)' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.1)'}">
+        ${isDoneToday ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleProdHabitToday(id) {
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  log[today][id] = !log[today][id];
+  saveHabitLog(log);
+  renderProdHabits();
+  renderHabits(); // sync with Me tab
+}
+
+// === TAB SWIPE NAVIGATION ===
+(function() {
+  let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
+  const EDGE_ZONE = 30; // px від краю для "назад"
+
+  document.addEventListener('touchstart', e => {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeStartTime = Date.now();
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    // Ignore if any modal is open
+    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal'];
+    if (modals.some(id => {
+      const el = document.getElementById(id);
+      return el && (el.style.display === 'flex' || el.classList.contains('open'));
+    })) return;
+
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    const dy = e.changedTouches[0].clientY - swipeStartY;
+    const dt = Date.now() - swipeStartTime;
+
+    // Must be fast enough and horizontal
+    if (dt > 400) return;
+    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
+
+    const tabs = ['inbox','tasks','notes','me','evening'];
+    const idx = tabs.indexOf(currentTab);
+
+    // Swipe from left edge = "back" (same as right swipe but only from edge)
+    if (swipeStartX <= EDGE_ZONE && dx > 60) {
+      if (idx > 0) switchTab(tabs[idx - 1]);
+      return;
+    }
+
+    // Swipe left → next tab
+    if (dx < -60 && idx < tabs.length - 1) {
+      switchTab(tabs[idx + 1]);
+    }
+    // Swipe right → prev tab
+    else if (dx > 60 && idx > 0) {
+      switchTab(tabs[idx - 1]);
+    }
+  }, { passive: true });
+})();
+
 // === INIT ===
 function init() {
   try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
   try { setupKeyboardAvoiding(); } catch(e) {}
+  try { setupSettingsSwipe(); } catch(e) {}
+  // Me chat enter key
+  const meChatInput = document.getElementById('me-chat-input');
+  if (meChatInput) meChatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMeChatMessage(); } });
   // iOS Safari fix: inputs in fixed/transformed containers don't get focus on tap
   try {
     document.addEventListener('touchend', function(e) {
@@ -3410,10 +3768,10 @@ setTimeout(() => {
 <!-- TASK CHAT MODAL -->
 <div id="task-chat-modal" style="display:none;position:fixed;inset:0;z-index:300;flex-direction:column;background:white;">
   <div style="display:flex;align-items:center;gap:12px;padding:max(56px, calc(env(safe-area-inset-top) + 16px)) 16px 12px;border-bottom:1px solid rgba(30,16,64,0.08);flex-shrink:0;background:white;">
-    <button onclick="closeTaskChat()" style="background:rgba(234,88,12,0.1);border:none;font-size:20px;cursor:pointer;color:#ea580c;padding:8px 12px;line-height:1;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
+    <button onclick="closeTaskChat()" style="background:rgba(234,88,12,0.1);border:none;font-size:23px;cursor:pointer;color:#ea580c;padding:8px 12px;line-height:1;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
     <div style="flex:1;min-width:0">
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Обговорення задачі</div>
-      <div id="task-chat-title" style="font-size:14px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Обговорення задачі</div>
+      <div id="task-chat-title" style="font-size:16px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
     </div>
   </div>
   <div id="task-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
@@ -3421,7 +3779,7 @@ setTimeout(() => {
     <textarea id="task-chat-input" rows="1" placeholder="Запитай або розкажи деталі…"
       oninput="autoResizeTextarea(this)"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage();}"
-      style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
+      style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
     <button onclick="sendTaskChatMessage()" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -3431,24 +3789,24 @@ setTimeout(() => {
 <!-- NOTE VIEWER MODAL (F2) -->
 <div id="note-view-modal" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:linear-gradient(160deg,#f0f4ff,#e8ecff);">
   <!-- Header -->
-  <div style="display:flex;align-items:center;gap:12px;padding:max(56px,calc(env(safe-area-inset-top)+16px)) 16px 12px;border-bottom:1px solid rgba(79,70,229,0.12);flex-shrink:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);">
-    <button onclick="closeNoteView()" style="background:rgba(79,70,229,0.1);border:none;font-size:20px;cursor:pointer;color:#4f46e5;padding:8px 12px;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
+  <div style="display:flex;align-items:center;gap:12px;padding:max(44px,calc(env(safe-area-inset-top)+8px)) 16px 12px;border-bottom:1px solid rgba(79,70,229,0.12);flex-shrink:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);">
+    <button onclick="closeNoteView()" style="background:rgba(79,70,229,0.1);border:none;font-size:23px;cursor:pointer;color:#4f46e5;padding:8px 12px;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
     <div style="flex:1;min-width:0">
-      <div id="note-view-folder" style="font-size:10px;font-weight:800;color:rgba(79,70,229,0.5);text-transform:uppercase;letter-spacing:0.08em"></div>
-      <div style="font-size:13px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="note-view-preview"></div>
+      <div id="note-view-folder" style="font-size:12px;font-weight:800;color:rgba(79,70,229,0.5);text-transform:uppercase;letter-spacing:0.08em"></div>
+      <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;" id="note-view-preview"></div>
     </div>
-    <button onclick="openEditNoteFromView()" style="background:rgba(79,70,229,0.1);border:none;font-size:14px;cursor:pointer;color:#4f46e5;padding:8px 10px;border-radius:10px;font-weight:700">✎</button>
+    <button onclick="openEditNoteFromView()" style="background:rgba(79,70,229,0.1);border:none;font-size:16px;cursor:pointer;color:#4f46e5;padding:8px 10px;border-radius:10px;font-weight:700">✎</button>
   </div>
 
   <!-- Tabs -->
   <div style="display:flex;border-bottom:1px solid rgba(79,70,229,0.1);background:rgba(255,255,255,0.7);flex-shrink:0">
-    <button id="note-view-tab-note" onclick="switchNoteViewTab('note')" style="flex:1;padding:10px;font-size:12px;font-weight:700;color:#4f46e5;background:none;border:none;border-bottom:2px solid #4f46e5;cursor:pointer">📝 Нотатка</button>
-    <button id="note-view-tab-chat" onclick="switchNoteViewTab('chat')" style="flex:1;padding:10px;font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">💬 Агент</button>
+    <button id="note-view-tab-note" onclick="switchNoteViewTab('note')" style="flex:1;padding:10px;font-size:14px;font-weight:700;color:#4f46e5;background:none;border:none;border-bottom:2px solid #4f46e5;cursor:pointer">📝 Нотатка</button>
+    <button id="note-view-tab-chat" onclick="switchNoteViewTab('chat')" style="flex:1;padding:10px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">💬 Агент</button>
   </div>
 
   <!-- Note content panel -->
   <div id="note-view-panel-note" style="flex:1;overflow-y:auto;padding:20px 16px;">
-    <div id="note-view-text" style="font-size:15px;line-height:1.8;color:#1e1040;font-weight:400;white-space:pre-wrap;word-break:break-word"></div>
+    <div id="note-view-text" style="font-size:17px;line-height:1.8;color:#1e1040;font-weight:400;white-space:pre-wrap;word-break:break-word"></div>
   </div>
 
   <!-- Chat panel -->
@@ -3461,7 +3819,7 @@ setTimeout(() => {
     <textarea id="note-chat-input" rows="1" placeholder="Запитай про цю нотатку…"
       oninput="autoResizeTextarea(this)"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNoteChatMessage();}"
-      style="flex:1;border:1.5px solid rgba(79,70,229,0.2);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:white;"></textarea>
+      style="flex:1;border:1.5px solid rgba(79,70,229,0.2);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:white;"></textarea>
     <button onclick="sendNoteChatMessage()" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
