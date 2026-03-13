@@ -2064,8 +2064,6 @@ async function callAIWithHistory(systemPrompt, history) {
     });
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content || null;
-    // Add assistant reply to history
-    if (reply) inboxChatHistory.push({ role: 'assistant', content: reply });
     return reply;
   } catch { return null; }
 }
@@ -2102,16 +2100,20 @@ async function sendToAI() {
   const statsContext = getMeStatsContext();
   const fullContext = [aiContext, statsContext].filter(Boolean).join('\n\n');
   const fullPrompt = fullContext ? `${INBOX_SYSTEM_PROMPT}\n\n${fullContext}` : INBOX_SYSTEM_PROMPT;
-  // Add to history and call with context
+  // Build history for context — but keep it short so JSON format is not broken
   inboxChatHistory.push({ role: 'user', content: text });
   if (inboxChatHistory.length > 12) inboxChatHistory = inboxChatHistory.slice(-12);
-  const reply = await callAIWithHistory(fullPrompt, inboxChatHistory);
+  // Pass last 4 messages max to avoid confusing the model into text mode
+  const historySlice = inboxChatHistory.slice(-4);
+  const reply = await callAIWithHistory(fullPrompt, historySlice);
 
   if (reply) {
     try {
       const clean = reply.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(clean);
 
+      // Save assistant reply to history for context
+      inboxChatHistory.push({ role: 'assistant', content: reply });
       if (parsed.action === 'save') {
         const cat = ['idea','task','habit','note','event'].includes(parsed.category) ? parsed.category : 'note';
         const savedText = parsed.text || text;
@@ -3682,6 +3684,13 @@ function toggleProdHabitToday(id) {
     const tabs = ['inbox','tasks','notes','me','evening'];
     const idx = tabs.indexOf(currentTab);
 
+    // If note-view-modal is open — swipe right closes it
+    const noteView = document.getElementById('note-view-modal');
+    if (noteView && noteView.style.display === 'flex') {
+      if (dx > 60) closeNoteView();
+      return;
+    }
+
     // Swipe from left edge = "back" (same as right swipe but only from edge)
     if (swipeStartX <= EDGE_ZONE && dx > 60) {
       if (idx > 0) switchTab(tabs[idx - 1]);
@@ -3789,14 +3798,14 @@ setTimeout(() => {
 <!-- NOTE VIEWER MODAL (F2) -->
 <div id="note-view-modal" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:linear-gradient(160deg,#f0f4ff,#e8ecff);">
   <!-- Header -->
-  <div style="display:flex;align-items:center;gap:12px;padding:max(44px,calc(env(safe-area-inset-top)+8px)) 16px 12px;border-bottom:1px solid rgba(79,70,229,0.12);flex-shrink:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);">
+  <div style="padding-top:env(safe-area-inset-top,0px);background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);flex-shrink:0;border-bottom:1px solid rgba(79,70,229,0.12)"><div style="display:flex;align-items:center;gap:12px;padding:10px 16px 12px;">
     <button onclick="closeNoteView()" style="background:rgba(79,70,229,0.1);border:none;font-size:23px;cursor:pointer;color:#4f46e5;padding:8px 12px;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
     <div style="flex:1;min-width:0">
       <div id="note-view-folder" style="font-size:12px;font-weight:800;color:rgba(79,70,229,0.5);text-transform:uppercase;letter-spacing:0.08em"></div>
       <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;" id="note-view-preview"></div>
     </div>
     <button onclick="openEditNoteFromView()" style="background:rgba(79,70,229,0.1);border:none;font-size:16px;cursor:pointer;color:#4f46e5;padding:8px 10px;border-radius:10px;font-weight:700">✎</button>
-  </div>
+  </div></div>
 
   <!-- Tabs -->
   <div style="display:flex;border-bottom:1px solid rgba(79,70,229,0.1);background:rgba(255,255,255,0.7);flex-shrink:0">
