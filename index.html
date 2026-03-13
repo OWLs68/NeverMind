@@ -1233,10 +1233,11 @@ body {
 <!-- HABIT MODAL -->
 <div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
-    <input id="habit-input-name" type="text" placeholder="Назва звички (напр: Читати 20 хв)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
+    <input id="habit-input-name" type="text" placeholder="Коротка назва (напр: Читати)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
+    <textarea id="habit-input-details" placeholder="Деталі (необов'язково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;resize:none;min-height:60px"></textarea>
     <input id="habit-input-emoji" type="text" placeholder="Емодзі (необов'язково)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
     <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Дні тижня</div>
     <div style="display:flex;gap:6px;margin-bottom:20px" id="habit-days-row">
@@ -1258,7 +1259,7 @@ body {
 <!-- MOMENT MODAL -->
 <div id="moment-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeMomentModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1323,7 +1324,7 @@ body {
 <!-- NOTE MODAL -->
 <div id="note-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeNoteModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="note-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
     <input id="note-input-folder" type="text" list="folder-suggestions" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Папка (наприклад: Ідеї, Навчання…)">
@@ -1339,7 +1340,7 @@ body {
 <!-- TASK MODAL -->
 <div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:1">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
     <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…" ontouchend="this.focus()">
@@ -1838,7 +1839,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "category": "idea|task|habit|note|event",
   "folder": "назва папки українською",
   "text": "очищений текст запису",
-  "comment": "коротка відповідь або порада (1-2 речення)"
+  "comment": "коротка практична ремарка (1 речення). НЕ хвали запис, не кажи що він чудовий чи правильний."
 }
 
 ЯКЩО це питання або розмова (не запис) — відповідай ТІЛЬКИ JSON:
@@ -2121,7 +2122,9 @@ async function sendToAI() {
       // Save assistant reply to history for context
       inboxChatHistory.push({ role: 'assistant', content: reply });
       if (parsed.action === 'save') {
-        const cat = ['idea','task','habit','note','event'].includes(parsed.category) ? parsed.category : 'note';
+        const catMap = {'нотатка':'note','задача':'task','звичка':'habit','ідея':'idea','подія':'event'};
+        const rawCat = (parsed.category || '').toLowerCase();
+        const cat = ['idea','task','habit','note','event'].includes(rawCat) ? rawCat : (catMap[rawCat] || 'note');
         const savedText = parsed.text || text;
         const folder = parsed.folder || null; // папка від агента
         const items = getInbox();
@@ -2141,10 +2144,31 @@ async function sendToAI() {
         // Дублюємо звички у вкладку Продуктивність
         if (cat === 'habit') {
           const habits = getHabits();
-          // Перевіряємо чи такої звички ще немає
           const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
           if (!exists) {
-            habits.push({ id: Date.now(), name: savedText, emoji: '⭕', days: [0,1,2,3,4,5,6], createdAt: Date.now() });
+            // Парсимо дні з тексту
+            const txt = savedText.toLowerCase();
+            let days = [0,1,2,3,4,5,6]; // за замовчуванням щодня
+            const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/i.test(txt);
+            const hasWeekdays = /будн|пн.*ср.*пт|пн.*вт.*ср|щодня|кожного дня/i.test(txt);
+            if (hasWeekdays) {
+              days = [0,1,2,3,4]; // пн-пт
+            } else if (hasWeekday) {
+              days = [];
+              if (/понеділ|пн/i.test(txt)) days.push(0);
+              if (/вівтор|вт/i.test(txt)) days.push(1);
+              if (/серед|ср/i.test(txt)) days.push(2);
+              if (/четвер|чт/i.test(txt)) days.push(3);
+              if (/п.ятниц|пт/i.test(txt)) days.push(4);
+              if (/субот|сб/i.test(txt)) days.push(5);
+              if (/неділ|нд/i.test(txt)) days.push(6);
+              if (days.length === 0) days = [0,1,2,3,4,5,6];
+            }
+            // Коротка назва + деталі для звички з Inbox
+            const habitParts = savedText.split(/[,.]\s*/);
+            const habitName = habitParts[0].trim().split(' ').slice(0,5).join(' ');
+            const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '';
+            habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, createdAt: Date.now() });
             saveHabits(habits);
           }
         }
@@ -3070,6 +3094,7 @@ function openAddHabit() {
   editingHabitId = null;
   document.getElementById('habit-modal-title').textContent = 'Нова звичка';
   document.getElementById('habit-input-name').value = '';
+  document.getElementById('habit-input-details').value = '';
   document.getElementById('habit-input-emoji').value = '';
   document.querySelectorAll('.habit-day-btn').forEach((b, i) => {
     b.classList.toggle('active', i < 5);
@@ -3085,9 +3110,33 @@ function openEditHabit(id) {
   editingHabitId = id;
   document.getElementById('habit-modal-title').textContent = 'Редагувати звичку';
   document.getElementById('habit-input-name').value = h.name;
+  // Деталі: якщо немає поля details — спробуй витягти з назви
+  let details = h.details || '';
+  if (!details && h.name) {
+    const parts = h.name.split(/[,]\s*/);
+    if (parts.length > 1) {
+      details = parts.slice(1).join(', ').trim();
+    }
+  }
+  document.getElementById('habit-input-details').value = details;
   document.getElementById('habit-input-emoji').value = h.emoji || '';
+  // Дні: якщо всі 7 активні але назва містить конкретні дні — запропонувати правильні
+  let days = h.days || [0,1,2,3,4];
+  const nameAndDetails = (h.name + ' ' + details).toLowerCase();
+  const hasSpecificDays = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/.test(nameAndDetails);
+  if (hasSpecificDays && days.length === 7) {
+    days = [];
+    if (/понеділ|пн/.test(nameAndDetails)) days.push(0);
+    if (/вівтор|вт/.test(nameAndDetails)) days.push(1);
+    if (/серед|ср/.test(nameAndDetails)) days.push(2);
+    if (/четвер|чт/.test(nameAndDetails)) days.push(3);
+    if (/п.ятниц|пт/.test(nameAndDetails)) days.push(4);
+    if (/субот|сб/.test(nameAndDetails)) days.push(5);
+    if (/неділ|нд/.test(nameAndDetails)) days.push(6);
+    if (days.length === 0) days = [0,1,2,3,4];
+  }
   document.querySelectorAll('.habit-day-btn').forEach(b => {
-    b.classList.toggle('active', (h.days || [0,1,2,3,4]).includes(parseInt(b.dataset.day)));
+    b.classList.toggle('active', days.includes(parseInt(b.dataset.day)));
   });
   document.getElementById('habit-modal').style.display = 'flex';
 }
@@ -3106,15 +3155,16 @@ document.addEventListener('click', e => {
 function saveHabit() {
   const name = document.getElementById('habit-input-name').value.trim();
   if (!name) { showToast('Введи назву звички'); return; }
+  const details = document.getElementById('habit-input-details').value.trim();
   const emoji = document.getElementById('habit-input-emoji').value.trim() || '⭕';
   const days = [...document.querySelectorAll('.habit-day-btn.active')].map(b => parseInt(b.dataset.day));
   const habits = getHabits();
 
   if (editingHabitId) {
     const idx = habits.findIndex(x => x.id === editingHabitId);
-    if (idx !== -1) habits[idx] = { ...habits[idx], name, emoji, days };
+    if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days };
   } else {
-    habits.push({ id: Date.now(), name, emoji, days, createdAt: Date.now() });
+    habits.push({ id: Date.now(), name, details, emoji, days, createdAt: Date.now() });
   }
   saveHabits(habits);
   closeHabitModal();
@@ -3290,7 +3340,7 @@ function openTaskChat(id) {
 
   addTaskChatMsg('agent', '…', 'task-chat-intro');
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — особистий коуч в NeverMind. Допомагаєш реально виконати задачу. Звертаєшся на "ти". Перше повідомлення: коротко (2-3 речення) дай позитивну оцінку — що сильного в задачі, чи вона чітка. Якщо нечітка — запропонуй як уточнити. Потім запитай що вже зроблено або який перший крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `Ти — жорсткий але справедливий особистий асистент в NeverMind. Допомагаєш реально виконати задачу. Звертаєшся на "ти". НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
 
   callAI(systemPrompt, taskInfo, {}).then(reply => {
@@ -3651,14 +3701,15 @@ function renderProdHabits() {
     const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
     const schedDays = dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ');
 
+    const detailsText = h.details ? h.details.substring(0, 50) : '';
     return `
-    <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid rgba(30,16,64,0.05)">
+    <div onclick="openEditHabit(${h.id})" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid rgba(30,16,64,0.05);cursor:pointer">
       <div style="font-size:26px;flex-shrink:0">${h.emoji || '⭕'}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:2px">${escapeHtml(h.name)}</div>
-        <div style="font-size:12px;color:rgba(30,16,64,0.35)">${streak >= 2 ? `🔥 ${streak} дні · ` : ''}${schedDays}</div>
+        <div style="font-size:12px;color:rgba(30,16,64,0.35)">${streak >= 2 ? `🔥 ${streak} · ` : ''}${schedDays}${detailsText ? ' · ' + escapeHtml(detailsText) : ''}</div>
       </div>
-      <div onclick="${isScheduledToday ? `toggleProdHabitToday(${h.id})` : ''}"
+      <div onclick="event.stopPropagation();${isScheduledToday ? `toggleProdHabitToday(${h.id})` : ''}"
         style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:${isScheduledToday ? 'pointer' : 'default'};
         display:flex;align-items:center;justify-content:center;transition:all 0.2s;
         ${isDoneToday ? 'background:#16a34a;' : isScheduledToday ? 'background:rgba(30,16,64,0.05);border:2px dashed rgba(30,16,64,0.2)' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.1)'}">
