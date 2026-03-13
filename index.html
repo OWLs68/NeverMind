@@ -2046,9 +2046,12 @@ async function callAIWithHistory(systemPrompt, history) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000); // 25 сек таймаут
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
@@ -2057,10 +2060,20 @@ async function callAIWithHistory(systemPrompt, history) {
         temperature: 0.7
       })
     });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('OpenAI error:', res.status, errText);
+      return null;
+    }
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content || null;
     return reply;
-  } catch { return null; }
+  } catch(e) {
+    clearTimeout(timeout);
+    console.error('callAIWithHistory error:', e);
+    return null;
+  }
 }
 
 
@@ -2152,10 +2165,11 @@ async function sendToAI() {
         // action === 'reply' — просто відповідь
         textEl.textContent = parsed.comment || reply;
       }
-    } catch {
+    } catch(e) {
       // JSON не розпарсився — зберігаємо офлайн
+      console.error('JSON parse error:', e, 'reply was:', reply);
       saveOffline(text);
-      textEl.textContent = reply.substring(0, 200);
+      textEl.textContent = (reply || '').substring(0, 200) || 'Помилка відповіді агента';
     }
   } else {
     saveOffline(text);
