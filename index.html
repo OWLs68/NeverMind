@@ -796,23 +796,27 @@ body {
 }
 .ai-bar-input {
   flex: 1;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 4px 8px;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(139,105,20,0.14);
+  border-radius: 16px;
+  padding: 10px 14px;
   font-family: var(--font-body);
   font-size: 16px;
   color: var(--text-primary);
   outline: none;
   -webkit-appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
   resize: none;
-  min-height: 28px;
-  max-height: 80px;
+  min-height: 40px;
+  max-height: 100px;
   overflow-y: auto;
   line-height: 1.45;
 }
 .ai-bar-input::placeholder { color: rgba(30,16,64,0.3); font-size: 15px; }
-.ai-bar-input:focus { outline: none; }
+.ai-bar-input:focus {
+  border-color: rgba(212,168,87,0.45);
+  box-shadow: 0 0 0 3px rgba(212,168,87,0.08);
+}
 
 .inbox-add-btn {
   width: 36px; height: 36px;
