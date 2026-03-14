@@ -712,25 +712,35 @@ body {
 #inbox-ai-bar {
   position: fixed;
   left: 12px; right: 12px;
-  bottom: 88px;
+  bottom: 72px;
   z-index: 50;
-  background: rgba(255,255,255,0.72);
-  border: 1px solid rgba(255,255,255,0.88);
-  border-radius: 22px;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(30,16,64,0.08);
+  border-radius: 20px;
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  box-shadow: 0 8px 32px rgba(100,70,200,0.13), 0 2px 8px rgba(100,70,200,0.07);
-  padding: 12px 12px 10px;
-  display: none; /* shown via JS only on inbox tab */
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  display: none;
+  flex-direction: column;
+  height: 230px;
+  overflow: hidden;
 }
-#inbox-ai-bar.bar-visible { display: block; }
+#inbox-ai-bar.bar-visible { display: flex; }
 #inbox-ai-bar::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
-  border-radius: 22px 22px 0 0;
+  border-radius: 20px 20px 0 0;
   pointer-events: none;
+}
+#inbox-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .ai-bar-preview {
@@ -941,28 +951,35 @@ body {
 
     <!-- AI BAR — одне поле, одна кнопка, ШІ вирішує все -->
     <div id="inbox-ai-bar">
-
-      <!-- AI відповідь -->
-      <div id="ai-bar-response" style="display:none">
-        <div class="ai-bar-preview">
+      <!-- Зона переписки — скролиться всередині -->
+      <div id="inbox-chat-messages">
+        <!-- Перше повідомлення від ШІ -->
+        <div style="display:flex;gap:8px;align-items:flex-start">
           <div class="ai-avatar">✦</div>
-          <div class="ai-bar-text" id="ai-bar-text"></div>
+          <div style="background:rgba(30,16,64,0.05);color:#1e1040;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">Привіт! Напиши що завгодно — я розберусь 👋</div>
         </div>
-        <div style="height:8px"></div>
       </div>
 
-      <!-- Єдине поле вводу -->
-      <div class="ai-bar-input-row">
-        <textarea class="ai-bar-input" id="inbox-input"
-          placeholder="Напиши що завгодно — ШІ розбереться…" rows="1"
-          oninput="autoResizeTextarea(this)"
-          onkeydown="unifiedInputKeydown(event)"></textarea>
-        <button class="ai-send-btn" id="ai-send-btn" onclick="sendToAI()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
+      <!-- Поле вводу — зафіксоване знизу вікна -->
+      <div style="flex-shrink:0;padding:8px 10px 10px;border-top:1px solid rgba(30,16,64,0.06)">
+        <div id="ai-bar-response" style="display:none;margin-bottom:6px">
+          <div class="ai-bar-preview">
+            <div class="ai-avatar">✦</div>
+            <div class="ai-bar-text" id="ai-bar-text"></div>
+          </div>
+        </div>
+        <div class="ai-bar-input-row">
+          <textarea class="ai-bar-input" id="inbox-input"
+            placeholder="Напиши що завгодно — ШІ розбереться…" rows="1"
+            oninput="autoResizeTextarea(this)"
+            onkeydown="unifiedInputKeydown(event)"></textarea>
+          <button class="ai-send-btn" id="ai-send-btn" onclick="sendToAI()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -2031,6 +2048,23 @@ async function callAI(systemPrompt, userMessage, contextData = {}) {
   }
 }
 
+
+// === INBOX CHAT MESSAGES ===
+function addInboxChatMsg(role, text) {
+  const el = document.getElementById('inbox-chat-messages');
+  if (!el) return;
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
+  if (isAgent) {
+    div.innerHTML = `<div class="ai-avatar">✦</div><div style="background:rgba(30,16,64,0.05);color:#1e1040;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+  } else {
+    div.innerHTML = `<div style="background:#7c3aed;color:white;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+  }
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
 // === INBOX ===
 const CAT_META = {
   idea:  { icon: '💡', label: 'Ідея',    dotClass: 'cat-dot-idea',  tagClass: 'cat-idea'  },
@@ -2212,6 +2246,7 @@ async function sendToAI() {
   }
 
   aiLoading = true;
+  addInboxChatMsg('user', text); // показуємо повідомлення в чаті
   input.value = ''; input.style.height = 'auto';
 
   const btn = document.getElementById('ai-send-btn');
@@ -2319,12 +2354,15 @@ async function sendToAI() {
         }
         if (parsed.comment) {
           textEl.textContent = parsed.comment;
+          addInboxChatMsg('agent', parsed.comment); // додаємо в чат
         } else {
           responseArea.style.display = 'none';
         }
       } else {
         // action === 'reply' — просто відповідь
-        textEl.textContent = parsed.comment || reply;
+        const replyText = parsed.comment || reply;
+        textEl.textContent = replyText;
+        addInboxChatMsg('agent', replyText); // додаємо в чат
       }
     } catch(e) {
       // JSON не розпарсився — зберігаємо офлайн
