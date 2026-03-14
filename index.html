@@ -1041,7 +1041,7 @@ body {
 
 
 <!-- TASKS AI CHAT BAR — поза .page щоб fixed працював на iOS -->
-<div id="tasks-ai-bar" style="display:none;position:fixed;bottom:96px;left:16px;right:16px;max-width:448px;margin:0 auto;z-index:100;">
+<div id="tasks-ai-bar" style="display:none;position:fixed;bottom:94px;left:16px;right:16px;z-index:100;">
   <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(234,88,12,0.15);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
     <div id="tasks-chat-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
     <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
@@ -1180,7 +1180,7 @@ body {
     </div>
 
     <!-- ME AI BAR — зафіксований знизу -->
-    <div id="me-ai-bar" style="display:none;position:fixed;bottom:82px;left:0;right:0;max-width:480px;margin:0 auto;z-index:100;padding:8px 14px 8px;">
+    <div id="me-ai-bar" style="display:none;position:fixed;bottom:94px;left:16px;right:16px;z-index:100;">
       <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(22,163,74,0.2);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
         <div id="me-chat-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
         <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
@@ -1245,7 +1245,7 @@ body {
     </div>
 
     <!-- EVENING AI BAR — зафіксований знизу -->
-    <div id="evening-ai-bar" style="display:none;position:fixed;bottom:82px;left:0;right:0;max-width:480px;margin:0 auto;z-index:100;padding:8px 14px 8px;">
+    <div id="evening-ai-bar" style="display:none;position:fixed;bottom:94px;left:16px;right:16px;z-index:100;">
       <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(124,58,237,0.2);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
         <div id="evening-bar-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
         <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
@@ -2874,7 +2874,7 @@ function renderTasks() {
     return `<div style="margin:0 14px 10px;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.6' : '1'}">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
         <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:13px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
-        <div style="flex:1;cursor:pointer" onclick="openTaskChat(${t.id})" title="Обговорити з ШІ">
+        <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
         </div>
@@ -2896,7 +2896,6 @@ function renderTasks() {
           `).join('')}
         </div>
       ` : ''}
-      <button onclick="openTaskChat(${t.id})" style="width:100%;background:rgba(234,88,12,0.07);border:1px solid rgba(234,88,12,0.15);border-radius:10px;padding:8px;font-size:14px;font-weight:700;color:#ea580c;cursor:pointer;text-align:center">✦ Обговорити з ШІ</button>
     </div>`;
   }).join('');
 }
@@ -4309,22 +4308,33 @@ async function sendTasksBarMessage() {
 
   const tasks = getTasks().filter(t => t.status !== 'done');
   const tasksSummary = tasks.map(t => {
-    const steps = (t.steps || []).map(s => `  - ${s.text}${s.done ? ' [✓]' : ''}`).join('\n');
-    return `Задача ID:${t.id} "${t.title}"${steps ? '\nКроки:\n' + steps : ''}`;
+    const steps = (t.steps || []).map(s => '  - ' + s.text + (s.done ? ' [✓]' : '')).join('\n');
+    return 'Задача ID:' + t.id + ' "' + t.title + '"' + (steps ? '\nКроки:\n' + steps : '');
   }).join('\n\n');
 
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const habitsSummary = habits.map(h => {
+    const done = !!log[today]?.[h.id];
+    return h.name + (done ? ' [виконано сьогодні]' : ' [не виконано сьогодні]');
+  }).join(', ');
+
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — асистент у вкладці Задачі застосунку NeverMind. 
-Активні задачі користувача:
-${tasksSummary || 'Немає активних задач'}
-
-Ти можеш:
-1. Відповідати на питання про задачі
-2. Якщо користувач каже що виконав щось — відповідай JSON: {"action":"complete_step","task_id":ID,"step_text":"текст кроку"} або {"action":"complete_task","task_id":ID}
-3. Якщо просить додати крок — відповідай JSON: {"action":"add_step","task_id":ID,"step":"текст кроку"}
-4. Якщо незрозуміло яка задача — запитай уточнення
-
-Інакше — відповідай текстом українською, коротко (1-2 речення).${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = 'Ти — асистент у вкладці Продуктивність застосунку NeverMind. Звертайся на "ти".\n\n'
+    + 'ЗАДАЧІ:\n' + (tasksSummary || 'Немає активних задач') + '\n\n'
+    + (habitsSummary ? 'ЗВИЧКИ СЬОГОДНІ:\n' + habitsSummary + '\n\n' : '')
+    + 'Ти можеш:\n'
+    + '1. Відповідати на питання про задачі та звички\n'
+    + '2. Якщо виконав крок — JSON: {"action":"complete_step","task_id":ID,"step_text":"текст"}\n'
+    + '3. Якщо виконав задачу — JSON: {"action":"complete_task","task_id":ID}\n'
+    + '4. Якщо виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
+    + '5. Якщо СТВОРИТИ звичку — JSON: {"action":"create_habit","name":"коротка назва","days":[0,1,2,3,4,5,6]}\n'
+    + '6. Якщо СТВОРИТИ задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
+    + '7. Якщо додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
+    + '8. Якщо незрозуміло — запитай уточнення\n'
+    + 'ВАЖЛИВО: тільки чистий JSON без слова "JSON:" і без markdown. Інакше — текст українською 1-2 речення.'
+    + (aiContext ? '\n\n' + aiContext : '');
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -4342,7 +4352,10 @@ ${tasksSummary || 'Немає активних задач'}
 
     // Спробуємо розпарсити JSON дію
     try {
-      const parsed = JSON.parse(reply.replace(/```json|```/g,'').trim());
+      // Шукаємо JSON навіть якщо є текст перед ним
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(jsonStr);
       if (parsed.action === 'complete_step') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
@@ -4363,7 +4376,39 @@ ${tasksSummary || 'Немає активних задач'}
       } else if (parsed.action === 'add_step') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
-        if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Додав крок "${parsed.step}"`); }
+        if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
+      } else if (parsed.action === 'complete_habit') {
+        const habits = getHabits();
+        const h = habits.find(x => x.name.toLowerCase().includes((parsed.habit_name || '').toLowerCase().substring(0,6)));
+        if (h) {
+          const todayStr = new Date().toDateString();
+          const log = getHabitLog();
+          if (!log[todayStr]) log[todayStr] = {};
+          log[todayStr][h.id] = true;
+          saveHabitLog(log);
+          renderProdHabits();
+          renderHabits();
+          addTaskBarMsg('agent', '✅ Відмітив звичку "' + h.name + '" як виконану сьогодні');
+        } else { addTaskBarMsg('agent', reply); }
+      } else if (parsed.action === 'create_habit') {
+        const habits = getHabits();
+        const name = (parsed.name || '').trim();
+        if (name) {
+          const days = parsed.days || [0,1,2,3,4,5,6];
+          habits.push({ id: Date.now(), name, details: parsed.details || '', emoji: '⭕', days, createdAt: Date.now() });
+          saveHabits(habits);
+          renderProdHabits(); renderHabits();
+          addTaskBarMsg('agent', '🌱 Звичку "' + name + '" створено!');
+        }
+      } else if (parsed.action === 'create_task') {
+        const tasks = getTasks();
+        const title = (parsed.title || '').trim();
+        if (title) {
+          const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+          tasks.unshift({ id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+          saveTasks(tasks); renderTasks();
+          addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
+        }
       } else { addTaskBarMsg('agent', reply); }
     } catch { addTaskBarMsg('agent', reply); }
 
