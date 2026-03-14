@@ -796,27 +796,23 @@ body {
 }
 .ai-bar-input {
   flex: 1;
-  background: rgba(255,255,255,0.55);
-  border: 1px solid rgba(139,105,20,0.14);
-  border-radius: 16px;
-  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 4px 8px;
   font-family: var(--font-body);
-  font-size: 16px; /* мінімум 16px — інакше iOS зумує */
+  font-size: 16px;
   color: var(--text-primary);
   outline: none;
   -webkit-appearance: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
   resize: none;
-  min-height: 40px;
-  max-height: 100px;
+  min-height: 28px;
+  max-height: 80px;
   overflow-y: auto;
   line-height: 1.45;
 }
 .ai-bar-input::placeholder { color: rgba(30,16,64,0.3); font-size: 15px; }
-.ai-bar-input:focus {
-  border-color: rgba(212,168,87,0.45);
-  box-shadow: 0 0 0 3px rgba(212,168,87,0.08);
-}
+.ai-bar-input:focus { outline: none; }
 
 .inbox-add-btn {
   width: 36px; height: 36px;
@@ -2050,9 +2046,26 @@ async function callAI(systemPrompt, userMessage, contextData = {}) {
 
 
 // === INBOX CHAT MESSAGES ===
+let _inboxTypingEl = null;
+
 function addInboxChatMsg(role, text) {
   const el = document.getElementById('inbox-chat-messages');
   if (!el) return;
+
+  // Видаляємо typing індикатор якщо є
+  if (_inboxTypingEl) { _inboxTypingEl.remove(); _inboxTypingEl = null; }
+
+  if (role === 'typing') {
+    // Показуємо typing індикатор
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
+    div.innerHTML = `<div class="ai-avatar">✦</div><div style="background:rgba(30,16,64,0.05);border-radius:4px 14px 14px 14px;padding:8px 12px"><div class="ai-typing"><span></span><span></span><span></span></div></div>`;
+    el.appendChild(div);
+    _inboxTypingEl = div;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
+
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
@@ -2255,8 +2268,8 @@ async function sendToAI() {
 
   const responseArea = document.getElementById('ai-bar-response');
   const textEl = document.getElementById('ai-bar-text');
-  responseArea.style.display = 'block';
-  textEl.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
+  // Показуємо typing в чаті
+  addInboxChatMsg('typing', '…');
 
   const aiContext = getAIContext();
   const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
@@ -2352,23 +2365,29 @@ async function sendToAI() {
           moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
           saveMoments(moments);
         }
-        if (parsed.comment) {
-          textEl.textContent = parsed.comment;
-          addInboxChatMsg('agent', parsed.comment); // додаємо в чат
-        } else {
-          responseArea.style.display = 'none';
-        }
+              // Підтвердження збереження в чаті
+        const catConfirm = {
+          task: '✅ Створив задачу',
+          habit: '🌱 Додав звичку',
+          note: '📝 Збережено в нотатки',
+          idea: '💡 Збережено як ідею',
+          event: '📅 Додав до Вечора'
+        };
+        const confirmMsg = catConfirm[cat] || '✓ Збережено';
+        addInboxChatMsg('agent', parsed.comment ? parsed.comment : confirmMsg);
+        responseArea.style.display = 'none';
       } else {
         // action === 'reply' — просто відповідь
         const replyText = parsed.comment || reply;
-        textEl.textContent = replyText;
-        addInboxChatMsg('agent', replyText); // додаємо в чат
+        addInboxChatMsg('agent', replyText);
+        responseArea.style.display = 'none';
       }
     } catch(e) {
       // JSON не розпарсився — зберігаємо офлайн
       console.error('JSON parse error:', e, 'reply was:', reply);
       saveOffline(text);
-      textEl.textContent = (reply || '').substring(0, 200) || 'Помилка відповіді агента';
+      addInboxChatMsg('agent', (reply || '').substring(0, 200) || 'Помилка відповіді агента');
+      responseArea.style.display = 'none';
     }
   } else {
     saveOffline(text);
@@ -3531,13 +3550,18 @@ function setupKeyboardAvoiding() {
     const keyboardHeight = window.innerHeight - window.visualViewport.height;
     const aiBar = document.getElementById('inbox-ai-bar');
     const tabBar = document.getElementById('tab-bar');
+    // Інші бари (tasks, me, evening)
+    const otherBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar'].map(id => document.getElementById(id));
     if (keyboardHeight > 100) {
-      // Keyboard is open
-      if (aiBar) aiBar.style.bottom = (keyboardHeight + 8) + 'px';
+      // Клавіатура відкрита — піднімаємо бар над клавіатурою, ховаємо таббар
+      if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
       if (tabBar) tabBar.style.transform = `translateY(${keyboardHeight}px)`;
+      otherBars.forEach(b => { if(b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
-      if (aiBar) aiBar.style.bottom = '88px';
+      // Клавіатура закрита
+      if (aiBar) { aiBar.style.bottom = '72px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
       if (tabBar) tabBar.style.transform = 'translateY(0)';
+      otherBars.forEach(b => { if(b) b.style.bottom = '60px'; });
     }
   });
 }
