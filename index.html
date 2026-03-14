@@ -1001,6 +1001,25 @@ body {
         </div>
       </div>
 
+      <!-- TASKS AI CHAT BAR — зафіксований знизу -->
+      <div id="tasks-ai-bar" style="display:none;position:fixed;bottom:60px;left:0;right:0;max-width:480px;margin:0 auto;z-index:100;padding:8px 14px 8px;">
+        <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(234,88,12,0.15);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+          <!-- Розгорнутий чат -->
+          <div id="tasks-chat-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;display:none;flex-direction:column;gap:6px"></div>
+          <!-- Поле вводу -->
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">✦</div>
+            <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи ШІ про задачі…"
+              oninput="autoResizeTextarea(this);showTasksChatMessages()"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"
+              style="flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;resize:none;max-height:80px;background:transparent;line-height:1.45"></textarea>
+            <button onclick="sendTasksBarMessage()" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- HABITS SUB-PAGE -->
       <div id="prod-page-habits" style="display:none;padding:0 0 120px">
         <!-- Day progress bar -->
@@ -1140,18 +1159,23 @@ body {
           <div id="me-ai-advice" style="font-size:19px;line-height:1.8;color:#7c2d12;font-weight:400"></div>
         </div>
 
-        <!-- Me AI Chat -->
-        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.8);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✦ Поговорити з агентом</div>
-          <div id="me-chat-messages" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;min-height:0"></div>
-          <div style="display:flex;gap:8px">
-            <input id="me-chat-input" type="text" placeholder="Запитай агента про себе..." style="flex:1;padding:10px 14px;border:1.5px solid rgba(22,163,74,0.2);border-radius:12px;font-size:16px;background:rgba(255,255,255,0.9);outline:none;font-family:inherit">
-            <button onclick="sendMeChatMessage()" style="width:44px;height:44px;border-radius:12px;background:#16a34a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
-          </div>
-        </div>
+      </div>
+    </div>
 
+    <!-- ME AI BAR — зафіксований знизу -->
+    <div id="me-ai-bar" style="display:none;position:fixed;bottom:60px;left:0;right:0;max-width:480px;margin:0 auto;z-index:100;padding:8px 14px 8px;">
+      <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(22,163,74,0.2);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+        <div id="me-chat-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">✦</div>
+          <input id="me-chat-input" type="text" placeholder="Запитай агента про себе…"
+            onfocus="showMeChatMessages()"
+            style="flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;background:transparent"
+            onkeydown="if(event.key==='Enter'){sendMeChatMessage()}">
+          <button onclick="sendMeChatMessage()" style="width:34px;height:34px;border-radius:10px;background:#16a34a;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1200,12 +1224,24 @@ body {
         <div id="evening-summary" style="font-size:19px;line-height:1.8;color:#4c1d95;font-weight:400">Натисни ↻ щоб отримати підсумок дня від агента.</div>
       </div>
 
-      <!-- Dialog button -->
-      <div onclick="openEveningDialog()" style="margin:0 14px;background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-        <div style="font-size:16px;font-weight:700;color:#7c3aed">✦ Вечірній діалог з агентом</div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </div>
       </div><!-- /evening scroll -->
+    </div>
+
+    <!-- EVENING AI BAR — зафіксований знизу -->
+    <div id="evening-ai-bar" style="display:none;position:fixed;bottom:60px;left:0;right:0;max-width:480px;margin:0 auto;z-index:100;padding:8px 14px 8px;">
+      <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(124,58,237,0.2);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+        <div id="evening-bar-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">✦</div>
+          <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
+            oninput="autoResizeTextarea(this);showEveningBarMessages()"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEveningBarMessage()}"
+            style="flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;resize:none;max-height:80px;background:transparent;line-height:1.45"></textarea>
+          <button onclick="sendEveningBarMessage()" style="width:34px;height:34px;border-radius:10px;background:#7c3aed;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+      </div>
     </div>
 
   </div><!-- /scroll-wrap -->
@@ -1500,10 +1536,15 @@ function switchTab(tab) {
   applyTheme(tab);
 
   // Tab-specific actions
-  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); }
+  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); document.getElementById('tasks-ai-bar').style.display = 'block'; }
+  ['tasks','me','evening'].forEach(t => {
+    const barId = t === 'tasks' ? 'tasks-ai-bar' : t === 'me' ? 'me-ai-bar' : 'evening-ai-bar';
+    const bar = document.getElementById(barId);
+    if (bar) bar.style.display = (t === tab) ? 'block' : 'none';
+  });
   if (tab === 'notes') { renderNotes(); checkAndSuggestFolders(); }
-  if (tab === 'me') { renderMe(); renderHabits(); renderMeHabitsStats(); }
-  if (tab === 'evening') renderEvening();
+  if (tab === 'me') { renderMe(); renderHabits(); renderMeHabitsStats(); document.getElementById('me-ai-bar').style.display = 'block'; }
+  if (tab === 'evening') { renderEvening(); document.getElementById('evening-ai-bar').style.display = 'block'; }
 
   // Show/hide AI bar (inbox only)
   updateAiBarVisibility();
@@ -1925,6 +1966,21 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 - Якщо не підходить жодна — придумай коротку логічну назву українською
 - Якщо category=task або habit або event — поле folder не потрібне (пиши null)
 
+ЯКЩО є сумнів (кілька можливих дій, незрозуміла категорія, кілька задач в одному записі) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "clarify",
+  "question": "коротке питання українською (1 речення)",
+  "options": [
+    {"label": "📋 Варіант 1", "action": "save", "category": "task", "text": "...", "task_title": "...", "task_steps": []},
+    {"label": "✅ Варіант 2", "action": "save", "category": "task", "text": "..."}
+  ]
+}
+
+Правила для clarify:
+- Використовуй якщо: є 2+ окремі дії через крапку/перерахування, незрозуміло task чи note, є список який може бути окремими задачами
+- НЕ використовуй якщо запис однозначний
+- Максимум 3 варіанти в options
+
 ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
 
 async function callAI(systemPrompt, userMessage, contextData = {}) {
@@ -2183,6 +2239,16 @@ async function sendToAI() {
 
       // Save assistant reply to history for context
       inboxChatHistory.push({ role: 'assistant', content: reply });
+      // Якщо ШІ не впевнений — показуємо вікно уточнення
+      if (parsed.action === 'clarify') {
+        responseArea.style.display = 'none';
+        showClarify(parsed, text);
+        aiLoading = false;
+        btn.disabled = false;
+        btn.innerHTML = SEND_SVG;
+        return;
+      }
+
       if (parsed.action === 'save') {
         const catMap = {'нотатка':'note','задача':'task','звичка':'habit','ідея':'idea','подія':'event'};
         const rawCat = (parsed.category || '').toLowerCase();
@@ -2757,20 +2823,11 @@ function renderTasks() {
         <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
           <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px" id="steps-list-${t.id}">
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div draggable="true"
-              ondragstart="stepDragStart(event,${t.id},${s.id})"
-              ondragend="stepDragEnd(event)"
-              ondragover="stepDragOver(event,${t.id},${s.id})"
-              style="display:flex;align-items:center;gap:8px;cursor:pointer;touch-action:none">
-              <div style="padding:4px 6px;cursor:grab;color:rgba(30,16,64,0.2);flex-shrink:0;font-size:11px;line-height:1;display:flex;flex-direction:column;gap:2px">
-                <div style="width:14px;height:1.5px;background:currentColor;border-radius:2px"></div>
-                <div style="width:14px;height:1.5px;background:currentColor;border-radius:2px"></div>
-                <div style="width:14px;height:1.5px;background:currentColor;border-radius:2px"></div>
-              </div>
-              <div onclick="toggleTaskStep(${t.id},${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#ea580c">${s.done ? '✓' : ''}</div>
-              <div onclick="toggleTaskStep(${t.id},${s.id})" style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <div style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#ea580c">${s.done ? '✓' : ''}</div>
+              <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
           `).join('')}
         </div>
@@ -3317,14 +3374,19 @@ function getHabitPct(id, days30) {
   const habits = getHabits();
   const h = habits.find(x => x.id === id);
   if (!h) return 0;
-  let done = 0, total = 0;
+  let done = 0;
+  const plannedDays = h.days || [0,1,2,3,4];
+  // Рахуємо скільки запланованих днів було за 30 днів
   const d = new Date();
+  let total = 0;
   for (let i = 0; i < 30; i++) {
     const ds = d.toDateString();
     const dow = (d.getDay() + 6) % 7;
-    if ((h.days || [0,1,2,3,4]).includes(dow)) {
+    if (plannedDays.includes(dow)) {
       total++;
-      if (log[ds]?.[id]) done++;
+      if (log[ds]?.[id]) done++; // виконано в запланований день
+    } else if (log[ds]?.[id]) {
+      done++; // виконано навіть не в запланований день — теж рахуємо
     }
     d.setDate(d.getDate() - 1);
   }
@@ -4014,37 +4076,305 @@ async function autoGenerateTaskSteps(taskId, title) {
   } catch(e) {}
 }
 
-// === TASK STEP DRAG & DROP ===
-let dragStepTaskId = null;
-let dragStepId = null;
-let dragStepEl = null;
 
-function stepDragStart(e, taskId, stepId) {
-  dragStepTaskId = taskId;
-  dragStepId = stepId;
-  dragStepEl = e.currentTarget;
-  dragStepEl.style.opacity = '0.4';
-  e.dataTransfer.effectAllowed = 'move';
+// === CLARIFY SYSTEM ===
+let clarifyParsed = null;
+let clarifyOriginalText = null;
+
+function showClarify(parsed, originalText) {
+  clarifyParsed = parsed;
+  clarifyOriginalText = originalText;
+
+  document.getElementById('clarify-question').textContent = parsed.question || 'Уточни будь ласка:';
+  document.getElementById('clarify-input').value = '';
+
+  const optEl = document.getElementById('clarify-options');
+  optEl.innerHTML = (parsed.options || []).map((opt, i) => {
+    const isPrimary = i === 0;
+    return `<button onclick="selectClarifyOption(${i})" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? 'rgba(124,58,237,0.05)' : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isPrimary ? 'rgba(124,58,237,0.2)' : 'rgba(30,16,64,0.08)'};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? '#7c3aed' : '#1e1040'};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || '')}</button>`;
+  }).join('');
+
+  document.getElementById('clarify-modal').style.display = 'flex';
 }
-function stepDragEnd(e) {
-  if (dragStepEl) dragStepEl.style.opacity = '1';
-  dragStepTaskId = null; dragStepId = null; dragStepEl = null;
+
+function closeClarify() {
+  document.getElementById('clarify-modal').style.display = 'none';
+  clarifyParsed = null;
+  clarifyOriginalText = null;
 }
-function stepDragOver(e, taskId, stepId) {
-  e.preventDefault();
-  if (dragStepTaskId !== taskId || dragStepId === stepId) return;
-  const allTasks = getTasks();
-  const t = allTasks.find(x => x.id === taskId);
-  if (!t) return;
-  const steps = [...t.steps];
-  const fromIdx = steps.findIndex(s => s.id === dragStepId);
-  const toIdx = steps.findIndex(s => s.id === stepId);
-  if (fromIdx === -1 || toIdx === -1) return;
-  const [moved] = steps.splice(fromIdx, 1);
-  steps.splice(toIdx, 0, moved);
-  t.steps = steps;
-  saveTasks(allTasks);
-  renderTasks();
+
+async function selectClarifyOption(idx) {
+  if (!clarifyParsed) return;
+  const opt = (clarifyParsed.options || [])[idx];
+  if (!opt) return;
+  closeClarify();
+  // Обробляємо вибраний варіант як звичайну відповідь save
+  await processSaveAction(opt, clarifyOriginalText);
+}
+
+async function sendClarifyText() {
+  const input = document.getElementById('clarify-input');
+  const text = input.value.trim();
+  if (!text) return;
+  closeClarify();
+  // Відправляємо уточнення назад в ШІ разом з оригінальним текстом
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
+  const combinedMsg = `Оригінальний запис: "${clarifyOriginalText}". Уточнення від користувача: "${text}"`;
+  clarifyOriginalText = null;
+  clarifyParsed = null;
+  const reply = await callAI(fullPrompt, combinedMsg, {});
+  if (reply) {
+    try {
+      const parsed = JSON.parse(reply.replace(/\`\`\`json|\`\`\`/g, '').trim());
+      if (parsed.action === 'save') await processSaveAction(parsed, combinedMsg);
+    } catch(e) {}
+  }
+}
+
+// Виносимо логіку збереження в окрему функцію щоб використовувати і з clarify і з sendToAI
+async function processSaveAction(parsed, originalText) {
+  const catMap = {'нотатка':'note','задача':'task','звичка':'habit','ідея':'idea','подія':'event'};
+  const rawCat = (parsed.category || '').toLowerCase();
+  const cat = ['idea','task','habit','note','event'].includes(rawCat) ? rawCat : (catMap[rawCat] || 'note');
+  const savedText = parsed.text || originalText;
+  const folder = parsed.folder || null;
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+
+  if (cat === 'task') {
+    const taskId = Date.now();
+    const tasks = getTasks();
+    const taskTitle = parsed.task_title || savedText;
+    const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
+      ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
+      : [];
+    tasks.unshift({ id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId });
+    saveTasks(tasks);
+    if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
+  }
+  if (cat === 'note' || cat === 'idea') addNoteFromInbox(savedText, cat, folder);
+  if (cat === 'habit') {
+    const habits = getHabits();
+    const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
+    if (!exists) {
+      const txt = savedText.toLowerCase();
+      let days = [0,1,2,3,4,5,6];
+      const hasWeekdays = /будн|пн.*ср.*пт|щодня|кожного дня/i.test(txt);
+      const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/i.test(txt);
+      if (hasWeekdays) { days = [0,1,2,3,4]; }
+      else if (hasWeekday) {
+        days = [];
+        if (/понеділ|пн/i.test(txt)) days.push(0);
+        if (/вівтор|вт/i.test(txt)) days.push(1);
+        if (/серед|ср/i.test(txt)) days.push(2);
+        if (/четвер|чт/i.test(txt)) days.push(3);
+        if (/п.ятниц|пт/i.test(txt)) days.push(4);
+        if (/субот|сб/i.test(txt)) days.push(5);
+        if (/неділ|нд/i.test(txt)) days.push(6);
+        if (days.length === 0) days = [0,1,2,3,4,5,6];
+      }
+      const habitParts = savedText.split(/[,.]\s*/);
+      const habitName = habitParts[0].trim().split(' ').slice(0,5).join(' ');
+      const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '';
+      habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, createdAt: Date.now() });
+      saveHabits(habits);
+    }
+  }
+  if (cat === 'event') {
+    const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
+                 /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
+    const moments = getMoments();
+    moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
+    saveMoments(moments);
+  }
+  if (parsed.comment) {
+    const responseArea = document.getElementById('ai-bar-response');
+    const textEl = document.getElementById('ai-bar-text');
+    if (responseArea && textEl) {
+      textEl.textContent = parsed.comment;
+      responseArea.style.display = 'block';
+    }
+  }
+  showToast('✓ Збережено');
+}
+
+
+// === TASKS AI BAR ===
+let taskBarLoading = false;
+let taskBarHistory = [];
+
+function showTasksChatMessages() {
+  const el = document.getElementById('tasks-chat-messages');
+  if (el && el.children.length > 0) el.style.display = 'flex';
+}
+
+function addTaskBarMsg(role, text) {
+  const el = document.getElementById('tasks-chat-messages');
+  if (!el) return;
+  el.style.display = 'flex';
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(234,88,12,0.07)' : '#ea580c'};color:${isAgent ? '#7c2d12' : 'white'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
+}
+
+async function sendTasksBarMessage() {
+  if (taskBarLoading) return;
+  const input = document.getElementById('tasks-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addTaskBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addTaskBarMsg('user', text);
+  taskBarLoading = true;
+
+  const tasks = getTasks().filter(t => t.status !== 'done');
+  const tasksSummary = tasks.map(t => {
+    const steps = (t.steps || []).map(s => `  - ${s.text}${s.done ? ' [✓]' : ''}`).join('\n');
+    return `Задача ID:${t.id} "${t.title}"${steps ? '\nКроки:\n' + steps : ''}`;
+  }).join('\n\n');
+
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — асистент у вкладці Задачі застосунку NeverMind. 
+Активні задачі користувача:
+${tasksSummary || 'Немає активних задач'}
+
+Ти можеш:
+1. Відповідати на питання про задачі
+2. Якщо користувач каже що виконав щось — відповідай JSON: {"action":"complete_step","task_id":ID,"step_text":"текст кроку"} або {"action":"complete_task","task_id":ID}
+3. Якщо просить додати крок — відповідай JSON: {"action":"add_step","task_id":ID,"step":"текст кроку"}
+4. Якщо незрозуміло яка задача — запитай уточнення
+
+Інакше — відповідай текстом українською, коротко (1-2 речення).${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, ...taskBarHistory.slice(-8), { role: 'user', content: text }],
+        max_tokens: 200, temperature: 0.5
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); taskBarLoading = false; return; }
+
+    // Спробуємо розпарсити JSON дію
+    try {
+      const parsed = JSON.parse(reply.replace(/```json|```/g,'').trim());
+      if (parsed.action === 'complete_step') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) {
+          const step = t.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
+          if (step) {
+            step.done = true;
+            // Якщо всі кроки виконані або немає кроків — виконати задачу
+            if (t.steps.every(s => s.done)) t.status = 'done';
+            saveTasks(allTasks); renderTasks();
+            addTaskBarMsg('agent', `✅ Відмітив "${step.text}" як виконано`);
+          } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
+        }
+      } else if (parsed.action === 'complete_task') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) { t.status = 'done'; t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
+      } else if (parsed.action === 'add_step') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Додав крок "${parsed.step}"`); }
+      } else { addTaskBarMsg('agent', reply); }
+    } catch { addTaskBarMsg('agent', reply); }
+
+    taskBarHistory.push({ role: 'assistant', content: reply });
+  } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
+  taskBarLoading = false;
+}
+
+
+// === ME AI BAR ===
+function showMeChatMessages() {
+  const el = document.getElementById('me-chat-messages');
+  if (el) el.style.display = 'flex';
+}
+
+// Оновлюємо sendMeChatMessage щоб показувати повідомлення в барі
+const _origAddMeChatMsg = addMeChatMsg;
+function addMeChatMsg(role, text, id = '') {
+  const el = document.getElementById('me-chat-messages');
+  if (!el) return;
+  el.style.display = 'flex';
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(22,163,74,0.08)' : '#16a34a'};color:${isAgent ? '#14532d' : 'white'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// === EVENING AI BAR ===
+let eveningBarHistory = [];
+let eveningBarLoading = false;
+
+function showEveningBarMessages() {
+  const el = document.getElementById('evening-bar-messages');
+  if (el) el.style.display = 'flex';
+}
+
+function addEveningBarMsg(role, text) {
+  const el = document.getElementById('evening-bar-messages');
+  if (!el) return;
+  el.style.display = 'flex';
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(124,58,237,0.07)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
+}
+
+async function sendEveningBarMessage() {
+  if (eveningBarLoading) return;
+  const input = document.getElementById('evening-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  input.value = ''; input.style.height = 'auto';
+  addEveningBarMsg('user', text);
+  eveningBarLoading = true;
+
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — вечірній агент NeverMind. Звертаєшся на "ти". Тепло і чесно. Короткі відповіді (1-3 речення). Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}. Записи сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 200, temperature: 0.8 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) { addEveningBarMsg('agent', reply); eveningBarHistory.push({ role: 'assistant', content: reply }); }
+    else addEveningBarMsg('agent', 'Щось пішло не так.');
+  } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
+  eveningBarLoading = false;
 }
 
 // === INIT ===
