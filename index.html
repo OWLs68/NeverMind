@@ -1103,6 +1103,12 @@ body {
           <div id="me-activity" style="display:flex;gap:4px;align-items:flex-end;height:48px"></div>
         </div>
 
+        <!-- Habits stats -->
+        <div id="me-habits-stats" style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
+          <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📊 Статистика звичок</div>
+          <div id="me-habits-stats-list"></div>
+        </div>
+
         <!-- AI weekly summary -->
         <div style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1116,12 +1122,6 @@ body {
         <div id="me-advice-block" style="display:none;margin:0 14px 10px;background:rgba(255,248,240,0.9);border:1px solid rgba(234,88,12,0.15);border-radius:16px;padding:14px">
           <div style="font-size:12px;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">💡 3 конкретні поради</div>
           <div id="me-ai-advice" style="font-size:19px;line-height:1.8;color:#7c2d12;font-weight:400"></div>
-        </div>
-
-        <!-- Habits stats -->
-        <div id="me-habits-stats" style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📊 Статистика звичок</div>
-          <div id="me-habits-stats-list"></div>
         </div>
 
         <!-- Me AI Chat -->
@@ -1233,14 +1233,14 @@ body {
 <!-- HABIT MODAL -->
 <div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
-    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:24px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
     <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
-    <input id="habit-input-name" type="text" placeholder="Коротка назва (напр: Читати)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
-    <textarea id="habit-input-details" placeholder="Деталі (необов'язково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;resize:none;min-height:60px"></textarea>
-    <input id="habit-input-emoji" type="text" placeholder="Емодзі (необов'язково)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Дні тижня</div>
-    <div style="display:flex;gap:6px;margin-bottom:20px" id="habit-days-row">
+    <input id="habit-input-name" type="text" placeholder="Назва звички" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
+    <textarea id="habit-input-details" placeholder="Деталі (необов'язково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:16px;resize:none;min-height:64px"></textarea>
+    <input id="habit-input-emoji" type="text" style="display:none">
+    <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Дні тижня</div>
+    <div style="display:flex;gap:6px;margin-bottom:24px" id="habit-days-row">
       <button class="habit-day-btn active" data-day="0">Пн</button>
       <button class="habit-day-btn active" data-day="1">Вт</button>
       <button class="habit-day-btn active" data-day="2">Ср</button>
@@ -1249,9 +1249,9 @@ body {
       <button class="habit-day-btn" data-day="5">Сб</button>
       <button class="habit-day-btn" data-day="6">Нд</button>
     </div>
-    <div style="display:flex;gap:8px">
-      <button onclick="closeHabitModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveHabit()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeHabitModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveHabit()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
@@ -1597,9 +1597,11 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary'];
   keys.forEach(k => localStorage.removeItem(k));
-  showToast('🗑️ Всі дані видалено');
+  // Видаляємо динамічні ключі чатів задач (nm_task_chat_123456...)
+  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_')).forEach(k => localStorage.removeItem(k));
+  showToast('\ud83d\uddd1\ufe0f Всі дані видалено');
   closeSettings();
 }
 
@@ -1805,7 +1807,7 @@ function setupPWA() {
     background_color: '#faf9ff',
     theme_color: '#f5f1ff',
     icons: [{
-      src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="%23a78bfa"/><text x="96" y="130" text-anchor="middle" font-size="100" font-family="serif">✦</text></svg>',
+      src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjM4IiBmaWxsPSIjMWUzYTVmIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSI2NiIgcj0iMTAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDQsNzYgUTM4LDkyIDQwLDExMiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI2IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMiIvPjxwYXRoIGQ9Ik00Miw5MiBMMjgsMTA4IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4yIi8+PHBhdGggZD0iTTQyLDkyIEw1MiwxMDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDAsMTEyIEwzMiwxMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDAsMTEyIEw0OCwxMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48Y2lyY2xlIGN4PSI5NiIgY3k9IjYyIiByPSIxMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNSIvPjxwYXRoIGQ9Ik05Niw3MiBMOTYsMTE0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC41Ii8+PHBhdGggZD0iTTk2LDkwIEw4MCwxMDQiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsOTAgTDExMiwxMDQiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsMTE0IEw4NiwxNDAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsMTE0IEwxMDYsMTQwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTUwIiBjeT0iNTgiIHI9IjExIiBmaWxsPSIjNjBhNWZhIi8+PHBhdGggZD0iTTE1MCw2OSBMMTUwLDExNiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsODYgTDEzMCw2NiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsODYgTDE3MCw2NiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsMTE2IEwxMzgsMTQyIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTE1MCwxMTYgTDE2MiwxNDIiIHN0cm9rZT0iIzYwYTVmYSIgc3Ryb2tlLXdpZHRoPSI1IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=',
       sizes: '192x192',
       type: 'image/svg+xml'
     }]
@@ -1850,7 +1852,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 
 Правила визначення категорії:
 - task: є конкретна дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити")
-- habit: регулярна повторювана дія ("щодня", "кожен ранок", "щотижня", "тренуватись")
+- habit: регулярна повторювана дія ("щодня", "кожен ранок", "щотижня", "тренуватись"). Для звичок поле "text" — це коротка назва 2-4 слова що точно описує суть (напр: "Бігати", "Читати щодня", "Рибалка на вихідних"). НЕ копіюй весь текст — витягни тільки суть.
 - event: ТІЛЬКИ короткий факт події без емоцій і роздумів ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції, оцінки, роздуми, висновки — це НЕ event
 - idea: творча думка, ідея, план, натхнення
 - note: рефлексія, особисті думки, емоції, висновки, спостереження, факти, їжа, витрати. ЯКЩО людина ділиться переживаннями або робить висновки — завжди note, навіть якщо є згадка часу ("завтра", "вчора")
@@ -2344,9 +2346,7 @@ function renderNotes(searchQuery = '') {
             const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
             return `
               <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:13px;overflow:hidden">
-                <div class="note-delete-bg" style="position:absolute;inset:0;background:#94a3b8;display:flex;align-items:center;justify-content:right;padding-right:20px;border-radius:13px">
-                  <span style="color:white;font-size:15px;font-weight:700">Видалити</span>
-                </div>
+                <div class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:80px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:flex-end;padding-right:20px;border-radius:13px;pointer-events:none;font-size:20px;color:white">🗑️</div>
                 <div id="note-item-${n.id}"
                   ontouchstart="noteSwipeStart(event,${n.id})"
                   ontouchmove="noteSwipeMove(event,${n.id})"
@@ -2356,7 +2356,7 @@ function renderNotes(searchQuery = '') {
                     <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
                       <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
-                      <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:2px 6px;cursor:pointer;color:rgba(30,16,64,0.3);font-size:21px;line-height:1">···</div>
+                      <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
                     </div>
                   </div>
                 </div>
@@ -3187,6 +3187,7 @@ function toggleHabitToday(id) {
   log[today][id] = !log[today][id];
   saveHabitLog(log);
   renderHabits();
+  renderMeHabitsStats(); // оновлюємо статистику одразу після зміни
 }
 
 function getHabitStreak(id) {
@@ -3283,18 +3284,18 @@ function renderHabits() {
     const weekDone = getHabitWeekDays(h.id);
     const shortName = h.name.split(' ').slice(0,4).join(' ');
     const dayDots = makeHabitDayDots(h, weekDone, todayDow);
+    const checkSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
     const checkBtn = isDoneToday
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-      : '<span style="opacity:' + (isScheduledToday ? '1' : '0.3') + '">' + (h.emoji || '⭕') + '</span>';
-    const btnBorder = isDoneToday ? '#16a34a' : isScheduledToday ? 'rgba(22,163,74,0.3)' : 'rgba(30,16,64,0.1)';
-    const btnBg = isDoneToday ? '#16a34a' : 'transparent';
+      ? checkSvg.replace('stroke-width', 'stroke="white" stroke-width')
+      : checkSvg.replace('stroke-width', 'stroke="rgba(30,16,64,0.25)" stroke-width');
+    const btnBorder = isDoneToday ? '#16a34a' : 'rgba(30,16,64,0.15)';
+    const btnBg = isDoneToday ? '#16a34a' : 'rgba(30,16,64,0.03)';
     const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥' + streak + '</span>' : '';
-    const onclickCheck = isScheduledToday ? 'toggleHabitToday(' + h.id + ')' : '';
 
     return '<div style="padding:10px 0;border-bottom:1px solid rgba(30,16,64,0.05)">'
       + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-        + '<div onclick="' + onclickCheck + '" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;font-size:18px;cursor:' + (isScheduledToday ? 'pointer' : 'default') + ';flex-shrink:0;transition:all 0.2s">'
+        + '<div onclick="toggleHabitToday(' + h.id + ')" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s">'
           + checkBtn
         + '</div>'
         + '<div style="flex:1;min-width:0">'
@@ -3746,13 +3747,15 @@ function renderProdHabits() {
     const weekDone = getHabitWeekDays(h.id);
     const shortName2 = h.name.split(' ').slice(0,4).join(' ');
     const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
+    const pct = getHabitPct(h.id); // відсоток виконання за 30 днів
     const pctColor2 = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakTxt = streak >= 2 ? '🔥 ' + streak + ' · ' : '';
-    const checkBtnProd = isDoneToday
+    const checkSvgProd = isDoneToday
       ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-      : '';
-    const checkBgProd = isDoneToday ? 'background:#16a34a;' : isScheduledToday ? 'background:rgba(30,16,64,0.05);border:2px dashed rgba(30,16,64,0.2)' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.1)';
-    const onclickProd = isScheduledToday ? 'event.stopPropagation();toggleProdHabitToday(' + h.id + ')' : 'event.stopPropagation()';
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    const checkBtnProd = checkSvgProd;
+    const checkBgProd = isDoneToday ? 'background:#16a34a;' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15)';
+    const onclickProd = 'event.stopPropagation();toggleProdHabitToday(' + h.id + ')';
 
     return '<div style="padding:12px 14px;border-bottom:1px solid rgba(30,16,64,0.05)">'
       + '<div onclick="openEditHabit(' + h.id + ')" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer">'
