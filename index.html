@@ -1233,7 +1233,7 @@ body {
 <!-- HABIT MODAL -->
 <div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:24px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:24px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
     <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
     <input id="habit-input-name" type="text" placeholder="Назва звички" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
@@ -2351,7 +2351,7 @@ function renderNotes(searchQuery = '') {
                   ontouchstart="noteSwipeStart(event,${n.id})"
                   ontouchmove="noteSwipeMove(event,${n.id})"
                   ontouchend="noteSwipeEnd(event,${n.id})"
-                  style="cursor:default;padding:12px 13px;">
+                  style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;">
                   <div onclick="openNoteView(${n.id})" style="cursor:pointer">
                     <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
@@ -3171,6 +3171,7 @@ function saveHabit() {
   saveHabits(habits);
   closeHabitModal();
   renderHabits();
+  renderProdHabits(); // оновлюємо список у вкладці Продуктивність
   showToast(editingHabitId ? '✓ Звичку оновлено' : '✓ Звичку додано');
 }
 
