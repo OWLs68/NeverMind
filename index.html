@@ -535,10 +535,26 @@ body {
   transition: opacity 0.25s, transform 0.25s;
   pointer-events: none;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 #toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+#toast-undo-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: none;
+  flex-shrink: 0;
 }
 
 /* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
@@ -1233,9 +1249,12 @@ body {
 <!-- HABIT MODAL -->
 <div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:24px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+24px);z-index:1;max-height:75vh;overflow-y:auto;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
-    <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова звичка</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Нова звичка</div>
+      <button id="habit-delete-btn" onclick="deleteHabitFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+    </div>
     <input id="habit-input-name" type="text" placeholder="Назва звички" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
     <textarea id="habit-input-details" placeholder="Деталі (необов'язково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:16px;resize:none;min-height:64px"></textarea>
     <input id="habit-input-emoji" type="text" style="display:none">
@@ -1259,7 +1278,7 @@ body {
 <!-- MOMENT MODAL -->
 <div id="moment-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeMomentModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1299,7 +1318,7 @@ body {
 <!-- NOTE CONTEXT MENU -->
 <div id="note-menu" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center">
   <div onclick="closeNoteMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:12px 12px 40px;z-index:1">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:12px 20px 40px;z-index:1;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 12px"></div>
     <button onclick="noteMenuEdit()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -1324,7 +1343,7 @@ body {
 <!-- NOTE MODAL -->
 <div id="note-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeNoteModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="note-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
     <input id="note-input-folder" type="text" list="folder-suggestions" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Папка (наприклад: Ідеї, Навчання…)">
@@ -1340,7 +1359,7 @@ body {
 <!-- TASK MODAL -->
 <div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
   <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;">
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
     <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px" placeholder="Назва задачі…" ontouchend="this.focus()">
@@ -1418,7 +1437,7 @@ body {
 </div>
 
 <!-- TOAST -->
-<div id="toast"></div>
+<div id="toast"><span id="toast-msg"></span><button id="toast-undo-btn" onclick="undoDelete()">Відновити</button></div>
 
 <script>
 // === TAB THEMES ===
@@ -1790,11 +1809,43 @@ function getMeStatsContext() {
 }
 
 
+let _undoToastTimer = null;
+let _undoData = null; // { type, item, restore }
+
 function showToast(msg, duration = 2000) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
+  const msgEl = document.getElementById('toast-msg');
+  const btn = document.getElementById('toast-undo-btn');
+  msgEl.textContent = msg;
+  btn.style.display = 'none';
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), duration);
+  _undoToastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showUndoToast(msg, restoreFn) {
+  // Показує toast з кнопкою "Відновити" на 10 секунд
+  const el = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  const btn = document.getElementById('toast-undo-btn');
+  msgEl.textContent = msg;
+  btn.style.display = 'inline-block';
+  _undoData = restoreFn;
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  el.classList.add('show');
+  _undoToastTimer = setTimeout(() => {
+    el.classList.remove('show');
+    _undoData = null;
+  }, 10000);
+}
+
+function undoDelete() {
+  if (_undoData) {
+    _undoData(); // викликаємо функцію відновлення
+    _undoData = null;
+  }
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  document.getElementById('toast').classList.remove('show');
 }
 
 // === PWA MANIFEST ===
@@ -1851,7 +1902,10 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 }
 
 Правила визначення категорії:
-- task: є конкретна дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити")
+- task: є конкретна дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити"). Для задач:
+  - поле "text" — оригінальний текст користувача (виправ тільки граматику, не змінюй зміст)
+  - поле "task_title" — коротка назва задачі 2-5 слів (напр: "Купити продукти", "Зателефонувати лікарю")
+  - поле "task_steps" — масив кроків якщо в задачі є список або кілька дій (напр: ["молоко","хліб","морозиво"]). Якщо список не очевидний — порожній масив []
 - habit: регулярна повторювана дія ("щодня", "кожен ранок", "щотижня", "тренуватись"). Для звичок поле "text" — це коротка назва 2-4 слова що точно описує суть (напр: "Бігати", "Читати щодня", "Рибалка на вихідних"). НЕ копіюй весь текст — витягни тільки суть.
 - event: ТІЛЬКИ короткий факт події без емоцій і роздумів ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції, оцінки, роздуми, висновки — це НЕ event
 - idea: творча думка, ідея, план, натхнення
@@ -2024,7 +2078,11 @@ function swipeEnd(e, id) {
   const el = document.getElementById(`item-${id}`);
   if (s.dx < -SWIPE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    setTimeout(() => { saveInbox(getInbox().filter(i => i.id !== id)); renderInbox(); }, 220);
+    setTimeout(() => {
+      const item = getInbox().find(i => i.id === id);
+      saveInbox(getInbox().filter(i => i.id !== id)); renderInbox();
+      if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); items.unshift(item); saveInbox(items); renderInbox(); });
+    }, 220);
   } else {
     if (el) { el.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'translateX(0)'; setTimeout(() => { if (el) el.style.transition = ''; }, 300); }
   }
@@ -2137,9 +2195,18 @@ async function sendToAI() {
         renderInbox();
         // Дублюємо задачі у вкладку Задачі
         if (cat === 'task') {
+          const taskId = Date.now();
           const tasks = getTasks();
-          tasks.unshift({ id: Date.now(), title: savedText, desc: '', steps: [], status: 'active', createdAt: Date.now() });
+          // Використовуємо task_title якщо є, інакше оригінальний текст
+          const taskTitle = parsed.task_title || savedText;
+          // Використовуємо task_steps якщо є
+          const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
+            ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
+            : [];
+          tasks.unshift({ id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId });
           saveTasks(tasks);
+          // Якщо кроків немає — спробуємо згенерувати автоматично
+          if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
         }
         // Дублюємо нотатки та ідеї в Нотатки з правильною папкою
         if (cat === 'note' || cat === 'idea') {
@@ -2399,8 +2466,9 @@ function noteSwipeEnd(e, id) {
       el.style.opacity = '0';
     }
     setTimeout(() => {
-      saveNotes(getNotes().filter(x => x.id !== id));
-      renderNotes();
+      const item = getNotes().find(x => x.id === id);
+      saveNotes(getNotes().filter(x => x.id !== id)); renderNotes();
+      if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); notes.unshift(item); saveNotes(notes); renderNotes(); });
     }, 200);
   } else {
     if (el) {
@@ -2636,10 +2704,10 @@ function toggleTaskStep(taskId, stepId) {
 }
 
 function deleteTask(id) {
-  if (!confirm('Видалити задачу?')) return;
+  const item = getTasks().find(x => x.id === id);
   saveTasks(getTasks().filter(x => x.id !== id));
   renderTasks();
-  showToast('🗑️ Видалено');
+  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); tasks.unshift(item); saveTasks(tasks); renderTasks(); });
 }
 
 function toggleTaskStatus(id) {
@@ -2689,11 +2757,20 @@ function renderTasks() {
         <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
           <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px" id="steps-list-${t.id}">
           ${steps.map(s => `
-            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:#ea580c">${s.done ? '✓' : ''}</div>
-              <div style="font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+            <div draggable="true"
+              ondragstart="stepDragStart(event,${t.id},${s.id})"
+              ondragend="stepDragEnd(event)"
+              ondragover="stepDragOver(event,${t.id},${s.id})"
+              style="display:flex;align-items:center;gap:8px;cursor:pointer;touch-action:none">
+              <div style="padding:4px 6px;cursor:grab;color:rgba(30,16,64,0.2);flex-shrink:0;font-size:11px;line-height:1;display:flex;flex-direction:column;gap:2px">
+                <div style="width:14px;height:1.5px;background:currentColor;border-radius:2px"></div>
+                <div style="width:14px;height:1.5px;background:currentColor;border-radius:2px"></div>
+                <div style="width:14px;height:1.5px;background:currentColor;border-radius:2px"></div>
+              </div>
+              <div onclick="toggleTaskStep(${t.id},${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#ea580c">${s.done ? '✓' : ''}</div>
+              <div onclick="toggleTaskStep(${t.id},${s.id})" style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
           `).join('')}
         </div>
@@ -3141,6 +3218,20 @@ function openEditHabit(id) {
     b.classList.toggle('active', days.includes(parseInt(b.dataset.day)));
   });
   document.getElementById('habit-modal').style.display = 'flex';
+  document.getElementById('habit-delete-btn').style.display = 'inline-block';
+}
+
+function openAddHabit() {
+  editingHabitId = null;
+  document.getElementById('habit-modal-title').textContent = 'Нова звичка';
+  document.getElementById('habit-input-name').value = '';
+  document.getElementById('habit-input-details').value = '';
+  document.getElementById('habit-input-emoji').value = '';
+  document.getElementById('habit-delete-btn').style.display = 'none';
+  document.querySelectorAll('.habit-day-btn').forEach(b => {
+    b.classList.toggle('active', [0,1,2,3,4].includes(parseInt(b.dataset.day)));
+  });
+  document.getElementById('habit-modal').style.display = 'flex';
 }
 
 function closeHabitModal() {
@@ -3179,6 +3270,17 @@ function deleteHabit(id) {
   if (!confirm('Видалити звичку?')) return;
   saveHabits(getHabits().filter(h => h.id !== id));
   renderHabits();
+  renderProdHabits();
+}
+
+function deleteHabitFromModal() {
+  if (!editingHabitId) return;
+  const id = editingHabitId;
+  const item = getHabits().find(h => h.id === id);
+  saveHabits(getHabits().filter(h => h.id !== id));
+  renderHabits(); renderProdHabits();
+  closeHabitModal();
+  if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
 }
 
 function toggleHabitToday(id) {
@@ -3294,23 +3396,29 @@ function renderHabits() {
     const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥' + streak + '</span>' : '';
 
-    return '<div style="padding:10px 0;border-bottom:1px solid rgba(30,16,64,0.05)">'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-        + '<div onclick="toggleHabitToday(' + h.id + ')" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s">'
-          + checkBtn
-        + '</div>'
-        + '<div style="flex:1;min-width:0">'
-          + '<div style="display:flex;align-items:center;gap:6px">'
-            + '<span style="font-size:15px;font-weight:700;color:#1e1040">' + escapeHtml(shortName) + '</span>'
-            + streakHtml
+    return '<div style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:6px">'
+      + '<div style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;font-size:20px;color:white;pointer-events:none">🗑️</div>'
+      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:default;width:100%;box-sizing:border-box;"'
+        + ' ontouchstart="habitMeSwipeStart(event,' + h.id + ')"'
+        + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
+        + ' ontouchend="habitMeSwipeEnd(event,' + h.id + ')">'
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+          + '<div onclick="toggleHabitToday(' + h.id + ')" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s">'
+            + checkBtn
           + '</div>'
-          + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
+          + '<div style="flex:1;min-width:0">'
+            + '<div style="display:flex;align-items:center;gap:6px">'
+              + '<span style="font-size:15px;font-weight:700;color:#1e1040">' + escapeHtml(shortName) + '</span>'
+              + streakHtml
+            + '</div>'
+            + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
+          + '</div>'
+          + '<div onclick="openEditHabit(' + h.id + ')" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">'
+            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>'
+          + '</div>'
         + '</div>'
-        + '<div onclick="openEditHabit(' + h.id + ')" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>'
-        + '</div>'
+        + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + '</div>'
     + '</div>';
   }).join('');
 }
@@ -3465,15 +3573,14 @@ async function sendTaskChatMessage() {
       try {
         const parsed = JSON.parse(reply.trim());
         if (parsed.steps && Array.isArray(parsed.steps) && parsed.steps.length > 0) {
-          // Add steps to task
           const allTasks = getTasks();
           const taskIdx = allTasks.findIndex(x => x.id === taskChatId);
           if (taskIdx !== -1) {
             const newSteps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
             allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
             saveTasks(allTasks);
-            const stepList = parsed.steps.map((s,j) => `${j+1}. ${s}`).join('\n');
-            addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроки до задачі:\n${stepList}`);
+            renderTasks(); // оновлюємо картку одразу
+            addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроків до задачі. Перевір картку.`);
           }
         } else {
           addTaskChatMsg('agent', reply);
@@ -3838,6 +3945,107 @@ function toggleProdHabitToday(id) {
     }
   }, { passive: true });
 })();
+
+
+// === HABIT ME SWIPE TO DELETE ===
+const habitMeSwipeState = {};
+const HABIT_SWIPE_THRESHOLD = 72;
+
+function habitMeSwipeStart(e, id) {
+  const t = e.touches[0];
+  habitMeSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function habitMeSwipeMove(e, id) {
+  const s = habitMeSwipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById('habit-me-item-' + id);
+  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+}
+function habitMeSwipeEnd(e, id) {
+  const s = habitMeSwipeState[id]; if (!s) return;
+  const el = document.getElementById('habit-me-item-' + id);
+  if (s.dx < -HABIT_SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => {
+      const item = getHabits().find(h => h.id === id);
+      saveHabits(getHabits().filter(h => h.id !== id)); renderHabits(); renderProdHabits();
+      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+    }, 200);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+  }
+  delete habitMeSwipeState[id];
+}
+
+
+// === AUTO GENERATE TASK STEPS ===
+async function autoGenerateTaskSteps(taskId, title) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const systemPrompt = `Ти — помічник планування. Отримуєш назву задачі і маєш вирішити чи варто розбивати на кроки.
+Якщо задача містить список (через кому, "і", "та") АБО потребує кількох дій — відповідай ТІЛЬКИ JSON: {"steps":["крок 1","крок 2"]}. Максимум 5 кроків. Кожен крок — коротко (2-5 слів).
+Якщо задача проста і не потребує кроків (наприклад "зателефонувати мамі") — відповідай ТІЛЬКИ: {"steps":[]}
+ТІЛЬКИ валідний JSON, без тексту.`;
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: title }], max_tokens: 150, temperature: 0.3 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) return;
+    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+    if (parsed.steps && parsed.steps.length > 0) {
+      const allTasks = getTasks();
+      const idx = allTasks.findIndex(x => x.id === taskId);
+      if (idx !== -1 && allTasks[idx].steps.length === 0) {
+        allTasks[idx].steps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+        saveTasks(allTasks);
+        renderTasks();
+      }
+    }
+  } catch(e) {}
+}
+
+// === TASK STEP DRAG & DROP ===
+let dragStepTaskId = null;
+let dragStepId = null;
+let dragStepEl = null;
+
+function stepDragStart(e, taskId, stepId) {
+  dragStepTaskId = taskId;
+  dragStepId = stepId;
+  dragStepEl = e.currentTarget;
+  dragStepEl.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function stepDragEnd(e) {
+  if (dragStepEl) dragStepEl.style.opacity = '1';
+  dragStepTaskId = null; dragStepId = null; dragStepEl = null;
+}
+function stepDragOver(e, taskId, stepId) {
+  e.preventDefault();
+  if (dragStepTaskId !== taskId || dragStepId === stepId) return;
+  const allTasks = getTasks();
+  const t = allTasks.find(x => x.id === taskId);
+  if (!t) return;
+  const steps = [...t.steps];
+  const fromIdx = steps.findIndex(s => s.id === dragStepId);
+  const toIdx = steps.findIndex(s => s.id === stepId);
+  if (fromIdx === -1 || toIdx === -1) return;
+  const [moved] = steps.splice(fromIdx, 1);
+  steps.splice(toIdx, 0, moved);
+  t.steps = steps;
+  saveTasks(allTasks);
+  renderTasks();
+}
 
 // === INIT ===
 function init() {
