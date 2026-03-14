@@ -712,7 +712,7 @@ body {
 #inbox-ai-bar {
   position: fixed;
   left: 16px; right: 16px;
-  bottom: 90px;
+  bottom: 88px;
   z-index: 50;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(30,16,64,0.08);
@@ -722,7 +722,7 @@ body {
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   display: none;
   flex-direction: column;
-  height: 260px;
+  height: 244px;
   overflow: hidden;
 }
 #inbox-ai-bar.bar-visible { display: flex; }
@@ -2294,7 +2294,7 @@ async function sendToAI() {
       // Якщо ШІ не впевнений — показуємо вікно уточнення
       if (parsed.action === 'clarify') {
         responseArea.style.display = 'none';
-        showClarify(parsed, text);
+        try { showClarify(parsed, text); } catch(ce) { console.error('Clarify error:', ce); addInboxChatMsg('agent', parsed.question || 'Уточни будь ласка'); }
         aiLoading = false;
         btn.disabled = false;
         btn.innerHTML = SEND_SVG;
@@ -2387,10 +2387,24 @@ async function sendToAI() {
         responseArea.style.display = 'none';
       }
     } catch(e) {
-      // JSON не розпарсився — зберігаємо офлайн
-      console.error('JSON parse error:', e, 'reply was:', reply);
+      // JSON не розпарсився — спробуємо розпарсити часткове clarify
+      console.error('JSON parse error:', e);
+      try {
+        // Іноді відповідь містить JSON але з зайвим текстом — спробуємо витягти
+        const jsonMatch = reply.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed2 = JSON.parse(jsonMatch[0]);
+          if (parsed2.action === 'clarify') {
+            showClarify(parsed2, text);
+            aiLoading = false;
+            btn.disabled = false;
+            btn.innerHTML = SEND_SVG;
+            return;
+          }
+        }
+      } catch(e2) {}
       saveOffline(text);
-      addInboxChatMsg('agent', (reply || '').substring(0, 200) || 'Помилка відповіді агента');
+      addInboxChatMsg('agent', '✓ Збережено офлайн');
       responseArea.style.display = 'none';
     }
   } else {
@@ -3563,7 +3577,7 @@ function setupKeyboardAvoiding() {
       otherBars.forEach(b => { if(b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
       // Клавіатура закрита
-      if (aiBar) { aiBar.style.bottom = '90px'; aiBar.style.left = '16px'; aiBar.style.right = '16px'; }
+      if (aiBar) { aiBar.style.bottom = '88px'; aiBar.style.left = '16px'; aiBar.style.right = '16px'; }
       if (tabBar) tabBar.style.transform = 'translateY(0)';
       otherBars.forEach(b => { if(b) b.style.bottom = '82px'; });
     }
