@@ -711,8 +711,8 @@ body {
 /* === AI BAR (Inbox) — always visible === */
 #inbox-ai-bar {
   position: fixed;
-  left: 12px; right: 12px;
-  bottom: 82px;
+  left: 16px; right: 16px;
+  bottom: 90px;
   z-index: 50;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(30,16,64,0.08);
@@ -3563,7 +3563,7 @@ function setupKeyboardAvoiding() {
       otherBars.forEach(b => { if(b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
       // Клавіатура закрита
-      if (aiBar) { aiBar.style.bottom = '82px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
+      if (aiBar) { aiBar.style.bottom = '90px'; aiBar.style.left = '16px'; aiBar.style.right = '16px'; }
       if (tabBar) tabBar.style.transform = 'translateY(0)';
       otherBars.forEach(b => { if(b) b.style.bottom = '82px'; });
     }
