@@ -2345,13 +2345,13 @@ function renderNotes(searchQuery = '') {
           ${items.map(n => {
             const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
             return `
-              <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:13px;overflow:hidden;margin-bottom:0">
+              <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);overflow:hidden;margin-bottom:0">
                 <div class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:20px;color:white">🗑️</div>
-                <div id="note-item-${n.id}"
+                <div id="note-item-${n.id}" class="inbox-item"
                   ontouchstart="noteSwipeStart(event,${n.id})"
                   ontouchmove="noteSwipeMove(event,${n.id})"
                   ontouchend="noteSwipeEnd(event,${n.id})"
-                  style="position:relative;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 13px;will-change:transform;touch-action:pan-y;">
+                  style="cursor:default;padding:12px 13px;">
                   <div onclick="openNoteView(${n.id})" style="cursor:pointer">
                     <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
