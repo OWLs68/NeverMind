@@ -306,7 +306,7 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: flex-start;
-  padding: 10px 8px calc(env(safe-area-inset-bottom) + 10px);
+  padding: 70px 8px calc(env(safe-area-inset-bottom) + 10px);
   background: var(--inbox-tab-bg);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
@@ -720,7 +720,7 @@ body {
 #inbox-ai-bar {
   position: fixed;
   left: 16px; right: 16px;
-  bottom: 154px; /* = AI_BAR_BOTTOM в JS */
+  bottom: 214px; /* = AI_BAR_BOTTOM в JS */
   z-index: 50;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(30,16,64,0.08);
@@ -1530,7 +1530,7 @@ const TAB_THEMES = {
 };
 
 // === CURRENT STATE ===
-const AI_BAR_BOTTOM = 154; // висота таббара + відступ. Якщо таббар зміниться — міняй тільки тут
+const AI_BAR_BOTTOM = 214; // висота таббара + відступ. Якщо таббар зміниться — міняй тільки тут
 let currentTab = 'inbox';
 
 // === SWITCH TAB ===
