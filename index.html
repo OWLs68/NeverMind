@@ -568,7 +568,7 @@ body {
 /* === INBOX === */
 
 /* === INBOX LIST === */
-#inbox-list { padding: 0 0 380px 0; }
+#inbox-list { padding: 0 0 380px 0; -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 60px), transparent 100%); mask-image: linear-gradient(to bottom, black calc(100% - 60px), transparent 100%); }
 
 /* Category selector chips */
 .cat-chips {
@@ -603,7 +603,7 @@ body {
 
 /* Inbox entry item */
 .inbox-item-wrap {
-  margin: 6px 16px;
+  margin: 6px 21px;
   position: relative;
   overflow: hidden;
   border-radius: var(--card-radius);
@@ -775,7 +775,125 @@ body {
   flex: 1;
 }
 
-/* Habit day buttons */
+/* === CHAT BAR SYSTEM (Tasks / Me / Evening) === */
+
+/* Overlay — блюр фону */
+#chat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: rgba(10,5,30,0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#chat-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Загальний стиль для всіх барів */
+.ai-bar-new {
+  position: fixed;
+  left: 16px; right: 16px;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  transition: bottom 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+.ai-bar-handle {
+  width: 28px; height: 4px;
+  background: rgba(30,16,64,0.18);
+  border-radius: 2px;
+  margin: 0 auto 6px;
+  cursor: pointer;
+}
+
+/* Поле вводу — завжди видиме */
+.ai-bar-input-box {
+  background: rgba(255,255,255,0.95);
+  border-radius: 18px;
+  border: 1px solid rgba(30,16,64,0.1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
+  cursor: text;
+}
+.ai-bar-input-box textarea {
+  flex: 1;
+  border: none; outline: none;
+  font-size: 15px; font-family: inherit;
+  color: #1e1040; background: transparent;
+  resize: none; line-height: 1.45;
+  max-height: 80px;
+}
+.ai-bar-send-btn {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+
+/* Чат-вікно — з'являється над полем */
+.ai-bar-chat-window {
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+  margin-bottom: 6px;
+  display: none;
+  flex-direction: column;
+}
+.ai-bar-chat-window.open {
+  display: flex;
+}
+
+/* Полоска зверху чат-вікна */
+.ai-bar-chat-handle {
+  width: 28px; height: 4px;
+  background: rgba(30,16,64,0.15);
+  border-radius: 2px;
+  margin: 8px auto 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* Повідомлення всередині чат-вікна */
+.ai-bar-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 200px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 6px, black calc(100% - 6px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0px, black 6px, black calc(100% - 6px), transparent 100%);
+  scrollbar-width: none;
+}
+.ai-bar-messages::-webkit-scrollbar { display: none; }
+
+/* Кольори барів */
+#tasks-ai-bar .ai-bar-send-btn { background: linear-gradient(135deg,#f97316,#ea580c); }
+#me-ai-bar .ai-bar-send-btn { background: #16a34a; }
+#evening-ai-bar .ai-bar-send-btn { background: #7c3aed; }
+
+/* Кольори чат-вікна */
+#tasks-ai-bar .ai-bar-chat-window { border-color: rgba(234,88,12,0.15); }
+#me-ai-bar .ai-bar-chat-window { border-color: rgba(22,163,74,0.2); }
+#evening-ai-bar .ai-bar-chat-window { border-color: rgba(124,58,237,0.2); }
+
+
 .habit-day-btn {
   flex:1;padding:8px 0;font-size:13px;font-weight:700;border-radius:9px;
   background:rgba(30,16,64,0.05);border:1.5px solid transparent;
@@ -1048,20 +1166,25 @@ body {
     </div>
 
 
-<!-- TASKS AI CHAT BAR — поза .page щоб fixed працював на iOS -->
-<div id="tasks-ai-bar" style="display:none;position:fixed;bottom:154px;left:16px;right:16px;z-index:100;">
-  <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(234,88,12,0.15);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-    <div id="tasks-chat-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
-      <div style="width:28px;height:28px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">✦</div>
-      <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи ШІ про задачі…"
-        oninput="autoResizeTextarea(this);showTasksChatMessages()"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"
-        style="flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;resize:none;max-height:80px;background:transparent;line-height:1.45"></textarea>
-      <button onclick="sendTasksBarMessage()" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-      </button>
-    </div>
+<!-- TASKS AI BAR — нова система -->
+<div id="tasks-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <!-- Чат-вікно (з'являється при фокусі) -->
+  <div class="ai-bar-chat-window" id="tasks-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('tasks')"></div>
+    <div class="ai-bar-messages" id="tasks-chat-messages"></div>
+  </div>
+  <!-- Полоска-хендл над полем -->
+  <div class="ai-bar-handle" onclick="toggleChatBar('tasks')"></div>
+  <!-- Поле вводу -->
+  <div class="ai-bar-input-box">
+    <div style="width:26px;height:26px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+    <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи ШІ про задачі…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('tasks')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendTasksBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
   </div>
 </div>
 
@@ -1176,22 +1299,24 @@ body {
       </div>
     </div>
 
-    <!-- ME AI BAR — зафіксований знизу -->
-    <div id="me-ai-bar" style="display:none;position:fixed;bottom:154px;left:16px;right:16px;z-index:100;">
-      <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(22,163,74,0.2);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-        <div id="me-chat-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
-          <div style="width:28px;height:28px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">✦</div>
-          <input id="me-chat-input" type="text" placeholder="Запитай агента про себе…"
-            onfocus="showMeChatMessages()"
-            style="flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;background:transparent"
-            onkeydown="if(event.key==='Enter'){sendMeChatMessage()}">
-          <button onclick="sendMeChatMessage()" style="width:34px;height:34px;border-radius:10px;background:#16a34a;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
-        </div>
+    <!-- ME AI BAR — нова система -->
+    <div id="me-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+      <div class="ai-bar-chat-window" id="me-chat-window">
+        <div class="ai-bar-chat-handle" onclick="closeChatBar('me')"></div>
+        <div class="ai-bar-messages" id="me-chat-messages"></div>
+      </div>
+      <div class="ai-bar-handle" onclick="toggleChatBar('me')"></div>
+      <div class="ai-bar-input-box">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+        <input id="me-chat-input" type="text" placeholder="Запитай агента про себе…"
+          onfocus="openChatBar('me')"
+          onkeydown="if(event.key==='Enter'){sendMeChatMessage()}">
+        <button class="ai-bar-send-btn" onclick="sendMeChatMessage()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
       </div>
     </div>
+
 
     <!-- PAGE: EVENING -->
     <div class="page" id="page-evening">
@@ -1241,24 +1366,29 @@ body {
       </div><!-- /evening scroll -->
     </div>
 
-    <!-- EVENING AI BAR — зафіксований знизу -->
-    <div id="evening-ai-bar" style="display:none;position:fixed;bottom:154px;left:16px;right:16px;z-index:100;">
-      <div style="background:rgba(255,255,255,0.95);border:1px solid rgba(124,58,237,0.2);border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-        <div id="evening-bar-messages" style="display:none;max-height:160px;overflow-y:auto;padding:10px 14px 4px;flex-direction:column;gap:6px"></div>
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
-          <div style="width:28px;height:28px;border-radius:50%;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">✦</div>
-          <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
-            oninput="autoResizeTextarea(this);showEveningBarMessages()"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEveningBarMessage()}"
-            style="flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;resize:none;max-height:80px;background:transparent;line-height:1.45"></textarea>
-          <button onclick="sendEveningBarMessage()" style="width:34px;height:34px;border-radius:10px;background:#7c3aed;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
-        </div>
+    <!-- EVENING AI BAR — нова система -->
+    <div id="evening-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+      <div class="ai-bar-chat-window" id="evening-chat-window">
+        <div class="ai-bar-chat-handle" onclick="closeChatBar('evening')"></div>
+        <div class="ai-bar-messages" id="evening-bar-messages"></div>
+      </div>
+      <div class="ai-bar-handle" onclick="toggleChatBar('evening')"></div>
+      <div class="ai-bar-input-box">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+        <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
+          oninput="autoResizeTextarea(this)"
+          onfocus="openChatBar('evening')"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEveningBarMessage()}"></textarea>
+        <button class="ai-bar-send-btn" onclick="sendEveningBarMessage()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
       </div>
     </div>
 
   </div><!-- /scroll-wrap -->
+
+  <!-- CHAT OVERLAY — блюр фону при відкритому чаті -->
+  <div id="chat-overlay" onclick="closeAllChatBars()"></div>
 
   <!-- TAB BAR -->
   <nav id="tab-bar">
@@ -1539,6 +1669,9 @@ function switchTab(tab) {
   animateTabSwitch(tab);
   currentTab = tab;
 
+  // Закриваємо всі чат-вікна при переключенні
+  try { closeAllChatBars(); } catch(e) {}
+
   // Update pages
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(`page-${tab}`).classList.add('active');
@@ -1550,19 +1683,23 @@ function switchTab(tab) {
   // Apply theme
   applyTheme(tab);
 
-  // Tab-specific actions
-  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); document.getElementById('tasks-ai-bar').style.display = 'block'; }
-  ['tasks','me','evening'].forEach(t => {
-    const barId = t === 'tasks' ? 'tasks-ai-bar' : t === 'me' ? 'me-ai-bar' : 'evening-ai-bar';
-    const bar = document.getElementById(barId);
-    if (bar) bar.style.display = (t === tab) ? 'block' : 'none';
-  });
-  if (tab === 'notes') { renderNotes(); checkAndSuggestFolders(); }
-  if (tab === 'me') { renderMe(); renderMeHabitsStats(); document.getElementById('me-ai-bar').style.display = 'block'; }
-  if (tab === 'evening') { renderEvening(); document.getElementById('evening-ai-bar').style.display = 'block'; }
-
-  // Show/hide AI bar (inbox only)
+  // Inbox AI bar — тільки на inbox
   updateAiBarVisibility();
+
+  // Нові бари tasks/me/evening — показуємо/ховаємо
+  ['tasks','me','evening'].forEach(t => {
+    const bar = document.getElementById(t + '-ai-bar');
+    if (bar) bar.style.display = (t === tab || (t === 'tasks' && tab === 'tasks')) ? 'flex' : 'none';
+  });
+  // tasks бар показуємо і на звичках (підвкладка tasks)
+  const tasksBar = document.getElementById('tasks-ai-bar');
+  if (tasksBar) tasksBar.style.display = (tab === 'tasks') ? 'flex' : 'none';
+
+  // Tab-specific render
+  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); }
+  if (tab === 'notes') { renderNotes(); checkAndSuggestFolders(); }
+  if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
+  if (tab === 'evening') { renderEvening(); }
 }
 
 function applyTheme(tab) {
@@ -3627,18 +3764,19 @@ function setupKeyboardAvoiding() {
     const keyboardHeight = window.innerHeight - window.visualViewport.height;
     const aiBar = document.getElementById('inbox-ai-bar');
     const tabBar = document.getElementById('tab-bar');
-    // Інші бари (tasks, me, evening)
-    const otherBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar'].map(id => document.getElementById(id));
+    const tbH = tabBar ? tabBar.offsetHeight : 83;
+    // Нові бари (tasks, me, evening) — клас ai-bar-new
+    const newBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar'].map(id => document.getElementById(id));
     if (keyboardHeight > 100) {
-      // Клавіатура відкрита — піднімаємо бар над клавіатурою, ховаємо таббар
+      // Клавіатура відкрита
       if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
       if (tabBar) tabBar.style.transform = `translateY(${keyboardHeight}px)`;
-      otherBars.forEach(b => { if(b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
+      newBars.forEach(b => { if (b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
       // Клавіатура закрита
       if (aiBar) { aiBar.style.bottom = AI_BAR_BOTTOM + 'px'; aiBar.style.left = '16px'; aiBar.style.right = '16px'; }
       if (tabBar) tabBar.style.transform = 'translateY(0)';
-      otherBars.forEach(b => { if(b) b.style.bottom = AI_BAR_BOTTOM + 'px'; });
+      newBars.forEach(b => { if (b) b.style.bottom = (tbH + 4) + 'px'; });
     }
   });
 }
@@ -4347,19 +4485,108 @@ async function processSaveAction(parsed, originalText) {
 }
 
 
-// === TASKS AI BAR ===
+// === CHAT BAR SYSTEM (Tasks / Me / Evening) ===
+let activeChatBar = null;
+
+function getTabbarHeight() {
+  const tb = document.getElementById('tab-bar');
+  return tb ? tb.offsetHeight : 83;
+}
+
+function openChatBar(tab) {
+  if (activeChatBar === tab) return;
+  closeAllChatBars(false);
+  activeChatBar = tab;
+
+  const bar = document.getElementById(tab + '-ai-bar');
+  const window_ = document.getElementById(tab + '-chat-window') || document.getElementById(tab === 'evening' ? 'evening-chat-window' : tab + '-chat-window');
+  const overlay = document.getElementById('chat-overlay');
+
+  if (!bar) return;
+
+  // Відкриваємо чат-вікно
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  if (chatWin) chatWin.classList.add('open');
+
+  // Показуємо overlay
+  if (overlay) overlay.classList.add('visible');
+
+  // Піднімаємо бар вище щоб чат-вікно було видиме
+  const tbH = getTabbarHeight();
+  bar.style.bottom = (tbH + 4) + 'px';
+}
+
+function closeChatBar(tab) {
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return;
+
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  if (chatWin) chatWin.classList.remove('open');
+
+  const overlay = document.getElementById('chat-overlay');
+  if (overlay) overlay.classList.remove('visible');
+
+  // Знімаємо фокус з поля
+  const inputs = bar.querySelectorAll('input, textarea');
+  inputs.forEach(i => i.blur());
+
+  activeChatBar = null;
+}
+
+function toggleChatBar(tab) {
+  if (activeChatBar === tab) {
+    closeChatBar(tab);
+  } else {
+    openChatBar(tab);
+  }
+}
+
+function closeAllChatBars(resetActive = true) {
+  ['tasks','me','evening'].forEach(t => {
+    const bar = document.getElementById(t + '-ai-bar');
+    if (!bar) return;
+    const chatWin = bar.querySelector('.ai-bar-chat-window');
+    if (chatWin) chatWin.classList.remove('open');
+    const inputs = bar.querySelectorAll('input, textarea');
+    inputs.forEach(i => i.blur());
+  });
+  const overlay = document.getElementById('chat-overlay');
+  if (overlay) overlay.classList.remove('visible');
+  if (resetActive) activeChatBar = null;
+}
+
+// Свайп вниз по чат-вікну щоб закрити
+function setupChatBarSwipe() {
+  ['tasks','me','evening'].forEach(tab => {
+    const bar = document.getElementById(tab + '-ai-bar');
+    if (!bar) return;
+    const chatWin = bar.querySelector('.ai-bar-chat-window');
+    if (!chatWin) return;
+
+    let startY = 0;
+    chatWin.addEventListener('touchstart', e => {
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    chatWin.addEventListener('touchend', e => {
+      const dy = e.changedTouches[0].clientY - startY;
+      if (dy > 60) closeChatBar(tab);
+    }, { passive: true });
+  });
+}
+
+
 let taskBarLoading = false;
 let taskBarHistory = [];
 
 function showTasksChatMessages() {
-  const el = document.getElementById('tasks-chat-messages');
-  if (el && el.children.length > 0) el.style.display = 'flex';
+  openChatBar('tasks');
 }
 
 function addTaskBarMsg(role, text) {
   const el = document.getElementById('tasks-chat-messages');
   if (!el) return;
-  el.style.display = 'flex';
+  // Відкриваємо чат-вікно якщо є повідомлення
+  try { openChatBar('tasks'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
@@ -4496,14 +4723,13 @@ async function sendTasksBarMessage() {
 
 // === ME AI BAR ===
 function showMeChatMessages() {
-  const el = document.getElementById('me-chat-messages');
-  if (el) el.style.display = 'flex';
+  openChatBar('me');
 }
 
 function addMeChatMsg(role, text, id = '') {
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
-  el.style.display = 'flex';
+  try { openChatBar('me'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
@@ -4517,14 +4743,13 @@ let eveningBarHistory = [];
 let eveningBarLoading = false;
 
 function showEveningBarMessages() {
-  const el = document.getElementById('evening-bar-messages');
-  if (el) el.style.display = 'flex';
+  openChatBar('evening');
 }
 
 function addEveningBarMsg(role, text) {
   const el = document.getElementById('evening-bar-messages');
   if (!el) return;
-  el.style.display = 'flex';
+  try { openChatBar('evening'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
@@ -4570,6 +4795,7 @@ function init() {
   try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
   try { setupKeyboardAvoiding(); } catch(e) {}
+  try { setupChatBarSwipe(); } catch(e) {}
   try { setupSettingsSwipe(); } catch(e) {}
   // Me chat enter key
   const meChatInput = document.getElementById('me-chat-input');
@@ -4584,6 +4810,18 @@ function init() {
     }, { passive: true });
   } catch(e) {}
   try { applyTheme('inbox'); } catch(e) {}
+  // Встановлюємо CSS змінну висоти таббару для нових барів
+  try {
+    const tb = document.getElementById('tab-bar');
+    if (tb) {
+      const setTabbarH = () => {
+        document.documentElement.style.setProperty('--tabbar-h', tb.offsetHeight + 'px');
+      };
+      setTabbarH();
+      // Також оновлюємо після завантаження шрифтів
+      if (document.fonts) document.fonts.ready.then(setTabbarH);
+    }
+  } catch(e) {}
   // Force inbox tab active on every load
   try {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
