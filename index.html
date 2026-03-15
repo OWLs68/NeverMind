@@ -194,7 +194,7 @@ body {
 .page {
   position: absolute;
   inset: 0;
-  bottom: 82px; /* tab-bar height */
+  bottom: 0; /* tab-bar handles its own space */
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -730,7 +730,7 @@ body {
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   display: none;
   flex-direction: column;
-  height: 220px;
+  height: 260px;
   overflow: hidden;
 }
 #inbox-ai-bar.bar-visible { display: flex; }
@@ -2443,14 +2443,26 @@ async function sendToAI() {
         responseArea.style.display = 'none';
       }
     } catch(e) {
-      // JSON не розпарсився — зберігаємо офлайн
-      console.error('JSON parse error:', e, 'reply was:', reply);
+      console.error('JSON parse error:', e);
+      // Спробуємо витягти clarify з часткового JSON
+      try {
+        const jsonMatch = (reply||'').match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const p2 = JSON.parse(jsonMatch[0]);
+          if (p2.action === 'clarify') {
+            showClarify(p2, text);
+            aiLoading = false; btn.disabled = false; btn.innerHTML = SEND_SVG;
+            return;
+          }
+        }
+      } catch(e2) {}
       saveOffline(text);
-      addInboxChatMsg('agent', (reply || '').substring(0, 200) || 'Помилка відповіді агента');
+      addInboxChatMsg('agent', '✓ Збережено');
       responseArea.style.display = 'none';
     }
   } else {
     saveOffline(text);
+    addInboxChatMsg('agent', '⚠️ Немає відповіді від ШІ');
     responseArea.style.display = 'none';
   }
 
@@ -4689,5 +4701,25 @@ setTimeout(() => {
   </div>
 </div>
 
+<!-- CLARIFY MODAL — вікно уточнення від ШІ -->
+<div id="clarify-modal" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center">
+  <div onclick="closeClarify()" style="position:absolute;inset:0;background:rgba(10,5,30,0.3);backdrop-filter:blur(2px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:14px 18px calc(env(safe-area-inset-bottom)+24px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15);box-sizing:border-box;">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+    <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(124,58,237,0.08);color:#7c3aed;font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;margin-bottom:10px">✦ ШІ уточнює</div>
+    <div id="clarify-question" style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.5;margin-bottom:16px"></div>
+    <div id="clarify-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+    <div style="height:1px;background:rgba(30,16,64,0.06);margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <textarea id="clarify-input" rows="1" placeholder="Або напиши свій варіант…"
+        oninput="autoResizeTextarea(this)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClarifyText()}"
+        style="flex:1;border:1.5px solid rgba(124,58,237,0.15);border-radius:13px;padding:10px 13px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:80px;box-sizing:border-box;"></textarea>
+      <button onclick="sendClarifyText()" style="width:42px;height:42px;border-radius:13px;background:#7c3aed;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </div>
+</div>
 
 </html>
