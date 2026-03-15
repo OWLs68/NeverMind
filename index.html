@@ -681,18 +681,25 @@ body {
   border-radius: 10px;
 }
 
-/* Category colors */
-.cat-idea   { background: rgba(196,181,253,0.18); color: #6d28d9; }
-.cat-task   { background: rgba(251,191,36,0.14); color: #92400e; }
-.cat-habit  { background: rgba(34,197,94,0.12); color: #15803d; }
-.cat-note   { background: rgba(0,0,0,0.05); color: rgba(30,16,64,0.5); }
-.cat-event  { background: rgba(147,197,253,0.15); color: #1e40af; }
+/* Category colors — Варіант А: яскравіші кольори */
+.cat-idea   { background: rgba(167,139,250,0.2); color: #6d28d9; font-weight: 700; }
+.cat-task   { background: rgba(234,88,12,0.14); color: #c2520a; font-weight: 700; }
+.cat-habit  { background: rgba(22,163,74,0.14); color: #15803d; font-weight: 700; }
+.cat-note   { background: rgba(99,102,241,0.12); color: #4338ca; font-weight: 700; }
+.cat-event  { background: rgba(59,130,246,0.14); color: #1d4ed8; font-weight: 700; }
 
-.cat-dot-idea  { background: rgba(196,181,253,0.25); }
-.cat-dot-task  { background: rgba(251,191,36,0.18); }
-.cat-dot-habit { background: rgba(34,197,94,0.15); }
-.cat-dot-note  { background: rgba(0,0,0,0.05); }
-.cat-dot-event { background: rgba(147,197,253,0.2); }
+.cat-dot-idea  { background: linear-gradient(135deg, #f5f3ff, #ede9fe); }
+.cat-dot-task  { background: linear-gradient(135deg, #fff7ed, #ffedd5); }
+.cat-dot-habit { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+.cat-dot-note  { background: linear-gradient(135deg, #eef2ff, #e0e7ff); }
+.cat-dot-event { background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+
+/* Кольорові картки залежно від категорії */
+.inbox-item[data-cat="task"]  { background: linear-gradient(135deg, #fff7ed, #ffedd5) !important; border-color: rgba(234,88,12,0.2) !important; }
+.inbox-item[data-cat="habit"] { background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important; border-color: rgba(22,163,74,0.2) !important; }
+.inbox-item[data-cat="note"]  { background: linear-gradient(135deg, #eef2ff, #e0e7ff) !important; border-color: rgba(99,102,241,0.18) !important; }
+.inbox-item[data-cat="idea"]  { background: linear-gradient(135deg, #faf5ff, #f3e8ff) !important; border-color: rgba(167,139,250,0.22) !important; }
+.inbox-item[data-cat="event"] { background: linear-gradient(135deg, #eff6ff, #dbeafe) !important; border-color: rgba(59,130,246,0.2) !important; }
 
 /* Inbox empty state */
 .inbox-empty {
@@ -1496,39 +1503,39 @@ body {
 // === TAB THEMES ===
 const TAB_THEMES = {
   inbox: {
-    bg: 'linear-gradient(160deg, #faf7f2, #f5f0e8, #f0f4f8)',
-    orb: 'rgba(251,191,36,0.10)',
-    tabBg: 'rgba(250,247,242,0.88)',
-    accent: '#8b6914',
-    accent2: '#d4a857',
+    bg: 'linear-gradient(160deg, #fff8ee, #ffefd5, #fff3e0)',
+    orb: 'rgba(251,146,60,0.18)',
+    tabBg: 'rgba(255,248,238,0.92)',
+    accent: '#c2620a',
+    accent2: '#f97316',
   },
   tasks: {
-    bg: 'linear-gradient(160deg, #fff8f0, #fff2e6, #fdf5ff)',
-    orb: 'rgba(234,88,12,0.10)',
-    tabBg: 'rgba(255,248,240,0.88)',
+    bg: 'linear-gradient(160deg, #fff4ed, #ffe8d6, #fff0e6)',
+    orb: 'rgba(234,88,12,0.18)',
+    tabBg: 'rgba(255,244,237,0.92)',
     accent: '#ea580c',
     accent2: '#f97316',
   },
   notes: {
-    bg: 'linear-gradient(160deg, #f0f4ff, #edf2ff, #f5f0ff)',
-    orb: 'rgba(99,102,241,0.10)',
-    tabBg: 'rgba(240,244,255,0.88)',
+    bg: 'linear-gradient(160deg, #eef0ff, #e8ecff, #f0ebff)',
+    orb: 'rgba(99,102,241,0.18)',
+    tabBg: 'rgba(238,240,255,0.92)',
     accent: '#4f46e5',
     accent2: '#818cf8',
   },
   me: {
-    bg: 'linear-gradient(160deg, #f0fdf4, #ecfdf5, #f0f9ff)',
-    orb: 'rgba(34,197,94,0.12)',
-    tabBg: 'rgba(240,253,244,0.88)',
+    bg: 'linear-gradient(160deg, #e8faf0, #d6f5e3, #eaf8f0)',
+    orb: 'rgba(34,197,94,0.20)',
+    tabBg: 'rgba(232,250,240,0.92)',
     accent: '#16a34a',
     accent2: '#22c55e',
   },
   evening: {
-    bg: 'linear-gradient(160deg, #f5f2ff, #ede8ff, #eef2ff)',
-    orb: 'rgba(180,155,255,0.15)',
-    tabBg: 'rgba(245,242,255,0.88)',
-    accent: '#7c5cbf',
-    accent2: '#9b7de0',
+    bg: 'linear-gradient(160deg, #f0ebff, #e8e0ff, #ebe8ff)',
+    orb: 'rgba(139,92,246,0.22)',
+    tabBg: 'rgba(240,235,255,0.92)',
+    accent: '#7c3aed',
+    accent2: '#a78bfa',
   },
 };
 
@@ -1842,8 +1849,52 @@ function getAIContext() {
   const profile = getProfile();
   const memory = localStorage.getItem('nm_memory') || '';
   const parts = [];
-  if (profile) parts.push(`Профіль користувача: ${profile}`);
-  if (memory) parts.push(`Що агент знає про користувача:\n${memory}`);
+
+  // === Дата і час ===
+  const now = new Date();
+  const days = ['неділя','понеділок','вівторок','середа','четвер','п\'ятниця','субота'];
+  const months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  const timeStr = now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+  const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}`;
+  parts.push(`Зараз: ${dateStr}`);
+
+  // === Профіль і пам'ять ===
+  if (profile) parts.push(`Профіль: ${profile}`);
+  if (memory) parts.push(`Що знаю про користувача:\n${memory}`);
+
+  // === Активні задачі ===
+  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 8);
+  if (tasks.length > 0) {
+    const taskList = tasks.map(t => {
+      const steps = (t.steps || []);
+      const doneSteps = steps.filter(s => s.done).length;
+      const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} кроків)` : '';
+      return `- ${t.title}${stepInfo}`;
+    }).join('\n');
+    parts.push(`Активні задачі:\n${taskList}`);
+  }
+
+  // === Звички сьогодні ===
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = now.toDateString();
+  if (habits.length > 0) {
+    const habitList = habits.map(h => {
+      const done = !!log[today]?.[h.id];
+      return `- ${h.name}: ${done ? '✓ виконано' : '✗ не виконано'}`;
+    }).join('\n');
+    parts.push(`Звички сьогодні:\n${habitList}`);
+  }
+
+  // === Записи Inbox за сьогодні (останні 8) ===
+  const todayInbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]')
+    .filter(i => new Date(i.ts).toDateString() === today)
+    .slice(0, 8);
+  if (todayInbox.length > 0) {
+    const inboxList = todayInbox.map(i => `- [${i.category}] ${i.text}`).join('\n');
+    parts.push(`Записи сьогодні:\n${inboxList}`);
+  }
+
   return parts.join('\n\n');
 }
 
@@ -2141,7 +2192,7 @@ function renderInbox() {
     const meta = CAT_META[item.category] || CAT_META.note;
     return `<div class="inbox-item-wrap" id="wrap-${item.id}">
       <div class="inbox-item-delete-bg">🗑️</div>
-      <div class="inbox-item" id="item-${item.id}" data-id="${item.id}"
+      <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
            ontouchstart="swipeStart(event,${item.id})"
            ontouchmove="swipeMove(event,${item.id})"
            ontouchend="swipeEnd(event,${item.id})">
@@ -2531,12 +2582,30 @@ function renderNotes(searchQuery = '') {
   const now = Date.now();
   const STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 днів
 
+  // Кольори папок
+  const FOLDER_COLORS = {
+    'Харчування': { bg: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: 'rgba(234,88,12,0.18)', dot: '🍎' },
+    'Фінанси':   { bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: 'rgba(234,179,8,0.22)',  dot: '💰' },
+    "Здоров'я":  { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',   dot: '💪' },
+    'Здоровя':   { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',   dot: '💪' },
+    'Робота':    { bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: 'rgba(59,130,246,0.2)',  dot: '💼' },
+    'Навчання':  { bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: 'rgba(99,102,241,0.2)',  dot: '📚' },
+    'Ідеї':      { bg: 'linear-gradient(135deg,#faf5ff,#f3e8ff)', border: 'rgba(167,139,250,0.22)', dot: '💡' },
+    'Особисте':  { bg: 'linear-gradient(135deg,#fff0f3,#ffe4e6)', border: 'rgba(244,63,94,0.18)',  dot: '🌸' },
+    'Подорожі':  { bg: 'linear-gradient(135deg,#ecfeff,#cffafe)', border: 'rgba(6,182,212,0.2)',   dot: '✈️' },
+  };
+  const DEFAULT_NOTE = { bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: 'rgba(124,58,237,0.18)', dot: '📝' };
+
   content.innerHTML = Object.entries(byFolder).map(([folder, items]) => {
+    const fc = FOLDER_COLORS[folder] || DEFAULT_NOTE;
     return `
-      <div style="margin:0 14px 14px">
+      <div style="margin:0 14px 18px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
-          <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.1em">${escapeHtml(folder)}</div>
-          <div style="font-size:12px;color:rgba(30,16,64,0.3)">${items.length}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:14px">${fc.dot}</span>
+            <span style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.5);text-transform:uppercase;letter-spacing:0.08em">${escapeHtml(folder)}</span>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.3)">${items.length}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${items.map(n => {
@@ -2548,7 +2617,7 @@ function renderNotes(searchQuery = '') {
                   ontouchstart="noteSwipeStart(event,${n.id})"
                   ontouchmove="noteSwipeMove(event,${n.id})"
                   ontouchend="noteSwipeEnd(event,${n.id})"
-                  style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;">
+                  style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
                   <div onclick="openNoteView(${n.id})" style="cursor:pointer">
                     <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
