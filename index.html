@@ -2190,9 +2190,18 @@ function renderInbox() {
 
   list.innerHTML = items.map(item => {
     const meta = CAT_META[item.category] || CAT_META.note;
+    const cardStyles = {
+      task:  'background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(234,88,12,0.22)',
+      habit: 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:rgba(22,163,74,0.22)',
+      note:  'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:rgba(99,102,241,0.2)',
+      idea:  'background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-color:rgba(167,139,250,0.25)',
+      event: 'background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:rgba(59,130,246,0.22)',
+    };
+    const cardStyle = cardStyles[item.category] || cardStyles.note;
     return `<div class="inbox-item-wrap" id="wrap-${item.id}">
       <div class="inbox-item-delete-bg">🗑️</div>
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
+           style="${cardStyle}"
            ontouchstart="swipeStart(event,${item.id})"
            ontouchmove="swipeMove(event,${item.id})"
            ontouchend="swipeEnd(event,${item.id})">
