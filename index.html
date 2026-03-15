@@ -720,7 +720,7 @@ body {
 #inbox-ai-bar {
   position: fixed;
   left: 4px; right: 4px;
-  bottom: calc(6px + 7px + env(safe-area-inset-bottom) + 24px + 4px); /* tabbar + gap */
+  bottom: calc(var(--tabbar-h, 83px) + 4px);
   z-index: 50;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(30,16,64,0.08);
@@ -1662,7 +1662,7 @@ const TAB_THEMES = {
 };
 
 // === CURRENT STATE ===
-const AI_BAR_BOTTOM = 'calc(6px + 7px + env(safe-area-inset-bottom) + 24px + 4px)'; // tabbar + gap
+const AI_BAR_BOTTOM = 83; // дефолт, реальне значення береться з --tabbar-h в JS
 let currentTab = 'inbox';
 
 // === SWITCH TAB ===
@@ -3776,7 +3776,7 @@ function setupKeyboardAvoiding() {
       newBars.forEach(b => { if (b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
       // Клавіатура закрита
-      if (aiBar) { aiBar.style.bottom = AI_BAR_BOTTOM; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
+      if (aiBar) { const tbH = getTabbarHeight(); aiBar.style.bottom = (tbH + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
       if (tabBar) tabBar.style.transform = 'translateY(0)';
       newBars.forEach(b => { if (b) b.style.bottom = (tbH + 4) + 'px'; });
     }
