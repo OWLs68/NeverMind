@@ -720,7 +720,7 @@ body {
 #inbox-ai-bar {
   position: fixed;
   left: 16px; right: 16px;
-  bottom: 154px;
+  bottom: 154px; /* = AI_BAR_BOTTOM в JS */
   z-index: 50;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(30,16,64,0.08);
@@ -1123,9 +1123,6 @@ body {
           <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Цей тиждень</div>
           <div id="me-week-grid" style="display:flex;gap:6px;justify-content:space-between"></div>
         </div>
-
-        <!-- Habits — тільки статистика, без галочок -->
-        <div id="habits-list" style="display:none"></div>
 
         <!-- Stats row -->
         <div style="display:flex;gap:8px;margin:0 14px 10px">
@@ -1533,6 +1530,7 @@ const TAB_THEMES = {
 };
 
 // === CURRENT STATE ===
+const AI_BAR_BOTTOM = 154; // висота таббара + відступ. Якщо таббар зміниться — міняй тільки тут
 let currentTab = 'inbox';
 
 // === SWITCH TAB ===
@@ -1824,17 +1822,6 @@ async function sendMeChatMessage() {
   if (loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
   if (reply) meChatHistory.push({ role: 'assistant', content: reply });
   if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
-}
-
-function addMeChatMsg(role, text, id = '') {
-  const el = document.getElementById('me-chat-messages');
-  if (!el) return;
-  const isAgent = role === 'agent';
-  const div = document.createElement('div');
-  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(22,163,74,0.08)' : '#16a34a'};color:${isAgent ? '#14532d' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:10px 14px;font-size:16px;line-height:1.6;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
 }
 
 // ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
@@ -2184,7 +2171,7 @@ function renderInbox() {
   list.innerHTML = items.map(item => {
     const meta = CAT_META[item.category] || CAT_META.note;
     const cardStyles = {
-      task:  'background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:rgba(59,130,246,0.25)',
+      task:  'background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(234,88,12,0.2)',
       habit: 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:rgba(22,163,74,0.22)',
       note:  'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:rgba(99,102,241,0.2)',
       idea:  'background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-color:rgba(167,139,250,0.25)',
@@ -2545,10 +2532,11 @@ function saveNote() {
 }
 
 function deleteNote(id) {
-  if (!confirm('Видалити нотатку?')) return;
-  saveNotes(getNotes().filter(x => x.id !== id));
+  const notes = getNotes();
+  const item = notes.find(x => x.id === id);
+  saveNotes(notes.filter(x => x.id !== id));
   renderNotes();
-  showToast('🗑️ Видалено');
+  if (item) showUndoToast('Нотатку видалено', () => { const n = getNotes(); n.unshift(item); saveNotes(n); renderNotes(); });
 }
 
 function filterNotes() {
@@ -3648,9 +3636,9 @@ function setupKeyboardAvoiding() {
       otherBars.forEach(b => { if(b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
       // Клавіатура закрита
-      if (aiBar) { aiBar.style.bottom = '88px'; aiBar.style.left = '16px'; aiBar.style.right = '16px'; }
+      if (aiBar) { aiBar.style.bottom = AI_BAR_BOTTOM + 'px'; aiBar.style.left = '16px'; aiBar.style.right = '16px'; }
       if (tabBar) tabBar.style.transform = 'translateY(0)';
-      otherBars.forEach(b => { if(b) b.style.bottom = '154px'; });
+      otherBars.forEach(b => { if(b) b.style.bottom = AI_BAR_BOTTOM + 'px'; });
     }
   });
 }
@@ -4117,7 +4105,7 @@ function toggleProdHabitToday(id) {
 
   document.addEventListener('touchend', e => {
     // Ignore if any modal is open
-    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal'];
+    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal','clarify-modal'];
     if (modals.some(id => {
       const el = document.getElementById(id);
       return el && (el.style.display === 'flex' || el.classList.contains('open'));
@@ -4205,12 +4193,16 @@ async function autoGenerateTaskSteps(taskId, title) {
 Якщо задача містить список (через кому, "і", "та") АБО потребує кількох дій — відповідай ТІЛЬКИ JSON: {"steps":["крок 1","крок 2"]}. Максимум 5 кроків. Кожен крок — коротко (2-5 слів).
 Якщо задача проста і не потребує кроків (наприклад "зателефонувати мамі") — відповідай ТІЛЬКИ: {"steps":[]}
 ТІЛЬКИ валідний JSON, без тексту.`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: title }], max_tokens: 150, temperature: 0.3 })
     });
+    clearTimeout(timeout);
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) return;
@@ -4224,7 +4216,7 @@ async function autoGenerateTaskSteps(taskId, title) {
         renderTasks();
       }
     }
-  } catch(e) {}
+  } catch(e) { clearTimeout(timeout); }
 }
 
 
@@ -4342,14 +4334,15 @@ async function processSaveAction(parsed, originalText) {
     moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
     saveMoments(moments);
   }
-  if (parsed.comment) {
-    const responseArea = document.getElementById('ai-bar-response');
-    const textEl = document.getElementById('ai-bar-text');
-    if (responseArea && textEl) {
-      textEl.textContent = parsed.comment;
-      responseArea.style.display = 'block';
-    }
-  }
+  const catConfirm2 = {
+    task: '✅ Створив задачу',
+    habit: '🌱 Додав звичку',
+    note: '📝 Збережено в нотатки',
+    idea: '💡 Збережено як ідею',
+    event: '📅 Додав до Вечора'
+  };
+  const confirmMsg2 = parsed.comment || catConfirm2[cat] || '✓ Збережено';
+  addInboxChatMsg('agent', confirmMsg2);
   showToast('✓ Збережено');
 }
 
@@ -4507,8 +4500,6 @@ function showMeChatMessages() {
   if (el) el.style.display = 'flex';
 }
 
-// Оновлюємо sendMeChatMessage щоб показувати повідомлення в барі
-const _origAddMeChatMsg = addMeChatMsg;
 function addMeChatMsg(role, text, id = '') {
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
