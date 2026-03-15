@@ -306,7 +306,7 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: flex-start;
-  padding: 10px 8px 23px;
+  padding: 10px 8px calc(23px + env(safe-area-inset-bottom));
   background: var(--inbox-tab-bg);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
