@@ -306,11 +306,12 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: flex-start;
-  padding: 10px 8px max(28px, env(safe-area-inset-bottom));
+  padding: 10px 8px calc(env(safe-area-inset-bottom) + 10px);
   background: var(--inbox-tab-bg);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border-top: 1px solid rgba(255,255,255,0.7);
+  border-top: 1.5px solid rgba(30,16,64,0.08);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
   transition: background 0.5s ease;
 }
 .tab-item {
@@ -567,7 +568,7 @@ body {
 /* === INBOX === */
 
 /* === INBOX LIST === */
-#inbox-list { padding: 0 0 200px 0; }
+#inbox-list { padding: 0 0 380px 0; }
 
 /* Category selector chips */
 .cat-chips {
@@ -1123,16 +1124,8 @@ body {
           <div id="me-week-grid" style="display:flex;gap:6px;justify-content:space-between"></div>
         </div>
 
-        <!-- Habits -->
-        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Звички</div>
-            <button onclick="openAddHabit()" style="font-size:13px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
-          </div>
-          <div id="habits-list">
-            <div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">Додай першу звичку</div>
-          </div>
-        </div>
+        <!-- Habits — тільки статистика, без галочок -->
+        <div id="habits-list" style="display:none"></div>
 
         <!-- Stats row -->
         <div style="display:flex;gap:8px;margin:0 14px 10px">
@@ -1517,9 +1510,9 @@ const TAB_THEMES = {
     accent2: '#f97316',
   },
   notes: {
-    bg: 'linear-gradient(160deg, #eef0ff, #e8ecff, #f0ebff)',
-    orb: 'rgba(99,102,241,0.18)',
-    tabBg: 'rgba(238,240,255,0.92)',
+    bg: 'linear-gradient(160deg, #f8faff, #eef2ff, #f0f4ff)',
+    orb: 'rgba(99,102,241,0.12)',
+    tabBg: 'rgba(248,250,255,0.92)',
     accent: '#4f46e5',
     accent2: '#818cf8',
   },
@@ -1567,7 +1560,7 @@ function switchTab(tab) {
     if (bar) bar.style.display = (t === tab) ? 'block' : 'none';
   });
   if (tab === 'notes') { renderNotes(); checkAndSuggestFolders(); }
-  if (tab === 'me') { renderMe(); renderHabits(); renderMeHabitsStats(); document.getElementById('me-ai-bar').style.display = 'block'; }
+  if (tab === 'me') { renderMe(); renderMeHabitsStats(); document.getElementById('me-ai-bar').style.display = 'block'; }
   if (tab === 'evening') { renderEvening(); document.getElementById('evening-ai-bar').style.display = 'block'; }
 
   // Show/hide AI bar (inbox only)
@@ -2191,7 +2184,7 @@ function renderInbox() {
   list.innerHTML = items.map(item => {
     const meta = CAT_META[item.category] || CAT_META.note;
     const cardStyles = {
-      task:  'background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(234,88,12,0.22)',
+      task:  'background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:rgba(59,130,246,0.25)',
       habit: 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:rgba(22,163,74,0.22)',
       note:  'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:rgba(99,102,241,0.2)',
       idea:  'background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-color:rgba(167,139,250,0.25)',
@@ -2593,15 +2586,15 @@ function renderNotes(searchQuery = '') {
 
   // Кольори папок
   const FOLDER_COLORS = {
-    'Харчування': { bg: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: 'rgba(234,88,12,0.18)', dot: '🍎' },
-    'Фінанси':   { bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: 'rgba(234,179,8,0.22)',  dot: '💰' },
-    "Здоров'я":  { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',   dot: '💪' },
-    'Здоровя':   { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',   dot: '💪' },
-    'Робота':    { bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: 'rgba(59,130,246,0.2)',  dot: '💼' },
-    'Навчання':  { bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: 'rgba(99,102,241,0.2)',  dot: '📚' },
+    'Харчування': { bg: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: 'rgba(234,88,12,0.18)',  dot: '🥑' },
+    'Фінанси':   { bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: 'rgba(234,179,8,0.22)',   dot: '💸' },
+    "Здоров'я":  { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',    dot: '💪' },
+    'Здоровя':   { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',    dot: '💪' },
+    'Робота':    { bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: 'rgba(59,130,246,0.2)',   dot: '🎯' },
+    'Навчання':  { bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: 'rgba(99,102,241,0.2)',   dot: '🧠' },
     'Ідеї':      { bg: 'linear-gradient(135deg,#faf5ff,#f3e8ff)', border: 'rgba(167,139,250,0.22)', dot: '💡' },
-    'Особисте':  { bg: 'linear-gradient(135deg,#fff0f3,#ffe4e6)', border: 'rgba(244,63,94,0.18)',  dot: '🌸' },
-    'Подорожі':  { bg: 'linear-gradient(135deg,#ecfeff,#cffafe)', border: 'rgba(6,182,212,0.2)',   dot: '✈️' },
+    'Особисте':  { bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: 'rgba(14,165,233,0.2)',   dot: '⚡' },
+    'Подорожі':  { bg: 'linear-gradient(135deg,#ecfeff,#cffafe)', border: 'rgba(6,182,212,0.2)',    dot: '✈️' },
   };
   const DEFAULT_NOTE = { bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: 'rgba(124,58,237,0.18)', dot: '📝' };
 
@@ -2957,8 +2950,8 @@ function renderTasks() {
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px">
-          <div onclick="openEditTask(${t.id})" style="font-size:16px;cursor:pointer;opacity:0.3;padding:2px">✎</div>
-          <div onclick="deleteTask(${t.id})" style="font-size:16px;cursor:pointer;opacity:0.3;padding:2px">×</div>
+          <div onclick="openEditTask(${t.id})" style="font-size:19px;cursor:pointer;opacity:0.35;padding:4px">✎</div>
+          <div onclick="deleteTask(${t.id})" style="font-size:20px;cursor:pointer;opacity:0.35;padding:4px">×</div>
         </div>
       </div>
       ${steps.length > 0 ? `
