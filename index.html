@@ -568,7 +568,7 @@ body {
 /* === INBOX === */
 
 /* === INBOX LIST === */
-#inbox-list { padding: 0 0 380px 0; -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 73px), transparent 100%); mask-image: linear-gradient(to bottom, black calc(100% - 73px), transparent 100%); }
+#inbox-list { padding: 0 0 380px 0; }
 
 /* Category selector chips */
 .cat-chips {
@@ -721,7 +721,7 @@ body {
   position: fixed;
   left: 4px; right: 4px;
   bottom: calc(var(--tabbar-h, 83px) + 4px);
-  z-index: 50;
+  z-index: 99;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(30,16,64,0.08);
   border-radius: 20px;
@@ -783,11 +783,9 @@ body {
 #chat-overlay {
   position: fixed;
   top: 0; left: 0; right: 0;
-  bottom: var(--tabbar-h, 83px); /* не перекриває таббар і поле вводу */
-  z-index: 98;
-  background: rgba(10,5,30,0.15);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  bottom: 0;
+  z-index: 97; /* нижче ніж бари (99) і таббар (100) */
+  background: rgba(10,5,30,0.12);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -828,7 +826,8 @@ body {
   padding: 8px 8px 8px 14px;
   cursor: text;
 }
-.ai-bar-input-box textarea {
+.ai-bar-input-box textarea,
+.ai-bar-input-box input {
   flex: 1;
   border: none; outline: none;
   font-size: 15px; font-family: inherit;
@@ -1317,9 +1316,10 @@ body {
       <div class="ai-bar-handle" onclick="toggleChatBar('me')"></div>
       <div class="ai-bar-input-box">
         <div style="width:26px;height:26px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
-        <input id="me-chat-input" type="text" placeholder="Запитай агента про себе…"
+        <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
+          oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('me')"
-          onkeydown="if(event.key==='Enter'){sendMeChatMessage()}">
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMeChatMessage()}"></textarea>
         <button class="ai-bar-send-btn" onclick="sendMeChatMessage()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -2391,11 +2391,28 @@ function unifiedInputKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
 }
 
+function updateInboxListMask() {
+  const list = document.getElementById('inbox-list');
+  const bar = document.getElementById('inbox-ai-bar');
+  if (!list || !bar) return;
+  const barH = bar.offsetHeight;
+  const fadeZone = 20; // px зони розмиття
+  if (barH > 0) {
+    const mask = `linear-gradient(to bottom, black calc(100% - ${barH + fadeZone}px), transparent calc(100% - ${barH}px))`;
+    list.style.webkitMaskImage = mask;
+    list.style.maskImage = mask;
+  }
+}
+
 function updateAiBarVisibility() {
   const bar = document.getElementById('inbox-ai-bar');
   if (!bar) return;
-  if (currentTab === 'inbox') bar.classList.add('bar-visible');
-  else bar.classList.remove('bar-visible');
+  if (currentTab === 'inbox') {
+    bar.classList.add('bar-visible');
+    requestAnimationFrame(() => updateInboxListMask());
+  } else {
+    bar.classList.remove('bar-visible');
+  }
 }
 
 async function callAIWithHistory(systemPrompt, history) {
@@ -4519,7 +4536,9 @@ function openChatBar(tab) {
   // Overlay не перекриває таббар і поле вводу
   const tbH = getTabbarHeight();
   if (overlay) {
-    overlay.style.bottom = tbH + 'px';
+    const inputBox = bar.querySelector('.ai-bar-input-box');
+    const inputH = inputBox ? inputBox.offsetHeight : 52;
+    overlay.style.bottom = (tbH + inputH + 8) + 'px';
     overlay.classList.add('visible');
   }
 }
@@ -4806,8 +4825,7 @@ function init() {
   try { setupChatBarSwipe(); } catch(e) {}
   try { setupSettingsSwipe(); } catch(e) {}
   // Me chat enter key
-  const meChatInput = document.getElementById('me-chat-input');
-  if (meChatInput) meChatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMeChatMessage(); } });
+  // me-chat-input Enter handled via onkeydown in HTML
   // iOS Safari fix: inputs in fixed/transformed containers don't get focus on tap
   try {
     document.addEventListener('touchend', function(e) {
@@ -4818,16 +4836,20 @@ function init() {
     }, { passive: true });
   } catch(e) {}
   try { applyTheme('inbox'); } catch(e) {}
-  // Встановлюємо CSS змінну висоти таббару для нових барів
+  // Встановлюємо CSS змінну висоти таббару — після рендеру через rAF
   try {
     const tb = document.getElementById('tab-bar');
     if (tb) {
       const setTabbarH = () => {
-        document.documentElement.style.setProperty('--tabbar-h', tb.offsetHeight + 'px');
+        const h = tb.offsetHeight;
+        if (h > 0) document.documentElement.style.setProperty('--tabbar-h', h + 'px');
       };
-      setTabbarH();
-      // Також оновлюємо після завантаження шрифтів
-      if (document.fonts) document.fonts.ready.then(setTabbarH);
+      // Перший раз — одразу
+      requestAnimationFrame(() => requestAnimationFrame(setTabbarH));
+      // Другий раз — після шрифтів
+      if (document.fonts) document.fonts.ready.then(() => requestAnimationFrame(setTabbarH));
+      // Третій раз — через 500ms як fallback
+      setTimeout(setTabbarH, 500);
     }
   } catch(e) {}
   // Force inbox tab active on every load
