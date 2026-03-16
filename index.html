@@ -194,11 +194,11 @@ body {
 .page {
   position: absolute;
   inset: 0;
-  bottom: 0; /* tab-bar handles its own space */
+  bottom: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: 0 0 24px 0;
+  padding: 0 0 calc(var(--tabbar-h, 83px) + 60px) 0;
   opacity: 0;
   pointer-events: none;
   transform: translateY(6px);
@@ -4482,6 +4482,7 @@ function setupChatBarSwipe() {
     const chatWin = bar.querySelector('.ai-bar-chat-window');
     if (!chatWin) return;
 
+    // Свайп вниз по чат-ВІКНУ → закрити
     let startY = 0;
     chatWin.addEventListener('touchstart', e => {
       startY = e.touches[0].clientY;
@@ -4490,6 +4491,14 @@ function setupChatBarSwipe() {
       const dy = e.changedTouches[0].clientY - startY;
       if (dy > 60) closeChatBar(tab);
     }, { passive: true });
+
+    // Блокуємо touchmove на всьому барі щоб він не рухався при скролі сторінки
+    bar.addEventListener('touchmove', e => {
+      // Дозволяємо скрол тільки всередині чат-вікна (повідомлення)
+      const messages = bar.querySelector('.ai-bar-messages');
+      if (messages && messages.contains(e.target)) return;
+      e.stopPropagation();
+    }, { passive: true });
   });
 
   // Тап поза баром — один «холостий» тап закриває чат
@@ -4497,14 +4506,10 @@ function setupChatBarSwipe() {
     if (!activeChatBar) return;
     const bar = document.getElementById(activeChatBar + '-ai-bar');
     if (!bar) return;
-    // Якщо тап всередині бару — нічого не робимо
     if (bar.contains(e.target)) return;
-    // Якщо тап по таббару — нічого не робимо
     const tabBar = document.getElementById('tab-bar');
     if (tabBar && tabBar.contains(e.target)) return;
-    // Інакше — закриваємо чат (один холостий тап)
     closeChatBar(activeChatBar);
-    // НЕ зупиняємо подію — скрол і інші елементи працюють
   }, { passive: true });
 }
 
