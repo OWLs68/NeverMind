@@ -1164,26 +1164,7 @@ body {
 
 
 <!-- TASKS AI BAR — нова система -->
-<div id="tasks-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
-  <!-- Чат-вікно (з'являється при фокусі) -->
-  <div class="ai-bar-chat-window" id="tasks-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('tasks')"></div>
-    <div class="ai-bar-messages" id="tasks-chat-messages"></div>
-  </div>
-  <!-- Полоска-хендл над полем -->
-  <div class="ai-bar-handle" onclick="toggleChatBar('tasks')"></div>
-  <!-- Поле вводу -->
-  <div class="ai-bar-input-box">
-    <div style="width:26px;height:26px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
-    <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи ШІ про задачі…"
-      oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('tasks')"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"></textarea>
-    <button class="ai-bar-send-btn" onclick="sendTasksBarMessage()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-    </button>
-  </div>
-</div>
+
 
     <!-- PAGE: NOTES -->
     <div class="page" id="page-notes">
@@ -1297,23 +1278,7 @@ body {
     </div>
 
     <!-- ME AI BAR — нова система -->
-    <div id="me-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
-      <div class="ai-bar-chat-window" id="me-chat-window">
-        <div class="ai-bar-chat-handle" onclick="closeChatBar('me')"></div>
-        <div class="ai-bar-messages" id="me-chat-messages"></div>
-      </div>
-      <div class="ai-bar-handle" onclick="toggleChatBar('me')"></div>
-      <div class="ai-bar-input-box">
-        <div style="width:26px;height:26px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
-        <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
-          oninput="autoResizeTextarea(this)"
-          onfocus="openChatBar('me')"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMeChatMessage()}"></textarea>
-        <button class="ai-bar-send-btn" onclick="sendMeChatMessage()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        </button>
-      </div>
-    </div>
+    
 
 
     <!-- PAGE: EVENING -->
@@ -1365,7 +1330,49 @@ body {
     </div>
 
     <!-- EVENING AI BAR — нова система -->
-    <div id="evening-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+    
+
+  </div><!-- /scroll-wrap -->
+
+<!-- AI BARS — поза .page щоб position:fixed працював на iOS -->
+<div id="tasks-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <!-- Чат-вікно (з'являється при фокусі) -->
+  <div class="ai-bar-chat-window" id="tasks-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('tasks')"></div>
+    <div class="ai-bar-messages" id="tasks-chat-messages"></div>
+  </div>
+  <!-- Полоска-хендл над полем -->
+  <div class="ai-bar-handle" onclick="toggleChatBar('tasks')"></div>
+  <!-- Поле вводу -->
+  <div class="ai-bar-input-box">
+    <div style="width:26px;height:26px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+    <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи ШІ про задачі…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('tasks')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendTasksBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
+<div id="me-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+      <div class="ai-bar-chat-window" id="me-chat-window">
+        <div class="ai-bar-chat-handle" onclick="closeChatBar('me')"></div>
+        <div class="ai-bar-messages" id="me-chat-messages"></div>
+      </div>
+      <div class="ai-bar-handle" onclick="toggleChatBar('me')"></div>
+      <div class="ai-bar-input-box">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+        <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
+          oninput="autoResizeTextarea(this)"
+          onfocus="openChatBar('me')"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMeChatMessage()}"></textarea>
+        <button class="ai-bar-send-btn" onclick="sendMeChatMessage()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+    </div>
+<div id="evening-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
       <div class="ai-bar-chat-window" id="evening-chat-window">
         <div class="ai-bar-chat-handle" onclick="closeChatBar('evening')"></div>
         <div class="ai-bar-messages" id="evening-bar-messages"></div>
@@ -1383,7 +1390,6 @@ body {
       </div>
     </div>
 
-  </div><!-- /scroll-wrap -->
 
   <!-- TAB BAR -->
   <nav id="tab-bar">
@@ -3196,7 +3202,7 @@ function renderEvening() {
   const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === today);
 
   // Додаємо нотатки за сьогодні з nm_notes (без копіювання — читаємо напряму)
-  const allNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]');
+  const allNotes = getNotes();
   const todayNotes = allNotes.filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
   // Об'єднуємо: спочатку події/моменти, потім нотатки — без дублів
   const notesAsItems = todayNotes.map(n => ({
