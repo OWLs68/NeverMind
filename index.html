@@ -33,33 +33,9 @@ body {
 
 /* === CSS VARIABLES — DESIGN SYSTEM === */
 :root {
-  /* Inbox — warm cream */
-  --inbox-bg: linear-gradient(160deg, #faf7f2, #f5f0e8, #f0f4f8);
-  --inbox-accent: #8b6914;
-  --inbox-accent2: #d4a857;
-  --inbox-orb: rgba(251,191,36,0.10);
-  --inbox-tab-bg: rgba(250,247,242,0.88);
-
-  /* Morning — peach gold */
-  --morning-bg: linear-gradient(160deg, #fffaf3, #fff4e6, #fdf6ff);
-  --morning-accent: #c47d0a;
-  --morning-accent2: #fbbf24;
-  --morning-orb: rgba(251,191,36,0.15);
-  --morning-tab-bg: rgba(255,250,243,0.88);
-
-  /* Habits — fresh green */
-  --habits-bg: linear-gradient(160deg, #f3faf5, #eaf5ee, #f0f8f5);
-  --habits-accent: #16a34a;
-  --habits-accent2: #22c55e;
-  --habits-orb: rgba(34,197,94,0.12);
-  --habits-tab-bg: rgba(243,250,245,0.88);
-
-  /* Evening — soft purple */
-  --evening-bg: linear-gradient(160deg, #f5f2ff, #ede8ff, #eef2ff);
-  --evening-accent: #7c5cbf;
-  --evening-accent2: #9b7de0;
-  --evening-orb: rgba(180,155,255,0.15);
-  --evening-tab-bg: rgba(245,242,255,0.88);
+  /* Global palette */
+  --inbox-bg: linear-gradient(160deg, #f2d978, #ffffff);
+  --inbox-tab-bg: rgba(243,211,94,0.73);
 
   /* Cards */
   --card-bg: rgba(255,255,255,0.5);
@@ -158,8 +134,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
-  transition: background 0.5s ease;
-  background: var(--inbox-bg);
+  background: linear-gradient(160deg, #f2d978, #ffffff);
 }
 
 /* Decorative orbs */
@@ -308,12 +283,12 @@ body {
   justify-content: space-around;
   align-items: flex-start;
   padding: 6px 8px calc(7px + env(safe-area-inset-bottom));
-  background: var(--inbox-tab-bg);
+  background: rgba(243,211,94,0.73);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   border-top: 1.5px solid rgba(30,16,64,0.08);
   box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
-  transition: background 0.5s ease, transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -562,16 +537,16 @@ body {
 }
 
 /* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
-#page-inbox .page-header { background: linear-gradient(to bottom, rgba(250,247,242,0.95), transparent); }
-#page-tasks .page-header { background: linear-gradient(to bottom, rgba(255,248,240,0.95), transparent); }
-#page-notes .page-header { background: linear-gradient(to bottom, rgba(240,244,255,0.95), transparent); }
-#page-me .page-header { background: linear-gradient(to bottom, rgba(240,253,244,0.95), transparent); }
-#page-evening .page-header { background: linear-gradient(to bottom, rgba(245,242,255,0.95), transparent); }
+#page-inbox .page-header { background: linear-gradient(to bottom, #f2d978 30%, transparent); }
+#page-tasks .page-header,
+#page-notes .page-header,
+#page-me .page-header,
+#page-evening .page-header { background: linear-gradient(to bottom, #f2d978 30%, transparent); }
 
 /* === INBOX === */
 
 /* === INBOX LIST === */
-#inbox-list { padding: 0 0 380px 0; }
+#inbox-list { padding: 0 16px 380px; } /* бокові відступи для вужчих карток */
 
 /* Category selector chips */
 .cat-chips {
@@ -699,11 +674,11 @@ body {
 .cat-dot-event { background: linear-gradient(135deg, #eff6ff, #dbeafe); }
 
 /* Кольорові картки залежно від категорії */
-.inbox-item[data-cat="task"]  { background: linear-gradient(135deg, #fff7ed, #ffedd5) !important; border-color: rgba(234,88,12,0.2) !important; }
-.inbox-item[data-cat="habit"] { background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important; border-color: rgba(22,163,74,0.2) !important; }
-.inbox-item[data-cat="note"]  { background: linear-gradient(135deg, #eef2ff, #e0e7ff) !important; border-color: rgba(99,102,241,0.18) !important; }
-.inbox-item[data-cat="idea"]  { background: linear-gradient(135deg, #faf5ff, #f3e8ff) !important; border-color: rgba(167,139,250,0.22) !important; }
-.inbox-item[data-cat="event"] { background: linear-gradient(135deg, #eff6ff, #dbeafe) !important; border-color: rgba(59,130,246,0.2) !important; }
+.inbox-item[data-cat="task"]  { background: linear-gradient(135deg,#c6f3fd,#a8ecfb) !important; border-color: rgba(255,255,255,0.4) !important; }
+.inbox-item[data-cat="habit"] { background: linear-gradient(135deg,#bbf7d0,#a7f3c0) !important; border-color: rgba(255,255,255,0.4) !important; }
+.inbox-item[data-cat="note"]  { background: linear-gradient(135deg,#f5ede0,#ede0cc) !important; border-color: rgba(255,255,255,0.4) !important; }
+.inbox-item[data-cat="idea"]  { background: linear-gradient(135deg,#fff176,#ffee30) !important; border-color: rgba(255,255,255,0.4) !important; }
+.inbox-item[data-cat="event"] { background: linear-gradient(135deg,#bfdbfe,#a5c8fe) !important; border-color: rgba(255,255,255,0.4) !important; }
 
 /* Inbox empty state */
 .inbox-empty {
@@ -723,14 +698,14 @@ body {
 #inbox-ai-bar {
   position: fixed;
   left: 4px; right: 4px;
-  bottom: calc(var(--tabbar-h, 83px) + 4px);
+  bottom: calc(var(--tabbar-h, 83px) - 2px);
   z-index: 99;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid rgba(30,16,64,0.08);
+  background: rgba(26,10,46,0.49);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 20px;
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
   display: none;
   flex-direction: column;
   height: 250px;
@@ -755,6 +730,7 @@ body {
   min-height: 0;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black calc(100% - 10px), transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black calc(100% - 10px), transparent 100%);
+  -webkit-overflow-scrolling: touch;
 }
 
 .ai-bar-preview {
@@ -766,12 +742,11 @@ body {
 .ai-avatar {
   width: 26px; height: 26px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a78bfa, #818cf8);
+  background: rgba(255,255,255,0.15);
   display: flex; align-items: center; justify-content: center;
   font-size: 11px;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(129,140,248,0.35);
 }
 .ai-bar-text {
   font-size: 13px;
@@ -793,6 +768,12 @@ body {
   transition: bottom 0.35s cubic-bezier(0.32,0.72,0,1);
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  pointer-events: none; /* сам бар прозорий для дотиків */
+}
+/* тільки поле вводу і вікно чату перехоплюють дотики */
+.ai-bar-new .ai-bar-input-box,
+.ai-bar-new .ai-bar-chat-window.open {
+  pointer-events: all;
 }
 /* Коли вікно закрите — не перехоплює дотики */
 .ai-bar-handle {
@@ -1076,6 +1057,8 @@ body {
 
       <!-- List -->
       <div id="inbox-list"></div>
+      <!-- маска знизу — картки зникають перед таббаром -->
+      <div style="position:fixed;bottom:0;left:0;right:0;height:calc(var(--tabbar-h,83px) + 60px);background:linear-gradient(to top,#ffffff 40%,transparent);z-index:8;pointer-events:none" id="inbox-bottom-mask"></div>
     </div>
 
     <!-- AI BAR — одне поле, одна кнопка, ШІ вирішує все -->
@@ -1085,7 +1068,7 @@ body {
         <!-- Перше повідомлення від ШІ -->
         <div style="display:flex;gap:8px;align-items:flex-start">
           <div class="ai-avatar">✦</div>
-          <div style="background:rgba(30,16,64,0.05);color:#1e1040;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">Привіт! Напиши що завгодно — я розберусь 👋</div>
+          <div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">Привіт! Напиши що завгодно — я розберусь 👋</div>
         </div>
       </div>
 
@@ -1099,11 +1082,11 @@ body {
         </div>
         <div class="ai-bar-input-row">
           <textarea class="ai-bar-input" id="inbox-input"
-            placeholder="Напиши що завгодно — ШІ розбереться…" rows="1"
+            placeholder="Напиши що завгодно — ШІ розбереться…" rows="1" style="color:white"
             oninput="autoResizeTextarea(this)"
             onkeydown="unifiedInputKeydown(event)"></textarea>
-          <button class="ai-send-btn" id="ai-send-btn" onclick="sendToAI()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <button class="ai-send-btn" id="ai-send-btn" onclick="sendToAI()" style="background:rgba(255,255,255,0.9)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
@@ -1138,7 +1121,7 @@ body {
 
       <!-- TASKS SUB-PAGE -->
       <div id="prod-page-tasks">
-        <div id="tasks-ai-comment" style="display:none;margin:0 16px 8px;background:rgba(255,255,255,0.7);border:1px solid rgba(234,88,12,0.15);border-radius:14px;padding:12px 14px;font-size:19px;line-height:1.8;color:#3d2060;font-weight:400"></div>
+        <div id="tasks-ai-comment" style="display:none;margin:0 16px 8px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:14px;padding:12px 14px;font-size:19px;line-height:1.8;color:#1e1040;font-weight:400"></div>
         <div id="tasks-list" style="padding:0 0 120px"></div>
         <div id="tasks-empty" style="display:none;text-align:center;padding:60px 32px;color:rgba(30,16,64,0.35)">
           <div style="font-size:46px;margin-bottom:12px;opacity:0.3">▣</div>
@@ -1185,7 +1168,7 @@ body {
 
       <!-- Search -->
       <div style="padding:4px 14px 8px">
-        <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.95);border-radius:12px;padding:9px 13px;backdrop-filter:blur(10px)">
+        <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.7);border-radius:12px;padding:9px 13px;backdrop-filter:blur(10px)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.35)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <input id="notes-search" type="text" placeholder="Пошук по нотатках…" oninput="filterNotes()" style="border:none;background:none;outline:none;font-size:15px;font-family:inherit;color:#1e1040;flex:1;font-weight:500" autocomplete="off" autocorrect="off" spellcheck="false">
           <span id="notes-search-clear" onclick="clearNotesSearch()" style="display:none;cursor:pointer;font-size:18px;color:rgba(30,16,64,0.3)">×</span>
@@ -1225,47 +1208,47 @@ body {
       <div id="me-content" style="padding:8px 0 120px">
 
         <!-- Week grid -->
-        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
           <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Цей тиждень</div>
           <div id="me-week-grid" style="display:flex;gap:6px;justify-content:space-between"></div>
         </div>
 
         <!-- Stats row -->
         <div style="display:flex;gap:8px;margin:0 14px 10px">
-          <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
+          <div style="flex:1;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:14px;padding:12px;text-align:center">
             <div id="me-stat-inbox" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#1e1040">0</div>
             <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">записів</div>
           </div>
-          <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
+          <div style="flex:1;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:14px;padding:12px;text-align:center">
             <div id="me-stat-tasks" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#ea580c">0</div>
             <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">задач активних</div>
           </div>
-          <div style="flex:1;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:14px;padding:12px;text-align:center">
+          <div style="flex:1;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:14px;padding:12px;text-align:center">
             <div id="me-stat-notes" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#4f46e5">0</div>
             <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">нотаток</div>
           </div>
         </div>
 
         <!-- Inbox categories breakdown -->
-        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
           <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Що записував</div>
           <div id="me-categories" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
         <!-- Activity last 14 days -->
-        <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
           <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Активність за 14 днів</div>
           <div id="me-activity" style="display:flex;gap:4px;align-items:flex-end;height:48px"></div>
         </div>
 
         <!-- Habits stats -->
-        <div id="me-habits-stats" style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
+        <div id="me-habits-stats" style="margin:0 14px 10px;background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
           <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📊 Статистика звичок</div>
           <div id="me-habits-stats-list"></div>
         </div>
 
         <!-- AI weekly summary -->
-        <div style="margin:0 14px 10px;background:rgba(240,253,244,0.85);border:1px solid rgba(22,163,74,0.15);border-radius:16px;padding:14px">
+        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">✦ Аналіз агента</div>
             <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:13px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
@@ -1274,7 +1257,7 @@ body {
         </div>
 
         <!-- AI Поради -->
-        <div id="me-advice-block" style="display:none;margin:0 14px 10px;background:rgba(255,248,240,0.9);border:1px solid rgba(234,88,12,0.15);border-radius:16px;padding:14px">
+        <div id="me-advice-block" style="display:none;margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
           <div style="font-size:12px;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">💡 3 конкретні поради</div>
           <div id="me-ai-advice" style="font-size:19px;line-height:1.8;color:#7c2d12;font-weight:400"></div>
         </div>
@@ -1297,7 +1280,7 @@ body {
 
       <!-- Day score -->
       <div style="padding:0 0 120px;overflow-y:auto">
-      <div style="margin:8px 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px;display:flex;align-items:center;gap:14px">
+      <div style="margin:8px 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px;display:flex;align-items:center;gap:14px">
         <div id="evening-ring" style="position:relative;width:60px;height:60px;flex-shrink:0">
           <svg width="60" height="60" viewBox="0 0 60 60">
             <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="5"/>
@@ -1312,7 +1295,7 @@ body {
       </div>
 
       <!-- Moments -->
-      <div style="margin:0 14px 10px;background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px">
+      <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Моменти дня</div>
           <button onclick="openAddMoment()" style="font-size:13px;font-weight:700;color:#7c3aed;background:rgba(124,58,237,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
@@ -1625,37 +1608,37 @@ body {
 // === TAB THEMES ===
 const TAB_THEMES = {
   inbox: {
-    bg: 'linear-gradient(160deg, #fff8ee, #ffefd5, #fff3e0)',
-    orb: 'rgba(251,146,60,0.18)',
-    tabBg: 'rgba(255,248,238,0.92)',
-    accent: '#c2620a',
-    accent2: '#f97316',
+    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
+    orb: 'rgba(242,217,120,0.25)',
+    tabBg: 'rgba(243,211,94,0.73)',
+    accent: '#8b6914',
+    accent2: '#d4a857',
   },
   tasks: {
-    bg: 'linear-gradient(160deg, #fff4ed, #ffe8d6, #fff0e6)',
-    orb: 'rgba(234,88,12,0.18)',
-    tabBg: 'rgba(255,244,237,0.92)',
+    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
+    orb: 'rgba(234,88,12,0.15)',
+    tabBg: 'rgba(243,211,94,0.73)',
     accent: '#ea580c',
     accent2: '#f97316',
   },
   notes: {
-    bg: 'linear-gradient(160deg, #f8faff, #eef2ff, #f0f4ff)',
-    orb: 'rgba(99,102,241,0.12)',
-    tabBg: 'rgba(248,250,255,0.92)',
+    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
+    orb: 'rgba(99,102,241,0.10)',
+    tabBg: 'rgba(243,211,94,0.73)',
     accent: '#4f46e5',
     accent2: '#818cf8',
   },
   me: {
-    bg: 'linear-gradient(160deg, #e8faf0, #d6f5e3, #eaf8f0)',
-    orb: 'rgba(34,197,94,0.20)',
-    tabBg: 'rgba(232,250,240,0.92)',
+    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
+    orb: 'rgba(22,163,74,0.15)',
+    tabBg: 'rgba(243,211,94,0.73)',
     accent: '#16a34a',
     accent2: '#22c55e',
   },
   evening: {
-    bg: 'linear-gradient(160deg, #f0ebff, #e8e0ff, #ebe8ff)',
-    orb: 'rgba(139,92,246,0.22)',
-    tabBg: 'rgba(240,235,255,0.92)',
+    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
+    orb: 'rgba(139,92,246,0.15)',
+    tabBg: 'rgba(243,211,94,0.73)',
     accent: '#7c3aed',
     accent2: '#a78bfa',
   },
@@ -1688,14 +1671,18 @@ function switchTab(tab) {
   // Inbox AI bar — тільки на inbox
   updateAiBarVisibility();
 
-  // Нові бари tasks/me/evening — показуємо/ховаємо
+  // Нові бари tasks/me/evening — показуємо/ховаємо і закриваємо вікно чату при переключенні
   ['tasks','me','evening'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
-    if (bar) bar.style.display = (t === tab || (t === 'tasks' && tab === 'tasks')) ? 'flex' : 'none';
+    if (!bar) return;
+    const show = t === tab;
+    bar.style.display = show ? 'flex' : 'none';
+    // Якщо вкладка стала неактивною — закриваємо вікно чату
+    if (!show) {
+      const cw = bar.querySelector('.ai-bar-chat-window');
+      if (cw) cw.classList.remove('open');
+    }
   });
-  // tasks бар показуємо і на звичках (підвкладка tasks)
-  const tasksBar = document.getElementById('tasks-ai-bar');
-  if (tasksBar) tasksBar.style.display = (tab === 'tasks') ? 'flex' : 'none';
 
   // Tab-specific render
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); }
@@ -1706,19 +1693,10 @@ function switchTab(tab) {
 
 function applyTheme(tab) {
   const theme = TAB_THEMES[tab];
-  const bg = document.getElementById('bg');
-  const tabBar = document.getElementById('tab-bar');
   const root = document.documentElement;
 
-  bg.style.background = theme.bg;
-  // Update orb colors via pseudo-elements trick (CSS vars)
   root.style.setProperty('--active-accent', theme.accent);
   root.style.setProperty('--active-accent2', theme.accent2);
-  tabBar.style.background = theme.tabBg;
-
-  // Orbs via custom properties on bg element
-  bg.style.setProperty('--orb-color', theme.orb);
-  bg.setAttribute('data-tab', tab);
 }
 
 // === SETTINGS ===
@@ -1945,6 +1923,8 @@ async function sendMeChatMessage() {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
+  input.style.height = 'auto';
+  input.focus(); // утримуємо клавіатуру
 
   addMeChatMsg('user', text);
   meChatHistory.push({ role: 'user', content: text });
@@ -1974,7 +1954,10 @@ function getAIContext() {
   const days = ['неділя','понеділок','вівторок','середа','четвер','п\'ятниця','субота'];
   const months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
   const timeStr = now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
-  const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}`;
+  const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone; // напр: Europe/Kiev
+  const tzOffset = -now.getTimezoneOffset() / 60; // напр: +2 або +3
+  const tzStr = `UTC${tzOffset >= 0 ? '+' : ''}${tzOffset} (${tzName})`;
+  const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}, часовий пояс: ${tzStr}`;
   parts.push(`Зараз: ${dateStr}`);
 
   // === Профіль і пам'ять ===
@@ -2126,7 +2109,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 ЯКЩО це питання або розмова (не запис) — відповідай ТІЛЬКИ JSON:
 {
   "action": "reply",
-  "comment": "відповідь українською, 2-4 речення"
+  "comment": "відповідь українською, 2-4 речення. Якщо є список — кожен пункт з нового рядка через \n (напр: назва1\nназва2\nназва3)"
 }
 
 Правила визначення категорії:
@@ -2246,15 +2229,36 @@ function addInboxChatMsg(role, text) {
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
   if (isAgent) {
-    div.innerHTML = `<div class="ai-avatar">✦</div><div style="background:rgba(30,16,64,0.05);color:#1e1040;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="ai-avatar">✦</div><div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
   } else {
-    div.innerHTML = `<div style="background:#7c3aed;color:white;border-radius:14px 4px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
   }
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
 
 // === INBOX ===
+const CAT_SVG = {
+  task:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2fd0f9" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+  idea:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a07800" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>',
+  note:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  habit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  event: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+};
+const CAT_DOT_BG = {
+  task:  'background:rgba(47,208,249,0.2)',
+  idea:  'background:rgba(255,238,0,0.3)',
+  note:  'background:rgba(180,140,90,0.15)',
+  habit: 'background:rgba(22,163,74,0.15)',
+  event: 'background:rgba(59,130,246,0.15)',
+};
+const CAT_TAG_STYLE = {
+  task:  'background:rgba(47,208,249,0.2);color:#0a7a97',
+  idea:  'background:rgba(255,238,0,0.35);color:#7a5c00',
+  note:  'background:rgba(180,140,90,0.2);color:#6a4a1a',
+  habit: 'background:rgba(22,163,74,0.15);color:#14532d',
+  event: 'background:rgba(59,130,246,0.15);color:#1d4ed8',
+};
 const CAT_META = {
   idea:  { icon: '💡', label: 'Ідея',    dotClass: 'cat-dot-idea',  tagClass: 'cat-idea'  },
   task:  { icon: '📌', label: 'Задача',  dotClass: 'cat-dot-task',  tagClass: 'cat-task'  },
@@ -2312,11 +2316,11 @@ function renderInbox() {
   list.innerHTML = items.map(item => {
     const meta = CAT_META[item.category] || CAT_META.note;
     const cardStyles = {
-      task:  'background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:rgba(234,88,12,0.2)',
-      habit: 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:rgba(22,163,74,0.22)',
-      note:  'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:rgba(99,102,241,0.2)',
-      idea:  'background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-color:rgba(167,139,250,0.25)',
-      event: 'background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:rgba(59,130,246,0.22)',
+      task:  'background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border-color:rgba(255,255,255,0.4)',
+      habit: 'background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border-color:rgba(255,255,255,0.4)',
+      note:  'background:linear-gradient(135deg,#f5ede0,#ede0cc);border-color:rgba(255,255,255,0.4)',
+      idea:  'background:linear-gradient(135deg,#fff176,#ffee30);border-color:rgba(255,255,255,0.4)',
+      event: 'background:linear-gradient(135deg,#bfdbfe,#a5c8fe);border-color:rgba(255,255,255,0.4)',
     };
     const cardStyle = cardStyles[item.category] || cardStyles.note;
     return `<div class="inbox-item-wrap" id="wrap-${item.id}">
@@ -2327,12 +2331,12 @@ function renderInbox() {
            ontouchmove="swipeMove(event,${item.id})"
            ontouchend="swipeEnd(event,${item.id})">
         <div class="inbox-item-inner">
-          <div class="inbox-item-cat-dot ${meta.dotClass}">${meta.icon}</div>
+          <div class="inbox-item-cat-dot" style="${CAT_DOT_BG[item.category] || CAT_DOT_BG.note}">${CAT_SVG[item.category] || CAT_SVG.note}</div>
           <div class="inbox-item-body">
             <div class="inbox-item-text">${escapeHtml(item.text)}</div>
             <div class="inbox-item-meta">
               <span class="inbox-item-time">${formatTime(item.ts)}</span>
-              <span class="inbox-item-tag ${meta.tagClass}">${meta.label}</span>
+              <span class="inbox-item-tag" style="${CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note}">${meta.label}</span>
             </div>
           </div>
         </div>
@@ -2401,12 +2405,15 @@ function updateInboxListMask() {
 
 function updateAiBarVisibility() {
   const bar = document.getElementById('inbox-ai-bar');
+  const mask = document.getElementById('inbox-bottom-mask');
   if (!bar) return;
   if (currentTab === 'inbox') {
     bar.classList.add('bar-visible');
+    if (mask) mask.style.display = 'block';
     requestAnimationFrame(() => updateInboxListMask());
   } else {
     bar.classList.remove('bar-visible');
+    if (mask) mask.style.display = 'none';
   }
 }
 
@@ -2503,7 +2510,7 @@ async function sendToAI() {
 
       if (parsed.action === 'save') {
         await processSaveAction(parsed, text);
-        addInboxChatMsg('agent', parsed.comment || '✓ Збережено');
+        // повідомлення вже додає processSaveAction — не дублюємо
         responseArea.style.display = 'none';
       } else {
         // action === 'reply' — просто відповідь
@@ -2668,17 +2675,17 @@ function renderNotes(searchQuery = '') {
 
   // Кольори папок
   const FOLDER_COLORS = {
-    'Харчування': { bg: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: 'rgba(234,88,12,0.18)',  dot: '🥑' },
-    'Фінанси':   { bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: 'rgba(234,179,8,0.22)',   dot: '💸' },
-    "Здоров'я":  { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',    dot: '💪' },
-    'Здоровя':   { bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: 'rgba(22,163,74,0.2)',    dot: '💪' },
-    'Робота':    { bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: 'rgba(59,130,246,0.2)',   dot: '🎯' },
-    'Навчання':  { bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: 'rgba(99,102,241,0.2)',   dot: '🧠' },
-    'Ідеї':      { bg: 'linear-gradient(135deg,#faf5ff,#f3e8ff)', border: 'rgba(167,139,250,0.22)', dot: '💡' },
-    'Особисте':  { bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: 'rgba(14,165,233,0.2)',   dot: '⚡' },
-    'Подорожі':  { bg: 'linear-gradient(135deg,#ecfeff,#cffafe)', border: 'rgba(6,182,212,0.2)',    dot: '✈️' },
+    'Харчування': { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
+    'Фінанси':   { bg: 'linear-gradient(135deg,#fff176,#ffee30)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
+    "Здоров'я":  { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+    'Здоровя':   { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+    'Робота':    { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '🎯' },
+    'Навчання':  { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🧠' },
+    'Ідеї':      { bg: 'linear-gradient(135deg,#fff176,#ffee30)', border: 'rgba(255,255,255,0.4)', dot: '💡' },
+    'Особисте':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '⚡' },
+    'Подорожі':  { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '✈️' },
   };
-  const DEFAULT_NOTE = { bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: 'rgba(124,58,237,0.18)', dot: '📝' };
+  const DEFAULT_NOTE = { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '📝' };
 
   content.innerHTML = Object.entries(byFolder).map(([folder, items]) => {
     const fc = FOLDER_COLORS[folder] || DEFAULT_NOTE;
@@ -3024,9 +3031,9 @@ function renderTasks() {
     const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
     const isDone = t.status === 'done';
 
-    return `<div style="margin:0 14px 10px;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.95);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.6' : '1'}">
+    return `<div style="margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'}">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div onclick="toggleTaskStatus(${t.id})" style="width:22px;height:22px;border-radius:7px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:13px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div onclick="toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
@@ -3042,8 +3049,8 @@ function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <div style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#ea580c">${s.done ? '✓' : ''}</div>
+            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+              <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
           `).join('')}
@@ -4830,6 +4837,7 @@ async function sendEveningBarMessage() {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
+  input.focus(); // утримуємо клавіатуру
   addEveningBarMsg('user', text);
   eveningBarLoading = true;
 
