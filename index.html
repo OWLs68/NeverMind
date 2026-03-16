@@ -3718,7 +3718,7 @@ function setupKeyboardAvoiding() {
     const tbH = tabBar ? tabBar.offsetHeight : 83;
     const newBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar'].map(id => document.getElementById(id));
 
-    if (keyboardHeight > 100) {
+    if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
       if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
       if (tabBar) { tabBar.style.transform = `translateY(${keyboardHeight + tbH}px)`; tabBar.style.opacity = '0'; }
