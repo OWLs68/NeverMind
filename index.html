@@ -867,6 +867,7 @@ body {
 .ai-bar-messages {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 5px 12px 5px;
   display: flex;
   flex-direction: column;
@@ -2489,86 +2490,8 @@ async function sendToAI() {
       }
 
       if (parsed.action === 'save') {
-        const catMap = {'нотатка':'note','задача':'task','звичка':'habit','ідея':'idea','подія':'event'};
-        const rawCat = (parsed.category || '').toLowerCase();
-        const cat = ['idea','task','habit','note','event'].includes(rawCat) ? rawCat : (catMap[rawCat] || 'note');
-        const savedText = parsed.text || text;
-        const folder = parsed.folder || null; // папка від агента
-        const items = getInbox();
-        items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
-        saveInbox(items);
-        renderInbox();
-        // Дублюємо задачі у вкладку Задачі
-        if (cat === 'task') {
-          const taskId = Date.now();
-          const tasks = getTasks();
-          // Використовуємо task_title якщо є, інакше оригінальний текст
-          const taskTitle = parsed.task_title || savedText;
-          // Використовуємо task_steps якщо є
-          const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
-            ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
-            : [];
-          tasks.unshift({ id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId });
-          saveTasks(tasks);
-          // Якщо кроків немає — спробуємо згенерувати автоматично
-          if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
-        }
-        // Дублюємо нотатки та ідеї в Нотатки з правильною папкою
-        if (cat === 'note' || cat === 'idea') {
-          addNoteFromInbox(savedText, cat, folder);
-        }
-        // Дублюємо звички у вкладку Продуктивність
-        if (cat === 'habit') {
-          const habits = getHabits();
-          const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
-          if (!exists) {
-            // Парсимо дні з тексту
-            const txt = savedText.toLowerCase();
-            let days = [0,1,2,3,4,5,6]; // за замовчуванням щодня
-            const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/i.test(txt);
-            const hasEveryDay = /щодня|кожного дня|кожен день|daily|кожного/i.test(txt);
-            const hasWeekdays = /будн|пн.*ср.*пт|пн.*вт.*ср/.test(txt);
-            if (hasEveryDay) {
-              days = [0,1,2,3,4,5,6]; // щодня
-            } else if (hasWeekdays) {
-              days = [0,1,2,3,4]; // пн-пт
-            } else if (hasWeekday) {
-              days = [];
-              if (/понеділ|пн/i.test(txt)) days.push(0);
-              if (/вівтор|вт/i.test(txt)) days.push(1);
-              if (/серед|ср/i.test(txt)) days.push(2);
-              if (/четвер|чт/i.test(txt)) days.push(3);
-              if (/п.ятниц|пт/i.test(txt)) days.push(4);
-              if (/субот|сб/i.test(txt)) days.push(5);
-              if (/неділ|нд/i.test(txt)) days.push(6);
-              if (days.length === 0) days = [0,1,2,3,4,5,6];
-            }
-            // Коротка назва + деталі для звички з Inbox
-            const habitParts = savedText.split(/[,.]\s*/);
-            const habitName = habitParts[0].trim().split(' ').slice(0,5).join(' ');
-            const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '';
-            habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, createdAt: Date.now() });
-            saveHabits(habits);
-          }
-        }
-        // Дублюємо події/моменти у вкладку Вечір
-        if (cat === 'event') {
-          const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
-                       /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
-          const moments = getMoments();
-          moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
-          saveMoments(moments);
-        }
-              // Підтвердження збереження в чаті
-        const catConfirm = {
-          task: '✅ Створив задачу',
-          habit: '🌱 Додав звичку',
-          note: '📝 Збережено в нотатки',
-          idea: '💡 Збережено як ідею',
-          event: '📅 Додав до Вечора'
-        };
-        const confirmMsg = catConfirm[cat] || '✓ Збережено';
-        addInboxChatMsg('agent', parsed.comment ? parsed.comment : confirmMsg);
+        await processSaveAction(parsed, text);
+        addInboxChatMsg('agent', parsed.comment || '✓ Збережено');
         responseArea.style.display = 'none';
       } else {
         // action === 'reply' — просто відповідь
@@ -3271,6 +3194,21 @@ function renderEvening() {
   const today = new Date().toDateString();
   const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === today);
 
+  // Додаємо нотатки за сьогодні з nm_notes (без копіювання — читаємо напряму)
+  const allNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]');
+  const todayNotes = allNotes.filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
+  // Об'єднуємо: спочатку події/моменти, потім нотатки — без дублів
+  const notesAsItems = todayNotes.map(n => ({
+    id: 'note_' + n.id,
+    text: n.title || n.text || '',
+    mood: 'neutral',
+    ts: n.ts || n.createdAt || 0,
+    isNote: true,
+    folder: n.folder || 'note'
+  }));
+  const allTodayItems = [...todayMoments, ...notesAsItems]
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
   // Відновлюємо збережений підсумок
   try {
     const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
@@ -3294,21 +3232,22 @@ function renderEvening() {
     const offset = 157 - (157 * score / 100);
     setTimeout(() => { arc.style.strokeDashoffset = offset; }, 100);
     pctEl.textContent = score + '%';
-    descEl.textContent = total === 0 ? 'Додай моменти дня' :
+    descEl.textContent = total === 0 && todayNotes.length === 0 ? 'Додай моменти дня' :
       score >= 70 ? 'Гарний день 💪' : score >= 40 ? 'Середній день' : 'Важкий день';
   }
 
-  // Moments list
+  // Moments + Notes list
   const momEl = document.getElementById('evening-moments');
-  if (todayMoments.length === 0) {
+  if (allTodayItems.length === 0) {
     momEl.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>';
   } else {
     const moodColors = { positive:'#16a34a', neutral:'#d97706', negative:'#ef4444' };
-    momEl.innerHTML = todayMoments.map(m => `
+    const folderIcons = { note:'📝', idea:'💡', event:'📅' };
+    momEl.innerHTML = allTodayItems.map(m => `
       <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
-        <div style="width:8px;height:8px;border-radius:50%;background:${moodColors[m.mood]||'#888'};margin-top:5px;flex-shrink:0"></div>
-        <div style="flex:1;font-size:15px;color:#1e1040;line-height:1.5">${escapeHtml(m.text)}</div>
-        <div onclick="deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>
+        <div style="width:8px;height:8px;border-radius:50%;background:${m.isNote ? '#818cf8' : (moodColors[m.mood]||'#888')};margin-top:5px;flex-shrink:0"></div>
+        <div style="flex:1;font-size:15px;color:#1e1040;line-height:1.5">${escapeHtml(m.text)}${m.isNote ? ' <span style="font-size:11px;color:rgba(30,16,64,0.3)">' + (folderIcons[m.folder] || '📝') + '</span>' : ''}</div>
+        ${!m.isNote ? `<div onclick="deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>` : ''}
       </div>
     `).join('');
   }
@@ -3506,19 +3445,6 @@ function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '
 function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
 function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
 function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
-
-function openAddHabit() {
-  editingHabitId = null;
-  document.getElementById('habit-modal-title').textContent = 'Нова звичка';
-  document.getElementById('habit-input-name').value = '';
-  document.getElementById('habit-input-details').value = '';
-  document.getElementById('habit-input-emoji').value = '';
-  document.querySelectorAll('.habit-day-btn').forEach((b, i) => {
-    b.classList.toggle('active', i < 5);
-  });
-  document.getElementById('habit-modal').style.display = 'flex';
-  setTimeout(() => { const el = document.getElementById('habit-input-name'); el.removeAttribute('readonly'); el.focus(); }, 350);
-}
 
 function openEditHabit(id) {
   const habits = getHabits();
@@ -4643,7 +4569,7 @@ async function sendTasksBarMessage() {
     + '5. Якщо СТВОРИТИ звичку — JSON: {"action":"create_habit","name":"коротка назва","days":[0,1,2,3,4,5,6]}\n'
     + '6. Якщо СТВОРИТИ задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
     + '7. Якщо додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
-    + '8. Якщо скасувати виконання кроку — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
+    + '8. Якщо скасувати виконання кроку (юзер каже "відміни", "поверни", "скасуй", "я ще не зробив") — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
     + '9. Якщо незрозуміло — запитай уточнення. НЕ вигадуй інших action крім перелічених.\n'
     + 'ВАЖЛИВО: тільки чистий JSON без слова "JSON:" і без markdown. Інакше — текст українською 1-2 речення.'
     + (aiContext ? '\n\n' + aiContext : '');
@@ -4734,7 +4660,12 @@ async function sendTasksBarMessage() {
           } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
         }
       } else { addTaskBarMsg('agent', reply); }
+    } catch { addTaskBarMsg('agent', reply); }
 
+    taskBarHistory.push({ role: 'assistant', content: reply });
+  } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
+  taskBarLoading = false;
+}
 
 // === ME AI BAR ===
 function showMeChatMessages() {
@@ -4788,8 +4719,9 @@ async function sendEveningBarMessage() {
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const todayNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]').filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — вечірній агент NeverMind. Звертаєшся на "ти". Тепло і чесно. Короткі відповіді (1-3 речення). Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}. Записи сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `Ти — вечірній агент NeverMind. Звертаєшся на "ти". Тепло і чесно. Короткі відповіді (1-3 речення). Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}. Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}. Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -4838,6 +4770,8 @@ function init() {
       if (document.fonts) document.fonts.ready.then(() => requestAnimationFrame(setTabbarH));
       // Третій раз — через 500ms як fallback
       setTimeout(setTabbarH, 500);
+      // Оновлюємо при зміні орієнтації
+      window.addEventListener('resize', setTabbarH, { passive: true });
     }
   } catch(e) {}
   // Force inbox tab active on every load
