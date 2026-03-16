@@ -788,12 +788,11 @@ body {
 
 /* Поле вводу — завжди видиме */
 .ai-bar-input-box {
-  background: rgba(255,255,255,0.95);
+  background: rgba(26,10,46,0.49);
   border-radius: 18px;
-  border: 1px solid rgba(30,16,64,0.1);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -805,26 +804,27 @@ body {
   flex: 1;
   border: none; outline: none;
   font-size: 15px; font-family: inherit;
-  color: #1e1040; background: transparent;
+  color: white; background: transparent;
   resize: none; line-height: 1.45;
   max-height: 80px;
 }
 .ai-bar-send-btn {
   width: 32px; height: 32px;
-  border-radius: 10px;
+  border-radius: 50%;
   border: none;
+  background: rgba(255,255,255,0.9);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
 }
 
 /* Чат-вікно — з'являється над полем */
 .ai-bar-chat-window {
-  background: rgba(255,255,255,0.75);
+  background: rgba(26,10,46,0.49);
   border-radius: 20px;
-  border: 1px solid rgba(30,16,64,0.08);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
   overflow: hidden;
   margin-bottom: 4px;
   display: flex;
@@ -867,15 +867,7 @@ body {
 }
 .ai-bar-messages::-webkit-scrollbar { display: none; }
 
-/* Кольори барів */
-#tasks-ai-bar .ai-bar-send-btn { background: linear-gradient(135deg,#f97316,#ea580c); }
-#me-ai-bar .ai-bar-send-btn { background: #16a34a; }
-#evening-ai-bar .ai-bar-send-btn { background: #7c3aed; }
-
-/* Кольори чат-вікна */
-#tasks-ai-bar .ai-bar-chat-window { border-color: rgba(234,88,12,0.15); }
-#me-ai-bar .ai-bar-chat-window { border-color: rgba(22,163,74,0.2); }
-#evening-ai-bar .ai-bar-chat-window { border-color: rgba(124,58,237,0.2); }
+/* Кольори барів — єдиний стиль для всіх вкладок */
 
 
 .habit-day-btn {
@@ -887,6 +879,53 @@ body {
 .habit-day-btn.active {
   background:rgba(22,163,74,0.12);border-color:rgba(22,163,74,0.4);color:#16a34a;
 }
+
+/* === FIRST VISIT TIP === */
+.fv-tip {
+  position: fixed; left: 14px; right: 14px; z-index: 90;
+  background: #1e1040; color: white;
+  border-radius: 16px; padding: 13px 16px;
+  display: flex; align-items: flex-start; gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  animation: tipSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: all;
+}
+@keyframes tipSlideIn {
+  from { opacity:0; transform:translateY(12px) scale(0.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.fv-tip-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
+.fv-tip-body { flex:1; }
+.fv-tip-title { font-size:13px; font-weight:800; margin-bottom:3px; }
+.fv-tip-text { font-size:12px; color:rgba(255,255,255,0.65); line-height:1.5; }
+.fv-tip-close { flex-shrink:0; font-size:18px; color:rgba(255,255,255,0.35); cursor:pointer; padding:0 2px; }
+
+/* === HELP DRAWER === */
+#help-drawer {
+  position: fixed; inset: 0; z-index: 400;
+  display: none; align-items: stretch; justify-content: flex-end;
+}
+#help-drawer-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.3); }
+#help-drawer-panel {
+  position: relative; width: 80%; max-width: 320px;
+  background: white; overflow-y: auto;
+  padding: 20px 16px 40px;
+  box-shadow: -8px 0 40px rgba(0,0,0,0.2);
+  display: flex; flex-direction: column; gap: 0;
+}
+.help-section-title {
+  font-size: 11px; font-weight: 800; color: rgba(30,16,64,0.35);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin: 14px 0 7px;
+}
+.help-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid rgba(30,16,64,0.05);
+}
+.help-item-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.help-item-title { font-size: 13px; font-weight: 700; color: #1e1040; }
+.help-item-desc { font-size: 12px; color: rgba(30,16,64,0.5); line-height: 1.45; margin-top: 1px; }
+.help-cmd { display: inline-block; background: rgba(79,70,229,0.08); border-radius: 6px; padding: 2px 7px; font-size: 11px; font-family: monospace; color: #4f46e5; font-weight: 600; margin-top: 3px; }
 
 /* Page transition */
 .page { opacity:1; transform:translateX(0); transition:opacity 0.22s ease, transform 0.22s ease; }
@@ -923,7 +962,7 @@ body {
   overflow-y: auto;
   line-height: 1.45;
 }
-.ai-bar-input::placeholder { color: rgba(30,16,64,0.3); font-size: 15px; }
+.ai-bar-input::placeholder { color: rgba(255,255,255,0.35); font-size: 15px; }
 .ai-bar-input:focus {
   border-color: rgba(212,168,87,0.45);
   box-shadow: 0 0 0 3px rgba(212,168,87,0.08);
@@ -1052,6 +1091,7 @@ body {
           <span id="inbox-count" style="margin-left:8px;font-size:14px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
         </div>
         <div class="header-actions">
+          <button class="icon-btn" onclick="openHelp('inbox')">?</button>
           <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
         </div>
       </div>
@@ -1100,6 +1140,7 @@ body {
           <button class="icon-btn" id="prod-add-btn" onclick="openAddTask()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
+          <button class="icon-btn" onclick="openHelp('tasks')">?</button>
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
       </div>
@@ -1159,6 +1200,7 @@ body {
           <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
+          <button class="icon-btn" onclick="openHelp('notes')">?</button>
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
       </div>
@@ -1200,6 +1242,7 @@ body {
       <div class="page-header">
         <span class="page-title">Я</span>
         <div class="header-actions">
+          <button class="icon-btn" onclick="openHelp('me')">?</button>
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
       </div>
@@ -1273,6 +1316,7 @@ body {
       <div class="page-header">
         <span class="page-title">Вечір</span>
         <div class="header-actions">
+          <button class="icon-btn" onclick="openHelp('evening')">?</button>
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
       </div>
@@ -1330,13 +1374,13 @@ body {
   </div>
   <!-- Поле вводу -->
   <div class="ai-bar-input-box">
-    <div style="width:26px;height:26px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
     <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи ШІ про задачі…"
       oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('tasks')"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"></textarea>
     <button class="ai-bar-send-btn" onclick="sendTasksBarMessage()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
@@ -1346,13 +1390,13 @@ body {
         <div class="ai-bar-messages" id="me-chat-messages"></div>
       </div>
       <div class="ai-bar-input-box">
-        <div style="width:26px;height:26px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
         <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
           oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('me')"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMeChatMessage()}"></textarea>
         <button class="ai-bar-send-btn" onclick="sendMeChatMessage()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
     </div>
@@ -1362,13 +1406,13 @@ body {
         <div class="ai-bar-messages" id="evening-bar-messages"></div>
       </div>
       <div class="ai-bar-input-box">
-        <div style="width:26px;height:26px;border-radius:50%;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
         <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
           oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('evening')"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEveningBarMessage()}"></textarea>
         <button class="ai-bar-send-btn" onclick="sendEveningBarMessage()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
     </div>
@@ -1473,7 +1517,7 @@ body {
     <div style="padding:12px 16px 32px;border-top:1px solid rgba(30,16,64,0.06);flex-shrink:0;display:flex;gap:8px">
       <textarea id="dialog-input" rows="1" style="flex:1;border:1.5px solid rgba(124,58,237,0.2);border-radius:12px;padding:10px 13px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px" placeholder="Напиши агенту…" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDialogMessage()}"></textarea>
       <button onclick="sendDialogMessage()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
       </button>
     </div>
   </div>
@@ -1592,11 +1636,49 @@ body {
       <button class="btn-danger" onclick="clearAllData()">🗑️ Очистити всі дані</button>
     </div>
 
+    <!-- How to use -->
+    <div class="settings-section" style="margin-top:4px">
+      <button class="btn-ghost" onclick="closeSettings();openSlidesTour()" style="background:linear-gradient(135deg,rgba(242,217,120,0.15),rgba(249,115,22,0.1));border-color:rgba(242,217,120,0.4);font-weight:700;color:#8b6914">📖 Як користуватися NeverMind</button>
+    </div>
+
     <!-- App info -->
     <div style="text-align:center;margin-top:28px;color:rgba(100,70,200,0.35);font-size:13px;">
       <span style="font-family:var(--font-display);font-weight:900;font-size:15px;color:rgba(26,14,64,0.3)">NeverMind</span><br>
       <span style="font-style:italic;">Забий на хаос. Просто роби.</span>
     </div>
+  </div>
+</div>
+
+<!-- SLIDES TOUR -->
+<div id="slides-tour" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
+  <!-- Затемнений фон -->
+  <div style="position:absolute;inset:0;background:rgba(10,5,25,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)" onclick="closeSlidesTour()"></div>
+  <!-- Картка слайду -->
+  <div style="position:relative;width:100%;max-width:420px;padding:0 12px 32px;z-index:1">
+    <div style="background:white;border-radius:24px;padding:22px 18px 18px;box-shadow:0 16px 48px rgba(0,0,0,0.25)">
+      <!-- Прогрес -->
+      <div style="display:flex;gap:4px;margin-bottom:16px" id="slides-dots"></div>
+      <!-- Контент -->
+      <div id="slides-content"></div>
+      <!-- Кнопки -->
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="slides-skip-btn" onclick="closeSlidesTour()" style="flex:1;padding:12px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);cursor:pointer;font-family:inherit">Закрити</button>
+        <button id="slides-next-btn" onclick="slidesNext()" style="flex:2;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:800;color:white;cursor:pointer;font-family:inherit">Далі →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HELP DRAWER -->
+<div id="help-drawer">
+  <div id="help-drawer-dim" onclick="closeHelp()"></div>
+  <div id="help-drawer-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div id="help-drawer-title" style="font-size:17px;font-weight:800;color:#1e1040"></div>
+      <button onclick="closeHelp()" style="background:rgba(30,16,64,0.07);border:none;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;color:rgba(30,16,64,0.4)">✕</button>
+    </div>
+    <div id="help-drawer-subtitle" style="font-size:13px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:2px"></div>
+    <div id="help-drawer-content"></div>
   </div>
 </div>
 
@@ -1688,6 +1770,9 @@ function switchTab(tab) {
   if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
+
+  // Підказка першого відвідування
+  setTimeout(() => showFirstVisitTip(tab), 600);
 }
 
 function applyTheme(tab) {
@@ -2465,20 +2550,21 @@ async function sendToAI() {
   const text = input.value.trim();
   if (!text) return;
 
+  // Перехоплюємо відповідь якщо йде опитування
+  addInboxChatMsg('user', text);
+  input.value = ''; input.style.height = 'auto';
+  input.focus();
+  if (handleSurveyAnswer(text)) return;
+
   const key = localStorage.getItem('nm_gemini_key');
 
   // Немає ключа або file:// — зберігаємо офлайн миттєво
   if (!key || location.protocol === 'file:') {
     saveOffline(text);
-    input.value = ''; input.style.height = 'auto';
-    input.focus();
     return;
   }
 
   aiLoading = true;
-  addInboxChatMsg('user', text); // показуємо повідомлення в чаті
-  input.value = ''; input.style.height = 'auto';
-  input.focus(); // утримуємо клавіатуру відкритою
 
   const btn = document.getElementById('ai-send-btn');
   btn.disabled = true;
@@ -3460,7 +3546,385 @@ async function sendDialogMessage() {
   dialogLoading = false;
 }
 
+// === SLIDES TOUR ===
+const SLIDES = [
+  {
+    tag: 'Що таке NeverMind',
+    title: 'Думки зникають. Записав — забув де.',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Нічого не виконується бо немає системи.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">NeverMind — один потік куди скидаєш все що в голові. Пишеш одним рядком — Агент визначає категорію, зберігає куди треба і підтверджує в чаті.</p>`,
+    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+  },
+  {
+    tag: 'Inbox',
+    title: 'Один рядок — Агент розбирає',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"купити хліб о 18:00" → <b style="color:#1e1040">задача з часом</b></div>
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"бігати щоранку" → <b style="color:#1e1040">звичка в трекері</b></div>
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"ідея про автоматизацію" → <b style="color:#1e1040">збережено в Ідеях. Обговори з Агентом</b></div>
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"зустрівся з Вовою" → <b style="color:#1e1040">момент у Вечорі</b></div>
+    </div>`,
+    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+  },
+  {
+    tag: 'Задачі та Звички',
+    title: 'Списки і команди Агенту',
+    body: `<p style="font-size:13px;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">Пиши список одним записом — Агент розібʼє на кроки:</p>
+<div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:#1e1040;font-style:italic;margin-bottom:12px">"Зробити ремонт: купити фарбу, найняти майстра, вибрати колір"</div>
+<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">Команди Агенту</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"додай крок: зателефонувати"</div>
+  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"відміни останній крок"</div>
+  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"які задачі відкриті"</div>
+</div>`,
+    color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
+  },
+  {
+    tag: 'Вечір',
+    title: 'Підсумок дня від Агента',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Щодня: що зробив, що було цікавого, про що думав. Додавай моменти — Агент бачить весь твій день і дає конкретну пораду на завтра.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Записи з Inbox автоматично потрапляють у Вечір.</p>`,
+    color: 'linear-gradient(135deg,#818cf8,#4f46e5)',
+  },
+  {
+    tag: 'Вкладка Я',
+    title: 'Твоя продуктивність чесно',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Активність щодня, скільки записів зробив, які звички пропускаєш, де провисаєш.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Агент дає чесний аналіз і конкретні поради — без лестощів.</p>`,
+    color: 'linear-gradient(135deg,#6ee7b7,#16a34a)',
+    isLast: true,
+  },
+];
+
+let currentSlide = 0;
+
+function openSlidesTour(fromOnboarding = false) {
+  _slidesFromOnboarding = fromOnboarding;
+  currentSlide = 0;
+  const el = document.getElementById('slides-tour');
+  el.style.display = 'flex';
+  renderSlide();
+}
+
+function closeSlidesTour(fromOnboarding = false) {
+  const el = document.getElementById('slides-tour');
+  el.style.opacity = '0';
+  el.style.transition = 'opacity 0.3s ease';
+  setTimeout(() => {
+    el.style.display = 'none'; el.style.opacity = ''; el.style.transition = '';
+    // Запускаємо опитування тільки після першого онбордингу
+    if (fromOnboarding && !localStorage.getItem('nm_survey_done')) {
+      startSurvey();
+    }
+  }, 300);
+}
+
+function slidesNext() {
+  if (currentSlide < SLIDES.length - 1) {
+    currentSlide++;
+    renderSlide();
+  } else {
+    closeSlidesTour(_slidesFromOnboarding);
+  }
+}
+
+let _slidesFromOnboarding = false;
+
+function renderSlide() {
+  const slide = SLIDES[currentSlide];
+  const total = SLIDES.length;
+
+  // Крапки прогресу
+  const dotsEl = document.getElementById('slides-dots');
+  dotsEl.innerHTML = Array.from({length: total}, (_, i) => {
+    const isActive = i === currentSlide;
+    const isDone = i < currentSlide;
+    const bg = isActive || isDone ? '#f97316' : 'rgba(30,16,64,0.1)';
+    const w = isActive ? '24px' : '7px';
+    return `<div style="height:4px;width:${w};border-radius:2px;background:${bg};transition:all 0.3s"></div>`;
+  }).join('');
+
+  // Контент
+  const contentEl = document.getElementById('slides-content');
+  contentEl.innerHTML = `
+    <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.4);margin-bottom:10px">${slide.tag}</div>
+    <div style="font-size:17px;font-weight:800;color:#1e1040;line-height:1.35;margin-bottom:14px">${slide.title}</div>
+    ${slide.body}
+  `;
+
+  // Кнопка
+  const nextBtn = document.getElementById('slides-next-btn');
+  nextBtn.textContent = slide.isLast ? 'Почати →' : 'Далі →';
+  nextBtn.style.background = slide.color;
+
+  // Пропустити → Закрити на останньому
+  const skipBtn = document.getElementById('slides-skip-btn');
+  skipBtn.textContent = slide.isLast ? '' : 'Пропустити';
+  skipBtn.style.display = slide.isLast ? 'none' : 'block';
+}
+
+
 // === ONBOARDING ===
+// === HELP SYSTEM ===
+const HELP_CONTENT = {
+  inbox: {
+    title: '📥 Inbox',
+    subtitle: 'Один потік для всіх думок. Агент сам розкладає по категоріях.',
+    sections: [
+      { title: 'Як писати', items: [
+        { icon: '✍️', title: 'Будь-який текст', desc: 'Пиши як думаєш — коротко або розгорнуто. Агент сам визначить категорію.' },
+        { icon: '🕐', title: 'Час і дата', desc: '"зателефонувати завтра о 9" → Агент додасть час у заголовок задачі.' },
+        { icon: '📋', title: 'Список одним записом', desc: '"Ремонт: купити фарбу, найняти майстра" → Агент розібʼє на кроки.' },
+      ]},
+      { title: 'Жести', items: [
+        { icon: '👈', title: 'Свайп вліво', desc: 'Видалити запис.' },
+        { icon: '❓', title: 'Якщо незрозуміло', desc: 'Агент уточнить питанням з варіантами відповіді.' },
+      ]},
+      { title: 'Чат з Агентом', items: [
+        { icon: '💬', title: 'Питай про записи', desc: 'Наприклад: "які задачі відкриті", "що я записував вчора".' },
+        { icon: '🔍', title: 'Обговори ідею', desc: 'Збережена ідея? Попроси Агента розвинути або знайти підводні камені.' },
+      ]},
+    ]
+  },
+  tasks: {
+    title: '⚡ Продуктивність',
+    subtitle: 'Задачі зі списком кроків і щоденні звички.',
+    sections: [
+      { title: 'Задачі', items: [
+        { icon: '☑️', title: 'Відмічай кроки', desc: 'Тап на чекбокс — відмічає крок. Всі кроки виконані → задача закривається.' },
+        { icon: '📝', title: 'Список через Агента', desc: 'Скажи: "додай кроки до задачі Ремонт: купити фарбу, найняти майстра".' },
+        { icon: '✏️', title: 'Редагувати', desc: 'Натисни іконку олівця на картці задачі.' },
+      ]},
+      { title: 'Команди Агенту', items: [
+        { icon: '🤖', title: 'Керуй задачами голосом', desc: null,
+          cmds: ['додай крок: назва', 'відміни останній крок', 'які задачі відкриті', 'виконав задачу: назва'] },
+      ]},
+      { title: 'Звички', items: [
+        { icon: '🌱', title: 'Щоденний трекер', desc: 'Звички з Inbox автоматично потрапляють сюди. Відмічай кожен день.' },
+        { icon: '📅', title: 'Вибір днів', desc: 'При створенні звички можна вказати конкретні дні тижня.' },
+      ]},
+    ]
+  },
+  notes: {
+    title: '📄 Нотатки',
+    subtitle: 'Записи автоматично сортуються по папках.',
+    sections: [
+      { title: 'Навігація', items: [
+        { icon: '📁', title: 'Папки', desc: 'Агент сам визначає папку. Тапни на папку щоб побачити всі записи всередині.' },
+        { icon: '🔙', title: 'Назад', desc: 'Кнопка ← у заголовку повертає до списку папок.' },
+        { icon: '🔎', title: 'Пошук', desc: 'Пошук по тексту всіх нотаток одразу.' },
+      ]},
+      { title: 'Робота з нотаткою', items: [
+        { icon: '💬', title: 'Обговори з Агентом', desc: 'Відкрий нотатку → чат з Агентом. Він допоможе розвинути думку.' },
+        { icon: '👈', title: 'Свайп вліво', desc: 'Видалити нотатку.' },
+        { icon: '···', title: 'Меню', desc: 'Три крапки → перемістити в іншу папку.' },
+      ]},
+    ]
+  },
+  me: {
+    title: '📊 Я',
+    subtitle: 'Твоя продуктивність і активність. Чесний аналіз від Агента.',
+    sections: [
+      { title: 'Що тут є', items: [
+        { icon: '📅', title: 'Активність тижня', desc: 'Гріл показує скільки записів ти робив кожного дня.' },
+        { icon: '📈', title: 'Статистика', desc: 'Inbox, активні задачі, нотатки — все одним поглядом.' },
+        { icon: '🌿', title: 'Звички', desc: 'Прогрес по кожній звичці — скільки днів поспіль і загальний відсоток.' },
+      ]},
+      { title: 'Агент-коуч', items: [
+        { icon: '✦', title: 'Аналіз', desc: 'Натисни ↻ — Агент проаналізує твої дані і скаже де провисаєш.' },
+        { icon: '💡', title: '3 поради', desc: 'Агент генерує конкретні, практичні поради саме для тебе.' },
+        { icon: '💬', title: 'Запитай сам', desc: 'Чат внизу — питай про свою продуктивність, звички, прогрес.' },
+      ]},
+    ]
+  },
+  evening: {
+    title: '🌙 Вечір',
+    subtitle: 'Рефлексія дня і підсумок від Агента.',
+    sections: [
+      { title: 'Моменти дня', items: [
+        { icon: '➕', title: 'Додати момент', desc: 'Що трапилось, що думав, як себе почував — кнопка + Додати.' },
+        { icon: '😊', title: 'Настрій', desc: 'Позначай настрій моменту — позитивний, нейтральний, негативний. Впливає на кільце продуктивності.' },
+        { icon: '⭕', title: 'Кільце', desc: 'Показує відсоток позитивних моментів за день.' },
+      ]},
+      { title: 'Агент-підсумок', items: [
+        { icon: '↻', title: 'Підсумок дня', desc: 'Натисни ↻ — Агент бачить всі твої записи і моменти, дає конкретну пораду на завтра.' },
+        { icon: '💬', title: 'Поговори', desc: 'Чат внизу — обговори день, поділись думками.' },
+      ]},
+      { title: 'Команди Агенту', items: [
+        { icon: '🤖', title: 'Питання', desc: null,
+          cmds: ['що я зробив сьогодні', 'як пройшов тиждень', 'що можна покращити завтра'] },
+      ]},
+    ]
+  },
+};
+
+const FIRST_VISIT_TIPS = {
+  inbox:   { icon: '💡', title: 'Підказка', text: 'Пиши будь-що — задачу, ідею, звичку. Агент сам розбере. Спробуй: "купити хліб о 18:00"' },
+  tasks:   { icon: '⚡', title: 'Підказка', text: 'Пиши список одним записом: "Ремонт: купити фарбу, знайти майстра" — Агент розібʼє на кроки' },
+  notes:   { icon: '📁', title: 'Підказка', text: 'Нотатки автоматично сортуються по папках. Тапни на папку щоб побачити записи всередині' },
+  me:      { icon: '📊', title: 'Підказка', text: 'Натисни ↻ в блоці "Аналіз агента" — отримаєш чесний огляд своєї продуктивності' },
+  evening: { icon: '🌙', title: 'Підказка', text: 'Натисни ↻ в "Ші на вечір" — Агент підсумує твій день на основі всіх записів' },
+};
+
+let _helpOpen = false;
+
+function openHelp(tab) {
+  const data = HELP_CONTENT[tab];
+  if (!data) return;
+
+  document.getElementById('help-drawer-title').textContent = data.title;
+  document.getElementById('help-drawer-subtitle').textContent = data.subtitle;
+
+  const contentEl = document.getElementById('help-drawer-content');
+  contentEl.innerHTML = data.sections.map(section => `
+    <div class="help-section-title">${section.title}</div>
+    ${section.items.map(item => `
+      <div class="help-item">
+        <div class="help-item-icon">${item.icon}</div>
+        <div>
+          <div class="help-item-title">${item.title}</div>
+          ${item.desc ? `<div class="help-item-desc">${item.desc}</div>` : ''}
+          ${item.cmds ? item.cmds.map(c => `<div><span class="help-cmd">"${c}"</span></div>`).join('') : ''}
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+
+  const drawer = document.getElementById('help-drawer');
+  drawer.style.display = 'flex';
+  requestAnimationFrame(() => {
+    document.getElementById('help-drawer-panel').style.transform = 'translateX(0)';
+  });
+  _helpOpen = true;
+}
+
+function closeHelp() {
+  const drawer = document.getElementById('help-drawer');
+  drawer.style.display = 'none';
+  _helpOpen = false;
+}
+
+// Підказка першого відвідування
+function showFirstVisitTip(tab) {
+  const key = 'nm_visited_' + tab;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+  const tip = FIRST_VISIT_TIPS[tab];
+  if (!tip) return;
+
+  // Видаляємо попередню підказку якщо є
+  const prev = document.getElementById('fv-tip');
+  if (prev) prev.remove();
+
+  const tipEl = document.createElement('div');
+  tipEl.id = 'fv-tip';
+  tipEl.className = 'fv-tip';
+  // Позиціонуємо над таббаром
+  const tbH = document.getElementById('tab-bar')?.offsetHeight || 83;
+  tipEl.style.bottom = (tbH + 12) + 'px';
+  tipEl.innerHTML = `
+    <div class="fv-tip-icon">${tip.icon}</div>
+    <div class="fv-tip-body">
+      <div class="fv-tip-title">${tip.title}</div>
+      <div class="fv-tip-text">${tip.text}</div>
+    </div>
+    <div class="fv-tip-close" onclick="this.closest('#fv-tip').remove()">✕</div>
+  `;
+  document.body.appendChild(tipEl);
+
+  // Автозакриття через 6 секунд
+  setTimeout(() => { if (document.getElementById('fv-tip') === tipEl) tipEl.remove(); }, 6000);
+}
+
+
+// === SURVEY (після першого онбордингу) ===
+const SURVEY_QUESTIONS = [
+  'Чим займаєшся? (наприклад: підприємець, студент, програміст, фрілансер…)',
+  'Які твої головні цілі зараз? (коротко, 1-2 речення)',
+  'Що хочеш тримати під контролем — задачі, звички, ідеї, або все разом?',
+];
+let surveyAnswers = [];
+let surveyStep = 0;
+let surveyWaiting = false;
+
+function startSurvey() {
+  surveyAnswers = [];
+  surveyStep = 0;
+  surveyWaiting = false;
+  // Переходимо на Inbox
+  if (currentTab !== 'inbox') switchTab('inbox');
+  // Невелика затримка щоб Inbox відрендерився
+  setTimeout(() => {
+    addInboxChatMsg('agent', 'Привіт! 👋 Щоб я міг бути кориснішим — розкажи трохи про себе. Це займе хвилину, а я зможу давати конкретніші поради саме для тебе.');
+    setTimeout(() => askSurveyQuestion(), 800);
+  }, 400);
+}
+
+function askSurveyQuestion() {
+  if (surveyStep >= SURVEY_QUESTIONS.length) {
+    finishSurvey();
+    return;
+  }
+  surveyWaiting = true;
+  addInboxChatMsg('agent', SURVEY_QUESTIONS[surveyStep]);
+}
+
+// Перехоплюємо відповіді під час опитування
+function handleSurveyAnswer(text) {
+  if (!surveyWaiting) return false;
+  surveyWaiting = false;
+  surveyAnswers.push({ q: SURVEY_QUESTIONS[surveyStep], a: text });
+  surveyStep++;
+  if (surveyStep < SURVEY_QUESTIONS.length) {
+    setTimeout(() => askSurveyQuestion(), 400);
+  } else {
+    setTimeout(() => finishSurvey(), 400);
+  }
+  return true; // означає що повідомлення перехоплено
+}
+
+async function finishSurvey() {
+  addInboxChatMsg('agent', 'Дякую! Зараз підготую персональні поради…');
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addInboxChatMsg('agent', 'Введи API ключ в налаштуваннях — і я збережу все про тебе в памʼять.');
+    localStorage.setItem('nm_survey_done', '1');
+    return;
+  }
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const name = settings.name || 'користувач';
+  const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
+  const prompt = `Ти — персональний агент застосунку NeverMind. Користувач ${name} тільки що завершив онбординг і відповів на питання анкети:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (3-5 речень) — це піде в пам'ять агента.\n2. Дай 2-3 конкретні поради як використовувати NeverMind саме для цієї людини, враховуючи їх відповіді. Поради мають бути практичними і специфічними — не загальними. Наприклад: якщо людина підприємець — порадь як записувати ідеї для бізнесу. Якщо студент — як вести нотатки з навчання.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для пам'яті", "advice": "персональні поради 2-3 речення"}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 400, temperature: 0.7 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (reply) {
+      try {
+        const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+        if (parsed.memory) {
+          localStorage.setItem('nm_memory', parsed.memory);
+          localStorage.setItem('nm_memory_ts', Date.now().toString());
+        }
+        if (parsed.advice) {
+          addInboxChatMsg('agent', '✦ ' + parsed.advice);
+        }
+      } catch(e) {
+        addInboxChatMsg('agent', reply);
+      }
+    }
+  } catch(e) {
+    addInboxChatMsg('agent', 'Не вдалось зберегти — але твої відповіді я запамʼятав. Спробуй оновити сторінку.');
+  }
+  localStorage.setItem('nm_survey_done', '1');
+}
+
+
 function checkOnboarding() {
   const done = localStorage.getItem('nm_onboarding_done');
   if (!done) {
@@ -3504,7 +3968,11 @@ function obFinish() {
   const ob = document.getElementById('onboarding');
   ob.style.opacity = '0';
   ob.style.transition = 'opacity 0.4s ease';
-  setTimeout(() => { ob.style.display = 'none'; }, 400);
+  setTimeout(() => {
+    ob.style.display = 'none';
+    // Показуємо тур після онбордингу
+    openSlidesTour(true);
+  }, 400);
   updateKeyStatus(!!localStorage.getItem('nm_gemini_key'));
 }
 
@@ -4581,30 +5049,37 @@ function setupChatBarSwipe() {
     if (!chatWin) return;
 
     // --- Gesture-driven свайп по чат-вікну ---
-    let winStartY = 0, winStartX = 0, isDragging = false, startTime = 0;
+    let winStartY = 0, winStartX = 0, winStartVpTop = 0, isDragging = false, startTime = 0;
 
     chatWin.addEventListener('touchstart', e => {
-      // Не починаємо drag якщо тап по повідомленнях (там скрол)
       if (messages && messages.contains(e.target)) return;
       winStartY = e.touches[0].clientY;
       winStartX = e.touches[0].clientX;
+      // Запам'ятовуємо позицію viewport — компенсуємо iOS scroll при клавіатурі
+      winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
       startTime = Date.now();
       isDragging = false;
-      // Вимикаємо CSS transition під час drag
       chatWin.style.transition = 'none';
       chatWin.style.opacity = '1';
     }, { passive: true });
 
     chatWin.addEventListener('touchmove', e => {
       if (messages && messages.contains(e.target)) return;
-      const dy = e.touches[0].clientY - winStartY;
+      // Враховуємо зміщення viewport (коли клавіатура відкрита iOS скролить viewport)
+      const vpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+      const vpDelta = vpTop - winStartVpTop;
+      const dy = (e.touches[0].clientY - winStartY) + vpDelta;
+      if (isDragging) {
+        if (dy <= 0) { chatWin.style.transform = 'translateY(0)'; return; }
+        chatWin.style.transform = `translateY(${dy}px)`;
+        chatWin.style.opacity = Math.max(0, 1 - dy / 300).toFixed(2);
+        return;
+      }
       const dx = Math.abs(e.touches[0].clientX - winStartX);
-      // Тільки вертикальний рух вниз
-      if (dy <= 0 || dx > 40) return;
+      if (dy <= 0) return;
+      if (dx > dy * 1.5) return;
       isDragging = true;
-      // Вікно слідує за пальцем 1:1
       chatWin.style.transform = `translateY(${dy}px)`;
-      // Плавно зменшуємо opacity
       chatWin.style.opacity = Math.max(0, 1 - dy / 300).toFixed(2);
     }, { passive: true });
 
@@ -4698,7 +5173,7 @@ function addTaskBarMsg(role, text) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(234,88,12,0.07)' : '#ea580c'};color:${isAgent ? '#7c2d12' : 'white'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
@@ -4853,7 +5328,7 @@ function addMeChatMsg(role, text, id = '') {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(22,163,74,0.08)' : '#16a34a'};color:${isAgent ? '#14532d' : 'white'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
@@ -4873,7 +5348,7 @@ function addEveningBarMsg(role, text) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(124,58,237,0.07)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
@@ -4959,6 +5434,7 @@ function init() {
   try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
   try { renderInbox(); } catch(e) {}
   try { updateAiBarVisibility(); } catch(e) {}
+  try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
 }
 
@@ -5012,7 +5488,7 @@ setTimeout(() => {
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage();}"
       style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
     <button onclick="sendTaskChatMessage()" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
@@ -5052,7 +5528,7 @@ setTimeout(() => {
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNoteChatMessage();}"
       style="flex:1;border:1.5px solid rgba(79,70,229,0.2);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:white;"></textarea>
     <button onclick="sendNoteChatMessage()" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
@@ -5072,7 +5548,7 @@ setTimeout(() => {
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClarifyText()}"
         style="flex:1;border:1.5px solid rgba(124,58,237,0.15);border-radius:13px;padding:10px 13px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:80px;box-sizing:border-box;"></textarea>
       <button onclick="sendClarifyText()" style="width:42px;height:42px;border-radius:13px;background:#7c3aed;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
       </button>
     </div>
   </div>
