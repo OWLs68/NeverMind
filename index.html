@@ -780,21 +780,6 @@ body {
 /* === CHAT BAR SYSTEM (Tasks / Me / Evening) === */
 
 /* Overlay — блюр фону */
-#chat-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  bottom: 0;
-  z-index: 97; /* нижче ніж бари (99) і таббар (100) */
-  background: rgba(10,5,30,0.12);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-#chat-overlay.visible {
-  opacity: 1;
-  pointer-events: all;
-}
-
 /* Загальний стиль для всіх барів */
 .ai-bar-new {
   position: fixed;
@@ -1397,9 +1382,6 @@ body {
     </div>
 
   </div><!-- /scroll-wrap -->
-
-  <!-- CHAT OVERLAY — блюр фону при відкритому чаті -->
-  <div id="chat-overlay" onclick="closeAllChatBars()"></div>
 
   <!-- TAB BAR -->
   <nav id="tab-bar">
@@ -4527,22 +4509,10 @@ function openChatBar(tab) {
   activeChatBar = tab;
 
   const bar = document.getElementById(tab + '-ai-bar');
-  const overlay = document.getElementById('chat-overlay');
-
   if (!bar) return;
 
-  // Відкриваємо чат-вікно з анімацією
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.add('open');
-
-  // Overlay не перекриває таббар і поле вводу
-  const tbH = getTabbarHeight();
-  if (overlay) {
-    const inputBox = bar.querySelector('.ai-bar-input-box');
-    const inputH = inputBox ? inputBox.offsetHeight : 52;
-    overlay.style.bottom = (tbH + inputH + 8) + 'px';
-    overlay.classList.add('visible');
-  }
 }
 
 function closeChatBar(tab) {
@@ -4552,10 +4522,6 @@ function closeChatBar(tab) {
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.remove('open');
 
-  const overlay = document.getElementById('chat-overlay');
-  if (overlay) overlay.classList.remove('visible');
-
-  // Знімаємо фокус з поля
   const inputs = bar.querySelectorAll('input, textarea');
   inputs.forEach(i => i.blur());
 
@@ -4579,8 +4545,6 @@ function closeAllChatBars(resetActive = true) {
     const inputs = bar.querySelectorAll('input, textarea');
     inputs.forEach(i => i.blur());
   });
-  const overlay = document.getElementById('chat-overlay');
-  if (overlay) overlay.classList.remove('visible');
   if (resetActive) activeChatBar = null;
 }
 
@@ -4601,6 +4565,21 @@ function setupChatBarSwipe() {
       if (dy > 60) closeChatBar(tab);
     }, { passive: true });
   });
+
+  // Тап поза баром — один «холостий» тап закриває чат
+  document.addEventListener('touchstart', e => {
+    if (!activeChatBar) return;
+    const bar = document.getElementById(activeChatBar + '-ai-bar');
+    if (!bar) return;
+    // Якщо тап всередині бару — нічого не робимо
+    if (bar.contains(e.target)) return;
+    // Якщо тап по таббару — нічого не робимо
+    const tabBar = document.getElementById('tab-bar');
+    if (tabBar && tabBar.contains(e.target)) return;
+    // Інакше — закриваємо чат (один холостий тап)
+    closeChatBar(activeChatBar);
+    // НЕ зупиняємо подію — скрол і інші елементи працюють
+  }, { passive: true });
 }
 
 
@@ -4664,7 +4643,8 @@ async function sendTasksBarMessage() {
     + '5. Якщо СТВОРИТИ звичку — JSON: {"action":"create_habit","name":"коротка назва","days":[0,1,2,3,4,5,6]}\n'
     + '6. Якщо СТВОРИТИ задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
     + '7. Якщо додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
-    + '8. Якщо незрозуміло — запитай уточнення\n'
+    + '8. Якщо скасувати виконання кроку — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
+    + '9. Якщо незрозуміло — запитай уточнення. НЕ вигадуй інших action крім перелічених.\n'
     + 'ВАЖЛИВО: тільки чистий JSON без слова "JSON:" і без markdown. Інакше — текст українською 1-2 речення.'
     + (aiContext ? '\n\n' + aiContext : '');
 
@@ -4741,13 +4721,19 @@ async function sendTasksBarMessage() {
           saveTasks(tasks); renderTasks();
           addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
         }
+      } else if (parsed.action === 'undo_step') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) {
+          const step = t.steps.find(s => s.text.toLowerCase().includes((parsed.step_text || '').toLowerCase().substring(0,10)));
+          if (step) {
+            step.done = false;
+            if (t.status === 'done') t.status = 'active';
+            saveTasks(allTasks); renderTasks();
+            addTaskBarMsg('agent', `↩️ Скасував виконання "${step.text}"`);
+          } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
+        }
       } else { addTaskBarMsg('agent', reply); }
-    } catch { addTaskBarMsg('agent', reply); }
-
-    taskBarHistory.push({ role: 'assistant', content: reply });
-  } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
-  taskBarLoading = false;
-}
 
 
 // === ME AI BAR ===
