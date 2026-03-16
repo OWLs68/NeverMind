@@ -313,7 +313,7 @@ body {
   -webkit-backdrop-filter: blur(28px);
   border-top: 1.5px solid rgba(30,16,64,0.08);
   box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
-  transition: background 0.5s ease;
+  transition: background 0.5s ease, transform 0.2s ease, opacity 0.2s ease;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -1346,8 +1346,6 @@ body {
     <div class="ai-bar-chat-handle" onclick="closeChatBar('tasks')"></div>
     <div class="ai-bar-messages" id="tasks-chat-messages"></div>
   </div>
-  <!-- Полоска-хендл над полем -->
-  <div class="ai-bar-handle" onclick="toggleChatBar('tasks')"></div>
   <!-- Поле вводу -->
   <div class="ai-bar-input-box">
     <div style="width:26px;height:26px;border-radius:50%;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
@@ -1365,7 +1363,6 @@ body {
         <div class="ai-bar-chat-handle" onclick="closeChatBar('me')"></div>
         <div class="ai-bar-messages" id="me-chat-messages"></div>
       </div>
-      <div class="ai-bar-handle" onclick="toggleChatBar('me')"></div>
       <div class="ai-bar-input-box">
         <div style="width:26px;height:26px;border-radius:50%;background:rgba(22,163,74,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
         <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
@@ -1382,7 +1379,6 @@ body {
         <div class="ai-bar-chat-handle" onclick="closeChatBar('evening')"></div>
         <div class="ai-bar-messages" id="evening-bar-messages"></div>
       </div>
-      <div class="ai-bar-handle" onclick="toggleChatBar('evening')"></div>
       <div class="ai-bar-input-box">
         <div style="width:26px;height:26px;border-radius:50%;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">✦</div>
         <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
@@ -3711,25 +3707,32 @@ function renderHabits() {
 // === KEYBOARD AVOIDING ===
 function setupKeyboardAvoiding() {
   if (!window.visualViewport) return;
-  window.visualViewport.addEventListener('resize', () => {
-    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+
+  const update = () => {
+    const vv = window.visualViewport;
+    // Правильний розрахунок для iOS: враховуємо offsetTop (скільки зверху зрізано)
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
     const aiBar = document.getElementById('inbox-ai-bar');
     const tabBar = document.getElementById('tab-bar');
     const tbH = tabBar ? tabBar.offsetHeight : 83;
-    // Нові бари (tasks, me, evening) — клас ai-bar-new
     const newBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar'].map(id => document.getElementById(id));
+
     if (keyboardHeight > 100) {
-      // Клавіатура відкрита
+      // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
       if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
-      if (tabBar) tabBar.style.transform = `translateY(${keyboardHeight}px)`;
+      if (tabBar) { tabBar.style.transform = `translateY(${keyboardHeight + tbH}px)`; tabBar.style.opacity = '0'; }
       newBars.forEach(b => { if (b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
     } else {
-      // Клавіатура закрита
-      if (aiBar) { const tbH = getTabbarHeight(); aiBar.style.bottom = (tbH + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
-      if (tabBar) tabBar.style.transform = 'translateY(0)';
+      // Клавіатура закрита — повертаємо все на місце
+      if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
+      if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; }
       newBars.forEach(b => { if (b) b.style.bottom = (tbH + 4) + 'px'; });
     }
-  });
+  };
+
+  // iOS іноді надсилає scroll замість resize — слухаємо обидва
+  window.visualViewport.addEventListener('resize', update);
+  window.visualViewport.addEventListener('scroll', update);
 }
 
 // === PAGE TRANSITIONS ===
@@ -4446,7 +4449,18 @@ function getTabbarHeight() {
 
 function openChatBar(tab) {
   if (activeChatBar === tab) return;
-  closeAllChatBars(false);
+
+  // Закриваємо інші бари БЕЗ blur — щоб не скинути фокус з поточного поля
+  ['tasks','me','evening'].forEach(t => {
+    if (t === tab) return;
+    const b = document.getElementById(t + '-ai-bar');
+    if (!b) return;
+    const cw = b.querySelector('.ai-bar-chat-window');
+    if (cw) cw.classList.remove('open');
+    const inputs = b.querySelectorAll('input, textarea');
+    inputs.forEach(i => i.blur());
+  });
+
   activeChatBar = tab;
 
   const bar = document.getElementById(tab + '-ai-bar');
@@ -4455,9 +4469,12 @@ function openChatBar(tab) {
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.add('open');
 
-  // Фокусуємо поле вводу щоб з'явилась клавіатура
+  // Поле вже має фокус від тапу користувача — просто не заважаємо
+  // Якщо фокусу ще немає (виклик програмно) — даємо через 50мс
   const textarea = bar.querySelector('textarea, input');
-  if (textarea) setTimeout(() => textarea.focus(), 50);
+  if (textarea && document.activeElement !== textarea) {
+    setTimeout(() => { textarea.focus(); }, 50);
+  }
 }
 
 function closeChatBar(tab) {
