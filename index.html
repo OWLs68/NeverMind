@@ -2705,14 +2705,14 @@ function renderNotes(searchQuery = '') {
     if (header) {
       const fc = FOLDER_COLORS[currentNotesFolder] || DEFAULT_NOTE_FOLDER;
       header.style.display = 'flex';
-      header.innerHTML = \`
+      header.innerHTML = `
         <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           Назад
         </button>
-        <span style="font-size:16px;font-weight:800;color:#1e1040">\${fc.dot} \${escapeHtml(currentNotesFolder)}</span>
-        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">\${notes.filter(n=>(n.folder||'Загальне')===currentNotesFolder).length}</span>
-      \`;
+        <span style="font-size:16px;font-weight:800;color:#1e1040">${fc.dot} ${escapeHtml(currentNotesFolder)}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter(n=>(n.folder||'Загальне')===currentNotesFolder).length}</span>
+      `;
     }
     const folderNotes = notes.filter(n => (n.folder || 'Загальне') === currentNotesFolder);
     content.innerHTML = folderNotes.length
@@ -2736,17 +2736,17 @@ function renderNotes(searchQuery = '') {
     folders.map(([folder, items]) => {
       const fc = FOLDER_COLORS[folder] || DEFAULT_NOTE_FOLDER;
       const preview = items[0].text.length > 60 ? items[0].text.substring(0,60) + '…' : items[0].text;
-      return \`<div onclick="openNotesFolder('\${escapeHtml(folder).replace(/'/g,"\\'")}')" style="cursor:pointer;border-radius:18px;padding:16px;background:\${fc.bg};border:1.5px solid \${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px">
-        <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">\${fc.dot}</div>
+      return `<div onclick="openNotesFolder('${escapeHtml(folder).replace(/'/g,"\\'")}')" style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${fc.dot}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">\${escapeHtml(folder)}</div>
-          <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\${escapeHtml(preview)}</div>
+          <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">${escapeHtml(folder)}</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
-          <div style="font-size:20px;font-weight:900;color:#1e1040">\${items.length}</div>
+          <div style="font-size:20px;font-weight:900;color:#1e1040">${items.length}</div>
           <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
         </div>
-      </div>\`;
+      </div>`;
     }).join('') + '</div>';
 }
 
@@ -2755,24 +2755,24 @@ function renderNotesList(notes) {
   return notes.map(n => {
     const fc = FOLDER_COLORS[n.folder || 'Загальне'] || DEFAULT_NOTE_FOLDER;
     const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
-    return \`
-      <div class="note-item-wrap" id="note-wrap-\${n.id}" style="position:relative;border-radius:var(--card-radius);overflow:hidden;margin-bottom:8px">
+    return `
+      <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);overflow:hidden;margin-bottom:8px">
         <div class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:20px;color:white">🗑️</div>
-        <div id="note-item-\${n.id}" class="inbox-item"
-          ontouchstart="noteSwipeStart(event,\${n.id})"
-          ontouchmove="noteSwipeMove(event,\${n.id})"
-          ontouchend="noteSwipeEnd(event,\${n.id})"
-          style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:\${fc.bg};border-color:\${fc.border};">
-          <div onclick="openNoteView(\${n.id})" style="cursor:pointer">
-            <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">\${escapeHtml(preview)}</div>
+        <div id="note-item-${n.id}" class="inbox-item"
+          ontouchstart="noteSwipeStart(event,${n.id})"
+          ontouchmove="noteSwipeMove(event,${n.id})"
+          ontouchend="noteSwipeEnd(event,${n.id})"
+          style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
+          <div onclick="openNoteView(${n.id})" style="cursor:pointer">
+            <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:12px;color:rgba(30,16,64,0.3)">\${formatTime(n.ts)}\${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
-              <div onclick="event.stopPropagation();openNoteMenu(\${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
+              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
+              <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
             </div>
           </div>
         </div>
       </div>
-    \`;
+    `;
   }).join('');
 }
 
