@@ -198,6 +198,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
   padding: 0 0 calc(var(--tabbar-h, 83px) + 60px) 0;
   opacity: 0;
   pointer-events: none;
@@ -313,6 +314,8 @@ body {
   border-top: 1.5px solid rgba(30,16,64,0.08);
   box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
   transition: background 0.5s ease;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 .tab-item {
   flex: 1;
@@ -788,6 +791,8 @@ body {
   display: flex;
   flex-direction: column;
   transition: bottom 0.35s cubic-bezier(0.32,0.72,0,1);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 /* Коли вікно закрите — не перехоплює дотики */
 .ai-bar-handle {
@@ -2157,8 +2162,8 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "action": "clarify",
   "question": "коротке питання українською (1 речення)",
   "options": [
-    {"label": "📋 Варіант 1", "action": "save", "category": "task", "text": "...", "task_title": "...", "task_steps": []},
-    {"label": "✅ Варіант 2", "action": "save", "category": "task", "text": "..."}
+    {"label": "📋 Купити запасне колесо", "action": "save", "category": "task", "text": "Купити запасне колесо", "task_title": "Купити запасне колесо", "task_steps": []},
+    {"label": "🏋️ Вправа колесо на тренуванні", "action": "save", "category": "habit", "text": "Вправа колесо на тренуванні"}
   ]
 }
 
@@ -2166,6 +2171,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 - Використовуй якщо: є 2+ окремі дії через крапку/перерахування, незрозуміло task чи note, є список який може бути окремими задачами
 - НЕ використовуй якщо запис однозначний
 - Максимум 3 варіанти в options
+- label ОБОВ'ЯЗКОВО містить реальний конкретний текст варіанту (НЕ "Варіант 1", а суть дії)
 
 ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
 
@@ -2454,12 +2460,14 @@ async function sendToAI() {
   if (!key || location.protocol === 'file:') {
     saveOffline(text);
     input.value = ''; input.style.height = 'auto';
+    input.focus();
     return;
   }
 
   aiLoading = true;
   addInboxChatMsg('user', text); // показуємо повідомлення в чаті
   input.value = ''; input.style.height = 'auto';
+  input.focus(); // утримуємо клавіатуру відкритою
 
   const btn = document.getElementById('ai-send-btn');
   btn.disabled = true;
@@ -2526,7 +2534,7 @@ async function sendToAI() {
     }
   } else {
     saveOffline(text);
-    addInboxChatMsg('agent', '⚠️ Немає відповіді від ШІ');
+    addInboxChatMsg('agent', '📝 Збережено в Inbox. Інтернет недоступний — ШІ не визначив категорію. Надішли ще раз коли буде мережа.');
     responseArea.style.display = 'none';
   }
 
