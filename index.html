@@ -4448,6 +4448,7 @@ function closeChatBar(tab) {
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.remove('open');
 
+  // Знімаємо фокус але НЕ очищуємо текст — користувач може повернутись
   const inputs = bar.querySelectorAll('input, textarea');
   inputs.forEach(i => i.blur());
 
@@ -4480,35 +4481,53 @@ function setupChatBarSwipe() {
     const bar = document.getElementById(tab + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
+    const messages = bar.querySelector('.ai-bar-messages');
     if (!chatWin) return;
 
-    // Свайп вниз по чат-ВІКНУ → закрити
-    let startY = 0;
+    // --- Свайп вниз по чат-вікну → закрити ---
+    let winStartY = 0, winStartX = 0;
     chatWin.addEventListener('touchstart', e => {
-      startY = e.touches[0].clientY;
+      winStartY = e.touches[0].clientY;
+      winStartX = e.touches[0].clientX;
     }, { passive: true });
     chatWin.addEventListener('touchend', e => {
-      const dy = e.changedTouches[0].clientY - startY;
-      if (dy > 60) closeChatBar(tab);
+      const dy = e.changedTouches[0].clientY - winStartY;
+      const dx = Math.abs(e.changedTouches[0].clientX - winStartX);
+      // Свайп вниз > 60px і не горизонтальний → закрити
+      if (dy > 60 && dx < 40) closeChatBar(tab);
     }, { passive: true });
 
-    // Блокуємо touchmove на всьому барі щоб він не рухався при скролі сторінки
+    // --- Блок: бар не рухається при скролі сторінки ---
+    // Дозволяємо скрол тільки всередині .ai-bar-messages
     bar.addEventListener('touchmove', e => {
-      // Дозволяємо скрол тільки всередині чат-вікна (повідомлення)
-      const messages = bar.querySelector('.ai-bar-messages');
-      if (messages && messages.contains(e.target)) return;
-      e.stopPropagation();
-    }, { passive: true });
+      if (messages && messages.contains(e.target)) return; // скрол повідомлень — ок
+      const textarea = bar.querySelector('textarea');
+      if (textarea && textarea.contains(e.target)) return; // скрол поля — ок
+      e.preventDefault(); // все інше на барі — не рухаємо
+    }, { passive: false });
   });
 
-  // Тап поза баром — один «холостий» тап закриває чат
+  // --- Тап поза вікном → закрити (але НЕ свайп) ---
+  let docTouchStartY = 0, docTouchStartX = 0;
   document.addEventListener('touchstart', e => {
+    docTouchStartY = e.touches[0].clientY;
+    docTouchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
     if (!activeChatBar) return;
     const bar = document.getElementById(activeChatBar + '-ai-bar');
     if (!bar) return;
+    // Якщо дотик всередині бару — нічого (поле, вікно, кнопки)
     if (bar.contains(e.target)) return;
+    // Якщо дотик по таббару — нічого
     const tabBar = document.getElementById('tab-bar');
     if (tabBar && tabBar.contains(e.target)) return;
+    // Вимірюємо відстань — якщо це свайп (> 10px) → НЕ закриваємо
+    const dy = Math.abs(e.changedTouches[0].clientY - docTouchStartY);
+    const dx = Math.abs(e.changedTouches[0].clientX - docTouchStartX);
+    if (dy > 10 || dx > 10) return; // це скрол карток — не заважаємо
+    // Це тап → закриваємо чат (текст у полі НЕ очищуємо)
     closeChatBar(activeChatBar);
   }, { passive: true });
 }
