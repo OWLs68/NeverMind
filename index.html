@@ -923,9 +923,9 @@ body {
 <!-- ONBOARDING -->
 <div id="onboarding" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f5f1ff,#ede9ff,#e0d9ff);overflow-y:auto">
   <div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px 60px">
-    <div style="font-size:60px;margin-bottom:16px">✦</div>
+    <div style="font-size:60px;margin-bottom:16px">🦉</div>
     <div style="font-family:'Unbounded',sans-serif;font-size:25px;font-weight:900;color:#1e1040;text-align:center;margin-bottom:8px">NeverMind</div>
-    <div style="font-size:15px;color:rgba(30,16,64,0.45);text-align:center;margin-bottom:36px">Твій особистий Агент</div>
+    <div style="font-size:15px;color:rgba(30,16,64,0.45);text-align:center;margin-bottom:36px">Твій особистий агент OWL</div>
 
     <div id="ob-step-1" style="width:100%;max-width:360px">
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">Як тебе звати?</div>
@@ -940,8 +940,32 @@ body {
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:6px">Потрібен для роботи агента</div>
       <div style="font-size:14px;color:rgba(124,58,237,0.7);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
       <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(2)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Розпочати</button>
+      <button onclick="obNext(2)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Далі →</button>
       <button onclick="obSkipKey()" style="width:100%;background:none;border:none;font-size:15px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
+    </div>
+
+    <!-- Вибір моделі OWL -->
+    <div id="ob-step-owl" style="display:none;width:100%;max-width:360px">
+      <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">Обери стиль OWL</div>
+      <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:24px">Як агент буде спілкуватись з тобою?</div>
+      <div id="owl-mode-cards" style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
+        <div onclick="selectOwlMode('coach')" id="owl-card-coach" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.8);border:2px solid rgba(124,58,237,0.15);border-radius:16px;cursor:pointer;transition:all 0.2s">
+          <div style="font-size:22px;margin-bottom:4px">🔥 Тренер</div>
+          <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Прямий і жорсткий</div>
+          <div style="font-size:13px;color:rgba(30,16,64,0.5)">Підштовхує до дії, не дає відмовок, говорить як є</div>
+        </div>
+        <div onclick="selectOwlMode('partner')" id="owl-card-partner" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.8);border:2px solid rgba(124,58,237,0.15);border-radius:16px;cursor:pointer;transition:all 0.2s">
+          <div style="font-size:22px;margin-bottom:4px">🤝 Партнер</div>
+          <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Збалансований і підтримуючий</div>
+          <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає, радить, не осуджує</div>
+        </div>
+        <div onclick="selectOwlMode('mentor')" id="owl-card-mentor" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.8);border:2px solid rgba(124,58,237,0.15);border-radius:16px;cursor:pointer;transition:all 0.2s">
+          <div style="font-size:22px;margin-bottom:4px">🦉 Наставник</div>
+          <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Мудрий і глибокий</div>
+          <div style="font-size:13px;color:rgba(30,16,64,0.5)">Дивиться ширше, задає правильні питання, допомагає думати</div>
+        </div>
+      </div>
+      <button onclick="obNext('owl')" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
     </div>
 
     <div id="ob-step-3" style="display:none;width:100%;max-width:360px;text-align:center">
@@ -1065,7 +1089,7 @@ body {
 
       <!-- AI suggestion banner -->
       <div id="notes-ai-banner" style="display:none;margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:12px 14px">
-        <div style="font-size:13px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">✦ Пропозиція Агента</div>
+        <div style="font-size:13px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">🦉 Пропозиція OWL</div>
         <div id="notes-ai-text" style="font-size:15px;line-height:1.5;color:#3730a3;font-weight:500"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button onclick="applyFolderSuggestion()" style="flex:1;background:#4f46e5;border:none;border-radius:9px;padding:8px;font-size:14px;font-weight:700;color:white;cursor:pointer">Застосувати</button>
@@ -1141,7 +1165,7 @@ body {
         <!-- AI weekly summary -->
         <div style="margin:0 14px 10px;background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">✦ Аналіз агента</div>
+            <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">🦉 Аналіз OWL</div>
             <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:13px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
           </div>
           <div id="me-ai-analysis" style="font-size:19px;line-height:1.8;color:#14532d;font-weight:400">Накопич більше даних — і агент дасть чесний аналіз.</div>
@@ -1202,7 +1226,7 @@ body {
       <!-- AI summary -->
       <div style="margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(124,58,237,0.15);border-radius:16px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">✦ Агент на вечір</div>
+          <div style="font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">🦉 OWL на вечір</div>
           <button onclick="generateEveningSummary()" id="evening-summary-btn" style="font-size:13px;font-weight:700;color:#7c3aed;background:none;border:none;cursor:pointer">↻</button>
         </div>
         <div id="evening-summary" style="font-size:19px;line-height:1.8;color:#4c1d95;font-weight:400">Натисни ↻ щоб отримати підсумок дня від агента.</div>
@@ -1303,7 +1327,7 @@ body {
     </div>
   </div>
   <div class="ai-bar-input-box">
-    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">🦉</div>
     <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
       oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('inbox')"
@@ -1337,7 +1361,7 @@ body {
   </div>
   <!-- Поле вводу -->
   <div class="ai-bar-input-box">
-    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">🦉</div>
     <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи Агенту про задачі…"
       oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('tasks')"
@@ -1353,7 +1377,7 @@ body {
         <div class="ai-bar-messages" id="me-chat-messages"></div>
       </div>
       <div class="ai-bar-input-box">
-        <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">🦉</div>
         <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
           oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('me')"
@@ -1369,7 +1393,7 @@ body {
         <div class="ai-bar-messages" id="evening-bar-messages"></div>
       </div>
       <div class="ai-bar-input-box">
-        <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">🦉</div>
         <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
           oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('evening')"
@@ -1478,7 +1502,7 @@ body {
     <div style="padding:16px 20px 0;flex-shrink:0">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:#1e1040">✦ Агент</div>
+        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:#1e1040">🦉 OWL</div>
         <div onclick="closeEveningDialog()" style="font-size:25px;color:rgba(30,16,64,0.3);cursor:pointer">×</div>
       </div>
     </div>
@@ -1579,6 +1603,25 @@ body {
         <input class="settings-input" type="number" id="input-height" placeholder="Зріст (см)" style="flex:1">
       </div>
       <textarea class="settings-input" id="input-profile-notes" placeholder="Додаткова інфо про себе — цілі, особливості, що важливо знати агенту…" rows="3" style="margin-top:8px;resize:none;font-family:inherit;font-size:15px;line-height:1.5"></textarea>
+    </div>
+
+    <!-- OWL Mode -->
+    <div class="settings-section">
+      <div class="settings-label">🦉 Стиль OWL</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div onclick="setOwlModeSetting('coach')" id="set-owl-coach" style="padding:12px 14px;border-radius:14px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.1);background:rgba(255,255,255,0.5);transition:all 0.2s">
+          <div style="font-size:14px;font-weight:700;color:#1e1040">🔥 Тренер — прямий і жорсткий</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.45)">Підштовхує до дії, не дає відмовок</div>
+        </div>
+        <div onclick="setOwlModeSetting('partner')" id="set-owl-partner" style="padding:12px 14px;border-radius:14px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.1);background:rgba(255,255,255,0.5);transition:all 0.2s">
+          <div style="font-size:14px;font-weight:700;color:#1e1040">🤝 Партнер — збалансований</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.45)">Як розумний друг — слухає і радить</div>
+        </div>
+        <div onclick="setOwlModeSetting('mentor')" id="set-owl-mentor" style="padding:12px 14px;border-radius:14px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.1);background:rgba(255,255,255,0.5);transition:all 0.2s">
+          <div style="font-size:14px;font-weight:700;color:#1e1040">🦉 Наставник — мудрий</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.45)">Дивиться ширше, задає правильні питання</div>
+        </div>
+      </div>
     </div>
 
     <button class="btn-primary" onclick="saveSettings()">Зберегти налаштування</button>
@@ -1806,6 +1849,7 @@ function openSettings() {
   }
 
   updateKeyStatus(!!key);
+  updateOwlModeUI(settings.owl_mode || 'partner');
 
   // Фінанси
   try {
@@ -1813,6 +1857,23 @@ function openSettings() {
     const finBudgetEl = document.getElementById('input-finance-budget');
     if (finBudgetEl) finBudgetEl.value = bdg.total || '';
   } catch(e) {}
+}
+
+function setOwlModeSetting(mode) {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  settings.owl_mode = mode;
+  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  updateOwlModeUI(mode);
+  showToast('🦉 Стиль OWL змінено');
+}
+
+function updateOwlModeUI(mode) {
+  ['coach','partner','mentor'].forEach(m => {
+    const el = document.getElementById('set-owl-' + m);
+    if (!el) return;
+    el.style.border = m === mode ? '1.5px solid #7c3aed' : '1.5px solid rgba(30,16,64,0.1)';
+    el.style.background = m === mode ? 'rgba(124,58,237,0.07)' : 'rgba(255,255,255,0.5)';
+  });
 }
 
 function closeSettings() {
@@ -1949,7 +2010,7 @@ async function doRefreshMemory(showResult) {
   // Передаємо нотатки — помічаємо оновлені
   const notesList = notes.slice(-20).map(n => `[${n.folder||'Загальне'}]${n.updatedAt ? ' (оновлено)' : ''} ${n.text.substring(0,80)}`).join('\n');
 
-  const systemPrompt = `Ти — персональний агент NeverMind. Сформуй короткий профіль людини на основі її записів. ОБОВЯЗКОВО звертайся до неї на "ти" в тексті профілю (наприклад: "ти схильний до...", "твої цілі...", "ти активний..."). Визнач патерни поведінки, звички, цілі. Чесно але з повагою — без зайвого негативу. Відповідай ТІЛЬКИ текстом профілю, без вступів. Максимум 300 слів.`;
+  const systemPrompt = `Ти — OWL, агент NeverMind. Сформуй короткий профіль людини на основі її записів. ОБОВЯЗКОВО звертайся до неї на "ти" в тексті профілю. Визнач патерни поведінки, звички, цілі. Чесно але з повагою — без зайвого негативу. Відповідай ТІЛЬКИ текстом профілю, без вступів. Максимум 300 слів.`;
 
   const userMsg = `Профіль користувача: ${profile || 'не заповнено'}
 
@@ -2037,7 +2098,7 @@ async function sendMeChatMessage() {
 
   const context = getAIContext();
   const stats = getMeStatsContext();
-  const systemPrompt = `Ти — особистий AI-коуч в NeverMind. Аналізуєш дані користувача і даєш чесний, корисний зворотній зв'язок. Звертаєшся на "ти". Відповіді — 2-4 речення, конкретно і по ділу. Не лестиш. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній зв'язок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
 
   const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
   const loadEl = document.getElementById(loadId);
@@ -2047,6 +2108,18 @@ async function sendMeChatMessage() {
 }
 
 // ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
+function getOWLPersonality() {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const mode = settings.owl_mode || 'partner';
+  const name = settings.name ? `, звертайся до нього "${settings.name}"` : '';
+  const personas = {
+    coach: `Ти — OWL, особистий агент-тренер в NeverMind${name}. Характер: прямий, конкретний, жорсткий але справедливий. Не даєш відмовок, підштовхуєш до дії. Говориш коротко і по ділу. Не лестиш і не розмазуєш. Якщо є проблема — кажеш прямо. Звертаєшся на "ти".`,
+    partner: `Ти — OWL, особистий агент-партнер в NeverMind${name}. Характер: збалансований, підтримуючий, як розумний друг. Слухаєш, радиш конкретно, не осуджуєш. Говориш природно і тепло. Звертаєшся на "ти".`,
+    mentor: `Ти — OWL, особистий агент-наставник в NeverMind${name}. Характер: мудрий, глибокий, дивишся ширше. Задаєш правильні питання, допомагаєш думати. Не даєш готових відповідей якщо людина може знайти їх сама. Звертаєшся на "ти".`
+  };
+  return personas[mode] || personas.partner;
+}
+
 function getAIContext() {
   const profile = getProfile();
   const memory = localStorage.getItem('nm_memory') || '';
@@ -2271,12 +2344,18 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "fin_type": "expense|income",
   "amount": 50,
   "category": "Їжа",
-  "fin_comment": "короткий коментар (1-3 слова)"
+  "fin_comment": "короткий опис БЕЗ суми (1-3 слова, тільки що/де, наприклад: заправка, продукти, кава)"
 }
 
 Категорії витрат: Їжа, Транспорт, Підписки, Здоровʼя, Житло, Покупки, Трава, Інше
 Категорії доходів: Зарплата, Надходження, Повернення, Інше
 Якщо категорія незрозуміла — використовуй "Інше".
+
+ЯКЩО повідомлення є уточненням, командою або поясненням до попереднього (наприклад: "в категорію транспорт", "так", "ні", "змінити на...", "видали", "це була помилка") — НЕ зберігай як запис, відповідай:
+{
+  "action": "reply",
+  "comment": "відповідь або підтвердження"
+}
 
 Пріоритет: якщо сумнів між event і note — обирай note з папкою "Особисте".
 
@@ -3230,13 +3309,13 @@ async function askAIAboutTask(title, desc, steps) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — мотивуючий особистий коуч в NeverMind. Користувач щойно додав задачу. Дай коротку (1-2 речення) підтримуючу пораду. Звертайся на "ти". Фокус на тому ЯК досягти мети, а не на ризиках чи проблемах. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Користувач щойно додав задачу. Дай коротку (1-2 речення) підтримуючу пораду. Фокус на тому ЯК досягти мети. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const steps_text = steps.length ? `\nКроки: ${steps.map(s => s.text).join(', ')}` : '';
   const reply = await callAI(systemPrompt, `Задача: ${title}${desc ? '\nОпис: ' + desc : ''}${steps_text}`, {});
   if (!reply) return;
   const commentEl = document.getElementById('tasks-ai-comment');
   if (commentEl) {
-    commentEl.textContent = '✦ ' + reply;
+    commentEl.textContent = '🦉 ' + reply;
     commentEl.style.display = 'block';
   }
 }
@@ -3333,7 +3412,7 @@ async function refreshMeAnalysis() {
   }
 
   const dataNote = totalRecords < 10 ? 'УВАГА: даних мало, не роби глибоких висновків про особистість — просто опиши що бачиш і запропонуй що додати.' : '';
-  const systemPrompt = `Ти — особистий аналітик і коуч в NeverMind. Проаналізуй дані та дай короткий аналіз (3-5 речень). Звертайся на "ти". Починай з позитивного — що вдається добре. Потім конкретно що можна покращити. ${dataNote} Завершуй конкретною мотивуючою порадою. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Проаналізуй дані та дай короткий аналіз (3-5 речень). Починай з позитивного — що вдається добре. Потім конкретно що можна покращити. ${dataNote} Завершуй конкретною порадою. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   const userData = `Записів в Inbox: ${inbox.length}
 Активних задач: ${tasks.filter(t=>t.status!=='done').length}
@@ -3353,7 +3432,7 @@ async function refreshMeAnalysis() {
     if (adviceEl && adviceBlock) {
       adviceEl.textContent = '…';
       adviceBlock.style.display = 'block';
-      const advicePrompt = `Ти — особистий коуч в NeverMind. На основі аналізу дай рівно 3 конкретні, практичні поради для цієї людини. Кожна порада — одне речення, максимально конкретна і дієва. Формат відповіді: "1. [порада]\n2. [порада]\n3. [порада]". Звертайся на "ти". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+      const advicePrompt = `${getOWLPersonality()} На основі аналізу дай рівно 3 конкретні, практичні поради для цієї людини. Кожна порада — одне речення, максимально конкретна і дієва. Формат відповіді: "1. [порада]\n2. [порада]\n3. [порада]". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
       const adviceReply = await callAI(advicePrompt, `Аналіз: ${reply}
 
 Дані: ${userData}`, {});
@@ -3535,7 +3614,7 @@ function deleteMoment(id) {
   renderEvening();
 }
 
-const EVENING_SUMMARY_PROMPT = `Ти — особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно але по-доброму. Завершуй конкретною порадою або мотивуючою думкою на завтра. Відповідай українською.`;
+const EVENING_SUMMARY_PROMPT = `Ти — OWL, особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно. Завершуй порадою або мотивуючою думкою на завтра. Відповідай українською.`;
 
 async function generateEveningSummary() {
   const btn = document.getElementById('evening-summary-btn');
@@ -3651,7 +3730,7 @@ async function sendDialogMessage() {
   const aiContext = getAIContext();
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const systemPrompt = `Ти — особистий агент NeverMind у вечірньому діалозі. Звертаєшся на "ти". Говориш тепло і чесно. Короткі відповіді (1-3 речення). Мотивуєш конкретними кроками. Підтримуєш і надихаєш. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
+  const systemPrompt = `${getOWLPersonality()} Говориш тепло і чесно. Короткі відповіді (1-3 речення). Мотивуєш конкретними кроками. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
 Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
 
   const key = localStorage.getItem('nm_gemini_key');
@@ -3680,6 +3759,51 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
+// === SLIDES TOUR ===
+const UPDATE_VERSION = 'v026'; // змінювати при кожному оновленні зі слайдами
+
+const UPDATE_SLIDES = [
+  {
+    tag: '🆕 Оновлення',
+    title: 'NeverMind оновився',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Два великі оновлення: фінансовий трекер і персональний характер агента.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Все що ти вже вів — на місці. Нові функції доступні одразу.</p>`,
+    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+  },
+  {
+    tag: '💰 Фінанси',
+    title: 'Облік грошей без таблиць',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Нова вкладка <b style="color:#1e1040">Фінанси</b> — пиши в Inbox і агент сам запише:</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заправка 50" → <b style="color:#1e1040">Транспорт −€50</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Встанови ліміт → <b style="color:#1e1040">агент попередить якщо перевищиш</b></div>
+</div>`,
+    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
+  },
+  {
+    tag: '🦉 OWL',
+    title: 'Агент тепер має характер',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Обери стиль спілкування в налаштуваннях:</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🔥 Тренер</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Прямий, жорсткий, підштовхує до дії</div>
+  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🤝 Партнер</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає і радить</div>
+  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🦉 Наставник</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Мудрий, задає правильні питання</div>
+  </div>
+</div>`,
+    color: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+    isLast: true,
+  },
+];
+
 const SLIDES = [
   {
     tag: 'Що таке NeverMind',
@@ -3742,8 +3866,20 @@ const SLIDES = [
 
 let currentSlide = 0;
 
+let _slidesIsUpdate = false;
+
 function openSlidesTour(fromOnboarding = false) {
   _slidesFromOnboarding = fromOnboarding;
+  _slidesIsUpdate = false;
+  currentSlide = 0;
+  const el = document.getElementById('slides-tour');
+  el.style.display = 'flex';
+  renderSlide();
+}
+
+function openUpdateSlides() {
+  _slidesFromOnboarding = false;
+  _slidesIsUpdate = true;
   currentSlide = 0;
   const el = document.getElementById('slides-tour');
   el.style.display = 'flex';
@@ -3754,17 +3890,25 @@ function closeSlidesTour(fromOnboarding = false) {
   const el = document.getElementById('slides-tour');
   el.style.opacity = '0';
   el.style.transition = 'opacity 0.3s ease';
+  // Зберігаємо що бачили поточне оновлення
+  if (_slidesIsUpdate) {
+    localStorage.setItem('nm_seen_update', UPDATE_VERSION);
+  }
   setTimeout(() => {
     el.style.display = 'none'; el.style.opacity = ''; el.style.transition = '';
-    // Запускаємо опитування тільки після першого онбордингу
     if (fromOnboarding && !localStorage.getItem('nm_survey_done')) {
       startSurvey();
     }
   }, 300);
 }
 
+function getCurrentSlides() {
+  return _slidesIsUpdate ? UPDATE_SLIDES : SLIDES;
+}
+
 function slidesNext() {
-  if (currentSlide < SLIDES.length - 1) {
+  const slides = getCurrentSlides();
+  if (currentSlide < slides.length - 1) {
     currentSlide++;
     renderSlide();
   } else {
@@ -3775,8 +3919,9 @@ function slidesNext() {
 let _slidesFromOnboarding = false;
 
 function renderSlide() {
-  const slide = SLIDES[currentSlide];
-  const total = SLIDES.length;
+  const slides = getCurrentSlides();
+  const slide = slides[currentSlide];
+  const total = slides.length;
 
   // Крапки прогресу
   const dotsEl = document.getElementById('slides-dots');
@@ -4058,7 +4203,7 @@ async function finishSurvey() {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const name = settings.name || 'користувач';
   const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
-  const prompt = `Ти — персональний агент застосунку NeverMind. Користувач ${name} тільки що завершив онбординг і відповів на питання анкети:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (3-5 речень) — це піде в пам'ять агента.\n2. Дай 2-3 конкретні поради як використовувати NeverMind саме для цієї людини, враховуючи їх відповіді. Поради мають бути практичними і специфічними — не загальними. Наприклад: якщо людина підприємець — порадь як записувати ідеї для бізнесу. Якщо студент — як вести нотатки з навчання.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для пам'яті", "advice": "персональні поради 2-3 речення"}`;
+  const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що завершив онбординг і відповів на питання анкети:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (3-5 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні поради як використовувати NeverMind саме для цієї людини. Поради мають бути практичними і специфічними.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -4076,7 +4221,7 @@ async function finishSurvey() {
           localStorage.setItem('nm_memory_ts', Date.now().toString());
         }
         if (parsed.advice) {
-          addInboxChatMsg('agent', '✦ ' + parsed.advice);
+          addInboxChatMsg('agent', '🦉 ' + parsed.advice);
         }
       } catch(e) {
         addInboxChatMsg('agent', reply);
@@ -4092,8 +4237,15 @@ async function finishSurvey() {
 function checkOnboarding() {
   const done = localStorage.getItem('nm_onboarding_done');
   if (!done) {
+    // Новий користувач — показуємо онбординг
     document.getElementById('onboarding').style.display = 'block';
     return true;
+  }
+  // Існуючий користувач — перевіряємо чи бачив оновлення
+  const seenUpdate = localStorage.getItem('nm_seen_update');
+  if (seenUpdate !== UPDATE_VERSION) {
+    setTimeout(() => openUpdateSlides(), 500);
+    return false;
   }
   return false;
 }
@@ -4102,7 +4254,7 @@ function obNext(step) {
   if (step === 1) {
     const name = document.getElementById('ob-name').value.trim();
     const age = document.getElementById('ob-age').value.trim();
-    if (!name) { showToast('Введи ім\'я'); return; }
+    if (!name) { showToast('Введи імʼя'); return; }
     const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
     settings.name = name;
     if (age) settings.age = age;
@@ -4112,12 +4264,34 @@ function obNext(step) {
   } else if (step === 2) {
     const key = document.getElementById('ob-key').value.trim();
     if (key) localStorage.setItem('nm_gemini_key', key);
+    document.getElementById('ob-step-2').style.display = 'none';
+    document.getElementById('ob-step-owl').style.display = 'block';
+    // Дефолтно вибрати "partner"
+    selectOwlMode('partner');
+  } else if (step === 'owl') {
+    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    if (!settings.owl_mode) settings.owl_mode = 'partner';
+    localStorage.setItem('nm_settings', JSON.stringify(settings));
     obShowWelcome();
   }
 }
 
 function obSkipKey() {
-  obShowWelcome();
+  document.getElementById('ob-step-2').style.display = 'none';
+  document.getElementById('ob-step-owl').style.display = 'block';
+  selectOwlMode('partner');
+}
+
+function selectOwlMode(mode) {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  settings.owl_mode = mode;
+  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  ['coach','partner','mentor'].forEach(m => {
+    const card = document.getElementById('owl-card-' + m);
+    if (!card) return;
+    card.style.border = m === mode ? '2px solid #7c3aed' : '2px solid rgba(124,58,237,0.15)';
+    card.style.background = m === mode ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.8)';
+  });
 }
 
 function obShowWelcome() {
@@ -4339,7 +4513,8 @@ function makeHabitDayDots(h, weekDone, todayDow) {
 
 function renderHabits() {
   const habits = getHabits();
-  const el = document.getElementById('prod-habits-list');
+  const el = document.getElementById('me-habits-stats-list');
+  const block = document.getElementById('me-habits-stats');
   if (!el) return;
   const log = getHabitLog();
   const today = new Date().toDateString();
@@ -4508,7 +4683,7 @@ function openTaskChat(id) {
 
   addTaskChatMsg('agent', '…', 'task-chat-intro');
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — жорсткий але справедливий особистий асистент в NeverMind. Допомагаєш реально виконати задачу. Звертаєшся на "ти". НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Допомагаєш реально виконати задачу. НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
 
   callAI(systemPrompt, taskInfo, {}).then(reply => {
@@ -4569,7 +4744,7 @@ async function sendTaskChatMessage() {
   const aiContext = getAIContext();
   const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
   const stepInstruction = wantsSteps ? ' ВАЖЛИВО: користувач просить кроки. Відповідай ТІЛЬКИ валідним JSON і нічим іншим: {"steps":["крок 1","крок 2","крок 3"]}. Жодного тексту до або після JSON.' : '';
-  const systemPrompt = `Ти — особистий коуч в NeverMind. Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Звертаєшся на "ти". Говориш конкретно і тепло. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках. Підтримуєш і мотивуєш до дії.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -4697,7 +4872,7 @@ async function initNoteChatGreeting(note) {
     return;
   }
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — персональний асистент в NeverMind. Тебе попросили поговорити про конкретну нотатку. Прочитай її і скажи коротко (1-2 речення): що це за нотатка і як ти можеш допомогти з нею. Звертайся на "ти". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Тебе попросили поговорити про конкретну нотатку. Прочитай її і скажи коротко (1-2 речення): що це за нотатка і як ти можеш допомогти з нею. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const greeting = await callAI(systemPrompt, `Нотатка: ${note.text}`, {});
   if (greeting) addNoteChatMsg('agent', greeting);
 }
@@ -4732,7 +4907,7 @@ async function sendNoteChatMessage() {
   const notes = getNotes();
   const n = notes.find(x => x.id === activeNoteViewId);
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — персональний асистент в NeverMind. Обговорюєш нотатку користувача. Звертаєшся на "ти". Короткі відповіді (2-4 речення). Допомагаєш розвинути думку, знайти рішення, структурувати ідею. Якщо просять зберегти відповідь — скажи що можна натиснути "Зберегти як нотатку".${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш нотатку користувача. Короткі відповіді (2-4 речення). Допомагаєш розвинути думку, знайти рішення, структурувати ідею. Якщо просять зберегти відповідь — скажи що можна натиснути "Зберегти як нотатку".${aiContext ? '\n\n' + aiContext : ''}`;
   const noteContext = `Нотатка: ${n?.text || ''}`;
 
   try {
@@ -4903,8 +5078,7 @@ function toggleProdHabitToday(id) {
   if (!log[today]) log[today] = {};
   log[today][id] = !log[today][id];
   saveHabitLog(log);
-  renderProdHabits();
-  renderHabits(); // sync with Me tab
+  renderProdHabits(); // оновлюємо тільки вкладку Продуктивність
 }
 
 // === TAB SWIPE NAVIGATION ===
@@ -5497,7 +5671,7 @@ async function sendTasksBarMessage() {
   }).join(', ');
 
   const aiContext = getAIContext();
-  const systemPrompt = 'Ти — асистент у вкладці Продуктивність застосунку NeverMind. Звертайся на "ти".\n\n'
+  const systemPrompt = getOWLPersonality() + '\n\n'
     + 'ЗАДАЧІ:\n' + (tasksSummary || 'Немає активних задач') + '\n\n'
     + (habitsSummary ? 'ЗВИЧКИ СЬОГОДНІ:\n' + habitsSummary + '\n\n' : '')
     + 'Ти можеш:\n'
@@ -6237,7 +6411,7 @@ async function sendFinanceBarMessage() {
   const cats = getFinCats();
   const aiContext = getAIContext();
 
-  const FINANCE_BAR_PROMPT = `Ти — фінансовий агент NeverMind. Звертаєшся на "ти". Відповіді — 1-3 речення, конкретно.
+  const FINANCE_BAR_PROMPT = `${getOWLPersonality()} Ти допомагаєш з фінансами. Відповіді — 1-3 речення, конкретно.
 Валюта: €. Поточний місяць.
 Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}€ ${t.comment||''}`).join('; ') || 'немає'}
 Загальний бюджет: ${budget.total ? budget.total+'€' : 'не встановлено'}
@@ -6248,10 +6422,11 @@ async function sendFinanceBarMessage() {
 {"action":"save_expense","amount":50,"category":"Їжа","comment":"продукти"}
 {"action":"save_income","amount":3000,"category":"Зарплата","comment":""}
 {"action":"delete_transaction","id":1234567890}
+{"action":"update_transaction","id":1234567890,"category":"Транспорт","comment":"заправка"}
 {"action":"set_budget","total":2000,"categories":{"Їжа":400}}
 {"action":"create_category","type":"expense","name":"Нова категорія"}
 
-Якщо питання або аналіз — відповідай текстом. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+Якщо користувач просить змінити категорію або опис існуючої транзакції — використовуй update_transaction з її id. НЕ створюй нову транзакцію і НЕ видаляй стару окремо.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -6280,6 +6455,19 @@ async function sendFinanceBarMessage() {
         saveFinance(getFinance().filter(t => t.id !== parsed.id));
         renderFinance();
         addFinanceChatMsg('agent', `🗑 Видалено: ${item ? item.category + ' ' + formatMoney(item.amount) : 'транзакцію'}`);
+      } else if (parsed.action === 'update_transaction') {
+        const txs2 = getFinance();
+        const idx = txs2.findIndex(t => t.id === parsed.id);
+        if (idx !== -1) {
+          if (parsed.category) txs2[idx].category = parsed.category;
+          if (parsed.comment !== undefined) txs2[idx].comment = parsed.comment;
+          if (parsed.amount) txs2[idx].amount = parseFloat(parsed.amount);
+          saveFinance(txs2);
+          renderFinance();
+          addFinanceChatMsg('agent', `✓ Оновлено: ${txs2[idx].category} ${formatMoney(txs2[idx].amount)}`);
+        } else {
+          addFinanceChatMsg('agent', 'Транзакцію не знайдено.');
+        }
       } else if (parsed.action === 'set_budget') {
         const bdg = getFinBudget();
         if (parsed.total) bdg.total = parsed.total;
@@ -6341,7 +6529,7 @@ async function sendEveningBarMessage() {
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
   const todayNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]').filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — вечірній агент NeverMind. Звертаєшся на "ти". Тепло і чесно. Короткі відповіді (1-3 речення). Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}. Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}. Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Тепло і чесно. Короткі відповіді (1-3 речення). Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}. Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}. Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -6513,7 +6701,7 @@ setTimeout(() => {
   <div onclick="closeClarify()" style="position:absolute;inset:0;background:rgba(10,5,30,0.3);backdrop-filter:blur(2px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:14px 18px calc(env(safe-area-inset-bottom)+24px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
-    <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(124,58,237,0.08);color:#7c3aed;font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;margin-bottom:10px">✦ Агент уточнює</div>
+    <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(124,58,237,0.08);color:#7c3aed;font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;margin-bottom:10px">🦉 OWL уточнює</div>
     <div id="clarify-question" style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.5;margin-bottom:16px"></div>
     <div id="clarify-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
     <div style="height:1px;background:rgba(30,16,64,0.06);margin-bottom:12px"></div>
