@@ -49,7 +49,6 @@ body {
   --font-body: 'Plus Jakarta Sans', sans-serif;
   --text-primary: rgba(30,16,64,0.88);
   --text-secondary: rgba(30,16,64,0.55);
-  --text-ai: rgba(30,16,64,0.75);
 
   /* Active tab accent (changes per tab) */
   --active-accent: #8b6914;
@@ -543,6 +542,7 @@ body {
 #page-notes .page-header { background: linear-gradient(to bottom, #fed7aa 30%, transparent); }
 #page-me .page-header { background: linear-gradient(to bottom, #a7f3d0 30%, transparent); }
 #page-evening .page-header { background: linear-gradient(to bottom, #818cf8 30%, transparent); }
+#page-finance .page-header { background: linear-gradient(to bottom, #fcd9bd 30%, transparent); }
 
 /* === INBOX === */
 
@@ -694,67 +694,6 @@ body {
 .inbox-empty-icon { font-size: 40px; opacity: 0.3; }
 .inbox-empty-title { font-size: 15px; font-weight: 600; opacity: 0.6; }
 .inbox-empty-sub { font-size: 12.5px; opacity: 0.4; line-height: 1.5; }
-
-/* === AI BAR (Inbox) — always visible === */
-#inbox-ai-bar {
-  position: fixed;
-  left: 4px; right: 4px;
-  bottom: calc(var(--tabbar-h, 83px) - 2px);
-  z-index: 99;
-  background: rgba(26,10,46,0.49);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 20px;
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  display: none;
-  flex-direction: column;
-  height: 250px;
-  overflow: hidden;
-}
-#inbox-ai-bar.bar-visible { display: flex; }
-#inbox-ai-bar::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
-  border-radius: 20px 20px 0 0;
-  pointer-events: none;
-}
-#inbox-chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 5px 12px 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 0;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black calc(100% - 10px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black calc(100% - 10px), transparent 100%);
-  -webkit-overflow-scrolling: touch;
-}
-
-.ai-bar-preview {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding-bottom: 2px;
-}
-.ai-avatar {
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
-  color: white;
-  flex-shrink: 0;
-}
-.ai-bar-text {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-ai);
-  flex: 1;
-}
 
 /* === CHAT BAR SYSTEM (Tasks / Me / Evening) === */
 
@@ -939,66 +878,6 @@ body {
 
 
 
-.ai-bar-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-}
-.ai-bar-input {
-  flex: 1;
-  background: rgba(255,255,255,0.55);
-  border: 1px solid rgba(139,105,20,0.14);
-  border-radius: 16px;
-  padding: 2px 14px;
-  font-family: var(--font-body);
-  font-size: 16px;
-  color: var(--text-primary);
-  outline: none;
-  -webkit-appearance: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  resize: none;
-  min-height: 28px;
-  max-height: 100px;
-  overflow-y: auto;
-  line-height: 1.45;
-}
-.ai-bar-input::placeholder { color: rgba(255,255,255,0.35); font-size: 15px; }
-.ai-bar-input:focus {
-  border-color: rgba(212,168,87,0.45);
-  box-shadow: 0 0 0 3px rgba(212,168,87,0.08);
-}
-
-.inbox-add-btn {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #d4a857, #c47d0a);
-  color: #fff;
-  font-size: 17px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(196,125,10,0.28);
-  transition: transform 0.15s, opacity 0.15s;
-}
-.inbox-add-btn:active { transform: scale(0.88); opacity: 0.85; }
-
-.ai-send-btn {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #a78bfa, #818cf8);
-  color: white;
-  font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(129,140,248,0.3);
-  transition: transform 0.15s, opacity 0.15s;
-}
-.ai-send-btn:active { transform: scale(0.88); }
-.ai-send-btn:disabled { opacity: 0.4; }
-
 /* AI typing dots */
 .ai-typing {
   display: inline-flex;
@@ -1100,37 +979,7 @@ body {
       <div id="inbox-list"></div>
     </div>
 
-    <!-- AI BAR — одне поле, одна кнопка, Агент вирішує все -->
-    <div id="inbox-ai-bar">
-      <!-- Зона переписки — скролиться всередині -->
-      <div id="inbox-chat-messages">
-        <!-- Перше повідомлення від Агента -->
-        <div>
-          <div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">Привіт! Напиши що завгодно — я розберусь 👋</div>
-        </div>
-      </div>
-
-      <!-- Поле вводу — зафіксоване знизу вікна -->
-      <div style="flex-shrink:0;padding:5px;">
-        <div id="ai-bar-response" style="display:none;margin-bottom:6px">
-          <div class="ai-bar-preview">
-            <div class="ai-bar-text" id="ai-bar-text"></div>
-          </div>
-        </div>
-        <div class="ai-bar-input-row">
-          <textarea class="ai-bar-input" id="inbox-input"
-            placeholder="Напиши що завгодно — Агент розбереться…" rows="1" style="color:white"
-            oninput="autoResizeTextarea(this)"
-            onkeydown="unifiedInputKeydown(event)"></textarea>
-          <button class="ai-send-btn" id="ai-send-btn" onclick="sendToAI()" style="background:rgba(255,255,255,0.9)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
+    </div><!-- /page-inbox -->
 
     <!-- PAGE: TASKS -->
     <div class="page" id="page-tasks">
@@ -1344,6 +1193,12 @@ body {
         </div>
       </div>
 
+      <!-- Finance today -->
+      <div id="evening-finance-block" style="display:none;margin:0 14px 10px;background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
+        <div style="font-size:12px;font-weight:800;color:rgba(194,65,12,0.7);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">€ Фінанси сьогодні</div>
+        <div id="evening-finance-content"></div>
+      </div>
+
       <!-- AI summary -->
       <div style="margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(124,58,237,0.15);border-radius:16px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1356,9 +1211,124 @@ body {
       </div><!-- /evening scroll -->
     </div>
 
+    <!-- PAGE: FINANCE -->
+    <div class="page" id="page-finance">
+      <div class="page-header">
+        <span class="page-title">Фінанси</span>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openHelp('finance')">?</button>
+          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+        </div>
+      </div>
+
+      <div style="padding:0 14px 140px">
+
+        <!-- Перемикач тип: Витрати / Доходи / Баланс -->
+        <div style="display:flex;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px;margin-bottom:12px">
+          <div id="fin-tab-expense" onclick="switchFinTab('expense')" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;background:white;color:#c2410c;box-shadow:0 2px 8px rgba(0,0,0,0.08)">Витрати</div>
+          <div id="fin-tab-income" onclick="switchFinTab('income')" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4)">Доходи</div>
+          <div id="fin-tab-balance" onclick="switchFinTab('balance')" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4)">Баланс</div>
+        </div>
+
+        <!-- Перемикач період -->
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button id="fin-period-week" onclick="setFinPeriod('week')" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(194,65,12,0.2);background:rgba(194,65,12,0.05);font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Тиждень</button>
+          <button id="fin-period-month" onclick="setFinPeriod('month')" style="padding:6px 14px;border-radius:20px;border:1.5px solid #c2410c;background:rgba(194,65,12,0.1);font-size:13px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">Місяць</button>
+          <button id="fin-period-3months" onclick="setFinPeriod('3months')" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(194,65,12,0.2);background:rgba(194,65,12,0.05);font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">3 місяці</button>
+        </div>
+
+        <!-- Зведення — сума + бюджет -->
+        <div id="fin-summary-block" style="background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border:1.5px solid rgba(255,255,255,0.5);border-radius:18px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:12px;font-weight:800;color:rgba(194,65,12,0.6);text-transform:uppercase;letter-spacing:0.08em" id="fin-summary-label">Витрати за місяць</div>
+              <div id="fin-total" style="font-family:var(--font-display);font-size:32px;font-weight:900;color:#7c2d12;margin-top:4px">€0</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;color:rgba(194,65,12,0.5);font-weight:600" id="fin-budget-label"></div>
+              <div id="fin-budget-remain" style="font-size:16px;font-weight:700;color:#c2410c;margin-top:2px"></div>
+            </div>
+          </div>
+          <!-- Бюджет прогрес-бар -->
+          <div id="fin-budget-bar-wrap" style="display:none;margin-top:12px">
+            <div style="height:6px;background:rgba(124,45,18,0.15);border-radius:3px;overflow:hidden">
+              <div id="fin-budget-bar" style="height:100%;width:0%;background:#c2410c;border-radius:3px;transition:width 0.6s ease"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Графік -->
+        <div style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px" id="fin-chart-label">Витрати по днях</div>
+          <div id="fin-chart" style="display:flex;gap:3px;align-items:flex-end;height:64px"></div>
+        </div>
+
+        <!-- Розбивка по категоріях (пай) -->
+        <div id="fin-cats-block" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">По категоріях</div>
+          <div id="fin-categories"></div>
+        </div>
+
+        <!-- Бюджет по категоріях -->
+        <div id="fin-cat-budgets-block" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:14px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Бюджет по категоріях</div>
+            <button onclick="openFinBudgetModal()" style="font-size:13px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">✎</button>
+          </div>
+          <div id="fin-cat-budgets"></div>
+        </div>
+
+        <!-- Список транзакцій -->
+        <div style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:14px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Транзакції</div>
+            <button onclick="openAddTransaction()" style="font-size:13px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+          </div>
+          <div id="fin-transactions"></div>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /scroll-wrap -->
 
 <!-- AI BARS — поза .page щоб position:fixed працював на iOS -->
+<div id="inbox-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <div class="ai-bar-chat-window" id="inbox-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('inbox')"></div>
+    <div class="ai-bar-messages" id="inbox-chat-messages">
+      <div style="display:flex">
+        <div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">Привіт! Напиши що завгодно — я розберусь 👋</div>
+      </div>
+    </div>
+  </div>
+  <div class="ai-bar-input-box">
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">✦</div>
+    <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('inbox')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendToAI()}"></textarea>
+    <button class="ai-bar-send-btn" id="ai-send-btn" onclick="sendToAI()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
+<div id="finance-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <div class="ai-bar-chat-window" id="finance-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('finance')"></div>
+    <div class="ai-bar-messages" id="finance-chat-messages"></div>
+  </div>
+  <div class="ai-bar-input-box">
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">€</div>
+    <textarea id="finance-bar-input" rows="1" placeholder="Витратив, отримав, запитай агента…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('finance')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFinanceBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendFinanceBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
 <div id="tasks-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <!-- Чат-вікно (з'являється при фокусі) -->
   <div class="ai-bar-chat-window" id="tasks-chat-window">
@@ -1442,6 +1412,12 @@ body {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
       </span>
       <span class="tab-label">Вечір</span>
+    </div>
+    <div class="tab-item" data-tab="finance" onclick="switchTab('finance')">
+      <span class="tab-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l-4.62 8M9.69 8l4.62 8M6 12h2.5M15.5 12H18"/></svg>
+      </span>
+      <span class="tab-label">Фінанси</span>
     </div>
   </nav>
 
@@ -1629,6 +1605,18 @@ body {
       <button class="btn-danger" onclick="clearAllData()">🗑️ Очистити всі дані</button>
     </div>
 
+    <!-- Finance -->
+    <div class="settings-divider"></div>
+    <div class="settings-section">
+      <div class="settings-label">Фінанси</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input class="settings-input" type="number" id="input-finance-budget" placeholder="Місячний бюджет (€)" style="flex:1">
+      </div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.4);margin-bottom:8px">Загальний ліміт витрат на місяць. Агент попередить при перевищенні.</div>
+      <button class="btn-ghost" onclick="saveFinanceSettings()">Зберегти бюджет</button>
+      <button class="btn-danger" onclick="clearFinanceData()" style="margin-top:6px">🗑️ Очистити фінансові дані</button>
+    </div>
+
     <!-- How to use -->
     <div class="settings-section" style="margin-top:4px">
       <button class="btn-ghost" onclick="closeSettings();openSlidesTour()" style="background:linear-gradient(135deg,rgba(242,217,120,0.15),rgba(249,115,22,0.1));border-color:rgba(242,217,120,0.4);font-weight:700;color:#8b6914">📖 Як користуватися NeverMind</button>
@@ -1716,6 +1704,13 @@ const TAB_THEMES = {
     accent: '#4f46e5',
     accent2: '#818cf8',
   },
+  finance: {
+    bg: 'linear-gradient(160deg, #fcd9bd, #fff7ed)',
+    orb: 'rgba(249,115,22,0.12)',
+    tabBg: 'rgb(249,155,100)',
+    accent: '#c2410c',
+    accent2: '#f97316',
+  },
 };
 
 // === CURRENT STATE ===
@@ -1741,11 +1736,8 @@ function switchTab(tab) {
   // Apply theme
   applyTheme(tab);
 
-  // Inbox AI bar — тільки на inbox
-  updateAiBarVisibility();
-
-  // Нові бари tasks/me/evening — показуємо/ховаємо і закриваємо вікно чату при переключенні
-  ['tasks','me','evening'].forEach(t => {
+  // Бари inbox/tasks/me/evening/finance — показуємо/ховаємо і закриваємо вікно чату при переключенні
+  ['inbox','tasks','me','evening','finance'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const show = t === tab;
@@ -1762,6 +1754,7 @@ function switchTab(tab) {
   if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
+  if (tab === 'finance') { renderFinance(); }
 
   // Підказка першого відвідування
   setTimeout(() => showFirstVisitTip(tab), 600);
@@ -1813,6 +1806,13 @@ function openSettings() {
   }
 
   updateKeyStatus(!!key);
+
+  // Фінанси
+  try {
+    const bdg = getFinBudget();
+    const finBudgetEl = document.getElementById('input-finance-budget');
+    if (finBudgetEl) finBudgetEl.value = bdg.total || '';
+  } catch(e) {}
 }
 
 function closeSettings() {
@@ -1858,7 +1858,7 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats'];
   keys.forEach(k => {
     const v = localStorage.getItem(k);
     if (v) data[k] = JSON.parse(v);
@@ -1876,12 +1876,28 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats'];
   keys.forEach(k => localStorage.removeItem(k));
-  // Видаляємо динамічні ключі чатів задач (nm_task_chat_123456...)
-  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_')).forEach(k => localStorage.removeItem(k));
-  showToast('\ud83d\uddd1\ufe0f Всі дані видалено');
+  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_')).forEach(k => localStorage.removeItem(k));
+  showToast('🗑️ Всі дані видалено');
   closeSettings();
+}
+
+function saveFinanceSettings() {
+  const budget = parseFloat(document.getElementById('input-finance-budget')?.value || '0') || 0;
+  const bdg = getFinBudget();
+  bdg.total = budget;
+  saveFinBudget(bdg);
+  showToast('✓ Бюджет збережено');
+}
+
+function clearFinanceData() {
+  if (!confirm('Видалити всі фінансові дані?')) return;
+  localStorage.removeItem('nm_finance');
+  localStorage.removeItem('nm_finance_budget');
+  localStorage.removeItem('nm_finance_cats');
+  if (currentTab === 'finance') renderFinance();
+  showToast('🗑️ Фінансові дані видалено');
 }
 
 // === MEMORY SYSTEM ===
@@ -2084,6 +2100,12 @@ function getAIContext() {
     parts.push(`Записи сьогодні:\n${inboxList}`);
   }
 
+  // === Фінанси ===
+  try {
+    const finCtx = getFinanceContext();
+    if (finCtx) parts.push(finCtx);
+  } catch(e) {}
+
   return parts.join('\n\n');
 }
 
@@ -2180,26 +2202,31 @@ function setupSW() {
   navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
 }
 
-// === GEMINI API ===
+// === OpenAI API === (ключ зберігається як nm_gemini_key — стара назва з часів Gemini)
 const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
 Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія, або звіт про виконане.
 
 СПОЧАТКУ перевір: чи повідомлення говорить про ВИКОНАННЯ або ФАКТ того що вже є в списку звичок або задач?
 Якщо так — дій відповідно (complete_habit або complete_task), НЕ створюй дублікат.
 
-ЯКЩО повідомлення означає що звичка виконана сьогодні (є в списку "Звички"):
+ЯКЩО повідомлення означає що одна або кілька звичок виконані сьогодні (є в списку "Звички"):
 {
   "action": "complete_habit",
-  "habit_id": 123456,
+  "habit_ids": [123456, 789012],
   "comment": "коротке підтвердження (1 речення)"
 }
 
-ЯКЩО повідомлення означає що задача виконана або закрита (є в списку "Активні задачі"):
+ЯКЩО повідомлення означає що одна або кілька задач виконані або закриті (є в списку "Активні задачі"):
 {
   "action": "complete_task",
-  "task_id": 123456,
+  "task_ids": [123456, 789012],
   "comment": "коротке підтвердження (1 речення)"
 }
+
+ВАЖЛИВО для complete_task і complete_habit:
+- Якщо користувач каже "все готово", "зробив все", "виконав" після того як агент перелічив кілька задач/звичок — передай ВСІ ID з того переліку
+- Якщо однозначно йдеться про одну — передай масив з одним елементом
+- Завжди масив, навіть якщо один елемент: [123456]
 
 ЯКЩО це новий запис (думка, задача, ідея, нова звичка, подія, нотатка) — відповідай ТІЛЬКИ JSON:
 {
@@ -2235,7 +2262,21 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   - "text" — коротка назва 2-4 слова (суть звички, не весь текст)
 - event: короткий факт події без емоцій ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції/роздуми — це note
 - idea: творча думка, ідея, план, натхнення
-- note: рефлексія, думки, емоції, висновки, спостереження, факти, їжа, витрати
+- note: рефлексія, думки, емоції, висновки, спостереження, факти
+- finance: витрата або дохід (будь-яка сума грошей). Якщо є сума і контекст витрат/доходу — це finance
+
+ЯКЩО це витрата або дохід (є конкретна сума) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "save_finance",
+  "fin_type": "expense|income",
+  "amount": 50,
+  "category": "Їжа",
+  "fin_comment": "короткий коментар (1-3 слова)"
+}
+
+Категорії витрат: Їжа, Транспорт, Підписки, Здоровʼя, Житло, Покупки, Трава, Інше
+Категорії доходів: Зарплата, Надходження, Повернення, Інше
+Якщо категорія незрозуміла — використовуй "Інше".
 
 Пріоритет: якщо сумнів між event і note — обирай note з папкою "Особисте".
 
@@ -2343,32 +2384,36 @@ function addInboxChatMsg(role, text) {
 
 // === INBOX ===
 const CAT_SVG = {
-  task:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2fd0f9" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
-  idea:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8a00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>',
-  note:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
-  habit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-  event: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  task:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2fd0f9" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+  idea:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8a00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>',
+  note:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  habit:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  event:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  finance: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M14.31 8l-4.62 8M9.69 8l4.62 8M6 12h2.5M15.5 12H18"/></svg>',
 };
 const CAT_DOT_BG = {
-  task:  'background:rgba(47,208,249,0.2)',
-  idea:  'background:rgba(236,247,85,0.3)',
-  note:  'background:rgba(180,140,90,0.15)',
-  habit: 'background:rgba(22,163,74,0.15)',
-  event: 'background:rgba(59,130,246,0.15)',
+  task:    'background:rgba(47,208,249,0.2)',
+  idea:    'background:rgba(236,247,85,0.3)',
+  note:    'background:rgba(180,140,90,0.15)',
+  habit:   'background:rgba(22,163,74,0.15)',
+  event:   'background:rgba(59,130,246,0.15)',
+  finance: 'background:rgba(194,65,12,0.15)',
 };
 const CAT_TAG_STYLE = {
-  task:  'background:rgba(47,208,249,0.2);color:#0a7a97',
-  idea:  'background:rgba(236,247,85,0.35);color:#5a6a00',
-  note:  'background:rgba(180,140,90,0.2);color:#6a4a1a',
-  habit: 'background:rgba(22,163,74,0.15);color:#14532d',
-  event: 'background:rgba(59,130,246,0.15);color:#1d4ed8',
+  task:    'background:rgba(47,208,249,0.2);color:#0a7a97',
+  idea:    'background:rgba(236,247,85,0.35);color:#5a6a00',
+  note:    'background:rgba(180,140,90,0.2);color:#6a4a1a',
+  habit:   'background:rgba(22,163,74,0.15);color:#14532d',
+  event:   'background:rgba(59,130,246,0.15);color:#1d4ed8',
+  finance: 'background:rgba(194,65,12,0.15);color:#7c2d12',
 };
 const CAT_META = {
-  idea:  { icon: '💡', label: 'Ідея',    dotClass: 'cat-dot-idea',  tagClass: 'cat-idea'  },
-  task:  { icon: '📌', label: 'Задача',  dotClass: 'cat-dot-task',  tagClass: 'cat-task'  },
-  habit: { icon: '🌱', label: 'Звичка',  dotClass: 'cat-dot-habit', tagClass: 'cat-habit' },
-  note:  { icon: '📝', label: 'Нотатка', dotClass: 'cat-dot-note',  tagClass: 'cat-note'  },
-  event: { icon: '📅', label: 'Подія',   dotClass: 'cat-dot-event', tagClass: 'cat-event' },
+  idea:    { icon: '💡', label: 'Ідея',     dotClass: 'cat-dot-idea',    tagClass: 'cat-idea'    },
+  task:    { icon: '📌', label: 'Задача',   dotClass: 'cat-dot-task',    tagClass: 'cat-task'    },
+  habit:   { icon: '🌱', label: 'Звичка',   dotClass: 'cat-dot-habit',   tagClass: 'cat-habit'   },
+  note:    { icon: '📝', label: 'Нотатка',  dotClass: 'cat-dot-note',    tagClass: 'cat-note'    },
+  event:   { icon: '📅', label: 'Подія',    dotClass: 'cat-dot-event',   tagClass: 'cat-event'   },
+  finance: { icon: '€',  label: 'Фінанси',  dotClass: 'cat-dot-finance', tagClass: 'cat-finance' },
 };
 
 function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
@@ -2420,11 +2465,12 @@ function renderInbox() {
   list.innerHTML = items.map(item => {
     const meta = CAT_META[item.category] || CAT_META.note;
     const cardStyles = {
-      task:  'background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border-color:rgba(255,255,255,0.4)',
-      habit: 'background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border-color:rgba(255,255,255,0.4)',
-      note:  'background:linear-gradient(135deg,#f5ede0,#ede0cc);border-color:rgba(255,255,255,0.4)',
-      idea:  'background:linear-gradient(135deg,#ecf755,#e4ef30);border-color:rgba(255,255,255,0.4)',
-      event: 'background:linear-gradient(135deg,#bfdbfe,#a5c8fe);border-color:rgba(255,255,255,0.4)',
+      task:    'background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border-color:rgba(255,255,255,0.4)',
+      habit:   'background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border-color:rgba(255,255,255,0.4)',
+      note:    'background:linear-gradient(135deg,#f5ede0,#ede0cc);border-color:rgba(255,255,255,0.4)',
+      idea:    'background:linear-gradient(135deg,#ecf755,#e4ef30);border-color:rgba(255,255,255,0.4)',
+      event:   'background:linear-gradient(135deg,#bfdbfe,#a5c8fe);border-color:rgba(255,255,255,0.4)',
+      finance: 'background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border-color:rgba(255,255,255,0.4)',
     };
     const cardStyle = cardStyles[item.category] || cardStyles.note;
     return `<div class="inbox-item-wrap" id="wrap-${item.id}">
@@ -2494,30 +2540,6 @@ function unifiedInputKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
 }
 
-function updateInboxListMask() {
-  const list = document.getElementById('inbox-list');
-  const bar = document.getElementById('inbox-ai-bar');
-  if (!list || !bar) return;
-  const barH = bar.offsetHeight;
-  const fadeZone = 20; // px зони розмиття
-  if (barH > 0) {
-    const mask = `linear-gradient(to bottom, black calc(100% - ${barH + fadeZone}px), transparent calc(100% - ${barH}px))`;
-    list.style.webkitMaskImage = mask;
-    list.style.maskImage = mask;
-  }
-}
-
-function updateAiBarVisibility() {
-  const bar = document.getElementById('inbox-ai-bar');
-  if (!bar) return;
-  if (currentTab === 'inbox') {
-    bar.classList.add('bar-visible');
-    requestAnimationFrame(() => updateInboxListMask());
-  } else {
-    bar.classList.remove('bar-visible');
-  }
-}
-
 async function callAIWithHistory(systemPrompt, history) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
@@ -2579,8 +2601,6 @@ async function sendToAI() {
   btn.disabled = true;
   btn.innerHTML = '<div class="ai-typing" style="transform:scale(0.65)"><span></span><span></span><span></span></div>';
 
-  const responseArea = document.getElementById('ai-bar-response');
-  const textEl = document.getElementById('ai-bar-text');
   // Показуємо typing в чаті
   addInboxChatMsg('typing', '…');
 
@@ -2588,9 +2608,9 @@ async function sendToAI() {
   const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
   // Build history for context — but keep it short so JSON format is not broken
   inboxChatHistory.push({ role: 'user', content: text });
-  if (inboxChatHistory.length > 12) inboxChatHistory = inboxChatHistory.slice(-12);
-  // Pass last 4 messages max to avoid confusing the model into text mode
-  const historySlice = inboxChatHistory.slice(-4);
+  if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
+  // Передаємо останні 12 повідомлень — достатньо для контексту розмови
+  const historySlice = inboxChatHistory.slice(-12);
   const reply = await callAIWithHistory(fullPrompt, historySlice);
 
   if (reply) {
@@ -2602,7 +2622,6 @@ async function sendToAI() {
       inboxChatHistory.push({ role: 'assistant', content: reply });
       // Якщо ШІ не впевнений — показуємо вікно уточнення
       if (parsed.action === 'clarify') {
-        responseArea.style.display = 'none';
         showClarify(parsed, text);
         aiLoading = false;
         btn.disabled = false;
@@ -2612,18 +2631,16 @@ async function sendToAI() {
 
       if (parsed.action === 'save') {
         await processSaveAction(parsed, text);
-        responseArea.style.display = 'none';
+      } else if (parsed.action === 'save_finance') {
+        processFinanceAction(parsed, text);
       } else if (parsed.action === 'complete_habit') {
         await processCompleteHabit(parsed, text);
-        responseArea.style.display = 'none';
       } else if (parsed.action === 'complete_task') {
         await processCompleteTask(parsed, text);
-        responseArea.style.display = 'none';
       } else {
         // action === 'reply' — просто відповідь
         const replyText = parsed.comment || reply;
         addInboxChatMsg('agent', replyText);
-        responseArea.style.display = 'none';
       }
     } catch(e) {
       console.error('JSON parse error:', e);
@@ -2641,12 +2658,10 @@ async function sendToAI() {
       } catch(e2) {}
       saveOffline(text);
       addInboxChatMsg('agent', '✓ Збережено');
-      responseArea.style.display = 'none';
     }
   } else {
     saveOffline(text);
     addInboxChatMsg('agent', '📝 Збережено в Inbox. Інтернет недоступний — Агент не визначив категорію. Надішли ще раз коли буде мережа.');
-    responseArea.style.display = 'none';
   }
 
   aiLoading = false;
@@ -3424,6 +3439,26 @@ function renderEvening() {
       </div>
     `).join('');
   }
+
+  // Фінанси сьогодні
+  try {
+    const todayFinTxs = getFinance().filter(t => new Date(t.ts).toDateString() === today);
+    const finBlock = document.getElementById('evening-finance-block');
+    const finContent = document.getElementById('evening-finance-content');
+    if (finBlock && finContent && todayFinTxs.length > 0) {
+      finBlock.style.display = 'block';
+      const todayExp = todayFinTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+      const todayInc = todayFinTxs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+      finContent.innerHTML = todayFinTxs.slice(0,5).map(t =>
+        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(194,65,12,0.08);font-size:13px">
+          <span style="color:#7c2d12;font-weight:600">${escapeHtml(t.category)}${t.comment ? ' · '+escapeHtml(t.comment) : ''}</span>
+          <span style="font-weight:700;color:${t.type==='expense'?'#c2410c':'#16a34a'}">${t.type==='expense'?'-':'+'}${formatMoney(t.amount)}</span>
+        </div>`
+      ).join('') + (todayExp > 0 || todayInc > 0 ? `<div style="margin-top:6px;font-size:13px;color:rgba(194,65,12,0.6);font-weight:600">${todayExp>0?'Витрати: '+formatMoney(todayExp):''}${todayExp>0&&todayInc>0?' · ':''}${todayInc>0?'Доходи: +'+formatMoney(todayInc):''}</div>` : '');
+    } else if (finBlock) {
+      finBlock.style.display = 'none';
+    }
+  } catch(e) {}
 }
 
 function openAddMoment() {
@@ -3500,6 +3535,8 @@ function deleteMoment(id) {
   renderEvening();
 }
 
+const EVENING_SUMMARY_PROMPT = `Ти — особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно але по-доброму. Завершуй конкретною порадою або мотивуючою думкою на завтра. Відповідай українською.`;
+
 async function generateEveningSummary() {
   const btn = document.getElementById('evening-summary-btn');
   const el = document.getElementById('evening-summary');
@@ -3512,7 +3549,7 @@ async function generateEveningSummary() {
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
   const aiContext = getAIContext();
 
-  const systemPrompt = `Ти — особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно але по-доброму. Завершуй конкретною порадою або мотивуючою думкою на завтра. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
 
   const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
 Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
@@ -3547,7 +3584,7 @@ async function autoEveningSummary() {
   } catch(e) {}
 
   const aiContext = getAIContext();
-  const systemPrompt = `Ти — особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно але по-доброму. Завершуй конкретною порадою або мотивуючою думкою на завтра. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
   const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
 Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
 
@@ -3688,6 +3725,17 @@ const SLIDES = [
     body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Активність щодня, скільки записів зробив, які звички пропускаєш, де провисаєш.</p>
 <p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Агент дає чесний аналіз і конкретні поради — без лестощів.</p>`,
     color: 'linear-gradient(135deg,#6ee7b7,#16a34a)',
+  },
+  {
+    tag: 'Фінанси',
+    title: 'Облік грошей без таблиць',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Пиши в Inbox: "витратив 50 на їжу" — Агент сам запише у Фінанси, визначить категорію і стежитиме за бюджетом.</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заплатив за Netflix 15" → <b style="color:#1e1040">Підписки</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Перевищив ліміт → <b style="color:#1e1040">Агент попередить</b></div>
+</div>`,
+    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
     isLast: true,
   },
 ];
@@ -3852,6 +3900,25 @@ const HELP_CONTENT = {
       ]},
     ]
   },
+  finance: {
+    title: '€ Фінанси',
+    subtitle: 'Облік витрат і доходів. Агент веде бюджет і попереджає про перевитрати.',
+    sections: [
+      { title: 'Як додавати', items: [
+        { icon: '💬', title: 'Через Inbox', desc: 'Пиши "витратив 50 на їжу" або "отримав зарплату 3000" — Агент сам збереже у Фінанси.' },
+        { icon: '➕', title: 'Вручну', desc: 'Кнопка "+ додати" в списку транзакцій. Вибери тип, суму, категорію.' },
+        { icon: '€', title: 'Чат Агента', desc: 'Пиши прямо в чаті вкладки — Агент розпізнає і збереже.' },
+      ]},
+      { title: 'Бюджет', items: [
+        { icon: '🎯', title: 'Загальний ліміт', desc: 'Натисни ✎ в блоці "Бюджет по категоріях" щоб задати місячний ліміт.' },
+        { icon: '📊', title: 'По категоріях', desc: 'Задай ліміт окремо для кожної категорії — Агент попередить коли залишилось 20%.' },
+      ]},
+      { title: 'Команди Агенту', items: [
+        { icon: '🤖', title: 'Запити', desc: null,
+          cmds: ['скільки витратив цього тижня', 'де найбільше трачу', 'встанови бюджет 2000 на місяць', 'видали останню витрату'] },
+      ]},
+    ]
+  },
 };
 
 const FIRST_VISIT_TIPS = {
@@ -3860,6 +3927,7 @@ const FIRST_VISIT_TIPS = {
   notes:   { icon: '📁', title: 'Підказка', text: 'Нотатки автоматично сортуються по папках. Тапни на папку щоб побачити записи всередині' },
   me:      { icon: '📊', title: 'Підказка', text: 'Натисни ↻ в блоці "Аналіз агента" — отримаєш чесний огляд своєї продуктивності' },
   evening: { icon: '🌙', title: 'Підказка', text: 'Натисни ↻ в "Агент на вечір" — Агент підсумує твій день на основі всіх записів' },
+  finance: { icon: '€',  title: 'Підказка', text: 'Пиши витрати прямо в Inbox: "витратив 50 на їжу" — Агент сам збереже у Фінанси' },
 };
 
 let _helpOpen = false;
@@ -4372,6 +4440,22 @@ function setupKeyboardAvoiding() {
   // iOS іноді надсилає scroll замість resize — слухаємо обидва
   window.visualViewport.addEventListener('resize', update);
   window.visualViewport.addEventListener('scroll', update);
+
+  // Фікс повторного фокусу: iOS не генерує новий resize якщо viewport вже встановлений
+  // Викликаємо update() вручну при кожному фокусі на поле вводу
+  document.addEventListener('focusin', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+      setTimeout(update, 120);
+      setTimeout(update, 400); // другий раз — iOS іноді повільніше показує клавіатуру
+    }
+  }, { passive: true });
+
+  // При закритті клавіатури через кнопку Готово — iOS не завжди надсилає resize
+  document.addEventListener('focusout', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+      setTimeout(update, 150);
+    }
+  }, { passive: true });
 }
 
 // === PAGE TRANSITIONS ===
@@ -4709,6 +4793,7 @@ function saveAgentResponseAsNote(text) {
   const folder = originalNote?.folder || 'Загальне';
   notes.unshift({ id: Date.now(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
+  renderNotes();
   showToast('✓ Збережено як нотатку');
   document.getElementById('note-chat-save-btn')?.remove();
   _pendingAgentNote = '';
@@ -4835,10 +4920,10 @@ function toggleProdHabitToday(id) {
 
   document.addEventListener('touchend', e => {
     // Ignore if any modal is open
-    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal','clarify-modal'];
+    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal','clarify-modal','help-drawer','onboarding'];
     if (modals.some(id => {
       const el = document.getElementById(id);
-      return el && (el.style.display === 'flex' || el.classList.contains('open'));
+      return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('open'));
     })) return;
 
     const dx = e.changedTouches[0].clientX - swipeStartX;
@@ -4850,7 +4935,7 @@ function toggleProdHabitToday(id) {
     if (Math.abs(dx) < 60) return;
     if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
 
-    const tabs = ['inbox','tasks','notes','me','evening'];
+    const tabs = ['inbox','tasks','notes','me','evening','finance'];
     const idx = tabs.indexOf(currentTab);
 
     // If note-view-modal is open — swipe right closes it
@@ -5020,6 +5105,9 @@ async function sendClarifyText() {
     try {
       const parsed = JSON.parse(reply.replace(/\`\`\`json|\`\`\`/g, '').trim());
       if (parsed.action === 'save') await processSaveAction(parsed, combinedMsg);
+      else if (parsed.action === 'complete_habit') processCompleteHabit(parsed, combinedMsg);
+      else if (parsed.action === 'complete_task') processCompleteTask(parsed, combinedMsg);
+      else if (parsed.action === 'reply') addInboxChatMsg('agent', parsed.comment || reply);
     } catch(e) {}
   }
 }
@@ -5096,22 +5184,28 @@ async function processSaveAction(parsed, originalText) {
 
 // === COMPLETE HABIT FROM INBOX ===
 function processCompleteHabit(parsed, originalText) {
-  const habitId = parsed.habit_id;
-  const habits = getHabits();
-  const habit = habits.find(h => h.id == habitId);
-  if (!habit) {
-    // ID не знайдено — зберігаємо як нотатку
-    addInboxChatMsg('agent', 'Не знайшов таку звичку. Зберіг як нотатку.');
-    const notes = getNotes();
-    notes.unshift({ id: Date.now(), text: originalText, folder: 'Особисте', ts: Date.now() });
-    saveNotes(notes);
+  // Підтримуємо і старий формат (habit_id) і новий (habit_ids масив)
+  const ids = parsed.habit_ids || (parsed.habit_id ? [parsed.habit_id] : []);
+  if (ids.length === 0) {
+    addInboxChatMsg('agent', 'Не зрозумів яку звичку відмітити.');
     return;
   }
-  // Відмічаємо звичку як виконану сьогодні
+  const habits = getHabits();
   const today = new Date().toDateString();
   const log = getHabitLog();
   if (!log[today]) log[today] = {};
-  log[today][habit.id] = true;
+  const completed = [];
+  ids.forEach(habitId => {
+    const habit = habits.find(h => h.id == habitId);
+    if (habit) {
+      log[today][habit.id] = true;
+      completed.push(habit.name);
+    }
+  });
+  if (completed.length === 0) {
+    addInboxChatMsg('agent', 'Не знайшов такі звички.');
+    return;
+  }
   saveHabitLog(log);
   renderProdHabits();
   renderHabits();
@@ -5120,25 +5214,33 @@ function processCompleteHabit(parsed, originalText) {
   items.unshift({ id: Date.now(), text: originalText, category: 'habit', ts: Date.now(), processed: true });
   saveInbox(items);
   renderInbox();
-  const msg = parsed.comment || `✅ Відмітив звичку "${habit.name}" як виконану сьогодні`;
+  const msg = parsed.comment || (completed.length === 1
+    ? `✅ Відмітив звичку "${completed[0]}" як виконану`
+    : `✅ Відмітив ${completed.length} звички: ${completed.join(', ')}`);
   addInboxChatMsg('agent', msg);
 }
 
 // === COMPLETE TASK FROM INBOX ===
 function processCompleteTask(parsed, originalText) {
-  const taskId = parsed.task_id;
-  const tasks = getTasks();
-  const task = tasks.find(t => t.id == taskId);
-  if (!task) {
-    addInboxChatMsg('agent', 'Не знайшов таку задачу. Зберіг як нотатку.');
-    const notes = getNotes();
-    notes.unshift({ id: Date.now(), text: originalText, folder: 'Особисте', ts: Date.now() });
-    saveNotes(notes);
+  // Підтримуємо і старий формат (task_id) і новий (task_ids масив)
+  const ids = parsed.task_ids || (parsed.task_id ? [parsed.task_id] : []);
+  if (ids.length === 0) {
+    addInboxChatMsg('agent', 'Не зрозумів яку задачу закрити.');
     return;
   }
-  // Закриваємо задачу
-  const idx = tasks.findIndex(t => t.id == taskId);
-  tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() };
+  const tasks = getTasks();
+  const completed = [];
+  ids.forEach(taskId => {
+    const idx = tasks.findIndex(t => t.id == taskId);
+    if (idx !== -1) {
+      completed.push(tasks[idx].title);
+      tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() };
+    }
+  });
+  if (completed.length === 0) {
+    addInboxChatMsg('agent', 'Не знайшов такі задачі.');
+    return;
+  }
   saveTasks(tasks);
   renderTasks();
   // Зберігаємо в Inbox для історії
@@ -5146,7 +5248,9 @@ function processCompleteTask(parsed, originalText) {
   items.unshift({ id: Date.now(), text: originalText, category: 'task', ts: Date.now(), processed: true });
   saveInbox(items);
   renderInbox();
-  const msg = parsed.comment || `✅ Задачу "${task.title}" закрито`;
+  const msg = parsed.comment || (completed.length === 1
+    ? `✅ Задачу "${completed[0]}" закрито`
+    : `✅ Закрив ${completed.length} задачі: ${completed.join(', ')}`);
   addInboxChatMsg('agent', msg);
 }
 
@@ -5214,7 +5318,7 @@ function toggleChatBar(tab) {
 }
 
 function closeAllChatBars(resetActive = true) {
-  ['tasks','me','evening'].forEach(t => {
+  ['inbox','tasks','me','evening','finance'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -5227,7 +5331,7 @@ function closeAllChatBars(resetActive = true) {
 
 // Свайп вниз по чат-вікну щоб закрити
 function setupChatBarSwipe() {
-  ['tasks','me','evening'].forEach(tab => {
+  ['inbox','tasks','me','evening','finance'].forEach(tab => {
     const bar = document.getElementById(tab + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -5503,6 +5607,8 @@ async function sendTasksBarMessage() {
 }
 
 // === ME AI BAR ===
+let meBarLoading = false;
+
 function showMeChatMessages() {
   openChatBar('me');
 }
@@ -5517,6 +5623,684 @@ function addMeChatMsg(role, text, id = '') {
   div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
+}
+
+// === FINANCE ===
+
+// Storage
+function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
+function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); }
+function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
+function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
+function getFinCats() {
+  const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
+  if (saved) return saved;
+  return {
+    expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Трава','Інше'],
+    income:  ['Зарплата','Надходження','Повернення','Інше'],
+  };
+}
+function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
+
+// State
+let currentFinTab = 'expense';
+let currentFinPeriod = 'month';
+const CURRENCY = '€';
+
+// Категорії кольори
+const FIN_CAT_COLORS = ['#f97316','#0ea5e9','#a855f7','#22c55e','#ef4444','#eab308','#14b8a6','#f43f5e','#6366f1','#84cc16','#fb923c','#38bdf8'];
+
+function getFinColor(idx) { return FIN_CAT_COLORS[idx % FIN_CAT_COLORS.length]; }
+
+// Фільтр транзакцій по періоду
+function getFinPeriodRange(period) {
+  const now = new Date();
+  let from;
+  if (period === 'week') {
+    from = new Date(now); from.setDate(now.getDate() - 6); from.setHours(0,0,0,0);
+  } else if (period === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  }
+  return from.getTime();
+}
+
+function getFilteredTransactions(type, period) {
+  const from = getFinPeriodRange(period);
+  return getFinance().filter(t => t.type === type && t.ts >= from);
+}
+
+function formatMoney(n) {
+  return CURRENCY + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
+}
+
+// Перемикачі
+function switchFinTab(tab) {
+  currentFinTab = tab;
+  ['expense','income','balance'].forEach(t => {
+    const el = document.getElementById('fin-tab-' + t);
+    if (!el) return;
+    const active = t === tab;
+    el.style.background = active ? 'white' : '';
+    el.style.color = active ? (tab === 'expense' ? '#c2410c' : tab === 'income' ? '#16a34a' : '#4f46e5') : 'rgba(30,16,64,0.4)';
+    el.style.boxShadow = active ? '0 2px 8px rgba(0,0,0,0.08)' : '';
+  });
+  renderFinance();
+}
+
+function setFinPeriod(period) {
+  currentFinPeriod = period;
+  ['week','month','3months'].forEach(p => {
+    const el = document.getElementById('fin-period-' + p);
+    if (!el) return;
+    const active = p === period;
+    el.style.borderColor = active ? '#c2410c' : 'rgba(194,65,12,0.2)';
+    el.style.background = active ? 'rgba(194,65,12,0.1)' : 'rgba(194,65,12,0.05)';
+    el.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
+  });
+  renderFinance();
+}
+
+// Головний рендер
+function renderFinance() {
+  if (currentFinTab === 'balance') {
+    renderFinBalance();
+  } else {
+    renderFinMain(currentFinTab);
+  }
+}
+
+function renderFinMain(type) {
+  const txs = getFilteredTransactions(type, currentFinPeriod);
+  const total = txs.reduce((s, t) => s + t.amount, 0);
+  const budget = getFinBudget();
+  const isExpense = type === 'expense';
+
+  // Зведення
+  const periodLabels = { week: 'за тиждень', month: 'за місяць', '3months': 'за 3 місяці' };
+  const typeLabel = isExpense ? 'Витрати' : 'Доходи';
+  document.getElementById('fin-summary-label').textContent = `${typeLabel} ${periodLabels[currentFinPeriod]}`;
+  document.getElementById('fin-total').textContent = formatMoney(total);
+  document.getElementById('fin-total').style.color = isExpense ? '#7c2d12' : '#14532d';
+
+  // Бюджет (тільки для витрат і місяця)
+  const budgetEl = document.getElementById('fin-budget-label');
+  const budgetRemainEl = document.getElementById('fin-budget-remain');
+  const budgetBarWrap = document.getElementById('fin-budget-bar-wrap');
+  const budgetBar = document.getElementById('fin-budget-bar');
+  if (isExpense && currentFinPeriod === 'month' && budget.total > 0) {
+    const remain = budget.total - total;
+    budgetEl.textContent = `Бюджет: ${formatMoney(budget.total)}`;
+    budgetRemainEl.textContent = remain >= 0 ? `Залишилось ${formatMoney(remain)}` : `Перевищено на ${formatMoney(-remain)}`;
+    budgetRemainEl.style.color = remain >= 0 ? '#c2410c' : '#dc2626';
+    budgetBarWrap.style.display = 'block';
+    const pct = Math.min(100, Math.round(total / budget.total * 100));
+    budgetBar.style.width = pct + '%';
+    budgetBar.style.background = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#c2410c';
+  } else {
+    budgetEl.textContent = '';
+    budgetRemainEl.textContent = '';
+    budgetBarWrap.style.display = 'none';
+  }
+
+  // Графік по днях
+  renderFinChart(txs, type);
+
+  // По категоріях
+  const catsBlock = document.getElementById('fin-cats-block');
+  const catBudgetsBlock = document.getElementById('fin-cat-budgets-block');
+  catsBlock.style.display = 'block';
+  catBudgetsBlock.style.display = isExpense ? 'block' : 'none';
+  renderFinCategories(txs, type);
+  if (isExpense) renderFinCatBudgets(txs);
+
+  // Список транзакцій
+  renderFinTransactions(txs);
+}
+
+function renderFinBalance() {
+  const from = getFinPeriodRange(currentFinPeriod);
+  const allTxs = getFinance().filter(t => t.ts >= from);
+  const income = allTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = allTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance = income - expense;
+
+  const periodLabels = { week: 'за тиждень', month: 'за місяць', '3months': 'за 3 місяці' };
+  document.getElementById('fin-summary-label').textContent = `Баланс ${periodLabels[currentFinPeriod]}`;
+  document.getElementById('fin-total').textContent = (balance >= 0 ? '+' : '') + (balance % 1 === 0 ? balance : balance.toFixed(2)) + CURRENCY;
+  document.getElementById('fin-total').style.color = balance >= 0 ? '#14532d' : '#7c2d12';
+  document.getElementById('fin-budget-label').textContent = `Доходи: +${formatMoney(income)}`;
+  document.getElementById('fin-budget-remain').textContent = `Витрати: -${formatMoney(expense)}`;
+  document.getElementById('fin-budget-remain').style.color = '#c2410c';
+  document.getElementById('fin-budget-bar-wrap').style.display = 'none';
+
+  // Графік balance по днях
+  renderFinChart(allTxs, 'balance');
+  document.getElementById('fin-cats-block').style.display = 'none';
+  document.getElementById('fin-cat-budgets-block').style.display = 'none';
+  renderFinTransactions(allTxs);
+}
+
+function renderFinChart(txs, type) {
+  const chartEl = document.getElementById('fin-chart');
+  const labelEl = document.getElementById('fin-chart-label');
+  const days = currentFinPeriod === 'week' ? 7 : currentFinPeriod === 'month' ? 30 : 90;
+  const now = new Date();
+
+  // Групуємо по дням
+  const byDay = {};
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (days - 1 - i));
+    byDay[d.toDateString()] = 0;
+  }
+  txs.forEach(t => {
+    const ds = new Date(t.ts).toDateString();
+    if (ds in byDay) byDay[ds] += t.amount;
+  });
+
+  const vals = Object.values(byDay);
+  const maxVal = Math.max(1, ...vals);
+  const barColor = type === 'income' ? '#16a34a' : type === 'balance' ? '#6366f1' : '#f97316';
+  const labelMap = { expense: 'Витрати по днях', income: 'Доходи по днях', balance: 'Баланс по днях' };
+  labelEl.textContent = labelMap[type] || '';
+
+  const showEvery = days > 30 ? 10 : days > 14 ? 5 : 1;
+  chartEl.innerHTML = vals.map((v, i) => {
+    const h = Math.max(3, Math.round(v / maxVal * 60));
+    const isToday = i === days - 1;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px">
+      <div style="width:100%;height:${h}px;background:${isToday ? barColor : barColor + '88'};border-radius:3px 3px 0 0"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinCategories(txs, type) {
+  const catEl = document.getElementById('fin-categories');
+  const total = txs.reduce((s, t) => s + t.amount, 0) || 1;
+  const catMap = {};
+  txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) {
+    catEl.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Немає даних</div>';
+    return;
+  }
+  catEl.innerHTML = sorted.map(([cat, amt], i) => {
+    const pct = Math.round(amt / total * 100);
+    const color = getFinColor(i);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.6);min-width:80px">${escapeHtml(cat)}</div>
+      <div style="flex:1;height:6px;background:rgba(0,0,0,0.05);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);min-width:52px;text-align:right">${formatMoney(amt)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinCatBudgets(txs) {
+  const el = document.getElementById('fin-cat-budgets');
+  const budget = getFinBudget();
+  const cats = getFinCats();
+  const catMap = {};
+  txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+
+  if (!budget.categories || Object.keys(budget.categories).length === 0) {
+    el.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.35);text-align:center;padding:4px">Ліміти не встановлені. Натисни ✎ щоб задати.</div>';
+    return;
+  }
+  el.innerHTML = Object.entries(budget.categories).map(([cat, limit]) => {
+    if (!limit) return '';
+    const spent = catMap[cat] || 0;
+    const pct = Math.min(100, Math.round(spent / limit * 100));
+    const color = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#16a34a';
+    const remain = limit - spent;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(cat)}</span>
+        <span style="font-size:12px;font-weight:600;color:${color}">${remain >= 0 ? `залишилось ${formatMoney(remain)}` : `перевищено на ${formatMoney(-remain)}`}</span>
+      </div>
+      <div style="height:5px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">${formatMoney(spent)} з ${formatMoney(limit)}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+}
+
+function renderFinTransactions(txs) {
+  const el = document.getElementById('fin-transactions');
+  if (txs.length === 0) {
+    el.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:12px">Немає транзакцій за цей період</div>';
+    return;
+  }
+  const sorted = [...txs].sort((a, b) => b.ts - a.ts).slice(0, 50);
+  el.innerHTML = sorted.map(t => {
+    const isExpense = t.type === 'expense';
+    const sign = isExpense ? '-' : '+';
+    const color = isExpense ? '#c2410c' : '#16a34a';
+    const date = new Date(t.ts);
+    const dateStr = date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(30,16,64,0.05)" onclick="openEditTransaction(${t.id})">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#1e1040">${escapeHtml(t.category)}</div>
+        ${t.comment ? `<div style="font-size:12px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:15px;font-weight:800;color:${color}">${sign}${formatMoney(t.amount)}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Додавання транзакції вручну
+let _finEditId = null;
+
+function openAddTransaction(prefill = {}) {
+  _finEditId = null;
+  const cats = getFinCats();
+  const type = prefill.type || currentFinTab === 'income' ? 'income' : 'expense';
+  _showTransactionModal({ type, amount: prefill.amount || '', category: prefill.category || '', comment: prefill.comment || '' });
+}
+
+function openEditTransaction(id) {
+  const txs = getFinance();
+  const t = txs.find(x => x.id === id);
+  if (!t) return;
+  _finEditId = id;
+  _showTransactionModal(t);
+}
+
+function _showTransactionModal(data) {
+  const cats = getFinCats();
+  const isExpense = data.type !== 'income';
+  const catList = isExpense ? cats.expense : cats.income;
+
+  const existing = document.getElementById('fin-tx-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fin-tx-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = `
+    <div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:16px 20px calc(env(safe-area-inset-bottom)+28px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15)">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">${_finEditId ? 'Редагувати' : 'Нова'} ${isExpense ? 'витрата' : 'дохід'}</div>
+
+      <!-- Тип -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button id="fntx-btn-expense" onclick="toggleFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${isExpense ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${isExpense ? 'rgba(194,65,12,0.08)' : 'white'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.4)'}">Витрата</button>
+        <button id="fntx-btn-income" onclick="toggleFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.1)'};background:${!isExpense ? 'rgba(22,163,74,0.08)' : 'white'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.4)'}">Дохід</button>
+      </div>
+
+      <!-- Сума -->
+      <input id="fntx-amount" type="number" placeholder="Сума (€)" inputmode="decimal"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:20px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box"
+        value="${data.amount || ''}">
+
+      <!-- Категорія -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Категорія</div>
+        <div id="fntx-cats" style="display:flex;flex-wrap:wrap;gap:6px">
+          ${catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${c === data.category ? 'rgba(194,65,12,0.08)' : 'white'};color:${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(c)}</button>`).join('')}
+        </div>
+        <input id="fntx-cat-custom" type="text" placeholder="або своя категорія…"
+          style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-top:8px;box-sizing:border-box"
+          value="${catList.includes(data.category) ? '' : (data.category || '')}">
+      </div>
+
+      <!-- Коментар -->
+      <input id="fntx-comment" type="text" placeholder="Коментар (необов'язково)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
+        value="${data.comment || ''}">
+
+      <div style="display:flex;gap:8px">
+        ${_finEditId ? `<button onclick="deleteFinTransaction()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:15px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">🗑</button>` : ''}
+        <button onclick="closeFinTxModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
+        <button onclick="saveFinTransaction()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(() => { document.getElementById('fntx-amount')?.focus(); }, 300);
+  _finTxCurrentType = isExpense ? 'expense' : 'income';
+  _finTxSelectedCat = data.category || '';
+}
+
+let _finTxCurrentType = 'expense';
+let _finTxSelectedCat = '';
+
+function toggleFinTxType(type) {
+  _finTxCurrentType = type;
+  const isExpense = type === 'expense';
+  const cats = getFinCats();
+  const catList = isExpense ? cats.expense : cats.income;
+
+  const btnE = document.getElementById('fntx-btn-expense');
+  const btnI = document.getElementById('fntx-btn-income');
+  if (btnE) { btnE.style.borderColor = isExpense ? '#c2410c' : 'rgba(30,16,64,0.1)'; btnE.style.background = isExpense ? 'rgba(194,65,12,0.08)' : 'white'; btnE.style.color = isExpense ? '#c2410c' : 'rgba(30,16,64,0.4)'; }
+  if (btnI) { btnI.style.borderColor = !isExpense ? '#16a34a' : 'rgba(30,16,64,0.1)'; btnI.style.background = !isExpense ? 'rgba(22,163,74,0.08)' : 'white'; btnI.style.color = !isExpense ? '#16a34a' : 'rgba(30,16,64,0.4)'; }
+
+  _finTxSelectedCat = '';
+  const catsEl = document.getElementById('fntx-cats');
+  if (catsEl) catsEl.innerHTML = catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:rgba(30,16,64,0.5)">${escapeHtml(c)}</button>`).join('');
+}
+
+function selectFinTxCat(cat) {
+  _finTxSelectedCat = cat;
+  const catsEl = document.getElementById('fntx-cats');
+  if (!catsEl) return;
+  catsEl.querySelectorAll('button').forEach(btn => {
+    const active = btn.textContent === cat;
+    btn.style.borderColor = active ? '#c2410c' : 'rgba(30,16,64,0.1)';
+    btn.style.background = active ? 'rgba(194,65,12,0.08)' : 'white';
+    btn.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
+  });
+  const customInput = document.getElementById('fntx-cat-custom');
+  if (customInput) customInput.value = '';
+}
+
+function saveFinTransaction() {
+  const amountRaw = parseFloat(document.getElementById('fntx-amount')?.value || '0');
+  if (!amountRaw || amountRaw <= 0) { showToast('Введи суму'); return; }
+
+  const customCat = document.getElementById('fntx-cat-custom')?.value.trim();
+  const category = customCat || _finTxSelectedCat;
+  if (!category) { showToast('Вибери категорію'); return; }
+
+  const comment = document.getElementById('fntx-comment')?.value.trim() || '';
+  const txs = getFinance();
+
+  // Перевіряємо чи нова категорія
+  const cats = getFinCats();
+  const catList = _finTxCurrentType === 'expense' ? cats.expense : cats.income;
+  if (customCat && !catList.includes(customCat)) {
+    cats[_finTxCurrentType].push(customCat);
+    saveFinCats(cats);
+  }
+
+  if (_finEditId) {
+    const idx = txs.findIndex(x => x.id === _finEditId);
+    if (idx !== -1) txs[idx] = { ...txs[idx], amount: amountRaw, category, comment, type: _finTxCurrentType };
+  } else {
+    txs.unshift({ id: Date.now(), type: _finTxCurrentType, amount: amountRaw, category, comment, ts: Date.now() });
+  }
+  saveFinance(txs);
+  closeFinTxModal();
+  renderFinance();
+  showToast(_finEditId ? '✓ Оновлено' : `✓ ${_finTxCurrentType === 'expense' ? 'Витрату' : 'Дохід'} збережено`);
+  _finEditId = null;
+}
+
+function deleteFinTransaction() {
+  if (!_finEditId) return;
+  const item = getFinance().find(t => t.id === _finEditId);
+  saveFinance(getFinance().filter(t => t.id !== _finEditId));
+  closeFinTxModal();
+  renderFinance();
+  if (item) showUndoToast('Транзакцію видалено', () => {
+    const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
+  });
+  _finEditId = null;
+}
+
+function closeFinTxModal() {
+  document.getElementById('fin-tx-modal')?.remove();
+}
+
+// Модал бюджету
+function openFinBudgetModal() {
+  const budget = getFinBudget();
+  const cats = getFinCats();
+
+  const existing = document.getElementById('fin-budget-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fin-budget-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = `
+    <div onclick="closeFinBudgetModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:16px 20px calc(env(safe-area-inset-bottom)+28px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:80vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">Бюджет на місяць</div>
+
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Загальний ліміт</div>
+      <input id="finbdg-total" type="number" placeholder="€ 0 — без ліміту" inputmode="decimal"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:17px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
+        value="${budget.total || ''}">
+
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">По категоріях</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        ${cats.expense.map(cat => `
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat)}</div>
+            <input type="number" id="finbdg-cat-${escapeHtml(cat)}" placeholder="без ліміту" inputmode="decimal"
+              style="width:100px;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;text-align:right"
+              value="${budget.categories?.[cat] || ''}">
+          </div>`).join('')}
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="closeFinBudgetModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
+        <button onclick="saveFinBudgetFromModal()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function saveFinBudgetFromModal() {
+  const cats = getFinCats();
+  const total = parseFloat(document.getElementById('finbdg-total')?.value || '0') || 0;
+  const categories = {};
+  cats.expense.forEach(cat => {
+    const val = parseFloat(document.getElementById(`finbdg-cat-${cat}`)?.value || '0') || 0;
+    if (val > 0) categories[cat] = val;
+  });
+  saveFinBudget({ total, categories });
+  closeFinBudgetModal();
+  renderFinance();
+  showToast('✓ Бюджет збережено');
+}
+
+function closeFinBudgetModal() {
+  document.getElementById('fin-budget-modal')?.remove();
+}
+
+// Обробка фінансів з Inbox
+function processFinanceAction(parsed, originalText) {
+  const cats = getFinCats();
+  const type = parsed.fin_type || 'expense';
+  const amount = parseFloat(parsed.amount) || 0;
+  const category = parsed.category || (type === 'expense' ? 'Інше' : 'Інше');
+  const comment = parsed.comment || originalText;
+
+  if (!amount || amount <= 0) {
+    addInboxChatMsg('agent', 'Не вдалось розпізнати суму. Спробуй написати чіткіше: "витратив 50 на їжу"');
+    return;
+  }
+
+  // Нова категорія — зберігаємо без запиту (агент вже підтвердив)
+  const catList = type === 'expense' ? cats.expense : cats.income;
+  if (!catList.includes(category)) {
+    catList.push(category);
+    saveFinCats(cats);
+  }
+
+  const txs = getFinance();
+  txs.unshift({ id: Date.now(), type, amount, category, comment, ts: Date.now() });
+  saveFinance(txs);
+
+  // Зберігаємо в Inbox для історії
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: originalText, category: 'finance', ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+
+  if (currentTab === 'finance') renderFinance();
+
+  const sign = type === 'expense' ? '-' : '+';
+  const typeLabel = type === 'expense' ? 'витрату' : 'дохід';
+  addInboxChatMsg('agent', `${sign}${formatMoney(amount)} · ${category}${parsed.fin_comment ? ' — ' + parsed.fin_comment : ''}`);
+
+  // Попередження про перевищення бюджету
+  checkFinBudgetWarning(type, category, amount);
+}
+
+function checkFinBudgetWarning(type, category, amount) {
+  if (type !== 'expense') return;
+  const budget = getFinBudget();
+  const from = getFinPeriodRange('month');
+  const txs = getFinance().filter(t => t.type === 'expense' && t.ts >= from);
+  const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
+
+  // Загальний ліміт
+  if (budget.total > 0) {
+    const pct = totalSpent / budget.total;
+    if (pct >= 1) addInboxChatMsg('agent', `⚠️ Загальний бюджет на місяць перевищено. Витрачено ${formatMoney(totalSpent)} з ${formatMoney(budget.total)}.`);
+    else if (pct >= 0.8) addInboxChatMsg('agent', `💡 До ліміту місяця залишилось ${formatMoney(budget.total - totalSpent)}.`);
+  }
+
+  // Категорійний ліміт
+  const catLimit = budget.categories?.[category];
+  if (catLimit > 0) {
+    const catSpent = txs.filter(t => t.category === category).reduce((s, t) => s + t.amount, 0);
+    const pct = catSpent / catLimit;
+    if (pct >= 1) addInboxChatMsg('agent', `⚠️ Ліміт по "${category}" перевищено: ${formatMoney(catSpent)} з ${formatMoney(catLimit)}.`);
+    else if (pct >= 0.8) addInboxChatMsg('agent', `💡 По "${category}" залишилось ${formatMoney(catLimit - catSpent)}.`);
+  }
+}
+
+// Finance контекст для getAIContext
+function getFinanceContext() {
+  const today = new Date().toDateString();
+  const from = getFinPeriodRange('month');
+  const txs = getFinance().filter(t => t.ts >= from);
+  if (txs.length === 0) return '';
+
+  const expenses = txs.filter(t => t.type === 'expense');
+  const incomes = txs.filter(t => t.type === 'income');
+  const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+  const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+  const budget = getFinBudget();
+
+  const catMap = {};
+  expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const top3 = Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,3).map(([c,a]) => `${c}: ${formatMoney(a)}`).join(', ');
+
+  const todayTxs = txs.filter(t => new Date(t.ts).toDateString() === today);
+  const todaySum = todayTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+
+  let parts = [`Фінанси (місяць): витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}`];
+  if (budget.total > 0) parts.push(`бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
+  if (top3) parts.push(`топ категорії: ${top3}`);
+  if (todaySum > 0) parts.push(`сьогодні витрачено ${formatMoney(todaySum)}`);
+  return parts.join('; ');
+}
+
+// === FINANCE AI BAR ===
+let financeBarHistory = [];
+let financeBarLoading = false;
+
+function addFinanceChatMsg(role, text) {
+  const el = document.getElementById('finance-chat-messages');
+  if (!el) return;
+  try { openChatBar('finance'); } catch(e) {}
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') financeBarHistory.push({ role: 'user', content: text });
+  else financeBarHistory.push({ role: 'assistant', content: text });
+}
+
+async function sendFinanceBarMessage() {
+  if (financeBarLoading) return;
+  const input = document.getElementById('finance-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addFinanceChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  input.value = ''; input.style.height = 'auto';
+  input.focus();
+  addFinanceChatMsg('user', text);
+  financeBarLoading = true;
+
+  const from = getFinPeriodRange('month');
+  const txs = getFinance().filter(t => t.ts >= from);
+  const budget = getFinBudget();
+  const cats = getFinCats();
+  const aiContext = getAIContext();
+
+  const FINANCE_BAR_PROMPT = `Ти — фінансовий агент NeverMind. Звертаєшся на "ти". Відповіді — 1-3 речення, конкретно.
+Валюта: €. Поточний місяць.
+Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}€ ${t.comment||''}`).join('; ') || 'немає'}
+Загальний бюджет: ${budget.total ? budget.total+'€' : 'не встановлено'}
+Категорії витрат: ${cats.expense.join(', ')}
+Категорії доходів: ${cats.income.join(', ')}
+
+Ти можеш виконувати дії через JSON (відповідай ТІЛЬКИ JSON якщо потрібна дія):
+{"action":"save_expense","amount":50,"category":"Їжа","comment":"продукти"}
+{"action":"save_income","amount":3000,"category":"Зарплата","comment":""}
+{"action":"delete_transaction","id":1234567890}
+{"action":"set_budget","total":2000,"categories":{"Їжа":400}}
+{"action":"create_category","type":"expense","name":"Нова категорія"}
+
+Якщо питання або аналіз — відповідай текстом. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: FINANCE_BAR_PROMPT }, ...financeBarHistory.slice(-10)], max_tokens: 300, temperature: 0.5 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
+
+    // Спробуємо JSON дію
+    try {
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
+      if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
+        const type = parsed.action === 'save_expense' ? 'expense' : 'income';
+        const txs2 = getFinance();
+        txs2.unshift({ id: Date.now(), type, amount: parseFloat(parsed.amount), category: parsed.category || 'Інше', comment: parsed.comment || '', ts: Date.now() });
+        saveFinance(txs2);
+        renderFinance();
+        addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(parsed.amount)} · ${parsed.category}`);
+        checkFinBudgetWarning(type, parsed.category, parseFloat(parsed.amount));
+      } else if (parsed.action === 'delete_transaction') {
+        const item = getFinance().find(t => t.id === parsed.id);
+        saveFinance(getFinance().filter(t => t.id !== parsed.id));
+        renderFinance();
+        addFinanceChatMsg('agent', `🗑 Видалено: ${item ? item.category + ' ' + formatMoney(item.amount) : 'транзакцію'}`);
+      } else if (parsed.action === 'set_budget') {
+        const bdg = getFinBudget();
+        if (parsed.total) bdg.total = parsed.total;
+        if (parsed.categories) Object.assign(bdg.categories, parsed.categories);
+        saveFinBudget(bdg);
+        renderFinance();
+        addFinanceChatMsg('agent', '✓ Бюджет оновлено');
+      } else if (parsed.action === 'create_category') {
+        const c = getFinCats();
+        const list = parsed.type === 'income' ? c.income : c.expense;
+        if (!list.includes(parsed.name)) { list.push(parsed.name); saveFinCats(c); }
+        renderFinance();
+        addFinanceChatMsg('agent', `✓ Категорію "${parsed.name}" додано`);
+      } else {
+        addFinanceChatMsg('agent', reply);
+      }
+    } catch {
+      addFinanceChatMsg('agent', reply);
+    }
+  } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
+  financeBarLoading = false;
 }
 
 // === EVENING AI BAR ===
@@ -5619,7 +6403,11 @@ function init() {
   } catch(e) {}
   try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
   try { renderInbox(); } catch(e) {}
-  try { updateAiBarVisibility(); } catch(e) {}
+  // Показуємо inbox bar одразу — він тепер керується як tasks/me/evening
+  try {
+    const inboxBar = document.getElementById('inbox-ai-bar');
+    if (inboxBar) inboxBar.style.display = 'flex';
+  } catch(e) {}
   try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
   try { setupAutoEveningSummary(); } catch(e) {}
