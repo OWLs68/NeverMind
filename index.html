@@ -1307,10 +1307,6 @@ body {
       </div>
     </div>
 
-    <!-- ME AI BAR — нова система -->
-    
-
-
     <!-- PAGE: EVENING -->
     <div class="page" id="page-evening">
       <div class="page-header">
@@ -1359,9 +1355,6 @@ body {
 
       </div><!-- /evening scroll -->
     </div>
-
-    <!-- EVENING AI BAR — нова система -->
-    
 
   </div><!-- /scroll-wrap -->
 
@@ -1726,7 +1719,6 @@ const TAB_THEMES = {
 };
 
 // === CURRENT STATE ===
-const AI_BAR_BOTTOM = 83; // дефолт, реальне значення береться з --tabbar-h в JS
 let currentTab = 'inbox';
 
 // === SWITCH TAB ===
@@ -2059,28 +2051,28 @@ function getAIContext() {
   if (profile) parts.push(`Профіль: ${profile}`);
   if (memory) parts.push(`Що знаю про користувача:\n${memory}`);
 
-  // === Активні задачі ===
+  // === Активні задачі (з ID для зіставлення) ===
   const tasks = getTasks().filter(t => t.status === 'active').slice(0, 8);
   if (tasks.length > 0) {
     const taskList = tasks.map(t => {
       const steps = (t.steps || []);
       const doneSteps = steps.filter(s => s.done).length;
       const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} кроків)` : '';
-      return `- ${t.title}${stepInfo}`;
+      return `- [ID:${t.id}] ${t.title}${stepInfo}`;
     }).join('\n');
-    parts.push(`Активні задачі:\n${taskList}`);
+    parts.push(`Активні задачі (використовуй ID для complete_task):\n${taskList}`);
   }
 
-  // === Звички сьогодні ===
+  // === Звички сьогодні (з ID для зіставлення) ===
   const habits = getHabits();
   const log = getHabitLog();
   const today = now.toDateString();
   if (habits.length > 0) {
     const habitList = habits.map(h => {
       const done = !!log[today]?.[h.id];
-      return `- ${h.name}: ${done ? '✓ виконано' : '✗ не виконано'}`;
+      return `- [ID:${h.id}] "${h.name}": ${done ? '✓ виконано' : '✗ не виконано'}`;
     }).join('\n');
-    parts.push(`Звички сьогодні:\n${habitList}`);
+    parts.push(`Звички (використовуй ID для complete_habit):\n${habitList}`);
   }
 
   // === Записи Inbox за сьогодні (останні 8) ===
@@ -2190,63 +2182,80 @@ function setupSW() {
 
 // === GEMINI API ===
 const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
-Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія або просто питання.
+Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія, або звіт про виконане.
 
-ЯКЩО це запис (думка, задача, ідея, звичка, подія, нотатка) — відповідай ТІЛЬКИ JSON:
+СПОЧАТКУ перевір: чи повідомлення говорить про ВИКОНАННЯ або ФАКТ того що вже є в списку звичок або задач?
+Якщо так — дій відповідно (complete_habit або complete_task), НЕ створюй дублікат.
+
+ЯКЩО повідомлення означає що звичка виконана сьогодні (є в списку "Звички"):
+{
+  "action": "complete_habit",
+  "habit_id": 123456,
+  "comment": "коротке підтвердження (1 речення)"
+}
+
+ЯКЩО повідомлення означає що задача виконана або закрита (є в списку "Активні задачі"):
+{
+  "action": "complete_task",
+  "task_id": 123456,
+  "comment": "коротке підтвердження (1 речення)"
+}
+
+ЯКЩО це новий запис (думка, задача, ідея, нова звичка, подія, нотатка) — відповідай ТІЛЬКИ JSON:
 {
   "action": "save",
   "category": "idea|task|habit|note|event",
-  "folder": "назва папки українською",
+  "folder": "назва папки українською або null",
   "text": "очищений текст запису",
-  "comment": "коротка практична ремарка (1 речення). НЕ хвали запис, не кажи що він чудовий чи правильний."
+  "comment": "коротка практична ремарка (1 речення). НЕ хвали запис."
 }
 
-ЯКЩО це питання або розмова (не запис) — відповідай ТІЛЬКИ JSON:
+ЯКЩО це питання або розмова (не запис і не виконання) — відповідай ТІЛЬКИ JSON:
 {
   "action": "reply",
-  "comment": "відповідь українською, 2-4 речення. Якщо є список — кожен пункт з нового рядка через \n (напр: назва1\nназва2\nназва3)"
+  "comment": "відповідь українською, 2-4 речення. Якщо є список — кожен пункт з нового рядка через \\n"
 }
 
-Правила визначення категорії:
-- task: є конкретна дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити"). Для задач:
-  - поле "text" — оригінальний текст користувача (виправ тільки граматику, не змінюй зміст)
-  - поле "task_title" — коротка назва задачі 2-5 слів (напр: "Купити продукти", "Зателефонувати лікарю")
-  - ЯКЩО в записі є час або дата — обов'язково включи їх у task_title. Час переводь у формат 24г (напр: "в три" вдень = "15:00", вночі = "03:00"). Орієнтуйся на поточний час з контексту щоб зрозуміти день чи ніч. Дату включай якщо вона конкретна (напр: "у п'ятницю", "завтра", "18 березня"). Приклади: "забрати стірку в три" → "Забрати стірку в 15:00"; "зателефонувати завтра вранці" → "Зателефонувати завтра о 9:00"
-  - поле "task_steps" — масив кроків якщо в задачі є список або кілька дій (напр: ["молоко","хліб","морозиво"]). Якщо список не очевидний — порожній масив []
-- habit: регулярна повторювана дія ("щодня", "кожен ранок", "щотижня", "тренуватись"). Для звичок поле "text" — це коротка назва 2-4 слова що точно описує суть (напр: "Бігати", "Читати щодня", "Рибалка на вихідних"). НЕ копіюй весь текст — витягни тільки суть.
-- event: ТІЛЬКИ короткий факт події без емоцій і роздумів ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції, оцінки, роздуми, висновки — це НЕ event
-- idea: творча думка, ідея, план, натхнення
-- note: рефлексія, особисті думки, емоції, висновки, спостереження, факти, їжа, витрати. ЯКЩО людина ділиться переживаннями або робить висновки — завжди note, навіть якщо є згадка часу ("завтра", "вчора")
-
-Пріоритет: якщо є сумнів між event і note — обирай note з папкою "Особисте".
-
-Правила визначення папки (для category=note або idea):
-- "Харчування" — їжа, напої, калорії, рецепти, продукти
-- "Фінанси" — витрати, доходи, ціни, гроші
-- "Здоров'я" — самопочуття, симптоми, ліки, спорт, тренування
-- "Робота" — робочі думки, проекти, колеги, зустрічі
-- "Навчання" — що вивчаю, книги, курси, інсайти
-- "Ідеї" — творчі ідеї, плани, натхнення (якщо category=idea)
-- "Особисте" — стосунки, емоції, особисті думки
-- "Подорожі" — місця, маршрути, враження
-- Якщо не підходить жодна — придумай коротку логічну назву українською
-- Якщо category=task або habit або event — поле folder не потрібне (пиши null)
-
-ЯКЩО є сумнів (кілька можливих дій, незрозуміла категорія, кілька задач в одному записі) — відповідай ТІЛЬКИ JSON:
+ЯКЩО є сумнів (кілька можливих дій, незрозуміла категорія) — відповідай ТІЛЬКИ JSON:
 {
   "action": "clarify",
   "question": "коротке питання українською (1 речення)",
   "options": [
     {"label": "📋 Купити запасне колесо", "action": "save", "category": "task", "text": "Купити запасне колесо", "task_title": "Купити запасне колесо", "task_steps": []},
-    {"label": "🏋️ Вправа колесо на тренуванні", "action": "save", "category": "habit", "text": "Вправа колесо на тренуванні"}
+    {"label": "✅ Виконав звичку X", "action": "complete_habit", "habit_id": 123456}
   ]
 }
 
+Правила визначення категорії для action=save:
+- task: є конкретна НОВА дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити")
+  - "text" — оригінальний текст (виправ тільки граматику)
+  - "task_title" — коротка назва 2-5 слів. ЯКЩО є час/дата — включи у task_title (формат 24г)
+  - "task_steps" — масив кроків якщо є список дій. Інакше []
+- habit: НОВА регулярна повторювана дія якої ще немає в списку звичок ("щодня", "кожен ранок")
+  - "text" — коротка назва 2-4 слова (суть звички, не весь текст)
+- event: короткий факт події без емоцій ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції/роздуми — це note
+- idea: творча думка, ідея, план, натхнення
+- note: рефлексія, думки, емоції, висновки, спостереження, факти, їжа, витрати
+
+Пріоритет: якщо сумнів між event і note — обирай note з папкою "Особисте".
+
+Правила визначення папки (для category=note або idea):
+- "Харчування" — їжа, напої, калорії, рецепти
+- "Фінанси" — витрати, доходи, ціни, гроші
+- "Здоровʼя" — самопочуття, симптоми, ліки, спорт, тренування
+- "Робота" — робочі думки, проекти, колеги
+- "Навчання" — що вивчаю, книги, курси, інсайти
+- "Ідеї" — творчі ідеї (якщо category=idea)
+- "Особисте" — стосунки, емоції, особисті думки
+- "Подорожі" — місця, маршрути, враження
+- Якщо не підходить — придумай коротку назву українською
+- Для task/habit/event — folder: null
+
 Правила для clarify:
-- Використовуй якщо: є 2+ окремі дії через крапку/перерахування, незрозуміло task чи note, є список який може бути окремими задачами
+- Використовуй якщо: 2+ окремі дії, незрозуміло task чи note, незрозуміло нова звичка чи виконання існуючої
 - НЕ використовуй якщо запис однозначний
 - Максимум 3 варіанти в options
-- label ОБОВ'ЯЗКОВО містить реальний конкретний текст варіанту (НЕ "Варіант 1", а суть дії)
+- label ОБОВ'ЯЗКОВО містить реальний конкретний текст варіанту
 
 ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
 
@@ -2603,7 +2612,12 @@ async function sendToAI() {
 
       if (parsed.action === 'save') {
         await processSaveAction(parsed, text);
-        // повідомлення вже додає processSaveAction — не дублюємо
+        responseArea.style.display = 'none';
+      } else if (parsed.action === 'complete_habit') {
+        await processCompleteHabit(parsed, text);
+        responseArea.style.display = 'none';
+      } else if (parsed.action === 'complete_task') {
+        await processCompleteTask(parsed, text);
         responseArea.style.display = 'none';
       } else {
         // action === 'reply' — просто відповідь
@@ -3402,7 +3416,10 @@ function renderEvening() {
     momEl.innerHTML = allTodayItems.map(m => `
       <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
         <div style="width:8px;height:8px;border-radius:50%;background:${m.isNote ? '#818cf8' : (moodColors[m.mood]||'#888')};margin-top:5px;flex-shrink:0"></div>
-        <div style="flex:1;font-size:15px;color:#1e1040;line-height:1.5">${escapeHtml(m.text)}${m.isNote ? ' <span style="font-size:11px;color:rgba(30,16,64,0.3)">' + (folderIcons[m.folder] || '📝') + '</span>' : ''}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;color:#1e1040;line-height:1.5;font-weight:${m.summary ? '600' : '400'}">${escapeHtml(m.summary || m.text)}${m.isNote ? ' <span style="font-size:11px;color:rgba(30,16,64,0.3)">' + (folderIcons[m.folder] || '📝') + '</span>' : ''}</div>
+          ${m.summary ? `<div style="font-size:12px;color:rgba(30,16,64,0.35);line-height:1.4;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escapeHtml(m.text)}</div>` : ''}
+        </div>
         ${!m.isNote ? `<div onclick="deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>` : ''}
       </div>
     `).join('');
@@ -3439,11 +3456,43 @@ function saveMoment() {
   const text = document.getElementById('moment-input-text').value.trim();
   if (!text) { showToast('Введіть текст моменту'); return; }
   const moments = getMoments();
-  moments.push({ id: Date.now(), text, mood: currentMomentMood, ts: Date.now() });
+  const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
+  moments.push(newMoment);
   saveMoments(moments);
   closeMomentModal();
   renderEvening();
   showToast('✓ Момент збережено');
+  // Генеруємо короткий summary через ШІ (у фоні, не блокує UI)
+  generateMomentSummary(newMoment.id, text);
+}
+
+async function generateMomentSummary(momentId, text) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  // Не генеруємо для коротких текстів — вони вже короткі
+  if (text.length <= 60) return;
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: `Стисни цей момент дня до 1 короткої фрази (максимум 7 слів, без крапки в кінці, українською): "${text}"` }],
+        max_tokens: 30, temperature: 0.5
+      })
+    });
+    const data = await res.json();
+    const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, '');
+    if (!summary) return;
+    // Зберігаємо summary в об'єкт моменту
+    const moments = getMoments();
+    const idx = moments.findIndex(m => m.id === momentId);
+    if (idx !== -1) {
+      moments[idx].summary = summary;
+      saveMoments(moments);
+      renderEvening(); // оновлюємо UI після отримання summary
+    }
+  } catch(e) {}
 }
 
 function deleteMoment(id) {
@@ -3475,6 +3524,53 @@ async function generateEveningSummary() {
   localStorage.setItem('nm_evening_summary', JSON.stringify({ text, date: today }));
   btn.textContent = '↻';
   btn.disabled = false;
+}
+
+// === АВТОПІДСУМОК ВЕЧОРА ЩОГОДИНИ ===
+async function autoEveningSummary() {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+
+  // Перевіряємо чи є взагалі записи за сьогодні
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  if (moments.length === 0 && inbox.length === 0) return; // нема чого підсумовувати
+
+  // Перевіряємо чи не оновлювали менше ніж 50 хвилин тому
+  try {
+    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if (saved && saved.date === today && saved.autoTs) {
+      const elapsed = Date.now() - saved.autoTs;
+      if (elapsed < 50 * 60 * 1000) return; // 50 хвилин
+    }
+  } catch(e) {}
+
+  const aiContext = getAIContext();
+  const systemPrompt = `Ти — особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно але по-доброму. Завершуй конкретною порадою або мотивуючою думкою на завтра. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
+Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
+
+  try {
+    const reply = await callAI(systemPrompt, dayData, {});
+    if (!reply) return;
+    // Зберігаємо з позначкою autoTs — щоб не запускати занадто часто
+    localStorage.setItem('nm_evening_summary', JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
+    // Якщо зараз відкрита вкладка Вечір — оновлюємо UI
+    if (currentTab === 'evening') {
+      const el = document.getElementById('evening-summary');
+      if (el) el.textContent = reply;
+    }
+  } catch(e) {}
+}
+
+function setupAutoEveningSummary() {
+  // Перший раз — через 5 хвилин після старту
+  setTimeout(() => {
+    autoEveningSummary();
+    // Далі — кожну годину
+    setInterval(autoEveningSummary, 60 * 60 * 1000);
+  }, 5 * 60 * 1000);
 }
 
 // Evening dialog
@@ -4175,7 +4271,7 @@ function makeHabitDayDots(h, weekDone, todayDow) {
 
 function renderHabits() {
   const habits = getHabits();
-  const el = document.getElementById('habits-list');
+  const el = document.getElementById('prod-habits-list');
   if (!el) return;
   const log = getHabitLog();
   const today = new Date().toDateString();
@@ -4210,7 +4306,7 @@ function renderHabits() {
         + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
         + ' ontouchend="habitMeSwipeEnd(event,' + h.id + ')">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '<div onclick="toggleHabitToday(' + h.id + ')" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s">'
+          + '<div onclick="toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">'
             + checkBtn
           + '</div>'
           + '<div style="flex:1;min-width:0">'
@@ -4247,13 +4343,29 @@ function setupKeyboardAvoiding() {
     if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
       if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
-      if (tabBar) { tabBar.style.transform = `translateY(${keyboardHeight + tbH}px)`; tabBar.style.opacity = '0'; }
-      newBars.forEach(b => { if (b && b.style.display !== 'none') b.style.bottom = (keyboardHeight + 8) + 'px'; });
+      // Ховаємо таббар — translateY достатньо великий щоб він пішов за екран
+      if (tabBar) { tabBar.style.transform = `translateY(${tbH + keyboardHeight}px)`; tabBar.style.opacity = '0'; tabBar.style.pointerEvents = 'none'; }
+      newBars.forEach(b => {
+        if (!b || b.style.display === 'none') return;
+        b.style.bottom = (keyboardHeight + 8) + 'px';
+        // Якщо чат-вікно відкрите — обмежуємо його висоту щоб вміщалось на екрані
+        const chatWin = b.querySelector('.ai-bar-chat-window');
+        if (chatWin && chatWin.classList.contains('open')) {
+          const availH = vv.height - keyboardHeight - 120; // 120 = поле вводу + відступи
+          chatWin.style.maxHeight = Math.max(140, availH) + 'px';
+        }
+      });
     } else {
       // Клавіатура закрита — повертаємо все на місце
       if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
-      if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; }
-      newBars.forEach(b => { if (b) b.style.bottom = (tbH + 4) + 'px'; });
+      if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; tabBar.style.pointerEvents = ''; }
+      newBars.forEach(b => {
+        if (!b) return;
+        b.style.bottom = (tbH + 4) + 'px';
+        // Повертаємо висоту чат-вікна
+        const chatWin = b.querySelector('.ai-bar-chat-window');
+        if (chatWin) chatWin.style.maxHeight = '';
+      });
     }
   };
 
@@ -4670,33 +4782,32 @@ function renderProdHabits() {
     const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
     const streak = getHabitStreak(h.id);
     const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-    const schedDays = dayLabels.filter((_,i) => (h.days||[0,1,2,3,4]).includes(i)).join(' ');
 
     const weekDone = getHabitWeekDays(h.id);
     const shortName2 = h.name.split(' ').slice(0,4).join(' ');
     const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
-    const pct = getHabitPct(h.id); // відсоток виконання за 30 днів
+    const pct = getHabitPct(h.id);
     const pctColor2 = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakTxt = streak >= 2 ? '🔥 ' + streak + ' · ' : '';
     const checkSvgProd = isDoneToday
       ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
       : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-    const checkBtnProd = checkSvgProd;
-    const checkBgProd = isDoneToday ? 'background:#16a34a;' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15)';
-    const onclickProd = 'event.stopPropagation();toggleProdHabitToday(' + h.id + ')';
+    const checkBgProd = isDoneToday ? 'background:#16a34a;border:none;' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15);';
 
+    // ФІКС: галочка і редагування — окремі незалежні елементи, не вкладені один в одний
     return '<div style="padding:12px 14px;border-bottom:1px solid rgba(30,16,64,0.05)">'
-      + '<div onclick="openEditHabit(' + h.id + ')" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer">'
-        + '<div style="font-size:24px;flex-shrink:0">' + (h.emoji || '⭕') + '</div>'
-        + '<div style="flex:1;min-width:0">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+        // Галочка — окремий елемент, НЕ всередині onclick на батьку
+        + '<div onclick="toggleProdHabitToday(' + h.id + ')" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;' + checkBgProd + '">'
+          + checkSvgProd
+        + '</div>'
+        // Назва і статистика — тап відкриває редагування
+        + '<div onclick="openEditHabit(' + h.id + ')" style="flex:1;min-width:0;cursor:pointer;-webkit-tap-highlight-color:transparent">'
           + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:1px">' + escapeHtml(shortName2) + '</div>'
           + '<div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + pct + '% за 30 днів</div>'
         + '</div>'
-        + '<div onclick="' + onclickProd + '" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:' + (isScheduledToday ? 'pointer' : 'default') + ';display:flex;align-items:center;justify-content:center;transition:all 0.2s;' + checkBgProd + '">'
-          + checkBtnProd
-        + '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:4px;padding-left:36px">' + dayDots2 + '</div>'
+      + '<div style="display:flex;gap:4px;padding-left:52px">' + dayDots2 + '</div>'
     + '</div>';
   }).join('');
 }
@@ -4779,7 +4890,11 @@ function habitMeSwipeMove(e, id) {
   const s = habitMeSwipeState[id]; if (!s) return;
   const t = e.touches[0];
   const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
+  // Якщо рух більше вертикальний — скасовуємо свайп, даємо скролитись
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
+    delete habitMeSwipeState[id];
+    return;
+  }
   if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
   if (!s.swiping) return;
   e.preventDefault();
@@ -4799,6 +4914,18 @@ function habitMeSwipeEnd(e, id) {
     }, 200);
   } else {
     if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+    // Якщо це тап (не свайп) — перевіряємо чи тапнули на кнопку галочки
+    if (!s.swiping) {
+      const target = e.changedTouches[0];
+      const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
+      if (checkBtn) {
+        const rect = checkBtn.getBoundingClientRect();
+        if (target.clientX >= rect.left && target.clientX <= rect.right &&
+            target.clientY >= rect.top && target.clientY <= rect.bottom) {
+          toggleHabitToday(id);
+        }
+      }
+    }
   }
   delete habitMeSwipeState[id];
 }
@@ -4869,9 +4996,11 @@ async function selectClarifyOption(idx) {
   if (!clarifyParsed) return;
   const opt = (clarifyParsed.options || [])[idx];
   if (!opt) return;
+  const origText = clarifyOriginalText;
   closeClarify();
-  // Обробляємо вибраний варіант як звичайну відповідь save
-  await processSaveAction(opt, clarifyOriginalText);
+  if (opt.action === 'save') await processSaveAction(opt, origText);
+  else if (opt.action === 'complete_habit') await processCompleteHabit(opt, origText);
+  else if (opt.action === 'complete_task') await processCompleteTask(opt, origText);
 }
 
 async function sendClarifyText() {
@@ -4965,7 +5094,64 @@ async function processSaveAction(parsed, originalText) {
 }
 
 
-// === CHAT BAR SYSTEM (Tasks / Me / Evening) ===
+// === COMPLETE HABIT FROM INBOX ===
+function processCompleteHabit(parsed, originalText) {
+  const habitId = parsed.habit_id;
+  const habits = getHabits();
+  const habit = habits.find(h => h.id == habitId);
+  if (!habit) {
+    // ID не знайдено — зберігаємо як нотатку
+    addInboxChatMsg('agent', 'Не знайшов таку звичку. Зберіг як нотатку.');
+    const notes = getNotes();
+    notes.unshift({ id: Date.now(), text: originalText, folder: 'Особисте', ts: Date.now() });
+    saveNotes(notes);
+    return;
+  }
+  // Відмічаємо звичку як виконану сьогодні
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  log[today][habit.id] = true;
+  saveHabitLog(log);
+  renderProdHabits();
+  renderHabits();
+  // Зберігаємо в Inbox для історії
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: originalText, category: 'habit', ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+  const msg = parsed.comment || `✅ Відмітив звичку "${habit.name}" як виконану сьогодні`;
+  addInboxChatMsg('agent', msg);
+}
+
+// === COMPLETE TASK FROM INBOX ===
+function processCompleteTask(parsed, originalText) {
+  const taskId = parsed.task_id;
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id == taskId);
+  if (!task) {
+    addInboxChatMsg('agent', 'Не знайшов таку задачу. Зберіг як нотатку.');
+    const notes = getNotes();
+    notes.unshift({ id: Date.now(), text: originalText, folder: 'Особисте', ts: Date.now() });
+    saveNotes(notes);
+    return;
+  }
+  // Закриваємо задачу
+  const idx = tasks.findIndex(t => t.id == taskId);
+  tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() };
+  saveTasks(tasks);
+  renderTasks();
+  // Зберігаємо в Inbox для історії
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: originalText, category: 'task', ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+  const msg = parsed.comment || `✅ Задачу "${task.title}" закрито`;
+  addInboxChatMsg('agent', msg);
+}
+
+
+
 let activeChatBar = null;
 
 function getTabbarHeight() {
@@ -5436,6 +5622,7 @@ function init() {
   try { updateAiBarVisibility(); } catch(e) {}
   try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
+  try { setupAutoEveningSummary(); } catch(e) {}
 }
 
 function showApp() {
@@ -5522,7 +5709,7 @@ setTimeout(() => {
   </div>
 
   <!-- Chat input (visible in chat tab) -->
-  <div id="note-chat-input-area" style="display:none;padding:12px 16px;border-top:1px solid rgba(79,70,229,0.1);flex-shrink:0;display:none;gap:8px;align-items:flex-end;background:rgba(255,255,255,0.85);">
+  <div id="note-chat-input-area" style="display:none;padding:12px 16px;border-top:1px solid rgba(79,70,229,0.1);flex-shrink:0;gap:8px;align-items:flex-end;background:rgba(255,255,255,0.85);">
     <textarea id="note-chat-input" rows="1" placeholder="Запитай про цю нотатку…"
       oninput="autoResizeTextarea(this)"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNoteChatMessage();}"
