@@ -1448,9 +1448,9 @@ body {
 </div><!-- /app -->
 
 <!-- HABIT MODAL -->
-<div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+<div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div onclick="closeHabitModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom)+24px);z-index:1;max-height:75vh;overflow-y:auto;box-sizing:border-box;">
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px calc(env(safe-area-inset-bottom)+24px);z-index:1;max-height:80vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Нова звичка</div>
@@ -1477,9 +1477,9 @@ body {
 </div>
 
 <!-- MOMENT MODAL -->
-<div id="moment-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+<div id="moment-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div onclick="closeMomentModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1517,7 +1517,7 @@ body {
 </div>
 
 <!-- NOTE CONTEXT MENU -->
-<div id="note-menu" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center">
+<div id="note-menu" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div onclick="closeNoteMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:12px 20px 40px;z-index:1;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 12px"></div>
@@ -1542,9 +1542,9 @@ body {
 </div>
 
 <!-- NOTE MODAL -->
-<div id="note-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+<div id="note-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div onclick="closeNoteModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="note-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
     <input id="note-input-folder" type="text" list="folder-suggestions" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box" placeholder="Папка (наприклад: Ідеї, Навчання…)">
@@ -1558,9 +1558,9 @@ body {
 </div>
 
 <!-- TASK MODAL -->
-<div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center">
+<div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
     <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box" placeholder="Назва задачі…" ontouchend="this.focus()">
@@ -1674,7 +1674,7 @@ body {
 </div>
 
 <!-- SLIDES TOUR -->
-<div id="slides-tour" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
+<div id="slides-tour" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <!-- Затемнений фон -->
   <div style="position:absolute;inset:0;background:rgba(10,5,25,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)" onclick="closeSlidesTour()"></div>
   <!-- Картка слайду -->
@@ -2311,6 +2311,12 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "comment": "коротка практична ремарка (1 речення). НЕ хвали запис."
 }
 
+ЯКЩО в одному повідомленні є КІЛЬКА окремих записів (наприклад дві звички, задача і нотатка) — відповідай масивом JSON:
+[
+  {"action": "save", "category": "habit", "text": "Присідати", ...},
+  {"action": "save", "category": "habit", "text": "Планка", ...}
+]
+
 ЯКЩО це питання або розмова (не запис і не виконання) — відповідай ТІЛЬКИ JSON:
 {
   "action": "reply",
@@ -2347,9 +2353,17 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "fin_comment": "короткий опис БЕЗ суми (1-3 слова, тільки що/де, наприклад: заправка, продукти, кава)"
 }
 
-Категорії витрат: Їжа, Транспорт, Підписки, Здоровʼя, Житло, Покупки, Трава, Інше
+Категорії витрат з прикладами:
+- Їжа: кава, ресторан, продукти, супермаркет, обід, вечеря, сніданок, доставка їжі, піца, суші
+- Транспорт: бензин, заправка, таксі, Uber, метро, автобус, парковка, авто
+- Підписки: Netflix, Spotify, ChatGPT, Apple, Google, додатки, сервіси
+- Здоровʼя: аптека, ліки, лікар, спортзал, фітнес, стоматолог
+- Житло: оренда, комуналка, інтернет, ремонт, меблі
+- Покупки: одяг, техніка, подарунок, магазин, Amazon
+- Трава: джоінт, канабіс, трава, диспансер
+- Інше: все що не підходить вище
 Категорії доходів: Зарплата, Надходження, Повернення, Інше
-Якщо категорія незрозуміла — використовуй "Інше".
+Якщо є сумнів — обирай найближчу категорію з прикладів, НЕ "Інше".
 
 ЯКЩО користувач просить змінити категорію або коментар існуючої транзакції — відповідай ТІЛЬКИ JSON:
 {
@@ -2708,39 +2722,43 @@ async function sendToAI() {
 
       // Save assistant reply to history for context
       inboxChatHistory.push({ role: 'assistant', content: reply });
-      // Якщо ШІ не впевнений — показуємо вікно уточнення
-      if (parsed.action === 'clarify') {
-        showClarify(parsed, text);
-        aiLoading = false;
-        btn.disabled = false;
-        btn.innerHTML = SEND_SVG;
-        return;
-      }
 
-      if (parsed.action === 'save') {
-        await processSaveAction(parsed, text);
-      } else if (parsed.action === 'save_finance') {
-        processFinanceAction(parsed, text);
-      } else if (parsed.action === 'update_transaction') {
-        const txs = getFinance();
-        const idx = txs.findIndex(t => t.id === parsed.id);
-        if (idx !== -1) {
-          if (parsed.category) txs[idx].category = parsed.category;
-          if (parsed.comment !== undefined) txs[idx].comment = parsed.comment;
-          saveFinance(txs);
-          if (currentTab === 'finance') renderFinance();
-          addInboxChatMsg('agent', `✓ Категорію змінено на "${txs[idx].category}"`);
-        } else {
-          addInboxChatMsg('agent', 'Не знайшов транзакцію. Спробуй ще раз.');
+      // Підтримка масиву дій — агент може повернути [{action:...}, {action:...}]
+      const actions = Array.isArray(parsed) ? parsed : [parsed];
+
+      for (const action of actions) {
+        if (action.action === 'clarify') {
+          showClarify(action, text);
+          aiLoading = false;
+          btn.disabled = false;
+          btn.innerHTML = SEND_SVG;
+          return;
         }
-      } else if (parsed.action === 'complete_habit') {
-        await processCompleteHabit(parsed, text);
-      } else if (parsed.action === 'complete_task') {
-        await processCompleteTask(parsed, text);
-      } else {
-        // action === 'reply' — просто відповідь
-        const replyText = parsed.comment || reply;
-        addInboxChatMsg('agent', replyText);
+        if (action.action === 'save') {
+          await processSaveAction(action, text);
+        } else if (action.action === 'save_finance') {
+          processFinanceAction(action, text);
+        } else if (action.action === 'update_transaction') {
+          const txs = getFinance();
+          const idx = txs.findIndex(t => t.id === action.id);
+          if (idx !== -1) {
+            if (action.category) txs[idx].category = action.category;
+            if (action.comment !== undefined) txs[idx].comment = action.comment;
+            saveFinance(txs);
+            if (currentTab === 'finance') renderFinance();
+            addInboxChatMsg('agent', `✓ Категорію змінено на "${txs[idx].category}"`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов транзакцію. Спробуй ще раз.');
+          }
+        } else if (action.action === 'complete_habit') {
+          await processCompleteHabit(action, text);
+        } else if (action.action === 'complete_task') {
+          await processCompleteTask(action, text);
+        } else {
+          // action === 'reply' — просто відповідь
+          const replyText = action.comment || reply;
+          addInboxChatMsg('agent', replyText);
+        }
       }
     } catch(e) {
       console.error('JSON parse error:', e);
@@ -6398,7 +6416,12 @@ function getFinanceContext() {
   if (budget.total > 0) parts.push(`бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
   if (top3) parts.push(`топ категорії: ${top3}`);
   if (todaySum > 0) parts.push(`сьогодні витрачено ${formatMoney(todaySum)}`);
-  return parts.join('; ');
+
+  // Останні 5 транзакцій з ID — для update_transaction з Inbox
+  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}€ ${t.category}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
+  if (recentTxs) parts.push(`Останні транзакції (використовуй ID для update_transaction): ${recentTxs}`);
+
+  return parts.join('\n');
 }
 
 // === FINANCE AI BAR ===
@@ -6442,7 +6465,9 @@ async function sendFinanceBarMessage() {
 Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}€ ${t.comment||''}`).join('; ') || 'немає'}
 Загальний бюджет: ${budget.total ? budget.total+'€' : 'не встановлено'}
 Категорії витрат: ${cats.expense.join(', ')}
+Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка), Трава(джоінт,канабіс)
 Категорії доходів: ${cats.income.join(', ')}
+Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
 
 Ти можеш виконувати дії через JSON (відповідай ТІЛЬКИ JSON якщо потрібна дія):
 {"action":"save_expense","amount":50,"category":"Їжа","comment":"продукти"}
@@ -6714,7 +6739,7 @@ setTimeout(() => {
 </div>
 
 <!-- CLARIFY MODAL — вікно уточнення від Агента -->
-<div id="clarify-modal" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center">
+<div id="clarify-modal" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div onclick="closeClarify()" style="position:absolute;inset:0;background:rgba(10,5,30,0.3);backdrop-filter:blur(2px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:14px 18px calc(env(safe-area-inset-bottom)+24px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
