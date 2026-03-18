@@ -2367,7 +2367,15 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 Категорії доходів: Зарплата, Надходження, Повернення, Інше
 Якщо є сумнів — обирай найближчу категорію з прикладів, НЕ "Інше".
 
-ЯКЩО користувач просить змінити категорію або коментар існуючої транзакції — відповідай ТІЛЬКИ JSON:
+ЯКЩО користувач просить додати кроки до існуючої задачі — відповідай ТІЛЬКИ JSON:
+{
+  "action": "add_step",
+  "task_id": 123456,
+  "steps": ["крок 1", "крок 2"]
+}
+Використовуй task_id з контексту активних задач.
+
+ЯКЩО користувач просить змінити категорію або коментар існуючої ФІНАНСОВОЇ транзакції (згадує суму, витрату, дохід, категорію витрат) — відповідай ТІЛЬКИ JSON:
 {
   "action": "update_transaction",
   "id": 1234567890,
@@ -2375,6 +2383,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "comment": "новий коментар або пусто"
 }
 Використовуй id з останньої транзакції в контексті. НЕ створюй нову транзакцію.
+ВАЖЛИВО: "додай кроки", "додай крок до задачі" — це НЕ update_transaction. Це стосується задач, відповідай як на звичайний запис або reply.
 
 ЯКЩО повідомлення є уточненням, командою або поясненням до попереднього (наприклад: "так", "ні", "видали", "це була помилка") — НЕ зберігай як запис, відповідай:
 {
@@ -2756,6 +2765,18 @@ async function sendToAI() {
           await processCompleteHabit(action, text);
         } else if (action.action === 'complete_task') {
           await processCompleteTask(action, text);
+        } else if (action.action === 'add_step') {
+          const tasks = getTasks();
+          const idx = tasks.findIndex(t => t.id == action.task_id);
+          if (idx !== -1) {
+            const steps = Array.isArray(action.steps) ? action.steps : (action.step ? [action.step] : []);
+            steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+            saveTasks(tasks);
+            renderTasks();
+            addInboxChatMsg('agent', `✓ Додано ${steps.length} крок(и) до "${tasks[idx].title}"`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
+          }
         } else {
           // action === 'reply' — просто відповідь
           const replyText = action.comment || reply;
