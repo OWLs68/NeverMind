@@ -105,34 +105,46 @@ function setupDrumTabbar() {
   });
 
   // Свайп по барабану
+  let currentTranslateX = 0;
+
+  function getDrumBounds() {
+    const capsuleW = capsule.offsetWidth - 8;
+    const trackW = track.scrollWidth;
+    const minX = Math.min(0, capsuleW - trackW); // ліва межа (кінець)
+    const maxX = 0; // права межа (початок)
+    return { minX, maxX };
+  }
+
   capsule.addEventListener('touchstart', e => {
     startX = e.touches[0].clientX;
     dragDelta = 0;
     dragging = true;
+    // Синхронізуємо позицію якщо updateDrumTabbar оновив її
+    if (window._drumCurrentX !== undefined) currentTranslateX = window._drumCurrentX;
     track.style.transition = 'none';
   }, { passive: true });
 
   capsule.addEventListener('touchmove', e => {
     if (!dragging) return;
     dragDelta = e.touches[0].clientX - startX;
-    const activeItem = capsule.querySelector('.tab-item.active');
-    if (!activeItem) return;
-    const capsuleW = capsule.offsetWidth - 8;
-    const base = -Math.max(0, activeItem.offsetLeft - (capsuleW/2) + (activeItem.offsetWidth/2));
-    track.style.transform = `translateX(${base + dragDelta * 0.45}px)`;
+    const { minX, maxX } = getDrumBounds();
+    let newX = currentTranslateX + dragDelta;
+    // Пружина на крайніх позиціях
+    if (newX > maxX) newX = maxX + (newX - maxX) * 0.3;
+    if (newX < minX) newX = minX + (newX - minX) * 0.3;
+    track.style.transform = `translateX(${newX}px)`;
   }, { passive: true });
 
   capsule.addEventListener('touchend', () => {
     dragging = false;
+    const { minX, maxX } = getDrumBounds();
+    let newX = currentTranslateX + dragDelta;
+    // Затискаємо в межі
+    newX = Math.max(minX, Math.min(maxX, newX));
+    currentTranslateX = newX;
+    window._drumCurrentX = newX;
     track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    const TAB_CURRENT = TAB_ORDER.indexOf(currentTab);
-    if (dragDelta < -40 && TAB_CURRENT < TAB_ORDER.length - 1) {
-      switchTab(TAB_ORDER[TAB_CURRENT + 1]);
-    } else if (dragDelta > 40 && TAB_CURRENT > 0) {
-      switchTab(TAB_ORDER[TAB_CURRENT - 1]);
-    } else {
-      updateDrumTabbar(currentTab);
-    }
+    track.style.transform = `translateX(${newX}px)`;
   }, { passive: true });
 }
 
@@ -153,10 +165,16 @@ function updateDrumTabbar(tab) {
   const activeItem = document.querySelector('.tab-item.active');
   if (!activeItem) return;
   const capsuleW = capsule.offsetWidth - 8;
+  const trackW = track.scrollWidth;
   const itemW = activeItem.offsetWidth;
   const itemLeft = activeItem.offsetLeft;
   const scrollTo = itemLeft - (capsuleW / 2) + (itemW / 2);
-  track.style.transform = `translateX(${-Math.max(0, scrollTo)}px)`;
+  const minX = Math.min(0, capsuleW - trackW);
+  const newX = -Math.max(0, Math.min(scrollTo, -minX));
+  // Синхронізуємо з поточним значенням для вільного скролу
+  try { window._drumCurrentX = newX; } catch(e) {}
+  track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+  track.style.transform = `translateX(${newX}px)`;
 }
 
 function applyTheme(tab) {
@@ -293,7 +311,7 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts'];
   keys.forEach(k => localStorage.removeItem(k));
   Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_')).forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
@@ -594,6 +612,95 @@ function showToast(msg, duration = 2000) {
   _undoToastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
+// === TRASH CACHE (кеш видалених — 7 днів) ===
+const NM_TRASH_KEY = 'nm_trash';
+const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
+
+function getTrash() {
+  try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }
+}
+function saveTrash(arr) {
+  localStorage.setItem(NM_TRASH_KEY, JSON.stringify(arr));
+}
+
+// Додати запис в кеш при видаленні
+function addToTrash(type, item, extra) {
+  const trash = getTrash();
+  // Прибираємо старіші за 7 днів
+  const now = Date.now();
+  const fresh = trash.filter(t => now - t.deletedAt < TRASH_TTL);
+  fresh.push({ type, item, extra: extra || null, deletedAt: now });
+  // Максимум 200 записів
+  saveTrash(fresh.slice(-200));
+}
+
+// Пошук в кеші — для агента
+function searchTrash(query) {
+  const trash = getTrash();
+  const now = Date.now();
+  const q = query.toLowerCase();
+  return trash
+    .filter(t => now - t.deletedAt < TRASH_TTL)
+    .filter(t => {
+      const item = t.item;
+      const text = (item.text || item.title || item.name || item.category || '').toLowerCase();
+      const folder = (item.folder || '').toLowerCase();
+      return text.includes(q) || folder.includes(q);
+    })
+    .sort((a, b) => b.deletedAt - a.deletedAt);
+}
+
+// Відновити запис з кешу по id
+function restoreFromTrash(trashId) {
+  const trash = getTrash();
+  const entry = trash.find(t => t.deletedAt === trashId);
+  if (!entry) return false;
+  const { type, item, extra } = entry;
+  if (type === 'task') {
+    const tasks = getTasks();
+    tasks.unshift(item);
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+  } else if (type === 'note') {
+    const notes = getNotes();
+    notes.unshift(item);
+    saveNotes(notes);
+    if (currentTab === 'notes') renderNotes();
+  } else if (type === 'habit') {
+    const habits = getHabits();
+    habits.push(item);
+    saveHabits(habits);
+    renderHabits(); renderProdHabits();
+  } else if (type === 'inbox') {
+    const items = getInbox();
+    items.unshift(item);
+    saveInbox(items);
+    if (currentTab === 'inbox') renderInbox();
+  } else if (type === 'folder') {
+    // extra = масив нотаток папки
+    const notes = getNotes();
+    (extra || []).forEach(n => notes.push(n));
+    saveNotes(notes);
+    if (currentTab === 'notes') renderNotes();
+  } else if (type === 'finance') {
+    const txs = getFinance();
+    txs.unshift(item);
+    saveFinance(txs);
+    if (currentTab === 'finance') renderFinance();
+  }
+  // Прибираємо з кешу після відновлення
+  saveTrash(trash.filter(t => t.deletedAt !== trashId));
+  return true;
+}
+
+// Очистка кешу — викликається при старті
+function cleanupTrash() {
+  const trash = getTrash();
+  const now = Date.now();
+  const fresh = trash.filter(t => now - t.deletedAt < TRASH_TTL);
+  if (fresh.length !== trash.length) saveTrash(fresh);
+}
+
 function showUndoToast(msg, restoreFn) {
   // Показує toast з кнопкою "Відновити" на 10 секунд
   const el = document.getElementById('toast');
@@ -767,6 +874,13 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 Поля "category", "amount", "comment" — вказуй тільки ті що змінюються. Якщо сума не змінюється — не включай "amount".
 Використовуй id з останньої транзакції в контексті. НЕ створюй нову транзакцію.
 ВАЖЛИВО: "додай кроки", "додай крок до задачі" — це НЕ update_transaction. Це стосується задач, відповідай як на звичайний запис або reply.
+
+ЯКЩО користувач просить відновити видалений запис, задачу, нотатку, звичку або папку — відповідай ТІЛЬКИ JSON:
+{
+  "action": "restore_deleted",
+  "query": "ключові слова для пошуку (текст або назва запису)"
+}
+Приклади: "відновити нотатку про машину", "поверни видалену задачу купити хліб", "відновити папку Здоровʼя"
 
 ЯКЩО повідомлення є уточненням, командою або поясненням до попереднього (наприклад: "так", "ні", "видали", "це була помилка") — НЕ зберігай як запис, відповідай:
 {
@@ -1020,6 +1134,7 @@ function swipeEnd(e, id) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
       const item = getInbox().find(i => i.id === id);
+      if (item) addToTrash('inbox', item);
       saveInbox(getInbox().filter(i => i.id !== id)); renderInbox();
       const originalIdx = getInbox().findIndex(i => i.id === id);
       if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); const idx = Math.min(originalIdx, items.length); items.splice(idx, 0, item); saveInbox(items); renderInbox(); });
@@ -1169,6 +1284,27 @@ async function sendToAI() {
           } else {
             addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
           }
+        } else if (action.action === 'restore_deleted') {
+          const q = action.query || '';
+          const results = searchTrash(q);
+          if (results.length === 0) {
+            addInboxChatMsg('agent', 'Не знайшов нічого схожого в кеші видалених. Записи зберігаються 7 днів.');
+          } else if (results.length === 1) {
+            const entry = results[0];
+            const label = entry.item.text || entry.item.title || entry.item.name || entry.item.folder || 'запис';
+            const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'транзакцію' }[entry.type] || 'запис';
+            restoreFromTrash(entry.deletedAt);
+            addInboxChatMsg('agent', `✓ Відновив ${typeLabel} "${label}"`);
+          } else {
+            // Кілька результатів — показуємо список
+            const list = results.slice(0,5).map((e,i) => {
+              const label = e.item.text || e.item.title || e.item.name || e.item.folder || 'запис';
+              const typeLabel = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' }[e.type] || '•';
+              const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
+              return `${typeLabel} ${label.substring(0,40)} (${ago === 0 ? 'сьогодні' : ago + ' дн. тому'})`;
+            }).join('\n');
+            addInboxChatMsg('agent', `Знайшов кілька схожих:\n${list}\n\nУточни який саме відновити.`);
+          }
         } else {
           // action === 'reply' — просто відповідь
           const replyText = action.comment || reply;
@@ -1278,6 +1414,7 @@ function saveNote() {
 function deleteNote(id) {
   const notes = getNotes();
   const item = notes.find(x => x.id === id);
+  if (item) addToTrash('note', item);
   saveNotes(notes.filter(x => x.id !== id));
   renderNotes();
   const noteOrigIdx = getNotes().findIndex(x => x.id === id);
@@ -1310,15 +1447,15 @@ function closeNotesFolder() {
 
 // Кольори папок — єдине місце визначення
 const FOLDER_COLORS = {
-  'Харчування': { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
-  'Фінанси':   { bg: 'linear-gradient(135deg,#ecf755,#e4ef30)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
-  "Здоровʼя":  { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
-  'Здоровя':   { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
-  'Робота':    { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '🎯' },
-  'Навчання':  { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🧠' },
-  'Ідеї':      { bg: 'linear-gradient(135deg,#ecf755,#e4ef30)', border: 'rgba(255,255,255,0.4)', dot: '💡' },
+  'Харчування': { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
+  'Фінанси':   { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
+  "Здоровʼя":  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+  'Здоровя':   { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+  'Робота':    { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🎯' },
+  'Навчання':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🧠' },
+  'Ідеї':      { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💡' },
   'Особисте':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '⚡' },
-  'Подорожі':  { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '✈️' },
+  'Подорожі':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '✈️' },
 };
 const DEFAULT_NOTE_FOLDER = { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '📝' };
 
@@ -1385,15 +1522,24 @@ function renderNotes(searchQuery = '') {
     folders.map(([folder, items]) => {
       const fc = getFolderColor(folder);
       const preview = items[0].text.length > 60 ? items[0].text.substring(0,60) + '…' : items[0].text;
-      return `<div onclick="openNotesFolder('${escapeHtml(folder).replace(/'/g,"\\'")}')" style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px">
-        <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${fc.dot}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">${escapeHtml(folder)}</div>
-          <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
-          <div style="font-size:20px;font-weight:900;color:#1e1040">${items.length}</div>
-          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
+      const safeFolder = escapeHtml(folder).replace(/'/g, "\\'");
+      const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
+      return `<div style="position:relative;border-radius:18px">
+        <div id="folder-del-${key}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:18px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
+        <div id="folder-item-${key}"
+          ontouchstart="folderSwipeStart(event,'${safeFolder}')"
+          ontouchmove="folderSwipeMove(event,'${safeFolder}')"
+          ontouchend="folderSwipeEnd(event,'${safeFolder}')"
+          style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${fc.dot}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">${escapeHtml(folder)}</div>
+            <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+            <div style="font-size:20px;font-weight:900;color:#1e1040">${items.length}</div>
+            <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
+          </div>
         </div>
       </div>`;
     }).join('') + '</div>';
@@ -1461,6 +1607,7 @@ function noteSwipeEnd(e, id) {
       const allNotes = getNotes();
       const noteSwipeIdx = allNotes.findIndex(x => x.id === id);
       const item = allNotes.find(x => x.id === id);
+      if (item) addToTrash('note', item);
       saveNotes(allNotes.filter(x => x.id !== id)); renderNotes();
       if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); const idx = Math.min(noteSwipeIdx, notes.length); notes.splice(idx, 0, item); saveNotes(notes); renderNotes(); });
     }, 200);
@@ -1637,6 +1784,7 @@ function deleteTaskFromModal() {
   const tasks = getTasks();
   const taskOrigIdx = tasks.findIndex(x => x.id === editingTaskId);
   const item = tasks.find(x => x.id === editingTaskId);
+  if (item) addToTrash('task', item);
   saveTasks(tasks.filter(x => x.id !== editingTaskId));
   closeTaskModal();
   renderTasks();
@@ -1718,6 +1866,7 @@ function deleteTask(id) {
   const tasks = getTasks();
   const taskOrigIdx = tasks.findIndex(x => x.id === id);
   const item = tasks.find(x => x.id === id);
+  if (item) addToTrash('task', item);
   saveTasks(tasks.filter(x => x.id !== id));
   renderTasks();
   if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
@@ -1755,7 +1904,13 @@ function renderTasks() {
     const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
     const isDone = t.status === 'done';
 
-    return `<div onclick="openEditTask(${t.id})" style="margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent">
+    return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
+      <div id="task-del-${t.id}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
+      <div id="task-item-${t.id}" onclick="openEditTask(${t.id})"
+        ontouchstart="taskSwipeStart(event,${t.id})"
+        ontouchmove="taskSwipeMove(event,${t.id})"
+        ontouchend="taskSwipeEnd(event,${t.id})"
+        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
         <div onclick="event.stopPropagation();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         <div style="flex:1">
@@ -1776,7 +1931,7 @@ function renderTasks() {
           `).join('')}
         </div>
       ` : ''}
-    </div>`;
+    </div></div>`;
   }).join('');
 }
 
@@ -3792,7 +3947,7 @@ function toggleProdHabitToday(id) {
 
     // Якщо dx > 40 і тач на картці — це свайп видалення, не навігація
     if (Math.abs(dx) > 40) {
-      if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"]')) return;
+      if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"], [id^="task-item-"], [id^="folder-item-"], .note-item-wrap')) return;
     }
 
     // note-view-modal — свайп вправо закриває
@@ -3858,6 +4013,7 @@ function habitMeSwipeEnd(e, id) {
       const allHabits = getHabits();
       const habitOrigIdx = allHabits.findIndex(h => h.id === id);
       const item = allHabits.find(h => h.id === id);
+      if (item) addToTrash('habit', item);
       saveHabits(allHabits.filter(h => h.id !== id)); renderHabits(); renderProdHabits();
       if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
@@ -3914,6 +4070,7 @@ function prodHabitSwipeEnd(e, id) {
       const allHabits = getHabits();
       const habitOrigIdx = allHabits.findIndex(h => h.id === id);
       const item = allHabits.find(h => h.id === id);
+      if (item) addToTrash('habit', item);
       saveHabits(allHabits.filter(h => h.id !== id));
       renderHabits(); renderProdHabits();
       if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
@@ -3937,6 +4094,106 @@ function prodHabitSwipeEnd(e, id) {
     }
   }
   delete prodHabitSwipeState[id];
+}
+
+// === TASK SWIPE TO DELETE ===
+const taskSwipeState = {};
+const TASK_SWIPE_THRESHOLD = 250;
+
+function taskSwipeStart(e, id) {
+  const t = e.touches[0];
+  taskSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function taskSwipeMove(e, id) {
+  const s = taskSwipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete taskSwipeState[id]; return; }
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById('task-item-' + id);
+  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+  const delBg = document.getElementById('task-del-' + id);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+}
+function taskSwipeEnd(e, id) {
+  const s = taskSwipeState[id]; if (!s) return;
+  const el = document.getElementById('task-item-' + id);
+  if (s.dx < -TASK_SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => {
+      const tasks = getTasks();
+      const taskOrigIdx = tasks.findIndex(x => x.id === id);
+      const item = tasks.find(x => x.id === id);
+      saveTasks(tasks.filter(x => x.id !== id));
+      renderTasks();
+      if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
+    }, 200);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+    const delBg = document.getElementById('task-del-' + id);
+    if (delBg) { delBg.style.transition = 'opacity 0.25s'; delBg.style.opacity = '0'; setTimeout(() => { if(delBg) delBg.style.transition = ''; }, 300); }
+    if (!s.swiping) openEditTask(id);
+  }
+  delete taskSwipeState[id];
+}
+
+// === FOLDER SWIPE TO DELETE ===
+const folderSwipeState = {};
+const FOLDER_SWIPE_THRESHOLD = 250;
+
+function _folderKey(folder) {
+  return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
+}
+function folderSwipeStart(e, folder) {
+  const t = e.touches[0];
+  const key = _folderKey(folder);
+  folderSwipeState[key] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false, folder };
+}
+function folderSwipeMove(e, folder) {
+  const key = _folderKey(folder);
+  const s = folderSwipeState[key]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete folderSwipeState[key]; return; }
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById('folder-item-' + key);
+  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+  const delBg = document.getElementById('folder-del-' + key);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+}
+function folderSwipeEnd(e, folder) {
+  const key = _folderKey(folder);
+  const s = folderSwipeState[key]; if (!s) return;
+  const el = document.getElementById('folder-item-' + key);
+  if (s.dx < -FOLDER_SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => {
+      const notes = getNotes();
+      const folderNotes = notes.filter(n => (n.folder || 'Загальне') === folder);
+      const remaining = notes.filter(n => (n.folder || 'Загальне') !== folder);
+      if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
+      saveNotes(remaining);
+      renderNotes();
+      if (folderNotes.length > 0) showUndoToast('Папку "' + folder + '" видалено (' + folderNotes.length + ')', () => {
+        const n = getNotes();
+        folderNotes.forEach(note => n.push(note));
+        saveNotes(n);
+        renderNotes();
+      });
+    }, 200);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+    const delBg = document.getElementById('folder-del-' + key);
+    if (delBg) { delBg.style.transition = 'opacity 0.25s'; delBg.style.opacity = '0'; setTimeout(() => { if(delBg) delBg.style.transition = ''; }, 300); }
+    if (!s.swiping) openNotesFolder(folder);
+  }
+  delete folderSwipeState[key];
 }
 
 // === AUTO GENERATE TASK STEPS ===
@@ -5208,7 +5465,9 @@ async function sendFinanceBarMessage() {
         checkFinBudgetWarning(type, parsed.category, parseFloat(parsed.amount));
       } else if (parsed.action === 'delete_transaction') {
         const item = getFinance().find(t => t.id === parsed.id);
-        saveFinance(getFinance().filter(t => t.id !== parsed.id));
+        const _item = getFinance().find(t => t.id === parsed.id);
+      if (_item) addToTrash('finance', _item);
+      saveFinance(getFinance().filter(t => t.id !== parsed.id));
         renderFinance();
         addFinanceChatMsg('agent', `🗑 Видалено: ${item ? item.category + ' ' + formatMoney(item.amount) : 'транзакцію'}`);
       } else if (parsed.action === 'update_transaction') {
@@ -5686,6 +5945,7 @@ function init() {
   try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
   try { setupAutoEveningSummary(); } catch(e) {}
+  try { cleanupTrash(); } catch(e) {}
   setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 4000);
 }
 
