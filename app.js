@@ -1,0 +1,5045 @@
+// === TAB THEMES ===
+const TAB_THEMES = {
+  inbox: {
+    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
+    orb: 'rgba(242,217,120,0.25)',
+    tabBg: 'rgb(243,211,94)',
+    accent: '#8b6914',
+    accent2: '#d4a857',
+  },
+  tasks: {
+    bg: 'linear-gradient(160deg, #fdb87a, #ffd4a8)',
+    orb: 'rgba(234,88,12,0.15)',
+    tabBg: 'rgb(253,184,122)',
+    accent: '#ea580c',
+    accent2: '#f97316',
+  },
+  notes: {
+    bg: 'linear-gradient(160deg, #fed7aa, #ffedd5)',
+    orb: 'rgba(234,88,12,0.10)',
+    tabBg: 'rgb(254,215,170)',
+    accent: '#c2620a',
+    accent2: '#f97316',
+  },
+  me: {
+    bg: 'linear-gradient(160deg, #a7f3d0, #ecfdf5)',
+    orb: 'rgba(22,163,74,0.12)',
+    tabBg: 'rgb(167,243,208)',
+    accent: '#16a34a',
+    accent2: '#22c55e',
+  },
+  evening: {
+    bg: 'linear-gradient(160deg, #818cf8, #c7d2fe)',
+    orb: 'rgba(129,140,248,0.20)',
+    tabBg: 'rgb(129,140,248)',
+    accent: '#4f46e5',
+    accent2: '#818cf8',
+  },
+  finance: {
+    bg: 'linear-gradient(160deg, #fcd9bd, #fff7ed)',
+    orb: 'rgba(249,115,22,0.12)',
+    tabBg: 'rgb(249,155,100)',
+    accent: '#c2410c',
+    accent2: '#f97316',
+  },
+};
+
+// === CURRENT STATE ===
+let currentTab = 'inbox';
+
+// === SWITCH TAB ===
+function switchTab(tab) {
+  if (tab === currentTab) return;
+  animateTabSwitch(tab);
+  currentTab = tab;
+
+  // Закриваємо всі чат-вікна при переключенні
+  try { closeAllChatBars(); } catch(e) {}
+
+  // Update pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${tab}`).classList.add('active');
+
+  // Update tab items
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active');
+
+  // Apply theme
+  applyTheme(tab);
+
+  // Бари inbox/tasks/me/evening/finance — показуємо/ховаємо і закриваємо вікно чату при переключенні
+  ['inbox','tasks','me','evening','finance'].forEach(t => {
+    const bar = document.getElementById(t + '-ai-bar');
+    if (!bar) return;
+    const show = t === tab;
+    bar.style.display = show ? 'flex' : 'none';
+    // Якщо вкладка стала неактивною — закриваємо вікно чату
+    if (!show) {
+      const cw = bar.querySelector('.ai-bar-chat-window');
+      if (cw) cw.classList.remove('open');
+    }
+  });
+
+  // Tab-specific render
+  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); }
+  if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
+  if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
+  if (tab === 'evening') { renderEvening(); }
+  if (tab === 'finance') { renderFinance(); }
+
+  // Підказка першого відвідування
+  setTimeout(() => showFirstVisitTip(tab), 600);
+}
+
+function applyTheme(tab) {
+  const theme = TAB_THEMES[tab];
+  const root = document.documentElement;
+  const bg = document.getElementById('bg');
+  const tabBar = document.getElementById('tab-bar');
+
+  if (bg) bg.style.background = theme.bg;
+  if (tabBar) tabBar.style.background = theme.tabBg;
+  root.style.setProperty('--active-accent', theme.accent);
+  root.style.setProperty('--active-accent2', theme.accent2);
+
+  // Вечір — темний таббар індиго, іконки і текст білі
+  const isDark = tab === 'evening';
+  const tabLabels = tabBar ? tabBar.querySelectorAll('.tab-label') : [];
+  tabLabels.forEach(s => { s.style.color = isDark ? 'rgba(255,255,255,0.5)' : ''; });
+  const tabIcons2 = tabBar ? tabBar.querySelectorAll('.tab-icon') : [];
+  tabIcons2.forEach(ic => { ic.style.color = isDark ? 'rgba(255,255,255,0.5)' : ''; });
+}
+
+// === SETTINGS ===
+function openSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  overlay.classList.add('open');
+
+  const key = localStorage.getItem('nm_gemini_key') || '';
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const memory = localStorage.getItem('nm_memory') || '';
+  const memoryTs = localStorage.getItem('nm_memory_ts');
+
+  document.getElementById('input-api-key').value = key;
+  document.getElementById('input-name').value = settings.name || '';
+  document.getElementById('input-age').value = settings.age || '';
+  document.getElementById('input-weight').value = settings.weight || '';
+  document.getElementById('input-height').value = settings.height || '';
+  document.getElementById('input-profile-notes').value = settings.profileNotes || '';
+  document.getElementById('input-memory').value = memory;
+
+  const tsEl = document.getElementById('memory-last-updated');
+  if (memoryTs) {
+    const d = new Date(parseInt(memoryTs));
+    tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
+  } else {
+    tsEl.textContent = 'Ще не оновлювалась';
+  }
+
+  updateKeyStatus(!!key);
+  updateOwlModeUI(settings.owl_mode || 'partner');
+
+  // Фінанси
+  try {
+    const bdg = getFinBudget();
+    const finBudgetEl = document.getElementById('input-finance-budget');
+    if (finBudgetEl) finBudgetEl.value = bdg.total || '';
+  } catch(e) {}
+}
+
+function setOwlModeSetting(mode) {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  settings.owl_mode = mode;
+  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  updateOwlModeUI(mode);
+  showToast('🦉 Стиль OWL змінено');
+}
+
+function updateOwlModeUI(mode) {
+  ['coach','partner','mentor'].forEach(m => {
+    const el = document.getElementById('set-owl-' + m);
+    if (!el) return;
+    el.style.border = m === mode ? '1.5px solid #7c3aed' : '1.5px solid rgba(30,16,64,0.1)';
+    el.style.background = m === mode ? 'rgba(124,58,237,0.07)' : 'rgba(255,255,255,0.5)';
+  });
+}
+
+function closeSettings() {
+  // Save memory edits before closing
+  const memory = document.getElementById('input-memory').value;
+  localStorage.setItem('nm_memory', memory);
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function updateKeyStatus(hasKey) {
+  const el = document.getElementById('key-status');
+  if (hasKey) {
+    el.className = 'key-status has-key';
+    el.textContent = '✓ API ключ збережено';
+  } else {
+    el.className = 'key-status no-key';
+    el.textContent = '⚠️ Ключ не встановлено';
+  }
+}
+
+function saveSettings() {
+  const key = document.getElementById('input-api-key').value.trim();
+  const name = document.getElementById('input-name').value.trim();
+  const age = document.getElementById('input-age').value.trim();
+  const weight = document.getElementById('input-weight').value.trim();
+  const height = document.getElementById('input-height').value.trim();
+  const profileNotes = document.getElementById('input-profile-notes').value.trim();
+  const memory = document.getElementById('input-memory').value.trim();
+
+  if (key) localStorage.setItem('nm_gemini_key', key);
+  else localStorage.removeItem('nm_gemini_key');
+
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  Object.assign(settings, { name, age, weight, height, profileNotes });
+  localStorage.setItem('nm_settings', JSON.stringify(settings));
+
+  if (memory) localStorage.setItem('nm_memory', memory);
+
+  updateKeyStatus(!!key);
+  showToast('✓ Збережено');
+  setTimeout(() => document.getElementById('settings-overlay').classList.remove('open'), 600);
+}
+
+function exportData() {
+  const data = {};
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats'];
+  keys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) data[k] = JSON.parse(v);
+  });
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 Дані експортовано');
+}
+
+function clearAllData() {
+  if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats'];
+  keys.forEach(k => localStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_')).forEach(k => localStorage.removeItem(k));
+  showToast('🗑️ Всі дані видалено');
+  closeSettings();
+}
+
+function saveFinanceSettings() {
+  const budget = parseFloat(document.getElementById('input-finance-budget')?.value || '0') || 0;
+  const bdg = getFinBudget();
+  bdg.total = budget;
+  saveFinBudget(bdg);
+  showToast('✓ Бюджет збережено');
+}
+
+function clearFinanceData() {
+  if (!confirm('Видалити всі фінансові дані?')) return;
+  localStorage.removeItem('nm_finance');
+  localStorage.removeItem('nm_finance_budget');
+  localStorage.removeItem('nm_finance_cats');
+  if (currentTab === 'finance') renderFinance();
+  showToast('🗑️ Фінансові дані видалено');
+}
+
+// === MEMORY SYSTEM ===
+function getProfile() {
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const parts = [];
+  if (s.name) parts.push(`Ім'я: ${s.name}`);
+  if (s.age) parts.push(`Вік: ${s.age}`);
+  if (s.weight) parts.push(`Вага: ${s.weight} кг`);
+  if (s.height) parts.push(`Зріст: ${s.height} см`);
+  if (s.profileNotes) parts.push(`Про себе: ${s.profileNotes}`);
+  return parts.join(', ');
+}
+
+function shouldRefreshMemory() {
+  const lastTs = localStorage.getItem('nm_memory_ts');
+  if (!lastTs) return true;
+  const last = new Date(parseInt(lastTs));
+  const now = new Date();
+  return last.toDateString() !== now.toDateString();
+}
+
+async function autoRefreshMemory() {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  if (!shouldRefreshMemory()) return;
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  if (inbox.length < 3) return; // недостатньо даних
+  await doRefreshMemory(false);
+}
+
+async function refreshMemory() {
+  const btn = document.getElementById('memory-refresh-btn');
+  btn.textContent = '…';
+  btn.disabled = true;
+  await doRefreshMemory(true);
+  btn.textContent = '↻ Оновити';
+  btn.disabled = false;
+}
+
+async function doRefreshMemory(showResult) {
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
+  const profile = getProfile();
+
+  const recentInbox = inbox.slice(-50).map(i => `[${i.category}] ${i.text}`).join('\n');
+  const tasksList = tasks.map(t => `${t.title} (${t.status})`).join('\n');
+  // Передаємо нотатки — помічаємо оновлені
+  const notesList = notes.slice(-20).map(n => `[${n.folder||'Загальне'}]${n.updatedAt ? ' (оновлено)' : ''} ${n.text.substring(0,80)}`).join('\n');
+
+  const systemPrompt = `Ти — OWL, агент NeverMind. Сформуй короткий профіль людини на основі її записів. ОБОВЯЗКОВО звертайся до неї на "ти" в тексті профілю. Визнач патерни поведінки, звички, цілі. Чесно але з повагою — без зайвого негативу. Відповідай ТІЛЬКИ текстом профілю, без вступів. Максимум 300 слів.`;
+
+  const userMsg = `Профіль користувача: ${profile || 'не заповнено'}
+
+Останні записи в Inbox:
+${recentInbox || 'порожньо'}
+
+Активні задачі:
+${tasksList || 'немає'}
+
+Нотатки:
+${notesList || 'немає'}
+
+Сформуй актуальний профіль користувача.`;
+
+  const result = await callAI(systemPrompt, userMsg, {});
+  if (!result) return;
+
+  localStorage.setItem('nm_memory', result);
+  localStorage.setItem('nm_memory_ts', Date.now().toString());
+
+  // Оновити поле якщо відкрите
+  const memEl = document.getElementById('input-memory');
+  if (memEl) memEl.value = result;
+
+  const tsEl = document.getElementById('memory-last-updated');
+  if (tsEl) {
+    const d = new Date();
+    tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
+  }
+
+  if (showResult) showToast('✓ Пам\'ять оновлено');
+}
+
+// Додаємо профіль і пам'ять до кожного AI запиту
+
+// === ME TAB CHAT ===
+let meChatHistory = [];
+
+function renderMeHabitsStats() {
+  const habits = getHabits();
+  const el = document.getElementById('me-habits-stats-list');
+  const block = document.getElementById('me-habits-stats');
+  if (!el) return;
+  if (habits.length === 0) {
+    if (block) block.style.display = 'none';
+    return;
+  }
+  if (block) block.style.display = 'block';
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+
+  el.innerHTML = habits.map(h => {
+    const pct = getHabitPct(h.id);
+    const streak = getHabitStreak(h.id);
+    const isDoneToday = !!log[today]?.[h.id];
+    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    return `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || '⭕'} ${escapeHtml(h.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626'}">${pct}%</span>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
+        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#ef4444'};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `🔥 ${streak} дні поспіль · ` : ''}за 30 днів${isScheduledToday ? (isDoneToday ? ' · ✅ сьогодні виконано' : ' · ⏳ сьогодні ще не виконано') : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function sendMeChatMessage() {
+  const input = document.getElementById('me-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  input.focus(); // утримуємо клавіатуру
+
+  addMeChatMsg('user', text);
+  meChatHistory.push({ role: 'user', content: text });
+
+  const loadId = 'me-chat-load-' + Date.now();
+  addMeChatMsg('agent', '…', loadId);
+
+  const context = getAIContext();
+  const stats = getMeStatsContext();
+  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній зв'язок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+
+  const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
+  const loadEl = document.getElementById(loadId);
+  if (loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
+  if (reply) meChatHistory.push({ role: 'assistant', content: reply });
+  if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+}
+
+// ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
+function getOWLPersonality() {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const mode = settings.owl_mode || 'partner';
+  const name = settings.name ? `, звертайся до нього "${settings.name}"` : '';
+  const personas = {
+    coach: `Ти — OWL, особистий агент-тренер в NeverMind${name}. Характер: прямий, конкретний, жорсткий але справедливий. Не даєш відмовок, підштовхуєш до дії. Говориш коротко і по ділу. Не лестиш і не розмазуєш. Якщо є проблема — кажеш прямо. Звертаєшся на "ти".`,
+    partner: `Ти — OWL, особистий агент-партнер в NeverMind${name}. Характер: збалансований, підтримуючий, як розумний друг. Слухаєш, радиш конкретно, не осуджуєш. Говориш природно і тепло. Звертаєшся на "ти".`,
+    mentor: `Ти — OWL, особистий агент-наставник в NeverMind${name}. Характер: мудрий, глибокий, дивишся ширше. Задаєш правильні питання, допомагаєш думати. Не даєш готових відповідей якщо людина може знайти їх сама. Звертаєшся на "ти".`
+  };
+  return personas[mode] || personas.partner;
+}
+
+function getAIContext() {
+  const profile = getProfile();
+  const memory = localStorage.getItem('nm_memory') || '';
+  const parts = [];
+
+  // === Дата і час ===
+  const now = new Date();
+  const days = ['неділя','понеділок','вівторок','середа','четвер','п\'ятниця','субота'];
+  const months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  const timeStr = now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+  const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone; // напр: Europe/Kiev
+  const tzOffset = -now.getTimezoneOffset() / 60; // напр: +2 або +3
+  const tzStr = `UTC${tzOffset >= 0 ? '+' : ''}${tzOffset} (${tzName})`;
+  const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}, часовий пояс: ${tzStr}`;
+  parts.push(`Зараз: ${dateStr}`);
+
+  // === Профіль і пам'ять ===
+  if (profile) parts.push(`Профіль: ${profile}`);
+  if (memory) parts.push(`Що знаю про користувача:\n${memory}`);
+
+  // === Активні задачі (з ID для зіставлення) ===
+  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 8);
+  if (tasks.length > 0) {
+    const taskList = tasks.map(t => {
+      const steps = (t.steps || []);
+      const doneSteps = steps.filter(s => s.done).length;
+      const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} кроків)` : '';
+      return `- [ID:${t.id}] ${t.title}${stepInfo}`;
+    }).join('\n');
+    parts.push(`Активні задачі (використовуй ID для complete_task):\n${taskList}`);
+  }
+
+  // === Звички сьогодні (з ID для зіставлення) ===
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = now.toDateString();
+  if (habits.length > 0) {
+    const habitList = habits.map(h => {
+      const done = !!log[today]?.[h.id];
+      return `- [ID:${h.id}] "${h.name}": ${done ? '✓ виконано' : '✗ не виконано'}`;
+    }).join('\n');
+    parts.push(`Звички (використовуй ID для complete_habit):\n${habitList}`);
+  }
+
+  // === Записи Inbox за сьогодні (останні 8) ===
+  const todayInbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]')
+    .filter(i => new Date(i.ts).toDateString() === today)
+    .slice(0, 8);
+  if (todayInbox.length > 0) {
+    const inboxList = todayInbox.map(i => `- [${i.category}] ${i.text}`).join('\n');
+    parts.push(`Записи сьогодні:\n${inboxList}`);
+  }
+
+  // === Фінанси ===
+  try {
+    const finCtx = getFinanceContext();
+    if (finCtx) parts.push(finCtx);
+  } catch(e) {}
+
+  return parts.join('\n\n');
+}
+
+function getMeStatsContext() {
+  // Короткий контекст — не більше 800 символів щоб не ламати JSON-режим
+  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 10);
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+
+  const parts = [];
+  if (tasks.length > 0) parts.push(`Задачі: ${tasks.map(t => t.title).join(', ')}`);
+  if (habits.length > 0) {
+    const habitStats = habits.map(h => {
+      const doneToday = !!log[today]?.[h.id];
+      return `${h.name}(${doneToday ? '✓' : '✗'})`;
+    }).join(', ');
+    parts.push(`Звички сьогодні: ${habitStats}`);
+  }
+  return parts.length > 0 ? parts.join('\n') : '';
+}
+
+
+let _undoToastTimer = null;
+let _undoData = null; // { type, item, restore }
+
+function showToast(msg, duration = 2000) {
+  const el = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  const btn = document.getElementById('toast-undo-btn');
+  msgEl.textContent = msg;
+  btn.style.display = 'none';
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  el.classList.add('show');
+  _undoToastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showUndoToast(msg, restoreFn) {
+  // Показує toast з кнопкою "Відновити" на 10 секунд
+  const el = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  const btn = document.getElementById('toast-undo-btn');
+  msgEl.textContent = msg;
+  btn.style.display = 'inline-block';
+  _undoData = restoreFn;
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  el.classList.add('show');
+  _undoToastTimer = setTimeout(() => {
+    el.classList.remove('show');
+    _undoData = null;
+  }, 10000);
+}
+
+function undoDelete() {
+  if (_undoData) {
+    _undoData(); // викликаємо функцію відновлення
+    _undoData = null;
+  }
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  document.getElementById('toast').classList.remove('show');
+}
+
+// === PWA MANIFEST ===
+function setupPWA() {
+  const manifest = {
+    name: 'NeverMind',
+    short_name: 'NeverMind',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#faf9ff',
+    theme_color: '#f5f1ff',
+    icons: [{
+      src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjM4IiBmaWxsPSIjMWUzYTVmIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSI2NiIgcj0iMTAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDQsNzYgUTM4LDkyIDQwLDExMiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI2IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMiIvPjxwYXRoIGQ9Ik00Miw5MiBMMjgsMTA4IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4yIi8+PHBhdGggZD0iTTQyLDkyIEw1MiwxMDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDAsMTEyIEwzMiwxMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDAsMTEyIEw0OCwxMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48Y2lyY2xlIGN4PSI5NiIgY3k9IjYyIiByPSIxMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNSIvPjxwYXRoIGQ9Ik05Niw3MiBMOTYsMTE0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC41Ii8+PHBhdGggZD0iTTk2LDkwIEw4MCwxMDQiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsOTAgTDExMiwxMDQiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsMTE0IEw4NiwxNDAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsMTE0IEwxMDYsMTQwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTUwIiBjeT0iNTgiIHI9IjExIiBmaWxsPSIjNjBhNWZhIi8+PHBhdGggZD0iTTE1MCw2OSBMMTUwLDExNiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsODYgTDEzMCw2NiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsODYgTDE3MCw2NiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsMTE2IEwxMzgsMTQyIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTE1MCwxMTYgTDE2MiwxNDIiIHN0cm9rZT0iIzYwYTVmYSIgc3Ryb2tlLXdpZHRoPSI1IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=',
+      sizes: '192x192',
+      type: 'image/svg+xml'
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+}
+
+// === SERVICE WORKER ===
+function setupSW() {
+  if (!('serviceWorker' in navigator)) return;
+  const swCode = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => clients.claim());
+    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+
+// === OpenAI API === (ключ зберігається як nm_gemini_key — стара назва з часів Gemini)
+const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
+Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія, або звіт про виконане.
+
+ГРАМАТИКА: Якщо бачиш очевидну помилку або опечатку — виправляй в полі "text" без питань. Наприклад: "голити в зал" → "ходити в зал", "купити хіб" → "купити хліб".
+
+СПОЧАТКУ перевір: чи повідомлення говорить про ВИКОНАННЯ або ФАКТ того що вже є в списку звичок або задач?
+Якщо так — дій відповідно (complete_habit або complete_task), НЕ створюй дублікат.
+
+ЯКЩО повідомлення означає що одна або кілька звичок виконані сьогодні (є в списку "Звички"):
+{
+  "action": "complete_habit",
+  "habit_ids": [123456, 789012],
+  "comment": "коротке підтвердження (1 речення)"
+}
+
+ЯКЩО повідомлення означає що одна або кілька задач виконані або закриті (є в списку "Активні задачі"):
+{
+  "action": "complete_task",
+  "task_ids": [123456, 789012],
+  "comment": "коротке підтвердження (1 речення)"
+}
+
+ВАЖЛИВО для complete_task і complete_habit:
+- Якщо користувач каже "все готово", "зробив все", "виконав" після того як агент перелічив кілька задач/звичок — передай ВСІ ID з того переліку
+- Якщо однозначно йдеться про одну — передай масив з одним елементом
+- Завжди масив, навіть якщо один елемент: [123456]
+
+ЯКЩО це новий запис (думка, задача, ідея, нова звичка, подія, нотатка) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "save",
+  "category": "idea|task|habit|note|event",
+  "folder": "назва папки українською або null",
+  "text": "очищений текст запису",
+  "comment": "коротка практична ремарка (1 речення). НЕ хвали запис."
+}
+
+ЯКЩО в одному повідомленні є КІЛЬКА окремих записів (наприклад дві звички, задача і нотатка) — відповідай масивом JSON:
+[
+  {"action": "save", "category": "habit", "text": "Присідати", ...},
+  {"action": "save", "category": "habit", "text": "Планка", ...}
+]
+
+ЯКЩО це питання або розмова (не запис і не виконання) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "reply",
+  "comment": "відповідь українською, 2-4 речення. Якщо є список — кожен пункт з нового рядка через \\n"
+}
+
+ЯКЩО є сумнів (кілька можливих дій, незрозуміла категорія) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "clarify",
+  "question": "коротке питання українською (1 речення)",
+  "options": [
+    {"label": "📋 Купити запасне колесо", "action": "save", "category": "task", "text": "Купити запасне колесо", "task_title": "Купити запасне колесо", "task_steps": []},
+    {"label": "✅ Виконав звичку X", "action": "complete_habit", "habit_id": 123456}
+  ]
+}
+
+Правила визначення категорії для action=save:
+- task: є конкретна НОВА дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити")
+  - "text" — оригінальний текст (виправ тільки граматику)
+  - "task_title" — коротка назва 2-5 слів. ЯКЩО є час/дата — включи у task_title (формат 24г)
+  - "task_steps" — масив кроків якщо є список дій. Інакше []
+- habit: НОВА регулярна повторювана дія ("щодня", "кожен ранок", "тричі на тиждень"). "text" — коротка назва 2-4 слова
+- event: короткий факт події без емоцій ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції/роздуми — це note
+- idea: творча думка, ідея, план, натхнення
+- note: рефлексія, думки, емоції, висновки, спостереження, факти, щоденникові записи, стан здоровʼя, що відбувається в житті. ЯКЩО людина описує свій день, стан, ситуацію — це note, НЕ reply.
+- finance: витрата або дохід (будь-яка сума грошей). Якщо є сума і контекст витрат/доходу — це finance
+
+ЯКЩО це витрата або дохід (є конкретна сума) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "save_finance",
+  "fin_type": "expense|income",
+  "amount": 50,
+  "category": "Їжа",
+  "fin_comment": "короткий опис БЕЗ суми (1-3 слова, тільки що/де, наприклад: заправка, продукти, кава)"
+}
+
+Категорії витрат з прикладами:
+- Їжа: кава, ресторан, продукти, супермаркет, обід, вечеря, сніданок, доставка їжі, піца, суші
+- Транспорт: бензин, заправка, таксі, Uber, метро, автобус, парковка, авто
+- Підписки: Netflix, Spotify, ChatGPT, Apple, Google, додатки, сервіси
+- Здоровʼя: аптека, ліки, лікар, спортзал, фітнес, стоматолог
+- Житло: оренда, комуналка, інтернет, ремонт, меблі
+- Покупки: одяг, техніка, подарунок, магазин, Amazon
+- Трава: джоінт, канабіс, трава, диспансер
+- Інше: все що не підходить вище
+Категорії доходів: Зарплата, Надходження, Повернення, Інше
+Якщо є сумнів — обирай найближчу категорію з прикладів, НЕ "Інше".
+
+ЯКЩО користувач просить додати кроки до існуючої задачі — відповідай ТІЛЬКИ JSON:
+{
+  "action": "add_step",
+  "task_id": 123456,
+  "steps": ["крок 1", "крок 2"]
+}
+Використовуй task_id з контексту активних задач.
+
+ЯКЩО користувач просить змінити категорію або коментар існуючої ФІНАНСОВОЇ транзакції (згадує суму, витрату, дохід, категорію витрат) — відповідай ТІЛЬКИ JSON:
+{
+  "action": "update_transaction",
+  "id": 1234567890,
+  "category": "Нова категорія",
+  "comment": "новий коментар або пусто"
+}
+Використовуй id з останньої транзакції в контексті. НЕ створюй нову транзакцію.
+ВАЖЛИВО: "додай кроки", "додай крок до задачі" — це НЕ update_transaction. Це стосується задач, відповідай як на звичайний запис або reply.
+
+ЯКЩО повідомлення є уточненням, командою або поясненням до попереднього (наприклад: "так", "ні", "видали", "це була помилка") — НЕ зберігай як запис, відповідай:
+{
+  "action": "reply",
+  "comment": "відповідь або підтвердження"
+}
+
+Пріоритет: якщо сумнів між event і note — обирай note з папкою "Особисте".
+
+Правила визначення папки (для category=note або idea):
+- "Харчування" — їжа, напої, калорії, рецепти
+- "Фінанси" — витрати, доходи, ціни, гроші
+- "Здоровʼя" — самопочуття, симптоми, ліки, спорт, тренування
+- "Робота" — робочі думки, проекти, колеги
+- "Навчання" — що вивчаю, книги, курси, інсайти
+- "Ідеї" — творчі ідеї (якщо category=idea)
+- "Особисте" — стосунки, емоції, особисті думки
+- "Подорожі" — місця, маршрути, враження
+- Якщо не підходить — придумай коротку назву українською
+- Для task/habit/event — folder: null
+
+Правила для clarify:
+- Використовуй якщо: 2+ окремі дії, незрозуміло task чи note, незрозуміло нова звичка чи виконання існуючої
+- НЕ використовуй якщо запис однозначний
+- Максимум 3 варіанти в options
+- label ОБОВ'ЯЗКОВО містить реальний конкретний текст варіанту
+
+ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
+
+async function callAI(systemPrompt, userMessage, contextData = {}) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000);
+    return null;
+  }
+  if (location.protocol === 'file:') {
+    showToast('⚠️ Відкрий файл через сервер, не file://', 5000);
+    return null;
+  }
+  const context = Object.keys(contextData).length > 0
+    ? `\n\nКонтекст:\n${JSON.stringify(contextData, null, 2)}`
+    : '';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage + context }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);
+      return null;
+    }
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) { showToast('❌ Порожня відповідь від Агента', 3000); return null; }
+    return text;
+  } catch (e) {
+    if (e.message === 'Load failed' || e.message.includes('Failed to fetch')) {
+      showToast('❌ Мережева помилка. Перевір інтернет', 4000);
+    } else {
+      showToast('❌ ' + e.message, 4000);
+    }
+    return null;
+  }
+}
+
+
+// === INBOX CHAT MESSAGES ===
+let _inboxTypingEl = null;
+
+function addInboxChatMsg(role, text) {
+  const el = document.getElementById('inbox-chat-messages');
+  if (!el) return;
+
+  // Видаляємо typing індикатор якщо є
+  if (_inboxTypingEl) { _inboxTypingEl.remove(); _inboxTypingEl = null; }
+
+  if (role === 'typing') {
+    // Показуємо typing індикатор
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex';
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.12);border-radius:4px 14px 14px 14px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>`;
+    el.appendChild(div);
+    _inboxTypingEl = div;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
+
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
+  if (isAgent) {
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+  } else {
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+  }
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// === INBOX ===
+const CAT_SVG = {
+  task:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2fd0f9" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+  idea:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8a00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>',
+  note:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a6a3a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  habit:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  event:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  finance: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M14.31 8l-4.62 8M9.69 8l4.62 8M6 12h2.5M15.5 12H18"/></svg>',
+};
+const CAT_DOT_BG = {
+  task:    'background:rgba(47,208,249,0.2)',
+  idea:    'background:rgba(236,247,85,0.3)',
+  note:    'background:rgba(180,140,90,0.15)',
+  habit:   'background:rgba(22,163,74,0.15)',
+  event:   'background:rgba(59,130,246,0.15)',
+  finance: 'background:rgba(194,65,12,0.15)',
+};
+const CAT_TAG_STYLE = {
+  task:    'background:rgba(47,208,249,0.2);color:#0a7a97',
+  idea:    'background:rgba(236,247,85,0.35);color:#5a6a00',
+  note:    'background:rgba(180,140,90,0.2);color:#6a4a1a',
+  habit:   'background:rgba(22,163,74,0.15);color:#14532d',
+  event:   'background:rgba(59,130,246,0.15);color:#1d4ed8',
+  finance: 'background:rgba(194,65,12,0.15);color:#7c2d12',
+};
+const CAT_META = {
+  idea:    { icon: '💡', label: 'Ідея',     dotClass: 'cat-dot-idea',    tagClass: 'cat-idea'    },
+  task:    { icon: '📌', label: 'Задача',   dotClass: 'cat-dot-task',    tagClass: 'cat-task'    },
+  habit:   { icon: '🌱', label: 'Звичка',   dotClass: 'cat-dot-habit',   tagClass: 'cat-habit'   },
+  note:    { icon: '📝', label: 'Нотатка',  dotClass: 'cat-dot-note',    tagClass: 'cat-note'    },
+  event:   { icon: '📅', label: 'Подія',    dotClass: 'cat-dot-event',   tagClass: 'cat-event'   },
+  finance: { icon: '₴',  label: 'Фінанси',  dotClass: 'cat-dot-finance', tagClass: 'cat-finance' },
+};
+
+function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
+function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
+
+function autoResizeTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// Офлайн-fallback: зберігає миттєво як нотатку
+function saveOffline(text) {
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text, category: 'note', ts: Date.now(), processed: false });
+  saveInbox(items);
+  renderInbox();
+
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'щойно';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' хв тому';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' год тому';
+  return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderInbox() {
+  const items = getInbox();
+  const list = document.getElementById('inbox-list');
+  const countEl = document.getElementById('inbox-count');
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="inbox-empty">
+      <div class="inbox-empty-icon">📥</div>
+      <div class="inbox-empty-title">Inbox порожній</div>
+      <div class="inbox-empty-sub">Напиши що завгодно — Агент розбереться</div>
+    </div>`;
+    countEl.style.display = 'none';
+    return;
+  }
+  countEl.style.display = 'inline';
+  countEl.textContent = items.length;
+
+  list.innerHTML = items.map(item => {
+    const meta = CAT_META[item.category] || CAT_META.note;
+    const cardStyles = {
+      task:    'background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border-color:rgba(255,255,255,0.4)',
+      habit:   'background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border-color:rgba(255,255,255,0.4)',
+      note:    'background:linear-gradient(135deg,#f5ede0,#ede0cc);border-color:rgba(255,255,255,0.4)',
+      idea:    'background:linear-gradient(135deg,#ecf755,#e4ef30);border-color:rgba(255,255,255,0.4)',
+      event:   'background:linear-gradient(135deg,#bfdbfe,#a5c8fe);border-color:rgba(255,255,255,0.4)',
+      finance: 'background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border-color:rgba(255,255,255,0.4)',
+    };
+    const cardStyle = cardStyles[item.category] || cardStyles.note;
+    return `<div class="inbox-item-wrap" id="wrap-${item.id}">
+      <div class="inbox-item-delete-bg">🗑️</div>
+      <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
+           style="${cardStyle}"
+           ontouchstart="swipeStart(event,${item.id})"
+           ontouchmove="swipeMove(event,${item.id})"
+           ontouchend="swipeEnd(event,${item.id})">
+        <div class="inbox-item-inner">
+          <div class="inbox-item-cat-dot" style="${CAT_DOT_BG[item.category] || CAT_DOT_BG.note}">${CAT_SVG[item.category] || CAT_SVG.note}</div>
+          <div class="inbox-item-body">
+            <div class="inbox-item-text">${escapeHtml(item.text)}</div>
+            <div class="inbox-item-meta">
+              <span class="inbox-item-time">${formatTime(item.ts)}</span>
+              <span class="inbox-item-tag" style="${CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note}">${meta.label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// === SWIPE TO DELETE ===
+const swipeState = {};
+const SWIPE_THRESHOLD = 72;
+
+function swipeStart(e, id) {
+  const t = e.touches[0];
+  swipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function swipeMove(e, id) {
+  const s = swipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById(`item-${id}`);
+  if (el) el.style.transform = `translateX(${s.dx}px)`;
+}
+function swipeEnd(e, id) {
+  const s = swipeState[id]; if (!s) return;
+  const el = document.getElementById(`item-${id}`);
+  if (s.dx < -SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => {
+      const item = getInbox().find(i => i.id === id);
+      saveInbox(getInbox().filter(i => i.id !== id)); renderInbox();
+      if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); items.unshift(item); saveInbox(items); renderInbox(); });
+    }, 220);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'translateX(0)'; setTimeout(() => { if (el) el.style.transition = ''; }, 300); }
+  }
+  delete swipeState[id];
+}
+
+// === UNIFIED SEND TO AI ===
+let aiLoading = false;
+let inboxChatHistory = []; // зберігає останні 6 обмінів
+const SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+
+function unifiedInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
+}
+
+async function callAIWithHistory(systemPrompt, history) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
+  if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000); // 25 сек таймаут
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, ...history],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('OpenAI error:', res.status, errText);
+      return null;
+    }
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || null;
+    return reply;
+  } catch(e) {
+    clearTimeout(timeout);
+    console.error('callAIWithHistory error:', e);
+    return null;
+  }
+}
+
+
+async function sendToAI() {
+  if (aiLoading) return;
+  const input = document.getElementById('inbox-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Перехоплюємо відповідь якщо йде опитування
+  addInboxChatMsg('user', text);
+  input.value = ''; input.style.height = 'auto';
+  input.focus();
+  if (handleSurveyAnswer(text)) return;
+
+  const key = localStorage.getItem('nm_gemini_key');
+
+  // Немає ключа або file:// — зберігаємо офлайн миттєво
+  if (!key || location.protocol === 'file:') {
+    saveOffline(text);
+    return;
+  }
+
+  aiLoading = true;
+
+  const btn = document.getElementById('ai-send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="ai-typing" style="transform:scale(0.65)"><span></span><span></span><span></span></div>';
+
+  // Показуємо typing в чаті
+  addInboxChatMsg('typing', '…');
+
+  const aiContext = getAIContext();
+  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
+  // Build history for context — but keep it short so JSON format is not broken
+  inboxChatHistory.push({ role: 'user', content: text });
+  if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
+  // Передаємо останні 12 повідомлень — достатньо для контексту розмови
+  const historySlice = inboxChatHistory.slice(-12);
+  const reply = await callAIWithHistory(fullPrompt, historySlice);
+
+  if (reply) {
+    try {
+      const clean = reply.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      // Save assistant reply to history for context
+      inboxChatHistory.push({ role: 'assistant', content: reply });
+
+      // Підтримка масиву дій — агент може повернути [{action:...}, {action:...}]
+      const actions = Array.isArray(parsed) ? parsed : [parsed];
+
+      for (const action of actions) {
+        if (action.action === 'clarify') {
+          showClarify(action, text);
+          aiLoading = false;
+          btn.disabled = false;
+          btn.innerHTML = SEND_SVG;
+          return;
+        }
+        if (action.action === 'save') {
+          await processSaveAction(action, text);
+        } else if (action.action === 'save_finance') {
+          processFinanceAction(action, text);
+        } else if (action.action === 'update_transaction') {
+          const txs = getFinance();
+          const idx = txs.findIndex(t => t.id === action.id);
+          if (idx !== -1) {
+            if (action.category) txs[idx].category = action.category;
+            if (action.comment !== undefined) txs[idx].comment = action.comment;
+            saveFinance(txs);
+            if (currentTab === 'finance') renderFinance();
+            addInboxChatMsg('agent', `✓ Категорію змінено на "${txs[idx].category}"`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов транзакцію. Спробуй ще раз.');
+          }
+        } else if (action.action === 'complete_habit') {
+          await processCompleteHabit(action, text);
+        } else if (action.action === 'complete_task') {
+          await processCompleteTask(action, text);
+        } else if (action.action === 'add_step') {
+          const tasks = getTasks();
+          const idx = tasks.findIndex(t => t.id == action.task_id);
+          if (idx !== -1) {
+            const steps = Array.isArray(action.steps) ? action.steps : (action.step ? [action.step] : []);
+            steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+            saveTasks(tasks);
+            renderTasks();
+            addInboxChatMsg('agent', `✓ Додано ${steps.length} крок(и) до "${tasks[idx].title}"`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
+          }
+        } else {
+          // action === 'reply' — просто відповідь
+          const replyText = action.comment || reply;
+          addInboxChatMsg('agent', replyText);
+        }
+      }
+    } catch(e) {
+      console.error('JSON parse error:', e);
+      // Спробуємо витягти clarify з часткового JSON
+      try {
+        const jsonMatch = (reply||'').match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const p2 = JSON.parse(jsonMatch[0]);
+          if (p2.action === 'clarify') {
+            showClarify(p2, text);
+            aiLoading = false; btn.disabled = false; btn.innerHTML = SEND_SVG;
+            return;
+          }
+        }
+      } catch(e2) {}
+      saveOffline(text);
+      addInboxChatMsg('agent', '✓ Збережено');
+    }
+  } else {
+    saveOffline(text);
+    addInboxChatMsg('agent', '📝 Збережено в Inbox. Інтернет недоступний — Агент не визначив категорію. Надішли ще раз коли буде мережа.');
+  }
+
+  aiLoading = false;
+  btn.disabled = false;
+  btn.innerHTML = SEND_SVG;
+}
+
+// === NOTES ===
+let editingNoteId = null;
+let pendingFolderSuggestion = null;
+
+function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
+function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); }
+
+function getFolders() {
+  const notes = getNotes();
+  const set = new Set(notes.map(n => n.folder || 'Загальне'));
+  return [...set].sort();
+}
+
+function addNoteFromInbox(text, category, folder = null) {
+  const notes = getNotes();
+  // Папка від агента має пріоритет, інакше fallback
+  const resolvedFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
+  notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source: 'inbox', ts: Date.now(), lastViewed: Date.now() });
+  saveNotes(notes);
+}
+
+function openAddNote() {
+  editingNoteId = null;
+  document.getElementById('note-modal-title').textContent = 'Нова нотатка';
+  document.getElementById('note-input-text').value = '';
+  document.getElementById('note-input-folder').value = '';
+  updateFolderSuggestions();
+  document.getElementById('note-modal').style.display = 'flex';
+  setTimeout(() => { const el = document.getElementById('note-input-text'); el.removeAttribute('readonly'); el.focus(); }, 350);
+}
+
+function openEditNote(id) {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  editingNoteId = id;
+  document.getElementById('note-modal-title').textContent = 'Редагувати нотатку';
+  document.getElementById('note-input-text').value = n.text;
+  document.getElementById('note-input-folder').value = n.folder || '';
+  updateFolderSuggestions();
+  document.getElementById('note-modal').style.display = 'flex';
+  // Оновлюємо час перегляду
+  n.lastViewed = Date.now();
+  saveNotes(notes);
+}
+
+function closeNoteModal() {
+  document.getElementById('note-modal').style.display = 'none';
+}
+
+function updateFolderSuggestions() {
+  const dl = document.getElementById('folder-suggestions');
+  dl.innerHTML = getFolders().map(f => `<option value="${f}">`).join('');
+}
+
+function saveNote() {
+  const text = document.getElementById('note-input-text').value.trim();
+  if (!text) { showToast('Введіть текст нотатки'); return; }
+  const folder = document.getElementById('note-input-folder').value.trim() || 'Загальне';
+  const notes = getNotes();
+
+  if (editingNoteId) {
+    const idx = notes.findIndex(x => x.id === editingNoteId);
+    if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
+  } else {
+    notes.unshift({ id: Date.now(), text, folder, source: 'manual', ts: Date.now(), lastViewed: Date.now() });
+  }
+  saveNotes(notes);
+  closeNoteModal();
+  renderNotes();
+  showToast(editingNoteId ? '✓ Нотатку оновлено' : '✓ Нотатку збережено');
+}
+
+function deleteNote(id) {
+  const notes = getNotes();
+  const item = notes.find(x => x.id === id);
+  saveNotes(notes.filter(x => x.id !== id));
+  renderNotes();
+  if (item) showUndoToast('Нотатку видалено', () => { const n = getNotes(); n.unshift(item); saveNotes(n); renderNotes(); });
+}
+
+let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
+
+function filterNotes() {
+  const q = document.getElementById('notes-search').value.trim();
+  document.getElementById('notes-search-clear').style.display = q ? 'block' : 'none';
+  renderNotes(q);
+}
+
+function clearNotesSearch() {
+  document.getElementById('notes-search').value = '';
+  document.getElementById('notes-search-clear').style.display = 'none';
+  renderNotes();
+}
+
+function openNotesFolder(folderName) {
+  currentNotesFolder = folderName;
+  renderNotes();
+}
+
+function closeNotesFolder() {
+  currentNotesFolder = null;
+  renderNotes();
+}
+
+// Кольори папок — єдине місце визначення
+const FOLDER_COLORS = {
+  'Харчування': { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
+  'Фінанси':   { bg: 'linear-gradient(135deg,#ecf755,#e4ef30)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
+  "Здоров'я":  { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+  'Здоровя':   { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+  'Робота':    { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '🎯' },
+  'Навчання':  { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🧠' },
+  'Ідеї':      { bg: 'linear-gradient(135deg,#ecf755,#e4ef30)', border: 'rgba(255,255,255,0.4)', dot: '💡' },
+  'Особисте':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '⚡' },
+  'Подорожі':  { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '✈️' },
+};
+const DEFAULT_NOTE_FOLDER = { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '📝' };
+
+function renderNotes(searchQuery = '') {
+  let notes = getNotes();
+  const content = document.getElementById('notes-content');
+  const empty = document.getElementById('notes-empty');
+  const header = document.getElementById('notes-folder-header');
+
+  if (notes.length === 0) {
+    content.innerHTML = '';
+    empty.style.display = 'block';
+    if (header) header.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Якщо пошук — показуємо всі записи без папок
+  if (searchQuery) {
+    if (header) header.style.display = 'none';
+    const q = searchQuery.toLowerCase();
+    notes = notes.filter(n => n.text.toLowerCase().includes(q) || (n.folder || '').toLowerCase().includes(q));
+    if (notes.length === 0) {
+      content.innerHTML = '<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">Нічого не знайдено</div>';
+      return;
+    }
+    content.innerHTML = renderNotesList(notes);
+    return;
+  }
+
+  // Рівень 2 — записи в конкретній папці
+  if (currentNotesFolder !== null) {
+    if (header) {
+      const fc = FOLDER_COLORS[currentNotesFolder] || DEFAULT_NOTE_FOLDER;
+      header.style.display = 'flex';
+      header.innerHTML = `
+        <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          Назад
+        </button>
+        <span style="font-size:16px;font-weight:800;color:#1e1040">${fc.dot} ${escapeHtml(currentNotesFolder)}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter(n=>(n.folder||'Загальне')===currentNotesFolder).length}</span>
+      `;
+    }
+    const folderNotes = notes.filter(n => (n.folder || 'Загальне') === currentNotesFolder);
+    content.innerHTML = folderNotes.length
+      ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + '</div>'
+      : '<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">Папка порожня</div>';
+    return;
+  }
+
+  // Рівень 1 — список папок
+  if (header) header.style.display = 'none';
+  const byFolder = {};
+  notes.forEach(n => {
+    const f = n.folder || 'Загальне';
+    if (!byFolder[f]) byFolder[f] = [];
+    byFolder[f].push(n);
+  });
+
+  const folders = Object.entries(byFolder).sort((a,b) => b[1].length - a[1].length);
+
+  content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:10px">' +
+    folders.map(([folder, items]) => {
+      const fc = FOLDER_COLORS[folder] || DEFAULT_NOTE_FOLDER;
+      const preview = items[0].text.length > 60 ? items[0].text.substring(0,60) + '…' : items[0].text;
+      return `<div onclick="openNotesFolder('${escapeHtml(folder).replace(/'/g,"\\'")}')" style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${fc.dot}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">${escapeHtml(folder)}</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+          <div style="font-size:20px;font-weight:900;color:#1e1040">${items.length}</div>
+          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+function renderNotesList(notes) {
+  const now = Date.now();
+  return notes.map(n => {
+    const fc = FOLDER_COLORS[n.folder || 'Загальне'] || DEFAULT_NOTE_FOLDER;
+    const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
+    return `
+      <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);overflow:hidden;margin-bottom:8px">
+        <div class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:20px;color:white">🗑️</div>
+        <div id="note-item-${n.id}" class="inbox-item"
+          ontouchstart="noteSwipeStart(event,${n.id})"
+          ontouchmove="noteSwipeMove(event,${n.id})"
+          ontouchend="noteSwipeEnd(event,${n.id})"
+          style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
+          <div onclick="openNoteView(${n.id})" style="cursor:pointer">
+            <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
+              <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+
+// === NOTE SWIPE TO DELETE ===
+const noteSwipeState = {};
+const NOTE_SWIPE_THRESHOLD = 80;
+
+function noteSwipeStart(e, id) {
+  const t = e.touches[0];
+  noteSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function noteSwipeMove(e, id) {
+  const s = noteSwipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById(`note-item-${id}`);
+  if (el) el.style.transform = `translateX(${s.dx}px)`;
+}
+function noteSwipeEnd(e, id) {
+  const s = noteSwipeState[id]; if (!s) return;
+  const el = document.getElementById(`note-item-${id}`);
+  if (s.dx < -NOTE_SWIPE_THRESHOLD) {
+    if (el) {
+      el.style.transition = 'transform 0.2s ease, opacity 0.2s';
+      el.style.transform = 'translateX(-110%)';
+      el.style.opacity = '0';
+    }
+    setTimeout(() => {
+      const item = getNotes().find(x => x.id === id);
+      saveNotes(getNotes().filter(x => x.id !== id)); renderNotes();
+      if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); notes.unshift(item); saveNotes(notes); renderNotes(); });
+    }, 200);
+  } else {
+    if (el) {
+      el.style.transition = 'transform 0.3s ease';
+      el.style.transform = 'translateX(0)';
+      setTimeout(() => { el.style.transition = ''; }, 300);
+    }
+  }
+  delete noteSwipeState[id];
+}
+
+// === NOTE CONTEXT MENU ===
+let activeNoteMenuId = null;
+
+function openNoteMenu(id) {
+  activeNoteMenuId = id;
+  document.getElementById('note-menu').style.display = 'flex';
+}
+function closeNoteMenu() {
+  document.getElementById('note-menu').style.display = 'none';
+  activeNoteMenuId = null;
+}
+function noteMenuEdit() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  openEditNote(id);
+}
+function noteMenuDelete() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  deleteNote(id);
+}
+function noteMenuCopy() {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteMenuId);
+  if (!n) return;
+  closeNoteMenu();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(n.text).then(() => showToast('✓ Скопійовано'));
+  } else {
+    showToast('Копіювання недоступне');
+  }
+}
+function noteMenuMove() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  const folders = getFolders();
+  const current = n.folder || 'Загальне';
+  const folderList = folders.filter(f => f !== current);
+  if (folderList.length === 0) {
+    showToast('Немає інших папок');
+    return;
+  }
+  // Simple prompt for now
+  const newFolder = prompt(`Перемістити в папку:\n${folderList.join(', ')}\n\nПоточна: ${current}\nВведіть назву:`, current);
+  if (newFolder && newFolder.trim() && newFolder.trim() !== current) {
+    const idx = notes.findIndex(x => x.id === id);
+    if (idx !== -1) notes[idx].folder = newFolder.trim();
+    saveNotes(notes);
+    renderNotes();
+    showToast(`✓ Переміщено в "${newFolder.trim()}"`);
+  }
+}
+async function checkAndSuggestFolders() {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const lastTs = localStorage.getItem('nm_notes_folders_ts');
+  if (lastTs) {
+    const last = new Date(parseInt(lastTs));
+    if (last.toDateString() === new Date().toDateString()) return;
+  }
+  const notes = getNotes();
+  if (notes.length < 5) return;
+  await suggestNoteFolders();
+}
+
+async function suggestNoteFolders() {
+  const notes = getNotes();
+  if (notes.length === 0) return;
+  const sample = notes.slice(0, 40).map(n => `"${n.text.substring(0, 60)}"`).join('\n');
+  const systemPrompt = `Ти — організатор нотаток. Проаналізуй записи і запропонуй оптимальну структуру папок (3-6 папок). Відповідай ТІЛЬКИ JSON масивом: [{"folder":"Назва","description":"коротко що сюди входить"}]. Без markdown, без тексту поза JSON.`;
+  const reply = await callAI(systemPrompt, `Нотатки:\n${sample}`, {});
+  if (!reply) return;
+  try {
+    const clean = reply.replace(/```json|```/g, '').trim();
+    const folders = JSON.parse(clean);
+    pendingFolderSuggestion = folders;
+    localStorage.setItem('nm_notes_folders_ts', Date.now().toString());
+    const banner = document.getElementById('notes-ai-banner');
+    const textEl = document.getElementById('notes-ai-text');
+    if (banner && textEl) {
+      const names = folders.map(f => `📁 ${f.folder} — ${f.description}`).join('\n');
+      textEl.textContent = `Пропоную структуру:\n${names}`;
+      banner.style.display = 'block';
+    }
+  } catch { /* ігноруємо */ }
+}
+
+function applyFolderSuggestion() {
+  if (!pendingFolderSuggestion) return;
+  const notes = getNotes();
+  let changed = 0;
+  notes.forEach(n => {
+    if (!n.folder || n.folder === 'Загальне') {
+      // Знаходимо найближчу папку по ключовим словам з опису
+      for (const f of pendingFolderSuggestion) {
+        const keywords = f.description.toLowerCase().split(/[\s,]+/);
+        const noteText = n.text.toLowerCase();
+        if (keywords.some(kw => kw.length > 3 && noteText.includes(kw))) {
+          n.folder = f.folder;
+          changed++;
+          break;
+        }
+      }
+    }
+  });
+  saveNotes(notes);
+  renderNotes();
+  updateFolderSuggestions();
+  document.getElementById('notes-ai-banner').style.display = 'none';
+  showToast(changed > 0 ? `✓ Розкладено ${changed} нотаток по папках` : '✓ Папки збережено як орієнтир');
+}
+
+// === TASKS ===
+let editingTaskId = null;
+let tempSteps = [];
+
+function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
+function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); }
+
+function openAddTask() {
+  editingTaskId = null;
+  tempSteps = [];
+  document.getElementById('task-modal-title').textContent = 'Нова задача';
+  document.getElementById('task-input-title').value = '';
+  document.getElementById('task-input-desc').value = '';
+  document.getElementById('task-step-input').value = '';
+  renderTempSteps();
+  document.getElementById('task-modal').style.display = 'flex';
+  setTimeout(() => { const el = document.getElementById('task-input-title'); el.removeAttribute('readonly'); el.focus(); }, 350);
+}
+
+function openEditTask(id) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  editingTaskId = id;
+  tempSteps = [...(t.steps || [])];
+  document.getElementById('task-modal-title').textContent = 'Редагувати задачу';
+  document.getElementById('task-input-title').value = t.title;
+  document.getElementById('task-input-desc').value = t.desc || '';
+  document.getElementById('task-step-input').value = '';
+  renderTempSteps();
+  document.getElementById('task-modal').style.display = 'flex';
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').style.display = 'none';
+}
+
+function addTaskStep() {
+  const inp = document.getElementById('task-step-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  tempSteps.push({ id: Date.now(), text: val, done: false });
+  inp.value = '';
+  renderTempSteps();
+}
+
+function toggleTempStep(id) {
+  const s = tempSteps.find(x => x.id === id);
+  if (s) s.done = !s.done;
+  renderTempSteps();
+}
+
+function removeTempStep(id) {
+  tempSteps = tempSteps.filter(x => x.id !== id);
+  renderTempSteps();
+}
+
+function renderTempSteps() {
+  const el = document.getElementById('task-steps-list');
+  if (tempSteps.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = tempSteps.map(s => `
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(30,16,64,0.03);border-radius:8px;padding:8px 10px">
+      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? '✓' : ''}</div>
+      <div style="flex:1;font-size:15px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+      <div onclick="removeTempStep(${s.id})" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
+    </div>
+  `).join('');
+}
+
+function saveTask() {
+  const title = document.getElementById('task-input-title').value.trim();
+  if (!title) { showToast('Введіть назву задачі'); return; }
+  const desc = document.getElementById('task-input-desc').value.trim();
+  const tasks = getTasks();
+
+  if (editingTaskId) {
+    const idx = tasks.findIndex(x => x.id === editingTaskId);
+    if (idx !== -1) {
+      tasks[idx] = { ...tasks[idx], title, desc, steps: tempSteps, updatedAt: Date.now() };
+    }
+  } else {
+    tasks.unshift({ id: Date.now(), title, desc, steps: tempSteps, status: 'active', createdAt: Date.now() });
+  }
+
+  saveTasks(tasks);
+  closeTaskModal();
+  renderTasks();
+  showToast(editingTaskId ? '✓ Задачу оновлено' : '✓ Задачу додано');
+
+  // Тихий AI коментар для нової задачі
+  if (!editingTaskId) askAIAboutTask(title, desc, tempSteps);
+}
+
+function toggleTaskStep(taskId, stepId) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === taskId);
+  if (!t) return;
+  const s = (t.steps || []).find(x => x.id === stepId);
+  if (s) s.done = !s.done;
+
+  // Перевіряємо чи всі кроки виконані
+  const allDone = t.steps.length > 0 && t.steps.every(x => x.done);
+  if (allDone) t.status = 'done';
+
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function deleteTask(id) {
+  const item = getTasks().find(x => x.id === id);
+  saveTasks(getTasks().filter(x => x.id !== id));
+  renderTasks();
+  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); tasks.unshift(item); saveTasks(tasks); renderTasks(); });
+}
+
+function toggleTaskStatus(id) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  t.status = t.status === 'done' ? 'active' : 'done';
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function renderTasks() {
+  const tasks = getTasks();
+  const list = document.getElementById('tasks-list');
+  const empty = document.getElementById('tasks-empty');
+
+  if (tasks.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const active = tasks.filter(t => t.status !== 'done');
+  const done = tasks.filter(t => t.status === 'done');
+  const sorted = [...active, ...done];
+
+  list.innerHTML = sorted.map(t => {
+    const steps = t.steps || [];
+    const doneCount = steps.filter(s => s.done).length;
+    const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
+    const isDone = t.status === 'done';
+
+    return `<div style="margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'}">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
+        <div onclick="toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
+          ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <div onclick="openEditTask(${t.id})" style="font-size:19px;cursor:pointer;opacity:0.35;padding:4px">✎</div>
+          <div onclick="deleteTask(${t.id})" style="font-size:20px;cursor:pointer;opacity:0.35;padding:4px">×</div>
+        </div>
+      </div>
+      ${steps.length > 0 ? `
+        <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
+          ${steps.map(s => `
+            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+              <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
+              <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function askAIAboutTask(title, desc, steps) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Користувач щойно додав задачу. Дай коротку (1-2 речення) підтримуючу пораду. Фокус на тому ЯК досягти мети. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const steps_text = steps.length ? `\nКроки: ${steps.map(s => s.text).join(', ')}` : '';
+  const reply = await callAI(systemPrompt, `Задача: ${title}${desc ? '\nОпис: ' + desc : ''}${steps_text}`, {});
+  if (!reply) return;
+  const commentEl = document.getElementById('tasks-ai-comment');
+  if (commentEl) {
+    commentEl.textContent = '🦉 ' + reply;
+    commentEl.style.display = 'block';
+  }
+}
+
+// Відкриваємо задачі при переключенні вкладки — через хук в renderTasks
+
+// === ME TAB ===
+function renderMe() {
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
+
+  // Stats
+  document.getElementById('me-stat-inbox').textContent = inbox.length;
+  document.getElementById('me-stat-tasks').textContent = tasks.filter(t => t.status !== 'done').length;
+  document.getElementById('me-stat-notes').textContent = notes.length;
+
+  // Week grid — активність по дням (inbox записи)
+  const weekEl = document.getElementById('me-week-grid');
+  const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  const now = new Date();
+  const todayDow = (now.getDay() + 6) % 7; // 0=Пн
+  weekEl.innerHTML = days.map((d, i) => {
+    const daysAgo = todayDow - i;
+    const date = new Date(now);
+    date.setDate(now.getDate() - daysAgo);
+    const dateStr = date.toDateString();
+    const count = inbox.filter(item => new Date(item.ts).toDateString() === dateStr).length;
+    const future = daysAgo < 0;
+    let bg = 'rgba(30,16,64,0.05)', color = 'rgba(30,16,64,0.2)';
+    if (!future && count > 0) { bg = count >= 5 ? '#16a34a' : count >= 2 ? 'rgba(22,163,74,0.4)' : 'rgba(22,163,74,0.2)'; color = count >= 5 ? 'white' : '#16a34a'; }
+    const isToday = daysAgo === 0;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35)">${d}</div>
+      <div style="width:32px;height:32px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};${isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.4)' : ''}">${future ? '–' : count || '·'}</div>
+    </div>`;
+  }).join('');
+
+  // Categories breakdown
+  const catEl = document.getElementById('me-categories');
+  const catCount = {};
+  inbox.forEach(i => { catCount[i.category] = (catCount[i.category] || 0) + 1; });
+  const total = inbox.length || 1;
+  const catColors = { note:'#6366f1', idea:'#f59e0b', task:'#ea580c', habit:'#16a34a', event:'#0ea5e9' };
+  const catLabels = { note:'Нотатки', idea:'Ідеї', task:'Задачі', habit:'Звички', event:'Події' };
+  catEl.innerHTML = Object.entries(catCount).sort((a,b) => b[1]-a[1]).map(([cat, cnt]) => {
+    const pct = Math.round(cnt / total * 100);
+    const color = catColors[cat] || '#888';
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);width:52px">${catLabels[cat]||cat}</div>
+      <div style="flex:1;height:6px;background:rgba(0,0,0,0.05);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.6s ease"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);width:28px;text-align:right">${cnt}</div>
+    </div>`;
+  }).join('') || '<div style="font-size:14px;color:rgba(30,16,64,0.3)">Немає даних</div>';
+
+  // Activity last 14 days
+  const actEl = document.getElementById('me-activity');
+  const days14 = Array.from({length:14}, (_,i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (13 - i));
+    return d.toDateString();
+  });
+  const maxAct = Math.max(1, ...days14.map(ds => inbox.filter(i => new Date(i.ts).toDateString() === ds).length));
+  actEl.innerHTML = days14.map((ds, i) => {
+    const cnt = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
+    const h = Math.max(4, Math.round(cnt / maxAct * 44));
+    const isToday = i === 13;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px">
+      <div style="width:100%;height:${h}px;background:${isToday ? '#16a34a' : 'rgba(22,163,74,0.3)'};border-radius:3px;transition:height 0.5s ease"></div>
+    </div>`;
+  }).join('');
+}
+
+async function refreshMeAnalysis() {
+  const btn = document.getElementById('me-refresh-btn');
+  const el = document.getElementById('me-ai-analysis');
+  btn.textContent = '…';
+  btn.disabled = true;
+  el.textContent = '…';
+
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
+  const aiContext = getAIContext();
+  const totalRecords = inbox.length + tasks.length + notes.length;
+
+  if (totalRecords < 3) {
+    el.textContent = 'Ще замало даних для аналізу. Додай кілька записів в Inbox, створи задачі або нотатки — і я дам тобі корисний аналіз.';
+    btn.textContent = '↻';
+    btn.disabled = false;
+    return;
+  }
+
+  const dataNote = totalRecords < 10 ? 'УВАГА: даних мало, не роби глибоких висновків про особистість — просто опиши що бачиш і запропонуй що додати.' : '';
+  const systemPrompt = `${getOWLPersonality()} Проаналізуй дані та дай короткий аналіз (3-5 речень). Починай з позитивного — що вдається добре. Потім конкретно що можна покращити. ${dataNote} Завершуй конкретною порадою. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  const userData = `Записів в Inbox: ${inbox.length}
+Активних задач: ${tasks.filter(t=>t.status!=='done').length}
+Виконаних задач: ${tasks.filter(t=>t.status==='done').length}
+Нотаток: ${notes.length}
+Останні 10 записів: ${inbox.slice(0,10).map(i=>`[${i.category}] ${i.text}`).join('; ')}`;
+
+  const reply = await callAI(systemPrompt, userData, {});
+  el.textContent = reply || 'Не вдалось отримати аналіз. Спробуй ще раз.';
+  btn.textContent = '↻';
+  btn.disabled = false;
+
+  // Генеруємо 3 поради окремим запитом
+  if (reply && totalRecords >= 5) {
+    const adviceEl = document.getElementById('me-ai-advice');
+    const adviceBlock = document.getElementById('me-advice-block');
+    if (adviceEl && adviceBlock) {
+      adviceEl.textContent = '…';
+      adviceBlock.style.display = 'block';
+      const advicePrompt = `${getOWLPersonality()} На основі аналізу дай рівно 3 конкретні, практичні поради для цієї людини. Кожна порада — одне речення, максимально конкретна і дієва. Формат відповіді: "1. [порада]\n2. [порада]\n3. [порада]". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+      const adviceReply = await callAI(advicePrompt, `Аналіз: ${reply}
+
+Дані: ${userData}`, {});
+      if (adviceReply) {
+        adviceEl.innerHTML = adviceReply.split('\n').filter(l => l.trim()).map(l => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join('');
+      } else {
+        adviceBlock.style.display = 'none';
+      }
+    }
+  }
+}
+
+// === EVENING TAB ===
+let currentMomentMood = 'positive';
+let dialogHistory = [];
+let dialogLoading = false;
+
+function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
+function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); }
+
+function renderEvening() {
+  const moments = getMoments();
+  const today = new Date().toDateString();
+  const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === today);
+
+  // Додаємо нотатки за сьогодні з nm_notes (без копіювання — читаємо напряму)
+  const allNotes = getNotes();
+  const todayNotes = allNotes.filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
+  // Об'єднуємо: спочатку події/моменти, потім нотатки — без дублів
+  const notesAsItems = todayNotes.map(n => ({
+    id: 'note_' + n.id,
+    text: n.title || n.text || '',
+    mood: 'neutral',
+    ts: n.ts || n.createdAt || 0,
+    isNote: true,
+    folder: n.folder || 'note'
+  }));
+  const allTodayItems = [...todayMoments, ...notesAsItems]
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  // Відновлюємо збережений підсумок
+  try {
+    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if (saved && saved.date === today && saved.text) {
+      const el = document.getElementById('evening-summary');
+      if (el && el.textContent.includes('Натисни')) el.textContent = saved.text;
+    }
+  } catch(e) {}
+
+  // Score — based on today's positive vs negative moments
+  const pos = todayMoments.filter(m => m.mood === 'positive').length;
+  const neg = todayMoments.filter(m => m.mood === 'negative').length;
+  const total = todayMoments.length;
+  const score = total > 0 ? Math.round((pos / total) * 100) : 0;
+
+  const arc = document.getElementById('evening-ring-arc');
+  const pctEl = document.getElementById('evening-ring-pct');
+  const descEl = document.getElementById('evening-score-desc');
+
+  if (arc) {
+    const offset = 157 - (157 * score / 100);
+    setTimeout(() => { arc.style.strokeDashoffset = offset; }, 100);
+    pctEl.textContent = score + '%';
+    descEl.textContent = total === 0 && todayNotes.length === 0 ? 'Додай моменти дня' :
+      score >= 70 ? 'Гарний день 💪' : score >= 40 ? 'Середній день' : 'Важкий день';
+  }
+
+  // Moments + Notes list
+  const momEl = document.getElementById('evening-moments');
+  if (allTodayItems.length === 0) {
+    momEl.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>';
+  } else {
+    const moodColors = { positive:'#16a34a', neutral:'#d97706', negative:'#ef4444' };
+    const folderIcons = { note:'📝', idea:'💡', event:'📅' };
+    momEl.innerHTML = allTodayItems.map(m => `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05)">
+        <div style="width:8px;height:8px;border-radius:50%;background:${m.isNote ? '#818cf8' : (moodColors[m.mood]||'#888')};margin-top:5px;flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;color:#1e1040;line-height:1.5;font-weight:${m.summary ? '600' : '400'}">${escapeHtml(m.summary || m.text)}${m.isNote ? ' <span style="font-size:11px;color:rgba(30,16,64,0.3)">' + (folderIcons[m.folder] || '📝') + '</span>' : ''}</div>
+          ${m.summary ? `<div style="font-size:12px;color:rgba(30,16,64,0.35);line-height:1.4;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escapeHtml(m.text)}</div>` : ''}
+        </div>
+        ${!m.isNote ? `<div onclick="deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer">×</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // Фінанси сьогодні
+  try {
+    const todayFinTxs = getFinance().filter(t => new Date(t.ts).toDateString() === today);
+    const finBlock = document.getElementById('evening-finance-block');
+    const finContent = document.getElementById('evening-finance-content');
+    if (finBlock && finContent && todayFinTxs.length > 0) {
+      finBlock.style.display = 'block';
+      const todayExp = todayFinTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+      const todayInc = todayFinTxs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+      finContent.innerHTML = todayFinTxs.slice(0,5).map(t =>
+        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(194,65,12,0.08);font-size:13px">
+          <span style="color:#7c2d12;font-weight:600">${escapeHtml(t.category)}${t.comment ? ' · '+escapeHtml(t.comment) : ''}</span>
+          <span style="font-weight:700;color:${t.type==='expense'?'#c2410c':'#16a34a'}">${t.type==='expense'?'-':'+'}${formatMoney(t.amount)}</span>
+        </div>`
+      ).join('') + (todayExp > 0 || todayInc > 0 ? `<div style="margin-top:6px;font-size:13px;color:rgba(194,65,12,0.6);font-weight:600">${todayExp>0?'Витрати: '+formatMoney(todayExp):''}${todayExp>0&&todayInc>0?' · ':''}${todayInc>0?'Доходи: +'+formatMoney(todayInc):''}</div>` : '');
+    } else if (finBlock) {
+      finBlock.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function openAddMoment() {
+  currentMomentMood = 'positive';
+  document.getElementById('moment-input-text').value = '';
+  updateMoodButtons();
+  document.getElementById('moment-modal').style.display = 'flex';
+  setTimeout(() => { const el = document.getElementById('moment-input-text'); el.removeAttribute('readonly'); el.focus(); }, 350);
+}
+
+function closeMomentModal() {
+  document.getElementById('moment-modal').style.display = 'none';
+}
+
+function setMomentMood(mood) {
+  currentMomentMood = mood;
+  updateMoodButtons();
+}
+
+function updateMoodButtons() {
+  ['positive','neutral','negative'].forEach(m => {
+    const btn = document.getElementById('mood-' + m);
+    if (!btn) return;
+    btn.style.opacity = currentMomentMood === m ? '1' : '0.4';
+    btn.style.transform = currentMomentMood === m ? 'scale(1.04)' : 'scale(1)';
+  });
+}
+
+function saveMoment() {
+  const text = document.getElementById('moment-input-text').value.trim();
+  if (!text) { showToast('Введіть текст моменту'); return; }
+  const moments = getMoments();
+  const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
+  moments.push(newMoment);
+  saveMoments(moments);
+  closeMomentModal();
+  renderEvening();
+  showToast('✓ Момент збережено');
+  // Генеруємо короткий summary через ШІ (у фоні, не блокує UI)
+  generateMomentSummary(newMoment.id, text);
+}
+
+async function generateMomentSummary(momentId, text) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  // Не генеруємо для коротких текстів — вони вже короткі
+  if (text.length <= 60) return;
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: `Стисни цей момент дня до 1 короткої фрази (максимум 7 слів, без крапки в кінці, українською): "${text}"` }],
+        max_tokens: 30, temperature: 0.5
+      })
+    });
+    const data = await res.json();
+    const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, '');
+    if (!summary) return;
+    // Зберігаємо summary в об'єкт моменту
+    const moments = getMoments();
+    const idx = moments.findIndex(m => m.id === momentId);
+    if (idx !== -1) {
+      moments[idx].summary = summary;
+      saveMoments(moments);
+      renderEvening(); // оновлюємо UI після отримання summary
+    }
+  } catch(e) {}
+}
+
+function deleteMoment(id) {
+  saveMoments(getMoments().filter(m => m.id !== id));
+  renderEvening();
+}
+
+const EVENING_SUMMARY_PROMPT = `Ти — OWL, особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно. Завершуй порадою або мотивуючою думкою на завтра. Відповідай українською.`;
+
+async function generateEveningSummary() {
+  const btn = document.getElementById('evening-summary-btn');
+  const el = document.getElementById('evening-summary');
+  btn.textContent = '…';
+  btn.disabled = true;
+  el.textContent = '…';
+
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const aiContext = getAIContext();
+
+  const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
+
+  const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
+Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
+
+  const reply = await callAI(systemPrompt, dayData, {});
+  const text = reply || 'Не вдалось отримати підсумок.';
+  el.textContent = text;
+  // Зберігаємо підсумок в localStorage — відновиться після перезапуску
+  localStorage.setItem('nm_evening_summary', JSON.stringify({ text, date: today }));
+  btn.textContent = '↻';
+  btn.disabled = false;
+}
+
+// === АВТОПІДСУМОК ВЕЧОРА ЩОГОДИНИ ===
+async function autoEveningSummary() {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+
+  // Перевіряємо чи є взагалі записи за сьогодні
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  if (moments.length === 0 && inbox.length === 0) return; // нема чого підсумовувати
+
+  // Перевіряємо чи не оновлювали менше ніж 50 хвилин тому
+  try {
+    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if (saved && saved.date === today && saved.autoTs) {
+      const elapsed = Date.now() - saved.autoTs;
+      if (elapsed < 50 * 60 * 1000) return; // 50 хвилин
+    }
+  } catch(e) {}
+
+  const aiContext = getAIContext();
+  const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
+  const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
+Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
+
+  try {
+    const reply = await callAI(systemPrompt, dayData, {});
+    if (!reply) return;
+    // Зберігаємо з позначкою autoTs — щоб не запускати занадто часто
+    localStorage.setItem('nm_evening_summary', JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
+    // Якщо зараз відкрита вкладка Вечір — оновлюємо UI
+    if (currentTab === 'evening') {
+      const el = document.getElementById('evening-summary');
+      if (el) el.textContent = reply;
+    }
+  } catch(e) {}
+}
+
+function setupAutoEveningSummary() {
+  // Перший раз — через 5 хвилин після старту
+  setTimeout(() => {
+    autoEveningSummary();
+    // Далі — кожну годину
+    setInterval(autoEveningSummary, 60 * 60 * 1000);
+  }, 5 * 60 * 1000);
+}
+
+// Evening dialog
+function openEveningDialog() {
+  dialogHistory = [];
+  document.getElementById('evening-dialog').style.display = 'flex';
+  document.getElementById('dialog-messages').innerHTML = '';
+  document.getElementById('dialog-input').value = '';
+
+  // Перше повідомлення від агента
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const name = settings.name ? `, ${settings.name}` : '';
+  addDialogMessage('agent', `Привіт${name}. Розкажи як пройшов день — що вийшло, що ні. Без прикрас.`);
+}
+
+function closeEveningDialog() {
+  document.getElementById('evening-dialog').style.display = 'none';
+}
+
+function addDialogMessage(role, text) {
+  const el = document.getElementById('dialog-messages');
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:80%;background:${isAgent ? 'rgba(237,233,255,0.9)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};padding:10px 13px;font-size:15px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  dialogHistory.push({ role: isAgent ? 'assistant' : 'user', content: text });
+}
+
+async function sendDialogMessage() {
+  if (dialogLoading) return;
+  const input = document.getElementById('dialog-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  addDialogMessage('user', text);
+  dialogLoading = true;
+
+  const aiContext = getAIContext();
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const systemPrompt = `${getOWLPersonality()} Говориш тепло і чесно. Короткі відповіді (1-3 речення). Мотивуєш конкретними кроками. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
+Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
+
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addDialogMessage('agent', 'Введи OpenAI ключ в налаштуваннях.'); dialogLoading = false; return; }
+
+  // Відправляємо всю історію
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...dialogHistory.slice(-10) // останні 10 повідомлень
+  ];
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 200, temperature: 0.8 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) addDialogMessage('agent', reply);
+    else addDialogMessage('agent', 'Щось пішло не так. Спробуй ще раз.');
+  } catch {
+    addDialogMessage('agent', 'Мережева помилка.');
+  }
+  dialogLoading = false;
+}
+
+// === SLIDES TOUR ===
+// === SLIDES TOUR ===
+const UPDATE_VERSION = 'v026'; // змінювати при кожному оновленні зі слайдами
+
+const UPDATE_SLIDES = [
+  {
+    tag: '🆕 Оновлення',
+    title: 'NeverMind оновився',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Два великі оновлення: фінансовий трекер і персональний характер агента.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Все що ти вже вів — на місці. Нові функції доступні одразу.</p>`,
+    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+  },
+  {
+    tag: '💰 Фінанси',
+    title: 'Облік грошей без таблиць',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Нова вкладка <b style="color:#1e1040">Фінанси</b> — пиши в Inbox і агент сам запише:</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заправка 50" → <b style="color:#1e1040">Транспорт −€50</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Встанови ліміт → <b style="color:#1e1040">агент попередить якщо перевищиш</b></div>
+</div>`,
+    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
+  },
+  {
+    tag: '🦉 OWL',
+    title: 'Агент тепер має характер',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Обери стиль спілкування в налаштуваннях:</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🔥 Тренер</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Прямий, жорсткий, підштовхує до дії</div>
+  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🤝 Партнер</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає і радить</div>
+  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🦉 Наставник</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Мудрий, задає правильні питання</div>
+  </div>
+</div>`,
+    color: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+    isLast: true,
+  },
+];
+
+const SLIDES = [
+  {
+    tag: 'Що таке NeverMind',
+    title: 'Думки зникають. Записав — забув де.',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Нічого не виконується бо немає системи.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">NeverMind — один потік куди скидаєш все що в голові. Пишеш одним рядком — Агент визначає категорію, зберігає куди треба і підтверджує в чаті.</p>`,
+    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+  },
+  {
+    tag: 'Inbox',
+    title: 'Один рядок — Агент розбирає',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"купити хліб о 18:00" → <b style="color:#1e1040">задача з часом</b></div>
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"бігати щоранку" → <b style="color:#1e1040">звичка в трекері</b></div>
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"ідея про автоматизацію" → <b style="color:#1e1040">збережено в Ідеях. Обговори з Агентом</b></div>
+      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"зустрівся з Вовою" → <b style="color:#1e1040">момент у Вечорі</b></div>
+    </div>`,
+    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+  },
+  {
+    tag: 'Задачі та Звички',
+    title: 'Списки і команди Агенту',
+    body: `<p style="font-size:13px;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">Пиши список одним записом — Агент розібʼє на кроки:</p>
+<div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:#1e1040;font-style:italic;margin-bottom:12px">"Зробити ремонт: купити фарбу, найняти майстра, вибрати колір"</div>
+<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">Команди Агенту</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"додай крок: зателефонувати"</div>
+  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"відміни останній крок"</div>
+  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"які задачі відкриті"</div>
+</div>`,
+    color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
+  },
+  {
+    tag: 'Вечір',
+    title: 'Підсумок дня від Агента',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Щодня: що зробив, що було цікавого, про що думав. Додавай моменти — Агент бачить весь твій день і дає конкретну пораду на завтра.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Записи з Inbox автоматично потрапляють у Вечір.</p>`,
+    color: 'linear-gradient(135deg,#818cf8,#4f46e5)',
+  },
+  {
+    tag: 'Вкладка Я',
+    title: 'Твоя продуктивність чесно',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Активність щодня, скільки записів зробив, які звички пропускаєш, де провисаєш.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Агент дає чесний аналіз і конкретні поради — без лестощів.</p>`,
+    color: 'linear-gradient(135deg,#6ee7b7,#16a34a)',
+  },
+  {
+    tag: 'Фінанси',
+    title: 'Облік грошей без таблиць',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Пиши в Inbox: "витратив 50 на їжу" — Агент сам запише у Фінанси, визначить категорію і стежитиме за бюджетом.</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заплатив за Netflix 15" → <b style="color:#1e1040">Підписки</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Перевищив ліміт → <b style="color:#1e1040">Агент попередить</b></div>
+</div>`,
+    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
+    isLast: true,
+  },
+];
+
+let currentSlide = 0;
+
+let _slidesIsUpdate = false;
+
+function openSlidesTour(fromOnboarding = false) {
+  _slidesFromOnboarding = fromOnboarding;
+  _slidesIsUpdate = false;
+  currentSlide = 0;
+  const el = document.getElementById('slides-tour');
+  el.style.display = 'flex';
+  renderSlide();
+}
+
+function openUpdateSlides() {
+  _slidesFromOnboarding = false;
+  _slidesIsUpdate = true;
+  currentSlide = 0;
+  const el = document.getElementById('slides-tour');
+  el.style.display = 'flex';
+  renderSlide();
+}
+
+function closeSlidesTour(fromOnboarding = false) {
+  const el = document.getElementById('slides-tour');
+  el.style.opacity = '0';
+  el.style.transition = 'opacity 0.3s ease';
+  // Зберігаємо що бачили поточне оновлення
+  if (_slidesIsUpdate) {
+    localStorage.setItem('nm_seen_update', UPDATE_VERSION);
+  }
+  setTimeout(() => {
+    el.style.display = 'none'; el.style.opacity = ''; el.style.transition = '';
+    if (fromOnboarding && !localStorage.getItem('nm_survey_done')) {
+      startSurvey();
+    }
+  }, 300);
+}
+
+function getCurrentSlides() {
+  return _slidesIsUpdate ? UPDATE_SLIDES : SLIDES;
+}
+
+function slidesNext() {
+  const slides = getCurrentSlides();
+  if (currentSlide < slides.length - 1) {
+    currentSlide++;
+    renderSlide();
+  } else {
+    closeSlidesTour(_slidesFromOnboarding);
+  }
+}
+
+let _slidesFromOnboarding = false;
+
+function renderSlide() {
+  const slides = getCurrentSlides();
+  const slide = slides[currentSlide];
+  const total = slides.length;
+
+  // Крапки прогресу
+  const dotsEl = document.getElementById('slides-dots');
+  dotsEl.innerHTML = Array.from({length: total}, (_, i) => {
+    const isActive = i === currentSlide;
+    const isDone = i < currentSlide;
+    const bg = isActive || isDone ? '#f97316' : 'rgba(30,16,64,0.1)';
+    const w = isActive ? '24px' : '7px';
+    return `<div style="height:4px;width:${w};border-radius:2px;background:${bg};transition:all 0.3s"></div>`;
+  }).join('');
+
+  // Контент
+  const contentEl = document.getElementById('slides-content');
+  contentEl.innerHTML = `
+    <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.4);margin-bottom:10px">${slide.tag}</div>
+    <div style="font-size:17px;font-weight:800;color:#1e1040;line-height:1.35;margin-bottom:14px">${slide.title}</div>
+    ${slide.body}
+  `;
+
+  // Кнопка
+  const nextBtn = document.getElementById('slides-next-btn');
+  nextBtn.textContent = slide.isLast ? 'Почати →' : 'Далі →';
+  nextBtn.style.background = slide.color;
+
+  // Пропустити → Закрити на останньому
+  const skipBtn = document.getElementById('slides-skip-btn');
+  skipBtn.textContent = slide.isLast ? '' : 'Пропустити';
+  skipBtn.style.display = slide.isLast ? 'none' : 'block';
+}
+
+
+// === ONBOARDING ===
+// === HELP SYSTEM ===
+const HELP_CONTENT = {
+  inbox: {
+    title: 'Inbox',
+    subtitle: 'Один потік для всіх думок. Агент сам розкладає по категоріях.',
+    sections: [
+      { title: 'Як писати', items: [
+        { icon: '✎', title: 'Будь-який текст', desc: 'Пиши як думаєш — коротко або розгорнуто. Агент сам визначить категорію.' },
+        { icon: '◷', title: 'Час і дата', desc: '"зателефонувати завтра о 9" → Агент додасть час у заголовок задачі.' },
+        { icon: '≡', title: 'Список одним записом', desc: '"Ремонт: купити фарбу, найняти майстра" → Агент розібʼє на кроки.' },
+      ]},
+      { title: 'Жести', items: [
+        { icon: '←', title: 'Свайп вліво', desc: 'Видалити запис.' },
+        { icon: '?', title: 'Якщо незрозуміло', desc: 'Агент уточнить питанням з варіантами відповіді.' },
+      ]},
+      { title: 'Чат з Агентом', items: [
+        { icon: '◉', title: 'Питай про записи', desc: 'Наприклад: "які задачі відкриті", "що я записував вчора".' },
+        { icon: '◈', title: 'Обговори ідею', desc: 'Збережена ідея? Попроси Агента розвинути або знайти підводні камені.' },
+      ]},
+    ]
+  },
+  tasks: {
+    title: 'Продуктивність',
+    subtitle: 'Задачі зі списком кроків і щоденні звички.',
+    sections: [
+      { title: 'Задачі', items: [
+        { icon: '✓', title: 'Відмічай кроки', desc: 'Тап на чекбокс — відмічає крок. Всі кроки виконані → задача закривається.' },
+        { icon: '≡', title: 'Список через Агента', desc: 'Скажи: "додай кроки до задачі Ремонт: купити фарбу, найняти майстра".' },
+        { icon: '✎', title: 'Редагувати', desc: 'Натисни іконку олівця на картці задачі.' },
+      ]},
+      { title: 'Команди Агенту', items: [
+        { icon: '◉', title: 'Керуй задачами', desc: null,
+          cmds: ['додай крок: назва', 'відміни останній крок', 'які задачі відкриті', 'виконав задачу: назва'] },
+      ]},
+      { title: 'Звички', items: [
+        { icon: '◎', title: 'Щоденний трекер', desc: 'Звички з Inbox автоматично потрапляють сюди. Відмічай кожен день.' },
+        { icon: '▦', title: 'Вибір днів', desc: 'При створенні звички можна вказати конкретні дні тижня.' },
+      ]},
+    ]
+  },
+  notes: {
+    title: 'Нотатки',
+    subtitle: 'Записи автоматично сортуються по папках.',
+    sections: [
+      { title: 'Навігація', items: [
+        { icon: '▤', title: 'Папки', desc: 'Агент сам визначає папку. Тапни на папку щоб побачити всі записи всередині.' },
+        { icon: '←', title: 'Назад', desc: 'Кнопка ← у заголовку повертає до списку папок.' },
+        { icon: '◎', title: 'Пошук', desc: 'Пошук по тексту всіх нотаток одразу.' },
+      ]},
+      { title: 'Робота з нотаткою', items: [
+        { icon: '◉', title: 'Обговори з Агентом', desc: 'Відкрий нотатку → чат з Агентом. Він допоможе розвинути думку.' },
+        { icon: '←', title: 'Свайп вліво', desc: 'Видалити нотатку.' },
+        { icon: '···', title: 'Меню', desc: 'Три крапки → перемістити в іншу папку.' },
+      ]},
+    ]
+  },
+  me: {
+    title: 'Я',
+    subtitle: 'Твоя продуктивність і активність. Чесний аналіз від Агента.',
+    sections: [
+      { title: 'Що тут є', items: [
+        { icon: '▦', title: 'Активність тижня', desc: 'Гріл показує скільки записів ти робив кожного дня.' },
+        { icon: '↗', title: 'Статистика', desc: 'Inbox, активні задачі, нотатки — все одним поглядом.' },
+        { icon: '◎', title: 'Звички', desc: 'Прогрес по кожній звичці — скільки днів поспіль і загальний відсоток.' },
+      ]},
+      { title: 'Агент-коуч', items: [
+        { icon: '↻', title: 'Аналіз', desc: 'Натисни ↻ — Агент проаналізує твої дані і скаже де провисаєш.' },
+        { icon: '◈', title: '3 поради', desc: 'Агент генерує конкретні, практичні поради саме для тебе.' },
+        { icon: '◉', title: 'Запитай сам', desc: 'Чат внизу — питай про свою продуктивність, звички, прогрес.' },
+      ]},
+    ]
+  },
+  evening: {
+    title: 'Вечір',
+    subtitle: 'Рефлексія дня і підсумок від Агента.',
+    sections: [
+      { title: 'Моменти дня', items: [
+        { icon: '+', title: 'Додати момент', desc: 'Що трапилось, що думав, як себе почував — кнопка + Додати.' },
+        { icon: '◑', title: 'Настрій', desc: 'Позначай настрій моменту — позитивний, нейтральний, негативний.' },
+        { icon: '○', title: 'Кільце', desc: 'Показує відсоток позитивних моментів за день.' },
+      ]},
+      { title: 'Агент-підсумок', items: [
+        { icon: '↻', title: 'Підсумок дня', desc: 'Натисни ↻ — Агент бачить всі твої записи і моменти, дає конкретну пораду на завтра.' },
+        { icon: '◉', title: 'Поговори', desc: 'Чат внизу — обговори день, поділись думками.' },
+      ]},
+      { title: 'Команди Агенту', items: [
+        { icon: '◉', title: 'Питання', desc: null,
+          cmds: ['що я зробив сьогодні', 'як пройшов тиждень', 'що можна покращити завтра'] },
+      ]},
+    ]
+  },
+  finance: {
+    title: 'Фінанси',
+    subtitle: 'Облік витрат і доходів. Агент веде бюджет і попереджає про перевитрати.',
+    sections: [
+      { title: 'Як додавати', items: [
+        { icon: '◉', title: 'Через Inbox', desc: 'Пиши "витратив 50 на їжу" або "отримав зарплату 3000" — Агент сам збереже у Фінанси.' },
+        { icon: '+', title: 'Вручну', desc: 'Кнопка "+ додати" в списку транзакцій. Вибери тип, суму, категорію.' },
+        { icon: '◉', title: 'Чат Агента', desc: 'Пиши прямо в чаті вкладки — Агент розпізнає і збереже.' },
+      ]},
+      { title: 'Бюджет', items: [
+        { icon: '◎', title: 'Загальний ліміт', desc: 'Натисни ✎ в блоці "Бюджет по категоріях" щоб задати місячний ліміт.' },
+        { icon: '▦', title: 'По категоріях', desc: 'Задай ліміт окремо для кожної категорії — Агент попередить коли залишилось 20%.' },
+      ]},
+      { title: 'Команди Агенту', items: [
+        { icon: '◉', title: 'Запити', desc: null,
+          cmds: ['скільки витратив цього тижня', 'де найбільше трачу', 'встанови бюджет 2000 на місяць', 'видали останню витрату'] },
+      ]},
+    ]
+  },
+};
+
+const FIRST_VISIT_TIPS = {
+  inbox:   { icon: '💡', title: 'Підказка', text: 'Пиши будь-що — задачу, ідею, звичку. Агент сам розбере. Спробуй: "купити хліб о 18:00"' },
+  tasks:   { icon: '⚡', title: 'Підказка', text: 'Пиши список одним записом: "Ремонт: купити фарбу, знайти майстра" — Агент розібʼє на кроки' },
+  notes:   { icon: '📁', title: 'Підказка', text: 'Нотатки автоматично сортуються по папках. Тапни на папку щоб побачити записи всередині' },
+  me:      { icon: '📊', title: 'Підказка', text: 'Натисни ↻ в блоці "Аналіз агента" — отримаєш чесний огляд своєї продуктивності' },
+  evening: { icon: '🌙', title: 'Підказка', text: 'Натисни ↻ в "Агент на вечір" — Агент підсумує твій день на основі всіх записів' },
+  finance: { icon: '◈',  title: 'Підказка', text: 'Пиши витрати прямо в Inbox: "витратив 50 на їжу" — Агент сам збереже у Фінанси' },
+};
+
+let _helpOpen = false;
+
+function openHelp(tab) {
+  const data = HELP_CONTENT[tab];
+  if (!data) return;
+
+  document.getElementById('help-drawer-title').textContent = data.title;
+  document.getElementById('help-drawer-subtitle').textContent = data.subtitle;
+
+  const contentEl = document.getElementById('help-drawer-content');
+  contentEl.innerHTML = data.sections.map(section => `
+    <div class="help-section-title">${section.title}</div>
+    ${section.items.map(item => `
+      <div class="help-item">
+        <div class="help-item-icon">${item.icon}</div>
+        <div>
+          <div class="help-item-title">${item.title}</div>
+          ${item.desc ? `<div class="help-item-desc">${item.desc}</div>` : ''}
+          ${item.cmds ? item.cmds.map(c => `<div><span class="help-cmd">"${c}"</span></div>`).join('') : ''}
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+
+  const drawer = document.getElementById('help-drawer');
+  drawer.style.display = 'flex';
+  requestAnimationFrame(() => {
+    document.getElementById('help-drawer-panel').style.transform = 'translateX(0)';
+  });
+  _helpOpen = true;
+}
+
+function closeHelp() {
+  const drawer = document.getElementById('help-drawer');
+  drawer.style.display = 'none';
+  _helpOpen = false;
+}
+
+// Підказка першого відвідування
+function showFirstVisitTip(tab) {
+  const key = 'nm_visited_' + tab;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+  const tip = FIRST_VISIT_TIPS[tab];
+  if (!tip) return;
+
+  // Видаляємо попередню підказку якщо є
+  const prev = document.getElementById('fv-tip');
+  if (prev) prev.remove();
+
+  const tipEl = document.createElement('div');
+  tipEl.id = 'fv-tip';
+  tipEl.className = 'fv-tip';
+  // Позиціонуємо над таббаром
+  const tbH = document.getElementById('tab-bar')?.offsetHeight || 83;
+  tipEl.style.bottom = (tbH + 12) + 'px';
+  tipEl.innerHTML = `
+    <div class="fv-tip-icon">${tip.icon}</div>
+    <div class="fv-tip-body">
+      <div class="fv-tip-title">${tip.title}</div>
+      <div class="fv-tip-text">${tip.text}</div>
+    </div>
+    <div class="fv-tip-close" onclick="this.closest('#fv-tip').remove()">✕</div>
+  `;
+  document.body.appendChild(tipEl);
+
+  // Автозакриття через 6 секунд
+  setTimeout(() => { if (document.getElementById('fv-tip') === tipEl) tipEl.remove(); }, 6000);
+}
+
+
+// === SURVEY (після першого онбордингу) ===
+const SURVEY_QUESTIONS = [
+  'Чим займаєшся? (наприклад: підприємець, студент, програміст, фрілансер…)',
+  'Які твої головні цілі зараз? (коротко, 1-2 речення)',
+  'Що хочеш тримати під контролем — задачі, звички, ідеї, або все разом?',
+];
+let surveyAnswers = [];
+let surveyStep = 0;
+let surveyWaiting = false;
+
+function startSurvey() {
+  surveyAnswers = [];
+  surveyStep = 0;
+  surveyWaiting = false;
+  // Переходимо на Inbox
+  if (currentTab !== 'inbox') switchTab('inbox');
+  // Невелика затримка щоб Inbox відрендерився
+  setTimeout(() => {
+    addInboxChatMsg('agent', 'Привіт! 👋 Щоб я міг бути кориснішим — розкажи трохи про себе. Це займе хвилину, а я зможу давати конкретніші поради саме для тебе.');
+    setTimeout(() => askSurveyQuestion(), 800);
+  }, 400);
+}
+
+function askSurveyQuestion() {
+  if (surveyStep >= SURVEY_QUESTIONS.length) {
+    finishSurvey();
+    return;
+  }
+  surveyWaiting = true;
+  addInboxChatMsg('agent', SURVEY_QUESTIONS[surveyStep]);
+}
+
+// Перехоплюємо відповіді під час опитування
+function handleSurveyAnswer(text) {
+  if (!surveyWaiting) return false;
+  surveyWaiting = false;
+  surveyAnswers.push({ q: SURVEY_QUESTIONS[surveyStep], a: text });
+  surveyStep++;
+  if (surveyStep < SURVEY_QUESTIONS.length) {
+    setTimeout(() => askSurveyQuestion(), 400);
+  } else {
+    setTimeout(() => finishSurvey(), 400);
+  }
+  return true; // означає що повідомлення перехоплено
+}
+
+async function finishSurvey() {
+  addInboxChatMsg('agent', 'Дякую! Зараз підготую персональні поради…');
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addInboxChatMsg('agent', 'Введи API ключ в налаштуваннях — і я збережу все про тебе в памʼять.');
+    localStorage.setItem('nm_survey_done', '1');
+    return;
+  }
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const name = settings.name || 'користувач';
+  const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
+  const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що завершив онбординг і відповів на питання анкети:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (3-5 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні поради як використовувати NeverMind саме для цієї людини. Поради мають бути практичними і специфічними.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 400, temperature: 0.7 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (reply) {
+      try {
+        const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+        if (parsed.memory) {
+          localStorage.setItem('nm_memory', parsed.memory);
+          localStorage.setItem('nm_memory_ts', Date.now().toString());
+        }
+        if (parsed.advice) {
+          addInboxChatMsg('agent', '🦉 ' + parsed.advice);
+        }
+      } catch(e) {
+        addInboxChatMsg('agent', reply);
+      }
+    }
+  } catch(e) {
+    addInboxChatMsg('agent', 'Не вдалось зберегти — але твої відповіді я запамʼятав. Спробуй оновити сторінку.');
+  }
+  localStorage.setItem('nm_survey_done', '1');
+}
+
+
+function checkOnboarding() {
+  const done = localStorage.getItem('nm_onboarding_done');
+  if (!done) {
+    // Новий користувач — показуємо онбординг
+    document.getElementById('onboarding').style.display = 'block';
+    return true;
+  }
+  // Існуючий користувач — перевіряємо чи бачив оновлення
+  const seenUpdate = localStorage.getItem('nm_seen_update');
+  if (seenUpdate !== UPDATE_VERSION) {
+    setTimeout(() => openUpdateSlides(), 500);
+    return false;
+  }
+  return false;
+}
+
+function obNext(step) {
+  if (step === 1) {
+    const name = document.getElementById('ob-name').value.trim();
+    const age = document.getElementById('ob-age').value.trim();
+    if (!name) { showToast('Введи імʼя'); return; }
+    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    settings.name = name;
+    if (age) settings.age = age;
+    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    document.getElementById('ob-step-1').style.display = 'none';
+    document.getElementById('ob-step-2').style.display = 'block';
+  } else if (step === 2) {
+    const key = document.getElementById('ob-key').value.trim();
+    if (key) localStorage.setItem('nm_gemini_key', key);
+    document.getElementById('ob-step-2').style.display = 'none';
+    document.getElementById('ob-step-owl').style.display = 'block';
+    // Дефолтно вибрати "partner"
+    selectOwlMode('partner');
+  } else if (step === 'owl') {
+    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    if (!settings.owl_mode) settings.owl_mode = 'partner';
+    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    obShowWelcome();
+  }
+}
+
+function obSkipKey() {
+  document.getElementById('ob-step-2').style.display = 'none';
+  document.getElementById('ob-step-owl').style.display = 'block';
+  selectOwlMode('partner');
+}
+
+function selectOwlMode(mode) {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  settings.owl_mode = mode;
+  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  ['coach','partner','mentor'].forEach(m => {
+    const card = document.getElementById('owl-card-' + m);
+    if (!card) return;
+    card.style.border = m === mode ? '2px solid #7c3aed' : '2px solid rgba(124,58,237,0.15)';
+    card.style.background = m === mode ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.8)';
+  });
+}
+
+function obShowWelcome() {
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  document.getElementById('ob-welcome-text').textContent = `Привіт, ${settings.name || 'друже'}! 👋`;
+  document.getElementById('ob-step-2').style.display = 'none';
+  document.getElementById('ob-step-3').style.display = 'block';
+}
+
+function obFinish() {
+  localStorage.setItem('nm_onboarding_done', '1');
+  const ob = document.getElementById('onboarding');
+  ob.style.opacity = '0';
+  ob.style.transition = 'opacity 0.4s ease';
+  setTimeout(() => {
+    ob.style.display = 'none';
+    // Показуємо тур після онбордингу
+    openSlidesTour(true);
+  }, 400);
+  updateKeyStatus(!!localStorage.getItem('nm_gemini_key'));
+}
+
+// === HABITS ===
+let editingHabitId = null;
+
+function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
+function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
+function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
+function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
+
+function openEditHabit(id) {
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  if (!h) return;
+  editingHabitId = id;
+  document.getElementById('habit-modal-title').textContent = 'Редагувати звичку';
+  document.getElementById('habit-input-name').value = h.name;
+  // Деталі: якщо немає поля details — спробуй витягти з назви
+  let details = h.details || '';
+  if (!details && h.name) {
+    const parts = h.name.split(/[,]\s*/);
+    if (parts.length > 1) {
+      details = parts.slice(1).join(', ').trim();
+    }
+  }
+  document.getElementById('habit-input-details').value = details;
+  document.getElementById('habit-input-emoji').value = h.emoji || '';
+  // Дні: якщо всі 7 активні але назва містить конкретні дні — запропонувати правильні
+  let days = h.days || [0,1,2,3,4];
+  const nameAndDetails = (h.name + ' ' + details).toLowerCase();
+  const hasSpecificDays = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/.test(nameAndDetails);
+  if (hasSpecificDays && days.length === 7) {
+    days = [];
+    if (/понеділ|пн/.test(nameAndDetails)) days.push(0);
+    if (/вівтор|вт/.test(nameAndDetails)) days.push(1);
+    if (/серед|ср/.test(nameAndDetails)) days.push(2);
+    if (/четвер|чт/.test(nameAndDetails)) days.push(3);
+    if (/п.ятниц|пт/.test(nameAndDetails)) days.push(4);
+    if (/субот|сб/.test(nameAndDetails)) days.push(5);
+    if (/неділ|нд/.test(nameAndDetails)) days.push(6);
+    if (days.length === 0) days = [0,1,2,3,4];
+  }
+  document.querySelectorAll('.habit-day-btn').forEach(b => {
+    b.classList.toggle('active', days.includes(parseInt(b.dataset.day)));
+  });
+  document.getElementById('habit-modal').style.display = 'flex';
+  document.getElementById('habit-delete-btn').style.display = 'inline-block';
+}
+
+function openAddHabit() {
+  editingHabitId = null;
+  document.getElementById('habit-modal-title').textContent = 'Нова звичка';
+  document.getElementById('habit-input-name').value = '';
+  document.getElementById('habit-input-details').value = '';
+  document.getElementById('habit-input-emoji').value = '';
+  document.getElementById('habit-delete-btn').style.display = 'none';
+  document.querySelectorAll('.habit-day-btn').forEach(b => {
+    b.classList.toggle('active', [0,1,2,3,4].includes(parseInt(b.dataset.day)));
+  });
+  document.getElementById('habit-modal').style.display = 'flex';
+}
+
+function closeHabitModal() {
+  document.getElementById('habit-modal').style.display = 'none';
+}
+
+// Toggle day button
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('habit-day-btn')) {
+    e.target.classList.toggle('active');
+  }
+});
+
+function saveHabit() {
+  const name = document.getElementById('habit-input-name').value.trim();
+  if (!name) { showToast('Введи назву звички'); return; }
+  const details = document.getElementById('habit-input-details').value.trim();
+  const emoji = document.getElementById('habit-input-emoji').value.trim() || '⭕';
+  const days = [...document.querySelectorAll('.habit-day-btn.active')].map(b => parseInt(b.dataset.day));
+  const habits = getHabits();
+
+  if (editingHabitId) {
+    const idx = habits.findIndex(x => x.id === editingHabitId);
+    if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days };
+  } else {
+    habits.push({ id: Date.now(), name, details, emoji, days, createdAt: Date.now() });
+  }
+  saveHabits(habits);
+  closeHabitModal();
+  renderHabits();
+  renderProdHabits(); // оновлюємо список у вкладці Продуктивність
+  showToast(editingHabitId ? '✓ Звичку оновлено' : '✓ Звичку додано');
+}
+
+function deleteHabit(id) {
+  if (!confirm('Видалити звичку?')) return;
+  saveHabits(getHabits().filter(h => h.id !== id));
+  renderHabits();
+  renderProdHabits();
+}
+
+function deleteHabitFromModal() {
+  if (!editingHabitId) return;
+  const id = editingHabitId;
+  const item = getHabits().find(h => h.id === id);
+  saveHabits(getHabits().filter(h => h.id !== id));
+  renderHabits(); renderProdHabits();
+  closeHabitModal();
+  if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+}
+
+function toggleHabitToday(id) {
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  log[today][id] = !log[today][id];
+  saveHabitLog(log);
+  renderHabits();
+  renderMeHabitsStats(); // оновлюємо статистику одразу після зміни
+}
+
+function getHabitStreak(id) {
+  const log = getHabitLog();
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  if (!h) return 0;
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 60; i++) {
+    const ds = d.toDateString();
+    const dow = (d.getDay() + 6) % 7;
+    if ((h.days || [0,1,2,3,4]).includes(dow)) {
+      if (log[ds]?.[id]) streak++;
+      else if (i > 0) break;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function getHabitPct(id, days30) {
+  const log = getHabitLog();
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  if (!h) return 0;
+  let done = 0;
+  const plannedDays = h.days || [0,1,2,3,4];
+  // Рахуємо скільки запланованих днів було за 30 днів
+  const d = new Date();
+  let total = 0;
+  for (let i = 0; i < 30; i++) {
+    const ds = d.toDateString();
+    const dow = (d.getDay() + 6) % 7;
+    if (plannedDays.includes(dow)) {
+      total++;
+      if (log[ds]?.[id]) done++; // виконано в запланований день
+    } else if (log[ds]?.[id]) {
+      done++; // виконано навіть не в запланований день — теж рахуємо
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return total > 0 ? Math.round(done / total * 100) : 0;
+}
+
+
+// Повертає масив індексів днів цього тижня (0=Пн..6=Нд) коли звичка була виконана
+function getHabitWeekDays(id) {
+  const log = getHabitLog();
+  const done = [];
+  const today = new Date();
+  const todayDow = (today.getDay() + 6) % 7;
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - todayDow);
+  weekStart.setHours(0,0,0,0);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const ds = d.toDateString();
+    if (log[ds]?.[id]) done.push(i);
+  }
+  return done;
+}
+
+function makeHabitDayDots(h, weekDone, todayDow) {
+  const labels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  return labels.map(function(label, i) {
+    const isPlanned = (h.days || [0,1,2,3,4]).includes(i);
+    const isDone = weekDone.includes(i);
+    const isToday = i === todayDow;
+    let bg, border, color;
+    if (isDone) { bg = '#16a34a'; border = '#16a34a'; color = 'white'; }
+    else if (isPlanned) { bg = 'transparent'; border = 'rgba(30,16,64,0.2)'; color = 'rgba(30,16,64,0.4)'; }
+    else { bg = 'transparent'; border = 'rgba(30,16,64,0.08)'; color = 'rgba(30,16,64,0.15)'; }
+    const shadow = isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.3);' : '';
+    const text = isDone ? '✓' : label.charAt(0);
+    return '<div style="width:24px;height:24px;border-radius:50%;background:' + bg + ';border:1.5px solid ' + border + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:' + color + ';' + shadow + '">' + text + '</div>';
+  }).join('');
+}
+
+function renderHabits() {
+  const habits = getHabits();
+  const el = document.getElementById('me-habits-stats-list');
+  const block = document.getElementById('me-habits-stats');
+  if (!el) return;
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+
+  if (habits.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">Додай першу звичку</div>';
+    return;
+  }
+
+  el.innerHTML = habits.map(function(h) {
+    const isDoneToday = !!log[today]?.[h.id];
+    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    const streak = getHabitStreak(h.id);
+    const pct = getHabitPct(h.id);
+    const weekDone = getHabitWeekDays(h.id);
+    const shortName = h.name.split(' ').slice(0,4).join(' ');
+    const dayDots = makeHabitDayDots(h, weekDone, todayDow);
+    const checkSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    const checkBtn = isDoneToday
+      ? checkSvg.replace('stroke-width', 'stroke="white" stroke-width')
+      : checkSvg.replace('stroke-width', 'stroke="rgba(30,16,64,0.25)" stroke-width');
+    const btnBorder = isDoneToday ? '#16a34a' : 'rgba(30,16,64,0.15)';
+    const btnBg = isDoneToday ? '#16a34a' : 'rgba(30,16,64,0.03)';
+    const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
+    const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥' + streak + '</span>' : '';
+
+    return '<div style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:6px">'
+      + '<div style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;font-size:20px;color:white;pointer-events:none">🗑️</div>'
+      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:default;width:100%;box-sizing:border-box;"'
+        + ' ontouchstart="habitMeSwipeStart(event,' + h.id + ')"'
+        + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
+        + ' ontouchend="habitMeSwipeEnd(event,' + h.id + ')">'
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+          + '<div onclick="toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">'
+            + checkBtn
+          + '</div>'
+          + '<div style="flex:1;min-width:0">'
+            + '<div style="display:flex;align-items:center;gap:6px">'
+              + '<span style="font-size:15px;font-weight:700;color:#1e1040">' + escapeHtml(shortName) + '</span>'
+              + streakHtml
+            + '</div>'
+            + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
+          + '</div>'
+          + '<div onclick="openEditHabit(' + h.id + ')" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">'
+            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>'
+          + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + '</div>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+
+// === KEYBOARD AVOIDING ===
+function setupKeyboardAvoiding() {
+  if (!window.visualViewport) return;
+
+  const update = () => {
+    const vv = window.visualViewport;
+    // Правильний розрахунок для iOS: враховуємо offsetTop (скільки зверху зрізано)
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
+    const aiBar = document.getElementById('inbox-ai-bar');
+    const tabBar = document.getElementById('tab-bar');
+    const tbH = tabBar ? tabBar.offsetHeight : 83;
+    const newBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar','finance-ai-bar'].map(id => document.getElementById(id));
+
+    if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
+      // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
+      if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
+      // Ховаємо таббар — translateY достатньо великий щоб він пішов за екран
+      if (tabBar) { tabBar.style.transform = `translateY(${tbH + keyboardHeight}px)`; tabBar.style.opacity = '0'; tabBar.style.pointerEvents = 'none'; }
+      newBars.forEach(b => {
+        if (!b || b.style.display === 'none') return;
+        b.style.bottom = (keyboardHeight + 8) + 'px';
+        // Якщо чат-вікно відкрите — обмежуємо його висоту щоб вміщалось на екрані
+        const chatWin = b.querySelector('.ai-bar-chat-window');
+        if (chatWin && chatWin.classList.contains('open')) {
+          const availH = vv.height - keyboardHeight - 120; // 120 = поле вводу + відступи
+          chatWin.style.maxHeight = Math.max(140, availH) + 'px';
+        }
+      });
+    } else {
+      // Клавіатура закрита — повертаємо все на місце
+      if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
+      if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; tabBar.style.pointerEvents = ''; }
+      newBars.forEach(b => {
+        if (!b) return;
+        b.style.bottom = (tbH + 4) + 'px';
+        // Повертаємо висоту чат-вікна
+        const chatWin = b.querySelector('.ai-bar-chat-window');
+        if (chatWin) chatWin.style.maxHeight = '';
+      });
+    }
+  };
+
+  // iOS іноді надсилає scroll замість resize — слухаємо обидва
+  window.visualViewport.addEventListener('resize', update);
+  window.visualViewport.addEventListener('scroll', update);
+
+  // Фікс після розблокування телефону — viewport скидається
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') setTimeout(update, 300);
+  });
+
+  // Фікс повторного фокусу: iOS не генерує новий resize якщо viewport вже встановлений
+  // Викликаємо update() вручну при кожному фокусі на поле вводу
+  document.addEventListener('focusin', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+      setTimeout(update, 120);
+      setTimeout(update, 400); // другий раз — iOS іноді повільніше показує клавіатуру
+    }
+  }, { passive: true });
+
+  // При закритті клавіатури через кнопку Готово — iOS не завжди надсилає resize
+  document.addEventListener('focusout', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+      setTimeout(update, 150);
+    }
+  }, { passive: true });
+}
+
+// === PAGE TRANSITIONS ===
+let currentTabForAnim = 'inbox';
+function animateTabSwitch(newTab) {
+  const oldPage = document.getElementById(`page-${currentTabForAnim}`);
+  const newPage = document.getElementById(`page-${newTab}`);
+  if (!oldPage || !newPage || oldPage === newPage) return;
+  oldPage.classList.add('page-exit');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      // nothing needed here — active class handles visibility
+    });
+  });
+  setTimeout(() => { oldPage.classList.remove('page-exit'); }, 230);
+  currentTabForAnim = newTab;
+}
+
+// === TASK CHAT ===
+let taskChatId = null;
+let taskChatHistory = [];
+let taskChatLoading = false;
+
+function openTaskChat(id) {
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  taskChatId = id;
+
+  document.getElementById('task-chat-title').textContent = t.title;
+  document.getElementById('task-chat-messages').innerHTML = '';
+  document.getElementById('task-chat-input').value = '';
+  document.getElementById('task-chat-modal').style.display = 'flex';
+
+  // Restore saved chat history
+  const savedChat = JSON.parse(localStorage.getItem('nm_task_chat_' + id) || 'null');
+  if (savedChat && savedChat.messages && savedChat.messages.length > 0) {
+    taskChatHistory = savedChat.history || [];
+    savedChat.messages.forEach(m => addTaskChatMsg(m.role, m.text));
+    return;
+  }
+
+  taskChatHistory = [];
+  const steps = (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з Агентом.');
+    return;
+  }
+
+  addTaskChatMsg('agent', '…', 'task-chat-intro');
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Допомагаєш реально виконати задачу. НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
+
+  callAI(systemPrompt, taskInfo, {}).then(reply => {
+    const el = document.getElementById('task-chat-intro');
+    if (el) el.textContent = reply || 'Розкажи більше про цю задачу.';
+    taskChatHistory.push({ role: 'assistant', content: reply || '' });
+    saveTaskChatHistory();
+  });
+}
+
+function saveTaskChatHistory() {
+  if (!taskChatId) return;
+  const messages = Array.from(document.getElementById('task-chat-messages').children).map(div => {
+    const bubble = div.querySelector('div');
+    const isAgent = div.style.justifyContent !== 'flex-end';
+    return { role: isAgent ? 'agent' : 'user', text: bubble ? bubble.textContent : '' };
+  }).filter(m => m.text && m.text !== '…');
+  localStorage.setItem('nm_task_chat_' + taskChatId, JSON.stringify({ messages, history: taskChatHistory }));
+}
+
+function closeTaskChat() {
+  saveTaskChatHistory();
+  document.getElementById('task-chat-modal').style.display = 'none';
+  taskChatId = null;
+  taskChatHistory = [];
+}
+
+function addTaskChatMsg(role, text, id = '') {
+  const el = document.getElementById('task-chat-messages');
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#ea580c'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') taskChatHistory.push({ role: 'user', content: text });
+}
+
+async function sendTaskChatMessage() {
+  if (taskChatLoading) return;
+  const input = document.getElementById('task-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addTaskChatMsg('user', text);
+  taskChatLoading = true;
+
+  const btn = document.getElementById('task-chat-send');
+  btn.disabled = true;
+
+  const tasks = getTasks();
+  const t = tasks.find(x => x.id === taskChatId);
+  const steps = t ? (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n') : '';
+  const aiContext = getAIContext();
+  const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
+  const stepInstruction = wantsSteps ? ' ВАЖЛИВО: користувач просить кроки. Відповідай ТІЛЬКИ валідним JSON і нічим іншим: {"steps":["крок 1","крок 2","крок 3"]}. Жодного тексту до або після JSON.' : '';
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, ...taskChatHistory.slice(-12)],
+        max_tokens: 300,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) {
+      // Check if reply is JSON with steps
+      try {
+        const parsed = JSON.parse(reply.trim());
+        if (parsed.steps && Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+          const allTasks = getTasks();
+          const taskIdx = allTasks.findIndex(x => x.id === taskChatId);
+          if (taskIdx !== -1) {
+            const newSteps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+            allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
+            saveTasks(allTasks);
+            renderTasks(); // оновлюємо картку одразу
+            addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроків до задачі. Перевір картку.`);
+          }
+        } else {
+          addTaskChatMsg('agent', reply);
+        }
+      } catch {
+        addTaskChatMsg('agent', reply);
+      }
+    }
+    else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+  } catch {
+    addTaskChatMsg('agent', 'Мережева помилка.');
+  }
+  taskChatLoading = false;
+  btn.disabled = false;
+  saveTaskChatHistory();
+}
+
+
+// === NOTE VIEW MODAL (F2) ===
+let activeNoteViewId = null;
+let noteChatHistory = [];
+let noteChatLoading = false;
+
+function openNoteView(id) {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  activeNoteViewId = id;
+  noteChatHistory = [];
+  noteChatLoading = false;
+
+  document.getElementById('note-view-folder').textContent = n.folder || 'Загальне';
+  const preview = n.text.length > 50 ? n.text.substring(0, 50) + '…' : n.text;
+  document.getElementById('note-view-preview').textContent = preview;
+  document.getElementById('note-view-text').textContent = n.text;
+  document.getElementById('note-chat-messages').innerHTML = '';
+
+  // Update lastViewed
+  n.lastViewed = Date.now();
+  const allNotes = getNotes();
+  const idx = allNotes.findIndex(x => x.id === id);
+  if (idx !== -1) { allNotes[idx].lastViewed = Date.now(); saveNotes(allNotes); }
+
+  switchNoteViewTab('note');
+  document.getElementById('note-view-modal').style.display = 'flex';
+}
+
+function closeNoteView() {
+  document.getElementById('note-view-modal').style.display = 'none';
+  activeNoteViewId = null;
+  noteChatHistory = [];
+}
+
+function openEditNoteFromView() {
+  const id = activeNoteViewId;
+  closeNoteView();
+  openEditNote(id);
+}
+
+function switchNoteViewTab(tab) {
+  const notePanel = document.getElementById('note-view-panel-note');
+  const chatPanel = document.getElementById('note-view-panel-chat');
+  const inputArea = document.getElementById('note-chat-input-area');
+  const tabNote = document.getElementById('note-view-tab-note');
+  const tabChat = document.getElementById('note-view-tab-chat');
+
+  if (tab === 'note') {
+    notePanel.style.display = 'block';
+    chatPanel.style.display = 'none';
+    inputArea.style.display = 'none';
+    tabNote.style.color = '#4f46e5';
+    tabNote.style.borderBottomColor = '#4f46e5';
+    tabChat.style.color = 'rgba(30,16,64,0.4)';
+    tabChat.style.borderBottomColor = 'transparent';
+  } else {
+    notePanel.style.display = 'none';
+    chatPanel.style.display = 'flex';
+    chatPanel.style.flexDirection = 'column';
+    inputArea.style.display = 'flex';
+    tabNote.style.color = 'rgba(30,16,64,0.4)';
+    tabNote.style.borderBottomColor = 'transparent';
+    tabChat.style.color = '#4f46e5';
+    tabChat.style.borderBottomColor = '#4f46e5';
+
+    // Auto-greet if first open
+    if (noteChatHistory.length === 0) {
+      const notes = getNotes();
+      const n = notes.find(x => x.id === activeNoteViewId);
+      if (n) initNoteChatGreeting(n);
+    }
+  }
+}
+
+async function initNoteChatGreeting(note) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з агентом.');
+    return;
+  }
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Тебе попросили поговорити про конкретну нотатку. Прочитай її і скажи коротко (1-2 речення): що це за нотатка і як ти можеш допомогти з нею. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const greeting = await callAI(systemPrompt, `Нотатка: ${note.text}`, {});
+  if (greeting) addNoteChatMsg('agent', greeting);
+}
+
+function addNoteChatMsg(role, text) {
+  const el = document.getElementById('note-chat-messages');
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#4f46e5'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') noteChatHistory.push({ role: 'user', content: text });
+}
+
+async function sendNoteChatMessage() {
+  if (noteChatLoading) return;
+  const input = document.getElementById('note-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addNoteChatMsg('user', text);
+  noteChatLoading = true;
+
+  const btn = document.getElementById('note-chat-send');
+  btn.disabled = true;
+
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteViewId);
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш нотатку користувача. Короткі відповіді (2-4 речення). Допомагаєш розвинути думку, знайти рішення, структурувати ідею. Якщо просять зберегти відповідь — скажи що можна натиснути "Зберегти як нотатку".${aiContext ? '\n\n' + aiContext : ''}`;
+  const noteContext = `Нотатка: ${n?.text || ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: noteContext },
+          ...noteChatHistory.slice(-10)
+        ],
+        max_tokens: 300,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) {
+      addNoteChatMsg('agent', reply);
+      noteChatHistory.push({ role: 'assistant', content: reply });
+      // Show save button if meaningful response
+      showSaveAsNoteBtn(reply);
+    } else {
+      addNoteChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+    }
+  } catch {
+    addNoteChatMsg('agent', 'Мережева помилка.');
+  }
+  noteChatLoading = false;
+  btn.disabled = false;
+}
+
+// Зберігаємо текст у closure — безпечно для будь-яких символів
+let _pendingAgentNote = '';
+
+function showSaveAsNoteBtn(replyText) {
+  const el = document.getElementById('note-chat-messages');
+  const old = document.getElementById('note-chat-save-btn');
+  if (old) old.remove();
+  _pendingAgentNote = replyText;
+  const btn = document.createElement('div');
+  btn.id = 'note-chat-save-btn';
+  btn.style.cssText = 'display:flex;justify-content:flex-end;margin-top:-4px';
+  const button = document.createElement('button');
+  button.textContent = '+ Зберегти як нотатку';
+  button.style.cssText = 'background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer';
+  button.addEventListener('click', () => saveAgentResponseAsNote(_pendingAgentNote));
+  btn.appendChild(button);
+  el.appendChild(btn);
+  el.scrollTop = el.scrollHeight;
+}
+
+function saveAgentResponseAsNote(text) {
+  const notes = getNotes();
+  const originalNote = notes.find(x => x.id === activeNoteViewId);
+  const folder = originalNote?.folder || 'Загальне';
+  notes.unshift({ id: Date.now(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
+  saveNotes(notes);
+  renderNotes();
+  showToast('✓ Збережено як нотатку');
+  document.getElementById('note-chat-save-btn')?.remove();
+  _pendingAgentNote = '';
+}
+
+
+// === SETTINGS SWIPE TO CLOSE ===
+function setupSettingsSwipe() {
+  const panel = document.getElementById('settings-panel-el');
+  if (!panel) return;
+  let startY = 0, startScrollTop = 0;
+  panel.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    startScrollTop = panel.scrollTop;
+  }, { passive: true });
+  panel.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - startY;
+    // Close only if swiped down >80px AND panel is scrolled to top
+    if (dy > 80 && startScrollTop === 0) {
+      closeSettings();
+    }
+  }, { passive: true });
+}
+
+
+
+// === PRODUCTIVITY INNER TABS ===
+let currentProdTab = 'tasks';
+
+function switchProdTab(tab) {
+  currentProdTab = tab;
+  const isHabits = tab === 'habits';
+
+  // Update inner tab styles
+  document.getElementById('prod-tab-tasks').style.cssText = `flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;${!isHabits ? 'background:white;color:#ea580c;box-shadow:0 2px 8px rgba(0,0,0,0.08)' : 'color:rgba(30,16,64,0.4)'}`;
+  document.getElementById('prod-tab-habits').style.cssText = `flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;${isHabits ? 'background:white;color:#16a34a;box-shadow:0 2px 8px rgba(0,0,0,0.08)' : 'color:rgba(30,16,64,0.4)'}`;
+
+  document.getElementById('prod-page-tasks').style.display = isHabits ? 'none' : 'block';
+  document.getElementById('prod-page-habits').style.display = isHabits ? 'block' : 'none';
+
+  // Update + button action
+  const addBtn = document.getElementById('prod-add-btn');
+  if (addBtn) addBtn.onclick = isHabits ? openAddHabit : openAddTask;
+
+  if (isHabits) renderProdHabits();
+}
+
+function renderProdHabits() {
+  const habits = getHabits();
+  const el = document.getElementById('prod-habits-list');
+  if (!el) return;
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+
+  // Update progress bar
+  const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+  const doneTodayCount = todayHabits.filter(h => !!log[today]?.[h.id]).length;
+  const countEl = document.getElementById('habits-today-count');
+  const barEl = document.getElementById('habits-today-bar');
+  if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
+  if (barEl) barEl.style.width = todayHabits.length > 0 ? `${Math.round(doneTodayCount/todayHabits.length*100)}%` : '0%';
+
+  if (habits.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще немає звичок<br>Натисни + щоб додати</div>';
+    return;
+  }
+
+  el.innerHTML = habits.map(h => {
+    const isDoneToday = !!log[today]?.[h.id];
+    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    const streak = getHabitStreak(h.id);
+    const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+
+    const weekDone = getHabitWeekDays(h.id);
+    const shortName2 = h.name.split(' ').slice(0,4).join(' ');
+    const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
+    const pct = getHabitPct(h.id);
+    const pctColor2 = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
+    const streakTxt = streak >= 2 ? '🔥 ' + streak + ' · ' : '';
+    const checkSvgProd = isDoneToday
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    const checkBgProd = isDoneToday ? 'background:#16a34a;border:none;' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15);';
+
+    // ФІКС: галочка і редагування — окремі незалежні елементи, не вкладені один в одний
+    return '<div style="position:relative;border-radius:16px;overflow:hidden;margin-bottom:10px">'
+      + '<div style="position:absolute;right:0;top:0;bottom:0;width:80px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:none">'
+        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'
+        + '<svg width="14" height="10" viewBox="0 0 24 16" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><line x1="20" y1="8" x2="4" y2="8"/><polyline points="10 2 4 8 10 14"/></svg>'
+      + '</div>'
+      + '<div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;will-change:transform"'
+        + ' ontouchstart="prodHabitSwipeStart(event,' + h.id + ')"'
+        + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
+        + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+        + '<div onclick="toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;' + checkBgProd + '">'
+          + checkSvgProd
+        + '</div>'
+        + '<div onclick="openEditHabit(' + h.id + ')" style="flex:1;min-width:0;cursor:pointer;-webkit-tap-highlight-color:transparent">'
+          + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:1px">' + escapeHtml(shortName2) + '</div>'
+          + '<div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + pct + '% за 30 днів</div>'
+        + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px;padding-left:52px">' + dayDots2 + '</div>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+function toggleProdHabitToday(id) {
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  log[today][id] = !log[today][id];
+  saveHabitLog(log);
+  renderProdHabits(); // оновлюємо тільки вкладку Продуктивність
+}
+
+// === TAB SWIPE NAVIGATION ===
+(function() {
+  let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
+  const EDGE_ZONE = 30; // px від краю для "назад"
+
+  document.addEventListener('touchstart', e => {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeStartTime = Date.now();
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    // Ignore if any modal is open
+    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal','clarify-modal','help-drawer','onboarding'];
+    if (modals.some(id => {
+      const el = document.getElementById(id);
+      return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('open'));
+    })) return;
+
+    // Не перемикаємо вкладку якщо тач почався на картці зі свайпом
+    const swipeTarget = document.elementFromPoint(swipeStartX, swipeStartY);
+    if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"]')) return;
+
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    const dy = e.changedTouches[0].clientY - swipeStartY;
+    const dt = Date.now() - swipeStartTime;
+
+    // Must be fast enough and horizontal
+    if (dt > 400) return;
+    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
+
+    const tabs = ['inbox','tasks','notes','me','evening','finance'];
+    const idx = tabs.indexOf(currentTab);
+
+    // If note-view-modal is open — swipe right closes it
+    const noteView = document.getElementById('note-view-modal');
+    if (noteView && noteView.style.display === 'flex') {
+      if (dx > 60) closeNoteView();
+      return;
+    }
+
+    // Swipe from left edge = "back" (same as right swipe but only from edge)
+    if (swipeStartX <= EDGE_ZONE && dx > 60) {
+      if (idx > 0) switchTab(tabs[idx - 1]);
+      return;
+    }
+
+    // Swipe left → next tab
+    if (dx < -60 && idx < tabs.length - 1) {
+      switchTab(tabs[idx + 1]);
+    }
+    // Swipe right → prev tab
+    else if (dx > 60 && idx > 0) {
+      switchTab(tabs[idx - 1]);
+    }
+  }, { passive: true });
+})();
+
+
+// === HABIT ME SWIPE TO DELETE ===
+const habitMeSwipeState = {};
+const HABIT_SWIPE_THRESHOLD = 72;
+
+function habitMeSwipeStart(e, id) {
+  const t = e.touches[0];
+  habitMeSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function habitMeSwipeMove(e, id) {
+  const s = habitMeSwipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  // Якщо рух більше вертикальний — скасовуємо свайп, даємо скролитись
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
+    delete habitMeSwipeState[id];
+    return;
+  }
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById('habit-me-item-' + id);
+  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+}
+function habitMeSwipeEnd(e, id) {
+  const s = habitMeSwipeState[id]; if (!s) return;
+  const el = document.getElementById('habit-me-item-' + id);
+  if (s.dx < -HABIT_SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => {
+      const item = getHabits().find(h => h.id === id);
+      saveHabits(getHabits().filter(h => h.id !== id)); renderHabits(); renderProdHabits();
+      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+    }, 200);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+    // Якщо це тап (не свайп) — перевіряємо чи тапнули на кнопку галочки
+    if (!s.swiping) {
+      const target = e.changedTouches[0];
+      const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
+      if (checkBtn) {
+        const rect = checkBtn.getBoundingClientRect();
+        if (target.clientX >= rect.left && target.clientX <= rect.right &&
+            target.clientY >= rect.top && target.clientY <= rect.bottom) {
+          toggleHabitToday(id);
+        }
+      }
+    }
+  }
+  delete habitMeSwipeState[id];
+}
+
+
+// === PROD HABIT SWIPE TO DELETE ===
+const prodHabitSwipeState = {};
+
+function prodHabitSwipeStart(e, id) {
+  const t = e.touches[0];
+  prodHabitSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+}
+function prodHabitSwipeMove(e, id) {
+  const s = prodHabitSwipeState[id]; if (!s) return;
+  const t = e.touches[0];
+  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete prodHabitSwipeState[id]; return; }
+  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+  if (!s.swiping) return;
+  e.preventDefault();
+  s.dx = Math.min(0, dx);
+  const el = document.getElementById('prod-habit-item-' + id);
+  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+}
+function prodHabitSwipeEnd(e, id) {
+  const s = prodHabitSwipeState[id]; if (!s) return;
+  const el = document.getElementById('prod-habit-item-' + id);
+  if (s.dx < -HABIT_SWIPE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    setTimeout(() => {
+      const item = getHabits().find(h => h.id === id);
+      saveHabits(getHabits().filter(h => h.id !== id));
+      renderHabits(); renderProdHabits();
+      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+    }, 200);
+  } else {
+    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+    if (!s.swiping) {
+      const target = e.changedTouches[0];
+      const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
+      if (checkBtn) {
+        const rect = checkBtn.getBoundingClientRect();
+        if (target.clientX >= rect.left && target.clientX <= rect.right &&
+            target.clientY >= rect.top && target.clientY <= rect.bottom) {
+          toggleProdHabitToday(id);
+        }
+      }
+    }
+  }
+  delete prodHabitSwipeState[id];
+}
+
+// === AUTO GENERATE TASK STEPS ===
+async function autoGenerateTaskSteps(taskId, title) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const systemPrompt = `Ти — помічник планування. Отримуєш назву задачі і маєш вирішити чи варто розбивати на кроки.
+Якщо задача містить список (через кому, "і", "та") АБО потребує кількох дій — відповідай ТІЛЬКИ JSON: {"steps":["крок 1","крок 2"]}. Максимум 5 кроків. Кожен крок — коротко (2-5 слів).
+Якщо задача проста і не потребує кроків (наприклад "зателефонувати мамі") — відповідай ТІЛЬКИ: {"steps":[]}
+ТІЛЬКИ валідний JSON, без тексту.`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: title }], max_tokens: 150, temperature: 0.3 })
+    });
+    clearTimeout(timeout);
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) return;
+    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+    if (parsed.steps && parsed.steps.length > 0) {
+      const allTasks = getTasks();
+      const idx = allTasks.findIndex(x => x.id === taskId);
+      if (idx !== -1 && allTasks[idx].steps.length === 0) {
+        allTasks[idx].steps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+        saveTasks(allTasks);
+        renderTasks();
+      }
+    }
+  } catch(e) { clearTimeout(timeout); }
+}
+
+
+// === CLARIFY SYSTEM ===
+let clarifyParsed = null;
+let clarifyOriginalText = null;
+
+function showClarify(parsed, originalText) {
+  clarifyParsed = parsed;
+  clarifyOriginalText = originalText;
+
+  document.getElementById('clarify-question').textContent = parsed.question || 'Уточни будь ласка:';
+  document.getElementById('clarify-input').value = '';
+
+  const optEl = document.getElementById('clarify-options');
+  optEl.innerHTML = (parsed.options || []).map((opt, i) => {
+    const isPrimary = i === 0;
+    return `<button onclick="selectClarifyOption(${i})" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? 'rgba(124,58,237,0.05)' : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isPrimary ? 'rgba(124,58,237,0.2)' : 'rgba(30,16,64,0.08)'};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? '#7c3aed' : '#1e1040'};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || '')}</button>`;
+  }).join('');
+
+  document.getElementById('clarify-modal').style.display = 'flex';
+}
+
+function closeClarify() {
+  document.getElementById('clarify-modal').style.display = 'none';
+  clarifyParsed = null;
+  clarifyOriginalText = null;
+}
+
+async function selectClarifyOption(idx) {
+  if (!clarifyParsed) return;
+  const opt = (clarifyParsed.options || [])[idx];
+  if (!opt) return;
+  const origText = clarifyOriginalText;
+  closeClarify();
+  if (opt.action === 'save') await processSaveAction(opt, origText);
+  else if (opt.action === 'complete_habit') await processCompleteHabit(opt, origText);
+  else if (opt.action === 'complete_task') await processCompleteTask(opt, origText);
+}
+
+async function sendClarifyText() {
+  const input = document.getElementById('clarify-input');
+  const text = input.value.trim();
+  if (!text) return;
+  closeClarify();
+  // Відправляємо уточнення назад в ШІ разом з оригінальним текстом
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
+  const combinedMsg = `Оригінальний запис: "${clarifyOriginalText}". Уточнення від користувача: "${text}"`;
+  clarifyOriginalText = null;
+  clarifyParsed = null;
+  const reply = await callAI(fullPrompt, combinedMsg, {});
+  if (reply) {
+    try {
+      const parsed = JSON.parse(reply.replace(/\`\`\`json|\`\`\`/g, '').trim());
+      if (parsed.action === 'save') await processSaveAction(parsed, combinedMsg);
+      else if (parsed.action === 'complete_habit') processCompleteHabit(parsed, combinedMsg);
+      else if (parsed.action === 'complete_task') processCompleteTask(parsed, combinedMsg);
+      else if (parsed.action === 'reply') addInboxChatMsg('agent', parsed.comment || reply);
+    } catch(e) {}
+  }
+}
+
+// Виносимо логіку збереження в окрему функцію щоб використовувати і з clarify і з sendToAI
+async function processSaveAction(parsed, originalText) {
+  const catMap = {'нотатка':'note','задача':'task','звичка':'habit','ідея':'idea','подія':'event'};
+  const rawCat = (parsed.category || '').toLowerCase();
+  const cat = ['idea','task','habit','note','event'].includes(rawCat) ? rawCat : (catMap[rawCat] || 'note');
+  const savedText = parsed.text || originalText;
+  const folder = parsed.folder || null;
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+
+  if (cat === 'task') {
+    const taskId = Date.now();
+    const tasks = getTasks();
+    const taskTitle = parsed.task_title || savedText;
+    const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
+      ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
+      : [];
+    tasks.unshift({ id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId });
+    saveTasks(tasks);
+    if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
+  }
+  if (cat === 'note' || cat === 'idea') addNoteFromInbox(savedText, cat, folder);
+  if (cat === 'habit') {
+    const habits = getHabits();
+    const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
+    if (!exists) {
+      const txt = savedText.toLowerCase();
+      let days = [0,1,2,3,4,5,6];
+      const hasEveryDay = /щодня|кожного дня|кожен день/i.test(txt);
+      const hasWeekdays = /будн|пн.*ср.*пт/i.test(txt);
+      const hasWeekend = /вихідн|субот.*неділ|сб.*нд/i.test(txt);
+      const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/i.test(txt);
+      if (hasEveryDay) { days = [0,1,2,3,4,5,6]; }
+      else if (hasWeekdays) { days = [0,1,2,3,4]; }
+      else if (hasWeekend) { days = [5,6]; }
+      else if (hasWeekday) {
+        days = [];
+        if (/понеділ|пн/i.test(txt)) days.push(0);
+        if (/вівтор|вт/i.test(txt)) days.push(1);
+        if (/серед|ср/i.test(txt)) days.push(2);
+        if (/четвер|чт/i.test(txt)) days.push(3);
+        if (/п.ятниц|пт/i.test(txt)) days.push(4);
+        if (/субот|сб/i.test(txt)) days.push(5);
+        if (/неділ|нд/i.test(txt)) days.push(6);
+        if (days.length === 0) days = [0,1,2,3,4,5,6];
+      }
+      const habitParts = savedText.split(/[,.]\s*/);
+      const habitName = habitParts[0].trim().split(' ').slice(0,5).join(' ');
+      const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '';
+      habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, createdAt: Date.now() });
+      saveHabits(habits);
+    }
+  }
+  if (cat === 'event') {
+    const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
+                 /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
+    const moments = getMoments();
+    moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
+    saveMoments(moments);
+  }
+  const catConfirm2 = {
+    task: '✅ Задачу створено',
+    habit: '🌱 Звичку створено',
+    note: '📝 Нотатку збережено',
+    idea: '💡 Ідею збережено',
+    event: '📅 Подію додано'
+  };
+  const confirmMsg2 = parsed.comment
+    ? `${parsed.comment} ${catConfirm2[cat] ? '/ ' + catConfirm2[cat] : ''}`
+    : (catConfirm2[cat] || '✓ Збережено');
+  addInboxChatMsg('agent', confirmMsg2);
+}
+
+
+// === COMPLETE HABIT FROM INBOX ===
+function processCompleteHabit(parsed, originalText) {
+  // Підтримуємо і старий формат (habit_id) і новий (habit_ids масив)
+  const ids = parsed.habit_ids || (parsed.habit_id ? [parsed.habit_id] : []);
+  if (ids.length === 0) {
+    addInboxChatMsg('agent', 'Не зрозумів яку звичку відмітити.');
+    return;
+  }
+  const habits = getHabits();
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  const completed = [];
+  ids.forEach(habitId => {
+    const habit = habits.find(h => h.id == habitId);
+    if (habit) {
+      log[today][habit.id] = true;
+      completed.push(habit.name);
+    }
+  });
+  if (completed.length === 0) {
+    addInboxChatMsg('agent', 'Не знайшов такі звички.');
+    return;
+  }
+  saveHabitLog(log);
+  renderProdHabits();
+  renderHabits();
+  // Зберігаємо в Inbox для історії
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: originalText, category: 'habit', ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+  const msg = parsed.comment || (completed.length === 1
+    ? `✅ Відмітив звичку "${completed[0]}" як виконану`
+    : `✅ Відмітив ${completed.length} звички: ${completed.join(', ')}`);
+  addInboxChatMsg('agent', msg);
+}
+
+// === COMPLETE TASK FROM INBOX ===
+function processCompleteTask(parsed, originalText) {
+  // Підтримуємо і старий формат (task_id) і новий (task_ids масив)
+  const ids = parsed.task_ids || (parsed.task_id ? [parsed.task_id] : []);
+  if (ids.length === 0) {
+    addInboxChatMsg('agent', 'Не зрозумів яку задачу закрити.');
+    return;
+  }
+  const tasks = getTasks();
+  const completed = [];
+  ids.forEach(taskId => {
+    const idx = tasks.findIndex(t => t.id == taskId);
+    if (idx !== -1) {
+      completed.push(tasks[idx].title);
+      tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() };
+    }
+  });
+  if (completed.length === 0) {
+    addInboxChatMsg('agent', 'Не знайшов такі задачі.');
+    return;
+  }
+  saveTasks(tasks);
+  renderTasks();
+  // Зберігаємо в Inbox для історії
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: originalText, category: 'task', ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+  const msg = parsed.comment || (completed.length === 1
+    ? `✅ Задачу "${completed[0]}" закрито`
+    : `✅ Закрив ${completed.length} задачі: ${completed.join(', ')}`);
+  addInboxChatMsg('agent', msg);
+}
+
+
+
+let activeChatBar = null;
+
+function getTabbarHeight() {
+  const tb = document.getElementById('tab-bar');
+  return tb ? tb.offsetHeight : 83;
+}
+
+function openChatBar(tab) {
+  if (activeChatBar === tab) return;
+
+  // Закриваємо інші бари БЕЗ blur — щоб не скинути фокус з поточного поля
+  ['tasks','me','evening','finance'].forEach(t => {
+    if (t === tab) return;
+    const b = document.getElementById(t + '-ai-bar');
+    if (!b) return;
+    const cw = b.querySelector('.ai-bar-chat-window');
+    if (cw) cw.classList.remove('open');
+    const inputs = b.querySelectorAll('input, textarea');
+    inputs.forEach(i => i.blur());
+  });
+
+  activeChatBar = tab;
+
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return;
+
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  // rAF — чекаємо один кадр щоб браузер намалював початкову позицію вікна
+  // без цього анімація не грає і вікно з'являється миттєво ("вилітає")
+  if (chatWin) requestAnimationFrame(() => { chatWin.classList.add('open'); });
+  // Не даємо фокус програмно — iOS відкриває клавіатуру тільки від живого тапу
+}
+
+function closeChatBar(tab) {
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return;
+
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  if (chatWin) chatWin.classList.remove('open');
+
+  // Знімаємо фокус але НЕ очищуємо текст — користувач може повернутись
+  const inputs = bar.querySelectorAll('input, textarea');
+  inputs.forEach(i => i.blur());
+
+  activeChatBar = null;
+}
+
+function toggleChatBar(tab) {
+  if (activeChatBar === tab) {
+    closeChatBar(tab);
+  } else {
+    openChatBar(tab);
+  }
+}
+
+function closeAllChatBars(resetActive = true) {
+  ['inbox','tasks','me','evening','finance'].forEach(t => {
+    const bar = document.getElementById(t + '-ai-bar');
+    if (!bar) return;
+    const chatWin = bar.querySelector('.ai-bar-chat-window');
+    if (chatWin) chatWin.classList.remove('open');
+    const inputs = bar.querySelectorAll('input, textarea');
+    inputs.forEach(i => i.blur());
+  });
+  if (resetActive) activeChatBar = null;
+}
+
+// Свайп вниз по чат-вікну щоб закрити
+function setupChatBarSwipe() {
+  ['inbox','tasks','me','evening','finance'].forEach(tab => {
+    const bar = document.getElementById(tab + '-ai-bar');
+    if (!bar) return;
+    const chatWin = bar.querySelector('.ai-bar-chat-window');
+    const messages = bar.querySelector('.ai-bar-messages');
+    if (!chatWin) return;
+
+    // --- Gesture-driven свайп по чат-вікну ---
+    let winStartY = 0, winStartX = 0, winStartVpTop = 0, isDragging = false, startTime = 0;
+
+    chatWin.addEventListener('touchstart', e => {
+      if (messages && messages.contains(e.target)) return;
+      winStartY = e.touches[0].clientY;
+      winStartX = e.touches[0].clientX;
+      // Запам'ятовуємо позицію viewport — компенсуємо iOS scroll при клавіатурі
+      winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+      startTime = Date.now();
+      isDragging = false;
+      chatWin.style.transition = 'none';
+      chatWin.style.opacity = '1';
+    }, { passive: true });
+
+    chatWin.addEventListener('touchmove', e => {
+      if (messages && messages.contains(e.target)) return;
+      // Враховуємо зміщення viewport (коли клавіатура відкрита iOS скролить viewport)
+      const vpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+      const vpDelta = vpTop - winStartVpTop;
+      const dy = (e.touches[0].clientY - winStartY) + vpDelta;
+      if (isDragging) {
+        if (dy <= 0) { chatWin.style.transform = 'translateY(0)'; return; }
+        chatWin.style.transform = `translateY(${dy}px)`;
+        chatWin.style.opacity = Math.max(0, 1 - dy / 300).toFixed(2);
+        return;
+      }
+      const dx = Math.abs(e.touches[0].clientX - winStartX);
+      if (dy <= 0) return;
+      if (dx > dy * 1.5) return;
+      isDragging = true;
+      chatWin.style.transform = `translateY(${dy}px)`;
+      chatWin.style.opacity = Math.max(0, 1 - dy / 300).toFixed(2);
+    }, { passive: true });
+
+    chatWin.addEventListener('touchend', e => {
+      if (!isDragging) {
+        // Це був тап — повертаємо в початковий стан
+        chatWin.style.transition = '';
+        chatWin.style.transform = '';
+        chatWin.style.opacity = '';
+        return;
+      }
+      const dy = e.changedTouches[0].clientY - winStartY;
+      const elapsed = Date.now() - startTime;
+      const velocity = dy / elapsed; // px/ms
+      // Вмикаємо transition назад
+      chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
+      // Закриваємо якщо: пройшли > 80px АБО швидкість > 0.5px/ms
+      if (dy > 80 || velocity > 0.5) {
+        chatWin.style.transform = 'translateY(110%)';
+        chatWin.style.opacity = '0';
+        setTimeout(() => {
+          closeChatBar(tab);
+          chatWin.style.transition = '';
+          chatWin.style.transform = '';
+          chatWin.style.opacity = '';
+        }, 280);
+      } else {
+        // Повертаємо назад (пружина)
+        chatWin.style.transform = 'translateY(0)';
+        chatWin.style.opacity = '1';
+        setTimeout(() => {
+          chatWin.style.transition = '';
+          chatWin.style.transform = '';
+          chatWin.style.opacity = '';
+        }, 280);
+      }
+      isDragging = false;
+    }, { passive: true });
+
+    // --- Блок: бар не рухається при скролі сторінки ---
+    // Блокуємо тільки коли вікно чату ВІДКРИТЕ
+    bar.addEventListener('touchmove', e => {
+      // Якщо вікно закрите — пропускаємо все наскрізь
+      if (!chatWin.classList.contains('open')) return;
+      // Вікно відкрите — дозволяємо скрол повідомлень і поля
+      if (messages && messages.contains(e.target)) return;
+      const textarea = bar.querySelector('textarea');
+      if (textarea && textarea.contains(e.target)) return;
+      e.preventDefault();
+    }, { passive: false });
+  });
+
+  // --- Тап поза вікном → закрити (але НЕ свайп) ---
+  let docTouchStartY = 0, docTouchStartX = 0;
+  document.addEventListener('touchstart', e => {
+    docTouchStartY = e.touches[0].clientY;
+    docTouchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!activeChatBar) return;
+    const bar = document.getElementById(activeChatBar + '-ai-bar');
+    if (!bar) return;
+    // Якщо дотик всередині бару — нічого (поле, вікно, кнопки)
+    if (bar.contains(e.target)) return;
+    // Якщо дотик по таббару — нічого
+    const tabBar = document.getElementById('tab-bar');
+    if (tabBar && tabBar.contains(e.target)) return;
+    // Вимірюємо відстань — якщо це свайп (> 10px) → НЕ закриваємо
+    const dy = Math.abs(e.changedTouches[0].clientY - docTouchStartY);
+    const dx = Math.abs(e.changedTouches[0].clientX - docTouchStartX);
+    if (dy > 10 || dx > 10) return; // це скрол карток — не заважаємо
+    // Це тап → закриваємо чат (текст у полі НЕ очищуємо)
+    closeChatBar(activeChatBar);
+  }, { passive: true });
+}
+
+
+let taskBarLoading = false;
+let taskBarHistory = [];
+
+function showTasksChatMessages() {
+  openChatBar('tasks');
+}
+
+function addTaskBarMsg(role, text) {
+  const el = document.getElementById('tasks-chat-messages');
+  if (!el) return;
+  // Відкриваємо чат-вікно якщо є повідомлення
+  try { openChatBar('tasks'); } catch(e) {}
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
+}
+
+async function sendTasksBarMessage() {
+  if (taskBarLoading) return;
+  const input = document.getElementById('tasks-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addTaskBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addTaskBarMsg('user', text);
+  taskBarLoading = true;
+
+  const tasks = getTasks().filter(t => t.status !== 'done');
+  const tasksSummary = tasks.map(t => {
+    const steps = (t.steps || []).map(s => '  - ' + s.text + (s.done ? ' [✓]' : '')).join('\n');
+    return 'Задача ID:' + t.id + ' "' + t.title + '"' + (steps ? '\nКроки:\n' + steps : '');
+  }).join('\n\n');
+
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const habitsSummary = habits.map(h => {
+    const done = !!log[today]?.[h.id];
+    return h.name + (done ? ' [виконано сьогодні]' : ' [не виконано сьогодні]');
+  }).join(', ');
+
+  const aiContext = getAIContext();
+  const systemPrompt = getOWLPersonality() + '\n\n'
+    + 'ЗАДАЧІ:\n' + (tasksSummary || 'Немає активних задач') + '\n\n'
+    + (habitsSummary ? 'ЗВИЧКИ СЬОГОДНІ:\n' + habitsSummary + '\n\n' : '')
+    + 'Ти можеш:\n'
+    + '1. Відповідати на питання про задачі та звички\n'
+    + '2. Якщо виконав крок — JSON: {"action":"complete_step","task_id":ID,"step_text":"текст"}\n'
+    + '3. Якщо виконав задачу — JSON: {"action":"complete_task","task_id":ID}\n'
+    + '4. Якщо виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
+    + '5. Якщо СТВОРИТИ звичку — JSON: {"action":"create_habit","name":"коротка назва","days":[0,1,2,3,4,5,6]}\n'
+    + '6. Якщо СТВОРИТИ задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
+    + '7. Якщо додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
+    + '8. Якщо скасувати виконання кроку (юзер каже "відміни", "поверни", "скасуй", "я ще не зробив") — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
+    + '9. Якщо незрозуміло — запитай уточнення. НЕ вигадуй інших action крім перелічених.\n'
+    + 'ВАЖЛИВО: тільки чистий JSON без слова "JSON:" і без markdown. Інакше — текст українською 1-2 речення.'
+    + (aiContext ? '\n\n' + aiContext : '');
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, ...taskBarHistory.slice(-8), { role: 'user', content: text }],
+        max_tokens: 200, temperature: 0.5
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); taskBarLoading = false; return; }
+
+    // Спробуємо розпарсити JSON дію
+    try {
+      // Шукаємо JSON навіть якщо є текст перед ним
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.action === 'complete_step') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) {
+          const step = t.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
+          if (step) {
+            step.done = true;
+            // Якщо всі кроки виконані або немає кроків — виконати задачу
+            if (t.steps.every(s => s.done)) t.status = 'done';
+            saveTasks(allTasks); renderTasks();
+            addTaskBarMsg('agent', `✅ Відмітив "${step.text}" як виконано`);
+          } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
+        }
+      } else if (parsed.action === 'complete_task') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) { t.status = 'done'; t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
+      } else if (parsed.action === 'add_step') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
+      } else if (parsed.action === 'complete_habit') {
+        const habits = getHabits();
+        const h = habits.find(x => x.name.toLowerCase().includes((parsed.habit_name || '').toLowerCase().substring(0,6)));
+        if (h) {
+          const todayStr = new Date().toDateString();
+          const log = getHabitLog();
+          if (!log[todayStr]) log[todayStr] = {};
+          log[todayStr][h.id] = true;
+          saveHabitLog(log);
+          renderProdHabits();
+          renderHabits();
+          addTaskBarMsg('agent', '✅ Відмітив звичку "' + h.name + '" як виконану сьогодні');
+        } else { addTaskBarMsg('agent', reply); }
+      } else if (parsed.action === 'create_habit') {
+        const habits = getHabits();
+        const name = (parsed.name || '').trim();
+        if (name) {
+          const days = parsed.days || [0,1,2,3,4,5,6];
+          habits.push({ id: Date.now(), name, details: parsed.details || '', emoji: '⭕', days, createdAt: Date.now() });
+          saveHabits(habits);
+          renderProdHabits(); renderHabits();
+          addTaskBarMsg('agent', '🌱 Звичку "' + name + '" створено!');
+        }
+      } else if (parsed.action === 'create_task') {
+        const tasks = getTasks();
+        const title = (parsed.title || '').trim();
+        if (title) {
+          const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+          tasks.unshift({ id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+          saveTasks(tasks); renderTasks();
+          addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
+        }
+      } else if (parsed.action === 'undo_step') {
+        const allTasks = getTasks();
+        const t = allTasks.find(x => x.id === parsed.task_id);
+        if (t) {
+          const step = t.steps.find(s => s.text.toLowerCase().includes((parsed.step_text || '').toLowerCase().substring(0,10)));
+          if (step) {
+            step.done = false;
+            if (t.status === 'done') t.status = 'active';
+            saveTasks(allTasks); renderTasks();
+            addTaskBarMsg('agent', `↩️ Скасував виконання "${step.text}"`);
+          } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
+        }
+      } else { addTaskBarMsg('agent', reply); }
+    } catch { addTaskBarMsg('agent', reply); }
+
+    taskBarHistory.push({ role: 'assistant', content: reply });
+  } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
+  taskBarLoading = false;
+}
+
+// === ME AI BAR ===
+let meBarLoading = false;
+
+function showMeChatMessages() {
+  openChatBar('me');
+}
+
+function addMeChatMsg(role, text, id = '') {
+  const el = document.getElementById('me-chat-messages');
+  if (!el) return;
+  try { openChatBar('me'); } catch(e) {}
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// === FINANCE ===
+
+// Storage
+function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
+function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); }
+function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
+function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
+function getFinCats() {
+  const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
+  if (saved) return saved;
+  return {
+    expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Трава','Інше'],
+    income:  ['Зарплата','Надходження','Повернення','Інше'],
+  };
+}
+function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
+
+// State
+let currentFinTab = 'expense';
+let currentFinPeriod = 'month';
+const CURRENCY = '€';
+
+// Категорії кольори
+const FIN_CAT_COLORS = ['#f97316','#0ea5e9','#a855f7','#22c55e','#ef4444','#eab308','#14b8a6','#f43f5e','#6366f1','#84cc16','#fb923c','#38bdf8'];
+
+function getFinColor(idx) { return FIN_CAT_COLORS[idx % FIN_CAT_COLORS.length]; }
+
+// Фільтр транзакцій по періоду
+function getFinPeriodRange(period) {
+  const now = new Date();
+  let from;
+  if (period === 'week') {
+    from = new Date(now); from.setDate(now.getDate() - 6); from.setHours(0,0,0,0);
+  } else if (period === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  }
+  return from.getTime();
+}
+
+function getFilteredTransactions(type, period) {
+  const from = getFinPeriodRange(period);
+  return getFinance().filter(t => t.type === type && t.ts >= from);
+}
+
+function formatMoney(n) {
+  return CURRENCY + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
+}
+
+// Перемикачі
+function switchFinTab(tab) {
+  currentFinTab = tab;
+  ['expense','income','balance'].forEach(t => {
+    const el = document.getElementById('fin-tab-' + t);
+    if (!el) return;
+    const active = t === tab;
+    el.style.background = active ? 'white' : '';
+    el.style.color = active ? (tab === 'expense' ? '#c2410c' : tab === 'income' ? '#16a34a' : '#4f46e5') : 'rgba(30,16,64,0.4)';
+    el.style.boxShadow = active ? '0 2px 8px rgba(0,0,0,0.08)' : '';
+  });
+  renderFinance();
+}
+
+function setFinPeriod(period) {
+  currentFinPeriod = period;
+  ['week','month','3months'].forEach(p => {
+    const el = document.getElementById('fin-period-' + p);
+    if (!el) return;
+    const active = p === period;
+    el.style.borderColor = active ? '#c2410c' : 'rgba(194,65,12,0.2)';
+    el.style.background = active ? 'rgba(194,65,12,0.1)' : 'rgba(194,65,12,0.05)';
+    el.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
+  });
+  renderFinance();
+}
+
+// Головний рендер
+function renderFinance() {
+  if (currentFinTab === 'balance') {
+    renderFinBalance();
+  } else {
+    renderFinMain(currentFinTab);
+  }
+}
+
+function renderFinMain(type) {
+  const txs = getFilteredTransactions(type, currentFinPeriod);
+  const total = txs.reduce((s, t) => s + t.amount, 0);
+  const budget = getFinBudget();
+  const isExpense = type === 'expense';
+
+  // Зведення
+  const periodLabels = { week: 'за тиждень', month: 'за місяць', '3months': 'за 3 місяці' };
+  const typeLabel = isExpense ? 'Витрати' : 'Доходи';
+  document.getElementById('fin-summary-label').textContent = `${typeLabel} ${periodLabels[currentFinPeriod]}`;
+  document.getElementById('fin-total').textContent = formatMoney(total);
+  document.getElementById('fin-total').style.color = isExpense ? '#7c2d12' : '#14532d';
+
+  // Бюджет (тільки для витрат і місяця)
+  const budgetEl = document.getElementById('fin-budget-label');
+  const budgetRemainEl = document.getElementById('fin-budget-remain');
+  const budgetBarWrap = document.getElementById('fin-budget-bar-wrap');
+  const budgetBar = document.getElementById('fin-budget-bar');
+  if (isExpense && currentFinPeriod === 'month' && budget.total > 0) {
+    const remain = budget.total - total;
+    budgetEl.textContent = `Бюджет: ${formatMoney(budget.total)}`;
+    budgetRemainEl.textContent = remain >= 0 ? `Залишилось ${formatMoney(remain)}` : `Перевищено на ${formatMoney(-remain)}`;
+    budgetRemainEl.style.color = remain >= 0 ? '#c2410c' : '#dc2626';
+    budgetBarWrap.style.display = 'block';
+    const pct = Math.min(100, Math.round(total / budget.total * 100));
+    budgetBar.style.width = pct + '%';
+    budgetBar.style.background = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#c2410c';
+  } else {
+    budgetEl.textContent = '';
+    budgetRemainEl.textContent = '';
+    budgetBarWrap.style.display = 'none';
+  }
+
+  // Графік по днях
+  renderFinChart(txs, type);
+
+  // По категоріях
+  const catsBlock = document.getElementById('fin-cats-block');
+  const catBudgetsBlock = document.getElementById('fin-cat-budgets-block');
+  catsBlock.style.display = 'block';
+  catBudgetsBlock.style.display = isExpense ? 'block' : 'none';
+  renderFinCategories(txs, type);
+  if (isExpense) renderFinCatBudgets(txs);
+
+  // Список транзакцій
+  renderFinTransactions(txs);
+}
+
+function renderFinBalance() {
+  const from = getFinPeriodRange(currentFinPeriod);
+  const allTxs = getFinance().filter(t => t.ts >= from);
+  const income = allTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = allTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance = income - expense;
+
+  const periodLabels = { week: 'за тиждень', month: 'за місяць', '3months': 'за 3 місяці' };
+  document.getElementById('fin-summary-label').textContent = `Баланс ${periodLabels[currentFinPeriod]}`;
+  document.getElementById('fin-total').textContent = (balance >= 0 ? '+' : '') + (balance % 1 === 0 ? balance : balance.toFixed(2)) + CURRENCY;
+  document.getElementById('fin-total').style.color = balance >= 0 ? '#14532d' : '#7c2d12';
+  document.getElementById('fin-budget-label').textContent = `Доходи: +${formatMoney(income)}`;
+  document.getElementById('fin-budget-remain').textContent = `Витрати: -${formatMoney(expense)}`;
+  document.getElementById('fin-budget-remain').style.color = '#c2410c';
+  document.getElementById('fin-budget-bar-wrap').style.display = 'none';
+
+  // Графік balance по днях
+  renderFinChart(allTxs, 'balance');
+  document.getElementById('fin-cats-block').style.display = 'none';
+  document.getElementById('fin-cat-budgets-block').style.display = 'none';
+  renderFinTransactions(allTxs);
+}
+
+function renderFinChart(txs, type) {
+  const chartEl = document.getElementById('fin-chart');
+  const labelEl = document.getElementById('fin-chart-label');
+  const days = currentFinPeriod === 'week' ? 7 : currentFinPeriod === 'month' ? 30 : 90;
+  const now = new Date();
+
+  // Групуємо по дням
+  const byDay = {};
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (days - 1 - i));
+    byDay[d.toDateString()] = 0;
+  }
+  txs.forEach(t => {
+    const ds = new Date(t.ts).toDateString();
+    if (ds in byDay) byDay[ds] += t.amount;
+  });
+
+  const vals = Object.values(byDay);
+  const maxVal = Math.max(1, ...vals);
+  const barColor = type === 'income' ? '#16a34a' : type === 'balance' ? '#6366f1' : '#f97316';
+  const labelMap = { expense: 'Витрати по днях', income: 'Доходи по днях', balance: 'Баланс по днях' };
+  labelEl.textContent = labelMap[type] || '';
+
+  const showEvery = days > 30 ? 10 : days > 14 ? 5 : 1;
+  chartEl.innerHTML = vals.map((v, i) => {
+    const h = Math.max(3, Math.round(v / maxVal * 60));
+    const isToday = i === days - 1;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px">
+      <div style="width:100%;height:${h}px;background:${isToday ? barColor : barColor + '88'};border-radius:3px 3px 0 0"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinCategories(txs, type) {
+  const catEl = document.getElementById('fin-categories');
+  const total = txs.reduce((s, t) => s + t.amount, 0) || 1;
+  const catMap = {};
+  txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) {
+    catEl.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Немає даних</div>';
+    return;
+  }
+  catEl.innerHTML = sorted.map(([cat, amt], i) => {
+    const pct = Math.round(amt / total * 100);
+    const color = getFinColor(i);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.6);min-width:80px">${escapeHtml(cat)}</div>
+      <div style="flex:1;height:6px;background:rgba(0,0,0,0.05);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);min-width:52px;text-align:right">${formatMoney(amt)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinCatBudgets(txs) {
+  const el = document.getElementById('fin-cat-budgets');
+  const budget = getFinBudget();
+  const cats = getFinCats();
+  const catMap = {};
+  txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+
+  if (!budget.categories || Object.keys(budget.categories).length === 0) {
+    el.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.35);text-align:center;padding:4px">Ліміти не встановлені. Натисни ✎ щоб задати.</div>';
+    return;
+  }
+  el.innerHTML = Object.entries(budget.categories).map(([cat, limit]) => {
+    if (!limit) return '';
+    const spent = catMap[cat] || 0;
+    const pct = Math.min(100, Math.round(spent / limit * 100));
+    const color = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#16a34a';
+    const remain = limit - spent;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(cat)}</span>
+        <span style="font-size:12px;font-weight:600;color:${color}">${remain >= 0 ? `залишилось ${formatMoney(remain)}` : `перевищено на ${formatMoney(-remain)}`}</span>
+      </div>
+      <div style="height:5px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">${formatMoney(spent)} з ${formatMoney(limit)}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+}
+
+function renderFinTransactions(txs) {
+  const el = document.getElementById('fin-transactions');
+  if (txs.length === 0) {
+    el.innerHTML = '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:12px">Немає транзакцій за цей період</div>';
+    return;
+  }
+  const sorted = [...txs].sort((a, b) => b.ts - a.ts).slice(0, 50);
+  el.innerHTML = sorted.map(t => {
+    const isExpense = t.type === 'expense';
+    const sign = isExpense ? '-' : '+';
+    const color = isExpense ? '#c2410c' : '#16a34a';
+    const date = new Date(t.ts);
+    const dateStr = date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(30,16,64,0.05)" onclick="openEditTransaction(${t.id})">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#1e1040">${escapeHtml(t.category)}</div>
+        ${t.comment ? `<div style="font-size:12px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:15px;font-weight:800;color:${color}">${sign}${formatMoney(t.amount)}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Додавання транзакції вручну
+let _finEditId = null;
+
+function openAddTransaction(prefill = {}) {
+  _finEditId = null;
+  const cats = getFinCats();
+  const type = prefill.type || currentFinTab === 'income' ? 'income' : 'expense';
+  _showTransactionModal({ type, amount: prefill.amount || '', category: prefill.category || '', comment: prefill.comment || '' });
+}
+
+function openEditTransaction(id) {
+  const txs = getFinance();
+  const t = txs.find(x => x.id === id);
+  if (!t) return;
+  _finEditId = id;
+  _showTransactionModal(t);
+}
+
+function _showTransactionModal(data) {
+  const cats = getFinCats();
+  const isExpense = data.type !== 'income';
+  const catList = isExpense ? cats.expense : cats.income;
+
+  const existing = document.getElementById('fin-tx-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fin-tx-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = `
+    <div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:16px 20px calc(env(safe-area-inset-bottom)+28px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15)">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">${_finEditId ? 'Редагувати' : 'Нова'} ${isExpense ? 'витрата' : 'дохід'}</div>
+
+      <!-- Тип -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button id="fntx-btn-expense" onclick="toggleFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${isExpense ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${isExpense ? 'rgba(194,65,12,0.08)' : 'white'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.4)'}">Витрата</button>
+        <button id="fntx-btn-income" onclick="toggleFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.1)'};background:${!isExpense ? 'rgba(22,163,74,0.08)' : 'white'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.4)'}">Дохід</button>
+      </div>
+
+      <!-- Сума -->
+      <input id="fntx-amount" type="number" placeholder="Сума (€)" inputmode="decimal"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:20px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box"
+        value="${data.amount || ''}">
+
+      <!-- Категорія -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Категорія</div>
+        <div id="fntx-cats" style="display:flex;flex-wrap:wrap;gap:6px">
+          ${catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${c === data.category ? 'rgba(194,65,12,0.08)' : 'white'};color:${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(c)}</button>`).join('')}
+        </div>
+        <input id="fntx-cat-custom" type="text" placeholder="або своя категорія…"
+          style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-top:8px;box-sizing:border-box"
+          value="${catList.includes(data.category) ? '' : (data.category || '')}">
+      </div>
+
+      <!-- Коментар -->
+      <input id="fntx-comment" type="text" placeholder="Коментар (необов'язково)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
+        value="${data.comment || ''}">
+
+      <div style="display:flex;gap:8px">
+        ${_finEditId ? `<button onclick="deleteFinTransaction()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:15px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">🗑</button>` : ''}
+        <button onclick="closeFinTxModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
+        <button onclick="saveFinTransaction()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(() => { document.getElementById('fntx-amount')?.focus(); }, 300);
+  _finTxCurrentType = isExpense ? 'expense' : 'income';
+  _finTxSelectedCat = data.category || '';
+}
+
+let _finTxCurrentType = 'expense';
+let _finTxSelectedCat = '';
+
+function toggleFinTxType(type) {
+  _finTxCurrentType = type;
+  const isExpense = type === 'expense';
+  const cats = getFinCats();
+  const catList = isExpense ? cats.expense : cats.income;
+
+  const btnE = document.getElementById('fntx-btn-expense');
+  const btnI = document.getElementById('fntx-btn-income');
+  if (btnE) { btnE.style.borderColor = isExpense ? '#c2410c' : 'rgba(30,16,64,0.1)'; btnE.style.background = isExpense ? 'rgba(194,65,12,0.08)' : 'white'; btnE.style.color = isExpense ? '#c2410c' : 'rgba(30,16,64,0.4)'; }
+  if (btnI) { btnI.style.borderColor = !isExpense ? '#16a34a' : 'rgba(30,16,64,0.1)'; btnI.style.background = !isExpense ? 'rgba(22,163,74,0.08)' : 'white'; btnI.style.color = !isExpense ? '#16a34a' : 'rgba(30,16,64,0.4)'; }
+
+  _finTxSelectedCat = '';
+  const catsEl = document.getElementById('fntx-cats');
+  if (catsEl) catsEl.innerHTML = catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:rgba(30,16,64,0.5)">${escapeHtml(c)}</button>`).join('');
+}
+
+function selectFinTxCat(cat) {
+  _finTxSelectedCat = cat;
+  const catsEl = document.getElementById('fntx-cats');
+  if (!catsEl) return;
+  catsEl.querySelectorAll('button').forEach(btn => {
+    const active = btn.textContent === cat;
+    btn.style.borderColor = active ? '#c2410c' : 'rgba(30,16,64,0.1)';
+    btn.style.background = active ? 'rgba(194,65,12,0.08)' : 'white';
+    btn.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
+  });
+  const customInput = document.getElementById('fntx-cat-custom');
+  if (customInput) customInput.value = '';
+}
+
+function saveFinTransaction() {
+  const amountRaw = parseFloat(document.getElementById('fntx-amount')?.value || '0');
+  if (!amountRaw || amountRaw <= 0) { showToast('Введи суму'); return; }
+
+  const customCat = document.getElementById('fntx-cat-custom')?.value.trim();
+  const category = customCat || _finTxSelectedCat;
+  if (!category) { showToast('Вибери категорію'); return; }
+
+  const comment = document.getElementById('fntx-comment')?.value.trim() || '';
+  const txs = getFinance();
+
+  // Перевіряємо чи нова категорія
+  const cats = getFinCats();
+  const catList = _finTxCurrentType === 'expense' ? cats.expense : cats.income;
+  if (customCat && !catList.includes(customCat)) {
+    cats[_finTxCurrentType].push(customCat);
+    saveFinCats(cats);
+  }
+
+  if (_finEditId) {
+    const idx = txs.findIndex(x => x.id === _finEditId);
+    if (idx !== -1) txs[idx] = { ...txs[idx], amount: amountRaw, category, comment, type: _finTxCurrentType };
+  } else {
+    txs.unshift({ id: Date.now(), type: _finTxCurrentType, amount: amountRaw, category, comment, ts: Date.now() });
+  }
+  saveFinance(txs);
+  closeFinTxModal();
+  renderFinance();
+  showToast(_finEditId ? '✓ Оновлено' : `✓ ${_finTxCurrentType === 'expense' ? 'Витрату' : 'Дохід'} збережено`);
+  _finEditId = null;
+}
+
+function deleteFinTransaction() {
+  if (!_finEditId) return;
+  const item = getFinance().find(t => t.id === _finEditId);
+  saveFinance(getFinance().filter(t => t.id !== _finEditId));
+  closeFinTxModal();
+  renderFinance();
+  if (item) showUndoToast('Транзакцію видалено', () => {
+    const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
+  });
+  _finEditId = null;
+}
+
+function closeFinTxModal() {
+  document.getElementById('fin-tx-modal')?.remove();
+}
+
+// Модал бюджету
+function openFinBudgetModal() {
+  const budget = getFinBudget();
+  const cats = getFinCats();
+
+  const existing = document.getElementById('fin-budget-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fin-budget-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = `
+    <div onclick="closeFinBudgetModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:16px 20px calc(env(safe-area-inset-bottom)+28px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:80vh;overflow-y:auto">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">Бюджет на місяць</div>
+
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Загальний ліміт</div>
+      <input id="finbdg-total" type="number" placeholder="€ 0 — без ліміту" inputmode="decimal"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:17px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
+        value="${budget.total || ''}">
+
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">По категоріях</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        ${cats.expense.map(cat => `
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat)}</div>
+            <input type="number" id="finbdg-cat-${escapeHtml(cat)}" placeholder="без ліміту" inputmode="decimal"
+              style="width:100px;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;text-align:right"
+              value="${budget.categories?.[cat] || ''}">
+          </div>`).join('')}
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="closeFinBudgetModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
+        <button onclick="saveFinBudgetFromModal()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function saveFinBudgetFromModal() {
+  const cats = getFinCats();
+  const total = parseFloat(document.getElementById('finbdg-total')?.value || '0') || 0;
+  const categories = {};
+  cats.expense.forEach(cat => {
+    const val = parseFloat(document.getElementById(`finbdg-cat-${cat}`)?.value || '0') || 0;
+    if (val > 0) categories[cat] = val;
+  });
+  saveFinBudget({ total, categories });
+  closeFinBudgetModal();
+  renderFinance();
+  showToast('✓ Бюджет збережено');
+}
+
+function closeFinBudgetModal() {
+  document.getElementById('fin-budget-modal')?.remove();
+}
+
+// Обробка фінансів з Inbox
+function processFinanceAction(parsed, originalText) {
+  const cats = getFinCats();
+  const type = parsed.fin_type || 'expense';
+  const amount = parseFloat(parsed.amount) || 0;
+  const category = parsed.category || (type === 'expense' ? 'Інше' : 'Інше');
+  const comment = parsed.comment || originalText;
+
+  if (!amount || amount <= 0) {
+    addInboxChatMsg('agent', 'Не вдалось розпізнати суму. Спробуй написати чіткіше: "витратив 50 на їжу"');
+    return;
+  }
+
+  // Нова категорія — зберігаємо без запиту (агент вже підтвердив)
+  const catList = type === 'expense' ? cats.expense : cats.income;
+  if (!catList.includes(category)) {
+    catList.push(category);
+    saveFinCats(cats);
+  }
+
+  const txs = getFinance();
+  txs.unshift({ id: Date.now(), type, amount, category, comment, ts: Date.now() });
+  saveFinance(txs);
+
+  // Зберігаємо в Inbox для історії
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text: originalText, category: 'finance', ts: Date.now(), processed: true });
+  saveInbox(items);
+  renderInbox();
+
+  if (currentTab === 'finance') renderFinance();
+
+  const sign = type === 'expense' ? '-' : '+';
+  const typeLabel = type === 'expense' ? 'витрату' : 'дохід';
+  addInboxChatMsg('agent', `${sign}${formatMoney(amount)} · ${category}${parsed.fin_comment ? ' — ' + parsed.fin_comment : ''}`);
+
+  // Попередження про перевищення бюджету
+  checkFinBudgetWarning(type, category, amount);
+}
+
+function checkFinBudgetWarning(type, category, amount) {
+  if (type !== 'expense') return;
+  const budget = getFinBudget();
+  const from = getFinPeriodRange('month');
+  const txs = getFinance().filter(t => t.type === 'expense' && t.ts >= from);
+  const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
+
+  // Загальний ліміт
+  if (budget.total > 0) {
+    const pct = totalSpent / budget.total;
+    if (pct >= 1) addInboxChatMsg('agent', `⚠️ Загальний бюджет на місяць перевищено. Витрачено ${formatMoney(totalSpent)} з ${formatMoney(budget.total)}.`);
+    else if (pct >= 0.8) addInboxChatMsg('agent', `💡 До ліміту місяця залишилось ${formatMoney(budget.total - totalSpent)}.`);
+  }
+
+  // Категорійний ліміт
+  const catLimit = budget.categories?.[category];
+  if (catLimit > 0) {
+    const catSpent = txs.filter(t => t.category === category).reduce((s, t) => s + t.amount, 0);
+    const pct = catSpent / catLimit;
+    if (pct >= 1) addInboxChatMsg('agent', `⚠️ Ліміт по "${category}" перевищено: ${formatMoney(catSpent)} з ${formatMoney(catLimit)}.`);
+    else if (pct >= 0.8) addInboxChatMsg('agent', `💡 По "${category}" залишилось ${formatMoney(catLimit - catSpent)}.`);
+  }
+}
+
+// Finance контекст для getAIContext
+function getFinanceContext() {
+  const today = new Date().toDateString();
+  const from = getFinPeriodRange('month');
+  const txs = getFinance().filter(t => t.ts >= from);
+  if (txs.length === 0) return '';
+
+  const expenses = txs.filter(t => t.type === 'expense');
+  const incomes = txs.filter(t => t.type === 'income');
+  const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+  const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+  const budget = getFinBudget();
+
+  const catMap = {};
+  expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const top3 = Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,3).map(([c,a]) => `${c}: ${formatMoney(a)}`).join(', ');
+
+  const todayTxs = txs.filter(t => new Date(t.ts).toDateString() === today);
+  const todaySum = todayTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+
+  let parts = [`Фінанси (місяць): витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}`];
+  if (budget.total > 0) parts.push(`бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
+  if (top3) parts.push(`топ категорії: ${top3}`);
+  if (todaySum > 0) parts.push(`сьогодні витрачено ${formatMoney(todaySum)}`);
+
+  // Останні 5 транзакцій з ID — для update_transaction з Inbox
+  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}€ ${t.category}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
+  if (recentTxs) parts.push(`Останні транзакції (використовуй ID для update_transaction): ${recentTxs}`);
+
+  return parts.join('\n');
+}
+
+// === FINANCE AI BAR ===
+let financeBarHistory = [];
+let financeBarLoading = false;
+
+function addFinanceChatMsg(role, text) {
+  const el = document.getElementById('finance-chat-messages');
+  if (!el) return;
+  try { openChatBar('finance'); } catch(e) {}
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') financeBarHistory.push({ role: 'user', content: text });
+  else financeBarHistory.push({ role: 'assistant', content: text });
+}
+
+async function sendFinanceBarMessage() {
+  if (financeBarLoading) return;
+  const input = document.getElementById('finance-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addFinanceChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  input.value = ''; input.style.height = 'auto';
+  input.focus();
+  addFinanceChatMsg('user', text);
+  financeBarLoading = true;
+
+  const from = getFinPeriodRange('month');
+  const txs = getFinance().filter(t => t.ts >= from);
+  const budget = getFinBudget();
+  const cats = getFinCats();
+  const aiContext = getAIContext();
+
+  const FINANCE_BAR_PROMPT = `${getOWLPersonality()} Ти допомагаєш з фінансами. Відповіді — 1-3 речення, конкретно.
+Валюта: €. Поточний місяць.
+Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}€ ${t.comment||''}`).join('; ') || 'немає'}
+Загальний бюджет: ${budget.total ? budget.total+'€' : 'не встановлено'}
+Категорії витрат: ${cats.expense.join(', ')}
+Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка), Трава(джоінт,канабіс)
+Категорії доходів: ${cats.income.join(', ')}
+Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
+
+Ти можеш виконувати дії через JSON (відповідай ТІЛЬКИ JSON якщо потрібна дія):
+{"action":"save_expense","amount":50,"category":"Їжа","comment":"продукти"}
+{"action":"save_income","amount":3000,"category":"Зарплата","comment":""}
+{"action":"delete_transaction","id":1234567890}
+{"action":"update_transaction","id":1234567890,"category":"Транспорт","comment":"заправка"}
+{"action":"set_budget","total":2000,"categories":{"Їжа":400}}
+{"action":"create_category","type":"expense","name":"Нова категорія"}
+
+Якщо користувач просить змінити категорію або опис існуючої транзакції — використовуй update_transaction з її id. НЕ створюй нову транзакцію і НЕ видаляй стару окремо.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: FINANCE_BAR_PROMPT }, ...financeBarHistory.slice(-10)], max_tokens: 300, temperature: 0.5 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
+
+    // Спробуємо JSON дію
+    try {
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
+      if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
+        const type = parsed.action === 'save_expense' ? 'expense' : 'income';
+        const txs2 = getFinance();
+        txs2.unshift({ id: Date.now(), type, amount: parseFloat(parsed.amount), category: parsed.category || 'Інше', comment: parsed.comment || '', ts: Date.now() });
+        saveFinance(txs2);
+        renderFinance();
+        addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(parsed.amount)} · ${parsed.category}`);
+        checkFinBudgetWarning(type, parsed.category, parseFloat(parsed.amount));
+      } else if (parsed.action === 'delete_transaction') {
+        const item = getFinance().find(t => t.id === parsed.id);
+        saveFinance(getFinance().filter(t => t.id !== parsed.id));
+        renderFinance();
+        addFinanceChatMsg('agent', `🗑 Видалено: ${item ? item.category + ' ' + formatMoney(item.amount) : 'транзакцію'}`);
+      } else if (parsed.action === 'update_transaction') {
+        const txs2 = getFinance();
+        const idx = txs2.findIndex(t => t.id === parsed.id);
+        if (idx !== -1) {
+          if (parsed.category) txs2[idx].category = parsed.category;
+          if (parsed.comment !== undefined) txs2[idx].comment = parsed.comment;
+          if (parsed.amount) txs2[idx].amount = parseFloat(parsed.amount);
+          saveFinance(txs2);
+          renderFinance();
+          addFinanceChatMsg('agent', `✓ Оновлено: ${txs2[idx].category} ${formatMoney(txs2[idx].amount)}`);
+        } else {
+          addFinanceChatMsg('agent', 'Транзакцію не знайдено.');
+        }
+      } else if (parsed.action === 'set_budget') {
+        const bdg = getFinBudget();
+        if (parsed.total) bdg.total = parsed.total;
+        if (parsed.categories) Object.assign(bdg.categories, parsed.categories);
+        saveFinBudget(bdg);
+        renderFinance();
+        addFinanceChatMsg('agent', '✓ Бюджет оновлено');
+      } else if (parsed.action === 'create_category') {
+        const c = getFinCats();
+        const list = parsed.type === 'income' ? c.income : c.expense;
+        if (!list.includes(parsed.name)) { list.push(parsed.name); saveFinCats(c); }
+        renderFinance();
+        addFinanceChatMsg('agent', `✓ Категорію "${parsed.name}" додано`);
+      } else {
+        addFinanceChatMsg('agent', reply);
+      }
+    } catch {
+      addFinanceChatMsg('agent', reply);
+    }
+  } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
+  financeBarLoading = false;
+}
+
+// === EVENING AI BAR ===
+let eveningBarHistory = [];
+let eveningBarLoading = false;
+
+function showEveningBarMessages() {
+  openChatBar('evening');
+}
+
+function addEveningBarMsg(role, text) {
+  const el = document.getElementById('evening-bar-messages');
+  if (!el) return;
+  try { openChatBar('evening'); } catch(e) {}
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
+}
+
+async function sendEveningBarMessage() {
+  if (eveningBarLoading) return;
+  const input = document.getElementById('evening-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  input.value = ''; input.style.height = 'auto';
+  input.focus(); // утримуємо клавіатуру
+  addEveningBarMsg('user', text);
+  eveningBarLoading = true;
+
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const todayNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]').filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Тепло і чесно. Короткі відповіді (1-3 речення). Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}. Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}. Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 200, temperature: 0.8 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) { addEveningBarMsg('agent', reply); eveningBarHistory.push({ role: 'assistant', content: reply }); }
+    else addEveningBarMsg('agent', 'Щось пішло не так.');
+  } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
+  eveningBarLoading = false;
+}
+
+// === INIT ===
+function init() {
+  try { setupPWA(); } catch(e) {}
+  try { setupSW(); } catch(e) {}
+  try { setupKeyboardAvoiding(); } catch(e) {}
+  try { setupChatBarSwipe(); } catch(e) {}
+  try { setupSettingsSwipe(); } catch(e) {}
+  // Me chat enter key
+  // me-chat-input Enter handled via onkeydown in HTML
+  try { applyTheme('inbox'); } catch(e) {}
+  // Встановлюємо CSS змінну висоти таббару — після рендеру через rAF
+  try {
+    const tb = document.getElementById('tab-bar');
+    if (tb) {
+      const setTabbarH = () => {
+        const h = tb.offsetHeight;
+        if (h > 0) document.documentElement.style.setProperty('--tabbar-h', h + 'px');
+      };
+      // Перший раз — одразу
+      requestAnimationFrame(() => requestAnimationFrame(setTabbarH));
+      // Другий раз — після шрифтів
+      if (document.fonts) document.fonts.ready.then(() => requestAnimationFrame(setTabbarH));
+      // Третій раз — через 500ms як fallback
+      setTimeout(setTabbarH, 500);
+      // Оновлюємо при зміні орієнтації
+      window.addEventListener('resize', setTabbarH, { passive: true });
+    }
+  } catch(e) {}
+  // Force inbox tab active on every load
+  try {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-inbox').classList.add('active');
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab-item[data-tab="inbox"]').classList.add('active');
+  } catch(e) {}
+  try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
+  try { renderInbox(); } catch(e) {}
+  // Показуємо inbox bar одразу — він тепер керується як tasks/me/evening
+  try {
+    const inboxBar = document.getElementById('inbox-ai-bar');
+    if (inboxBar) inboxBar.style.display = 'flex';
+  } catch(e) {}
+  try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
+  setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
+  try { setupAutoEveningSummary(); } catch(e) {}
+}
+
+function showApp() {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.classList.add('gone'), 600);
+  }
+  try { checkOnboarding(); } catch(e) {}
+}
+
+// === SPLASH → APP ===
+function bootApp() {
+  try { init(); } catch(e) { console.error('init error:', e); }
+  // Show app after brief splash — use both timer and readyState check
+  const delay = document.readyState === 'complete' ? 800 : 1200;
+  setTimeout(showApp, delay);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  // Already loaded (e.g. Chrome with cached page)
+  bootApp();
+}
+
+// Fallback: force hide splash after 3s no matter what
+setTimeout(() => {
+  const splash = document.getElementById('splash');
+  if (splash && !splash.classList.contains('gone')) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.classList.add('gone'), 600);
+  }
+}, 3000);
