@@ -279,62 +279,103 @@ body {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 100;
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-start;
-  padding: 6px 8px calc(7px + env(safe-area-inset-bottom));
-  background: rgb(243,211,94);
+  padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
+  background: var(--active-tabbar, rgb(243,211,94));
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border-top: 1.5px solid rgba(30,16,64,0.08);
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
   transition: transform 0.2s ease, opacity 0.2s ease, background 0.4s ease;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Капсула барабан */
+.drum-capsule {
+  flex: 1;
+  background: rgba(255,255,255,0.28);
+  border: 1.5px solid rgba(255,255,255,0.65);
+  border-radius: 20px;
+  padding: 4px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.07), inset 0 -1px 3px rgba(255,255,255,0.4), 0 1px 0 rgba(255,255,255,0.7);
+}
+/* Тіні по боках — глибина барабана */
+.drum-capsule::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 28px;
+  background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
+  z-index: 3; pointer-events: none; border-radius: 16px 0 0 16px;
+}
+.drum-capsule::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0; width: 28px;
+  background: linear-gradient(to left, rgba(0,0,0,0.08), transparent);
+  z-index: 3; pointer-events: none; border-radius: 0 16px 16px 0;
+}
+.drum-track {
+  display: flex;
+  gap: 2px;
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  position: relative; z-index: 2;
 }
 .tab-item {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  padding: 6px 12px;
+  border-radius: 15px;
+  min-width: 62px;
+  flex-shrink: 0;
   cursor: pointer;
-  padding: 4px 0;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s;
+  transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
+  opacity: 0.3;
+  transform: scale(0.92);
 }
-.tab-item:active { transform: scale(0.88); }
-.tab-icon {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s;
-  opacity: 0.38;
-  color: var(--text-primary);
+.tab-item.near {
+  opacity: 0.55;
+  transform: scale(0.96);
 }
-.tab-icon svg {
-  width: 20px;
-  height: 20px;
-}
-.tab-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  opacity: 0.6;
-  letter-spacing: 0.1px;
-  transition: opacity 0.2s, color 0.2s;
-}
-.tab-item.active .tab-icon {
+.tab-item.active {
+  background: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1), 0 1px 0 rgba(255,255,255,0.9);
   opacity: 1;
-  color: var(--active-accent);
-  transform: scale(1.12) translateY(-2px);
+  transform: scale(1.04);
+}
+.tab-icon {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(30,16,64,0.35);
+}
+.tab-icon svg { width: 19px; height: 19px; }
+.tab-item.active .tab-icon { color: var(--active-accent); }
+.tab-item.near .tab-icon { color: rgba(30,16,64,0.45); }
+.tab-label {
+  font-size: 9px; font-weight: 700;
+  color: rgba(30,16,64,0.35);
+  white-space: nowrap;
 }
 .tab-item.active .tab-label {
-  opacity: 1;
   color: var(--active-accent);
+  font-weight: 800; font-size: 9px;
 }
+/* Кнопка + */
+.drum-plus-btn {
+  width: 44px; height: 44px;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.25);
+  border: 1.5px dashed rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
+}
+.drum-plus-btn:active { transform: scale(0.9); }
 
 /* === SETTINGS OVERLAY === */
 #settings-overlay {
@@ -1032,8 +1073,9 @@ body {
         </div>
       </div>
 
-      <!-- Inner tabs: Задачі / Звички — великий перемикач -->
-      <div style="display:flex;margin:4px 14px 10px;gap:8px">
+      <!-- Inner tabs: Задачі / Звички — великий перемикач (sticky) -->
+      <div style="position:sticky;top:0;z-index:9;padding:4px 0 6px;background:linear-gradient(to bottom,rgb(253,184,122) 80%,transparent);margin-bottom:2px">
+      <div style="display:flex;margin:0 14px;gap:8px">
         <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
           style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:white;border:2px solid rgba(234,88,12,0.2);box-shadow:0 2px 10px rgba(234,88,12,0.1);transition:all 0.2s;-webkit-tap-highlight-color:transparent">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
@@ -1050,6 +1092,7 @@ body {
           </div>
           <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">сьогодні</div>
         </div>
+      </div>
       </div>
 
       <!-- TASKS SUB-PAGE -->
@@ -1375,6 +1418,22 @@ body {
     </button>
   </div>
 </div>
+<div id="notes-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <div class="ai-bar-chat-window" id="notes-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('notes')"></div>
+    <div class="ai-bar-messages" id="notes-chat-messages"></div>
+  </div>
+  <div class="ai-bar-input-box">
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">📝</div>
+    <textarea id="notes-bar-input" rows="1" placeholder="Створи нотатку, запитай агента…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('notes')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNotesBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendNotesBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
 <div id="tasks-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <!-- Чат-вікно (з'являється при фокусі) -->
   <div class="ai-bar-chat-window" id="tasks-chat-window">
@@ -1426,60 +1485,39 @@ body {
       </div>
     </div>
 
-<div id="notes-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
-  <div class="ai-bar-chat-window" id="notes-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('notes')"></div>
-    <div class="ai-bar-messages" id="notes-bar-messages"></div>
-  </div>
-  <div class="ai-bar-input-box">
-    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">🦉</div>
-    <textarea id="notes-bar-input" rows="1" placeholder="Запитай агента про нотатки…"
-      oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('notes')"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNotesBarMessage()}"></textarea>
-    <button class="ai-bar-send-btn" onclick="sendNotesBarMessage()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-    </button>
-  </div>
-</div>
 
   <!-- TAB BAR -->
   <nav id="tab-bar">
-    <div class="tab-item active" data-tab="inbox" onclick="switchTab('inbox')">
-      <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
-      </span>
-      <span class="tab-label">Inbox</span>
+    <div class="drum-capsule" id="drumCapsule">
+      <div class="drum-track" id="drumTrack">
+        <div class="tab-item active" data-tab="inbox">
+          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg></span>
+          <span class="tab-label">Inbox</span>
+        </div>
+        <div class="tab-item" data-tab="tasks">
+          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+          <span class="tab-label">Продукт.</span>
+        </div>
+        <div class="tab-item" data-tab="notes">
+          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line></svg></span>
+          <span class="tab-label">Нотатки</span>
+        </div>
+        <div class="tab-item" data-tab="me">
+          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
+          <span class="tab-label">Я</span>
+        </div>
+        <div class="tab-item" data-tab="evening">
+          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+          <span class="tab-label">Вечір</span>
+        </div>
+        <div class="tab-item" data-tab="finance">
+          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l-4.62 8M9.69 8l4.62 8M6 12h2.5M15.5 12H18"/></svg></span>
+          <span class="tab-label">Фінанси</span>
+        </div>
+      </div>
     </div>
-    <div class="tab-item" data-tab="tasks" onclick="switchTab('tasks')">
-      <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-      </span>
-      <span class="tab-label">Продукт.</span>
-    </div>
-    <div class="tab-item" data-tab="notes" onclick="switchTab('notes')">
-      <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-      </span>
-      <span class="tab-label">Нотатки</span>
-    </div>
-    <div class="tab-item" data-tab="me" onclick="switchTab('me')">
-      <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-      </span>
-      <span class="tab-label">Я</span>
-    </div>
-    <div class="tab-item" data-tab="evening" onclick="switchTab('evening')">
-      <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-      </span>
-      <span class="tab-label">Вечір</span>
-    </div>
-    <div class="tab-item" data-tab="finance" onclick="switchTab('finance')">
-      <span class="tab-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l-4.62 8M9.69 8l4.62 8M6 12h2.5M15.5 12H18"/></svg>
-      </span>
-      <span class="tab-label">Фінанси</span>
+    <div class="drum-plus-btn" onclick="showToast('Кастомізація — незабаром')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.4)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
   </nav>
 

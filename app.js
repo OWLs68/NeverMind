@@ -60,15 +60,14 @@ function switchTab(tab) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(`page-${tab}`).classList.add('active');
 
-  // Update tab items
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active');
+  // Update tab items — drum tabbar
+  updateDrumTabbar(tab);
 
   // Apply theme
   applyTheme(tab);
 
-  // Бари inbox/tasks/me/evening/finance/notes — показуємо/ховаємо і закриваємо вікно чату при переключенні
-  ['inbox','tasks','me','evening','finance','notes'].forEach(t => {
+  // Бари inbox/tasks/me/evening/finance — показуємо/ховаємо і закриваємо вікно чату при переключенні
+  ['inbox','tasks','notes','me','evening','finance'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const show = t === tab;
@@ -89,6 +88,75 @@ function switchTab(tab) {
 
   // Підказка першого відвідування
   setTimeout(() => showFirstVisitTip(tab), 600);
+}
+
+function setupDrumTabbar() {
+  const capsule = document.getElementById('drumCapsule');
+  const track = document.getElementById('drumTrack');
+  if (!capsule || !track) return;
+
+  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
+  let startX = 0, dragDelta = 0, dragging = false;
+
+  // Тап на вкладку
+  capsule.addEventListener('click', e => {
+    const item = e.target.closest('.tab-item[data-tab]');
+    if (item) switchTab(item.dataset.tab);
+  });
+
+  // Свайп по барабану
+  capsule.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    dragDelta = 0;
+    dragging = true;
+    track.style.transition = 'none';
+  }, { passive: true });
+
+  capsule.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dragDelta = e.touches[0].clientX - startX;
+    const activeItem = capsule.querySelector('.tab-item.active');
+    if (!activeItem) return;
+    const capsuleW = capsule.offsetWidth - 8;
+    const base = -Math.max(0, activeItem.offsetLeft - (capsuleW/2) + (activeItem.offsetWidth/2));
+    track.style.transform = `translateX(${base + dragDelta * 0.45}px)`;
+  }, { passive: true });
+
+  capsule.addEventListener('touchend', () => {
+    dragging = false;
+    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    const TAB_CURRENT = TAB_ORDER.indexOf(currentTab);
+    if (dragDelta < -40 && TAB_CURRENT < TAB_ORDER.length - 1) {
+      switchTab(TAB_ORDER[TAB_CURRENT + 1]);
+    } else if (dragDelta > 40 && TAB_CURRENT > 0) {
+      switchTab(TAB_ORDER[TAB_CURRENT - 1]);
+    } else {
+      updateDrumTabbar(currentTab);
+    }
+  }, { passive: true });
+}
+
+function updateDrumTabbar(tab) {
+  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
+  const activeIdx = TAB_ORDER.indexOf(tab);
+  const items = document.querySelectorAll('.tab-item[data-tab]');
+  items.forEach((item, i) => {
+    const diff = Math.abs(i - activeIdx);
+    item.classList.remove('active', 'near');
+    if (diff === 0) item.classList.add('active');
+    else if (diff === 1) item.classList.add('near');
+  });
+  // Центруємо активну вкладку в барабані
+  const track = document.getElementById('drumTrack');
+  const capsule = document.getElementById('drumCapsule');
+  if (!track || !capsule) return;
+  const activeItem = document.querySelector('.tab-item.active');
+  if (!activeItem) return;
+  const capsuleW = capsule.offsetWidth - 8;
+  const itemW = activeItem.offsetWidth;
+  const itemLeft = activeItem.offsetLeft;
+  const scrollTo = itemLeft - (capsuleW / 2) + (itemW / 2);
+  track.style.transform = `translateX(${-Math.max(0, scrollTo)}px)`;
 }
 
 function applyTheme(tab) {
@@ -666,7 +734,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 }
 Використовуй task_id з контексту активних задач.
 
-ЯКЩО користувач просить змінити категорію, суму або коментар існуючої ФІНАНСОВОЇ транзакції (згадує суму, витрату, дохід, категорію витрат) — відповідай ТІЛЬКИ JSON:
+ЯКЩО користувач ЯВНО просить змінити, виправити, оновити існуючу транзакцію (використовує слова "зміни", "виправ", "оновити", "та сама", "попередня", "та витрата") — відповідай ТІЛЬКИ JSON:
 {
   "action": "update_transaction",
   "id": 1234567890,
@@ -903,7 +971,7 @@ function renderInbox() {
 
 // === SWIPE TO DELETE ===
 const swipeState = {};
-const SWIPE_THRESHOLD = 200;
+const SWIPE_THRESHOLD = 250;
 
 function swipeStart(e, id) {
   const t = e.touches[0];
@@ -921,7 +989,7 @@ function swipeMove(e, id) {
   const el = document.getElementById(`item-${id}`);
   if (el) el.style.transform = `translateX(${s.dx}px)`;
   const delBg = el ? el.previousElementSibling : null;
-  if (delBg && delBg.classList.contains('inbox-item-delete-bg')) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
+  if (delBg && delBg.classList.contains('inbox-item-delete-bg')) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
 }
 function swipeEnd(e, id) {
   const s = swipeState[id]; if (!s) return;
@@ -931,7 +999,8 @@ function swipeEnd(e, id) {
     setTimeout(() => {
       const item = getInbox().find(i => i.id === id);
       saveInbox(getInbox().filter(i => i.id !== id)); renderInbox();
-      if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); items.unshift(item); saveInbox(items); renderInbox(); });
+      const originalIdx = getInbox().findIndex(i => i.id === id);
+      if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); const idx = Math.min(originalIdx, items.length); items.splice(idx, 0, item); saveInbox(items); renderInbox(); });
     }, 220);
   } else {
     if (el) { el.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'translateX(0)'; setTimeout(() => { if (el) el.style.transition = ''; }, 300); }
@@ -1189,7 +1258,8 @@ function deleteNote(id) {
   const item = notes.find(x => x.id === id);
   saveNotes(notes.filter(x => x.id !== id));
   renderNotes();
-  if (item) showUndoToast('Нотатку видалено', () => { const n = getNotes(); n.unshift(item); saveNotes(n); renderNotes(); });
+  const noteOrigIdx = getNotes().findIndex(x => x.id === id);
+  if (item) showUndoToast('Нотатку видалено', () => { const n = getNotes(); const idx = Math.min(noteOrigIdx, n.length); n.splice(idx, 0, item); saveNotes(n); renderNotes(); });
 }
 
 let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
@@ -1336,7 +1406,7 @@ function renderNotesList(notes) {
 
 // === NOTE SWIPE TO DELETE ===
 const noteSwipeState = {};
-const NOTE_SWIPE_THRESHOLD = 200;
+const NOTE_SWIPE_THRESHOLD = 250;
 
 function noteSwipeStart(e, id) {
   const t = e.touches[0];
@@ -1354,7 +1424,7 @@ function noteSwipeMove(e, id) {
   const el = document.getElementById(`note-item-${id}`);
   if (el) el.style.transform = `translateX(${s.dx}px)`;
   const delBg = document.getElementById('note-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
 }
 function noteSwipeEnd(e, id) {
   const s = noteSwipeState[id]; if (!s) return;
@@ -1368,7 +1438,8 @@ function noteSwipeEnd(e, id) {
     setTimeout(() => {
       const item = getNotes().find(x => x.id === id);
       saveNotes(getNotes().filter(x => x.id !== id)); renderNotes();
-      if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); notes.unshift(item); saveNotes(notes); renderNotes(); });
+      const noteSwipeIdx = getNotes().findIndex(x => x.id === id);
+      if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); const idx = Math.min(noteSwipeIdx, notes.length); notes.splice(idx, 0, item); saveNotes(notes); renderNotes(); });
     }, 200);
   } else {
     if (el) {
@@ -1544,7 +1615,8 @@ function deleteTaskFromModal() {
   saveTasks(getTasks().filter(x => x.id !== editingTaskId));
   closeTaskModal();
   renderTasks();
-  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); tasks.unshift(item); saveTasks(tasks); renderTasks(); });
+  const taskOrigIdx = getTasks().findIndex(x => x.id === id);
+  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); const idx = Math.min(taskOrigIdx, tasks.length); tasks.splice(idx, 0, item); saveTasks(tasks); renderTasks(); });
 }
 
 function addTaskStep() {
@@ -1622,7 +1694,8 @@ function deleteTask(id) {
   const item = getTasks().find(x => x.id === id);
   saveTasks(getTasks().filter(x => x.id !== id));
   renderTasks();
-  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); tasks.unshift(item); saveTasks(tasks); renderTasks(); });
+  const taskOrigIdx = getTasks().findIndex(x => x.id === id);
+  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); const idx = Math.min(taskOrigIdx, tasks.length); tasks.splice(idx, 0, item); saveTasks(tasks); renderTasks(); });
 }
 
 function toggleTaskStatus(id) {
@@ -2136,35 +2209,46 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-const UPDATE_VERSION = 'v028'; // змінювати при кожному оновленні зі слайдами
+const UPDATE_VERSION = 'v027'; // змінювати при кожному оновленні зі слайдами
 
 const UPDATE_SLIDES = [
   {
-    tag: '🆕 Оновлення v0.28',
-    title: 'NeverMind став зручнішим',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Великий UX-рефакторинг: єдина логіка взаємодії по всьому застосунку.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Тепер скрізь однаково — тап, чекбокс, свайп. Передбачувано і зрозуміло.</p>`,
+    tag: '🆕 Оновлення',
+    title: 'NeverMind оновився',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Два великі оновлення: фінансовий трекер і персональний характер агента.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Все що ти вже вів — на місці. Нові функції доступні одразу.</p>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: '👆 Нова логіка тапу',
-    title: 'Скрізь однаково',
-    body: `<p style="font-size:13px;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">Для всіх карток — задачі, звички, нотатки:</p>
-<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">👆 <b style="color:#1e1040">Тап по картці</b> — відкриває редагування</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">✅ <b style="color:#1e1040">Чекбокс</b> — позначає виконаним</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">← <b style="color:#1e1040">Свайп вліво</b> — видаляє</div>
+    tag: '💰 Фінанси',
+    title: 'Облік грошей без таблиць',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Нова вкладка <b style="color:#1e1040">Фінанси</b> — пиши в Inbox і агент сам запише:</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заправка 50" → <b style="color:#1e1040">Транспорт −€50</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Встанови ліміт → <b style="color:#1e1040">агент попередить якщо перевищиш</b></div>
 </div>`,
-    color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
+    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
   },
   {
-    tag: '↔️ Свайп між вкладками',
-    title: 'Навігація жестами',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Тепер можна свайпати між усіма вкладками без таббару:</p>
-<div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:12px 14px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.8">
-  Inbox → Задачі → Звички → Нотатки → Я → Вечір → Фінанси
+    tag: '🦉 OWL',
+    title: 'Агент тепер має характер',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Обери стиль спілкування в налаштуваннях:</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🔥 Тренер</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Прямий, жорсткий, підштовхує до дії</div>
+  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🤝 Партнер</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає і радить</div>
+  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
+    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🦉 Наставник</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Мудрий, задає правильні питання</div>
+  </div>
 </div>`,
-    color: 'linear-gradient(135deg,#a7f3d0,#16a34a)',
+    color: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
     isLast: true,
   },
 ];
@@ -2997,7 +3081,7 @@ function setupKeyboardAvoiding() {
     const aiBar = document.getElementById('inbox-ai-bar');
     const tabBar = document.getElementById('tab-bar');
     const tbH = tabBar ? tabBar.offsetHeight : 83;
-    const newBars = ['tasks-ai-bar','me-ai-bar','evening-ai-bar','finance-ai-bar'].map(id => document.getElementById(id));
+    const newBars = ['tasks-ai-bar','notes-ai-bar','me-ai-bar','evening-ai-bar','finance-ai-bar'].map(id => document.getElementById(id));
 
     if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
@@ -3661,18 +3745,23 @@ function toggleProdHabitToday(id) {
       return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('open'));
     })) return;
 
-    // Не перемикаємо якщо тач на картці зі свайпом видалення
-    const swipeTarget = document.elementFromPoint(swipeStartX, swipeStartY);
-    if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"]')) return;
-
     const dx = e.changedTouches[0].clientX - swipeStartX;
     const dy = e.changedTouches[0].clientY - swipeStartY;
     const dt = Date.now() - swipeStartTime;
 
     // Достатньо швидкий і горизонтальний
     if (dt > 400) return;
-    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dx) < 40) return;
     if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
+
+    // Ігноруємо якщо тач почався на барабані — він обробляє сам
+    const swipeTarget = document.elementFromPoint(swipeStartX, swipeStartY);
+    if (swipeTarget && swipeTarget.closest('#drumCapsule')) return;
+
+    // Якщо dx > 40 і тач на картці — це свайп видалення, не навігація
+    if (Math.abs(dx) > 40) {
+      if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"]')) return;
+    }
 
     // note-view-modal — свайп вправо закриває
     const noteView = document.getElementById('note-view-modal');
@@ -3704,7 +3793,7 @@ function toggleProdHabitToday(id) {
 
 // === HABIT ME SWIPE TO DELETE ===
 const habitMeSwipeState = {};
-const HABIT_SWIPE_THRESHOLD = 200;
+const HABIT_SWIPE_THRESHOLD = 250;
 
 function habitMeSwipeStart(e, id) {
   const t = e.touches[0];
@@ -3726,7 +3815,7 @@ function habitMeSwipeMove(e, id) {
   const el = document.getElementById('habit-me-item-' + id);
   if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
   const delBg = document.getElementById('habit-me-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
 }
 function habitMeSwipeEnd(e, id) {
   const s = habitMeSwipeState[id]; if (!s) return;
@@ -3736,7 +3825,8 @@ function habitMeSwipeEnd(e, id) {
     setTimeout(() => {
       const item = getHabits().find(h => h.id === id);
       saveHabits(getHabits().filter(h => h.id !== id)); renderHabits(); renderProdHabits();
-      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+      const habitOrigIdx = getHabits().findIndex(h => h.id === id);
+      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
   } else {
     if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
@@ -3780,7 +3870,7 @@ function prodHabitSwipeMove(e, id) {
   const el = document.getElementById('prod-habit-item-' + id);
   if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
   const delBg = document.getElementById('prod-habit-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
 }
 function prodHabitSwipeEnd(e, id) {
   const s = prodHabitSwipeState[id]; if (!s) return;
@@ -3791,7 +3881,8 @@ function prodHabitSwipeEnd(e, id) {
       const item = getHabits().find(h => h.id === id);
       saveHabits(getHabits().filter(h => h.id !== id));
       renderHabits(); renderProdHabits();
-      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+      const habitOrigIdx = getHabits().findIndex(h => h.id === id);
+      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
   } else {
     if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
@@ -4071,7 +4162,7 @@ function openChatBar(tab) {
   if (activeChatBar === tab) return;
 
   // Закриваємо інші бари БЕЗ blur — щоб не скинути фокус з поточного поля
-  ['tasks','me','evening','finance','notes'].forEach(t => {
+  ['tasks','me','evening','finance'].forEach(t => {
     if (t === tab) return;
     const b = document.getElementById(t + '-ai-bar');
     if (!b) return;
@@ -4116,7 +4207,7 @@ function toggleChatBar(tab) {
 }
 
 function closeAllChatBars(resetActive = true) {
-  ['inbox','tasks','me','evening','finance','notes'].forEach(t => {
+  ['inbox','tasks','notes','me','evening','finance'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -4129,7 +4220,7 @@ function closeAllChatBars(resetActive = true) {
 
 // Свайп вниз по чат-вікну щоб закрити
 function setupChatBarSwipe() {
-  ['inbox','tasks','me','evening','finance','notes'].forEach(tab => {
+  ['inbox','tasks','notes','me','evening','finance'].forEach(tab => {
     const bar = document.getElementById(tab + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -5176,12 +5267,12 @@ async function sendEveningBarMessage() {
   eveningBarLoading = false;
 }
 
-// === NOTES BAR ===
+// === NOTES AI BAR ===
 let notesBarHistory = [];
 let notesBarLoading = false;
 
-function addNotesBarMsg(role, text) {
-  const el = document.getElementById('notes-bar-messages');
+function addNotesChatMsg(role, text) {
+  const el = document.getElementById('notes-chat-messages');
   if (!el) return;
   try { openChatBar('notes'); } catch(e) {}
   const isAgent = role === 'agent';
@@ -5191,6 +5282,7 @@ function addNotesBarMsg(role, text) {
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
+  else notesBarHistory.push({ role: 'assistant', content: text });
 }
 
 async function sendNotesBarMessage() {
@@ -5199,28 +5291,39 @@ async function sendNotesBarMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addNotesBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addNotesChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
-  addNotesBarMsg('user', text);
+  addNotesChatMsg('user', text);
   notesBarLoading = true;
 
-  const notes = getNotes();
-  const notesList = notes.slice(-30).map(n => `[${n.folder || 'Загальне'}] ${(n.text || '').substring(0, 120)}`).join('\n');
+  const notes = getNotes().slice(0, 20).map(n => `[${n.folder||'Загальне'}] ${n.text.substring(0,60)}`).join('; ');
   const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} Допомагаєш з нотатками. Відповідай коротко (1-3 речення). Нотатки користувача:\n${notesList || 'немає нотаток'}.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = getOWLPersonality() + ' Ти допомагаєш з нотатками. Якщо просять створити нотатку — відповідай JSON: {"action":"create_note","text":"текст нотатки","folder":"назва папки або null"}. Якщо питання про існуючі нотатки — відповідай текстом (1-3 речення). Нотатки користувача: ' + (notes || 'немає') + (aiContext ? ('\n\n' + aiContext) : '');
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...notesBarHistory.slice(-10)], max_tokens: 200, temperature: 0.8 })
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...notesBarHistory.slice(-8)], max_tokens: 300, temperature: 0.7 })
     });
     const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content;
-    if (reply) { addNotesBarMsg('agent', reply); notesBarHistory.push({ role: 'assistant', content: reply }); }
-    else addNotesBarMsg('agent', 'Щось пішло не так.');
-  } catch { addNotesBarMsg('agent', 'Мережева помилка.'); }
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { addNotesChatMsg('agent', 'Щось пішло не так.'); notesBarLoading = false; return; }
+
+    try {
+      const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+      if (parsed.action === 'create_note') {
+        addNoteFromInbox(parsed.text, 'note', parsed.folder || null);
+        if (currentTab === 'notes') renderNotes();
+        addNotesChatMsg('agent', `✓ Нотатку збережено${parsed.folder ? ' в папку "' + parsed.folder + '"' : ''}`);
+      } else {
+        addNotesChatMsg('agent', reply);
+      }
+    } catch {
+      addNotesChatMsg('agent', reply);
+    }
+  } catch { addNotesChatMsg('agent', 'Мережева помилка.'); }
   notesBarLoading = false;
 }
 
@@ -5230,6 +5333,7 @@ function init() {
   try { setupSW(); } catch(e) {}
   try { setupKeyboardAvoiding(); } catch(e) {}
   try { setupChatBarSwipe(); } catch(e) {}
+  try { setupDrumTabbar(); } catch(e) {}
   try { setupSettingsSwipe(); } catch(e) {}
   // Me chat enter key
   // me-chat-input Enter handled via onkeydown in HTML
