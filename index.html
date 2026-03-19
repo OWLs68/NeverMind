@@ -1426,6 +1426,22 @@ body {
       </div>
     </div>
 
+<div id="notes-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <div class="ai-bar-chat-window" id="notes-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('notes')"></div>
+    <div class="ai-bar-messages" id="notes-bar-messages"></div>
+  </div>
+  <div class="ai-bar-input-box">
+    <div style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">🦉</div>
+    <textarea id="notes-bar-input" rows="1" placeholder="Запитай агента про нотатки…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('notes')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNotesBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendNotesBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+</div>
 
   <!-- TAB BAR -->
   <nav id="tab-bar">

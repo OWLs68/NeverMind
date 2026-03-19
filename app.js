@@ -67,8 +67,8 @@ function switchTab(tab) {
   // Apply theme
   applyTheme(tab);
 
-  // Бари inbox/tasks/me/evening/finance — показуємо/ховаємо і закриваємо вікно чату при переключенні
-  ['inbox','tasks','me','evening','finance'].forEach(t => {
+  // Бари inbox/tasks/me/evening/finance/notes — показуємо/ховаємо і закриваємо вікно чату при переключенні
+  ['inbox','tasks','me','evening','finance','notes'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const show = t === tab;
@@ -2136,46 +2136,35 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-const UPDATE_VERSION = 'v027'; // змінювати при кожному оновленні зі слайдами
+const UPDATE_VERSION = 'v028'; // змінювати при кожному оновленні зі слайдами
 
 const UPDATE_SLIDES = [
   {
-    tag: '🆕 Оновлення',
-    title: 'NeverMind оновився',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Два великі оновлення: фінансовий трекер і персональний характер агента.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Все що ти вже вів — на місці. Нові функції доступні одразу.</p>`,
+    tag: '🆕 Оновлення v0.28',
+    title: 'NeverMind став зручнішим',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Великий UX-рефакторинг: єдина логіка взаємодії по всьому застосунку.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Тепер скрізь однаково — тап, чекбокс, свайп. Передбачувано і зрозуміло.</p>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: '💰 Фінанси',
-    title: 'Облік грошей без таблиць',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Нова вкладка <b style="color:#1e1040">Фінанси</b> — пиши в Inbox і агент сам запише:</p>
-<div style="display:flex;flex-direction:column;gap:6px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заправка 50" → <b style="color:#1e1040">Транспорт −€50</b></div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Встанови ліміт → <b style="color:#1e1040">агент попередить якщо перевищиш</b></div>
+    tag: '👆 Нова логіка тапу',
+    title: 'Скрізь однаково',
+    body: `<p style="font-size:13px;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">Для всіх карток — задачі, звички, нотатки:</p>
+<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">👆 <b style="color:#1e1040">Тап по картці</b> — відкриває редагування</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">✅ <b style="color:#1e1040">Чекбокс</b> — позначає виконаним</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">← <b style="color:#1e1040">Свайп вліво</b> — видаляє</div>
 </div>`,
-    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
+    color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
   },
   {
-    tag: '🦉 OWL',
-    title: 'Агент тепер має характер',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Обери стиль спілкування в налаштуваннях:</p>
-<div style="display:flex;flex-direction:column;gap:8px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
-    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🔥 Тренер</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Прямий, жорсткий, підштовхує до дії</div>
-  </div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
-    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🤝 Партнер</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає і радить</div>
-  </div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
-    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🦉 Наставник</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Мудрий, задає правильні питання</div>
-  </div>
+    tag: '↔️ Свайп між вкладками',
+    title: 'Навігація жестами',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Тепер можна свайпати між усіма вкладками без таббару:</p>
+<div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:12px 14px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.8">
+  Inbox → Задачі → Звички → Нотатки → Я → Вечір → Фінанси
 </div>`,
-    color: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+    color: 'linear-gradient(135deg,#a7f3d0,#16a34a)',
     isLast: true,
   },
 ];
@@ -4082,7 +4071,7 @@ function openChatBar(tab) {
   if (activeChatBar === tab) return;
 
   // Закриваємо інші бари БЕЗ blur — щоб не скинути фокус з поточного поля
-  ['tasks','me','evening','finance'].forEach(t => {
+  ['tasks','me','evening','finance','notes'].forEach(t => {
     if (t === tab) return;
     const b = document.getElementById(t + '-ai-bar');
     if (!b) return;
@@ -4127,7 +4116,7 @@ function toggleChatBar(tab) {
 }
 
 function closeAllChatBars(resetActive = true) {
-  ['inbox','tasks','me','evening','finance'].forEach(t => {
+  ['inbox','tasks','me','evening','finance','notes'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -4140,7 +4129,7 @@ function closeAllChatBars(resetActive = true) {
 
 // Свайп вниз по чат-вікну щоб закрити
 function setupChatBarSwipe() {
-  ['inbox','tasks','me','evening','finance'].forEach(tab => {
+  ['inbox','tasks','me','evening','finance','notes'].forEach(tab => {
     const bar = document.getElementById(tab + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -5185,6 +5174,54 @@ async function sendEveningBarMessage() {
     else addEveningBarMsg('agent', 'Щось пішло не так.');
   } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
   eveningBarLoading = false;
+}
+
+// === NOTES BAR ===
+let notesBarHistory = [];
+let notesBarLoading = false;
+
+function addNotesBarMsg(role, text) {
+  const el = document.getElementById('notes-bar-messages');
+  if (!el) return;
+  try { openChatBar('notes'); } catch(e) {}
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
+}
+
+async function sendNotesBarMessage() {
+  if (notesBarLoading) return;
+  const input = document.getElementById('notes-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addNotesBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  input.value = ''; input.style.height = 'auto';
+  input.focus();
+  addNotesBarMsg('user', text);
+  notesBarLoading = true;
+
+  const notes = getNotes();
+  const notesList = notes.slice(-30).map(n => `[${n.folder || 'Загальне'}] ${(n.text || '').substring(0, 120)}`).join('\n');
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Допомагаєш з нотатками. Відповідай коротко (1-3 речення). Нотатки користувача:\n${notesList || 'немає нотаток'}.${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...notesBarHistory.slice(-10)], max_tokens: 200, temperature: 0.8 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) { addNotesBarMsg('agent', reply); notesBarHistory.push({ role: 'assistant', content: reply }); }
+    else addNotesBarMsg('agent', 'Щось пішло не так.');
+  } catch { addNotesBarMsg('agent', 'Мережева помилка.'); }
+  notesBarLoading = false;
 }
 
 // === INIT ===
