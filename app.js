@@ -81,7 +81,7 @@ function switchTab(tab) {
   });
 
   // Tab-specific render
-  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); }
+  if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
   if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
@@ -253,7 +253,7 @@ function clearFinanceData() {
 function getProfile() {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const parts = [];
-  if (s.name) parts.push(`Ім'я: ${s.name}`);
+  if (s.name) parts.push(`Імʼя: ${s.name}`);
   if (s.age) parts.push(`Вік: ${s.age}`);
   if (s.weight) parts.push(`Вага: ${s.weight} кг`);
   if (s.height) parts.push(`Зріст: ${s.height} см`);
@@ -332,7 +332,7 @@ ${notesList || 'немає'}
   if (showResult) showToast('✓ Пам\'ять оновлено');
 }
 
-// Додаємо профіль і пам'ять до кожного AI запиту
+// Додаємо профіль і памʼять до кожного AI запиту
 
 // === ME TAB CHAT ===
 let meChatHistory = [];
@@ -386,7 +386,7 @@ async function sendMeChatMessage() {
 
   const context = getAIContext();
   const stats = getMeStatsContext();
-  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній зв'язок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
 
   const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
   const loadEl = document.getElementById(loadId);
@@ -424,7 +424,7 @@ function getAIContext() {
   const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}, часовий пояс: ${tzStr}`;
   parts.push(`Зараз: ${dateStr}`);
 
-  // === Профіль і пам'ять ===
+  // === Профіль і памʼять ===
   if (profile) parts.push(`Профіль: ${profile}`);
   if (memory) parts.push(`Що знаю про користувача:\n${memory}`);
 
@@ -600,7 +600,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   "comment": "коротка практична ремарка (1 речення). НЕ хвали запис."
 }
 
-ЯКЩО в одному повідомленні є КІЛЬКА окремих записів (наприклад дві звички, задача і нотатка) — відповідай масивом JSON:
+ЯКЩО в одному повідомленні є КІЛЬКА РІЗНИХ записів різних типів (наприклад дві звички, задача і нотатка) — відповідай масивом JSON. УВАГА: список однотипних речей через кому (наприклад "список покупок: хліб, молоко") — це ОДНА задача з кроками, не масив окремих задач:
 [
   {"action": "save", "category": "habit", "text": "Присідати", ...},
   {"action": "save", "category": "habit", "text": "Планка", ...}
@@ -627,6 +627,10 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
   - "text" — оригінальний текст (виправ тільки граматику)
   - "task_title" — коротка назва 2-5 слів. ЯКЩО є час/дата — включи у task_title (формат 24г)
   - "task_steps" — масив кроків якщо є список дій. Інакше []
+  ВАЖЛИВО — список чи окремі задачі:
+  - Якщо є назва списку + елементи ("список покупок: хліб, молоко" або "ремонт: купити фарбу, найняти майстра") — ОДНА задача з кроками
+  - Якщо елементи явно різні і незалежні ("зателефонувати Вові, записатися до лікаря") — окремі задачі (масив)
+  - Якщо незрозуміло — action: "clarify" з питанням "Це один список чи окремі задачі?"
 - habit: НОВА регулярна повторювана дія ("щодня", "кожен ранок", "тричі на тиждень"). "text" — коротка назва 2-4 слова
 - event: короткий факт події без емоцій ("поїхав на рибалку", "зустрівся з Вовою"). Якщо є емоції/роздуми — це note
 - idea: творча думка, ідея, план, натхнення
@@ -698,7 +702,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 - Використовуй якщо: 2+ окремі дії, незрозуміло task чи note, незрозуміло нова звичка чи виконання існуючої
 - НЕ використовуй якщо запис однозначний
 - Максимум 3 варіанти в options
-- label ОБОВ'ЯЗКОВО містить реальний конкретний текст варіанту
+- label ОБОВʼЯЗКОВО містить реальний конкретний текст варіанту
 
 ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
 
@@ -899,7 +903,7 @@ function renderInbox() {
 
 // === SWIPE TO DELETE ===
 const swipeState = {};
-const SWIPE_THRESHOLD = 72;
+const SWIPE_THRESHOLD = 200;
 
 function swipeStart(e, id) {
   const t = e.touches[0];
@@ -916,6 +920,8 @@ function swipeMove(e, id) {
   s.dx = Math.min(0, dx);
   const el = document.getElementById(`item-${id}`);
   if (el) el.style.transform = `translateX(${s.dx}px)`;
+  const delBg = el ? el.previousElementSibling : null;
+  if (delBg && delBg.classList.contains('inbox-item-delete-bg')) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
 }
 function swipeEnd(e, id) {
   const s = swipeState[id]; if (!s) return;
@@ -929,6 +935,8 @@ function swipeEnd(e, id) {
     }, 220);
   } else {
     if (el) { el.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'translateX(0)'; setTimeout(() => { if (el) el.style.transition = ''; }, 300); }
+    const delBgEnd = el ? el.previousElementSibling : null;
+    if (delBgEnd && delBgEnd.classList.contains('inbox-item-delete-bg')) { delBgEnd.style.transition = 'opacity 0.25s'; delBgEnd.style.opacity = '0'; setTimeout(() => { if(delBgEnd) delBgEnd.style.transition = ''; }, 300); }
   }
   delete swipeState[id];
 }
@@ -1212,7 +1220,7 @@ function closeNotesFolder() {
 const FOLDER_COLORS = {
   'Харчування': { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
   'Фінанси':   { bg: 'linear-gradient(135deg,#ecf755,#e4ef30)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
-  "Здоров'я":  { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
+  "Здоровʼя":  { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
   'Здоровя':   { bg: 'linear-gradient(135deg,#bbf7d0,#a7f3c0)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
   'Робота':    { bg: 'linear-gradient(135deg,#bfdbfe,#a5c8fe)', border: 'rgba(255,255,255,0.4)', dot: '🎯' },
   'Навчання':  { bg: 'linear-gradient(135deg,#c6f3fd,#a8ecfb)', border: 'rgba(255,255,255,0.4)', dot: '🧠' },
@@ -1252,7 +1260,7 @@ function renderNotes(searchQuery = '') {
   // Рівень 2 — записи в конкретній папці
   if (currentNotesFolder !== null) {
     if (header) {
-      const fc = FOLDER_COLORS[currentNotesFolder] || DEFAULT_NOTE_FOLDER;
+      const fc = getFolderColor(currentNotesFolder);
       header.style.display = 'flex';
       header.innerHTML = `
         <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
@@ -1283,7 +1291,7 @@ function renderNotes(searchQuery = '') {
 
   content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:10px">' +
     folders.map(([folder, items]) => {
-      const fc = FOLDER_COLORS[folder] || DEFAULT_NOTE_FOLDER;
+      const fc = getFolderColor(folder);
       const preview = items[0].text.length > 60 ? items[0].text.substring(0,60) + '…' : items[0].text;
       return `<div onclick="openNotesFolder('${escapeHtml(folder).replace(/'/g,"\\'")}')" style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px">
         <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${fc.dot}</div>
@@ -1302,11 +1310,11 @@ function renderNotes(searchQuery = '') {
 function renderNotesList(notes) {
   const now = Date.now();
   return notes.map(n => {
-    const fc = FOLDER_COLORS[n.folder || 'Загальне'] || DEFAULT_NOTE_FOLDER;
+    const fc = getFolderColor(n.folder || 'Загальне');
     const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
     return `
-      <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);overflow:hidden;margin-bottom:8px">
-        <div class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:20px;color:white">🗑️</div>
+      <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);margin-bottom:8px">
+        <div id="note-del-${n.id}" class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:var(--card-radius);opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
         <div id="note-item-${n.id}" class="inbox-item"
           ontouchstart="noteSwipeStart(event,${n.id})"
           ontouchmove="noteSwipeMove(event,${n.id})"
@@ -1328,7 +1336,7 @@ function renderNotesList(notes) {
 
 // === NOTE SWIPE TO DELETE ===
 const noteSwipeState = {};
-const NOTE_SWIPE_THRESHOLD = 80;
+const NOTE_SWIPE_THRESHOLD = 200;
 
 function noteSwipeStart(e, id) {
   const t = e.touches[0];
@@ -1345,6 +1353,8 @@ function noteSwipeMove(e, id) {
   s.dx = Math.min(0, dx);
   const el = document.getElementById(`note-item-${id}`);
   if (el) el.style.transform = `translateX(${s.dx}px)`;
+  const delBg = document.getElementById('note-del-' + id);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
 }
 function noteSwipeEnd(e, id) {
   const s = noteSwipeState[id]; if (!s) return;
@@ -1366,6 +1376,8 @@ function noteSwipeEnd(e, id) {
       el.style.transform = 'translateX(0)';
       setTimeout(() => { el.style.transition = ''; }, 300);
     }
+    const delBgN = document.getElementById('note-del-' + id);
+    if (delBgN) { delBgN.style.transition = 'opacity 0.25s'; delBgN.style.opacity = '0'; setTimeout(() => { if(delBgN) delBgN.style.transition = ''; }, 300); }
   }
   delete noteSwipeState[id];
 }
@@ -1499,6 +1511,8 @@ function openAddTask() {
   document.getElementById('task-input-title').value = '';
   document.getElementById('task-input-desc').value = '';
   document.getElementById('task-step-input').value = '';
+  const delBtn = document.getElementById('task-delete-btn');
+  if (delBtn) delBtn.style.display = 'none';
   renderTempSteps();
   document.getElementById('task-modal').style.display = 'flex';
   setTimeout(() => { const el = document.getElementById('task-input-title'); el.removeAttribute('readonly'); el.focus(); }, 350);
@@ -1514,12 +1528,23 @@ function openEditTask(id) {
   document.getElementById('task-input-title').value = t.title;
   document.getElementById('task-input-desc').value = t.desc || '';
   document.getElementById('task-step-input').value = '';
+  const delBtn = document.getElementById('task-delete-btn');
+  if (delBtn) delBtn.style.display = 'inline-block';
   renderTempSteps();
   document.getElementById('task-modal').style.display = 'flex';
 }
 
 function closeTaskModal() {
   document.getElementById('task-modal').style.display = 'none';
+}
+
+function deleteTaskFromModal() {
+  if (!editingTaskId) return;
+  const item = getTasks().find(x => x.id === editingTaskId);
+  saveTasks(getTasks().filter(x => x.id !== editingTaskId));
+  closeTaskModal();
+  renderTasks();
+  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); tasks.unshift(item); saveTasks(tasks); renderTasks(); });
 }
 
 function addTaskStep() {
@@ -1625,22 +1650,19 @@ function renderTasks() {
   const done = tasks.filter(t => t.status === 'done');
   const sorted = [...active, ...done];
 
+  updateProdTabCounters();
   list.innerHTML = sorted.map(t => {
     const steps = t.steps || [];
     const doneCount = steps.filter(s => s.done).length;
     const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
     const isDone = t.status === 'done';
 
-    return `<div style="margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'}">
+    return `<div onclick="openEditTask(${t.id})" style="margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div onclick="toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div onclick="event.stopPropagation();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
-        </div>
-        <div style="display:flex;gap:6px">
-          <div onclick="openEditTask(${t.id})" style="font-size:19px;cursor:pointer;opacity:0.35;padding:4px">✎</div>
-          <div onclick="deleteTask(${t.id})" style="font-size:20px;cursor:pointer;opacity:0.35;padding:4px">×</div>
         </div>
       </div>
       ${steps.length > 0 ? `
@@ -1649,7 +1671,7 @@ function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div onclick="toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div onclick="event.stopPropagation();toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
@@ -1816,7 +1838,7 @@ function renderEvening() {
   // Додаємо нотатки за сьогодні з nm_notes (без копіювання — читаємо напряму)
   const allNotes = getNotes();
   const todayNotes = allNotes.filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
-  // Об'єднуємо: спочатку події/моменти, потім нотатки — без дублів
+  // Обʼєднуємо: спочатку події/моменти, потім нотатки — без дублів
   const notesAsItems = todayNotes.map(n => ({
     id: 'note_' + n.id,
     text: n.title || n.text || '',
@@ -1953,7 +1975,7 @@ async function generateMomentSummary(momentId, text) {
     const data = await res.json();
     const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, '');
     if (!summary) return;
-    // Зберігаємо summary в об'єкт моменту
+    // Зберігаємо summary в обʼєкт моменту
     const moments = getMoments();
     const idx = moments.findIndex(m => m.id === momentId);
     if (idx !== -1) {
@@ -2312,108 +2334,119 @@ function renderSlide() {
 const HELP_CONTENT = {
   inbox: {
     title: 'Inbox',
-    subtitle: 'Один потік для всіх думок. Агент сам розкладає по категоріях.',
+    subtitle: 'Один потік для всіх думок.',
+    color: 'linear-gradient(135deg, #f2d978, #f97316)',
+    accent: '#8b6914',
     sections: [
       { title: 'Як писати', items: [
-        { icon: '✎', title: 'Будь-який текст', desc: 'Пиши як думаєш — коротко або розгорнуто. Агент сам визначить категорію.' },
-        { icon: '◷', title: 'Час і дата', desc: '"зателефонувати завтра о 9" → Агент додасть час у заголовок задачі.' },
-        { icon: '≡', title: 'Список одним записом', desc: '"Ремонт: купити фарбу, найняти майстра" → Агент розібʼє на кроки.' },
+        { icon: 'edit',  title: 'Будь-який текст', desc: 'Пиши як думаєш. Агент сам визначить — це задача, нотатка, звичка чи ідея.' },
+        { icon: 'clock', title: 'З часом', desc: '«Зателефонувати завтра о 9» — час автоматично потрапить у заголовок задачі.' },
+        { icon: 'list',  title: 'Список одним рядком', desc: '«Ремонт: купити фарбу, найняти майстра» — Агент розбʼє на окремі кроки.' },
       ]},
       { title: 'Жести', items: [
-        { icon: '←', title: 'Свайп вліво', desc: 'Видалити запис.' },
-        { icon: '?', title: 'Якщо незрозуміло', desc: 'Агент уточнить питанням з варіантами відповіді.' },
+        { icon: 'swipe', title: 'Свайп вліво — видалити', desc: 'Довгий свайп (200px) видаляє запис. Можна відновити через «Відновити».' },
+        { icon: 'help',  title: 'Агент уточнить', desc: 'Якщо незрозуміло — зʼявляться варіанти відповіді. Просто вибери.' },
       ]},
-      { title: 'Чат з Агентом', items: [
-        { icon: '◉', title: 'Питай про записи', desc: 'Наприклад: "які задачі відкриті", "що я записував вчора".' },
-        { icon: '◈', title: 'Обговори ідею', desc: 'Збережена ідея? Попроси Агента розвинути або знайти підводні камені.' },
+      { title: 'Агент', items: [
+        { icon: 'chat', title: 'Запитай про свої записи', desc: '«Які задачі відкриті», «що я записував вчора» — Агент знає весь контекст.' },
+        { icon: 'idea', title: 'Розвинь ідею', desc: 'Попроси Агента знайти підводні камені або розгорнути думку.' },
       ]},
     ]
   },
   tasks: {
     title: 'Продуктивність',
-    subtitle: 'Задачі зі списком кроків і щоденні звички.',
+    subtitle: 'Задачі з кроками і щоденні звички.',
+    color: 'linear-gradient(135deg, #fdb87a, #f97316)',
+    accent: '#ea580c',
     sections: [
       { title: 'Задачі', items: [
-        { icon: '✓', title: 'Відмічай кроки', desc: 'Тап на чекбокс — відмічає крок. Всі кроки виконані → задача закривається.' },
-        { icon: '≡', title: 'Список через Агента', desc: 'Скажи: "додай кроки до задачі Ремонт: купити фарбу, найняти майстра".' },
-        { icon: '✎', title: 'Редагувати', desc: 'Натисни іконку олівця на картці задачі.' },
-      ]},
-      { title: 'Команди Агенту', items: [
-        { icon: '◉', title: 'Керуй задачами', desc: null,
-          cmds: ['додай крок: назва', 'відміни останній крок', 'які задачі відкриті', 'виконав задачу: назва'] },
+        { icon: 'check',  title: 'Відмічай кроки', desc: 'Тап на чекбокс — відмічає крок. Всі кроки виконані → задача закривається.' },
+        { icon: 'list',   title: 'Кроки через Агента', desc: '«Додай кроки до задачі Ремонт: купити фарбу, найняти майстра».' },
+        { icon: 'edit',   title: 'Редагувати', desc: 'Тап на назву задачі відкриває редагування.' },
       ]},
       { title: 'Звички', items: [
-        { icon: '◎', title: 'Щоденний трекер', desc: 'Звички з Inbox автоматично потрапляють сюди. Відмічай кожен день.' },
-        { icon: '▦', title: 'Вибір днів', desc: 'При створенні звички можна вказати конкретні дні тижня.' },
+        { icon: 'habit',    title: 'Щоденний трекер', desc: 'Нова звичка з Inbox одразу зʼявляється тут. Відмічай кожен день — будується стрік.' },
+        { icon: 'calendar', title: 'Вибір днів', desc: 'При створенні вкажи конкретні дні тижня — Агент враховує розклад.' },
+        { icon: 'swipe',    title: 'Свайп вліво — видалити', desc: 'Довгий свайп видаляє звичку.' },
+      ]},
+      { title: 'Агент', items: [
+        { icon: 'chat', title: 'Керуй голосом', desc: null,
+          cmds: ['виконав задачу: назва', 'додай крок: назва', 'відміни крок', 'відмітити звичку'] },
       ]},
     ]
   },
   notes: {
     title: 'Нотатки',
     subtitle: 'Записи автоматично сортуються по папках.',
+    color: 'linear-gradient(135deg, #fed7aa, #f97316)',
+    accent: '#c2620a',
     sections: [
       { title: 'Навігація', items: [
-        { icon: '▤', title: 'Папки', desc: 'Агент сам визначає папку. Тапни на папку щоб побачити всі записи всередині.' },
-        { icon: '←', title: 'Назад', desc: 'Кнопка ← у заголовку повертає до списку папок.' },
-        { icon: '◎', title: 'Пошук', desc: 'Пошук по тексту всіх нотаток одразу.' },
+        { icon: 'folder', title: 'Папки', desc: 'Агент сам визначає папку при збереженні. Тапни на папку щоб побачити записи всередині.' },
+        { icon: 'search', title: 'Пошук', desc: 'Шукає по тексту всіх нотаток одразу, незалежно від папки.' },
       ]},
       { title: 'Робота з нотаткою', items: [
-        { icon: '◉', title: 'Обговори з Агентом', desc: 'Відкрий нотатку → чат з Агентом. Він допоможе розвинути думку.' },
-        { icon: '←', title: 'Свайп вліво', desc: 'Видалити нотатку.' },
-        { icon: '···', title: 'Меню', desc: 'Три крапки → перемістити в іншу папку.' },
+        { icon: 'chat',  title: 'Обговори з Агентом', desc: 'Відкрий нотатку — знизу зʼявиться чат. Агент допоможе розвинути думку.' },
+        { icon: 'swipe', title: 'Свайп вліво — видалити', desc: 'Довгий свайп видаляє нотатку. Можна відновити.' },
+        { icon: 'menu',  title: 'Меню ···', desc: 'Три крапки на нотатці — перемістити в іншу папку, скопіювати.' },
       ]},
     ]
   },
   me: {
     title: 'Я',
-    subtitle: 'Твоя продуктивність і активність. Чесний аналіз від Агента.',
+    subtitle: 'Твоя активність і чесний аналіз від Агента.',
+    color: 'linear-gradient(135deg, #a7f3d0, #22c55e)',
+    accent: '#16a34a',
     sections: [
       { title: 'Що тут є', items: [
-        { icon: '▦', title: 'Активність тижня', desc: 'Гріл показує скільки записів ти робив кожного дня.' },
-        { icon: '↗', title: 'Статистика', desc: 'Inbox, активні задачі, нотатки — все одним поглядом.' },
-        { icon: '◎', title: 'Звички', desc: 'Прогрес по кожній звичці — скільки днів поспіль і загальний відсоток.' },
+        { icon: 'grid',  title: 'Активність тижня', desc: 'Кожна клітинка — один день. Чим темніше — більше записів.' },
+        { icon: 'stats', title: 'Статистика', desc: 'Кількість записів, активних задач і нотаток одним поглядом.' },
+        { icon: 'habit', title: 'Прогрес звичок', desc: 'Відсоток за 30 днів і кількість днів поспіль по кожній звичці.' },
       ]},
       { title: 'Агент-коуч', items: [
-        { icon: '↻', title: 'Аналіз', desc: 'Натисни ↻ — Агент проаналізує твої дані і скаже де провисаєш.' },
-        { icon: '◈', title: '3 поради', desc: 'Агент генерує конкретні, практичні поради саме для тебе.' },
-        { icon: '◉', title: 'Запитай сам', desc: 'Чат внизу — питай про свою продуктивність, звички, прогрес.' },
+        { icon: 'refresh', title: 'Аналіз', desc: 'Натисни ↻ — Агент скаже де ти провисаєш і що вдається добре.' },
+        { icon: 'star',    title: '3 поради', desc: 'Конкретні практичні поради на основі твоїх реальних даних.' },
+        { icon: 'chat',    title: 'Запитай сам', desc: 'Чат внизу — питай про свою продуктивність, звички, прогрес.' },
       ]},
     ]
   },
   evening: {
     title: 'Вечір',
     subtitle: 'Рефлексія дня і підсумок від Агента.',
+    color: 'linear-gradient(135deg, #818cf8, #4f46e5)',
+    accent: '#4f46e5',
     sections: [
       { title: 'Моменти дня', items: [
-        { icon: '+', title: 'Додати момент', desc: 'Що трапилось, що думав, як себе почував — кнопка + Додати.' },
-        { icon: '◑', title: 'Настрій', desc: 'Позначай настрій моменту — позитивний, нейтральний, негативний.' },
-        { icon: '○', title: 'Кільце', desc: 'Показує відсоток позитивних моментів за день.' },
+        { icon: 'plus', title: 'Додай момент', desc: 'Що трапилось, що відчував, що думав — кнопка «+ Додати» або через Агента.' },
+        { icon: 'mood', title: 'Настрій', desc: 'Позначай кожен момент — позитивний, нейтральний чи негативний.' },
+        { icon: 'ring', title: 'Кільце продуктивності', desc: 'Відсоток позитивних моментів за день. Чесна картина твого дня.' },
       ]},
       { title: 'Агент-підсумок', items: [
-        { icon: '↻', title: 'Підсумок дня', desc: 'Натисни ↻ — Агент бачить всі твої записи і моменти, дає конкретну пораду на завтра.' },
-        { icon: '◉', title: 'Поговори', desc: 'Чат внизу — обговори день, поділись думками.' },
+        { icon: 'refresh', title: 'Підсумок дня', desc: 'Натисни ↻ — Агент бачить всі записи і моменти, дає пораду на завтра.' },
+        { icon: 'chat',    title: 'Поговори', desc: 'Чат внизу — обговори день, поділись думками, отримай підтримку.' },
       ]},
-      { title: 'Команди Агенту', items: [
-        { icon: '◉', title: 'Питання', desc: null,
-          cmds: ['що я зробив сьогодні', 'як пройшов тиждень', 'що можна покращити завтра'] },
+      { title: 'Агент', items: [
+        { icon: 'chat', title: 'Питання', desc: null,
+          cmds: ['що я зробив сьогодні', 'як пройшов тиждень', 'що покращити завтра'] },
       ]},
     ]
   },
   finance: {
     title: 'Фінанси',
-    subtitle: 'Облік витрат і доходів. Агент веде бюджет і попереджає про перевитрати.',
+    subtitle: 'Облік витрат і доходів без таблиць.',
+    color: 'linear-gradient(135deg, #fcd9bd, #f97316)',
+    accent: '#c2410c',
     sections: [
       { title: 'Як додавати', items: [
-        { icon: '◉', title: 'Через Inbox', desc: 'Пиши "витратив 50 на їжу" або "отримав зарплату 3000" — Агент сам збереже у Фінанси.' },
-        { icon: '+', title: 'Вручну', desc: 'Кнопка "+ додати" в списку транзакцій. Вибери тип, суму, категорію.' },
-        { icon: '◉', title: 'Чат Агента', desc: 'Пиши прямо в чаті вкладки — Агент розпізнає і збереже.' },
+        { icon: 'chat',   title: 'Через Inbox або чат', desc: '«Витратив 50 на їжу» або «отримав зарплату 3000» — Агент сам збереже.' },
+        { icon: 'plus',   title: 'Вручну', desc: 'Кнопка «+ Додати» — вибери тип, суму і категорію.' },
       ]},
       { title: 'Бюджет', items: [
-        { icon: '◎', title: 'Загальний ліміт', desc: 'Натисни ✎ в блоці "Бюджет по категоріях" щоб задати місячний ліміт.' },
-        { icon: '▦', title: 'По категоріях', desc: 'Задай ліміт окремо для кожної категорії — Агент попередить коли залишилось 20%.' },
+        { icon: 'limit',  title: 'Загальний ліміт', desc: 'Натисни ✎ в блоці «Бюджет по категоріях» щоб задати місячний ліміт.' },
+        { icon: 'cat',    title: 'Ліміти по категоріях', desc: 'Агент попередить коли витрати наближаються до ліміту.' },
       ]},
-      { title: 'Команди Агенту', items: [
-        { icon: '◉', title: 'Запити', desc: null,
+      { title: 'Агент', items: [
+        { icon: 'wallet', title: 'Запити', desc: null,
           cmds: ['скільки витратив цього тижня', 'де найбільше трачу', 'встанови бюджет 2000 на місяць', 'видали останню витрату'] },
       ]},
     ]
@@ -2431,9 +2464,43 @@ const FIRST_VISIT_TIPS = {
 
 let _helpOpen = false;
 
+const HELP_ICONS = {
+  edit:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  clock:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  list:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+  swipe:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  help:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  chat:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  idea:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="4"/></svg>',
+  check:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  habit:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 8v4l3 3"/></svg>',
+  calendar:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  folder:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  search:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  menu:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+  grid:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+  stats:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+  refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  star:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  plus:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  mood:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+  ring:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  wallet:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>',
+  limit:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  cat:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+};
+
 function openHelp(tab) {
   const data = HELP_CONTENT[tab];
   if (!data) return;
+
+  const panel = document.getElementById('help-drawer-panel');
+
+  // Кольоровий хедер
+  const headerEl = document.getElementById('help-drawer-header');
+  if (headerEl) {
+    headerEl.style.background = data.color;
+  }
 
   document.getElementById('help-drawer-title').textContent = data.title;
   document.getElementById('help-drawer-subtitle').textContent = data.subtitle;
@@ -2443,11 +2510,11 @@ function openHelp(tab) {
     <div class="help-section-title">${section.title}</div>
     ${section.items.map(item => `
       <div class="help-item">
-        <div class="help-item-icon">${item.icon}</div>
-        <div>
+        <div class="help-item-icon" style="color:${data.accent}">${HELP_ICONS[item.icon] || ''}</div>
+        <div style="flex:1;min-width:0">
           <div class="help-item-title">${item.title}</div>
           ${item.desc ? `<div class="help-item-desc">${item.desc}</div>` : ''}
-          ${item.cmds ? item.cmds.map(c => `<div><span class="help-cmd">"${c}"</span></div>`).join('') : ''}
+          ${item.cmds ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${item.cmds.map(c => `<span class="help-cmd">${c}</span>`).join('')}</div>` : ''}
         </div>
       </div>
     `).join('')}
@@ -2462,8 +2529,16 @@ function openHelp(tab) {
 }
 
 function closeHelp() {
-  const drawer = document.getElementById('help-drawer');
-  drawer.style.display = 'none';
+  const panel = document.getElementById('help-drawer-panel');
+  if (panel) {
+    panel.style.transition = 'transform 0.24s cubic-bezier(0.32,0.72,0,1)';
+    panel.style.transform = 'translateX(100%)';
+  }
+  setTimeout(() => {
+    const drawer = document.getElementById('help-drawer');
+    if (drawer) drawer.style.display = 'none';
+    if (panel) panel.style.transition = '';
+  }, 240);
   _helpOpen = false;
 }
 
@@ -2896,14 +2971,14 @@ function renderHabits() {
     const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥' + streak + '</span>' : '';
 
-    return '<div style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:6px">'
-      + '<div style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;font-size:20px;color:white;pointer-events:none">🗑️</div>'
-      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:default;width:100%;box-sizing:border-box;"'
+    return '<div style="position:relative;border-radius:14px;margin-bottom:6px">'
+      + '<div id="habit-me-del-' + h.id + '" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:14px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>'
+      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')"'
         + ' ontouchstart="habitMeSwipeStart(event,' + h.id + ')"'
         + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
         + ' ontouchend="habitMeSwipeEnd(event,' + h.id + ')">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '<div onclick="toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">'
+          + '<div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">'
             + checkBtn
           + '</div>'
           + '<div style="flex:1;min-width:0">'
@@ -2913,9 +2988,7 @@ function renderHabits() {
             + '</div>'
             + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
           + '</div>'
-          + '<div onclick="openEditHabit(' + h.id + ')" style="padding:6px;cursor:pointer;color:rgba(30,16,64,0.2)">'
-            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>'
-          + '</div>'
+
         + '</div>'
         + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + '</div>'
       + '</div>'
@@ -3154,6 +3227,16 @@ let activeNoteViewId = null;
 let noteChatHistory = [];
 let noteChatLoading = false;
 
+function getFolderColor(folder) {
+  if (!folder) return DEFAULT_NOTE_FOLDER;
+  // Пряме співпадіння
+  if (FOLDER_COLORS[folder]) return FOLDER_COLORS[folder];
+  // Нечутливе до апострофа (ʼ vs ' vs без)
+  const normalized = folder.replace(/[ʼ']/g, '').toLowerCase();
+  const found = Object.keys(FOLDER_COLORS).find(k => k.replace(/[ʼ']/g, '').toLowerCase() === normalized);
+  return found ? FOLDER_COLORS[found] : DEFAULT_NOTE_FOLDER;
+}
+
 function openNoteView(id) {
   const notes = getNotes();
   const n = notes.find(x => x.id === id);
@@ -3162,26 +3245,79 @@ function openNoteView(id) {
   noteChatHistory = [];
   noteChatLoading = false;
 
+  // Колір фону = колір картки нотатки
+  const fc = getFolderColor(n.folder);
+  const modal = document.getElementById('note-view-modal');
+  if (modal) modal.style.background = fc.bg;
+
   document.getElementById('note-view-folder').textContent = n.folder || 'Загальне';
   const preview = n.text.length > 50 ? n.text.substring(0, 50) + '…' : n.text;
   document.getElementById('note-view-preview').textContent = preview;
-  document.getElementById('note-view-text').textContent = n.text;
+
+  // contenteditable — встановлюємо текст
+  const textEl = document.getElementById('note-view-text');
+  if (textEl) textEl.textContent = n.text;
+
   document.getElementById('note-chat-messages').innerHTML = '';
 
   // Update lastViewed
-  n.lastViewed = Date.now();
   const allNotes = getNotes();
   const idx = allNotes.findIndex(x => x.id === id);
   if (idx !== -1) { allNotes[idx].lastViewed = Date.now(); saveNotes(allNotes); }
 
   switchNoteViewTab('note');
-  document.getElementById('note-view-modal').style.display = 'flex';
+  modal.style.display = 'flex';
 }
 
 function closeNoteView() {
+  // Зберігаємо перед закриттям
+  if (activeNoteViewId) {
+    const textEl = document.getElementById('note-view-text');
+    if (textEl) {
+      const notes = getNotes();
+      const idx = notes.findIndex(x => x.id === activeNoteViewId);
+      if (idx !== -1 && textEl.textContent !== notes[idx].text) {
+        notes[idx].text = textEl.textContent;
+        notes[idx].updatedAt = Date.now();
+        saveNotes(notes);
+        if (currentTab === 'notes') renderNotes();
+      }
+    }
+  }
   document.getElementById('note-view-modal').style.display = 'none';
   activeNoteViewId = null;
   noteChatHistory = [];
+}
+
+let _autoSaveNoteTimer = null;
+function autoSaveNoteView() {
+  if (!activeNoteViewId) return;
+  if (_autoSaveNoteTimer) clearTimeout(_autoSaveNoteTimer);
+  _autoSaveNoteTimer = setTimeout(() => {
+    const textEl = document.getElementById('note-view-text');
+    if (!textEl) return;
+    const notes = getNotes();
+    const idx = notes.findIndex(x => x.id === activeNoteViewId);
+    if (idx !== -1) {
+      notes[idx].text = textEl.textContent;
+      notes[idx].updatedAt = Date.now();
+      saveNotes(notes);
+      // Оновлюємо preview в хедері
+      const preview = notes[idx].text.length > 50 ? notes[idx].text.substring(0, 50) + '…' : notes[idx].text;
+      const prevEl = document.getElementById('note-view-preview');
+      if (prevEl) prevEl.textContent = preview;
+    }
+  }, 800); // зберігаємо через 800мс після зупинки друку
+}
+
+function openNoteViewMenu() {
+  if (!activeNoteViewId) return;
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteViewId);
+  if (!n) return;
+  // Використовуємо існуюче меню нотаток
+  activeNoteMenuId = activeNoteViewId;
+  document.getElementById('note-menu').style.display = 'flex';
 }
 
 function openEditNoteFromView() {
@@ -3201,8 +3337,8 @@ function switchNoteViewTab(tab) {
     notePanel.style.display = 'block';
     chatPanel.style.display = 'none';
     inputArea.style.display = 'none';
-    tabNote.style.color = '#4f46e5';
-    tabNote.style.borderBottomColor = '#4f46e5';
+    tabNote.style.color = '#c2620a';
+    tabNote.style.borderBottomColor = '#c2620a';
     tabChat.style.color = 'rgba(30,16,64,0.4)';
     tabChat.style.borderBottomColor = 'transparent';
   } else {
@@ -3212,8 +3348,8 @@ function switchNoteViewTab(tab) {
     inputArea.style.display = 'flex';
     tabNote.style.color = 'rgba(30,16,64,0.4)';
     tabNote.style.borderBottomColor = 'transparent';
-    tabChat.style.color = '#4f46e5';
-    tabChat.style.borderBottomColor = '#4f46e5';
+    tabChat.style.color = '#c2620a';
+    tabChat.style.borderBottomColor = '#c2620a';
 
     // Auto-greet if first open
     if (noteChatHistory.length === 0) {
@@ -3357,13 +3493,54 @@ function setupSettingsSwipe() {
 // === PRODUCTIVITY INNER TABS ===
 let currentProdTab = 'tasks';
 
+function updateProdTabCounters() {
+  // Лічильник задач
+  const taskCount = getTasks().filter(t => t.status !== 'done').length;
+  const taskCountEl = document.getElementById('prod-tab-tasks-count');
+  const taskSubEl = document.getElementById('prod-tab-tasks-sub');
+  if (taskCountEl) taskCountEl.textContent = taskCount;
+  if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? 'активна' : 'активних';
+
+  // Лічильник звичок
+  const habits = getHabits();
+  const log = getHabitLog();
+  const today = new Date().toDateString();
+  const todayDow = (new Date().getDay() + 6) % 7;
+  const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+  const doneToday = todayHabits.filter(h => !!log[today]?.[h.id]).length;
+  const habitCountEl = document.getElementById('prod-tab-habits-count');
+  const habitSubEl = document.getElementById('prod-tab-habits-sub');
+  if (habitCountEl) habitCountEl.textContent = habits.length;
+  if (habitSubEl) habitSubEl.textContent = todayHabits.length > 0 ? `${doneToday} з ${todayHabits.length} сьогодні` : 'звичок';
+}
+
 function switchProdTab(tab) {
   currentProdTab = tab;
   const isHabits = tab === 'habits';
 
-  // Update inner tab styles
-  document.getElementById('prod-tab-tasks').style.cssText = `flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;${!isHabits ? 'background:white;color:#ea580c;box-shadow:0 2px 8px rgba(0,0,0,0.08)' : 'color:rgba(30,16,64,0.4)'}`;
-  document.getElementById('prod-tab-habits').style.cssText = `flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;${isHabits ? 'background:white;color:#16a34a;box-shadow:0 2px 8px rgba(0,0,0,0.08)' : 'color:rgba(30,16,64,0.4)'}`;
+  // Стилі карток перемикача
+  const tabTasks = document.getElementById('prod-tab-tasks');
+  const tabHabits = document.getElementById('prod-tab-habits');
+  const tasksCount = document.getElementById('prod-tab-tasks-count');
+  const tasksTitle = tabTasks ? tabTasks.querySelector('div > div:first-child') : null;
+  const habitsCount = document.getElementById('prod-tab-habits-count');
+  const habitsTitle = tabHabits ? tabHabits.querySelector('div > div:first-child') : null;
+
+  if (tabTasks) {
+    tabTasks.style.background = !isHabits ? 'white' : 'rgba(255,255,255,0.4)';
+    tabTasks.style.borderColor = !isHabits ? 'rgba(234,88,12,0.2)' : 'transparent';
+    tabTasks.style.boxShadow = !isHabits ? '0 2px 10px rgba(234,88,12,0.1)' : 'none';
+  }
+  if (tasksCount) tasksCount.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.3)';
+  if (tasksTitle) tasksTitle.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.3)';
+
+  if (tabHabits) {
+    tabHabits.style.background = isHabits ? 'white' : 'rgba(255,255,255,0.4)';
+    tabHabits.style.borderColor = isHabits ? 'rgba(22,163,74,0.2)' : 'transparent';
+    tabHabits.style.boxShadow = isHabits ? '0 2px 10px rgba(22,163,74,0.1)' : 'none';
+  }
+  if (habitsCount) habitsCount.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.3)';
+  if (habitsTitle) habitsTitle.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.3)';
 
   document.getElementById('prod-page-tasks').style.display = isHabits ? 'none' : 'block';
   document.getElementById('prod-page-habits').style.display = isHabits ? 'block' : 'none';
@@ -3372,10 +3549,12 @@ function switchProdTab(tab) {
   const addBtn = document.getElementById('prod-add-btn');
   if (addBtn) addBtn.onclick = isHabits ? openAddHabit : openAddTask;
 
+  updateProdTabCounters();
   if (isHabits) renderProdHabits();
 }
 
 function renderProdHabits() {
+  updateProdTabCounters();
   const habits = getHabits();
   const el = document.getElementById('prod-habits-list');
   if (!el) return;
@@ -3414,20 +3593,19 @@ function renderProdHabits() {
     const checkBgProd = isDoneToday ? 'background:#16a34a;border:none;' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15);';
 
     // ФІКС: галочка і редагування — окремі незалежні елементи, не вкладені один в одний
-    return '<div style="position:relative;border-radius:16px;overflow:hidden;margin-bottom:10px">'
-      + '<div style="position:absolute;right:0;top:0;bottom:0;width:80px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:none">'
-        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'
-        + '<svg width="14" height="10" viewBox="0 0 24 16" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><line x1="20" y1="8" x2="4" y2="8"/><polyline points="10 2 4 8 10 14"/></svg>'
+    return '<div style="position:relative;border-radius:16px;margin-bottom:10px">'
+      + '<div id="prod-habit-del-' + h.id + '" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s">'
+        + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'
       + '</div>'
-      + '<div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;will-change:transform"'
+      + '<div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"'
         + ' ontouchstart="prodHabitSwipeStart(event,' + h.id + ')"'
         + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
         + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
-        + '<div onclick="toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;' + checkBgProd + '">'
+        + '<div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;' + checkBgProd + '">'
           + checkSvgProd
         + '</div>'
-        + '<div onclick="openEditHabit(' + h.id + ')" style="flex:1;min-width:0;cursor:pointer;-webkit-tap-highlight-color:transparent">'
+        + '<div style="flex:1;min-width:0">'
           + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:1px">' + escapeHtml(shortName2) + '</div>'
           + '<div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + pct + '% за 30 днів</div>'
         + '</div>'
@@ -3448,9 +3626,37 @@ function toggleProdHabitToday(id) {
 }
 
 // === TAB SWIPE NAVIGATION ===
+// Повна навігація: inbox → tasks(задачі) → tasks(звички) → notes → me → evening → finance
 (function() {
   let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
-  const EDGE_ZONE = 30; // px від краю для "назад"
+  const EDGE_ZONE = 30;
+
+  // Розширений масив вкладок — tasks розбитий на дві підвкладки
+  function getNavTabs() {
+    return ['inbox', 'tasks_tasks', 'tasks_habits', 'notes', 'me', 'evening', 'finance'];
+  }
+
+  // Поточна позиція в навігації
+  function getCurrentNavIdx() {
+    const tabs = getNavTabs();
+    if (currentTab === 'tasks') {
+      return tabs.indexOf(currentProdTab === 'habits' ? 'tasks_habits' : 'tasks_tasks');
+    }
+    return tabs.indexOf(currentTab);
+  }
+
+  // Перейти до навігаційного індексу
+  function navigateTo(navTab) {
+    if (navTab === 'tasks_tasks') {
+      if (currentTab !== 'tasks') switchTab('tasks');
+      switchProdTab('tasks');
+    } else if (navTab === 'tasks_habits') {
+      if (currentTab !== 'tasks') switchTab('tasks');
+      switchProdTab('habits');
+    } else {
+      switchTab(navTab);
+    }
+  }
 
   document.addEventListener('touchstart', e => {
     swipeStartX = e.touches[0].clientX;
@@ -3459,14 +3665,14 @@ function toggleProdHabitToday(id) {
   }, { passive: true });
 
   document.addEventListener('touchend', e => {
-    // Ignore if any modal is open
+    // Ігноруємо якщо відкрите будь-яке модальне вікно
     const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal','clarify-modal','help-drawer','onboarding'];
     if (modals.some(id => {
       const el = document.getElementById(id);
       return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('open'));
     })) return;
 
-    // Не перемикаємо вкладку якщо тач почався на картці зі свайпом
+    // Не перемикаємо якщо тач на картці зі свайпом видалення
     const swipeTarget = document.elementFromPoint(swipeStartX, swipeStartY);
     if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"]')) return;
 
@@ -3474,34 +3680,34 @@ function toggleProdHabitToday(id) {
     const dy = e.changedTouches[0].clientY - swipeStartY;
     const dt = Date.now() - swipeStartTime;
 
-    // Must be fast enough and horizontal
+    // Достатньо швидкий і горизонтальний
     if (dt > 400) return;
     if (Math.abs(dx) < 60) return;
     if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
 
-    const tabs = ['inbox','tasks','notes','me','evening','finance'];
-    const idx = tabs.indexOf(currentTab);
-
-    // If note-view-modal is open — swipe right closes it
+    // note-view-modal — свайп вправо закриває
     const noteView = document.getElementById('note-view-modal');
     if (noteView && noteView.style.display === 'flex') {
       if (dx > 60) closeNoteView();
       return;
     }
 
-    // Swipe from left edge = "back" (same as right swipe but only from edge)
+    const navTabs = getNavTabs();
+    const idx = getCurrentNavIdx();
+
+    // Swipe from left edge = "back"
     if (swipeStartX <= EDGE_ZONE && dx > 60) {
-      if (idx > 0) switchTab(tabs[idx - 1]);
+      if (idx > 0) navigateTo(navTabs[idx - 1]);
       return;
     }
 
-    // Swipe left → next tab
-    if (dx < -60 && idx < tabs.length - 1) {
-      switchTab(tabs[idx + 1]);
+    // Swipe left → вперед
+    if (dx < -60 && idx < navTabs.length - 1) {
+      navigateTo(navTabs[idx + 1]);
     }
-    // Swipe right → prev tab
+    // Swipe right → назад
     else if (dx > 60 && idx > 0) {
-      switchTab(tabs[idx - 1]);
+      navigateTo(navTabs[idx - 1]);
     }
   }, { passive: true });
 })();
@@ -3509,7 +3715,7 @@ function toggleProdHabitToday(id) {
 
 // === HABIT ME SWIPE TO DELETE ===
 const habitMeSwipeState = {};
-const HABIT_SWIPE_THRESHOLD = 72;
+const HABIT_SWIPE_THRESHOLD = 200;
 
 function habitMeSwipeStart(e, id) {
   const t = e.touches[0];
@@ -3530,6 +3736,8 @@ function habitMeSwipeMove(e, id) {
   s.dx = Math.min(0, dx);
   const el = document.getElementById('habit-me-item-' + id);
   if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+  const delBg = document.getElementById('habit-me-del-' + id);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
 }
 function habitMeSwipeEnd(e, id) {
   const s = habitMeSwipeState[id]; if (!s) return;
@@ -3543,7 +3751,9 @@ function habitMeSwipeEnd(e, id) {
     }, 200);
   } else {
     if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
-    // Якщо це тап (не свайп) — перевіряємо чи тапнули на кнопку галочки
+    const delBgMe = document.getElementById('habit-me-del-' + id);
+    if (delBgMe) { delBgMe.style.transition = 'opacity 0.25s'; delBgMe.style.opacity = '0'; setTimeout(() => { if(delBgMe) delBgMe.style.transition = ''; }, 300); }
+    // Якщо це тап (не свайп) — чекбокс або редагування
     if (!s.swiping) {
       const target = e.changedTouches[0];
       const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
@@ -3552,6 +3762,8 @@ function habitMeSwipeEnd(e, id) {
         if (target.clientX >= rect.left && target.clientX <= rect.right &&
             target.clientY >= rect.top && target.clientY <= rect.bottom) {
           toggleHabitToday(id);
+        } else {
+          openEditHabit(id);
         }
       }
     }
@@ -3578,6 +3790,8 @@ function prodHabitSwipeMove(e, id) {
   s.dx = Math.min(0, dx);
   const el = document.getElementById('prod-habit-item-' + id);
   if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
+  const delBg = document.getElementById('prod-habit-del-' + id);
+  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 150).toFixed(2);
 }
 function prodHabitSwipeEnd(e, id) {
   const s = prodHabitSwipeState[id]; if (!s) return;
@@ -3592,6 +3806,8 @@ function prodHabitSwipeEnd(e, id) {
     }, 200);
   } else {
     if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
+    const delBg2 = document.getElementById('prod-habit-del-' + id);
+    if (delBg2) { delBg2.style.transition = 'opacity 0.25s'; delBg2.style.opacity = '0'; setTimeout(() => { if(delBg2) delBg2.style.transition = ''; }, 300); }
     if (!s.swiping) {
       const target = e.changedTouches[0];
       const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
@@ -3600,6 +3816,8 @@ function prodHabitSwipeEnd(e, id) {
         if (target.clientX >= rect.left && target.clientX <= rect.right &&
             target.clientY >= rect.top && target.clientY <= rect.bottom) {
           toggleProdHabitToday(id);
+        } else {
+          openEditHabit(id);
         }
       }
     }
@@ -3881,7 +4099,7 @@ function openChatBar(tab) {
 
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   // rAF — чекаємо один кадр щоб браузер намалював початкову позицію вікна
-  // без цього анімація не грає і вікно з'являється миттєво ("вилітає")
+  // без цього анімація не грає і вікно зʼявляється миттєво ("вилітає")
   if (chatWin) requestAnimationFrame(() => { chatWin.classList.add('open'); });
   // Не даємо фокус програмно — iOS відкриває клавіатуру тільки від живого тапу
 }
@@ -3936,7 +4154,7 @@ function setupChatBarSwipe() {
       if (messages && messages.contains(e.target)) return;
       winStartY = e.touches[0].clientY;
       winStartX = e.touches[0].clientX;
-      // Запам'ятовуємо позицію viewport — компенсуємо iOS scroll при клавіатурі
+      // Запамʼятовуємо позицію viewport — компенсуємо iOS scroll при клавіатурі
       winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
       startTime = Date.now();
       isDragging = false;
@@ -4545,7 +4763,7 @@ function _showTransactionModal(data) {
       </div>
 
       <!-- Коментар -->
-      <input id="fntx-comment" type="text" placeholder="Коментар (необов'язково)"
+      <input id="fntx-comment" type="text" placeholder="Коментар (необовʼязково)"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
         value="${data.comment || ''}">
 

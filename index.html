@@ -584,20 +584,20 @@ body {
 .inbox-item-wrap {
   margin: 8px 26px;
   position: relative;
-  overflow: hidden;
   border-radius: var(--card-radius);
 }
 .inbox-item-delete-bg {
   position: absolute;
   right: 0; top: 0; bottom: 0;
-  width: 80px;
-  background: linear-gradient(135deg, #94a3b8, #64748b);
-  display: flex; align-items: center; justify-content: flex-end;
-  padding-right: 20px;
+  width: 72px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  display: flex; align-items: center; justify-content: center;
   border-radius: var(--card-radius);
   font-size: 20px;
   color: white;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 .inbox-item {
   position: relative;
@@ -844,27 +844,41 @@ body {
   position: fixed; inset: 0; z-index: 400;
   display: none; align-items: stretch; justify-content: flex-end;
 }
-#help-drawer-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.3); }
+#help-drawer-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(2px); }
 #help-drawer-panel {
-  position: relative; width: 80%; max-width: 320px;
-  background: white; overflow-y: auto;
-  padding: max(56px, calc(env(safe-area-inset-top) + 20px)) 16px 40px;
-  box-shadow: -8px 0 40px rgba(0,0,0,0.2);
+  position: relative; width: 82%; max-width: 340px;
+  background: #faf9ff; overflow-y: auto;
+  box-shadow: -8px 0 40px rgba(0,0,0,0.18);
   display: flex; flex-direction: column; gap: 0;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+}
+#help-drawer-header {
+  padding: max(52px, calc(env(safe-area-inset-top) + 16px)) 18px 20px;
+  flex-shrink: 0;
+}
+#help-drawer-body {
+  padding: 0 18px calc(env(safe-area-inset-bottom) + 32px);
+  flex: 1;
 }
 .help-section-title {
-  font-size: 11px; font-weight: 800; color: rgba(30,16,64,0.35);
-  text-transform: uppercase; letter-spacing: 0.08em;
-  margin: 14px 0 7px;
+  font-size: 10px; font-weight: 800; color: rgba(30,16,64,0.3);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin: 16px 0 6px;
 }
 .help-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid rgba(30,16,64,0.05);
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid rgba(30,16,64,0.06);
 }
-.help-item-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.help-item-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(30,16,64,0.06);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
 .help-item-title { font-size: 13px; font-weight: 700; color: #1e1040; }
-.help-item-desc { font-size: 12px; color: rgba(30,16,64,0.5); line-height: 1.45; margin-top: 1px; }
-.help-cmd { display: inline-block; background: rgba(79,70,229,0.08); border-radius: 6px; padding: 2px 7px; font-size: 11px; font-family: monospace; color: #4f46e5; font-weight: 600; margin-top: 3px; }
+.help-item-desc { font-size: 12px; color: rgba(30,16,64,0.48); line-height: 1.45; margin-top: 2px; }
+.help-cmd { display: inline-block; background: rgba(79,70,229,0.07); border-radius: 6px; padding: 3px 8px; font-size: 11px; font-family: monospace; color: #4f46e5; font-weight: 600; }
 
 /* Page transition */
 .page { opacity:1; transform:translateX(0); transition:opacity 0.22s ease, transform 0.22s ease; }
@@ -1018,15 +1032,23 @@ body {
         </div>
       </div>
 
-      <!-- Inner tabs: Задачі / Звички -->
-      <div style="display:flex;margin:4px 14px 8px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px">
+      <!-- Inner tabs: Задачі / Звички — великий перемикач -->
+      <div style="display:flex;margin:4px 14px 10px;gap:8px">
         <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
-          style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;background:white;color:#ea580c;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s">
-          ✅ Задачі
+          style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:white;border:2px solid rgba(234,88,12,0.2);box-shadow:0 2px 10px rgba(234,88,12,0.1);transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+            <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
+            <div id="prod-tab-tasks-count" style="font-size:18px;font-weight:800;color:#ea580c;line-height:1">0</div>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.35)" id="prod-tab-tasks-sub">активних</div>
         </div>
         <div id="prod-tab-habits" onclick="switchProdTab('habits')"
-          style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4);transition:all 0.2s">
-          🌱 Звички
+          style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:rgba(255,255,255,0.4);border:2px solid transparent;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+            <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
+            <div id="prod-tab-habits-count" style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3);line-height:1">0</div>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">сьогодні</div>
         </div>
       </div>
 
@@ -1562,7 +1584,10 @@ body {
   <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова задача</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Нова задача</div>
+      <button id="task-delete-btn" onclick="deleteTaskFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+    </div>
     <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box" placeholder="Назва задачі…" ontouchend="this.focus()">
     <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px;box-sizing:border-box" placeholder="Опис або мета (необовʼязково)…" ontouchend="this.focus()"></textarea>
     <div style="font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
@@ -1697,13 +1722,17 @@ body {
 <div id="help-drawer">
   <div id="help-drawer-dim" onclick="closeHelp()"></div>
   <div id="help-drawer-panel">
-    <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Довідка</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div id="help-drawer-title" style="font-size:17px;font-weight:800;color:#1e1040"></div>
-      <button onclick="closeHelp()" style="background:rgba(30,16,64,0.07);border:none;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;color:rgba(30,16,64,0.4)">✕</button>
+    <div id="help-drawer-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">Довідка</div>
+        <button onclick="closeHelp()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+      </div>
+      <div id="help-drawer-title" style="font-size:22px;font-weight:800;color:white;margin-bottom:4px"></div>
+      <div id="help-drawer-subtitle" style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5"></div>
     </div>
-    <div id="help-drawer-subtitle" style="font-size:13px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:2px"></div>
-    <div id="help-drawer-content"></div>
+    <div id="help-drawer-body">
+      <div id="help-drawer-content"></div>
+    </div>
   </div>
 </div>
 
@@ -1734,26 +1763,31 @@ body {
 </div>
 
 <!-- NOTE VIEWER MODAL (F2) -->
-<div id="note-view-modal" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:linear-gradient(160deg,#f0f4ff,#e8ecff);">
-  <!-- Header -->
-  <div style="padding-top:env(safe-area-inset-top,0px);background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);flex-shrink:0;border-bottom:1px solid rgba(79,70,229,0.12)"><div style="display:flex;align-items:center;gap:12px;padding:10px 16px 12px;">
-    <button onclick="closeNoteView()" style="background:rgba(79,70,229,0.1);border:none;font-size:23px;cursor:pointer;color:#4f46e5;padding:8px 12px;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
-    <div style="flex:1;min-width:0">
-      <div id="note-view-folder" style="font-size:12px;font-weight:800;color:rgba(79,70,229,0.5);text-transform:uppercase;letter-spacing:0.08em"></div>
-      <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;" id="note-view-preview"></div>
+<div id="note-view-modal" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:linear-gradient(160deg,#fed7aa,#ffedd5);">
+  <!-- Header — тема Нотаток -->
+  <div id="note-view-header" style="padding-top:env(safe-area-inset-top,0px);background:linear-gradient(160deg,#fed7aa,#ffedd5);flex-shrink:0;border-bottom:1px solid rgba(194,98,10,0.1)">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px 12px;">
+      <button onclick="closeNoteView()" style="background:rgba(194,98,10,0.12);border:none;cursor:pointer;color:#c2620a;padding:0;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div style="flex:1;min-width:0">
+        <div id="note-view-folder" style="font-size:11px;font-weight:800;color:rgba(194,98,10,0.6);text-transform:uppercase;letter-spacing:0.08em"></div>
+        <div style="font-size:14px;font-weight:600;color:#1e1040;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;" id="note-view-preview"></div>
+      </div>
+      <button onclick="openNoteViewMenu()" style="background:rgba(194,98,10,0.1);border:none;cursor:pointer;color:#c2620a;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
     </div>
-    <button onclick="openEditNoteFromView()" style="background:rgba(79,70,229,0.1);border:none;font-size:16px;cursor:pointer;color:#4f46e5;padding:8px 10px;border-radius:10px;font-weight:700">✎</button>
-  </div></div>
-
-  <!-- Tabs -->
-  <div style="display:flex;border-bottom:1px solid rgba(79,70,229,0.1);background:rgba(255,255,255,0.7);flex-shrink:0">
-    <button id="note-view-tab-note" onclick="switchNoteViewTab('note')" style="flex:1;padding:10px;font-size:14px;font-weight:700;color:#4f46e5;background:none;border:none;border-bottom:2px solid #4f46e5;cursor:pointer">📝 Нотатка</button>
-    <button id="note-view-tab-chat" onclick="switchNoteViewTab('chat')" style="flex:1;padding:10px;font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer">💬 Агент</button>
   </div>
 
-  <!-- Note content panel -->
-  <div id="note-view-panel-note" style="flex:1;overflow-y:auto;padding:20px 16px;">
-    <div id="note-view-text" style="font-size:17px;line-height:1.8;color:#1e1040;font-weight:400;white-space:pre-wrap;word-break:break-word"></div>
+  <!-- Tabs — SVG іконки -->
+  <div style="display:flex;border-bottom:1px solid rgba(194,98,10,0.1);background:rgba(254,215,170,0.5);flex-shrink:0">
+    <button id="note-view-tab-note" onclick="switchNoteViewTab('note')" style="flex:1;padding:10px;font-size:13px;font-weight:700;color:#c2620a;background:none;border:none;border-bottom:2px solid #c2620a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Нотатка</button>
+    <button id="note-view-tab-chat" onclick="switchNoteViewTab('chat')" style="flex:1;padding:10px;font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Агент</button>
+  </div>
+
+  <!-- Note content panel — колір картки -->
+  <div id="note-view-panel-note" style="flex:1;overflow-y:auto;padding:12px;">
+    <div id="note-view-text"
+      contenteditable="true"
+      oninput="autoSaveNoteView()"
+      style="background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.6);border-radius:16px;padding:16px;font-size:17px;line-height:1.8;color:#1e1040;font-weight:400;white-space:pre-wrap;word-break:break-word;outline:none;min-height:calc(100% - 8px);caret-color:#c2620a;-webkit-user-select:text;user-select:text;box-shadow:0 2px 12px rgba(194,98,10,0.06);box-sizing:border-box;"></div>
   </div>
 
   <!-- Chat panel -->
@@ -1761,14 +1795,14 @@ body {
     <div id="note-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:0"></div>
   </div>
 
-  <!-- Chat input (visible in chat tab) -->
-  <div id="note-chat-input-area" style="display:none;padding:12px 16px;border-top:1px solid rgba(79,70,229,0.1);flex-shrink:0;gap:8px;align-items:flex-end;background:rgba(255,255,255,0.85);">
+  <!-- Chat input -->
+  <div id="note-chat-input-area" style="display:none;padding:12px 16px;border-top:1px solid rgba(194,98,10,0.1);flex-shrink:0;gap:8px;align-items:flex-end;background:rgba(254,215,170,0.5);">
     <textarea id="note-chat-input" rows="1" placeholder="Запитай про цю нотатку…"
       oninput="autoResizeTextarea(this)"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNoteChatMessage();}"
-      style="flex:1;border:1.5px solid rgba(79,70,229,0.2);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:white;"></textarea>
-    <button onclick="sendNoteChatMessage()" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      style="flex:1;border:1.5px solid rgba(194,98,10,0.15);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:rgba(255,255,255,0.7);"></textarea>
+    <button onclick="sendNoteChatMessage()" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
