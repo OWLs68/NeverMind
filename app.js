@@ -662,13 +662,15 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 }
 Використовуй task_id з контексту активних задач.
 
-ЯКЩО користувач просить змінити категорію або коментар існуючої ФІНАНСОВОЇ транзакції (згадує суму, витрату, дохід, категорію витрат) — відповідай ТІЛЬКИ JSON:
+ЯКЩО користувач просить змінити категорію, суму або коментар існуючої ФІНАНСОВОЇ транзакції (згадує суму, витрату, дохід, категорію витрат) — відповідай ТІЛЬКИ JSON:
 {
   "action": "update_transaction",
   "id": 1234567890,
   "category": "Нова категорія",
+  "amount": 18,
   "comment": "новий коментар або пусто"
 }
+Поля "category", "amount", "comment" — вказуй тільки ті що змінюються. Якщо сума не змінюється — не включай "amount".
 Використовуй id з останньої транзакції в контексті. НЕ створюй нову транзакцію.
 ВАЖЛИВО: "додай кроки", "додай крок до задачі" — це НЕ update_transaction. Це стосується задач, відповідай як на звичайний запис або reply.
 
@@ -1042,9 +1044,13 @@ async function sendToAI() {
           if (idx !== -1) {
             if (action.category) txs[idx].category = action.category;
             if (action.comment !== undefined) txs[idx].comment = action.comment;
+            if (action.amount) txs[idx].amount = parseFloat(action.amount);
             saveFinance(txs);
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію змінено на "${txs[idx].category}"`);
+            const updParts = [];
+            if (action.category) updParts.push('категорія: ' + txs[idx].category);
+            if (action.amount) updParts.push('сума: ' + formatMoney(txs[idx].amount));
+            addInboxChatMsg('agent', '✓ Оновлено: ' + (updParts.join(', ') || txs[idx].category));
           } else {
             addInboxChatMsg('agent', 'Не знайшов транзакцію. Спробуй ще раз.');
           }
@@ -2108,8 +2114,7 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-// === SLIDES TOUR ===
-const UPDATE_VERSION = 'v026'; // змінювати при кожному оновленні зі слайдами
+const UPDATE_VERSION = 'v027'; // змінювати при кожному оновленні зі слайдами
 
 const UPDATE_SLIDES = [
   {
@@ -4488,7 +4493,7 @@ let _finEditId = null;
 function openAddTransaction(prefill = {}) {
   _finEditId = null;
   const cats = getFinCats();
-  const type = prefill.type || currentFinTab === 'income' ? 'income' : 'expense';
+  const type = prefill.type || (currentFinTab === 'income' ? 'income' : 'expense');
   _showTransactionModal({ type, amount: prefill.amount || '', category: prefill.category || '', comment: prefill.comment || '' });
 }
 
@@ -4513,7 +4518,7 @@ function _showTransactionModal(data) {
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
     <div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
-    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:16px 20px calc(env(safe-area-inset-bottom)+28px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15)">
+    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 12px 12px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
       <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">${_finEditId ? 'Редагувати' : 'Нова'} ${isExpense ? 'витрата' : 'дохід'}</div>
 
@@ -4650,7 +4655,7 @@ function openFinBudgetModal() {
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
     <div onclick="closeFinBudgetModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
-    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;padding:16px 20px calc(env(safe-area-inset-bottom)+28px);z-index:1;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:80vh;overflow-y:auto">
+    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 12px 12px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
       <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">Бюджет на місяць</div>
 
