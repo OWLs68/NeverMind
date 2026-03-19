@@ -467,11 +467,33 @@ async function sendMeChatMessage() {
 function getOWLPersonality() {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const mode = settings.owl_mode || 'partner';
-  const name = settings.name ? `, звертайся до нього "${settings.name}"` : '';
+  const name = settings.name ? settings.name : '';
+  const nameStr = name ? `, звертайся до користувача на імʼя "${name}"` : '';
+
   const personas = {
-    coach: `Ти — OWL, особистий агент-тренер в NeverMind${name}. Характер: прямий, конкретний, жорсткий але справедливий. Не даєш відмовок, підштовхуєш до дії. Говориш коротко і по ділу. Не лестиш і не розмазуєш. Якщо є проблема — кажеш прямо. Звертаєшся на "ти".`,
-    partner: `Ти — OWL, особистий агент-партнер в NeverMind${name}. Характер: збалансований, підтримуючий, як розумний друг. Слухаєш, радиш конкретно, не осуджуєш. Говориш природно і тепло. Звертаєшся на "ти".`,
-    mentor: `Ти — OWL, особистий агент-наставник в NeverMind${name}. Характер: мудрий, глибокий, дивишся ширше. Задаєш правильні питання, допомагаєш думати. Не даєш готових відповідей якщо людина може знайти їх сама. Звертаєшся на "ти".`
+    coach: `Ти — OWL, особистий агент-тренер в застосунку NeverMind${nameStr}.
+
+ХАРАКТЕР: Ти віриш в людину але не даєш їй розслаблятись. Прямий, конкретний, без зайвих слів. Можеш підколоти якщо людина затягує — але без жорстокості, з повагою. Ніколи не виправдовуєш відмовки. Підштовхуєш до дії тут і зараз. Радієш результатам коротко і по ділу.
+
+СТИЛЬ: Короткі речення. Без вступів і прощань. Без "звісно", "зрозуміло", "чудово". Якщо є проблема — кажеш прямо. Говориш на "ти". Іноді одне влучне слово краще за абзац.
+
+ЗАБОРОНЕНО: лестити, розмазувати, казати "це чудова ідея", виправдовувати бездіяльність, давати довгі пояснення без конкретики.`,
+
+    partner: `Ти — OWL, особистий агент-партнер в застосунку NeverMind${nameStr}.
+
+ХАРАКТЕР: Ти як найкращий друг який завжди поруч — щирий, теплий, людяний. Радієш перемогам разом з людиною, переживаєш коли щось не так. Не осуджуєш і не тиснеш. Можеш пожартувати доречно. Підтримуєш навіть коли справи ідуть погано. Завжди на боці людини.
+
+СТИЛЬ: Природна розмовна мова. Звертаєшся по імені якщо знаєш. Емодзі — помірно, тільки коли доречно. Говориш на "ти". Короткі відповіді але з теплом. Не формально.
+
+ЗАБОРОНЕНО: бути холодним або формальним, читати лекції, осуджувати, бути занадто серйозним коли ситуація легка.`,
+
+    mentor: `Ти — OWL, особистий агент-наставник в застосунку NeverMind${nameStr}.
+
+ХАРАКТЕР: Мудрий і спокійний. Говориш рідше але завжди влучно — не реагуєш на дрібниці. Бачиш патерни і звʼязки які людина сама не помічає. Не даєш готових відповідей якщо людина може знайти їх сама — натомість ставиш правильне питання. Думаєш на крок вперед. Поважаєш автономію людини.
+
+СТИЛЬ: Спокійний тон, без поспіху. Глибина без пафосу. Говориш на "ти". Короткі але змістовні відповіді. Іноді одне влучне питання цінніше за пораду.
+
+ЗАБОРОНЕНО: говорити банальності, поспішати з відповіддю, давати поверхневі поради, бути повчальним або зверхнім.`
   };
   return personas[mode] || personas.partner;
 }
@@ -1436,9 +1458,10 @@ function noteSwipeEnd(e, id) {
       el.style.opacity = '0';
     }
     setTimeout(() => {
-      const item = getNotes().find(x => x.id === id);
-      saveNotes(getNotes().filter(x => x.id !== id)); renderNotes();
-      const noteSwipeIdx = getNotes().findIndex(x => x.id === id);
+      const allNotes = getNotes();
+      const noteSwipeIdx = allNotes.findIndex(x => x.id === id);
+      const item = allNotes.find(x => x.id === id);
+      saveNotes(allNotes.filter(x => x.id !== id)); renderNotes();
       if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); const idx = Math.min(noteSwipeIdx, notes.length); notes.splice(idx, 0, item); saveNotes(notes); renderNotes(); });
     }, 200);
   } else {
@@ -1611,12 +1634,13 @@ function closeTaskModal() {
 
 function deleteTaskFromModal() {
   if (!editingTaskId) return;
-  const item = getTasks().find(x => x.id === editingTaskId);
-  saveTasks(getTasks().filter(x => x.id !== editingTaskId));
+  const tasks = getTasks();
+  const taskOrigIdx = tasks.findIndex(x => x.id === editingTaskId);
+  const item = tasks.find(x => x.id === editingTaskId);
+  saveTasks(tasks.filter(x => x.id !== editingTaskId));
   closeTaskModal();
   renderTasks();
-  const taskOrigIdx = getTasks().findIndex(x => x.id === id);
-  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); const idx = Math.min(taskOrigIdx, tasks.length); tasks.splice(idx, 0, item); saveTasks(tasks); renderTasks(); });
+  if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
 }
 
 function addTaskStep() {
@@ -1691,11 +1715,12 @@ function toggleTaskStep(taskId, stepId) {
 }
 
 function deleteTask(id) {
-  const item = getTasks().find(x => x.id === id);
-  saveTasks(getTasks().filter(x => x.id !== id));
+  const tasks = getTasks();
+  const taskOrigIdx = tasks.findIndex(x => x.id === id);
+  const item = tasks.find(x => x.id === id);
+  saveTasks(tasks.filter(x => x.id !== id));
   renderTasks();
-  const taskOrigIdx = getTasks().findIndex(x => x.id === id);
-  if (item) showUndoToast('Задачу видалено', () => { const tasks = getTasks(); const idx = Math.min(taskOrigIdx, tasks.length); tasks.splice(idx, 0, item); saveTasks(tasks); renderTasks(); });
+  if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
 }
 
 function toggleTaskStatus(id) {
@@ -2329,6 +2354,8 @@ let currentSlide = 0;
 
 let _slidesIsUpdate = false;
 
+let _slidesFromOnboarding = false;
+
 function openSlidesTour(fromOnboarding = false) {
   _slidesFromOnboarding = fromOnboarding;
   _slidesIsUpdate = false;
@@ -2376,8 +2403,6 @@ function slidesNext() {
     closeSlidesTour(_slidesFromOnboarding);
   }
 }
-
-let _slidesFromOnboarding = false;
 
 function renderSlide() {
   const slides = getCurrentSlides();
@@ -3157,11 +3182,6 @@ function animateTabSwitch(newTab) {
   const newPage = document.getElementById(`page-${newTab}`);
   if (!oldPage || !newPage || oldPage === newPage) return;
   oldPage.classList.add('page-exit');
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      // nothing needed here — active class handles visibility
-    });
-  });
   setTimeout(() => { oldPage.classList.remove('page-exit'); }, 230);
   currentTabForAnim = newTab;
 }
@@ -3835,9 +3855,10 @@ function habitMeSwipeEnd(e, id) {
   if (s.dx < -HABIT_SWIPE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
-      const item = getHabits().find(h => h.id === id);
-      saveHabits(getHabits().filter(h => h.id !== id)); renderHabits(); renderProdHabits();
-      const habitOrigIdx = getHabits().findIndex(h => h.id === id);
+      const allHabits = getHabits();
+      const habitOrigIdx = allHabits.findIndex(h => h.id === id);
+      const item = allHabits.find(h => h.id === id);
+      saveHabits(allHabits.filter(h => h.id !== id)); renderHabits(); renderProdHabits();
       if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
   } else {
@@ -3890,10 +3911,11 @@ function prodHabitSwipeEnd(e, id) {
   if (s.dx < -HABIT_SWIPE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
-      const item = getHabits().find(h => h.id === id);
-      saveHabits(getHabits().filter(h => h.id !== id));
+      const allHabits = getHabits();
+      const habitOrigIdx = allHabits.findIndex(h => h.id === id);
+      const item = allHabits.find(h => h.id === id);
+      saveHabits(allHabits.filter(h => h.id !== id));
       renderHabits(); renderProdHabits();
-      const habitOrigIdx = getHabits().findIndex(h => h.id === id);
       if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
   } else {
@@ -5339,6 +5361,285 @@ async function sendNotesBarMessage() {
   notesBarLoading = false;
 }
 
+// === OWL BOARD ===
+const OWL_BOARD_KEY = 'nm_owl_board';       // масив до 3 повідомлень
+const OWL_BOARD_SEEN_KEY = 'nm_owl_board_seen'; // які ID вже показано
+const OWL_BOARD_TS_KEY = 'nm_owl_board_ts'; // timestamp останньої генерації
+const OWL_BOARD_INTERVAL = 3 * 60 * 1000;  // 3 хвилини
+
+let _owlBoardSlide = 0;
+let _owlBoardMessages = [];
+let _owlBoardGenerating = false;
+let _owlBoardTimer = null;
+
+function getOwlBoardMessages() {
+  try { return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]'); } catch { return []; }
+}
+function saveOwlBoardMessages(arr) {
+  localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-3)));
+}
+
+// Перевірка чи є щось важливе — БЕЗ API
+function checkOwlBoardTrigger() {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return false;
+
+  const now = new Date();
+  const todayStr = now.toDateString();
+  const hour = now.getHours();
+
+  // Задачі з дедлайном через ~1 годину
+  const tasks = getTasks().filter(t => t.status !== 'done');
+  for (const t of tasks) {
+    if (t.title) {
+      const timeMatch = t.title.match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        const taskHour = parseInt(timeMatch[1]);
+        const taskMin = parseInt(timeMatch[2]);
+        const diff = (taskHour * 60 + taskMin) - (hour * 60 + now.getMinutes());
+        if (diff > 0 && diff <= 65) return true; // дедлайн через ~годину
+      }
+    }
+  }
+
+  // Звички не виконані сьогодні (після 10 ранку)
+  if (hour >= 10) {
+    const habits = getHabits();
+    const log = getHabitLog();
+    const todayLog = log[todayStr] || {};
+    const pending = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
+    if (pending.length > 0) return true;
+  }
+
+  // Вечір без підсумку (після 20:00)
+  if (hour >= 20) {
+    const eveningSummary = localStorage.getItem('nm_evening_summary');
+    if (eveningSummary) {
+      const s = JSON.parse(eveningSummary);
+      if (new Date(s.date).toDateString() !== todayStr) return true;
+    } else {
+      return true;
+    }
+  }
+
+  // Бюджет перевищено
+  try {
+    const budget = getFinBudget();
+    if (budget.total > 0) {
+      const from = getFinPeriodRange('month');
+      const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+      if (exp > budget.total) return true;
+    }
+  } catch(e) {}
+
+  // Вранці (7-9) — завжди показуємо огляд дня
+  if (hour >= 7 && hour <= 9) return true;
+
+  return false;
+}
+
+// Будуємо контекст для табло
+function getOwlBoardContext() {
+  const now = new Date();
+  const todayStr = now.toDateString();
+  const hour = now.getHours();
+  const parts = [];
+
+  // Час доби
+  const timeOfDay = hour < 12 ? 'ранок' : hour < 18 ? 'день' : 'вечір';
+  parts.push(`Зараз ${timeOfDay}, ${now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}.`);
+
+  // Задачі
+  const tasks = getTasks();
+  const activeTasks = tasks.filter(t => t.status !== 'done');
+  if (activeTasks.length > 0) {
+    // Дедлайни через ~годину
+    const urgent = activeTasks.filter(t => {
+      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+      if (!m) return false;
+      const diff = (parseInt(m[1])*60+parseInt(m[2])) - (hour*60+now.getMinutes());
+      return diff > 0 && diff <= 65;
+    });
+    if (urgent.length > 0) parts.push(`ТЕРМІНОВЕ: через ~годину — ${urgent.map(t=>t.title).join(', ')}.`);
+    parts.push(`Відкритих задач: ${activeTasks.length}. Список: ${activeTasks.slice(0,3).map(t=>t.title).join(', ')}${activeTasks.length>3?' і ще...':''}.`);
+  } else {
+    parts.push('Всі задачі виконано.');
+  }
+
+  // Звички
+  const habits = getHabits();
+  const log = getHabitLog();
+  const todayLog = log[todayStr] || {};
+  const todayHabits = habits.filter(h => h.days.includes(now.getDay()));
+  const doneHabits = todayHabits.filter(h => todayLog[h.id]);
+  const pendingHabits = todayHabits.filter(h => !todayLog[h.id]);
+  if (todayHabits.length > 0) {
+    parts.push(`Звички сьогодні: виконано ${doneHabits.length}/${todayHabits.length}.${pendingHabits.length > 0 ? ' Не виконано: ' + pendingHabits.map(h=>h.name).join(', ') + '.' : ''}`);
+  }
+
+  // Фінанси
+  try {
+    const budget = getFinBudget();
+    if (budget.total > 0) {
+      const from = getFinPeriodRange('month');
+      const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+      const pct = Math.round(exp/budget.total*100);
+      parts.push(`Бюджет місяця: витрачено ${formatMoney(exp)} з ${formatMoney(budget.total)} (${pct}%).`);
+    }
+  } catch(e) {}
+
+  return parts.join(' ');
+}
+
+async function generateOwlBoardMessage() {
+  if (_owlBoardGenerating) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+
+  _owlBoardGenerating = true;
+
+  const context = getOwlBoardContext();
+  const existing = getOwlBoardMessages();
+
+  // Список того що вже казали — щоб не повторювати
+  const recentTexts = existing.map(m => m.text).join(' | ');
+
+  const systemPrompt = getOWLPersonality() + `
+
+Ти пишеш КОРОТКЕ проактивне повідомлення для табло в Inbox. Це НЕ відповідь на запит — це твоя ініціатива.
+
+ПРАВИЛА:
+- Максимум 2 речення. Коротко і конкретно.
+- Базуйся на реальних даних з контексту.
+- НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
+- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","chips":["чіп1","чіп2"]}
+- chips — 2-3 конкретні факти або дії (задача, звичка, сума). Максимум 3 слова кожен.
+- Відповідай українською.`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Дані: ${context}` }
+        ],
+        max_tokens: 150,
+        temperature: 0.8
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { _owlBoardGenerating = false; return; }
+
+    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+    if (!parsed.text) { _owlBoardGenerating = false; return; }
+
+    // Додаємо нове повідомлення, зберігаємо 3 останніх
+    const msgs = getOwlBoardMessages();
+    msgs.unshift({ id: Date.now(), text: parsed.text, chips: parsed.chips || [] });
+    saveOwlBoardMessages(msgs.slice(0, 3));
+    localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
+
+    renderOwlBoard();
+  } catch(e) {}
+  _owlBoardGenerating = false;
+}
+
+function renderOwlBoard() {
+  const messages = getOwlBoardMessages();
+  const board = document.getElementById('owl-board');
+  if (!board) return;
+
+  if (messages.length === 0) {
+    board.style.display = 'none';
+    return;
+  }
+
+  board.style.display = 'block';
+  _owlBoardMessages = messages;
+  if (_owlBoardSlide >= messages.length) _owlBoardSlide = 0;
+
+  // Рендер слайдів
+  const track = document.getElementById('owl-board-track');
+  if (track) {
+    track.innerHTML = messages.map((m, i) => `
+      <div style="min-width:100%;box-sizing:border-box">
+        <div style="font-size:13px;font-weight:600;color:white;line-height:1.5;margin-bottom:7px">${escapeHtml(m.text)}</div>
+        ${m.chips && m.chips.length > 0 ? `<div style="display:flex;gap:5px;flex-wrap:wrap">${m.chips.map(c=>`<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`).join('')}</div>` : ''}
+      </div>
+    `).join('');
+    track.style.transform = `translateX(-${_owlBoardSlide * 100}%)`;
+  }
+
+  // Крапки
+  const dots = document.getElementById('owl-board-dots');
+  if (dots && messages.length > 1) {
+    dots.style.display = 'flex';
+    dots.innerHTML = messages.map((_, i) => {
+      const active = i === _owlBoardSlide;
+      return `<div onclick="owlBoardGoTo(${i})" style="height:4px;width:${active?'12px':'4px'};border-radius:2px;background:${active?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.2)'};transition:all 0.3s;cursor:pointer"></div>`;
+    }).join('');
+  } else if (dots) {
+    dots.style.display = 'none';
+  }
+
+  // Свайп на слайдері
+  setupOwlBoardSwipe();
+}
+
+function owlBoardGoTo(idx) {
+  _owlBoardSlide = idx;
+  const track = document.getElementById('owl-board-track');
+  if (track) track.style.transform = `translateX(-${idx * 100}%)`;
+  renderOwlBoard();
+}
+
+function dismissOwlBoard() {
+  const board = document.getElementById('owl-board');
+  if (board) board.style.display = 'none';
+}
+
+let _owlSwipeStartX = 0;
+function setupOwlBoardSwipe() {
+  const slider = document.getElementById('owl-board-slider');
+  if (!slider || slider._owlSwipe) return;
+  slider._owlSwipe = true;
+  slider.addEventListener('touchstart', e => { _owlSwipeStartX = e.touches[0].clientX; }, { passive: true });
+  slider.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _owlSwipeStartX;
+    const msgs = getOwlBoardMessages();
+    if (dx < -40 && _owlBoardSlide < msgs.length - 1) owlBoardGoTo(_owlBoardSlide + 1);
+    else if (dx > 40 && _owlBoardSlide > 0) owlBoardGoTo(_owlBoardSlide - 1);
+  }, { passive: true });
+}
+
+// Запуск циклу перевірки
+function startOwlBoardCycle() {
+  // Одразу при відкритті
+  tryOwlBoardUpdate();
+  // Потім кожні 3 хвилини
+  if (_owlBoardTimer) clearInterval(_owlBoardTimer);
+  _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
+}
+
+function tryOwlBoardUpdate() {
+  // Показуємо що є зараз
+  const msgs = getOwlBoardMessages();
+  if (msgs.length > 0) renderOwlBoard();
+
+  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const elapsed = Date.now() - lastTs;
+  const isFirstTime = msgs.length === 0 && lastTs === 0;
+
+  // Перший запуск — завжди генеруємо (знайомство з таблом)
+  // Наступні — тільки якщо пройшло 3 хв і є тригер
+  const shouldGenerate = isFirstTime || (elapsed > OWL_BOARD_INTERVAL && checkOwlBoardTrigger());
+  if (shouldGenerate) generateOwlBoardMessage();
+}
+
 // === INIT ===
 function init() {
   try { setupPWA(); } catch(e) {}
@@ -5385,6 +5686,7 @@ function init() {
   try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
   try { setupAutoEveningSummary(); } catch(e) {}
+  setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 4000);
 }
 
 function showApp() {
