@@ -2209,46 +2209,58 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-const UPDATE_VERSION = 'v027'; // змінювати при кожному оновленні зі слайдами
+const UPDATE_VERSION = 'v028'; // змінювати при кожному оновленні зі слайдами
 
 const UPDATE_SLIDES = [
   {
-    tag: '🆕 Оновлення',
-    title: 'NeverMind оновився',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Два великі оновлення: фінансовий трекер і персональний характер агента.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Все що ти вже вів — на місці. Нові функції доступні одразу.</p>`,
+    tag: '🆕 v0.28',
+    title: 'NeverMind став зручнішим',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Великий UX апдейт — навігація, редагування і дизайн стали простішими і логічнішими.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Всі твої дані на місці. Просто спробуй — відчуєш різницю.</p>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: '💰 Фінанси',
-    title: 'Облік грошей без таблиць',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Нова вкладка <b style="color:#1e1040">Фінанси</b> — пиши в Inbox і агент сам запише:</p>
-<div style="display:flex;flex-direction:column;gap:6px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заправка 50" → <b style="color:#1e1040">Транспорт −€50</b></div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Встанови ліміт → <b style="color:#1e1040">агент попередить якщо перевищиш</b></div>
+    tag: '👆 Тап по картці',
+    title: 'Тап — і одразу редагуєш',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Більше не треба шукати кнопку олівця або три крапки:</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Тап по картці</b> → відкриває вікно редагування</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Чекбокс</b> → виконати задачу або звичку</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Свайп вліво</b> → видалити картку</div>
 </div>`,
-    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
+    color: 'linear-gradient(135deg,#fdb87a,#f97316)',
   },
   {
-    tag: '🦉 OWL',
-    title: 'Агент тепер має характер',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Обери стиль спілкування в налаштуваннях:</p>
+    tag: '🥁 Новий таббар',
+    title: 'Барабан замість рядка',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Таббар тепер — капсула-барабан:</p>
 <div style="display:flex;flex-direction:column;gap:8px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
-    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🔥 Тренер</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Прямий, жорсткий, підштовхує до дії</div>
-  </div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
-    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🤝 Партнер</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає і радить</div>
-  </div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:12px;padding:10px 14px">
-    <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">🦉 Наставник</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.5)">Мудрий, задає правильні питання</div>
-  </div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Тягни барабан</b> ← → щоб переключати вкладки</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Свайп по екрану</b> також перемикає вкладки</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Задачі і Звички — <b style="color:#1e1040">окремі вкладки</b> в навігації</div>
 </div>`,
-    color: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+    color: 'linear-gradient(135deg,#fed7aa,#f97316)',
+  },
+  {
+    tag: '📝 Нотатки',
+    title: 'Пиши прямо у вікні нотатки',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Відкрив нотатку — і одразу можна писати:</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Тап по тексту</b> → курсор і клавіатура</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Автозбереження</b> — зміни зберігаються самі</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Колір вікна = <b style="color:#1e1040">колір папки</b> нотатки</div>
+</div>`,
+    color: 'linear-gradient(135deg,#a7f3d0,#22c55e)',
+  },
+  {
+    tag: '❓ Довідка',
+    title: 'Довідка стала зрозумілішою',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Натисни <b style="color:#1e1040">?</b> на будь-якій вкладці:</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Кольоровий хедер — одразу видно про яку вкладку</div>
+  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Зрозумілі іконки і живий текст замість технічного</div>
+</div>`,
+    color: 'linear-gradient(135deg,#818cf8,#4f46e5)',
     isLast: true,
   },
 ];
