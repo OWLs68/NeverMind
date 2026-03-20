@@ -113,13 +113,14 @@ function setupDrumTabbar() {
 
   // Визначає яка вкладка зараз по центру капсули
   function getTabAtCenter() {
-    const { capsuleW } = getDrumBounds();
-    const centerInTrack = -currentTranslateX + capsuleW / 2;
+    const capsuleRect = capsule.getBoundingClientRect();
+    const capsuleCenter = capsuleRect.left + capsuleRect.width / 2;
     const items = track.querySelectorAll('.tab-item[data-tab]');
     let closest = null, minDist = Infinity;
     items.forEach(item => {
-      const itemCenter = item.offsetLeft + item.offsetWidth / 2;
-      const dist = Math.abs(itemCenter - centerInTrack);
+      const rect = item.getBoundingClientRect();
+      const itemCenter = rect.left + rect.width / 2;
+      const dist = Math.abs(itemCenter - capsuleCenter);
       if (dist < minDist) { minDist = dist; closest = item; }
     });
     return closest ? closest.dataset.tab : null;
@@ -245,6 +246,7 @@ function applyTheme(tab) {
 function openSettings() {
   const overlay = document.getElementById('settings-overlay');
   overlay.classList.add('open');
+  try { updateErrorLogBtn(); } catch(e) {}
 
   const key = localStorage.getItem('nm_gemini_key') || '';
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
@@ -356,7 +358,7 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_error_log'];
   keys.forEach(k => localStorage.removeItem(k));
   Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_')).forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
@@ -3931,37 +3933,9 @@ function toggleProdHabitToday(id) {
 }
 
 // === TAB SWIPE NAVIGATION ===
-// Повна навігація: inbox → tasks(задачі) → tasks(звички) → notes → me → evening → finance
+// Свайп вправо закриває note-view-modal
 (function() {
   let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
-  const EDGE_ZONE = 30;
-
-  // Розширений масив вкладок — tasks розбитий на дві підвкладки
-  function getNavTabs() {
-    return ['inbox', 'tasks_tasks', 'tasks_habits', 'notes', 'me', 'evening', 'finance'];
-  }
-
-  // Поточна позиція в навігації
-  function getCurrentNavIdx() {
-    const tabs = getNavTabs();
-    if (currentTab === 'tasks') {
-      return tabs.indexOf(currentProdTab === 'habits' ? 'tasks_habits' : 'tasks_tasks');
-    }
-    return tabs.indexOf(currentTab);
-  }
-
-  // Перейти до навігаційного індексу
-  function navigateTo(navTab) {
-    if (navTab === 'tasks_tasks') {
-      if (currentTab !== 'tasks') switchTab('tasks');
-      switchProdTab('tasks');
-    } else if (navTab === 'tasks_habits') {
-      if (currentTab !== 'tasks') switchTab('tasks');
-      switchProdTab('habits');
-    } else {
-      switchTab(navTab);
-    }
-  }
 
   document.addEventListener('touchstart', e => {
     swipeStartX = e.touches[0].clientX;
@@ -3970,55 +3944,14 @@ function toggleProdHabitToday(id) {
   }, { passive: true });
 
   document.addEventListener('touchend', e => {
-    // Ігноруємо якщо відкрите будь-яке модальне вікно
-    const modals = ['task-chat-modal','task-modal','note-modal','note-view-modal','settings-overlay','habit-modal','moment-modal','clarify-modal','help-drawer','onboarding'];
-    if (modals.some(id => {
-      const el = document.getElementById(id);
-      return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('open'));
-    })) return;
-
+    const noteView = document.getElementById('note-view-modal');
+    if (!noteView || noteView.style.display !== 'flex') return;
     const dx = e.changedTouches[0].clientX - swipeStartX;
     const dy = e.changedTouches[0].clientY - swipeStartY;
     const dt = Date.now() - swipeStartTime;
-
-    // Достатньо швидкий і горизонтальний
     if (dt > 400) return;
-    if (Math.abs(dx) < 40) return;
     if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
-
-    // Ігноруємо якщо тач почався на барабані — він обробляє сам
-    const swipeTarget = document.elementFromPoint(swipeStartX, swipeStartY);
-    if (swipeTarget && swipeTarget.closest('#drumCapsule')) return;
-
-    // Якщо dx > 40 і тач на картці — це свайп видалення, не навігація
-    if (Math.abs(dx) > 40) {
-      if (swipeTarget && swipeTarget.closest('.inbox-item, [id^="prod-habit-item-"], [id^="habit-me-item-"], [id^="task-item-"], [id^="folder-item-"], .note-item-wrap')) return;
-    }
-
-    // note-view-modal — свайп вправо закриває
-    const noteView = document.getElementById('note-view-modal');
-    if (noteView && noteView.style.display === 'flex') {
-      if (dx > 60) closeNoteView();
-      return;
-    }
-
-    const navTabs = getNavTabs();
-    const idx = getCurrentNavIdx();
-
-    // Swipe from left edge = "back"
-    if (swipeStartX <= EDGE_ZONE && dx > 60) {
-      if (idx > 0) navigateTo(navTabs[idx - 1]);
-      return;
-    }
-
-    // Swipe left → вперед
-    if (dx < -60 && idx < navTabs.length - 1) {
-      navigateTo(navTabs[idx + 1]);
-    }
-    // Swipe right → назад
-    else if (dx > 60 && idx > 0) {
-      navigateTo(navTabs[idx - 1]);
-    }
+    if (dx > 60) closeNoteView();
   }, { passive: true });
 })();
 
@@ -5938,10 +5871,84 @@ function tryOwlBoardUpdate() {
   const elapsed = Date.now() - lastTs;
   const isFirstTime = msgs.length === 0 && lastTs === 0;
 
-  // Перший запуск — завжди генеруємо (знайомство з таблом)
+  // Новий день — завжди генеруємо свіже повідомлення
+  const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
+
+  // Перший запуск або новий день — завжди генеруємо
   // Наступні — тільки якщо пройшло 3 хв і є тригер
-  const shouldGenerate = isFirstTime || (elapsed > OWL_BOARD_INTERVAL && checkOwlBoardTrigger());
+  const shouldGenerate = isFirstTime || isNewDay || (elapsed > OWL_BOARD_INTERVAL && checkOwlBoardTrigger());
   if (shouldGenerate) generateOwlBoardMessage();
+}
+
+// === ERROR LOGGER ===
+const NM_LOG_KEY = 'nm_error_log';
+const NM_LOG_MAX = 100; // максимум записів
+
+function getErrorLog() {
+  try { return JSON.parse(localStorage.getItem(NM_LOG_KEY) || '[]'); } catch { return []; }
+}
+function saveErrorLog(arr) {
+  try { localStorage.setItem(NM_LOG_KEY, JSON.stringify(arr.slice(-NM_LOG_MAX))); } catch {}
+}
+
+function logError(type, message, source) {
+  const log = getErrorLog();
+  const entry = {
+    ts: Date.now(),
+    type,
+    msg: message,
+    src: source || '',
+    tab: typeof currentTab !== 'undefined' ? currentTab : '?'
+  };
+  log.push(entry);
+  saveErrorLog(log);
+}
+
+// Перехоплюємо всі JS помилки
+window.addEventListener('error', e => {
+  logError('error', e.message, (e.filename || '').replace(/.*\//, '') + ':' + e.lineno);
+});
+
+// Перехоплюємо unhandled promise rejections
+window.addEventListener('unhandledrejection', e => {
+  const msg = e.reason ? (e.reason.message || String(e.reason)) : 'Promise rejected';
+  logError('promise', msg, '');
+});
+
+function copyErrorLog() {
+  const log = getErrorLog();
+  if (log.length === 0) {
+    showToast('Лог порожній — помилок не знайдено 👍');
+    return;
+  }
+  const lines = log.map(e => {
+    const d = new Date(e.ts);
+    const time = d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return '[' + time + '] [' + e.type + '] [' + e.tab + '] ' + e.msg + (e.src ? ' → ' + e.src : '');
+  }).join('\n');
+  const text = 'NeverMind Error Log (' + log.length + ' записів)\n' + '='.repeat(40) + '\n' + lines;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Лог скопійовано (' + log.length + ' помилок)'));
+  } else {
+    showToast('Копіювання недоступне');
+  }
+}
+
+function clearErrorLog() {
+  localStorage.removeItem(NM_LOG_KEY);
+  showToast('✓ Лог очищено');
+  // Оновлюємо кнопку
+  const btn = document.getElementById('error-log-btn');
+  if (btn) btn.textContent = '🪲 Лог помилок (0)';
+}
+
+function updateErrorLogBtn() {
+  const btn = document.getElementById('error-log-btn');
+  if (!btn) return;
+  const count = getErrorLog().length;
+  btn.textContent = count > 0 ? '🪲 Лог помилок (' + count + ')' : '🪲 Лог помилок (0)';
+  btn.style.borderColor = count > 0 ? 'rgba(234,88,12,0.3)' : '';
+  btn.style.color = count > 0 ? '#ea580c' : '';
 }
 
 // === INIT ===
