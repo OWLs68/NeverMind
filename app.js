@@ -96,55 +96,100 @@ function setupDrumTabbar() {
   if (!capsule || !track) return;
 
   const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
-  let startX = 0, dragDelta = 0, dragging = false;
+  let startX = 0, startTime = 0, dragDelta = 0, dragging = false, velocity = 0, lastX = 0, lastTime = 0;
+  let currentTranslateX = 0;
 
   // Тап на вкладку
   capsule.addEventListener('click', e => {
     const item = e.target.closest('.tab-item[data-tab]');
-    if (item) switchTab(item.dataset.tab);
+    if (item && Math.abs(dragDelta) < 5) switchTab(item.dataset.tab);
   });
-
-  // Свайп по барабану
-  let currentTranslateX = 0;
 
   function getDrumBounds() {
     const capsuleW = capsule.offsetWidth - 8;
     const trackW = track.scrollWidth;
-    const minX = Math.min(0, capsuleW - trackW); // ліва межа (кінець)
-    const maxX = 0; // права межа (початок)
-    return { minX, maxX };
+    return { minX: Math.min(0, capsuleW - trackW), maxX: 0, capsuleW };
+  }
+
+  // Визначає яка вкладка зараз по центру капсули
+  function getTabAtCenter() {
+    const { capsuleW } = getDrumBounds();
+    const centerInTrack = -currentTranslateX + capsuleW / 2;
+    const items = track.querySelectorAll('.tab-item[data-tab]');
+    let closest = null, minDist = Infinity;
+    items.forEach(item => {
+      const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+      const dist = Math.abs(itemCenter - centerInTrack);
+      if (dist < minDist) { minDist = dist; closest = item; }
+    });
+    return closest ? closest.dataset.tab : null;
+  }
+
+  // Оновлює .active/.near без switchTab (тільки візуал)
+  function updateActiveVisual(tab) {
+    const activeIdx = TAB_ORDER.indexOf(tab);
+    track.querySelectorAll('.tab-item[data-tab]').forEach((item, i) => {
+      const diff = Math.abs(i - activeIdx);
+      item.classList.remove('active', 'near');
+      if (diff === 0) item.classList.add('active');
+      else if (diff === 1) item.classList.add('near');
+    });
   }
 
   capsule.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    dragDelta = 0;
-    dragging = true;
-    // Синхронізуємо позицію якщо updateDrumTabbar оновив її
     if (window._drumCurrentX !== undefined) currentTranslateX = window._drumCurrentX;
+    startX = e.touches[0].clientX;
+    lastX = startX;
+    lastTime = Date.now();
+    startTime = lastTime;
+    dragDelta = 0;
+    velocity = 0;
+    dragging = true;
     track.style.transition = 'none';
   }, { passive: true });
 
   capsule.addEventListener('touchmove', e => {
     if (!dragging) return;
-    dragDelta = e.touches[0].clientX - startX;
+    const x = e.touches[0].clientX;
+    const now = Date.now();
+    const dt = now - lastTime;
+    if (dt > 0) velocity = (x - lastX) / dt;
+    lastX = x; lastTime = now;
+    dragDelta = x - startX;
+
     const { minX, maxX } = getDrumBounds();
     let newX = currentTranslateX + dragDelta;
-    // Пружина на крайніх позиціях
-    if (newX > maxX) newX = maxX + (newX - maxX) * 0.3;
-    if (newX < minX) newX = minX + (newX - minX) * 0.3;
+    if (newX > maxX) newX = maxX + (newX - maxX) * 0.25;
+    if (newX < minX) newX = minX + (newX - minX) * 0.25;
     track.style.transform = `translateX(${newX}px)`;
+
+    // Оновлюємо візуал активної вкладки під час прокрутки
+    const tempX = Math.max(minX, Math.min(maxX, newX));
+    const savedX = currentTranslateX;
+    currentTranslateX = tempX;
+    const centerTab = getTabAtCenter();
+    currentTranslateX = savedX;
+    if (centerTab) updateActiveVisual(centerTab);
   }, { passive: true });
 
   capsule.addEventListener('touchend', () => {
     dragging = false;
     const { minX, maxX } = getDrumBounds();
-    let newX = currentTranslateX + dragDelta;
-    // Затискаємо в межі
-    newX = Math.max(minX, Math.min(maxX, newX));
+
+    // Інерція — продовжуємо рух
+    const momentum = velocity * 120;
+    let newX = Math.max(minX, Math.min(maxX, currentTranslateX + dragDelta + momentum));
+
     currentTranslateX = newX;
     window._drumCurrentX = newX;
-    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    track.style.transition = 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)';
     track.style.transform = `translateX(${newX}px)`;
+
+    // Визначаємо активну вкладку і перемикаємо
+    const centerTab = getTabAtCenter();
+    if (centerTab && centerTab !== currentTab) {
+      setTimeout(() => switchTab(centerTab), 50);
+    }
   }, { passive: true });
 }
 
