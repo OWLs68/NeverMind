@@ -790,7 +790,7 @@ body {
 .inbox-item[data-cat="task"]  { background: linear-gradient(135deg,#c6f3fd,#a8ecfb) !important; border-color: rgba(255,255,255,0.4) !important; }
 .inbox-item[data-cat="habit"] { background: linear-gradient(135deg,#bbf7d0,#a7f3c0) !important; border-color: rgba(255,255,255,0.4) !important; }
 .inbox-item[data-cat="note"]  { background: linear-gradient(135deg,#f5ede0,#ede0cc) !important; border-color: rgba(255,255,255,0.4) !important; }
-.inbox-item[data-cat="idea"]  { background: linear-gradient(135deg,#ecf755,#e4ef30) !important; border-color: rgba(255,255,255,0.4) !important; }
+.inbox-item[data-cat="idea"]  { background: linear-gradient(135deg,#f5f0a8,#eee97a) !important; border-color: rgba(255,255,255,0.4) !important; }
 .inbox-item[data-cat="event"] { background: linear-gradient(135deg,#bfdbfe,#a5c8fe) !important; border-color: rgba(255,255,255,0.4) !important; }
 
 /* Inbox empty state */
@@ -1423,6 +1423,7 @@ body {
       <div class="page-header">
         <span class="page-title">Фінанси</span>
         <div class="header-actions">
+          <button class="icon-btn" onclick="openAddTransaction()" style="font-size:20px;font-weight:300;color:rgba(30,16,64,0.5)">+</button>
           <button class="icon-btn" onclick="openHelp('finance')">?</button>
           <button class="icon-btn" onclick="openSettings()">⚙️</button>
         </div>
@@ -1803,6 +1804,14 @@ body {
         <input class="settings-input" type="number" id="input-height" placeholder="Зріст (см)" style="flex:1">
       </div>
       <textarea class="settings-input" id="input-profile-notes" placeholder="Додаткова інфо про себе — цілі, особливості, що важливо знати агенту…" rows="3" style="margin-top:8px;resize:none;font-family:inherit;font-size:15px;line-height:1.5"></textarea>
+      <div style="margin-top:10px">
+        <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Валюта</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="setCurrency('₴')" id="btn-currency-uah" style="flex:1;padding:8px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:#1e1040;transition:all 0.2s">₴</button>
+          <button onclick="setCurrency('$')" id="btn-currency-usd" style="flex:1;padding:8px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:#1e1040;transition:all 0.2s">$</button>
+          <button onclick="setCurrency('€')" id="btn-currency-eur" style="flex:1;padding:8px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:#1e1040;transition:all 0.2s">€</button>
+        </div>
+      </div>
     </div>
 
     <!-- OWL Mode -->

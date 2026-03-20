@@ -99,10 +99,20 @@ function setupDrumTabbar() {
   let startX = 0, startTime = 0, dragDelta = 0, dragging = false, velocity = 0, lastX = 0, lastTime = 0;
   let currentTranslateX = 0;
 
-  // Тап на вкладку
+  // Відступи щоб крайні вкладки доходили до центру капсули
+  function updateEdgePadding() {
+    const capsuleW = capsule.offsetWidth;
+    const half = Math.floor(capsuleW / 2);
+    track.style.paddingLeft = half + 'px';
+    track.style.paddingRight = half + 'px';
+  }
+  updateEdgePadding();
+  window.addEventListener('resize', updateEdgePadding);
+
+  // Тап на вкладку — click спрацьовує тільки якщо не було свайпу
   capsule.addEventListener('click', e => {
     const item = e.target.closest('.tab-item[data-tab]');
-    if (item && Math.abs(dragDelta) < 5) switchTab(item.dataset.tab);
+    if (item && Math.abs(dragDelta) < 8) switchTab(item.dataset.tab);
   });
 
   function getDrumBounds() {
@@ -138,7 +148,10 @@ function setupDrumTabbar() {
   }
 
   capsule.addEventListener('touchstart', e => {
-    if (window._drumCurrentX !== undefined) currentTranslateX = window._drumCurrentX;
+    // Читаємо реальну позицію з DOM щоб уникнути ривків
+    const mat = new DOMMatrix(getComputedStyle(track).transform);
+    currentTranslateX = isNaN(mat.m41) ? (window._drumCurrentX || 0) : mat.m41;
+    window._drumCurrentX = currentTranslateX;
     startX = e.touches[0].clientX;
     lastX = startX;
     lastTime = Date.now();
@@ -176,6 +189,9 @@ function setupDrumTabbar() {
   capsule.addEventListener('touchend', () => {
     dragging = false;
     const { minX, maxX } = getDrumBounds();
+
+    // Якщо це тап (не свайп) — нічого не робимо, click обробить
+    if (Math.abs(dragDelta) < 8) return;
 
     // Інерція — продовжуємо рух
     const momentum = velocity * 120;
@@ -234,12 +250,15 @@ function applyTheme(tab) {
   root.style.setProperty('--active-accent', theme.accent);
   root.style.setProperty('--active-accent2', theme.accent2);
 
-  // Вечір — темний таббар індиго, іконки і текст білі
+  // Вечір — темний таббар індиго, іконки і текст білі (крім активної вкладки)
   const isDark = tab === 'evening';
   const tabLabels = tabBar ? tabBar.querySelectorAll('.tab-label') : [];
   tabLabels.forEach(s => { s.style.color = isDark ? 'rgba(255,255,255,0.5)' : ''; });
   const tabIcons2 = tabBar ? tabBar.querySelectorAll('.tab-icon') : [];
-  tabIcons2.forEach(ic => { ic.style.color = isDark ? 'rgba(255,255,255,0.5)' : ''; });
+  tabIcons2.forEach(ic => {
+    const isActive = ic.closest('.tab-item.active');
+    ic.style.color = isDark && !isActive ? 'rgba(255,255,255,0.5)' : '';
+  });
 }
 
 // === SETTINGS ===
@@ -271,6 +290,7 @@ function openSettings() {
 
   updateKeyStatus(!!key);
   updateOwlModeUI(settings.owl_mode || 'partner');
+  setCurrency(settings.currency || '₴');
 
   // Фінанси
   try {
@@ -519,7 +539,7 @@ async function sendMeChatMessage() {
 
   const context = getAIContext();
   const stats = getMeStatsContext();
-  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською. НЕ вигадуй факти яких немає в даних.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
 
   const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
   const loadEl = document.getElementById(loadId);
@@ -955,7 +975,8 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 - Максимум 3 варіанти в options
 - label ОБОВʼЯЗКОВО містить реальний конкретний текст варіанту
 
-ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.`;
+ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.
+НЕ вигадуй ліміти, бюджети або плани яких немає в контексті. Якщо дані відсутні — не згадуй їх.`;
 
 async function callAI(systemPrompt, userMessage, contextData = {}) {
   const key = localStorage.getItem('nm_gemini_key');
@@ -1058,7 +1079,7 @@ const CAT_DOT_BG = {
 };
 const CAT_TAG_STYLE = {
   task:    'background:rgba(47,208,249,0.2);color:#0a7a97',
-  idea:    'background:rgba(236,247,85,0.35);color:#5a6a00',
+  idea:    'background:rgba(245,240,168,0.5);color:#7a6c00',
   note:    'background:rgba(180,140,90,0.2);color:#6a4a1a',
   habit:   'background:rgba(22,163,74,0.15);color:#14532d',
   event:   'background:rgba(59,130,246,0.15);color:#1d4ed8',
@@ -1125,7 +1146,7 @@ function renderInbox() {
       task:    'background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border-color:rgba(255,255,255,0.4)',
       habit:   'background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border-color:rgba(255,255,255,0.4)',
       note:    'background:linear-gradient(135deg,#f5ede0,#ede0cc);border-color:rgba(255,255,255,0.4)',
-      idea:    'background:linear-gradient(135deg,#ecf755,#e4ef30);border-color:rgba(255,255,255,0.4)',
+      idea:    'background:linear-gradient(135deg,#f5f0a8,#eee97a);border-color:rgba(255,255,255,0.4)',
       event:   'background:linear-gradient(135deg,#bfdbfe,#a5c8fe);border-color:rgba(255,255,255,0.4)',
       finance: 'background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border-color:rgba(255,255,255,0.4)',
     };
@@ -1803,6 +1824,7 @@ function openAddTask() {
   if (delBtn) delBtn.style.display = 'none';
   renderTempSteps();
   document.getElementById('task-modal').style.display = 'flex';
+  setupModalSwipeClose(document.querySelector('#task-modal > div:last-child'), closeTaskModal);
   setTimeout(() => { const el = document.getElementById('task-input-title'); el.removeAttribute('readonly'); el.focus(); }, 350);
 }
 
@@ -1820,6 +1842,37 @@ function openEditTask(id) {
   if (delBtn) delBtn.style.display = 'inline-block';
   renderTempSteps();
   document.getElementById('task-modal').style.display = 'flex';
+  setupModalSwipeClose(document.querySelector('#task-modal > div:last-child'), closeTaskModal);
+}
+
+// === SWIPE DOWN TO CLOSE MODALS ===
+function setupModalSwipeClose(contentEl, closeFn) {
+  if (!contentEl || contentEl._swipeClose) return;
+  contentEl._swipeClose = true;
+  let startY = 0, startX = 0, dy = 0;
+  contentEl.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    dy = 0;
+    contentEl.style.transition = 'none';
+  }, { passive: true });
+  contentEl.addEventListener('touchmove', e => {
+    dy = e.touches[0].clientY - startY;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    if (dy > 0 && dy > dx) {
+      contentEl.style.transform = `translateY(${dy}px)`;
+    }
+  }, { passive: true });
+  contentEl.addEventListener('touchend', () => {
+    contentEl.style.transition = 'transform 0.25s ease';
+    if (dy > 80) {
+      contentEl.style.transform = 'translateY(100%)';
+      setTimeout(() => { contentEl.style.transform = ''; closeFn(); }, 250);
+    } else {
+      contentEl.style.transform = '';
+    }
+    dy = 0;
+  }, { passive: true });
 }
 
 function closeTaskModal() {
@@ -1845,6 +1898,7 @@ function addTaskStep() {
   tempSteps.push({ id: Date.now(), text: val, done: false });
   inp.value = '';
   renderTempSteps();
+  setTimeout(() => { inp.focus(); }, 50);
 }
 
 function toggleTempStep(id) {
@@ -1953,13 +2007,13 @@ function renderTasks() {
 
     return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
       <div id="task-del-${t.id}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
-      <div id="task-item-${t.id}" onclick="openEditTask(${t.id})"
+      <div id="task-item-${t.id}"
         ontouchstart="taskSwipeStart(event,${t.id})"
         ontouchmove="taskSwipeMove(event,${t.id})"
         ontouchend="taskSwipeEnd(event,${t.id})"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div onclick="event.stopPropagation();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div data-task-check="1" ontouchend="event.stopPropagation();event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
@@ -1971,7 +2025,7 @@ function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div onclick="event.stopPropagation();toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchend="event.stopPropagation();event.preventDefault();toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
@@ -1986,7 +2040,7 @@ async function askAIAboutTask(title, desc, steps) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} Користувач щойно додав задачу. Дай коротку (1-2 речення) підтримуючу пораду. Фокус на тому ЯК досягти мети. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Користувач щойно додав задачу. Дай коротку (1-2 речення) реакцію у своєму стилі. Фокус на тому ЯК досягти мети. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const steps_text = steps.length ? `\nКроки: ${steps.map(s => s.text).join(', ')}` : '';
   const reply = await callAI(systemPrompt, `Задача: ${title}${desc ? '\nОпис: ' + desc : ''}${steps_text}`, {});
   if (!reply) return;
@@ -2037,7 +2091,7 @@ function renderMe() {
   inbox.forEach(i => { catCount[i.category] = (catCount[i.category] || 0) + 1; });
   const total = inbox.length || 1;
   const catColors = { note:'#6366f1', idea:'#f59e0b', task:'#ea580c', habit:'#16a34a', event:'#0ea5e9' };
-  const catLabels = { note:'Нотатки', idea:'Ідеї', task:'Задачі', habit:'Звички', event:'Події' };
+  const catLabels = { note:'Нотатки', idea:'Ідеї', task:'Задачі', habit:'Звички', event:'Події', finance:'Фінанси' };
   catEl.innerHTML = Object.entries(catCount).sort((a,b) => b[1]-a[1]).map(([cat, cnt]) => {
     const pct = Math.round(cnt / total * 100);
     const color = catColors[cat] || '#888';
@@ -2089,7 +2143,7 @@ async function refreshMeAnalysis() {
   }
 
   const dataNote = totalRecords < 10 ? 'УВАГА: даних мало, не роби глибоких висновків про особистість — просто опиши що бачиш і запропонуй що додати.' : '';
-  const systemPrompt = `${getOWLPersonality()} Проаналізуй дані та дай короткий аналіз (3-5 речень). Починай з позитивного — що вдається добре. Потім конкретно що можна покращити. ${dataNote} Завершуй конкретною порадою. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Проаналізуй дані та дай короткий аналіз (3-5 речень) у своєму стилі. Що вдається добре і що можна покращити — конкретно. ${dataNote} Завершуй конкретною порадою. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   const userData = `Записів в Inbox: ${inbox.length}
 Активних задач: ${tasks.filter(t=>t.status!=='done').length}
@@ -2291,7 +2345,7 @@ function deleteMoment(id) {
   renderEvening();
 }
 
-const EVENING_SUMMARY_PROMPT = `Ти — OWL, особистий агент NeverMind. Зроби теплий і чесний підсумок дня (3-4 речення). Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно. Завершуй порадою або мотивуючою думкою на завтра. Відповідай українською.`;
+const EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} Зроби підсумок дня (3-4 речення) у своєму стилі. Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно. Завершуй думкою на завтра. Відповідай українською.`;
 
 async function generateEveningSummary() {
   const btn = document.getElementById('evening-summary-btn');
@@ -2407,7 +2461,7 @@ async function sendDialogMessage() {
   const aiContext = getAIContext();
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const systemPrompt = `${getOWLPersonality()} Говориш тепло і чесно. Короткі відповіді (1-3 речення). Мотивуєш конкретними кроками. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
+  const systemPrompt = `${getOWLPersonality()} Короткі відповіді (1-3 речення). Конкретно і по ділу. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
 Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
 
   const key = localStorage.getItem('nm_gemini_key');
@@ -3100,6 +3154,7 @@ function openEditHabit(id) {
   });
   document.getElementById('habit-modal').style.display = 'flex';
   document.getElementById('habit-delete-btn').style.display = 'inline-block';
+  setupModalSwipeClose(document.querySelector('#habit-modal > div:last-child'), closeHabitModal);
 }
 
 function openAddHabit() {
@@ -3113,6 +3168,7 @@ function openAddHabit() {
     b.classList.toggle('active', [0,1,2,3,4].includes(parseInt(b.dataset.day)));
   });
   document.getElementById('habit-modal').style.display = 'flex';
+  setupModalSwipeClose(document.querySelector('#habit-modal > div:last-child'), closeHabitModal);
 }
 
 function closeHabitModal() {
@@ -4113,7 +4169,7 @@ function taskSwipeEnd(e, id) {
     if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
     const delBg = document.getElementById('task-del-' + id);
     if (delBg) { delBg.style.transition = 'opacity 0.25s'; delBg.style.opacity = '0'; setTimeout(() => { if(delBg) delBg.style.transition = ''; }, 300); }
-    if (!s.swiping) openEditTask(id);
+    if (!s.swiping && !e.target.closest('[data-task-check],[data-step-check]')) openEditTask(id);
   }
   delete taskSwipeState[id];
 }
@@ -4329,8 +4385,10 @@ async function processSaveAction(parsed, originalText) {
     const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
                  /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
     const moments = getMoments();
-    moments.push({ id: Date.now(), text: savedText, mood, ts: Date.now() });
+    const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
+    moments.push(newMoment);
     saveMoments(moments);
+    generateMomentSummary(newMoment.id, savedText);
   }
   const catConfirm2 = {
     task: '✅ Задачу створено',
@@ -4613,9 +4671,26 @@ function showTasksChatMessages() {
   openChatBar('tasks');
 }
 
+let _taskTypingEl = null;
+let _financeTypingEl = null;
+let _eveningTypingEl = null;
+let _notesTypingEl = null;
+
 function addTaskBarMsg(role, text) {
   const el = document.getElementById('tasks-chat-messages');
   if (!el) return;
+  // Прибираємо typing індикатор
+  if (_taskTypingEl) { _taskTypingEl.remove(); _taskTypingEl = null; }
+  // Typing індикатор
+  if (role === 'typing') {
+    const td = document.createElement('div');
+    td.style.cssText = 'display:flex';
+    td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class=\"ai-typing\"><span></span><span></span><span></span></div></div>';
+    el.appendChild(td);
+    _taskTypingEl = td;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
   // Відкриваємо чат-вікно якщо є повідомлення
   try { openChatBar('tasks'); } catch(e) {}
   const isAgent = role === 'agent';
@@ -4626,6 +4701,60 @@ function addTaskBarMsg(role, text) {
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
 }
+
+// === UNIVERSAL ACTION PROCESSOR — один мозок для всіх барів ===
+function processUniversalAction(parsed, originalText, addMsg) {
+  const action = parsed.action;
+
+  if (action === 'create_task') {
+    const title = (parsed.title || '').trim();
+    if (!title) return false;
+    const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+    const tasks = getTasks();
+    tasks.unshift({ id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', '✅ Задачу "' + title + '" створено');
+    return true;
+  }
+
+  if (action === 'create_habit') {
+    const name = (parsed.name || '').trim();
+    if (!name) return false;
+    const habits = getHabits();
+    habits.push({ id: Date.now(), name, details: parsed.details || '', emoji: '⭕', days: parsed.days || [0,1,2,3,4,5,6], createdAt: Date.now() });
+    saveHabits(habits);
+    renderProdHabits(); renderHabits();
+    addMsg('agent', '🌱 Звичку "' + name + '" створено');
+    return true;
+  }
+
+  if (action === 'create_note') {
+    addNoteFromInbox(parsed.text, 'note', parsed.folder || null);
+    if (currentTab === 'notes') renderNotes();
+    addMsg('agent', '✓ Нотатку збережено' + (parsed.folder ? ' в папку "' + parsed.folder + '"' : ''));
+    return true;
+  }
+
+  if (action === 'save_finance' || action === 'save_expense' || action === 'save_income') {
+    const type = action === 'save_income' ? 'income' : (parsed.fin_type || 'expense');
+    const amount = parseFloat(parsed.amount) || 0;
+    if (!amount || amount <= 0) { addMsg('agent', 'Не вдалось розпізнати суму.'); return true; }
+    const category = parsed.category || 'Інше';
+    const cats = getFinCats();
+    const catList = type === 'expense' ? cats.expense : cats.income;
+    if (!catList.includes(category)) { catList.push(category); saveFinCats(cats); }
+    const txs = getFinance();
+    txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: Date.now() });
+    saveFinance(txs);
+    if (currentTab === 'finance') renderFinance();
+    addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · ' + category);
+    return true;
+  }
+
+  return false;
+}
+
 
 async function sendTasksBarMessage() {
   if (taskBarLoading) return;
@@ -4639,6 +4768,7 @@ async function sendTasksBarMessage() {
   input.style.height = 'auto';
   addTaskBarMsg('user', text);
   taskBarLoading = true;
+  addTaskBarMsg('typing', '');
 
   const tasks = getTasks().filter(t => t.status !== 'done');
   const tasksSummary = tasks.map(t => {
@@ -4660,15 +4790,17 @@ async function sendTasksBarMessage() {
     + (habitsSummary ? 'ЗВИЧКИ СЬОГОДНІ:\n' + habitsSummary + '\n\n' : '')
     + 'Ти можеш:\n'
     + '1. Відповідати на питання про задачі та звички\n'
-    + '2. Якщо виконав крок — JSON: {"action":"complete_step","task_id":ID,"step_text":"текст"}\n'
-    + '3. Якщо виконав задачу — JSON: {"action":"complete_task","task_id":ID}\n'
-    + '4. Якщо виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
-    + '5. Якщо СТВОРИТИ звичку — JSON: {"action":"create_habit","name":"коротка назва","days":[0,1,2,3,4,5,6]}\n'
-    + '6. Якщо СТВОРИТИ задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
-    + '7. Якщо додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
-    + '8. Якщо скасувати виконання кроку (юзер каже "відміни", "поверни", "скасуй", "я ще не зробив") — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
-    + '9. Якщо незрозуміло — запитай уточнення. НЕ вигадуй інших action крім перелічених.\n'
-    + 'ВАЖЛИВО: тільки чистий JSON без слова "JSON:" і без markdown. Інакше — текст українською 1-2 речення.'
+    + '2. Виконав крок — JSON: {"action":"complete_step","task_id":ID,"step_text":"текст"}\n'
+    + '3. Виконав задачу — JSON: {"action":"complete_task","task_id":ID}\n'
+    + '4. Виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
+    + '5. Створити звичку — JSON: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}\n'
+    + '6. Створити задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
+    + '7. Додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
+    + '8. Скасувати крок — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
+    + '9. Створити нотатку — JSON: {"action":"create_note","text":"текст","folder":null}\n'
+    + '10. Зберегти витрату — JSON: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}\n'
+    + '11. Зберегти дохід — JSON: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}\n'
+    + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.'
     + (aiContext ? '\n\n' + aiContext : '');
 
   try {
@@ -4691,7 +4823,11 @@ async function sendTasksBarMessage() {
       const jsonMatch = reply.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim();
       const parsed = JSON.parse(jsonStr);
-      if (parsed.action === 'complete_step') {
+
+      // Спочатку пробуємо універсальні дії (нотатки, фінанси, задачі, звички)
+      if (processUniversalAction(parsed, text, addTaskBarMsg)) {
+        // оброблено
+      } else if (parsed.action === 'complete_step') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
         if (t) {
@@ -4803,7 +4939,30 @@ function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringi
 // State
 let currentFinTab = 'expense';
 let currentFinPeriod = 'month';
-const CURRENCY = '€';
+function getCurrency() {
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  return s.currency || '₴';
+}
+
+function setCurrency(symbol) {
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  s.currency = symbol;
+  localStorage.setItem('nm_settings', JSON.stringify(s));
+  ['₴','$','€'].forEach(c => {
+    const map = {'₴':'uah','$':'usd','€':'eur'};
+    const btn = document.getElementById('btn-currency-' + map[c]);
+    if (btn) {
+      btn.style.background = c === symbol ? '#1e1040' : 'white';
+      btn.style.color = c === symbol ? 'white' : '#1e1040';
+      btn.style.borderColor = c === symbol ? '#1e1040' : 'rgba(30,16,64,0.1)';
+    }
+  });
+  if (currentTab === 'finance') renderFinance();
+}
+
+function formatMoney(n) {
+  return getCurrency() + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
+}
 
 // Категорії кольори
 const FIN_CAT_COLORS = ['#f97316','#0ea5e9','#a855f7','#22c55e','#ef4444','#eab308','#14b8a6','#f43f5e','#6366f1','#84cc16','#fb923c','#38bdf8'];
@@ -4829,9 +4988,6 @@ function getFilteredTransactions(type, period) {
   return getFinance().filter(t => t.type === type && t.ts >= from);
 }
 
-function formatMoney(n) {
-  return CURRENCY + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
-}
 
 // Перемикачі
 function switchFinTab(tab) {
@@ -5123,6 +5279,7 @@ function _showTransactionModal(data) {
       </div>
     </div>`;
   document.body.appendChild(modal);
+  setupModalSwipeClose(modal.querySelector('div:last-child'), closeFinTxModal);
   setTimeout(() => { document.getElementById('fntx-amount')?.focus(); }, 300);
   _finTxCurrentType = isExpense ? 'expense' : 'income';
   _finTxSelectedCat = data.category || '';
@@ -5358,7 +5515,7 @@ function getFinanceContext() {
   if (todaySum > 0) parts.push(`сьогодні витрачено ${formatMoney(todaySum)}`);
 
   // Останні 5 транзакцій з ID — для update_transaction з Inbox
-  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}€ ${t.category}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
+  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}${getCurrency()} ${t.category}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
   if (recentTxs) parts.push(`Останні транзакції (використовуй ID для update_transaction): ${recentTxs}`);
 
   return parts.join('\n');
@@ -5371,6 +5528,16 @@ let financeBarLoading = false;
 function addFinanceChatMsg(role, text) {
   const el = document.getElementById('finance-chat-messages');
   if (!el) return;
+  if (_financeTypingEl) { _financeTypingEl.remove(); _financeTypingEl = null; }
+  if (role === 'typing') {
+    const td = document.createElement('div');
+    td.style.cssText = 'display:flex';
+    td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class=\"ai-typing\"><span></span><span></span><span></span></div></div>';
+    el.appendChild(td);
+    _financeTypingEl = td;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
   try { openChatBar('finance'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
@@ -5393,6 +5560,7 @@ async function sendFinanceBarMessage() {
   input.focus();
   addFinanceChatMsg('user', text);
   financeBarLoading = true;
+  addFinanceChatMsg('typing', '');
 
   const from = getFinPeriodRange('month');
   const txs = getFinance().filter(t => t.ts >= from);
@@ -5401,9 +5569,9 @@ async function sendFinanceBarMessage() {
   const aiContext = getAIContext();
 
   const FINANCE_BAR_PROMPT = `${getOWLPersonality()} Ти допомагаєш з фінансами. Відповіді — 1-3 речення, конкретно.
-Валюта: €. Поточний місяць.
-Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}€ ${t.comment||''}`).join('; ') || 'немає'}
-Загальний бюджет: ${budget.total ? budget.total+'€' : 'не встановлено'}
+Валюта: ${getCurrency()}. Поточний місяць.
+Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}${getCurrency()} ${t.comment||''}`).join('; ') || 'немає'}
+Загальний бюджет: ${budget.total ? budget.total+getCurrency() : 'не встановлено'}
 Категорії витрат: ${cats.expense.join(', ')}
 Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка), Трава(джоінт,канабіс)
 Категорії доходів: ${cats.income.join(', ')}
@@ -5417,7 +5585,9 @@ async function sendFinanceBarMessage() {
 {"action":"set_budget","total":2000,"categories":{"Їжа":400}}
 {"action":"create_category","type":"expense","name":"Нова категорія"}
 
-Якщо користувач просить змінити категорію або опис існуючої транзакції — використовуй update_transaction з її id. НЕ створюй нову транзакцію і НЕ видаляй стару окремо.${aiContext ? '\n\n' + aiContext : ''}`;
+Якщо користувач просить змінити категорію або опис існуючої транзакції — використовуй update_transaction з її id. НЕ створюй нову транзакцію і НЕ видаляй стару окремо.
+ВАЖЛИВО: НЕ вигадуй ліміти, бюджети або плани яких немає в даних вище. Якщо бюджет "не встановлено" — не згадуй перевищення. Тільки реальні цифри.
+Також вмієш: створити задачу {"action":"create_task","title":"назва","steps":[]}, звичку {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}, нотатку {"action":"create_note","text":"текст","folder":null}.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -5433,7 +5603,9 @@ async function sendFinanceBarMessage() {
     try {
       const jsonMatch = reply.match(/\{[\s\S]*\}/);
       const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
-      if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
+      if (processUniversalAction(parsed, text, addFinanceChatMsg)) {
+        // оброблено універсально
+      } else if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
         const type = parsed.action === 'save_expense' ? 'expense' : 'income';
         const txs2 = getFinance();
         txs2.unshift({ id: Date.now(), type, amount: parseFloat(parsed.amount), category: parsed.category || 'Інше', comment: parsed.comment || '', ts: Date.now() });
@@ -5495,6 +5667,16 @@ function showEveningBarMessages() {
 function addEveningBarMsg(role, text) {
   const el = document.getElementById('evening-bar-messages');
   if (!el) return;
+  if (_eveningTypingEl) { _eveningTypingEl.remove(); _eveningTypingEl = null; }
+  if (role === 'typing') {
+    const td = document.createElement('div');
+    td.style.cssText = 'display:flex';
+    td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class=\"ai-typing\"><span></span><span></span><span></span></div></div>';
+    el.appendChild(td);
+    _eveningTypingEl = td;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
   try { openChatBar('evening'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
@@ -5516,24 +5698,46 @@ async function sendEveningBarMessage() {
   input.focus(); // утримуємо клавіатуру
   addEveningBarMsg('user', text);
   eveningBarLoading = true;
+  addEveningBarMsg('typing', '');
 
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
   const todayNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]').filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
   const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} Тепло і чесно. Короткі відповіді (1-3 речення). Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}. Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}. Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Короткі відповіді (1-3 речення).
+Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}.
+Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}.
+Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.
+Якщо треба зберегти запис — відповідай JSON:
+- Нотатка: {"action":"create_note","text":"текст","folder":null}
+- Задача: {"action":"create_task","title":"назва","steps":[]}
+- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
+- Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
+Інакше — текст українською 1-3 речення.
+НЕ вигадуй ліміти, плани або факти яких немає в даних вище.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 200, temperature: 0.8 })
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 300, temperature: 0.8 })
     });
     const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content;
-    if (reply) { addEveningBarMsg('agent', reply); eveningBarHistory.push({ role: 'assistant', content: reply }); }
-    else addEveningBarMsg('agent', 'Щось пішло не так.');
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
+
+    try {
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim());
+      if (!processUniversalAction(parsed, text, addEveningBarMsg)) {
+        addEveningBarMsg('agent', reply);
+      }
+    } catch {
+      addEveningBarMsg('agent', reply);
+    }
+    eveningBarHistory.push({ role: 'assistant', content: reply });
   } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
   eveningBarLoading = false;
 }
@@ -5545,6 +5749,16 @@ let notesBarLoading = false;
 function addNotesChatMsg(role, text) {
   const el = document.getElementById('notes-chat-messages');
   if (!el) return;
+  if (_notesTypingEl) { _notesTypingEl.remove(); _notesTypingEl = null; }
+  if (role === 'typing') {
+    const td = document.createElement('div');
+    td.style.cssText = 'display:flex';
+    td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class=\"ai-typing\"><span></span><span></span><span></span></div></div>';
+    el.appendChild(td);
+    _notesTypingEl = td;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
   try { openChatBar('notes'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
@@ -5567,10 +5781,17 @@ async function sendNotesBarMessage() {
   input.focus();
   addNotesChatMsg('user', text);
   notesBarLoading = true;
+  addNotesChatMsg('typing', '');
 
   const notes = getNotes().slice(0, 20).map(n => `[${n.folder||'Загальне'}] ${n.text.substring(0,60)}`).join('; ');
   const aiContext = getAIContext();
-  const systemPrompt = getOWLPersonality() + ' Ти допомагаєш з нотатками. Якщо просять створити нотатку — відповідай JSON: {"action":"create_note","text":"текст нотатки","folder":"назва папки або null"}. Якщо питання про існуючі нотатки — відповідай текстом (1-3 речення). Нотатки користувача: ' + (notes || 'немає') + (aiContext ? ('\n\n' + aiContext) : '');
+  const systemPrompt = getOWLPersonality() + ` Ти допомагаєш у вкладці Нотатки. Відповідай JSON для дій:
+- Створити нотатку: {"action":"create_note","text":"текст","folder":"папка або null"}
+- Створити задачу: {"action":"create_task","title":"назва","steps":[]}
+- Зберегти фінанси: {"action":"save_finance","fin_type":"expense або income","amount":число,"category":"категорія","comment":"коментар"}
+- Просто відповісти: текст (1-3 речення)
+Нотатки: ` + (notes || 'немає') + `
+НЕ вигадуй дані яких немає в контексті.` + (aiContext ? ('\n\n' + aiContext) : '');
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -5584,11 +5805,7 @@ async function sendNotesBarMessage() {
 
     try {
       const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
-      if (parsed.action === 'create_note') {
-        addNoteFromInbox(parsed.text, 'note', parsed.folder || null);
-        if (currentTab === 'notes') renderNotes();
-        addNotesChatMsg('agent', `✓ Нотатку збережено${parsed.folder ? ' в папку "' + parsed.folder + '"' : ''}`);
-      } else {
+      if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
         addNotesChatMsg('agent', reply);
       }
     } catch {
@@ -5747,7 +5964,7 @@ async function generateOwlBoardMessage() {
 
 ПРАВИЛА:
 - Максимум 2 речення. Коротко і конкретно.
-- Базуйся на реальних даних з контексту.
+- Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","chips":["чіп1","чіп2"]}
 - chips — 2-3 конкретні факти або дії (задача, звичка, сума). Максимум 3 слова кожен.
@@ -5844,13 +6061,24 @@ function setupOwlBoardSwipe() {
   const slider = document.getElementById('owl-board-slider');
   if (!slider || slider._owlSwipe) return;
   slider._owlSwipe = true;
-  slider.addEventListener('touchstart', e => { _owlSwipeStartX = e.touches[0].clientX; }, { passive: true });
+  let _owlStartX = 0, _owlStartY = 0;
+  slider.addEventListener('touchstart', e => {
+    _owlStartX = e.touches[0].clientX;
+    _owlStartY = e.touches[0].clientY;
+    e.stopPropagation();
+  }, { passive: false });
+  slider.addEventListener('touchmove', e => {
+    const dx = Math.abs(e.touches[0].clientX - _owlStartX);
+    const dy = Math.abs(e.touches[0].clientY - _owlStartY);
+    if (dx > dy) e.stopPropagation();
+  }, { passive: false });
   slider.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - _owlSwipeStartX;
+    const dx = e.changedTouches[0].clientX - _owlStartX;
+    e.stopPropagation();
     const msgs = getOwlBoardMessages();
     if (dx < -40 && _owlBoardSlide < msgs.length - 1) owlBoardGoTo(_owlBoardSlide + 1);
     else if (dx > 40 && _owlBoardSlide > 0) owlBoardGoTo(_owlBoardSlide - 1);
-  }, { passive: true });
+  }, { passive: false });
 }
 
 // Запуск циклу перевірки
