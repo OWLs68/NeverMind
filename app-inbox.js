@@ -296,25 +296,63 @@ async function sendToAI() {
             addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
           }
         } else if (action.action === 'restore_deleted') {
-          const q = action.query || '';
-          const results = searchTrash(q);
-          if (results.length === 0) {
-            addInboxChatMsg('agent', 'Не знайшов нічого схожого в кеші видалених. Записи зберігаються 7 днів.');
-          } else if (results.length === 1) {
-            const entry = results[0];
-            const label = entry.item.text || entry.item.title || entry.item.name || entry.item.folder || 'запис';
-            const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'транзакцію' }[entry.type] || 'запис';
-            restoreFromTrash(entry.deletedAt);
-            addInboxChatMsg('agent', `✓ Відновив ${typeLabel} "${label}"`);
+          const q = (action.query || '').trim();
+          const typeFilter = action.type || null;
+          const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
+          const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'транзакцію' };
+          const typeIcon = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' };
+
+          // Фільтруємо по типу якщо вказано
+          const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
+
+          if (q === 'all') {
+            // Відновити всі (або всі певного типу)
+            if (filtered.length === 0) {
+              addInboxChatMsg('agent', 'Кеш видалених порожній. Записи зберігаються 7 днів.');
+            } else {
+              filtered.forEach(t => restoreFromTrash(t.deletedAt));
+              const label = typeFilter ? (typeLabel[typeFilter] + 'и/ки') : 'записів';
+              addInboxChatMsg('agent', `✅ Відновив ${filtered.length} ${label}`);
+            }
+          } else if (q === 'last') {
+            // Відновити останній видалений (або останній певного типу)
+            const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+            if (!last) {
+              addInboxChatMsg('agent', 'Нічого не знайшов в кеші видалених.');
+            } else {
+              const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || 'запис';
+              restoreFromTrash(last.deletedAt);
+              addInboxChatMsg('agent', `✅ Відновив ${typeLabel[last.type] || 'запис'} "${itemLabel}"`);
+            }
           } else {
-            // Кілька результатів — показуємо список
-            const list = results.slice(0,5).map((e,i) => {
-              const label = e.item.text || e.item.title || e.item.name || e.item.folder || 'запис';
-              const typeLabel = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' }[e.type] || '•';
-              const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
-              return `${typeLabel} ${label.substring(0,40)} (${ago === 0 ? 'сьогодні' : ago + ' дн. тому'})`;
-            }).join('\n');
-            addInboxChatMsg('agent', `Знайшов кілька схожих:\n${list}\n\nУточни який саме відновити.`);
+            // Пошук по ключових словах
+            const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
+            const results = filtered.filter(t => {
+              const text = (t.item.text || t.item.title || t.item.name || t.item.folder || '').toLowerCase();
+              return words.some(w => text.includes(w));
+            }).sort((a, b) => b.deletedAt - a.deletedAt);
+
+            if (results.length === 0) {
+              addInboxChatMsg('agent', 'Не знайшов нічого схожого в кеші видалених. Записи зберігаються 7 днів.');
+            } else if (results.length === 1) {
+              const entry = results[0];
+              const itemLabel = entry.item.text || entry.item.title || entry.item.name || entry.item.folder || 'запис';
+              restoreFromTrash(entry.deletedAt);
+              addInboxChatMsg('agent', `✅ Відновив ${typeLabel[entry.type] || 'запис'} "${itemLabel}"`);
+            } else if (results.length <= 5) {
+              // Кілька — відновлюємо всі що підходять
+              results.forEach(t => restoreFromTrash(t.deletedAt));
+              const labels = results.map(e => `${typeIcon[e.type] || '•'} ${(e.item.text || e.item.title || e.item.name || '').substring(0, 35)}`).join('\n');
+              addInboxChatMsg('agent', `✅ Відновив ${results.length} записи:\n${labels}`);
+            } else {
+              // Забагато результатів — показуємо і просимо уточнити
+              const list = results.slice(0, 5).map(e => {
+                const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || 'запис').substring(0, 40);
+                const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
+                return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? 'сьогодні' : ago + ' дн. тому'})`;
+              }).join('\n');
+              addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме, або скажи "відновити всі".`);
+            }
           }
         } else {
           // action === 'reply' — просто відповідь

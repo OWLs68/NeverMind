@@ -110,16 +110,18 @@ function _hideOldFinBlocks() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  // Старий таб-перемикач Витрати/Доходи/Баланс
+  // Старий таб-перемикач — ховаємо батька (flex-контейнер перемикача)
   const expTab = document.getElementById('fin-tab-expense');
   if (expTab && expTab.parentElement) expTab.parentElement.style.display = 'none';
-  // Старий графік-блок (батько fin-chart)
+  // Старий графік — ховаємо безпосередній батьківський блок fin-chart
   const chartEl = document.getElementById('fin-chart');
-  if (chartEl && chartEl.parentElement && chartEl.parentElement.parentElement)
-    chartEl.parentElement.parentElement.style.display = 'none';
-  // Старий блок транзакцій (батько fin-transactions)
+  if (chartEl && chartEl.parentElement) chartEl.parentElement.style.display = 'none';
+  // Старий блок транзакцій — ховаємо батька fin-transactions
   const txEl = document.getElementById('fin-transactions');
   if (txEl && txEl.parentElement) txEl.parentElement.style.display = 'none';
+  // Старий перемикач періоду
+  const periodEl = document.getElementById('fin-period-week');
+  if (periodEl && periodEl.parentElement) periodEl.parentElement.style.display = 'none';
 }
 
 // Адаптивний бенчмарк на основі контексту користувача
@@ -162,12 +164,18 @@ function getFinAdaptiveBenchmark() {
 function renderFinance() {
   _hideOldFinBlocks();
 
+  // Вставляємо fin-v2-wrap напряму в скрол-контейнер — не через insertBefore
   let wrap = document.getElementById('fin-v2-wrap');
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.id = 'fin-v2-wrap';
-    const anchor = document.getElementById('fin-summary-block');
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(wrap, anchor);
+    const scroll = document.getElementById('fin-scroll');
+    if (scroll) scroll.insertBefore(wrap, scroll.firstChild);
+    else {
+      // fallback — перед fin-summary-block
+      const anchor = document.getElementById('fin-summary-block');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(wrap, anchor);
+    }
   }
 
   const from = getFinPeriodRange(currentFinPeriod);

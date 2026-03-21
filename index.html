@@ -691,8 +691,9 @@ body {
 #page-inbox .page-header { background: linear-gradient(to bottom, #f2d978 30%, transparent); }
 #page-tasks .page-header { background: linear-gradient(to bottom, #fdb87a 30%, transparent); }
 #page-notes .page-header { background: linear-gradient(to bottom, #fed7aa 30%, transparent); }
-#page-me .page-header { background: linear-gradient(to bottom, #a7f3d0 30%, transparent); }
-#page-evening .page-header { background: linear-gradient(to bottom, #818cf8 30%, transparent); }
+#page-me .page-header { background: linear-gradient(to bottom, #e8d5c4 30%, transparent); }
+#page-evening .page-header { background: linear-gradient(to bottom, #1e3350 30%, transparent); }
+#page-evening .page-header .page-title { color: white; }
 #page-finance .page-header { background: linear-gradient(to bottom, #fcd9bd 30%, transparent); }
 
 /* === INBOX === */
@@ -1423,159 +1424,208 @@ body {
     </div>
 
     <!-- PAGE: ME -->
-    <div class="page" id="page-me">
-      <div class="page-header">
-        <span class="page-title">Я</span>
-        <div class="header-actions">
-          <button class="icon-btn" onclick="openHelp('me')">?</button>
-          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+    <div class="page" id="page-me" style="display:flex;flex-direction:column;height:100%">
+
+      <!-- FIXED TOP: header + стрік + OWL board -->
+      <div style="flex-shrink:0;padding:0 14px">
+        <div class="page-header" style="padding-left:0;padding-right:0">
+          <span class="page-title" style="color:#7c4a2a">Я</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="me-streak-badge" style="display:none;background:rgba(234,88,12,0.1);border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px">
+              <span style="font-size:14px">🔥</span>
+              <span id="me-streak-count" style="font-size:12px;font-weight:900;color:#ea580c">0</span>
+              <span style="font-size:10px;font-weight:700;color:rgba(234,88,12,0.6)">днів</span>
+            </div>
+            <button class="icon-btn" onclick="openSettings()" style="color:rgba(124,74,42,0.5)">⚙️</button>
+          </div>
+        </div>
+
+        <!-- OWL TAB BOARD: ME — завжди активне -->
+        <div id="owl-tab-board-me" style="margin-bottom:10px">
+          <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+              <div id="owl-tab-pulse-me" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
+              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · тиждень</span>
+            </div>
+            <div id="owl-tab-text-me" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
+            <div id="owl-tab-chips-me" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <div style="display:flex;gap:4px;margin-top:8px;align-items:center">
+              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            </div>
+          </div>
         </div>
       </div>
-      <!-- PAGE: ME content -->
-      <div id="me-content" style="padding:8px 0 120px">
 
-        <!-- OWL TAB BOARD: ME -->
-        <div id="owl-tab-board-me" style="display:none;margin:0 14px 8px">
-          <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
-            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div style="display:flex;align-items:center;gap:6px">
-                <div id="owl-tab-pulse-me" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-                <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
-              </div>
-              <button onclick="dismissTabBoard('me')" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;padding:0;line-height:1">&times;</button>
+      <!-- SCROLL контент -->
+      <div id="me-content" style="flex:1;overflow-y:auto;padding:0 14px 130px">
+
+        <!-- Кружечки тижня -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Прогрес тижня</div>
+          <div id="me-week-rings" style="display:flex;gap:3px;justify-content:space-between"></div>
+        </div>
+
+        <!-- Порівняння тиждень до тижня -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Цей тиждень vs минулий</div>
+          <div id="me-week-compare" style="display:flex;gap:6px"></div>
+        </div>
+
+        <!-- Настрій тижня -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Настрій тижня</div>
+            <span style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600">Вечір + Inbox</span>
+          </div>
+          <div id="me-mood-bars" style="display:flex;gap:3px;align-items:flex-end;height:32px"></div>
+        </div>
+
+        <!-- Активні проекти -->
+        <div id="me-projects-block" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;display:none">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Активні проекти</div>
+          <div id="me-projects-list"></div>
+        </div>
+
+        <!-- Найближчий дедлайн + календар -->
+        <div id="me-deadline-block" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;display:none">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Найближчий дедлайн</div>
+          <div id="me-deadline-content"></div>
+          <!-- Міні-календар -->
+          <div style="margin-top:10px">
+            <div id="me-cal-label" style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-align:center;margin-bottom:6px"></div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:3px">
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Пн</div>
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Вт</div>
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Ср</div>
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Чт</div>
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Пт</div>
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Сб</div>
+              <div style="font-size:8px;font-weight:800;color:rgba(30,16,64,0.3);text-align:center">Нд</div>
             </div>
-            <div id="owl-tab-text-me" style="font-size:13px;font-weight:600;color:white;line-height:1.5"></div>
-            <div id="owl-tab-chips-me" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <div id="me-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+            <div style="display:flex;gap:10px;margin-top:6px;justify-content:flex-end">
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#7c4a2a"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">є задачі</span></div>
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:rgba(234,88,12,0.2)"></div><span style="font-size:9px;color:#ea580c;font-weight:600">дедлайн</span></div>
+            </div>
           </div>
         </div>
 
-        <!-- Week grid -->
-        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Цей тиждень</div>
-          <div id="me-week-grid" style="display:flex;gap:6px;justify-content:space-between"></div>
-        </div>
-
-        <!-- Stats row -->
-        <div style="display:flex;gap:8px;margin:0 14px 10px">
-          <div style="flex:1;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:14px;padding:12px;text-align:center">
-            <div id="me-stat-inbox" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#1e1040">0</div>
-            <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">записів</div>
-          </div>
-          <div style="flex:1;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:14px;padding:12px;text-align:center">
-            <div id="me-stat-tasks" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#ea580c">0</div>
-            <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">задач активних</div>
-          </div>
-          <div style="flex:1;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:14px;padding:12px;text-align:center">
-            <div id="me-stat-notes" style="font-family:var(--font-display);font-size:25px;font-weight:900;color:#4f46e5">0</div>
-            <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:3px">нотаток</div>
-          </div>
-        </div>
-
-        <!-- Inbox categories breakdown -->
-        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Що записував</div>
-          <div id="me-categories" style="display:flex;flex-direction:column;gap:8px"></div>
-        </div>
-
-        <!-- Activity last 14 days -->
-        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Активність за 14 днів</div>
-          <div id="me-activity" style="display:flex;gap:4px;align-items:flex-end;height:48px"></div>
-        </div>
-
-        <!-- Habits stats -->
-        <div id="me-habits-stats" style="margin:0 14px 10px;background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">📊 Статистика звичок</div>
+        <!-- Звички — статистика (зберігаємо для renderMeHabitsStats) -->
+        <div id="me-habits-stats" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;display:none">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Звички</div>
           <div id="me-habits-stats-list"></div>
         </div>
 
-        <!-- AI weekly summary -->
-        <div style="margin:0 14px 10px;background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:12px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em">Аналіз OWL</div>
-            <button onclick="refreshMeAnalysis()" id="me-refresh-btn" style="font-size:13px;font-weight:700;color:#16a34a;background:none;border:none;cursor:pointer">↻</button>
-          </div>
-          <div id="me-ai-analysis" style="font-size:19px;line-height:1.8;color:#14532d;font-weight:400">Накопич більше даних — і агент дасть чесний аналіз.</div>
-        </div>
-
-        <!-- AI Поради -->
-        <div id="me-advice-block" style="display:none;margin:0 14px 10px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px">
-          <div style="font-size:12px;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">💡 3 конкретні поради</div>
-          <div id="me-ai-advice" style="font-size:19px;line-height:1.8;color:#7c2d12;font-weight:400"></div>
-        </div>
-
-      </div>
+      </div><!-- /scroll -->
     </div>
 
     <!-- PAGE: EVENING -->
-    <div class="page" id="page-evening">
-      <div class="page-header">
-        <span class="page-title">Вечір</span>
-        <div class="header-actions">
-          <button class="icon-btn" onclick="openHelp('evening')">?</button>
-          <button class="icon-btn" onclick="openSettings()">⚙️</button>
-        </div>
-      </div>
+    <div class="page" id="page-evening" style="display:flex;flex-direction:column;height:100%">
 
-      <!-- Day score -->
-      <div style="padding:0 0 120px;overflow-y:auto">
-      <!-- OWL TAB BOARD: EVENING -->
-      <div id="owl-tab-board-evening" style="display:none;margin:8px 14px 2px">
-        <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div id="owl-tab-pulse-evening" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
-            </div>
-            <button onclick="dismissTabBoard('evening')" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;padding:0;line-height:1">&times;</button>
+      <!-- FIXED TOP: header + OWL board -->
+      <div style="flex-shrink:0;padding:0 14px">
+        <div class="page-header" style="padding-left:0;padding-right:0">
+          <span class="page-title" style="color:white">Вечір</span>
+          <div class="header-actions">
+            <button class="icon-btn" onclick="openHelp('evening')" style="color:rgba(255,255,255,0.6)">?</button>
+            <button class="icon-btn" onclick="openSettings()" style="color:rgba(255,255,255,0.6)">⚙️</button>
           </div>
-          <div id="owl-tab-text-evening" style="font-size:13px;font-weight:600;color:white;line-height:1.5"></div>
-          <div id="owl-tab-chips-evening" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
         </div>
-      </div>
-      <!-- Day score -->;border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px;display:flex;align-items:center;gap:14px">
-        <div id="evening-ring" style="position:relative;width:60px;height:60px;flex-shrink:0">
-          <svg width="60" height="60" viewBox="0 0 60 60">
-            <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="5"/>
-            <circle id="evening-ring-arc" cx="30" cy="30" r="25" fill="none" stroke="#7c3aed" stroke-width="5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" transform="rotate(-90 30 30)" style="transition:stroke-dashoffset 1s ease"/>
-          </svg>
-          <div id="evening-ring-pct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;font-weight:900;color:#7c3aed">0%</div>
-        </div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Продуктивність дня</div>
-          <div id="evening-score-desc" style="font-size:16px;font-weight:700;color:#1e1040;margin-top:3px">Додай записи щоб побачити</div>
+
+        <!-- OWL TAB BOARD: EVENING — завжди активне, не закривається -->
+        <div id="owl-tab-board-evening" style="margin-bottom:10px">
+          <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+              <div id="owl-tab-pulse-evening" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
+              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · підсумок дня</span>
+            </div>
+            <!-- Слайдер: головне + 2 архівних -->
+            <div id="owl-tab-slider-evening" style="overflow:hidden">
+              <div id="owl-tab-track-evening" style="display:flex;transition:transform 0.3s ease">
+                <div style="min-width:100%">
+                  <div id="owl-tab-text-evening" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
+                </div>
+              </div>
+            </div>
+            <div id="owl-tab-chips-evening" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <!-- Крапки (головна + 2 архівних) -->
+            <div id="owl-tab-dots-evening" style="display:flex;gap:4px;margin-top:8px;align-items:center">
+              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Moments -->
-      <div style="margin:0 14px 10px;background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.1em">Моменти дня</div>
-          <button onclick="openAddMoment()" style="font-size:13px;font-weight:700;color:#7c3aed;background:rgba(124,58,237,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
-        </div>
-        <div id="evening-moments" style="display:flex;flex-direction:column;gap:6px">
-          <div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>
-        </div>
-      </div>
+      <!-- SCROLL контент -->
+      <div style="flex:1;overflow-y:auto;padding:0 14px 130px">
 
-      <!-- Finance today -->
-      <div id="evening-finance-block" style="display:none;margin:0 14px 10px;background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border:1.5px solid rgba(255,255,255,0.5);border-radius:16px;padding:14px">
-        <div style="font-size:12px;font-weight:800;color:rgba(194,65,12,0.7);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">€ Фінанси сьогодні</div>
-        <div id="evening-finance-content"></div>
-      </div>
-
-      <!-- AI summary -->
-      <div style="margin:0 14px 10px;background:rgba(237,233,255,0.85);border:1px solid rgba(124,58,237,0.15);border-radius:16px;padding:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em">OWL на вечір</div>
-          <button onclick="generateEveningSummary()" id="evening-summary-btn" style="font-size:13px;font-weight:700;color:#7c3aed;background:none;border:none;cursor:pointer">↻</button>
+        <!-- 3 статки -->
+        <div id="evening-stats-row" style="display:flex;gap:8px;margin-bottom:10px">
+          <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:14px;padding:10px 8px;text-align:center">
+            <div id="evening-stat-tasks" style="font-size:22px;font-weight:900;color:#1e3350;line-height:1">0</div>
+            <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:3px">задачі ✓</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:14px;padding:10px 8px;text-align:center">
+            <div id="evening-stat-habits" style="font-size:22px;font-weight:900;color:#16a34a;line-height:1">—</div>
+            <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:3px">звички</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:14px;padding:10px 8px;text-align:center">
+            <div id="evening-stat-finance" style="font-size:22px;font-weight:900;color:#c2410c;line-height:1">—</div>
+            <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:3px">витрати</div>
+          </div>
         </div>
-        <div id="evening-summary" style="font-size:19px;line-height:1.8;color:#4c1d95;font-weight:400">Натисни ↻ щоб отримати підсумок дня від агента.</div>
-      </div>
 
-      </div><!-- /evening scroll -->
+        <!-- Продуктивність + настрій -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px">
+            <div>
+              <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Продуктивність дня</div>
+              <div id="evening-ring-pct" style="font-size:36px;font-weight:900;color:#1e3350;line-height:1">0%</div>
+              <div id="evening-score-desc" style="font-size:11px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:3px">Додай моменти дня</div>
+            </div>
+            <div id="evening-ring" style="position:relative;width:64px;height:64px;flex-shrink:0">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(30,16,64,0.08)" stroke-width="5"/>
+                <circle id="evening-ring-arc" cx="32" cy="32" r="26" fill="none" stroke="#1e3350" stroke-width="5" stroke-linecap="round" stroke-dasharray="163" stroke-dashoffset="163" transform="rotate(-90 32 32)" style="transition:stroke-dashoffset 1s ease"/>
+              </svg>
+            </div>
+          </div>
+          <div style="height:1px;background:rgba(30,16,64,0.07);margin-bottom:12px"></div>
+          <!-- Настрій -->
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Як пройшов день?</div>
+          <div style="display:flex;gap:8px;justify-content:center" id="evening-mood-row">
+            <div onclick="setEveningMood('bad')" id="evening-mood-bad" style="width:40px;height:40px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.4;cursor:pointer;transition:all 0.2s">😔</div>
+            <div onclick="setEveningMood('meh')" id="evening-mood-meh" style="width:40px;height:40px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.4;cursor:pointer;transition:all 0.2s">😐</div>
+            <div onclick="setEveningMood('ok')" id="evening-mood-ok" style="width:40px;height:40px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.4;cursor:pointer;transition:all 0.2s">🙂</div>
+            <div onclick="setEveningMood('good')" id="evening-mood-good" style="width:40px;height:40px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.4;cursor:pointer;transition:all 0.2s">😄</div>
+            <div onclick="setEveningMood('fire')" id="evening-mood-fire" style="width:40px;height:40px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.4;cursor:pointer;transition:all 0.2s">🔥</div>
+          </div>
+        </div>
+
+        <!-- Моменти дня -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Моменти дня</div>
+            <button onclick="openAddMoment()" style="font-size:12px;font-weight:700;color:#1e3350;background:rgba(30,51,80,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+          </div>
+          <div id="evening-moments">
+            <div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Додай моменти свого дня</div>
+          </div>
+        </div>
+
+        <!-- Фінанси сьогодні -->
+        <div id="evening-finance-block" style="display:none;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Фінанси сьогодні</div>
+          <div id="evening-finance-content"></div>
+        </div>
+
+      </div><!-- /scroll -->
     </div>
 
     <!-- PAGE: FINANCE -->
@@ -1589,7 +1639,7 @@ body {
         </div>
       </div>
 
-      <div style="padding:0 14px 140px">
+      <div id="fin-scroll" style="padding:0 14px 140px">
 
         <!-- OWL TAB BOARD: FINANCE -->
         <div id="owl-tab-board-finance" style="display:none;margin:0 0 10px">
@@ -1788,36 +1838,165 @@ body {
   <nav id="tab-bar">
     <div class="drum-capsule" id="drumCapsule">
       <div class="drum-track" id="drumTrack">
-        <div class="tab-item active" data-tab="inbox">
-          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg></span>
-          <span class="tab-label">Inbox</span>
-        </div>
-        <div class="tab-item" data-tab="tasks">
-          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
-          <span class="tab-label">Продукт.</span>
-        </div>
-        <div class="tab-item" data-tab="notes">
-          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line></svg></span>
-          <span class="tab-label">Нотатки</span>
-        </div>
-        <div class="tab-item" data-tab="me">
-          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
-          <span class="tab-label">Я</span>
-        </div>
-        <div class="tab-item" data-tab="evening">
-          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
-          <span class="tab-label">Вечір</span>
-        </div>
-        <div class="tab-item" data-tab="finance">
-          <span class="tab-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="14" r="2"/></svg></span>
-          <span class="tab-label">Фінанси</span>
-        </div>
+        <!-- Вкладки будуються динамічно через rebuildDrumTabbar() -->
       </div>
     </div>
-    <div class="drum-plus-btn" onclick="showToast('Кастомізація — незабаром')">
+    <div class="drum-plus-btn" onclick="openTabSelector()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.4)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
   </nav>
+
+    <!-- PAGE: HEALTH -->
+    <div class="page" id="page-health" style="display:flex;flex-direction:column;height:100%">
+
+      <!-- FIXED TOP -->
+      <div style="flex-shrink:0;padding:0 14px">
+        <div class="page-header" style="padding-left:0;padding-right:0">
+          <span class="page-title" style="color:#1a5c2a">Здоров'я</span>
+          <div class="header-actions">
+            <button onclick="openAddHealthCard()" style="font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:10px;padding:5px 12px;cursor:pointer">+ картка</button>
+          </div>
+        </div>
+
+        <!-- OWL board — завжди активне -->
+        <div id="owl-tab-board-health" style="margin-bottom:10px">
+          <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+              <div id="owl-tab-pulse-health" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
+              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · нагадування</span>
+            </div>
+            <div id="owl-tab-text-health" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
+            <div id="owl-tab-chips-health" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <div style="display:flex;gap:4px;margin-top:8px;align-items:center">
+              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCROLL -->
+      <div style="flex:1;overflow-y:auto;padding:0 14px 130px">
+
+        <!-- Трекер самопочуття тижня -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Самопочуття тижня</div>
+            <div style="display:flex;gap:8px">
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:2px;background:#16a34a"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">Енергія</span></div>
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:2px;background:#6366f1"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">Сон</span></div>
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:2px;background:#ef4444"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">Біль</span></div>
+            </div>
+          </div>
+          <div id="health-week-bars" style="display:flex;gap:3px;align-items:flex-end;height:44px"></div>
+
+          <!-- Відмітити сьогодні -->
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(30,16,64,0.07)">
+            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Відмітити сьогодні</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="health-today-scales"></div>
+          </div>
+        </div>
+
+        <!-- Дисклеймер -->
+        <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:12px;padding:8px 12px;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">NeverMind не є медичним сервісом. OWL не ставить діагнози. Завжди консультуйся з лікарем.</div>
+        </div>
+
+        <!-- Картки хвороб/станів -->
+        <div id="health-cards-list"></div>
+
+        <!-- Порожній стан -->
+        <div id="health-empty" style="display:none;text-align:center;padding:32px 0">
+          <div style="font-size:36px;margin-bottom:10px">🫀</div>
+          <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">Немає карток здоров'я</div>
+          <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">Додай першу — хворобу, стан або мету</div>
+          <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Додати картку</button>
+        </div>
+
+      </div>
+
+      <!-- AI bar -->
+      <div id="health-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
+        <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
+          <div style="background:rgba(26,92,42,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
+            <div id="health-chat-window" class="ai-bar-chat-window">
+              <div id="health-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
+              <textarea id="health-bar-input" rows="1" placeholder="Прийняв ліки, болить голова..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendHealthBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
+              <button onclick="sendHealthBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#1a5c2a;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAGE: PROJECTS -->
+    <div class="page" id="page-projects" style="display:flex;flex-direction:column;height:100%">
+
+      <!-- FIXED TOP -->
+      <div style="flex-shrink:0;padding:0 14px">
+        <div class="page-header" style="padding-left:0;padding-right:0">
+          <span class="page-title" style="color:#3d2e1e">Проекти</span>
+          <div class="header-actions">
+            <button onclick="openAddProject()" style="font-size:13px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:10px;padding:5px 12px;cursor:pointer">+ новий</button>
+          </div>
+        </div>
+
+        <!-- OWL board -->
+        <div id="owl-tab-board-projects" style="margin-bottom:10px">
+          <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+              <div id="owl-tab-pulse-projects" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
+              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · проекти</span>
+            </div>
+            <div id="owl-tab-text-projects" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
+            <div id="owl-tab-chips-projects" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <div style="display:flex;gap:4px;margin-top:8px;align-items:center">
+              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCROLL -->
+      <div style="flex:1;overflow-y:auto;padding:0 14px 130px">
+        <div id="projects-list"></div>
+        <div id="projects-empty" style="display:none;text-align:center;padding:40px 0">
+          <div style="font-size:36px;margin-bottom:10px">🚀</div>
+          <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">Немає активних проектів</div>
+          <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">Додай перший — від ідеї до результату</div>
+          <button onclick="openAddProject()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Новий проект</button>
+        </div>
+      </div>
+
+      <!-- AI bar -->
+      <div id="projects-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
+        <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
+          <div style="background:rgba(61,46,30,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
+            <div id="projects-chat-window" class="ai-bar-chat-window">
+              <div id="projects-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
+              <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
+              <button onclick="sendProjectsBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#3d2e1e;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
 
 </div><!-- /app -->
 
@@ -2263,6 +2442,8 @@ body {
 <script src="app-notes.js"></script>
 <script src="app-finance.js"></script>
 <script src="app-evening.js"></script>
+<script src="app-health.js"></script>
+<script src="app-projects.js"></script>
 
 <!-- TASK CHAT MODAL -->
 <div id="task-chat-modal" style="display:none;position:fixed;inset:0;z-index:300;flex-direction:column;background:white;">

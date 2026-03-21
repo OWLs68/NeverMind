@@ -28,18 +28,18 @@ const TAB_THEMES = {
     accent2: '#f97316',
   },
   me: {
-    bg: 'linear-gradient(160deg, #a7f3d0, #ecfdf5)',
-    orb: 'rgba(22,163,74,0.12)',
-    tabBg: 'rgb(167,243,208)',
-    accent: '#16a34a',
-    accent2: '#22c55e',
+    bg: 'linear-gradient(160deg, #e8d5c4, #f5ede4)',
+    orb: 'rgba(124,74,42,0.12)',
+    tabBg: 'rgb(200,160,130)',
+    accent: '#7c4a2a',
+    accent2: '#c2620a',
   },
   evening: {
-    bg: 'linear-gradient(160deg, #818cf8, #c7d2fe)',
-    orb: 'rgba(129,140,248,0.20)',
-    tabBg: 'rgb(129,140,248)',
-    accent: '#4f46e5',
-    accent2: '#818cf8',
+    bg: 'linear-gradient(160deg, #1e3350, #3a5a80)',
+    orb: 'rgba(30,51,80,0.20)',
+    tabBg: 'rgb(25,45,75)',
+    accent: '#1e3350',
+    accent2: '#3a5a80',
   },
   finance: {
     bg: 'linear-gradient(160deg, #fcd9bd, #fff7ed)',
@@ -47,6 +47,20 @@ const TAB_THEMES = {
     tabBg: 'rgb(249,155,100)',
     accent: '#c2410c',
     accent2: '#f97316',
+  },
+  health: {
+    bg: 'linear-gradient(160deg, #d4e8d8, #edf7ef)',
+    orb: 'rgba(26,92,42,0.12)',
+    tabBg: 'rgb(26,92,42)',
+    accent: '#1a5c2a',
+    accent2: '#16a34a',
+  },
+  projects: {
+    bg: 'linear-gradient(160deg, #e8e0d5, #f5f0ea)',
+    orb: 'rgba(61,46,30,0.10)',
+    tabBg: 'rgb(61,46,30)',
+    accent: '#3d2e1e',
+    accent2: '#7c5c3a',
   },
 };
 
@@ -73,7 +87,7 @@ function switchTab(tab) {
   applyTheme(tab);
 
   // Бари inbox/tasks/me/evening/finance — показуємо/ховаємо і закриваємо вікно чату при переключенні
-  ['inbox','tasks','notes','me','evening','finance'].forEach(t => {
+  ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const show = t === tab;
@@ -91,6 +105,8 @@ function switchTab(tab) {
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
   if (tab === 'finance') { renderFinance(); }
+  if (tab === 'health') { try { renderHealth(); } catch(e) {} }
+  if (tab === 'projects') { try { renderProjects(); } catch(e) {} }
 
   // Підказка першого відвідування
   setTimeout(() => showFirstVisitTip(tab), 600);
@@ -99,55 +115,229 @@ function switchTab(tab) {
   setTimeout(() => { try { tryTabBoardUpdate(tab); } catch(e) {} }, 700);
 }
 
+// === АКТИВНІ ВКЛАДКИ (вибір через кнопку +) ===
+const DEFAULT_TABS = ['inbox','tasks','notes','evening'];
+const ALL_TABS_CONFIG = [
+  { id: 'inbox',    label: 'Inbox',         icon: '📥' },
+  { id: 'tasks',    label: 'Продуктивність',icon: '⚡' },
+  { id: 'notes',    label: 'Нотатки',       icon: '📝' },
+  { id: 'me',       label: 'Я',             icon: '🪞' },
+  { id: 'evening',  label: 'Вечір',         icon: '🌙' },
+  { id: 'finance',  label: 'Фінанси',       icon: '💳' },
+  { id: 'health',   label: "Здоров'я",      icon: '🫀' },
+  { id: 'projects', label: 'Проекти',       icon: '🚀' },
+];
+
+function getActiveTabs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('nm_active_tabs') || 'null');
+    if (Array.isArray(saved) && saved.length >= 1) return saved;
+  } catch(e) {}
+  return [...DEFAULT_TABS];
+}
+
+function saveActiveTabs(arr) {
+  localStorage.setItem('nm_active_tabs', JSON.stringify(arr));
+}
+
+function openTabSelector() {
+  const active = getActiveTabs();
+  const locked = ['inbox','tasks','notes','evening']; // не можна прибрати
+
+  const overlay = document.createElement('div');
+  overlay.id = 'tab-selector-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 16px';
+
+  overlay.innerHTML = `
+    <div onclick="event.stopPropagation()" style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px 32px;border:1.5px solid rgba(255,255,255,0.7);box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 16px"></div>
+      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:4px">Вкладки</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4);font-weight:500;margin-bottom:16px">Обери які показувати в барабані</div>
+      <div id="tab-selector-list" style="display:flex;flex-direction:column;gap:4px">
+        ${ALL_TABS_CONFIG.map(t => {
+          const isActive = active.includes(t.id);
+          const isLocked = locked.includes(t.id);
+          return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:${isActive ? 'rgba(30,16,64,0.05)' : 'transparent'};cursor:${isLocked ? 'default' : 'pointer'}" onclick="${isLocked ? '' : `toggleTabSelection('${t.id}')`}" id="tab-sel-row-${t.id}">
+            <div style="width:36px;height:36px;border-radius:11px;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${t.icon}</div>
+            <div style="flex:1;font-size:15px;font-weight:600;color:#1e1040">${t.label}</div>
+            ${isLocked
+              ? `<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.3);padding:3px 8px;border-radius:8px;background:rgba(30,16,64,0.05)">завжди</div>`
+              : `<div id="tab-sel-toggle-${t.id}" style="width:24px;height:24px;border-radius:8px;border:2px solid ${isActive ? '#1e1040' : 'rgba(30,16,64,0.15)'};background:${isActive ? '#1e1040' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s">
+                  ${isActive ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                </div>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+      <button onclick="applyTabSelection()" style="width:100%;margin-top:16px;padding:14px;background:#1e1040;color:white;border:none;border-radius:16px;font-size:15px;font-weight:700;cursor:pointer">Готово</button>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeTabSelector(); });
+  document.body.appendChild(overlay);
+
+  // Свайп вниз щоб закрити
+  const content = overlay.querySelector('div[onclick]');
+  let _sy = 0;
+  content.addEventListener('touchstart', e => { _sy = e.touches[0].clientY; }, { passive: true });
+  content.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - _sy;
+    if (dy > 0) content.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  content.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - _sy;
+    content.style.transition = 'transform 0.25s ease';
+    if (dy > 80) { content.style.transform = 'translateY(100%)'; setTimeout(closeTabSelector, 250); }
+    else { content.style.transform = ''; setTimeout(() => content.style.transition = '', 300); }
+  }, { passive: true });
+}
+
+// Тимчасовий стан вибору — зберігаємо в overlay
+let _pendingTabs = null;
+
+function toggleTabSelection(tabId) {
+  if (!_pendingTabs) _pendingTabs = [...getActiveTabs()];
+  const locked = ['inbox','tasks','notes','evening'];
+  if (locked.includes(tabId)) return;
+
+  const idx = _pendingTabs.indexOf(tabId);
+  if (idx !== -1) {
+    _pendingTabs.splice(idx, 1);
+  } else {
+    // Додаємо в правильному порядку
+    const order = ALL_TABS_CONFIG.map(t => t.id);
+    _pendingTabs.push(tabId);
+    _pendingTabs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  }
+
+  // Оновлюємо UI
+  const toggle = document.getElementById(`tab-sel-toggle-${tabId}`);
+  const row = document.getElementById(`tab-sel-row-${tabId}`);
+  const isNowActive = _pendingTabs.includes(tabId);
+  if (toggle) {
+    toggle.style.borderColor = isNowActive ? '#1e1040' : 'rgba(30,16,64,0.15)';
+    toggle.style.background = isNowActive ? '#1e1040' : 'transparent';
+    toggle.innerHTML = isNowActive ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+  }
+  if (row) row.style.background = isNowActive ? 'rgba(30,16,64,0.05)' : 'transparent';
+}
+
+function applyTabSelection() {
+  const tabs = _pendingTabs || getActiveTabs();
+  _pendingTabs = null;
+  saveActiveTabs(tabs);
+  closeTabSelector();
+  rebuildDrumTabbar();
+  showToast('✓ Вкладки оновлено');
+}
+
+function closeTabSelector() {
+  _pendingTabs = null;
+  const overlay = document.getElementById('tab-selector-overlay');
+  if (overlay) overlay.remove();
+}
+
+// Перебудовує барабан відповідно до активних вкладок
+function rebuildDrumTabbar() {
+  const track = document.getElementById('drumTrack');
+  if (!track) return;
+  const active = getActiveTabs();
+
+  const TAB_ICONS = {
+    inbox:    '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>',
+    tasks:    '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>',
+    notes:    '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line></svg>',
+    me:       '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
+    evening:  '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+    finance:  '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="14" r="2"/></svg>',
+    health:   '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    projects: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  };
+  const TAB_LABELS = {
+    inbox:'Inbox', tasks:'Продукт.', notes:'Нотатки', me:'Я',
+    evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти',
+  };
+
+  track.innerHTML = active.map((id, i) =>
+    `<div class="tab-item${id === currentTab ? ' active' : ''}" data-tab="${id}">
+      <span class="tab-icon">${TAB_ICONS[id] || ''}</span>
+      <span class="tab-label">${TAB_LABELS[id] || id}</span>
+    </div>`
+  ).join('');
+
+  // Оновлюємо позицію і падінг
+  updateDrumTabbar(currentTab);
+  // Переоновлюємо edge padding
+  const capsule = document.getElementById('drumCapsule');
+  if (capsule) {
+    const half = Math.floor(capsule.offsetWidth / 2);
+    track.style.paddingLeft = half + 'px';
+    track.style.paddingRight = half + 'px';
+  }
+}
+
 function setupDrumTabbar() {
   const capsule = document.getElementById('drumCapsule');
   const track = document.getElementById('drumTrack');
   if (!capsule || !track) return;
 
-  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
-  let startX = 0, startTime = 0, dragDelta = 0, dragging = false, velocity = 0, lastX = 0, lastTime = 0;
+  // Будуємо барабан з активних вкладок
+  rebuildDrumTabbar();
+
+  let startX = 0, dragDelta = 0, dragging = false, velocity = 0, lastX = 0, lastTime = 0;
   let currentTranslateX = 0;
 
-  // Відступи щоб крайні вкладки доходили до центру капсули
+  // Відступи — рівно половина капсули з кожного боку
   function updateEdgePadding() {
-    const capsuleW = capsule.offsetWidth;
-    const half = Math.floor(capsuleW / 2);
+    const half = Math.floor(capsule.offsetWidth / 2);
     track.style.paddingLeft = half + 'px';
     track.style.paddingRight = half + 'px';
   }
   updateEdgePadding();
   window.addEventListener('resize', updateEdgePadding);
 
-  // Тап на вкладку — click спрацьовує тільки якщо не було свайпу
+  // Клік — тільки якщо не свайп
   capsule.addEventListener('click', e => {
     const item = e.target.closest('.tab-item[data-tab]');
     if (item && Math.abs(dragDelta) < 8) switchTab(item.dataset.tab);
   });
 
   function getDrumBounds() {
-    const capsuleW = capsule.offsetWidth - 8;
+    const capsuleW = capsule.offsetWidth;
     const trackW = track.scrollWidth;
-    return { minX: Math.min(0, capsuleW - trackW), maxX: 0, capsuleW };
+    // minX — ліва межа (від'ємна), maxX = 0
+    return { minX: Math.min(0, capsuleW - trackW), maxX: 0 };
   }
 
-  // Визначає яка вкладка зараз по центру капсули
   function getTabAtCenter() {
     const capsuleRect = capsule.getBoundingClientRect();
-    const capsuleCenter = capsuleRect.left + capsuleRect.width / 2;
+    const center = capsuleRect.left + capsuleRect.width / 2;
     const items = track.querySelectorAll('.tab-item[data-tab]');
     let closest = null, minDist = Infinity;
     items.forEach(item => {
       const rect = item.getBoundingClientRect();
-      const itemCenter = rect.left + rect.width / 2;
-      const dist = Math.abs(itemCenter - capsuleCenter);
+      const dist = Math.abs(rect.left + rect.width / 2 - center);
       if (dist < minDist) { minDist = dist; closest = item; }
     });
     return closest ? closest.dataset.tab : null;
   }
 
-  // Оновлює .active/.near без switchTab (тільки візуал)
+  function snapToTab(tab) {
+    // Знаходимо елемент і центруємо його в капсулі
+    const item = track.querySelector(`.tab-item[data-tab="${tab}"]`);
+    if (!item) return;
+    const { minX, maxX } = getDrumBounds();
+    const capsuleW = capsule.offsetWidth;
+    const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+    const newX = Math.max(minX, Math.min(maxX, capsuleW / 2 - itemCenter));
+    currentTranslateX = newX;
+    window._drumCurrentX = newX;
+    track.style.transition = 'transform 0.32s cubic-bezier(0.32,0.72,0,1)';
+    track.style.transform = `translateX(${newX}px)`;
+  }
+
   function updateActiveVisual(tab) {
-    const activeIdx = TAB_ORDER.indexOf(tab);
+    const active = getActiveTabs();
+    const activeIdx = active.indexOf(tab);
     track.querySelectorAll('.tab-item[data-tab]').forEach((item, i) => {
       const diff = Math.abs(i - activeIdx);
       item.classList.remove('active', 'near');
@@ -157,14 +347,12 @@ function setupDrumTabbar() {
   }
 
   capsule.addEventListener('touchstart', e => {
-    // Читаємо реальну позицію з DOM щоб уникнути ривків
     const mat = new DOMMatrix(getComputedStyle(track).transform);
     currentTranslateX = isNaN(mat.m41) ? (window._drumCurrentX || 0) : mat.m41;
     window._drumCurrentX = currentTranslateX;
     startX = e.touches[0].clientX;
     lastX = startX;
     lastTime = Date.now();
-    startTime = lastTime;
     dragDelta = 0;
     velocity = 0;
     dragging = true;
@@ -182,46 +370,77 @@ function setupDrumTabbar() {
 
     const { minX, maxX } = getDrumBounds();
     let newX = currentTranslateX + dragDelta;
-    if (newX > maxX) newX = maxX + (newX - maxX) * 0.25;
-    if (newX < minX) newX = minX + (newX - minX) * 0.25;
+    // Пружна межа
+    if (newX > maxX) newX = maxX + (newX - maxX) * 0.2;
+    if (newX < minX) newX = minX + (newX - minX) * 0.2;
     track.style.transform = `translateX(${newX}px)`;
 
-    // Оновлюємо візуал активної вкладки під час прокрутки
-    const tempX = Math.max(minX, Math.min(maxX, newX));
-    const savedX = currentTranslateX;
-    currentTranslateX = tempX;
+    // Візуал активної вкладки під час скролу
+    const tempX = currentTranslateX;
+    currentTranslateX = Math.max(minX, Math.min(maxX, newX));
     const centerTab = getTabAtCenter();
-    currentTranslateX = savedX;
+    currentTranslateX = tempX;
     if (centerTab) updateActiveVisual(centerTab);
   }, { passive: true });
 
   capsule.addEventListener('touchend', () => {
     dragging = false;
-    const { minX, maxX } = getDrumBounds();
-
-    // Якщо це тап (не свайп) — нічого не робимо, click обробить
     if (Math.abs(dragDelta) < 8) return;
 
-    // Інерція — продовжуємо рух
-    const momentum = velocity * 120;
-    let newX = Math.max(minX, Math.min(maxX, currentTranslateX + dragDelta + momentum));
+    const { minX, maxX } = getDrumBounds();
+    const active = getActiveTabs();
 
-    currentTranslateX = newX;
-    window._drumCurrentX = newX;
-    track.style.transition = 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)';
-    track.style.transform = `translateX(${newX}px)`;
+    // Знаходимо поточну вкладку (яка зараз ближче до центру)
+    const currentLanded = Math.max(minX, Math.min(maxX, currentTranslateX + dragDelta));
+    const savedX = currentTranslateX;
+    currentTranslateX = currentLanded;
+    const fromTab = getTabAtCenter() || currentTab;
+    currentTranslateX = savedX;
 
-    // Визначаємо активну вкладку і перемикаємо
-    const centerTab = getTabAtCenter();
-    if (centerTab && centerTab !== currentTab) {
-      setTimeout(() => switchTab(centerTab), 50);
+    const fromIdx = active.indexOf(fromTab);
+
+    // Рахуємо кількість вкладок для прокрутки на основі velocity
+    // velocity > 0 = рух вправо (вкладки ліворуч) = зменшення idx
+    // velocity < 0 = рух вліво (вкладки праворуч) = збільшення idx
+    const absV = Math.abs(velocity);
+    let tabsToScroll;
+    if (absV > 1.5)      tabsToScroll = active.length; // дуже швидко — до кінця
+    else if (absV > 0.8) tabsToScroll = 3;
+    else if (absV > 0.4) tabsToScroll = 2;
+    else                 tabsToScroll = 1;
+
+    const direction = velocity > 0 ? -1 : 1; // > 0 = свайп вправо = йдемо до менших idx
+    const targetIdx = Math.max(0, Math.min(active.length - 1, fromIdx + direction * tabsToScroll));
+    const targetTab = active[targetIdx];
+
+    // Анімація до цільової вкладки
+    const targetItem = track.querySelector(`.tab-item[data-tab="${targetTab}"]`);
+    if (targetItem) {
+      const capsuleW = capsule.offsetWidth;
+      const itemCenter = targetItem.offsetLeft + targetItem.offsetWidth / 2;
+      const newX = Math.max(minX, Math.min(maxX, capsuleW / 2 - itemCenter));
+
+      // Тривалість залежить від дистанції
+      const dist = Math.abs(tabsToScroll);
+      const duration = dist >= active.length ? 480 : dist >= 3 ? 420 : dist >= 2 ? 360 : 300;
+
+      currentTranslateX = newX;
+      window._drumCurrentX = newX;
+      track.style.transition = `transform ${duration}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
+      track.style.transform = `translateX(${newX}px)`;
+
+      updateActiveVisual(targetTab);
+
+      setTimeout(() => {
+        if (targetTab !== currentTab) switchTab(targetTab);
+      }, duration - 50);
     }
   }, { passive: true });
 }
 
 function updateDrumTabbar(tab) {
-  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
-  const activeIdx = TAB_ORDER.indexOf(tab);
+  const active = getActiveTabs();
+  const activeIdx = active.indexOf(tab);
   const items = document.querySelectorAll('.tab-item[data-tab]');
   items.forEach((item, i) => {
     const diff = Math.abs(i - activeIdx);
@@ -229,20 +448,17 @@ function updateDrumTabbar(tab) {
     if (diff === 0) item.classList.add('active');
     else if (diff === 1) item.classList.add('near');
   });
-  // Центруємо активну вкладку в барабані
+  // Центруємо активну вкладку в барабані через snapToTab-логіку
   const track = document.getElementById('drumTrack');
   const capsule = document.getElementById('drumCapsule');
   if (!track || !capsule) return;
   const activeItem = document.querySelector('.tab-item.active');
   if (!activeItem) return;
-  const capsuleW = capsule.offsetWidth - 8;
+  const capsuleW = capsule.offsetWidth;
+  const itemCenter = activeItem.offsetLeft + activeItem.offsetWidth / 2;
   const trackW = track.scrollWidth;
-  const itemW = activeItem.offsetWidth;
-  const itemLeft = activeItem.offsetLeft;
-  const scrollTo = itemLeft - (capsuleW / 2) + (itemW / 2);
   const minX = Math.min(0, capsuleW - trackW);
-  const newX = -Math.max(0, Math.min(scrollTo, -minX));
-  // Синхронізуємо з поточним значенням для вільного скролу
+  const newX = Math.max(minX, Math.min(0, capsuleW / 2 - itemCenter));
   try { window._drumCurrentX = newX; } catch(e) {}
   track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
   track.style.transform = `translateX(${newX}px)`;
@@ -259,8 +475,8 @@ function applyTheme(tab) {
   root.style.setProperty('--active-accent', theme.accent);
   root.style.setProperty('--active-accent2', theme.accent2);
 
-  // Вечір — темний таббар індиго, іконки і текст білі (крім активної вкладки)
-  const isDark = tab === 'evening';
+  // Темні таббари (вечір, здоров'я, проекти) — іконки і текст білі
+  const isDark = ['evening','health','projects'].includes(tab);
   const tabLabels = tabBar ? tabBar.querySelectorAll('.tab-label') : [];
   tabLabels.forEach(s => { s.style.color = isDark ? 'rgba(255,255,255,0.5)' : ''; });
   const tabIcons2 = tabBar ? tabBar.querySelectorAll('.tab-icon') : [];
@@ -856,7 +1072,7 @@ function setupKeyboardAvoiding() {
 // === PAGE TRANSITIONS ===
 let currentTabForAnim = 'inbox';
 function animateTabSwitch(newTab) {
-  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
+  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance','health','projects'];
   const oldPage = document.getElementById(`page-${currentTabForAnim}`);
   const newPage = document.getElementById(`page-${newTab}`);
   if (!oldPage || !newPage || oldPage === newPage) {
@@ -1023,6 +1239,8 @@ function markTabBoardSaid(tab, topic) {
 function tabAlreadySaid(tab, topic) { return !!getTabBoardSaid(tab)[topic]; }
 
 function dismissTabBoard(tab) {
+  // Вечір — табло завжди активне, не закривається
+  if (tab === 'evening') return;
   const el = document.getElementById('owl-tab-board-' + tab);
   if (el) el.style.display = 'none';
 }
@@ -1031,7 +1249,12 @@ function renderTabBoard(tab) {
   const msg = getTabBoardMsg(tab);
   const board = document.getElementById('owl-tab-board-' + tab);
   if (!board) return;
-  if (!msg || !msg.text) { board.style.display = 'none'; return; }
+  // Вечір — завжди показуємо (навіть якщо немає msg ще)
+  if (!msg || !msg.text) {
+    if (tab !== 'evening') { board.style.display = 'none'; return; }
+    board.style.display = 'block';
+    return;
+  }
   board.style.display = 'block';
 
   const pulse = document.getElementById('owl-tab-pulse-' + tab);
