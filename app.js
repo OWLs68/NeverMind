@@ -88,6 +88,9 @@ function switchTab(tab) {
 
   // Підказка першого відвідування
   setTimeout(() => showFirstVisitTip(tab), 600);
+
+  // OWL табло для вкладки
+  setTimeout(() => { try { tryTabBoardUpdate(tab); } catch(e) {} }, 700);
 }
 
 function setupDrumTabbar() {
@@ -291,6 +294,12 @@ function openSettings() {
   updateKeyStatus(!!key);
   updateOwlModeUI(settings.owl_mode || 'partner');
   setCurrency(settings.currency || '₴');
+  // Мова
+  const lang = settings.language || 'uk';
+  ['uk','en','nl'].forEach(l => {
+    const btn = document.getElementById('btn-lang-' + l);
+    if (btn) { if (l === lang) btn.classList.add('active'); else btn.classList.remove('active'); }
+  });
 
   // Фінанси
   try {
@@ -305,15 +314,20 @@ function setOwlModeSetting(mode) {
   settings.owl_mode = mode;
   localStorage.setItem('nm_settings', JSON.stringify(settings));
   updateOwlModeUI(mode);
-  showToast('🦉 Стиль OWL змінено');
+  showToast('Стиль OWL змінено');
 }
 
 function updateOwlModeUI(mode) {
   ['coach','partner','mentor'].forEach(m => {
     const el = document.getElementById('set-owl-' + m);
     if (!el) return;
-    el.style.border = m === mode ? '1.5px solid #7c3aed' : '1.5px solid rgba(30,16,64,0.1)';
-    el.style.background = m === mode ? 'rgba(124,58,237,0.07)' : 'rgba(255,255,255,0.5)';
+    if (m === mode) {
+      el.style.border = '1.5px solid #7c3aed';
+      el.style.background = 'rgba(124,58,237,0.07)';
+    } else {
+      el.style.border = '1.5px solid rgba(30,16,64,0.08)';
+      el.style.background = 'rgba(255,255,255,0.5)';
+    }
   });
 }
 
@@ -322,6 +336,95 @@ function closeSettings() {
   const memory = document.getElementById('input-memory').value;
   localStorage.setItem('nm_memory', memory);
   document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function setLanguage(lang) {
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  s.language = lang;
+  localStorage.setItem('nm_settings', JSON.stringify(s));
+  ['uk','en','nl'].forEach(l => {
+    const btn = document.getElementById('btn-lang-' + l);
+    if (btn) {
+      if (l === lang) btn.classList.add('active');
+      else btn.classList.remove('active');
+    }
+  });
+  showToast(lang === 'uk' ? 'Мова: Українська' : lang === 'en' ? 'Language: English' : 'Taal: Nederlands');
+}
+
+function openMemoryModal() {
+  const modal = document.getElementById('memory-modal');
+  modal.style.display = 'flex';
+  renderMemoryCards();
+}
+
+function closeMemoryModal() {
+  document.getElementById('memory-modal').style.display = 'none';
+}
+
+function renderMemoryCards() {
+  const raw = localStorage.getItem('nm_memory') || '';
+  const list = document.getElementById('memory-cards-list');
+  const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!entries.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще порожньо.<br>Напиши кілька записів в Inbox і натисни "Оновити через OWL".</div>';
+    return;
+  }
+  list.innerHTML = entries.map((entry, i) => `
+    <div id="memory-card-${i}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+      <div contenteditable="true" id="memory-entry-${i}" style="flex:1;font-size:15px;color:#1e1040;line-height:1.5;outline:none;min-width:0;word-break:break-word" onblur="saveMemoryCards()">${escapeHtml(entry)}</div>
+      <button onclick="deleteMemoryCard(${i})" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">×</button>
+    </div>`).join('');
+}
+
+function addMemoryEntry() {
+  const input = document.getElementById('memory-new-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const raw = localStorage.getItem('nm_memory') || '';
+  const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
+  entries.push(text);
+  localStorage.setItem('nm_memory', entries.join('\n'));
+  input.value = '';
+  renderMemoryCards();
+  // scroll to bottom
+  const list = document.getElementById('memory-cards-list');
+  if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+}
+
+function deleteMemoryCard(idx) {
+  const raw = localStorage.getItem('nm_memory') || '';
+  const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
+  entries.splice(idx, 1);
+  localStorage.setItem('nm_memory', entries.join('\n'));
+  renderMemoryCards();
+}
+
+function saveMemoryCards() {
+  const list = document.getElementById('memory-cards-list');
+  if (!list) return;
+  const divs = list.querySelectorAll('[id^="memory-entry-"]');
+  const entries = Array.from(divs).map(d => d.textContent.trim()).filter(Boolean);
+  const text = entries.join('\n');
+  localStorage.setItem('nm_memory', text);
+  // sync hidden field
+  const hidden = document.getElementById('input-memory');
+  if (hidden) hidden.value = text;
+  // update timestamp label
+  const tsEl = document.getElementById('memory-last-updated');
+  if (tsEl) tsEl.textContent = 'Збережено щойно';
+}
+
+function openPrivacyPolicy() {
+  showToast('Конфіденційність — незабаром');
+}
+
+function openTerms() {
+  showToast('Умови використання — незабаром');
+}
+
+function openFeedback() {
+  showToast('Написати автору — незабаром');
 }
 
 function updateKeyStatus(hasKey) {
@@ -378,9 +481,9 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_error_log'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log','nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me','nm_chat_evening','nm_chat_finance'];
   keys.forEach(k => localStorage.removeItem(k));
-  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_')).forEach(k => localStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_') || k.startsWith('nm_owl_tab_')).forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
   closeSettings();
 }
@@ -433,11 +536,13 @@ async function autoRefreshMemory() {
 
 async function refreshMemory() {
   const btn = document.getElementById('memory-refresh-btn');
-  btn.textContent = '…';
-  btn.disabled = true;
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
   await doRefreshMemory(true);
-  btn.textContent = '↻ Оновити';
-  btn.disabled = false;
+  if (btn) { btn.textContent = '↻ Оновити через OWL'; btn.disabled = false; }
+  // якщо вікно памʼяті відкрите — перемалювати картки
+  if (document.getElementById('memory-modal')?.style.display !== 'none') {
+    renderMemoryCards();
+  }
 }
 
 async function doRefreshMemory(showResult) {
@@ -535,7 +640,7 @@ async function sendMeChatMessage() {
   meChatHistory.push({ role: 'user', content: text });
 
   const loadId = 'me-chat-load-' + Date.now();
-  addMeChatMsg('agent', '…', loadId);
+  addMeChatMsg('agent', '…', false, loadId);
 
   const context = getAIContext();
   const stats = getMeStatsContext();
@@ -964,16 +1069,21 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 - "Робота" — робочі думки, проекти, колеги
 - "Навчання" — що вивчаю, книги, курси, інсайти
 - "Ідеї" — творчі ідеї (якщо category=idea)
-- "Особисте" — стосунки, емоції, особисті думки
+- "Особисте" — стосунки, емоції, особисті думки, все що не підходить в інші папки
 - "Подорожі" — місця, маршрути, враження
-- Якщо не підходить — придумай коротку назву українською
+- Якщо не підходить жодна — використовуй "Особисте", НЕ вигадуй нових папок
+- ЗАБОРОНЕНО автоматично використовувати папку "Чернетки" — тільки якщо користувач ЯВНО просить зберегти в чернетки
 - Для task/habit/event — folder: null
 
 Правила для clarify:
-- Використовуй якщо: 2+ окремі дії, незрозуміло task чи note, незрозуміло нова звичка чи виконання існуючої
-- НЕ використовуй якщо запис однозначний
+- ЗАБОРОНЕНО використовувати clarify перед збереженням — спочатку завжди зберігай, потім уточнюй
+- Якщо є сумнів між task/note/habit — обирай найімовірніший варіант і зберігай. Додай поле "ask_after":"коротке питання" щоб уточнити після збереження
+- clarify використовуй ТІЛЬКИ якщо: 2+ різні типи записів і незрозуміло яким є кожен, АБО незрозуміло чи це нова звичка чи виконання існуючої (тоді clarify доречний бо дія різна)
 - Максимум 3 варіанти в options
 - label ОБОВʼЯЗКОВО містить реальний конкретний текст варіанту
+
+Приклад save з уточненням:
+{"action":"save","category":"task","text":"Зателефонувати Вові","comment":"Задачу збережено.","ask_after":"Це одноразово чи хочеш зробити регулярним?"}
 
 ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.
 НЕ вигадуй ліміти, бюджети або плани яких немає в контексті. Якщо дані відсутні — не згадуй їх.`;
@@ -1038,7 +1148,6 @@ function addInboxChatMsg(role, text) {
   if (_inboxTypingEl) { _inboxTypingEl.remove(); _inboxTypingEl = null; }
 
   if (role === 'typing') {
-    // Показуємо typing індикатор
     const div = document.createElement('div');
     div.style.cssText = 'display:flex';
     div.innerHTML = `<div style="background:rgba(255,255,255,0.12);border-radius:4px 14px 14px 14px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>`;
@@ -1048,19 +1157,39 @@ function addInboxChatMsg(role, text) {
     return;
   }
 
+  // Розділювач часу — якщо юзер пише після паузи >5 хвилин
+  if (role === 'user') {
+    const now = Date.now();
+    const gap = now - _lastUserMsgTs;
+    if (_lastUserMsgTs > 0 && gap > 5 * 60 * 1000) {
+      const mins = Math.round(gap / 60000);
+      const label = mins < 60
+        ? `${mins} хв тому`
+        : mins < 1440
+        ? `${Math.round(mins/60)} год тому`
+        : 'раніше';
+      const sep = document.createElement('div');
+      sep.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;opacity:0.45';
+      sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:500">${label}</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
+      el.appendChild(sep);
+    }
+    _lastUserMsgTs = now;
+  }
+
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
   if (isAgent) {
-    div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
   } else {
-    div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
   }
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
+  saveChatMsg('inbox', role, text);
 }
 
-// === INBOX ===
+// Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
 const CAT_SVG = {
   task:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2fd0f9" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
   idea:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8a00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>',
@@ -1218,6 +1347,7 @@ function swipeEnd(e, id) {
 // === UNIFIED SEND TO AI ===
 let aiLoading = false;
 let inboxChatHistory = []; // зберігає останні 6 обмінів
+let _lastUserMsgTs = 0; // timestamp останнього повідомлення юзера
 const SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
 
 function unifiedInputKeydown(e) {
@@ -1289,7 +1419,12 @@ async function sendToAI() {
   addInboxChatMsg('typing', '…');
 
   const aiContext = getAIContext();
-  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}` : INBOX_SYSTEM_PROMPT;
+  // Додаємо контекст паузи якщо >5 хвилин
+  const gapMs = _lastUserMsgTs > 0 ? Date.now() - _lastUserMsgTs : 0;
+  const gapContext = gapMs > 5 * 60 * 1000
+    ? `\n\n[Увага: між попереднім і цим повідомленням пройшло ${Math.round(gapMs/60000)} хв — це може бути нова незалежна думка, не продовження попереднього. Але НЕ припускай автоматично — просто зберігай як окремий запис без уточнень якщо все зрозуміло.]`
+    : '';
+  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}${gapContext}\n\n${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
   // Build history for context — but keep it short so JSON format is not broken
   inboxChatHistory.push({ role: 'user', content: text });
   if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
@@ -1514,6 +1649,24 @@ function closeNotesFolder() {
 }
 
 // Кольори папок — єдине місце визначення
+const FOLDER_ICONS = {
+  'Харчування': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2"/><line x1="6" y1="2" x2="6" y2="12"/><path d="M21 2s-2 2-2 7 2 5 2 5"/><path d="M19 14v8"/></svg>',
+  'Фінанси':   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>',
+  "Здоровʼя":  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>',
+  'Здоровя':   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>',
+  'Робота':    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>',
+  'Навчання':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  'Ідеї':      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/></svg>',
+  'Особисте':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  'Подорожі':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+};
+const FOLDER_ICON_DEFAULT = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+function getFolderIcon(folder) {
+  if (FOLDER_ICONS[folder]) return FOLDER_ICONS[folder];
+  const normalized = folder.replace(/[ʼ']/g, '').toLowerCase();
+  const found = Object.keys(FOLDER_ICONS).find(k => k.replace(/[ʼ']/g, '').toLowerCase() === normalized);
+  return found ? FOLDER_ICONS[found] : FOLDER_ICON_DEFAULT;
+}
 const FOLDER_COLORS = {
   'Харчування': { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
   'Фінанси':   { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
@@ -1564,7 +1717,7 @@ function renderNotes(searchQuery = '') {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           Назад
         </button>
-        <span style="font-size:16px;font-weight:800;color:#1e1040">${fc.dot} ${escapeHtml(currentNotesFolder)}</span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:#1e1040">${getFolderIcon(currentNotesFolder)} ${escapeHtml(currentNotesFolder)}</span>
         <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter(n=>(n.folder||'Загальне')===currentNotesFolder).length}</span>
       `;
     }
@@ -1599,7 +1752,7 @@ function renderNotes(searchQuery = '') {
           ontouchmove="folderSwipeMove(event,'${safeFolder}')"
           ontouchend="folderSwipeEnd(event,'${safeFolder}')"
           style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
-          <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${fc.dot}</div>
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">${escapeHtml(folder)}</div>
             <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>
@@ -1763,7 +1916,7 @@ async function suggestNoteFolders() {
   const notes = getNotes();
   if (notes.length === 0) return;
   const sample = notes.slice(0, 40).map(n => `"${n.text.substring(0, 60)}"`).join('\n');
-  const systemPrompt = `Ти — організатор нотаток. Проаналізуй записи і запропонуй оптимальну структуру папок (3-6 папок). Відповідай ТІЛЬКИ JSON масивом: [{"folder":"Назва","description":"коротко що сюди входить"}]. Без markdown, без тексту поза JSON.`;
+  const systemPrompt = `Ти — організатор нотаток. Проаналізуй записи і запропонуй оптимальну структуру папок (3-6 папок). Відповідай ТІЛЬКИ JSON масивом: [{"folder":"Назва","description":"коротко що сюди входить"}]. Без markdown, без тексту поза JSON. ЗАБОРОНЕНО пропонувати папку "Чернетки".`;
   const reply = await callAI(systemPrompt, `Нотатки:\n${sample}`, {});
   if (!reply) return;
   try {
@@ -2046,7 +2199,7 @@ async function askAIAboutTask(title, desc, steps) {
   if (!reply) return;
   const commentEl = document.getElementById('tasks-ai-comment');
   if (commentEl) {
-    commentEl.textContent = '🦉 ' + reply;
+    commentEl.textContent = reply;
     commentEl.style.display = 'block';
   }
 }
@@ -3016,7 +3169,7 @@ async function finishSurvey() {
           localStorage.setItem('nm_memory_ts', Date.now().toString());
         }
         if (parsed.advice) {
-          addInboxChatMsg('agent', '🦉 ' + parsed.advice);
+          addInboxChatMsg('agent', parsed.advice);
         }
       } catch(e) {
         addInboxChatMsg('agent', reply);
@@ -3067,7 +3220,8 @@ function obNext(step) {
     const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
     if (!settings.owl_mode) settings.owl_mode = 'partner';
     localStorage.setItem('nm_settings', JSON.stringify(settings));
-    obShowWelcome();
+    document.getElementById('ob-step-owl').style.display = 'none';
+    document.getElementById('ob-step-consent').style.display = 'block';
   }
 }
 
@@ -3436,11 +3590,49 @@ function setupKeyboardAvoiding() {
 // === PAGE TRANSITIONS ===
 let currentTabForAnim = 'inbox';
 function animateTabSwitch(newTab) {
+  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance'];
   const oldPage = document.getElementById(`page-${currentTabForAnim}`);
   const newPage = document.getElementById(`page-${newTab}`);
-  if (!oldPage || !newPage || oldPage === newPage) return;
-  oldPage.classList.add('page-exit');
-  setTimeout(() => { oldPage.classList.remove('page-exit'); }, 230);
+  if (!oldPage || !newPage || oldPage === newPage) {
+    currentTabForAnim = newTab;
+    return;
+  }
+
+  const oldIdx = TAB_ORDER.indexOf(currentTabForAnim);
+  const newIdx = TAB_ORDER.indexOf(newTab);
+  const goRight = newIdx > oldIdx;
+
+  // Стартова позиція нової вкладки
+  newPage.style.transition = 'none';
+  newPage.style.transform = goRight ? 'translateX(28px)' : 'translateX(-28px)';
+  newPage.style.opacity = '0';
+  newPage.style.visibility = 'visible';
+
+  // Вихід старої
+  oldPage.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+  oldPage.style.transform = goRight ? 'translateX(-28px)' : 'translateX(28px)';
+  oldPage.style.opacity = '0';
+
+  // Вхід нової — наступний кадр
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      newPage.style.transition = 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
+      newPage.style.transform = 'translateX(0)';
+      newPage.style.opacity = '1';
+    });
+  });
+
+  // Прибираємо inline стилі після завершення
+  setTimeout(() => {
+    oldPage.style.transition = '';
+    oldPage.style.transform = '';
+    oldPage.style.opacity = '';
+    oldPage.style.visibility = '';
+    newPage.style.transition = '';
+    newPage.style.transform = '';
+    newPage.style.opacity = '';
+  }, 280);
+
   currentTabForAnim = newTab;
 }
 
@@ -4401,6 +4593,11 @@ async function processSaveAction(parsed, originalText) {
     ? `${parsed.comment} ${catConfirm2[cat] ? '/ ' + catConfirm2[cat] : ''}`
     : (catConfirm2[cat] || '✓ Збережено');
   addInboxChatMsg('agent', confirmMsg2);
+
+  // Якщо є уточнення після збереження — показуємо через паузу
+  if (parsed.ask_after) {
+    setTimeout(() => addInboxChatMsg('agent', parsed.ask_after), 600);
+  }
 }
 
 
@@ -4485,6 +4682,84 @@ function getTabbarHeight() {
   return tb ? tb.offsetHeight : 83;
 }
 
+// === CHAT STORAGE — зберігає чати по вкладках ===
+const CHAT_STORE_MAX = 30; // максимум повідомлень на вкладку
+const CHAT_STORE_KEYS = {
+  inbox:   'nm_chat_inbox',
+  tasks:   'nm_chat_tasks',
+  notes:   'nm_chat_notes',
+  me:      'nm_chat_me',
+  evening: 'nm_chat_evening',
+  finance: 'nm_chat_finance',
+};
+
+function saveChatMsg(tab, role, text) {
+  if (role === 'typing') return;
+  const key = CHAT_STORE_KEYS[tab];
+  if (!key) return;
+  try {
+    const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+    msgs.push({ role, text, ts: Date.now() });
+    if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
+    localStorage.setItem(key, JSON.stringify(msgs));
+  } catch(e) {}
+}
+
+function loadChatMsgs(tab) {
+  const key = CHAT_STORE_KEYS[tab];
+  if (!key) return [];
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+
+function restoreChatUI(tab) {
+  const containerMap = {
+    inbox:   'inbox-chat-messages',
+    tasks:   'tasks-chat-messages',
+    notes:   'notes-chat-messages',
+    me:      'me-chat-messages',
+    evening: 'evening-bar-messages',
+    finance: 'finance-chat-messages',
+  };
+  const addMsgMap = {
+    tasks:   (r,t) => addTaskBarMsg(r,t,true),
+    notes:   (r,t) => addNotesChatMsg(r,t,true),
+    me:      (r,t) => addMeChatMsg(r,t,true),
+    evening: (r,t) => addEveningBarMsg(r,t,true),
+    finance: (r,t) => addFinanceChatMsg(r,t,true),
+  };
+  const containerId = containerMap[tab];
+  if (!containerId) return;
+  const el = document.getElementById(containerId);
+  if (!el || el.children.length > 0) return; // вже є повідомлення
+  const msgs = loadChatMsgs(tab);
+  if (msgs.length === 0) return;
+  // Додаємо розділювач "Попередня розмова"
+  const sep = document.createElement('div');
+  sep.style.cssText = 'display:flex;align-items:center;gap:8px;margin:4px 0 8px;opacity:0.4';
+  sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Попередня розмова</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
+  el.appendChild(sep);
+  // Рендеримо збережені повідомлення без повторного запису в storage
+  if (tab === 'inbox') {
+    msgs.forEach(m => _renderInboxChatMsg(m.role, m.text, el));
+  } else if (addMsgMap[tab]) {
+    msgs.forEach(m => addMsgMap[tab](m.role, m.text));
+  }
+}
+
+// Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
+function _renderInboxChatMsg(role, text, el) {
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
+  if (isAgent) {
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  } else {
+    div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+  }
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
 function openChatBar(tab) {
   if (activeChatBar === tab) return;
 
@@ -4504,11 +4779,11 @@ function openChatBar(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
 
+  // Відновлюємо попередній чат якщо вікно порожнє
+  restoreChatUI(tab);
+
   const chatWin = bar.querySelector('.ai-bar-chat-window');
-  // rAF — чекаємо один кадр щоб браузер намалював початкову позицію вікна
-  // без цього анімація не грає і вікно зʼявляється миттєво ("вилітає")
   if (chatWin) requestAnimationFrame(() => { chatWin.classList.add('open'); });
-  // Не даємо фокус програмно — iOS відкриває клавіатуру тільки від живого тапу
 }
 
 function closeChatBar(tab) {
@@ -4676,12 +4951,10 @@ let _financeTypingEl = null;
 let _eveningTypingEl = null;
 let _notesTypingEl = null;
 
-function addTaskBarMsg(role, text) {
+function addTaskBarMsg(role, text, _noSave = false) {
   const el = document.getElementById('tasks-chat-messages');
   if (!el) return;
-  // Прибираємо typing індикатор
   if (_taskTypingEl) { _taskTypingEl.remove(); _taskTypingEl = null; }
-  // Typing індикатор
   if (role === 'typing') {
     const td = document.createElement('div');
     td.style.cssText = 'display:flex';
@@ -4691,15 +4964,15 @@ function addTaskBarMsg(role, text) {
     el.scrollTop = el.scrollHeight;
     return;
   }
-  // Відкриваємо чат-вікно якщо є повідомлення
   try { openChatBar('tasks'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
+  if (!_noSave) saveChatMsg('tasks', role, text);
 }
 
 // === UNIVERSAL ACTION PROCESSOR — один мозок для всіх барів ===
@@ -4715,6 +4988,7 @@ function processUniversalAction(parsed, originalText, addMsg) {
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
     addMsg('agent', '✅ Задачу "' + title + '" створено');
+    if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
   }
 
@@ -4726,6 +5000,7 @@ function processUniversalAction(parsed, originalText, addMsg) {
     saveHabits(habits);
     renderProdHabits(); renderHabits();
     addMsg('agent', '🌱 Звичку "' + name + '" створено');
+    if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
   }
 
@@ -4733,6 +5008,7 @@ function processUniversalAction(parsed, originalText, addMsg) {
     addNoteFromInbox(parsed.text, 'note', parsed.folder || null);
     if (currentTab === 'notes') renderNotes();
     addMsg('agent', '✓ Нотатку збережено' + (parsed.folder ? ' в папку "' + parsed.folder + '"' : ''));
+    if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
   }
 
@@ -4907,16 +5183,17 @@ function showMeChatMessages() {
   openChatBar('me');
 }
 
-function addMeChatMsg(role, text, id = '') {
+function addMeChatMsg(role, text, _noSave = false, id = '') {
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
   try { openChatBar('me'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
+  if (!_noSave) saveChatMsg('me', role, text);
 }
 
 // === FINANCE ===
@@ -4936,6 +5213,17 @@ function getFinCats() {
 }
 function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
 
+// Підкатегорії — показуються після вибору головної
+const FIN_SUBCATS = {
+  'Їжа':       ['Продукти','Ресторан','Кафе','Доставка','Фастфуд'],
+  'Транспорт': ['Паливо','Таксі','Парковка','Громадський','Ремонт авто'],
+  'Підписки':  ['Стрімінг','Музика','Хмара','Додатки','Ігри'],
+  'Здоровʼя':  ['Аптека','Лікар','Спортзал','Аналізи','Косметика'],
+  'Житло':     ['Оренда','Комунальні','Інтернет','Ремонт','Меблі'],
+  'Покупки':   ['Одяг','Техніка','Книги','Подарунки','Дім'],
+  'Трава':     ['Кальян','Диспенсарі','Квіти','Дорого','Онлайн'],
+};
+
 // State
 let currentFinTab = 'expense';
 let currentFinPeriod = 'month';
@@ -4952,9 +5240,8 @@ function setCurrency(symbol) {
     const map = {'₴':'uah','$':'usd','€':'eur'};
     const btn = document.getElementById('btn-currency-' + map[c]);
     if (btn) {
-      btn.style.background = c === symbol ? '#1e1040' : 'white';
-      btn.style.color = c === symbol ? 'white' : '#1e1040';
-      btn.style.borderColor = c === symbol ? '#1e1040' : 'rgba(30,16,64,0.1)';
+      if (c === symbol) btn.classList.add('active');
+      else btn.classList.remove('active');
     }
   });
   if (currentTab === 'finance') renderFinance();
@@ -5241,7 +5528,7 @@ function _showTransactionModal(data) {
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
     <div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
-    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 12px 12px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);box-sizing:border-box">
+    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
       <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">${_finEditId ? 'Редагувати' : 'Нова'} ${isExpense ? 'витрата' : 'дохід'}</div>
 
@@ -5257,7 +5544,7 @@ function _showTransactionModal(data) {
         value="${data.amount || ''}">
 
       <!-- Категорія -->
-      <div style="margin-bottom:10px">
+      <div id="fntx-cats-wrap" style="margin-bottom:10px">
         <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Категорія</div>
         <div id="fntx-cats" style="display:flex;flex-wrap:wrap;gap:6px">
           ${catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${c === data.category ? 'rgba(194,65,12,0.08)' : 'white'};color:${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(c)}</button>`).join('')}
@@ -5280,6 +5567,10 @@ function _showTransactionModal(data) {
     </div>`;
   document.body.appendChild(modal);
   setupModalSwipeClose(modal.querySelector('div:last-child'), closeFinTxModal);
+  // Якщо категорія вже вибрана — показуємо підкатегорії
+  if (data.category && catList.includes(data.category)) {
+    setTimeout(() => selectFinTxCat(data.category), 50);
+  }
   setTimeout(() => { document.getElementById('fntx-amount')?.focus(); }, 300);
   _finTxCurrentType = isExpense ? 'expense' : 'income';
   _finTxSelectedCat = data.category || '';
@@ -5305,15 +5596,57 @@ function toggleFinTxType(type) {
 }
 
 function selectFinTxCat(cat) {
+  // Якщо це підкатегорія — просто зберігаємо
+  const cats = getFinCats();
+  const catList = _finTxCurrentType === 'expense' ? cats.expense : cats.income;
+  const isSubcat = !catList.includes(cat);
+
+  if (isSubcat) {
+    _finTxSelectedCat = cat;
+    // Підсвічуємо підкатегорію
+    const subEl = document.getElementById('fntx-subcats');
+    if (subEl) subEl.querySelectorAll('button').forEach(btn => {
+      const active = btn.textContent === cat;
+      btn.style.borderColor = active ? '#c2410c' : 'rgba(30,16,64,0.08)';
+      btn.style.background = active ? 'rgba(194,65,12,0.08)' : 'rgba(30,16,64,0.03)';
+      btn.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.45)';
+    });
+    const customInput = document.getElementById('fntx-cat-custom');
+    if (customInput) customInput.value = '';
+    return;
+  }
+
   _finTxSelectedCat = cat;
+
+  // Підсвічуємо головну категорію
   const catsEl = document.getElementById('fntx-cats');
-  if (!catsEl) return;
-  catsEl.querySelectorAll('button').forEach(btn => {
+  if (catsEl) catsEl.querySelectorAll('button').forEach(btn => {
     const active = btn.textContent === cat;
     btn.style.borderColor = active ? '#c2410c' : 'rgba(30,16,64,0.1)';
     btn.style.background = active ? 'rgba(194,65,12,0.08)' : 'white';
     btn.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
   });
+
+  // Показуємо підкатегорії якщо є
+  const subcats = FIN_SUBCATS[cat];
+  let subEl = document.getElementById('fntx-subcats');
+  if (subcats && subcats.length > 0) {
+    if (!subEl) {
+      subEl = document.createElement('div');
+      subEl.id = 'fntx-subcats';
+      subEl.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(30,16,64,0.06)';
+      const catsWrapper = document.getElementById('fntx-cats-wrap');
+      if (catsWrapper) catsWrapper.appendChild(subEl);
+      else catsEl?.parentNode?.insertBefore(subEl, catsEl?.nextSibling);
+    }
+    subEl.innerHTML = subcats.map(s =>
+      `<button onclick="selectFinTxCat('${escapeHtml(s)}')" style="padding:5px 11px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.08);background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.45);transition:all 0.15s">${escapeHtml(s)}</button>`
+    ).join('');
+    subEl.style.display = 'flex';
+  } else if (subEl) {
+    subEl.style.display = 'none';
+  }
+
   const customInput = document.getElementById('fntx-cat-custom');
   if (customInput) customInput.value = '';
 }
@@ -5379,7 +5712,7 @@ function openFinBudgetModal() {
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
     <div onclick="closeFinBudgetModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
-    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 12px 12px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
+    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
       <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">Бюджет на місяць</div>
 
@@ -5525,7 +5858,7 @@ function getFinanceContext() {
 let financeBarHistory = [];
 let financeBarLoading = false;
 
-function addFinanceChatMsg(role, text) {
+function addFinanceChatMsg(role, text, _noSave = false) {
   const el = document.getElementById('finance-chat-messages');
   if (!el) return;
   if (_financeTypingEl) { _financeTypingEl.remove(); _financeTypingEl = null; }
@@ -5542,11 +5875,12 @@ function addFinanceChatMsg(role, text) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 11px;font-size:13px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') financeBarHistory.push({ role: 'user', content: text });
   else financeBarHistory.push({ role: 'assistant', content: text });
+  if (!_noSave) saveChatMsg('finance', role, text);
 }
 
 async function sendFinanceBarMessage() {
@@ -5664,7 +5998,7 @@ function showEveningBarMessages() {
   openChatBar('evening');
 }
 
-function addEveningBarMsg(role, text) {
+function addEveningBarMsg(role, text, _noSave = false) {
   const el = document.getElementById('evening-bar-messages');
   if (!el) return;
   if (_eveningTypingEl) { _eveningTypingEl.remove(); _eveningTypingEl = null; }
@@ -5685,6 +6019,7 @@ function addEveningBarMsg(role, text) {
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
+  if (!_noSave) saveChatMsg('evening', role, text);
 }
 
 async function sendEveningBarMessage() {
@@ -5746,7 +6081,7 @@ async function sendEveningBarMessage() {
 let notesBarHistory = [];
 let notesBarLoading = false;
 
-function addNotesChatMsg(role, text) {
+function addNotesChatMsg(role, text, _noSave = false) {
   const el = document.getElementById('notes-chat-messages');
   if (!el) return;
   if (_notesTypingEl) { _notesTypingEl.remove(); _notesTypingEl = null; }
@@ -5768,6 +6103,7 @@ function addNotesChatMsg(role, text) {
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
   else notesBarHistory.push({ role: 'assistant', content: text });
+  if (!_noSave) saveChatMsg('notes', role, text);
 }
 
 async function sendNotesBarMessage() {
@@ -5833,6 +6169,27 @@ function saveOwlBoardMessages(arr) {
   localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-3)));
 }
 
+// === OWL BOARD — повний розумний цикл ===
+
+// Ключ для антиповтору — що вже сказали сьогодні
+const OWL_BOARD_SAID_KEY = 'nm_owl_board_said'; // {date, topics:[]}
+
+function getOwlBoardSaid() {
+  try {
+    const s = JSON.parse(localStorage.getItem(OWL_BOARD_SAID_KEY) || '{}');
+    if (s.date !== new Date().toDateString()) return { date: new Date().toDateString(), topics: [] };
+    return s;
+  } catch { return { date: new Date().toDateString(), topics: [] }; }
+}
+function markOwlBoardSaid(topic) {
+  const s = getOwlBoardSaid();
+  if (!s.topics.includes(topic)) s.topics.push(topic);
+  localStorage.setItem(OWL_BOARD_SAID_KEY, JSON.stringify(s));
+}
+function owlAlreadySaid(topic) {
+  return getOwlBoardSaid().topics.includes(topic);
+}
+
 // Перевірка чи є щось важливе — БЕЗ API
 function checkOwlBoardTrigger() {
   const key = localStorage.getItem('nm_gemini_key');
@@ -5841,83 +6198,136 @@ function checkOwlBoardTrigger() {
   const now = new Date();
   const todayStr = now.toDateString();
   const hour = now.getHours();
+  const min = now.getMinutes();
 
-  // Задачі з дедлайном через ~1 годину
+  // Тихий режим 23:00–7:00
+  if (hour >= 23 || hour < 7) return false;
+
+  // Ранковий огляд 7:00–9:00 — раз за ранок
+  if (hour >= 7 && hour <= 9 && !owlAlreadySaid('morning_brief')) return true;
+
+  // Обід 13:00 — статус дня, раз
+  if (hour === 13 && min < 30 && !owlAlreadySaid('midday_check')) return true;
+
+  // Вечірній підсумок 20:00 — раз
+  if (hour >= 20 && !owlAlreadySaid('evening_prompt')) {
+    const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if (!s || new Date(s.date).toDateString() !== todayStr) return true;
+  }
+
+  // Понеділок вранці — огляд тижня
+  if (now.getDay() === 1 && hour >= 8 && hour <= 10 && !owlAlreadySaid('week_start')) return true;
+
+  // Пʼятниця ввечері — підсумок тижня
+  if (now.getDay() === 5 && hour >= 17 && !owlAlreadySaid('week_end')) return true;
+
+  // Дедлайн через ~годину — не повторювати для тієї ж задачі
   const tasks = getTasks().filter(t => t.status !== 'done');
   for (const t of tasks) {
-    if (t.title) {
-      const timeMatch = t.title.match(/(\d{1,2}):(\d{2})/);
-      if (timeMatch) {
-        const taskHour = parseInt(timeMatch[1]);
-        const taskMin = parseInt(timeMatch[2]);
-        const diff = (taskHour * 60 + taskMin) - (hour * 60 + now.getMinutes());
-        if (diff > 0 && diff <= 65) return true; // дедлайн через ~годину
-      }
+    const m = t.title.match(/(\d{1,2}):(\d{2})/);
+    if (m) {
+      const diff = (parseInt(m[1])*60+parseInt(m[2])) - (hour*60+min);
+      if (diff > 0 && diff <= 65 && !owlAlreadySaid('deadline_' + t.id)) return true;
     }
   }
 
-  // Звички не виконані сьогодні (після 10 ранку)
+  // Задача 3+ дні не закривається
+  const now3d = Date.now() - 3*24*60*60*1000;
+  const stuck = tasks.filter(t => t.createdAt && t.createdAt < now3d && !owlAlreadySaid('stuck_' + t.id));
+  if (stuck.length > 0) return true;
+
+  // Звички не виконані після 10:00
   if (hour >= 10) {
     const habits = getHabits();
     const log = getHabitLog();
     const todayLog = log[todayStr] || {};
     const pending = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
-    if (pending.length > 0) return true;
+    if (pending.length > 0 && !owlAlreadySaid('habits_' + todayStr)) return true;
   }
 
-  // Вечір без підсумку (після 20:00)
+  // Стрік під загрозою після 20:00
   if (hour >= 20) {
-    const eveningSummary = localStorage.getItem('nm_evening_summary');
-    if (eveningSummary) {
-      const s = JSON.parse(eveningSummary);
-      if (new Date(s.date).toDateString() !== todayStr) return true;
-    } else {
-      return true;
-    }
+    const habits = getHabits();
+    const log = getHabitLog();
+    const todayLog = log[todayStr] || {};
+    const atRisk = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
+    if (atRisk.length > 0 && !owlAlreadySaid('streak_risk_' + todayStr)) return true;
   }
 
-  // Бюджет перевищено
+  // Всі звички виконані — привітати раз
+  if (hour >= 10) {
+    const habits = getHabits();
+    const log = getHabitLog();
+    const todayLog = log[todayStr] || {};
+    const todayH = habits.filter(h => h.days.includes(now.getDay()));
+    if (todayH.length > 0 && todayH.every(h => todayLog[h.id]) && !owlAlreadySaid('all_habits_done_' + todayStr)) return true;
+  }
+
+  // Бюджет 80%+ витрачено
   try {
     const budget = getFinBudget();
     if (budget.total > 0) {
       const from = getFinPeriodRange('month');
       const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
-      if (exp > budget.total) return true;
+      const pct = exp / budget.total;
+      if (pct >= 0.8 && !owlAlreadySaid('budget_80_' + new Date().toISOString().slice(0,7))) return true;
     }
   } catch(e) {}
 
-  // Вранці (7-9) — завжди показуємо огляд дня
-  if (hour >= 7 && hour <= 9) return true;
+  // Порожній день — немає нічого критичного, але треба щось показати
+  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const sinceLastH = (Date.now() - lastTs) / (60*60*1000);
+  if (sinceLastH > 4 && !owlAlreadySaid('quiet_day_' + todayStr)) return true;
 
   return false;
 }
 
-// Будуємо контекст для табло
+// Будуємо контекст для табло з пріоритетами
 function getOwlBoardContext() {
   const now = new Date();
   const todayStr = now.toDateString();
   const hour = now.getHours();
-  const parts = [];
+  const min = now.getMinutes();
+  const weekDay = now.getDay(); // 0=нд, 1=пн...5=пт
+  const critical = [];
+  const important = [];
+  const normal = [];
 
-  // Час доби
   const timeOfDay = hour < 12 ? 'ранок' : hour < 18 ? 'день' : 'вечір';
-  parts.push(`Зараз ${timeOfDay}, ${now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}.`);
+  normal.push(`Зараз ${timeOfDay}, ${now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}.`);
 
   // Задачі
   const tasks = getTasks();
   const activeTasks = tasks.filter(t => t.status !== 'done');
+
+  // Дедлайн через ~годину
+  const urgent = activeTasks.filter(t => {
+    const m = t.title.match(/(\d{1,2}):(\d{2})/);
+    if (!m) return false;
+    const diff = (parseInt(m[1])*60+parseInt(m[2])) - (hour*60+min);
+    return diff > 0 && diff <= 65;
+  });
+  urgent.forEach(t => {
+    if (!owlAlreadySaid('deadline_' + t.id)) {
+      critical.push(`[КРИТИЧНО] Дедлайн через ~годину: "${t.title}".`);
+      markOwlBoardSaid('deadline_' + t.id);
+    }
+  });
+
+  // Задача завʼязла 3+ дні
+  const now3d = Date.now() - 3*24*60*60*1000;
+  const stuck = activeTasks.filter(t => t.createdAt && t.createdAt < now3d);
+  stuck.forEach(t => {
+    if (!owlAlreadySaid('stuck_' + t.id)) {
+      important.push(`[ВАЖЛИВО] Задача "${t.title}" відкрита вже 3+ дні.`);
+      markOwlBoardSaid('stuck_' + t.id);
+    }
+  });
+
   if (activeTasks.length > 0) {
-    // Дедлайни через ~годину
-    const urgent = activeTasks.filter(t => {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
-      if (!m) return false;
-      const diff = (parseInt(m[1])*60+parseInt(m[2])) - (hour*60+now.getMinutes());
-      return diff > 0 && diff <= 65;
-    });
-    if (urgent.length > 0) parts.push(`ТЕРМІНОВЕ: через ~годину — ${urgent.map(t=>t.title).join(', ')}.`);
-    parts.push(`Відкритих задач: ${activeTasks.length}. Список: ${activeTasks.slice(0,3).map(t=>t.title).join(', ')}${activeTasks.length>3?' і ще...':''}.`);
+    normal.push(`Відкритих задач: ${activeTasks.length}. ${activeTasks.slice(0,3).map(t=>t.title).join(', ')}${activeTasks.length>3?' і ще...':''}.`);
   } else {
-    parts.push('Всі задачі виконано.');
+    normal.push('Всі задачі виконано.');
   }
 
   // Звички
@@ -5927,8 +6337,33 @@ function getOwlBoardContext() {
   const todayHabits = habits.filter(h => h.days.includes(now.getDay()));
   const doneHabits = todayHabits.filter(h => todayLog[h.id]);
   const pendingHabits = todayHabits.filter(h => !todayLog[h.id]);
+
+  // Всі звички виконані — привітати
+  if (todayHabits.length > 0 && pendingHabits.length === 0 && !owlAlreadySaid('all_habits_done_' + todayStr)) {
+    important.push(`[ВАЖЛИВО] Всі ${todayHabits.length} звичок виконано сьогодні!`);
+    markOwlBoardSaid('all_habits_done_' + todayStr);
+  }
+
+  // Стрік під загрозою після 20:00
+  if (hour >= 20 && pendingHabits.length > 0 && !owlAlreadySaid('streak_risk_' + todayStr)) {
+    const atRisk = pendingHabits.filter(h => {
+      const allDays = Object.values(log);
+      return allDays.filter(d => d[h.id]).length >= 3;
+    });
+    if (atRisk.length > 0) {
+      critical.push(`[КРИТИЧНО] Стрік під загрозою: ${atRisk.map(h=>h.name).join(', ')}.`);
+      markOwlBoardSaid('streak_risk_' + todayStr);
+    }
+  }
+
+  // Звички не виконані після 10:00
+  if (hour >= 10 && pendingHabits.length > 0 && !owlAlreadySaid('habits_' + todayStr)) {
+    important.push(`[ВАЖЛИВО] Не виконано звичок: ${pendingHabits.map(h=>h.name).join(', ')}.`);
+    markOwlBoardSaid('habits_' + todayStr);
+  }
+
   if (todayHabits.length > 0) {
-    parts.push(`Звички сьогодні: виконано ${doneHabits.length}/${todayHabits.length}.${pendingHabits.length > 0 ? ' Не виконано: ' + pendingHabits.map(h=>h.name).join(', ') + '.' : ''}`);
+    normal.push(`Звички сьогодні: ${doneHabits.length}/${todayHabits.length}.`);
   }
 
   // Фінанси
@@ -5936,13 +6371,78 @@ function getOwlBoardContext() {
     const budget = getFinBudget();
     if (budget.total > 0) {
       const from = getFinPeriodRange('month');
-      const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+      const txs = getFinance().filter(t => t.ts >= from && t.type === 'expense');
+      const exp = txs.reduce((s,t) => s+t.amount, 0);
       const pct = Math.round(exp/budget.total*100);
-      parts.push(`Бюджет місяця: витрачено ${formatMoney(exp)} з ${formatMoney(budget.total)} (${pct}%).`);
+      const monthKey = new Date().toISOString().slice(0,7);
+      if (exp > budget.total) {
+        important.push(`[ВАЖЛИВО] Бюджет перевищено! Витрачено ${formatMoney(exp)} з ${formatMoney(budget.total)} (${pct}%).`);
+      } else if (pct >= 80 && !owlAlreadySaid('budget_80_' + monthKey)) {
+        important.push(`[ВАЖЛИВО] Витрачено ${pct}% місячного бюджету.`);
+        markOwlBoardSaid('budget_80_' + monthKey);
+      } else {
+        normal.push(`Бюджет місяця: ${formatMoney(exp)} / ${formatMoney(budget.total)} (${pct}%).`);
+      }
+
+      // Незвична витрата — більше ніж вдвічі від середньої по категорії
+      if (txs.length >= 3) {
+        const bycat = {};
+        txs.forEach(t => { if (!bycat[t.category]) bycat[t.category] = []; bycat[t.category].push(t.amount); });
+        const lastTx = txs[0];
+        if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
+          const avg = bycat[lastTx.category].reduce((a,b)=>a+b,0) / bycat[lastTx.category].length;
+          if (lastTx.amount > avg * 2.5 && !owlAlreadySaid('unusual_tx_' + lastTx.id)) {
+            important.push(`[ВАЖЛИВО] Незвична витрата: ${formatMoney(lastTx.amount)} на "${lastTx.category}" — вище звичного вдвічі.`);
+            markOwlBoardSaid('unusual_tx_' + lastTx.id);
+          }
+        }
+      }
     }
   } catch(e) {}
 
-  return parts.join(' ');
+  // Ранковий огляд
+  if (hour >= 7 && hour <= 9 && !owlAlreadySaid('morning_brief')) {
+    normal.push(`[РАНОК] Початок дня. Налаштуй пріоритети.`);
+    markOwlBoardSaid('morning_brief');
+  }
+
+  // Середина дня
+  if (hour === 13 && min < 30 && !owlAlreadySaid('midday_check')) {
+    normal.push(`[ОБІД] Середина дня — як справи?`);
+    markOwlBoardSaid('midday_check');
+  }
+
+  // Вечір без підсумку
+  if (hour >= 20 && !owlAlreadySaid('evening_prompt')) {
+    const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if (!s || new Date(s.date).toDateString() !== todayStr) {
+      important.push('[ВАЖЛИВО] Вечір — підсумок дня ще не записано.');
+      markOwlBoardSaid('evening_prompt');
+    }
+  }
+
+  // Понеділок — огляд тижня
+  if (weekDay === 1 && hour >= 8 && hour <= 10 && !owlAlreadySaid('week_start')) {
+    normal.push('[ТИЖДЕНЬ] Новий тиждень. Огляд планів і відкритих задач.');
+    markOwlBoardSaid('week_start');
+  }
+
+  // Пʼятниця — підсумок тижня
+  if (weekDay === 5 && hour >= 17 && !owlAlreadySaid('week_end')) {
+    const doneTasks = tasks.filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 7*24*60*60*1000);
+    normal.push(`[ТИЖДЕНЬ] Кінець тижня. Закрито задач за тиждень: ${doneTasks.length}.`);
+    markOwlBoardSaid('week_end');
+  }
+
+  // Порожній день — немає нічого критичного або важливого
+  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const sinceLastH = (Date.now() - lastTs) / (60*60*1000);
+  if (critical.length === 0 && important.length === 0 && sinceLastH > 4 && !owlAlreadySaid('quiet_day_' + todayStr)) {
+    normal.push('[СПОКІЙНИЙ ДЕНЬ] Немає нічого термінового. OWL може сказати щось мотивуюче або поставити коротке питання.');
+    markOwlBoardSaid('quiet_day_' + todayStr);
+  }
+
+  return [...critical, ...important, ...normal].join(' ');
 }
 
 async function generateOwlBoardMessage() {
@@ -5962,12 +6462,18 @@ async function generateOwlBoardMessage() {
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло в Inbox. Це НЕ відповідь на запит — це твоя ініціатива.
 
+ПРІОРИТЕТ ПОВІДОМЛЕНЬ:
+1. Якщо є [КРИТИЧНО] — пиши ТІЛЬКИ про це. Нічого іншого.
+2. Якщо є [ВАЖЛИВО] і немає [КРИТИЧНО] — пиши про перше [ВАЖЛИВО].
+3. Якщо є [СПОКІЙНИЙ ДЕНЬ] — скажи щось коротке в своєму характері: мотивацію, коротке питання про день, або просте спостереження. БЕЗ згадки задач і звичок якщо їх немає.
+4. Інакше — обери найцікавіше зі звичайних даних.
+
 ПРАВИЛА:
 - Максимум 2 речення. Коротко і конкретно.
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
-- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","chips":["чіп1","чіп2"]}
-- chips — 2-3 конкретні факти або дії (задача, звичка, сума). Максимум 3 слова кожен.
+- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
+- chips — 2-3 конкретні факти або дії. Максимум 3 слова кожен. Якщо спокійний день — chips можуть бути порожнім масивом [].
 - Відповідай українською.`;
 
   try {
@@ -5993,7 +6499,7 @@ async function generateOwlBoardMessage() {
 
     // Додаємо нове повідомлення, зберігаємо 3 останніх
     const msgs = getOwlBoardMessages();
-    msgs.unshift({ id: Date.now(), text: parsed.text, chips: parsed.chips || [] });
+    msgs.unshift({ id: Date.now(), text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [] });
     saveOwlBoardMessages(msgs.slice(0, 3));
     localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
 
@@ -6019,12 +6525,21 @@ function renderOwlBoard() {
   // Рендер слайдів
   const track = document.getElementById('owl-board-track');
   if (track) {
-    track.innerHTML = messages.map((m, i) => `
-      <div style="min-width:100%;box-sizing:border-box">
-        <div style="font-size:13px;font-weight:600;color:white;line-height:1.5;margin-bottom:7px">${escapeHtml(m.text)}</div>
-        ${m.chips && m.chips.length > 0 ? `<div style="display:flex;gap:5px;flex-wrap:wrap">${m.chips.map(c=>`<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`).join('')}</div>` : ''}
-      </div>
-    `).join('');
+    track.innerHTML = messages.map((m, i) => {
+      const priorityDot = m.priority === 'critical'
+        ? '<div style="width:6px;height:6px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:5px;box-shadow:0 0 6px rgba(239,68,68,0.7)"></div>'
+        : m.priority === 'important'
+        ? '<div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0;margin-top:5px"></div>'
+        : '';
+      return `
+        <div style="min-width:100%;box-sizing:border-box">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:7px">
+            ${priorityDot}
+            <div style="font-size:13px;font-weight:600;color:white;line-height:1.5;flex:1">${escapeHtml(m.text)}</div>
+          </div>
+          ${m.chips && m.chips.length > 0 ? `<div style="display:flex;gap:5px;flex-wrap:wrap">${m.chips.map(c=>`<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`).join('')}</div>` : ''}
+        </div>`;
+    }).join('');
     track.style.transform = `translateX(-${_owlBoardSlide * 100}%)`;
   }
 
@@ -6091,6 +6606,10 @@ function startOwlBoardCycle() {
 }
 
 function tryOwlBoardUpdate() {
+  // Тихий режим 23:00–7:00
+  const hour = new Date().getHours();
+  if (hour >= 23 || hour < 7) return;
+
   // Показуємо що є зараз
   const msgs = getOwlBoardMessages();
   if (msgs.length > 0) renderOwlBoard();
@@ -6098,13 +6617,12 @@ function tryOwlBoardUpdate() {
   const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
   const elapsed = Date.now() - lastTs;
   const isFirstTime = msgs.length === 0 && lastTs === 0;
-
-  // Новий день — завжди генеруємо свіже повідомлення
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
 
-  // Перший запуск або новий день — завжди генеруємо
-  // Наступні — тільки якщо пройшло 3 хв і є тригер
-  const shouldGenerate = isFirstTime || isNewDay || (elapsed > OWL_BOARD_INTERVAL && checkOwlBoardTrigger());
+  // Вранці (7-9) — перевіряємо частіше (кожні 2 хв)
+  const interval = (hour >= 7 && hour <= 9) ? 2 * 60 * 1000 : OWL_BOARD_INTERVAL;
+
+  const shouldGenerate = isFirstTime || isNewDay || (elapsed > interval && checkOwlBoardTrigger());
   if (shouldGenerate) generateOwlBoardMessage();
 }
 
@@ -6179,6 +6697,204 @@ function updateErrorLogBtn() {
   btn.style.color = count > 0 ? '#ea580c' : '';
 }
 
+// === OWL TAB BOARDS (#37) ===
+const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
+
+function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
+function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
+function getOwlTabSaidKey(tab) { return 'nm_owl_tab_said_' + tab; }
+
+function getTabBoardMsg(tab) {
+  try { return JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null'); } catch { return null; }
+}
+function saveTabBoardMsg(tab, msg) {
+  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msg)); } catch {} }
+
+function getTabBoardSaid(tab) {
+  const today = new Date().toDateString();
+  try {
+    const raw = JSON.parse(localStorage.getItem(getOwlTabSaidKey(tab)) || '{}');
+    if (raw.date !== today) return {};
+    return raw.said || {};
+  } catch { return {}; }
+}
+function markTabBoardSaid(tab, topic) {
+  const today = new Date().toDateString();
+  const said = getTabBoardSaid(tab);
+  said[topic] = true;
+  try { localStorage.setItem(getOwlTabSaidKey(tab), JSON.stringify({ date: today, said })); } catch {}
+}
+function tabAlreadySaid(tab, topic) { return !!getTabBoardSaid(tab)[topic]; }
+
+function dismissTabBoard(tab) {
+  const el = document.getElementById('owl-tab-board-' + tab);
+  if (el) el.style.display = 'none';
+}
+
+function renderTabBoard(tab) {
+  const msg = getTabBoardMsg(tab);
+  const board = document.getElementById('owl-tab-board-' + tab);
+  if (!board) return;
+  if (!msg || !msg.text) { board.style.display = 'none'; return; }
+  board.style.display = 'block';
+
+  const pulse = document.getElementById('owl-tab-pulse-' + tab);
+  if (pulse) {
+    pulse.style.background = msg.priority === 'critical' ? '#ef4444' : msg.priority === 'important' ? '#f59e0b' : '#fbbf24';
+    pulse.style.boxShadow = msg.priority === 'critical' ? '0 0 6px rgba(239,68,68,0.7)' : '';
+  }
+  const textEl = document.getElementById('owl-tab-text-' + tab);
+  if (textEl) textEl.textContent = msg.text;
+  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
+  if (chipsEl) {
+    if (msg.chips && msg.chips.length > 0) {
+      chipsEl.style.display = 'flex';
+      chipsEl.innerHTML = msg.chips.map(c => `<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`).join('');
+    } else {
+      chipsEl.style.display = 'none';
+    }
+  }
+}
+
+function getTabBoardContext(tab) {
+  const parts = [];
+  try { const ctx = getAIContext(); if (ctx) parts.push(ctx); } catch(e) {}
+
+  if (tab === 'tasks') {
+    const tasks = getTasks();
+    const active = tasks.filter(t => t.status === 'active');
+    const now = Date.now();
+    const stuck = active.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
+    if (stuck.length > 0) parts.push(`[ВАЖЛИВО] Задачі без прогресу 3+ дні: ${stuck.map(t => '"' + t.title + '"').join(', ')}`);
+    parts.push(`Активних задач: ${active.length}, закрито: ${tasks.filter(t => t.status === 'done').length}`);
+  }
+
+  if (tab === 'notes') {
+    const notes = getNotes();
+    const byFolder = {};
+    notes.forEach(n => { const f = n.folder || 'Загальне'; byFolder[f] = (byFolder[f] || 0) + 1; });
+    parts.push(`Нотатки: ${notes.length} записів. Папки: ${Object.entries(byFolder).map(([f, c]) => f + '(' + c + ')').join(', ') || 'немає'}`);
+  }
+
+  if (tab === 'me') {
+    const habits = getHabits();
+    const log = getHabitLog();
+    const today = new Date().toDateString();
+    const todayDow = (new Date().getDay() + 6) % 7;
+    const todayH = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+    const doneToday = todayH.filter(h => !!log[today]?.[h.id]).length;
+    if (habits.length > 0) {
+      const streaks = habits.map(h => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
+      parts.push(`Звички сьогодні: ${doneToday}/${todayH.length}. Стріки: ${streaks.filter(s => s.streak >= 2).map(s => s.name + '🔥' + s.streak).join(', ') || 'немає'}`);
+    }
+    const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    parts.push(`Записів за тиждень: ${inbox.filter(i => i.ts > weekAgo).length}. Задач активних: ${getTasks().filter(t => t.status === 'active').length}`);
+  }
+
+  if (tab === 'evening') {
+    const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+    const todayStr = new Date().toDateString();
+    const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === todayStr);
+    const summary = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+    const hour = new Date().getHours();
+    parts.push(`Моменти сьогодні: ${todayMoments.length}. Підсумок дня: ${hasSummary ? 'є' : 'ще не записано'}.`);
+    if (hour >= 20 && !hasSummary) parts.push('[ВАЖЛИВО] Вечір — підсумок ще не записано.');
+    const tasks = getTasks().filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 24*60*60*1000);
+    if (tasks.length > 0) parts.push(`Задач закрито сьогодні: ${tasks.length}`);
+  }
+
+  if (tab === 'finance') {
+    try { const finCtx = getFinanceContext(); if (finCtx) parts.push(finCtx); } catch(e) {}
+  }
+
+  return parts.filter(Boolean).join('\n\n');
+}
+
+function checkTabBoardTrigger(tab) {
+  if (tab === 'tasks') {
+    const tasks = getTasks().filter(t => t.status === 'active');
+    if (tasks.length === 0) return false;
+    const now = Date.now();
+    const stuck = tasks.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
+    if (stuck.length > 0) return true;
+    return true;
+  }
+  if (tab === 'notes') return getNotes().length > 0;
+  if (tab === 'me') return getHabits().length > 0 || getTasks().length > 0;
+  if (tab === 'evening') return true;
+  if (tab === 'finance') {
+    try { return getFinance().length > 0; } catch { return false; }
+  }
+  return true;
+}
+
+let _tabBoardGenerating = {};
+
+async function generateTabBoardMessage(tab) {
+  if (_tabBoardGenerating[tab]) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  _tabBoardGenerating[tab] = true;
+
+  const context = getTabBoardContext(tab);
+  const tabLabels = { tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси' };
+  const existing = getTabBoardMsg(tab);
+  const recentText = existing ? existing.text : '';
+
+  const systemPrompt = getOWLPersonality() + `
+
+Ти пишеш КОРОТКЕ проактивне повідомлення для табло у вкладці "${tabLabels[tab] || tab}". Це НЕ відповідь на запит — це твоя ініціатива.
+
+ПРАВИЛА:
+- Максимум 2 речення. Коротко і конкретно про цю вкладку.
+- Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти і дані яких немає.
+- НЕ повторюй нещодавнє: "${recentText || 'нічого'}"
+- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
+- chips — 2-3 конкретні факти або дії. Максимум 3 слова кожен. Якщо нічого — [].
+- Відповідай українською.`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Дані: ${context}` }
+        ],
+        max_tokens: 120,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { _tabBoardGenerating[tab] = false; return; }
+    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+    if (!parsed.text) { _tabBoardGenerating[tab] = false; return; }
+    saveTabBoardMsg(tab, { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() });
+    localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+    renderTabBoard(tab);
+  } catch(e) {}
+  _tabBoardGenerating[tab] = false;
+}
+
+function tryTabBoardUpdate(tab) {
+  if (tab === 'inbox') return;
+  const hour = new Date().getHours();
+  if (hour >= 23 || hour < 7) return;
+  renderTabBoard(tab);
+  const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
+  const elapsed = Date.now() - lastTs;
+  const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
+  const firstTime = lastTs === 0;
+  if (firstTime || isNewDay || (elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab))) {
+    generateTabBoardMessage(tab);
+  }
+}
+
 // === INIT ===
 function init() {
   try { setupPWA(); } catch(e) {}
@@ -6217,6 +6933,8 @@ function init() {
   } catch(e) {}
   try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
   try { renderInbox(); } catch(e) {}
+  // Відновлюємо чат Inbox якщо є збережені повідомлення
+  try { restoreChatUI('inbox'); } catch(e) {}
   // Показуємо inbox bar одразу — він тепер керується як tasks/me/evening
   try {
     const inboxBar = document.getElementById('inbox-ai-bar');
