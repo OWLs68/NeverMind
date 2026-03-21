@@ -34,7 +34,7 @@ body {
 /* === CSS VARIABLES — DESIGN SYSTEM === */
 :root {
   /* Global palette */
-  --inbox-bg: linear-gradient(160deg, #f2d978, #ffffff);
+  --inbox-bg: linear-gradient(160deg, #f5f0e8, #ffffff);
   --inbox-tab-bg: rgb(243,211,94);
 
   /* Cards */
@@ -184,7 +184,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(160deg, #f2d978, #ffffff);
+  background: linear-gradient(160deg, #f5f0e8, #ffffff);
   transition: background 0.4s ease;
 }
 
@@ -485,7 +485,7 @@ body {
   position: relative;
   z-index: 1;
   width: 100%;
-  background: linear-gradient(180deg, #f2d978 0%, #fff8e6 30%, #ffffff 100%);
+  background: linear-gradient(180deg, #f5f0e8 0%, #faf7f2 30%, #ffffff 100%);
   border-radius: 24px 24px 0 0;
   padding: 12px 0 48px;
   margin-bottom: -100%;
@@ -688,7 +688,7 @@ body {
 }
 
 /* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
-#page-inbox .page-header { background: linear-gradient(to bottom, #f2d978 30%, transparent); }
+#page-inbox .page-header { background: linear-gradient(to bottom, #f5f0e8 30%, transparent); }
 #page-tasks .page-header { background: linear-gradient(to bottom, #fdb87a 30%, transparent); }
 #page-notes .page-header { background: linear-gradient(to bottom, #fed7aa 30%, transparent); }
 #page-me .page-header { background: linear-gradient(to bottom, #e8d5c4 30%, transparent); }
@@ -2140,7 +2140,7 @@ body {
   <div class="settings-panel" id="settings-panel-el">
     <div class="settings-handle" style="cursor:grab"></div>
     <div class="settings-title">Налаштування</div>
-    <div class="settings-version">NeverMind · v0.29</div>
+    <div class="settings-version">NeverMind · v0.31</div>
 
     <!-- Як користуватися -->
     <div class="s-group" style="background:rgba(242,217,120,0.35);border-color:rgba(242,217,120,0.5)">
@@ -2332,12 +2332,12 @@ body {
         </div>
         <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      <div class="s-row" onclick="closeSettings();openSlidesTour()" style="border-bottom:none">
+      <div class="s-row" onclick="closeSettings();openUpdateSlides()" style="border-bottom:none">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(30,16,64,0.05)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
-          <div class="s-row-title">Що нового · v0.29</div>
+          <div class="s-row-title">Що нового · v0.31</div>
         </div>
         <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
@@ -2369,7 +2369,7 @@ body {
 <!-- MEMORY MODAL -->
 <div id="memory-modal" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
   <div onclick="closeMemoryModal()" style="position:absolute;inset:0;background:rgba(20,10,50,0.45);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:linear-gradient(180deg,#f2d978 0%,#fff8e6 20%,#ffffff 100%);border-radius:24px 24px 0 0;z-index:1;max-height:88vh;display:flex;flex-direction:column">
+  <div style="position:relative;width:100%;max-width:480px;background:linear-gradient(180deg,#f5f0e8 0%,#faf7f2 20%,#ffffff 100%);border-radius:24px 24px 0 0;z-index:1;max-height:88vh;display:flex;flex-direction:column">
     <!-- Handle -->
     <div style="padding:12px 20px 0;flex-shrink:0">
       <div style="width:36px;height:4px;background:rgba(30,16,64,0.15);border-radius:2px;margin:0 auto 12px"></div>

@@ -7,11 +7,11 @@
 // === TAB THEMES ===
 const TAB_THEMES = {
   inbox: {
-    bg: 'linear-gradient(160deg, #f2d978, #ffffff)',
-    orb: 'rgba(242,217,120,0.25)',
-    tabBg: 'rgb(243,211,94)',
-    accent: '#8b6914',
-    accent2: '#d4a857',
+    bg: 'linear-gradient(160deg, #f5f0e8, #ffffff)',
+    orb: 'rgba(220,200,170,0.25)',
+    tabBg: 'rgb(220,200,170)',
+    accent: '#5c4a2a',
+    accent2: '#8b6914',
   },
   tasks: {
     bg: 'linear-gradient(160deg, #fdb87a, #ffd4a8)',
@@ -280,13 +280,13 @@ function setupDrumTabbar() {
   const track = document.getElementById('drumTrack');
   if (!capsule || !track) return;
 
-  // Будуємо барабан з активних вкладок
   rebuildDrumTabbar();
 
-  let startX = 0, dragDelta = 0, dragging = false, velocity = 0, lastX = 0, lastTime = 0;
+  let startX = 0, dragDelta = 0, dragging = false;
+  let velocity = 0, lastX = 0, lastTime = 0;
   let currentTranslateX = 0;
+  let _rafId = null; // для інерційної анімації
 
-  // Відступи — рівно половина капсули з кожного боку
   function updateEdgePadding() {
     const half = Math.floor(capsule.offsetWidth / 2);
     track.style.paddingLeft = half + 'px';
@@ -295,7 +295,6 @@ function setupDrumTabbar() {
   updateEdgePadding();
   window.addEventListener('resize', updateEdgePadding);
 
-  // Клік — тільки якщо не свайп
   capsule.addEventListener('click', e => {
     const item = e.target.closest('.tab-item[data-tab]');
     if (item && Math.abs(dragDelta) < 8) switchTab(item.dataset.tab);
@@ -304,7 +303,6 @@ function setupDrumTabbar() {
   function getDrumBounds() {
     const capsuleW = capsule.offsetWidth;
     const trackW = track.scrollWidth;
-    // minX — ліва межа (від'ємна), maxX = 0
     return { minX: Math.min(0, capsuleW - trackW), maxX: 0 };
   }
 
@@ -321,18 +319,13 @@ function setupDrumTabbar() {
     return closest ? closest.dataset.tab : null;
   }
 
-  function snapToTab(tab) {
-    // Знаходимо елемент і центруємо його в капсулі
+  function getSnapX(tab) {
     const item = track.querySelector(`.tab-item[data-tab="${tab}"]`);
-    if (!item) return;
+    if (!item) return currentTranslateX;
     const { minX, maxX } = getDrumBounds();
     const capsuleW = capsule.offsetWidth;
     const itemCenter = item.offsetLeft + item.offsetWidth / 2;
-    const newX = Math.max(minX, Math.min(maxX, capsuleW / 2 - itemCenter));
-    currentTranslateX = newX;
-    window._drumCurrentX = newX;
-    track.style.transition = 'transform 0.32s cubic-bezier(0.32,0.72,0,1)';
-    track.style.transform = `translateX(${newX}px)`;
+    return Math.max(minX, Math.min(maxX, capsuleW / 2 - itemCenter));
   }
 
   function updateActiveVisual(tab) {
@@ -346,17 +339,69 @@ function setupDrumTabbar() {
     });
   }
 
+  function setX(x) {
+    track.style.transform = `translateX(${x}px)`;
+    currentTranslateX = x;
+    window._drumCurrentX = x;
+  }
+
+  // Інерційна анімація через requestAnimationFrame
+  function runMomentum(vel) {
+    if (_rafId) cancelAnimationFrame(_rafId);
+    const { minX, maxX } = getDrumBounds();
+    const FRICTION = 0.92; // гальмування (0.9 = швидше, 0.95 = довше)
+    const MIN_VEL = 0.3;   // поріг зупинки
+
+    function step() {
+      vel *= FRICTION;
+      const newX = Math.max(minX, Math.min(maxX, currentTranslateX + vel));
+
+      // Пружна межа — відскакує від країв
+      if (currentTranslateX + vel > maxX) {
+        vel *= -0.4;
+      } else if (currentTranslateX + vel < minX) {
+        vel *= -0.4;
+      }
+
+      setX(newX);
+
+      // Оновлюємо візуал під час інерції
+      const centerTab = getTabAtCenter();
+      if (centerTab) updateActiveVisual(centerTab);
+
+      if (Math.abs(vel) > MIN_VEL) {
+        _rafId = requestAnimationFrame(step);
+      } else {
+        // Інерція зупинилась — snap до найближчої вкладки
+        const snapTab = getTabAtCenter();
+        if (snapTab) {
+          const snapX = getSnapX(snapTab);
+          track.style.transition = 'transform 0.25s cubic-bezier(0.32,0.72,0,1)';
+          setX(snapX);
+          setTimeout(() => { track.style.transition = ''; }, 260);
+          if (snapTab !== currentTab) switchTab(snapTab);
+        }
+      }
+    }
+    _rafId = requestAnimationFrame(step);
+  }
+
   capsule.addEventListener('touchstart', e => {
+    // Зупиняємо інерцію якщо є
+    if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+    track.style.transition = 'none';
+
+    // Читаємо реальну позицію з DOM
     const mat = new DOMMatrix(getComputedStyle(track).transform);
     currentTranslateX = isNaN(mat.m41) ? (window._drumCurrentX || 0) : mat.m41;
     window._drumCurrentX = currentTranslateX;
+
     startX = e.touches[0].clientX;
     lastX = startX;
     lastTime = Date.now();
     dragDelta = 0;
     velocity = 0;
     dragging = true;
-    track.style.transition = 'none';
   }, { passive: true });
 
   capsule.addEventListener('touchmove', e => {
@@ -364,76 +409,55 @@ function setupDrumTabbar() {
     const x = e.touches[0].clientX;
     const now = Date.now();
     const dt = now - lastTime;
-    if (dt > 0) velocity = (x - lastX) / dt;
-    lastX = x; lastTime = now;
+    // Velocity в px/ms — середнє між останніми точками
+    if (dt > 0) velocity = velocity * 0.6 + (x - lastX) / dt * 0.4;
+    lastX = x;
+    lastTime = now;
     dragDelta = x - startX;
 
     const { minX, maxX } = getDrumBounds();
-    let newX = currentTranslateX + dragDelta;
-    // Пружна межа
-    if (newX > maxX) newX = maxX + (newX - maxX) * 0.2;
-    if (newX < minX) newX = minX + (newX - minX) * 0.2;
+    let newX = currentTranslateX + (x - startX);
+
+    // Пружна межа — опір на краях
+    if (newX > maxX) newX = maxX + (newX - maxX) * 0.25;
+    if (newX < minX) newX = minX + (newX - minX) * 0.25;
+
     track.style.transform = `translateX(${newX}px)`;
 
-    // Візуал активної вкладки під час скролу
-    const tempX = currentTranslateX;
-    currentTranslateX = Math.max(minX, Math.min(maxX, newX));
-    const centerTab = getTabAtCenter();
+    // Оновлюємо startX щоб рух був 1:1 з пальцем
+    // НЕ оновлюємо currentTranslateX тут — це робиться через velocity
+    const tempX = Math.max(minX, Math.min(maxX, newX));
+    const saved = currentTranslateX;
     currentTranslateX = tempX;
+    const centerTab = getTabAtCenter();
+    currentTranslateX = saved;
     if (centerTab) updateActiveVisual(centerTab);
   }, { passive: true });
 
-  capsule.addEventListener('touchend', () => {
+  capsule.addEventListener('touchend', e => {
     dragging = false;
     if (Math.abs(dragDelta) < 8) return;
 
-    const { minX, maxX } = getDrumBounds();
-    const active = getActiveTabs();
+    // Оновлюємо currentTranslateX до реальної позиції
+    const mat = new DOMMatrix(getComputedStyle(track).transform);
+    currentTranslateX = isNaN(mat.m41) ? currentTranslateX : mat.m41;
+    window._drumCurrentX = currentTranslateX;
 
-    // Знаходимо поточну вкладку (яка зараз ближче до центру)
-    const currentLanded = Math.max(minX, Math.min(maxX, currentTranslateX + dragDelta));
-    const savedX = currentTranslateX;
-    currentTranslateX = currentLanded;
-    const fromTab = getTabAtCenter() || currentTab;
-    currentTranslateX = savedX;
-
-    const fromIdx = active.indexOf(fromTab);
-
-    // Рахуємо кількість вкладок для прокрутки на основі velocity
-    // velocity > 0 = рух вправо (вкладки ліворуч) = зменшення idx
-    // velocity < 0 = рух вліво (вкладки праворуч) = збільшення idx
-    const absV = Math.abs(velocity);
-    let tabsToScroll;
-    if (absV > 1.5)      tabsToScroll = active.length; // дуже швидко — до кінця
-    else if (absV > 0.8) tabsToScroll = 3;
-    else if (absV > 0.4) tabsToScroll = 2;
-    else                 tabsToScroll = 1;
-
-    const direction = velocity > 0 ? -1 : 1; // > 0 = свайп вправо = йдемо до менших idx
-    const targetIdx = Math.max(0, Math.min(active.length - 1, fromIdx + direction * tabsToScroll));
-    const targetTab = active[targetIdx];
-
-    // Анімація до цільової вкладки
-    const targetItem = track.querySelector(`.tab-item[data-tab="${targetTab}"]`);
-    if (targetItem) {
-      const capsuleW = capsule.offsetWidth;
-      const itemCenter = targetItem.offsetLeft + targetItem.offsetWidth / 2;
-      const newX = Math.max(minX, Math.min(maxX, capsuleW / 2 - itemCenter));
-
-      // Тривалість залежить від дистанції
-      const dist = Math.abs(tabsToScroll);
-      const duration = dist >= active.length ? 480 : dist >= 3 ? 420 : dist >= 2 ? 360 : 300;
-
-      currentTranslateX = newX;
-      window._drumCurrentX = newX;
-      track.style.transition = `transform ${duration}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
-      track.style.transform = `translateX(${newX}px)`;
-
-      updateActiveVisual(targetTab);
-
-      setTimeout(() => {
-        if (targetTab !== currentTab) switchTab(targetTab);
-      }, duration - 50);
+    // Запускаємо інерцію з поточною швидкістю (px/ms → px/frame при 60fps ≈ 16ms)
+    const vel = velocity * 16;
+    if (Math.abs(vel) > 1) {
+      runMomentum(vel);
+    } else {
+      // Повільний свайп — snap до найближчої
+      const snapTab = getTabAtCenter();
+      if (snapTab) {
+        const snapX = getSnapX(snapTab);
+        track.style.transition = 'transform 0.25s cubic-bezier(0.32,0.72,0,1)';
+        setX(snapX);
+        setTimeout(() => { track.style.transition = ''; }, 260);
+        updateActiveVisual(snapTab);
+        if (snapTab !== currentTab) switchTab(snapTab);
+      }
     }
   }, { passive: true });
 }
@@ -1072,7 +1096,6 @@ function setupKeyboardAvoiding() {
 // === PAGE TRANSITIONS ===
 let currentTabForAnim = 'inbox';
 function animateTabSwitch(newTab) {
-  const TAB_ORDER = ['inbox','tasks','notes','me','evening','finance','health','projects'];
   const oldPage = document.getElementById(`page-${currentTabForAnim}`);
   const newPage = document.getElementById(`page-${newTab}`);
   if (!oldPage || !newPage || oldPage === newPage) {
@@ -1080,40 +1103,29 @@ function animateTabSwitch(newTab) {
     return;
   }
 
-  const oldIdx = TAB_ORDER.indexOf(currentTabForAnim);
-  const newIdx = TAB_ORDER.indexOf(newTab);
-  const goRight = newIdx > oldIdx;
-
-  // Стартова позиція нової вкладки
+  // Плавний fade — без translate щоб не було жорсткого контрасту між кольорами
   newPage.style.transition = 'none';
-  newPage.style.transform = goRight ? 'translateX(28px)' : 'translateX(-28px)';
   newPage.style.opacity = '0';
   newPage.style.visibility = 'visible';
 
-  // Вихід старої
-  oldPage.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
-  oldPage.style.transform = goRight ? 'translateX(-28px)' : 'translateX(28px)';
+  // Стара — зникає
+  oldPage.style.transition = 'opacity 0.18s ease';
   oldPage.style.opacity = '0';
 
-  // Вхід нової — наступний кадр
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      newPage.style.transition = 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
-      newPage.style.transform = 'translateX(0)';
+      newPage.style.transition = 'opacity 0.22s ease';
       newPage.style.opacity = '1';
     });
   });
 
-  // Прибираємо inline стилі після завершення
   setTimeout(() => {
     oldPage.style.transition = '';
-    oldPage.style.transform = '';
     oldPage.style.opacity = '';
     oldPage.style.visibility = '';
     newPage.style.transition = '';
-    newPage.style.transform = '';
     newPage.style.opacity = '';
-  }, 280);
+  }, 260);
 
   currentTabForAnim = newTab;
 }

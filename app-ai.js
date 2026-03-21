@@ -1051,23 +1051,53 @@ function setupOwlBoardSwipe() {
   const slider = document.getElementById('owl-board-slider');
   if (!slider || slider._owlSwipe) return;
   slider._owlSwipe = true;
-  let _owlStartX = 0, _owlStartY = 0;
+
+  let _owlStartX = 0, _owlStartY = 0, _owlLocked = false;
+
   slider.addEventListener('touchstart', e => {
     _owlStartX = e.touches[0].clientX;
     _owlStartY = e.touches[0].clientY;
-    e.stopPropagation();
-  }, { passive: false });
+    _owlLocked = false;
+  }, { passive: true });
+
   slider.addEventListener('touchmove', e => {
     const dx = Math.abs(e.touches[0].clientX - _owlStartX);
     const dy = Math.abs(e.touches[0].clientY - _owlStartY);
-    if (dx > dy) e.stopPropagation();
+    if (!_owlLocked && dx > dy && dx > 8) {
+      _owlLocked = true;
+    }
+    if (_owlLocked) {
+      e.stopPropagation();
+      // Показуємо рух треку під пальцем
+      const msgs = getOwlBoardMessages();
+      if (msgs.length <= 1) return;
+      const rawDx = e.touches[0].clientX - _owlStartX;
+      const track = document.getElementById('owl-board-track');
+      if (track) {
+        const base = -_owlBoardSlide * 100;
+        const pct = (rawDx / slider.offsetWidth) * 100;
+        // Опір на краях
+        let offset = pct;
+        if ((_owlBoardSlide === 0 && rawDx > 0) || (_owlBoardSlide === msgs.length - 1 && rawDx < 0)) {
+          offset = pct * 0.25;
+        }
+        track.style.transition = 'none';
+        track.style.transform = `translateX(${base + offset}%)`;
+      }
+    }
   }, { passive: false });
+
   slider.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - _owlStartX;
+    if (!_owlLocked) return;
     e.stopPropagation();
+    const dx = e.changedTouches[0].clientX - _owlStartX;
+    const track = document.getElementById('owl-board-track');
+    if (track) track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
     const msgs = getOwlBoardMessages();
     if (dx < -40 && _owlBoardSlide < msgs.length - 1) owlBoardGoTo(_owlBoardSlide + 1);
     else if (dx > 40 && _owlBoardSlide > 0) owlBoardGoTo(_owlBoardSlide - 1);
+    else owlBoardGoTo(_owlBoardSlide); // snap back
+    _owlLocked = false;
   }, { passive: false });
 }
 
