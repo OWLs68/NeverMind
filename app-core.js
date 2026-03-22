@@ -156,50 +156,40 @@ function openTabSelector() {
   overlay.id = 'tab-selector-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)';
 
-  overlay.innerHTML = `
-    <div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)">
+  // Будуємо HTML через конкатенацію (без вкладених template literals)
+  var cardsHtml = ALL_TABS_CONFIG.map(function(t) {
+    var isActive = active.includes(t.id);
+    var isLocked = locked.includes(t.id);
+    var borderColor = isActive ? t.accent : 'rgba(30,16,64,0.08)';
+    var cardBg = isActive ? t.bg : 'rgba(255,255,255,0.6)';
+    var iconBg = isActive ? t.accent : 'rgba(30,16,64,0.06)';
+    var iconColor = isActive ? 'white' : 'rgba(30,16,64,0.4)';
+    var labelColor = isActive ? t.accent : 'rgba(30,16,64,0.45)';
+    var onclickAttr = isLocked ? '' : "toggleTabSelection('" + t.id + "')";
+    var checkHtml = isLocked
+      ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">завжди</div>'
+      : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? t.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
+        + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '')
+        + '</div>';
+    return '<div id="tab-sel-card-' + t.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ';border:2px solid ' + borderColor + ';cursor:' + (isLocked ? 'default' : 'pointer') + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">'
+      + '<div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:' + iconColor + ';transition:all 0.18s">' + t.svg + '</div>'
+      + '<div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t.label + '</div>'
+      + checkHtml + '</div>';
+  }).join('');
 
-      <!-- Хедер -->
-      <div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)">
-        <div>
-          <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
-          <div style="font-size:18px;font-weight:800;color:#1e1040">Вкладки</div>
-          <div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">Вибери що показувати в барабані</div>
-        </div>
-        <button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">Готово</button>
-      </div>
-
-      <!-- Сітка вкладок 2×4 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">
-        ${ALL_TABS_CONFIG.map(t => {
-          const isActive = active.includes(t.id);
-          const isLocked = locked.includes(t.id);
-          const borderColor = isActive ? t.accent : 'rgba(30,16,64,0.08)';
-          const cardBg = isActive ? t.bg : 'rgba(255,255,255,0.6)';
-          return `<div id="tab-sel-card-${t.id}"
-            onclick="${isLocked ? '' : 'toggleTabSelection(\'' + t.id + '\')'}"
-            style="border-radius:18px;padding:14px;background:${cardBg};border:2px solid ${borderColor};cursor:${isLocked ? 'default' : 'pointer'};transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">
-            <div style="width:40px;height:40px;border-radius:12px;background:${isActive ? t.accent : 'rgba(30,16,64,0.06)'};display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:${isActive ? 'white' : 'rgba(30,16,64,0.4)'};transition:all 0.18s">
-              ${t.svg}
-            </div>
-            <div style="font-size:14px;font-weight:700;color:${isActive ? t.accent : 'rgba(30,16,64,0.45)'};line-height:1.2">${t.label}</div>
-            ${isLocked
-              ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">завжди</div>'
-              : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? t.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
-                + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '')
-                + '</div>'
-            }
-          </div>`;
-        }).join('')}
-      </div>
-
-      <!-- Порядок вкладок (#27) -->
-      <div style="padding:0 16px 8px">
-        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Порядок</div>
-        <div id="tab-order-list" style="display:flex;flex-direction:column;gap:6px"></div>
-        <div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;margin-top:8px;text-align:center">Тапни вкладку → стрілки для переміщення</div>
-      </div>
-    </div>\`;
+  overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)">'
+    + '<div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)">'
+    + '<div><div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>'
+    + '<div style="font-size:18px;font-weight:800;color:#1e1040">Вкладки</div>'
+    + '<div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">Вибери що показувати в барабані</div></div>'
+    + '<button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">Готово</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div>'
+    + '<div style="padding:0 16px 8px">'
+    + '<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Порядок</div>'
+    + '<div id="tab-order-list" style="display:flex;flex-direction:column;gap:6px"></div>'
+    + '<div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;margin-top:8px;text-align:center">Тапни вкладку → стрілки для переміщення</div>'
+    + '</div></div>';
 
   overlay.addEventListener('click', e => { if (e.target === overlay) closeTabSelector(); });
   document.body.appendChild(overlay);
