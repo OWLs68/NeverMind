@@ -289,6 +289,8 @@ function applyTabSelection() {
   showToast('✓ Вкладки оновлено');
 }
 
+let _selectedOrderTab = null;
+
 function closeTabSelector() {
   _pendingTabs = null;
   _selectedOrderTab = null;
@@ -297,7 +299,6 @@ function closeTabSelector() {
 }
 
 // === TAB ORDER (#27) ===
-let _selectedOrderTab = null;
 
 function renderTabOrderList() {
   const list = document.getElementById('tab-order-list');
