@@ -115,7 +115,7 @@ function renderProjectWorkspace(id) {
   const resources = p.resources || [];
   const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
 
-  const scrollEl = document.querySelector('#page-projects > div:nth-child(2)');
+  const scrollEl = document.getElementById('projects-scroll');
   if (!scrollEl) return;
 
   scrollEl.innerHTML = `
@@ -316,14 +316,28 @@ function _syncProjectStepToTasks(project, step) {
 
 // === ДОДАТИ ПРОЕКТ ===
 function openAddProject() {
-  const name = prompt('Назва проекту:');
-  if (!name || !name.trim()) return;
-  const subtitle = prompt('Підзаголовок (необов\'язково, напр. "PWA → Supabase → App Store"):') || '';
+  const modal = document.getElementById('project-modal');
+  if (!modal) return;
+  document.getElementById('project-input-name').value = '';
+  document.getElementById('project-input-subtitle').value = '';
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('project-input-name').focus(), 100);
+}
+
+function closeProjectModal() {
+  const modal = document.getElementById('project-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function saveNewProject() {
+  const name = (document.getElementById('project-input-name').value || '').trim();
+  if (!name) return;
+  const subtitle = (document.getElementById('project-input-subtitle').value || '').trim();
   const projects = getProjects();
   const newProject = {
     id: Date.now(),
-    name: name.trim(),
-    subtitle: subtitle.trim(),
+    name,
+    subtitle,
     progress: 0,
     steps: [],
     budget: { total: 0, spent: 0, items: [] },
@@ -340,6 +354,7 @@ function openAddProject() {
   };
   projects.unshift(newProject);
   saveProjects(projects);
+  closeProjectModal();
   showToast('✓ Проект створено');
   openProjectWorkspace(newProject.id);
 }

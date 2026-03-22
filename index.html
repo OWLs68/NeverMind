@@ -1900,7 +1900,7 @@ body {
       </div>
 
       <!-- SCROLL -->
-      <div style="flex:1;overflow-y:auto;padding:0 14px 130px">
+      <div id="health-scroll" style="flex:1;overflow-y:auto;padding:0 14px 130px">
 
         <!-- Трекер самопочуття тижня -->
         <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
@@ -1973,7 +1973,7 @@ body {
       </div>
 
       <!-- SCROLL -->
-      <div style="flex:1;overflow-y:auto;padding:0 14px 130px">
+      <div id="projects-scroll" style="flex:1;overflow-y:auto;padding:0 14px 130px">
         <div id="projects-list"></div>
         <div id="projects-empty" style="display:none;text-align:center;padding:40px 0">
           <div style="font-size:36px;margin-bottom:10px">🚀</div>
@@ -1987,36 +1987,36 @@ body {
 </div><!-- /app -->
 
 <!-- HEALTH AI BAR -->
-<div id="health-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
-  <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
-    <div style="background:rgba(26,92,42,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
-      <div id="health-chat-window" class="ai-bar-chat-window">
-        <div id="health-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
-        <textarea id="health-bar-input" rows="1" placeholder="Прийняв ліки, болить голова..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendHealthBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
-        <button onclick="sendHealthBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#1a5c2a;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
-      </div>
-    </div>
+<div id="health-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <div class="ai-bar-chat-window" id="health-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('health')"></div>
+    <div class="ai-bar-messages" id="health-chat-messages"></div>
+  </div>
+  <div class="ai-bar-input-box">
+    <textarea id="health-bar-input" rows="1" placeholder="Прийняв ліки, болить голова…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('health')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendHealthBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendHealthBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
   </div>
 </div>
 
 <!-- PROJECTS AI BAR -->
-<div id="projects-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
-  <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
-    <div style="background:rgba(61,46,30,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
-      <div id="projects-chat-window" class="ai-bar-chat-window">
-        <div id="projects-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
-        <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
-        <button onclick="sendProjectsBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#3d2e1e;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
-      </div>
-    </div>
+<div id="projects-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
+  <div class="ai-bar-chat-window" id="projects-chat-window">
+    <div class="ai-bar-chat-handle" onclick="closeChatBar('projects')"></div>
+    <div class="ai-bar-messages" id="projects-chat-messages"></div>
+  </div>
+  <div class="ai-bar-input-box">
+    <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план…"
+      oninput="autoResizeTextarea(this)"
+      onfocus="openChatBar('projects')"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}"></textarea>
+    <button class="ai-bar-send-btn" onclick="sendProjectsBarMessage()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
   </div>
 </div>
 
@@ -2163,6 +2163,21 @@ body {
     <div style="display:flex;gap:8px">
       <button onclick="closeTaskModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
       <button onclick="saveTask()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div id="project-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+  <div onclick="closeProjectModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 24px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div style="font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Новий проект</div>
+    <input id="project-input-name" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box" placeholder="Назва проекту…" ontouchend="this.focus()">
+    <textarea id="project-input-subtitle" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:16px;box-sizing:border-box" placeholder="Підзаголовок або мета (необовʼязково)…" ontouchend="this.focus()"></textarea>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeProjectModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveNewProject()" style="flex:2;background:linear-gradient(135deg,#5c4a2a,#3d2e1e);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Створити</button>
     </div>
   </div>
 </div>

@@ -187,7 +187,7 @@ function renderHealthWorkspace(id) {
   const analyses = card.analyses || [];
   const owlAnalysis = card.owlAnalysis || '';
 
-  const scrollEl = document.querySelector('#page-health > div:nth-child(2)');
+  const scrollEl = document.getElementById('health-scroll');
   if (scrollEl) scrollEl.innerHTML = `
     <!-- Назад -->
     <div onclick="closeHealthCard()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
