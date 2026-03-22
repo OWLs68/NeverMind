@@ -228,7 +228,7 @@ function renderProjectWorkspace(id) {
     </div>` : ''}
 
     <!-- Нотатки → папка -->
-    <div onclick="openNotesFolder('${escapeHtml(p.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -357,6 +357,59 @@ function saveNewProject() {
   closeProjectModal();
   showToast('✓ Проект створено');
   openProjectWorkspace(newProject.id);
+  // OWL починає інтервʼю по проекту в Inbox
+  setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
+}
+
+async function startProjectInboxInterview(projectName, projectSubtitle) {
+  // Переходимо на Inbox де відбувається вся комунікація
+  if (typeof switchTab === 'function' && currentTab !== 'inbox') switchTab('inbox');
+
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    setTimeout(() => addInboxChatMsg('agent',
+      `Проект "${projectName}" створено! Розкажи — який у тебе стартовий капітал, скільки часу на тиждень можеш вкладати, і що найбільше лякає в цьому?`
+    ), 400);
+    return;
+  }
+
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Щойно створено новий проект "${projectName}"${projectSubtitle ? ` — "${projectSubtitle}"` : ''}.
+Твоя роль — персональний наставник. Постав ОДНЕ перше питання щоб краще зрозуміти цей проект.
+Питай про стартовий капітал або ресурси. Коротко, по-людськи, без зайвих слів.
+Відповідай українською. Тільки текст, без JSON.
+${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }],
+        max_tokens: 100,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (reply) {
+      setTimeout(() => {
+        addInboxChatMsg('agent', reply);
+        // Зберігаємо що OWL чекає відповідь по темі проекту
+        localStorage.setItem('nm_guide_waiting_topic', 'project_' + Date.now());
+        // Додаємо в масив тем провідника щоб продовжити розпитувати
+        const shownTopics = JSON.parse(localStorage.getItem('nm_guide_shown_topics') || '[]');
+        // Питання про час на тиждень — наступне
+        localStorage.setItem('nm_project_interview_step', '1');
+        localStorage.setItem('nm_project_interview_name', projectName);
+      }, 500);
+    }
+  } catch(e) {
+    setTimeout(() => addInboxChatMsg('agent',
+      `Проект "${projectName}" створено! Розкажи — який у тебе стартовий капітал для цього?`
+    ), 400);
+  }
 }
 
 // Контекст проектів для AI
@@ -436,6 +489,7 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Оновити темп: {"action":"update_project_tempo","project_id":${activeProjectId || 'null'},"tempoNow":"6 тиж","tempoMore":"4 тиж","tempoIdeal":"2 тиж"}
 - Записати ризики: {"action":"update_project_risks","project_id":${activeProjectId || 'null'},"risks":"текст"}
 - Нотатку: {"action":"create_note","text":"текст","folder":"${activeProject ? activeProject.name : 'Проекти'}"}
+- Створити папку нотаток: {"action":"create_folder","folder":"назва папки"}
 - Задачу: {"action":"create_task","title":"назва","steps":[]}
 Інакше — відповідай текстом 1-3 речення. Якщо незрозуміло — перепитуй. НЕ вигадуй дані яких немає.`;
 
@@ -467,7 +521,7 @@ ${aiContext ? '\n\n' + aiContext : ''}
             renderProjects();
             addProjectsChatMsg('agent', `✅ Крок "${step.text}" виконано! Прогрес: ${p.progress}%`);
           } else { safeAgentReply(reply, addProjectsChatMsg); }
-        }
+        } else { safeAgentReply(reply, addProjectsChatMsg); }
       } else if (parsed.action === 'add_project_step' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
@@ -478,7 +532,7 @@ ${aiContext ? '\n\n' + aiContext : ''}
           saveProjects(projs);
           renderProjects();
           addProjectsChatMsg('agent', `✓ Додав крок: "${parsed.step}"`);
-        }
+        } else { safeAgentReply(reply, addProjectsChatMsg); }
       } else if (parsed.action === 'update_project_progress' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);

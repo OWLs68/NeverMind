@@ -195,7 +195,14 @@ function openTabSelector() {
           </div>`;
         }).join('')}
       </div>
-    </div>`;
+
+      <!-- Порядок вкладок (#27) -->
+      <div style="padding:0 16px 8px">
+        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Порядок</div>
+        <div id="tab-order-list" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;margin-top:8px;text-align:center">Тапни вкладку → стрілки для переміщення</div>
+      </div>
+    </div>\`;
 
   overlay.addEventListener('click', e => { if (e.target === overlay) closeTabSelector(); });
   document.body.appendChild(overlay);
@@ -204,6 +211,7 @@ function openTabSelector() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       document.getElementById('tab-sel-sheet').style.transform = 'translateY(0)';
+      renderTabOrderList();
     });
   });
 
@@ -268,6 +276,8 @@ function toggleTabSelection(tabId) {
     check.style.background = isNowActive ? cfg.accent : 'transparent';
     check.innerHTML = isNowActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '';
   }
+  // Оновлюємо список порядку
+  renderTabOrderList();
 }
 
 function applyTabSelection() {
@@ -281,8 +291,60 @@ function applyTabSelection() {
 
 function closeTabSelector() {
   _pendingTabs = null;
+  _selectedOrderTab = null;
   const overlay = document.getElementById('tab-selector-overlay');
   if (overlay) overlay.remove();
+}
+
+// === TAB ORDER (#27) ===
+let _selectedOrderTab = null;
+
+function renderTabOrderList() {
+  const list = document.getElementById('tab-order-list');
+  if (!list) return;
+  const tabs = _pendingTabs || getActiveTabs();
+  const TAB_LABELS = {
+    inbox:'Inbox', tasks:'Продуктив.', notes:'Нотатки', me:'Я',
+    evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти',
+  };
+  list.innerHTML = tabs.map((id, idx) => {
+    const cfg = ALL_TABS_CONFIG.find(t => t.id === id);
+    const isSelected = _selectedOrderTab === id;
+    const isLocked = id === 'inbox'; // Inbox завжди перший
+    return `<div id="tab-order-row-${id}" onclick="${isLocked ? '' : `selectTabOrder('${id}')`}"
+      style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:${isSelected ? (cfg?.bg || 'rgba(30,16,64,0.06)') : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isSelected ? (cfg?.accent || 'rgba(30,16,64,0.2)') : 'transparent'};cursor:${isLocked ? 'default' : 'pointer'};transition:all 0.18s;-webkit-tap-highlight-color:transparent">
+      <div style="width:8px;height:8px;border-radius:50%;background:${cfg?.accent || 'rgba(30,16,64,0.2)'};flex-shrink:0"></div>
+      <div style="flex:1;font-size:15px;font-weight:${isSelected ? 700 : 600};color:${isSelected ? '#1e1040' : 'rgba(30,16,64,0.6)'}">${TAB_LABELS[id] || id}</div>
+      ${isLocked ? `<div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">перший</div>` : ''}
+      ${isSelected ? `
+        <button onclick="event.stopPropagation();moveTabOrder('${id}',-1)" style="width:32px;height:32px;border-radius:10px;background:rgba(30,16,64,0.08);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;${idx <= 1 ? 'opacity:0.3;pointer-events:none' : ''}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button onclick="event.stopPropagation();moveTabOrder('${id}',1)" style="width:32px;height:32px;border-radius:10px;background:rgba(30,16,64,0.08);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;${idx >= tabs.length - 1 ? 'opacity:0.3;pointer-events:none' : ''}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectTabOrder(tabId) {
+  if (_selectedOrderTab === tabId) {
+    _selectedOrderTab = null; // повторний тап — гасить
+  } else {
+    _selectedOrderTab = tabId;
+  }
+  renderTabOrderList();
+}
+
+function moveTabOrder(tabId, dir) {
+  if (!_pendingTabs) _pendingTabs = [...getActiveTabs()];
+  const idx = _pendingTabs.indexOf(tabId);
+  if (idx === -1) return;
+  const newIdx = idx + dir;
+  if (newIdx < 1 || newIdx >= _pendingTabs.length) return; // не можна перемістити перед inbox
+  // Swap
+  [_pendingTabs[idx], _pendingTabs[newIdx]] = [_pendingTabs[newIdx], _pendingTabs[idx]];
+  renderTabOrderList();
 }
 
 // Перебудовує барабан відповідно до активних вкладок
@@ -1474,6 +1536,33 @@ function tryTabBoardUpdate(tab) {
   if (firstTime || isNewDay || (elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab))) {
     generateTabBoardMessage(tab);
   }
+}
+
+// === UNIVERSAL SWIPE DELETE TRAIL (#32) ===
+const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для всіх вкладок
+
+// Застосовує червоний градієнтний шлейф і рух картки
+// el = картка (рухається), wrapEl = wrapper (на ньому шлейф)
+function applySwipeTrail(cardEl, wrapEl, dx) {
+  if (!cardEl) return;
+  cardEl.style.transform = `translateX(${dx}px)`;
+  if (!wrapEl) return;
+  // Прогрес від 0 до 1 по відстані свайпу
+  const progress = Math.min(1, -dx / 160);
+  if (progress <= 0) {
+    wrapEl.style.background = '';
+    return;
+  }
+  // Шлейф: градієнт від прозорого до червоного, яскравість зростає з прогресом
+  const alpha = (0.15 + progress * 0.85).toFixed(2); // 0.15 → 1.0
+  const midStop = Math.round(30 + progress * 40); // де починається насичений червоний
+  wrapEl.style.background = `linear-gradient(to right, transparent ${midStop}%, rgba(239,68,68,${alpha}) 100%)`;
+}
+
+// Скидає шлейф після відпускання
+function clearSwipeTrail(cardEl, wrapEl) {
+  if (cardEl) { cardEl.style.transition = 'transform 0.25s ease'; cardEl.style.transform = 'translateX(0)'; setTimeout(() => { if (cardEl) { cardEl.style.transition = ''; } }, 300); }
+  if (wrapEl) { wrapEl.style.transition = 'background 0.25s ease'; wrapEl.style.background = ''; setTimeout(() => { if (wrapEl) wrapEl.style.transition = ''; }, 300); }
 }
 
 // === INIT ===

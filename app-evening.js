@@ -812,72 +812,88 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-const UPDATE_VERSION = 'v031';
+const UPDATE_VERSION = 'v033';
 
 const UPDATE_SLIDES = [
   {
-    tag: '🆕 v0.31',
-    emoji: '✨',
-    title: 'Великий апдейт',
+    tag: '🦉 OWL провідник',
+    emoji: '🦉',
+    title: 'OWL тебе вивчає',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🌙</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Новий Вечір — продуктивність, настрій, фінанси</div>
+    <div style="font-size:20px">❓</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">10 питань на старті — OWL дізнається хто ти</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🪞</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нова вкладка Я — тижневі кружечки, порівняння, настрій</div>
+    <div style="font-size:20px">💬</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Органічні питання в Inbox — поглиблює знання про тебе</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🫀</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нова вкладка Здоров'я — картки, трекер, препарати</div>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🚀</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нова вкладка Проекти — від ідеї до результату</div>
+    <div style="font-size:20px">🧠</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Підказки по функціях — покаже де що є</div>
   </div>
 </div>`,
-    color: 'linear-gradient(135deg,#f2d978,#f97316)',
+    color: 'linear-gradient(135deg,#e0e7ff,#6366f1)',
   },
   {
-    tag: '🥁 Барабан',
-    emoji: '🥁',
-    title: 'Барабан став розумнішим',
+    tag: '🚀 Проекти',
+    emoji: '🚀',
+    title: 'Проект → план за хвилину',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">➕</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка + — обирай які вкладки показувати</div>
+    <div style="font-size:20px">🎙️</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Створив проект — OWL питає про капітал, час і страхи</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">💨</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кинь швидко — барабан долетить до крайньої вкладки</div>
+    <div style="font-size:20px">📋</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Після відповідей — перші 3 кроки у воркспейсі</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🎯</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Крайні вкладки тепер точно доходять до центру</div>
+    <div style="font-size:20px">📂</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка нотаток → відкриває папку проекту</div>
   </div>
 </div>`,
-    color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
+    color: 'linear-gradient(135deg,#fef9c3,#f59e0b)',
+  },
+  {
+    tag: '📁 Нотатки',
+    emoji: '📁',
+    title: 'Нотатки стали кращими',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🔍</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Пошук через чат — «знайди нотатку про машину»</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🎨</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Редагуй папки — іконка, колір, закріплення (···)</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">📌</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">30 іконок для папок і закріплення зверху</div>
+  </div>
+</div>`,
+    color: 'linear-gradient(135deg,#fed7aa,#c2620a)',
   },
   {
     tag: '🔧 Фікси',
     emoji: '🔧',
-    title: 'Виправили баги',
+    title: '20+ виправлень',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">💳</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Фінанси більше не порожні після відкриття</div>
+    <div style="font-size:20px">👆</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Свайп-видалення: червоний шлейф, поріг 90px скрізь</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">↩️</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">"Відновити всі задачі" — тепер працює</div>
+    <div style="font-size:20px">🟢</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Галочка виконання стала зеленою</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🎨</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нові кольори вкладок — чіткіше і красивіше</div>
+    <div style="font-size:20px">🥁</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Барабан більше не перелітає + порядок вкладок</div>
   </div>
 </div>`,
-    color: 'linear-gradient(135deg,#a7f3d0,#16a34a)',
+    color: 'linear-gradient(135deg,#d1fae5,#16a34a)',
     isLast: true,
   },
 ];
@@ -1340,6 +1356,13 @@ const SURVEY_QUESTIONS = [
   'Чим займаєшся? (наприклад: підприємець, студент, програміст, фрілансер…)',
   'Які твої головні цілі зараз? (коротко, 1-2 речення)',
   'Що хочеш тримати під контролем — задачі, звички, ідеї, або все разом?',
+  'Як у тебе зараз з фінансами — ведеш облік чи поки хаос?',
+  'Є якийсь проект або велика ціль над якою зараз працюєш?',
+  'Як твій режим — більше ранкова людина чи вечірня?',
+  'Що найбільше заважає тобі бути продуктивним зараз?',
+  'Які звички хочеш сформувати або вже намагаєшся підтримувати?',
+  'Як ти зазвичай запамʼятовуєш ідеї — телефон, блокнот, голова?',
+  'Що хочеш змінити у своєму житті через 3 місяці?',
 ];
 let surveyAnswers = [];
 let surveyStep = 0;
@@ -1387,18 +1410,19 @@ async function finishSurvey() {
   if (!key) {
     addInboxChatMsg('agent', 'Введи API ключ в налаштуваннях — і я збережу все про тебе в памʼять.');
     localStorage.setItem('nm_survey_done', '1');
+    localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
     return;
   }
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const name = settings.name || 'користувач';
   const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
-  const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що завершив онбординг і відповів на питання анкети:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (3-5 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні поради як використовувати NeverMind саме для цієї людини. Поради мають бути практичними і специфічними.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
+  const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що відповів на питання онбордингу:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (4-6 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні практичні поради як використовувати NeverMind саме для цієї людини. Порекомендуй конкретні вкладки або функції.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 400, temperature: 0.7 })
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.7 })
     });
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content?.trim();
@@ -1417,9 +1441,183 @@ async function finishSurvey() {
       }
     }
   } catch(e) {
-    addInboxChatMsg('agent', 'Не вдалось зберегти — але твої відповіді я запамʼятав. Спробуй оновити сторінку.');
+    addInboxChatMsg('agent', 'Не вдалось зберегти — але твої відповіді я запамʼятав.');
   }
   localStorage.setItem('nm_survey_done', '1');
+  localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
+
+  // Через 30 секунд — перша рекомендація по застосунку
+  setTimeout(() => owlGuideNextTip(), 30000);
+}
+
+// === OWL ПРОВІДНИК — органічні питання після онбордингу ===
+
+// Теми для подальшого вивчення (після базових 10 питань)
+const OWL_GUIDE_TOPICS = [
+  { key: 'health', q: 'Як ти зараз з енергією і здоровʼям — відстежуєш чи пускаєш на самоплив?' },
+  { key: 'relations', q: 'Є важливі люди в житті яким хочеш приділяти більше уваги?' },
+  { key: 'learning', q: 'Зараз щось активно вивчаєш — книги, курси, нові навички?' },
+  { key: 'stress', q: 'Що зараз найбільше тисне або викликає тривогу?' },
+  { key: 'money_goal', q: 'Є конкретна фінансова ціль — накопичити, купити, інвестувати?' },
+  { key: 'daily_routine', q: 'Як виглядає твій ідеальний день — є якийсь ритм або все хаотично?' },
+  { key: 'motivation', q: 'Що тебе найбільше мотивує — результат, визнання, розвиток, або щось інше?' },
+  { key: 'obstacles', q: 'Що найчастіше зупиняє коли берешся за щось нове?' },
+];
+
+// Підказки про функції застосунку
+const OWL_APP_TIPS = [
+  { key: 'tip_inbox', msg: 'До речі — в Inbox можна писати всe підряд одним рядком, навіть "купити хліб і зателефонувати мамі". Я розберуся сам.' },
+  { key: 'tip_habits', msg: 'Вкладка Продуктивність → Звички — можна відстежувати регулярні дії з підрахунком кількості. Наприклад "8 склянок води".' },
+  { key: 'tip_notes', msg: 'У Нотатках папки створюються автоматично — просто пиши в Inbox і я кладу в потрібне місце. Або сам можеш сказати куди.' },
+  { key: 'tip_finance', msg: 'Фінанси ведуться через Inbox — просто напиши "витратив 200 на продукти" і я запишу. Без форм і полів.' },
+  { key: 'tip_evening', msg: 'Вкладка Вечір — там підсумок дня і настрій одним тапом. Добре відкривати ввечері щоб закрити день.' },
+  { key: 'tip_projects', msg: 'Якщо є велика ціль або проект — вкладка Проекти допоможе з планом і темпом. Просто напиши про неї і я допоможу розбити на кроки.' },
+  { key: 'tip_owl_mode', msg: 'В налаштуваннях можна змінити характер OWL — Тренер (прямий), Партнер (теплий), або Наставник (мудрий). Який тобі ближче?' },
+  { key: 'tip_memory', msg: 'Все що ти розповідаєш — я запамʼятовую. В налаштуваннях є розділ Памʼять де можна подивитись і відредагувати що я знаю про тебе.' },
+];
+
+function owlGuideNextTip() {
+  // Не питаємо якщо опитування ще йде
+  if (surveyWaiting) return;
+  // Не питаємо вночі
+  const hour = new Date().getHours();
+  if (hour >= 23 || hour < 8) return;
+  // Не питаємо якщо вкладка не Inbox
+  if (typeof currentTab !== 'undefined' && currentTab !== 'inbox') return;
+
+  // Продовження інтерв'ю по проекту
+  const projectStep = parseInt(localStorage.getItem('nm_project_interview_step') || '0');
+  const projectName = localStorage.getItem('nm_project_interview_name') || '';
+  if (projectStep > 0 && projectName) {
+    const projectQuestions = [
+      `Скільки годин на тиждень реально можеш вкладати в "${projectName}"?`,
+      `Що найбільше лякає або турбує тебе в цьому проекті?`,
+      `Чому саме "${projectName}" — що тебе мотивує?`,
+    ];
+    if (projectStep <= projectQuestions.length) {
+      addInboxChatMsg('agent', projectQuestions[projectStep - 1]);
+      if (projectStep < projectQuestions.length) {
+        localStorage.setItem('nm_project_interview_step', (projectStep + 1).toString());
+      } else {
+        // Після всіх питань — генеруємо перші кроки
+        localStorage.removeItem('nm_project_interview_step');
+        localStorage.removeItem('nm_project_interview_name');
+        setTimeout(() => generateProjectFirstSteps(projectName), 1500);
+      }
+      return;
+    }
+  }
+
+  const shownTips = JSON.parse(localStorage.getItem('nm_guide_shown_tips') || '[]');
+  const shownTopics = JSON.parse(localStorage.getItem('nm_guide_shown_topics') || '[]');
+
+  // Спочатку показуємо підказки про функції (кожну один раз)
+  const nextTip = OWL_APP_TIPS.find(t => !shownTips.includes(t.key));
+  if (nextTip) {
+    addInboxChatMsg('agent', nextTip.msg);
+    shownTips.push(nextTip.key);
+    localStorage.setItem('nm_guide_shown_tips', JSON.stringify(shownTips));
+    return;
+  }
+
+  // Потім питаємо по темах (кожну один раз)
+  const nextTopic = OWL_GUIDE_TOPICS.find(t => !shownTopics.includes(t.key));
+  if (nextTopic) {
+    addInboxChatMsg('agent', nextTopic.q);
+    shownTopics.push(nextTopic.key);
+    localStorage.setItem('nm_guide_shown_topics', JSON.stringify(shownTopics));
+    localStorage.setItem('nm_guide_waiting_topic', nextTopic.key);
+  }
+}
+
+// Виклик після кожної відповіді агента в Inbox — вирішує чи питати зараз
+function maybeAskGuideQuestion() {
+  // Тільки якщо онбординг завершено і є ключ
+  if (!localStorage.getItem('nm_survey_done')) return;
+  if (!localStorage.getItem('nm_gemini_key')) return;
+  if (surveyWaiting) return;
+
+  // Органічно — не кожного разу, а з вірогідністю ~25% і не частіше ніж раз на 3 хв
+  const lastGuideTs = parseInt(localStorage.getItem('nm_guide_last_ts') || '0');
+  const elapsed = Date.now() - lastGuideTs;
+  if (elapsed < 3 * 60 * 1000) return; // не частіше 3 хвилин
+  if (Math.random() > 0.25) return; // 25% шанс
+
+  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+  setTimeout(() => owlGuideNextTip(), 1200); // невелика пауза після відповіді агента
+}
+
+async function generateProjectFirstSteps(projectName) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} На основі розмови про проект "${projectName}" — запропонуй перші 3 конкретні кроки для старту. Кожен крок — одна дія, 4-8 слів, реальна і досяжна на цьому тижні.
+Відповідай ТІЛЬКИ JSON: {"steps":["крок 1","крок 2","крок 3"],"summary":"1 речення — що це за проект і з чого починати"}`;
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Проект: ${projectName}\n\n${aiContext}` }
+        ],
+        max_tokens: 200,
+        temperature: 0.6
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) return;
+    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+    if (parsed.steps && parsed.steps.length > 0) {
+      // Зберігаємо кроки в проект
+      try {
+        const projects = getProjects();
+        const p = projects.find(pr => pr.name === projectName);
+        if (p && p.steps.length === 0) {
+          p.steps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+          saveProjects(projects);
+        }
+      } catch(e) {}
+      const stepsText = parsed.steps.map((s, i) => `${i+1}. ${s}`).join('\n');
+      addInboxChatMsg('agent', `${parsed.summary || 'Перші кроки для старту:'}\n\n${stepsText}\n\nКроки збережені у воркспейсі проекту.`);
+    }
+  } catch(e) {}
+}
+
+// Зберігає відповідь юзера в памʼять якщо OWL чекав на відповідь по темі
+async function saveGuideTopicAnswer(userText) {
+  const waitingTopic = localStorage.getItem('nm_guide_waiting_topic');
+  if (!waitingTopic) return;
+  localStorage.removeItem('nm_guide_waiting_topic');
+
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+
+  const currentMemory = localStorage.getItem('nm_memory') || '';
+  const topicData = OWL_GUIDE_TOPICS.find(t => t.key === waitingTopic);
+  if (!topicData) return;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: `Існуюча памʼять про користувача:\n${currentMemory}\n\nНова відповідь на питання "${topicData.q}":\n${userText}\n\nДопов нову інформацію до памʼяті. Повернь ТІЛЬКИ оновлений текст памʼяті (без JSON, без коментарів), максимум 8 речень.` }],
+        max_tokens: 300,
+        temperature: 0.5
+      })
+    });
+    const data = await res.json();
+    const updated = data.choices?.[0]?.message?.content?.trim();
+    if (updated) {
+      localStorage.setItem('nm_memory', updated);
+      localStorage.setItem('nm_memory_ts', Date.now().toString());
+    }
+  } catch(e) {}
 }
 
 

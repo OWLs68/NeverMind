@@ -88,18 +88,6 @@ function deleteNote(id) {
 
 let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
 
-function filterNotes() {
-  const q = document.getElementById('notes-search').value.trim();
-  document.getElementById('notes-search-clear').style.display = q ? 'block' : 'none';
-  renderNotes(q);
-}
-
-function clearNotesSearch() {
-  document.getElementById('notes-search').value = '';
-  document.getElementById('notes-search-clear').style.display = 'none';
-  renderNotes();
-}
-
 function openNotesFolder(folderName) {
   currentNotesFolder = folderName;
   renderNotes();
@@ -110,25 +98,84 @@ function closeNotesFolder() {
   renderNotes();
 }
 
-// Кольори папок — єдине місце визначення
-const FOLDER_ICONS = {
-  'Харчування': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2"/><line x1="6" y1="2" x2="6" y2="12"/><path d="M21 2s-2 2-2 7 2 5 2 5"/><path d="M19 14v8"/></svg>',
-  'Фінанси':   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>',
-  "Здоровʼя":  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>',
-  'Здоровя':   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>',
-  'Робота':    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/></svg>',
-  'Навчання':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-  'Ідеї':      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/></svg>',
-  'Особисте':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-  'Подорожі':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+// === КАТАЛОГ ІКОНОК ПАПОК (30 іконок) ===
+const _S = 'stroke="rgba(30,16,64,0.55)"';
+function _ico(path) { return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; }
+
+const ICON_SVG = {
+  folder:   _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+  note:     _ico('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+  food:     _ico('<path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2"/><line x1="6" y1="2" x2="6" y2="12"/><path d="M21 2s-2 2-2 7 2 5 2 5"/><path d="M19 14v8"/>'),
+  money:    _ico('<circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/>'),
+  heart:    _ico('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/>'),
+  work:     _ico('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/>'),
+  book:     _ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
+  bulb:     _ico('<circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/>'),
+  person:   _ico('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+  plane:    _ico('<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>'),
+  star:     _ico('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+  home:     _ico('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+  car:      _ico('<path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-4h10l2 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="16.5" cy="17" r="2.5"/>'),
+  music:    _ico('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+  camera:   _ico('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
+  gift:     _ico('<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'),
+  sport:    _ico('<circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l4.24 4.24"/><path d="M14.83 9.17l4.24-4.24"/><path d="M14.83 14.83l4.24 4.24"/><path d="M9.17 14.83l-4.24 4.24"/><circle cx="12" cy="12" r="4"/>'),
+  phone:    _ico('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.4 2 2 0 0 1 3.6 2.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17z"/>'),
+  lock:     _ico('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+  globe:    _ico('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
+  map:      _ico('<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>'),
+  chart:    _ico('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'),
+  smile:    _ico('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
+  coffee:   _ico('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'),
+  leaf:     _ico('<path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 3-8 3"/>'),
+  zap:      _ico('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+  target:   _ico('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+  tool:     _ico('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'),
+  users:    _ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  sun:      _ico('<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'),
+  shopping: _ico('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>'),
 };
-const FOLDER_ICON_DEFAULT = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+// Маппінг назва → іконка
+const FOLDER_ICON_MAP = {
+  'Харчування': 'food', 'Фінанси': 'money', "Здоровʼя": 'heart', 'Здоровя': 'heart',
+  'Робота': 'work', 'Навчання': 'book', 'Ідеї': 'bulb', 'Особисте': 'person',
+  'Подорожі': 'plane', 'Цілі': 'target', 'Спорт': 'sport', 'Музика': 'music',
+  'Дім': 'home', 'Авто': 'car', 'Покупки': 'shopping', 'Люди': 'users',
+  'Проекти': 'zap', 'Природа': 'leaf', 'Кава': 'coffee', 'Фото': 'camera',
+};
+
+const FOLDER_ICONS = Object.fromEntries(
+  Object.entries(FOLDER_ICON_MAP).map(([name, key]) => [name, ICON_SVG[key]])
+);
+const FOLDER_ICON_DEFAULT = ICON_SVG.note;
+
+// Всі іконки як масив для вибору в модалці
+const ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
+
 function getFolderIcon(folder) {
+  if (!folder) return FOLDER_ICON_DEFAULT;
+  const meta = getFolderMeta(folder);
+  if (meta.iconKey && ICON_SVG[meta.iconKey]) return ICON_SVG[meta.iconKey];
   if (FOLDER_ICONS[folder]) return FOLDER_ICONS[folder];
   const normalized = folder.replace(/[ʼ']/g, '').toLowerCase();
   const found = Object.keys(FOLDER_ICONS).find(k => k.replace(/[ʼ']/g, '').toLowerCase() === normalized);
   return found ? FOLDER_ICONS[found] : FOLDER_ICON_DEFAULT;
 }
+
+// === FOLDER META — кастомна іконка, колір, закріплення ===
+function getFoldersMeta() {
+  try { return JSON.parse(localStorage.getItem('nm_folders_meta') || '{}'); } catch { return {}; }
+}
+function saveFoldersMeta(obj) {
+  try { localStorage.setItem('nm_folders_meta', JSON.stringify(obj)); } catch {} }
+function getFolderMeta(folder) { return getFoldersMeta()[folder] || {}; }
+function setFolderMeta(folder, data) {
+  const all = getFoldersMeta();
+  all[folder] = { ...(all[folder] || {}), ...data };
+  saveFoldersMeta(all);
+}
+
 const FOLDER_COLORS = {
   'Харчування': { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
   'Фінанси':   { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
@@ -199,14 +246,28 @@ function renderNotes(searchQuery = '') {
     byFolder[f].push(n);
   });
 
-  const folders = Object.entries(byFolder).sort((a,b) => b[1].length - a[1].length);
+  // Сортуємо: закріплені зверху, потім за кількістю
+  const allMeta = getFoldersMeta();
+  const folders = Object.entries(byFolder).sort((a, b) => {
+    const pinA = allMeta[a[0]]?.pinned ? 1 : 0;
+    const pinB = allMeta[b[0]]?.pinned ? 1 : 0;
+    if (pinB !== pinA) return pinB - pinA;
+    return b[1].length - a[1].length;
+  });
 
   content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:10px">' +
     folders.map(([folder, items]) => {
-      const fc = getFolderColor(folder);
+      const meta = getFolderMeta(folder);
+      // Колір — з мета або дефолт
+      const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey]
+        ? FOLDER_COLOR_PALETTE[meta.colorKey]
+        : null;
+      const fc = colorDef ? { bg: colorDef.bg, border: 'rgba(255,255,255,0.5)' } : getFolderColor(folder);
       const preview = items[0].text.length > 60 ? items[0].text.substring(0,60) + '…' : items[0].text;
       const safeFolder = escapeHtml(folder).replace(/'/g, "\\'");
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
+      const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">📌</div>' : '';
+      const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
       return `<div style="position:relative;border-radius:18px">
         <div id="folder-del-${key}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:18px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
         <div id="folder-item-${key}"
@@ -214,13 +275,15 @@ function renderNotes(searchQuery = '') {
           ontouchmove="folderSwipeMove(event,'${safeFolder}')"
           ontouchend="folderSwipeEnd(event,'${safeFolder}')"
           style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:3px">${escapeHtml(folder)}</div>
-            <div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>
+            <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:2px">${escapeHtml(folder)}</div>
+            ${desc}
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
-            <div style="font-size:20px;font-weight:900;color:#1e1040">${items.length}</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+            <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent">···</div>
+            <div style="font-size:18px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
           </div>
         </div>
@@ -257,7 +320,6 @@ function renderNotesList(notes) {
 
 // === NOTE SWIPE TO DELETE ===
 const noteSwipeState = {};
-const NOTE_SWIPE_THRESHOLD = 150;
 
 function noteSwipeStart(e, id) {
   const t = e.touches[0];
@@ -273,19 +335,15 @@ function noteSwipeMove(e, id) {
   e.preventDefault();
   s.dx = Math.min(0, dx);
   const el = document.getElementById(`note-item-${id}`);
-  if (el) el.style.transform = `translateX(${s.dx}px)`;
-  const delBg = document.getElementById('note-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+  const wrap = document.getElementById(`note-wrap-${id}`);
+  applySwipeTrail(el, wrap, s.dx);
 }
 function noteSwipeEnd(e, id) {
   const s = noteSwipeState[id]; if (!s) return;
   const el = document.getElementById(`note-item-${id}`);
-  if (s.dx < -NOTE_SWIPE_THRESHOLD) {
-    if (el) {
-      el.style.transition = 'transform 0.2s ease, opacity 0.2s';
-      el.style.transform = 'translateX(-110%)';
-      el.style.opacity = '0';
-    }
+  const wrap = document.getElementById(`note-wrap-${id}`);
+  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
+    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
       const allNotes = getNotes();
       const noteSwipeIdx = allNotes.findIndex(x => x.id === id);
@@ -295,13 +353,7 @@ function noteSwipeEnd(e, id) {
       if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); const idx = Math.min(noteSwipeIdx, notes.length); notes.splice(idx, 0, item); saveNotes(notes); renderNotes(); });
     }, 200);
   } else {
-    if (el) {
-      el.style.transition = 'transform 0.3s ease';
-      el.style.transform = 'translateX(0)';
-      setTimeout(() => { el.style.transition = ''; }, 300);
-    }
-    const delBgN = document.getElementById('note-del-' + id);
-    if (delBgN) { delBgN.style.transition = 'opacity 0.25s'; delBgN.style.opacity = '0'; setTimeout(() => { if(delBgN) delBgN.style.transition = ''; }, 300); }
+    clearSwipeTrail(el, wrap);
   }
   delete noteSwipeState[id];
 }
@@ -319,12 +371,16 @@ function closeNoteMenu() {
 }
 function noteMenuEdit() {
   const id = activeNoteMenuId;
+  const fromView = activeNoteViewId === id;
   closeNoteMenu();
+  if (fromView) closeNoteView();
   openEditNote(id);
 }
 function noteMenuDelete() {
   const id = activeNoteMenuId;
+  const fromView = activeNoteViewId === id;
   closeNoteMenu();
+  if (fromView) closeNoteView();
   deleteNote(id);
 }
 function noteMenuCopy() {
@@ -671,7 +727,6 @@ function saveAgentResponseAsNote(text) {
 
 // === FOLDER SWIPE TO DELETE ===
 const folderSwipeState = {};
-const FOLDER_SWIPE_THRESHOLD = 150;
 
 function _folderKey(folder) {
   return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
@@ -692,15 +747,15 @@ function folderSwipeMove(e, folder) {
   e.preventDefault();
   s.dx = Math.min(0, dx);
   const el = document.getElementById('folder-item-' + key);
-  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
-  const delBg = document.getElementById('folder-del-' + key);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+  const wrap = el ? el.parentElement : null;
+  applySwipeTrail(el, wrap, s.dx);
 }
 function folderSwipeEnd(e, folder) {
   const key = _folderKey(folder);
   const s = folderSwipeState[key]; if (!s) return;
   const el = document.getElementById('folder-item-' + key);
-  if (s.dx < -FOLDER_SWIPE_THRESHOLD) {
+  const wrap = el ? el.parentElement : null;
+  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
       const notes = getNotes();
@@ -717,12 +772,143 @@ function folderSwipeEnd(e, folder) {
       });
     }, 200);
   } else {
-    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
-    const delBg = document.getElementById('folder-del-' + key);
-    if (delBg) { delBg.style.transition = 'opacity 0.25s'; delBg.style.opacity = '0'; setTimeout(() => { if(delBg) delBg.style.transition = ''; }, 300); }
+    clearSwipeTrail(el, wrap);
     if (!s.swiping) openNotesFolder(folder);
   }
   delete folderSwipeState[key];
+}
+
+// === FOLDER EDIT MODAL (#20) ===
+let _editingFolder = null;
+
+function openFolderEditModal(folder) {
+  _editingFolder = folder;
+  const meta = getFolderMeta(folder);
+
+  // Встановлюємо поточні значення
+  const nameEl = document.getElementById('folder-edit-name');
+  const descEl = document.getElementById('folder-edit-desc');
+  const pinEl = document.getElementById('folder-edit-pin');
+  if (nameEl) nameEl.value = folder;
+  if (descEl) descEl.value = meta.desc || '';
+  if (pinEl) pinEl.checked = !!meta.pinned;
+
+  // Рендеримо сітку іконок
+  renderFolderIconGrid(meta.iconKey || _autoIconKey(folder));
+
+  // Рендеримо кольори
+  renderFolderColorGrid(meta.colorKey || 'default');
+
+  const modal = document.getElementById('folder-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFolderEditModal() {
+  const modal = document.getElementById('folder-edit-modal');
+  if (modal) modal.style.display = 'none';
+  _editingFolder = null;
+}
+
+function _autoIconKey(folder) {
+  const norm = folder.replace(/[ʼ']/g, '').toLowerCase();
+  const match = Object.entries(FOLDER_ICON_MAP).find(([name]) =>
+    name.replace(/[ʼ']/g, '').toLowerCase() === norm
+  );
+  return match ? match[1] : 'folder';
+}
+
+let _selectedIconKey = 'folder';
+let _selectedColorKey = 'default';
+
+function renderFolderIconGrid(activeKey) {
+  _selectedIconKey = activeKey;
+  const grid = document.getElementById('folder-icon-grid');
+  if (!grid) return;
+  grid.innerHTML = ALL_FOLDER_ICONS.map(key => {
+    const isActive = key === activeKey;
+    return `<div onclick="selectFolderIcon('${key}')" id="ficon-${key}" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${isActive ? 'rgba(30,16,64,0.1)' : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isActive ? 'rgba(30,16,64,0.25)' : 'transparent'};transition:all 0.15s">
+      ${ICON_SVG[key]}
+    </div>`;
+  }).join('');
+}
+
+function selectFolderIcon(key) {
+  _selectedIconKey = key;
+  document.querySelectorAll('[id^="ficon-"]').forEach(el => {
+    const k = el.id.replace('ficon-', '');
+    const isActive = k === key;
+    el.style.background = isActive ? 'rgba(30,16,64,0.1)' : 'rgba(30,16,64,0.03)';
+    el.style.border = `1.5px solid ${isActive ? 'rgba(30,16,64,0.25)' : 'transparent'}`;
+  });
+}
+
+const FOLDER_COLOR_PALETTE = {
+  default: { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', label: 'Пісок' },
+  blue:    { bg: 'linear-gradient(135deg,#dbeafe,#bfdbfe)', label: 'Блакитний' },
+  green:   { bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', label: 'Зелений' },
+  yellow:  { bg: 'linear-gradient(135deg,#fef9c3,#fef08a)', label: 'Жовтий' },
+  pink:    { bg: 'linear-gradient(135deg,#fce7f3,#fbcfe8)', label: 'Рожевий' },
+  purple:  { bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', label: 'Фіолетовий' },
+  orange:  { bg: 'linear-gradient(135deg,#ffedd5,#fed7aa)', label: 'Оранжевий' },
+  gray:    { bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', label: 'Сірий' },
+};
+
+function renderFolderColorGrid(activeKey) {
+  _selectedColorKey = activeKey;
+  const grid = document.getElementById('folder-color-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(FOLDER_COLOR_PALETTE).map(([key, val]) => {
+    const isActive = key === activeKey;
+    return `<div onclick="selectFolderColor('${key}')" id="fcolor-${key}" title="${val.label}" style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${val.bg};border:2.5px solid ${isActive ? 'rgba(30,16,64,0.4)' : 'transparent'};transition:all 0.15s"></div>`;
+  }).join('');
+}
+
+function selectFolderColor(key) {
+  _selectedColorKey = key;
+  document.querySelectorAll('[id^="fcolor-"]').forEach(el => {
+    const k = el.id.replace('fcolor-', '');
+    el.style.border = `2.5px solid ${k === key ? 'rgba(30,16,64,0.4)' : 'transparent'}`;
+  });
+}
+
+function saveFolderEdit() {
+  if (!_editingFolder) return;
+  const nameEl = document.getElementById('folder-edit-name');
+  const descEl = document.getElementById('folder-edit-desc');
+  const pinEl = document.getElementById('folder-edit-pin');
+  const newName = (nameEl?.value || '').trim() || _editingFolder;
+  const desc = descEl?.value || '';
+  const pinned = !!pinEl?.checked;
+
+  // Перевіряємо ліміт закріплених (макс 5)
+  if (pinned) {
+    const meta = getFoldersMeta();
+    const pinnedCount = Object.values(meta).filter(m => m.pinned).length;
+    const wasAlreadyPinned = getFolderMeta(_editingFolder).pinned;
+    if (!wasAlreadyPinned && pinnedCount >= 5) {
+      showToast('Максимум 5 закріплених папок');
+      return;
+    }
+  }
+
+  // Перейменування — оновлюємо всі нотатки
+  if (newName !== _editingFolder) {
+    const notes = getNotes();
+    notes.forEach(n => { if ((n.folder || 'Загальне') === _editingFolder) n.folder = newName; });
+    saveNotes(notes);
+    // Переносимо мету
+    const allMeta = getFoldersMeta();
+    if (allMeta[_editingFolder]) {
+      allMeta[newName] = allMeta[_editingFolder];
+      delete allMeta[_editingFolder];
+      saveFoldersMeta(allMeta);
+    }
+  }
+
+  setFolderMeta(newName, { iconKey: _selectedIconKey, colorKey: _selectedColorKey, desc, pinned });
+  closeFolderEditModal();
+  renderNotes();
+  showToast('✓ Папку оновлено');
 }
 
 // === NOTES AI BAR ===
@@ -773,10 +959,13 @@ async function sendNotesBarMessage() {
 - Створити нотатку: {"action":"create_note","text":"текст","folder":"папка або null"}
 - Видалити папку: {"action":"delete_folder","folder":"назва папки"}
 - Перемістити нотатку: {"action":"move_note","query":"частина тексту нотатки","folder":"нова папка"}
+- Знайти нотатки по запиту: {"action":"search_notes","query":"ключові слова"}
+- Відкрити папку: {"action":"open_folder","folder":"назва папки"}
+- Відкрити нотатку: {"action":"open_note","query":"частина тексту нотатки"}
 - Створити задачу: {"action":"create_task","title":"назва","steps":[]}
 - Зберегти фінанси: {"action":"save_finance","fin_type":"expense або income","amount":число,"category":"категорія","comment":"коментар"}
 - Просто відповісти: текст (1-3 речення)
-ВАЖЛИВО: для delete_folder і move_note — вказуй назву папки максимально близько до оригінальної.
+ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
 Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
 НЕ вигадуй дані яких немає в контексті.` + (aiContext ? ('\n\n' + aiContext) : '');
 
@@ -792,6 +981,69 @@ async function sendNotesBarMessage() {
 
     try {
       const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+
+      // Дії специфічні для нотаток
+      if (parsed.action === 'search_notes') {
+        const q = (parsed.query || '').toLowerCase();
+        const results = getNotes().filter(n =>
+          n.text.toLowerCase().includes(q) ||
+          (n.folder || '').toLowerCase().includes(q)
+        ).slice(0, 5);
+        if (results.length === 0) {
+          addNotesChatMsg('agent', `Нічого не знайдено по запиту "${parsed.query}".`);
+        } else {
+          addNotesChatMsg('agent', `Знайдено ${results.length}:`);
+          results.forEach(n => {
+            const preview = n.text.length > 60 ? n.text.substring(0, 60) + '…' : n.text;
+            const el = document.getElementById('notes-chat-messages');
+            if (!el) return;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex';
+            div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView(${n.id})" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || 'Загальне')}</div>
+              ${escapeHtml(preview)}
+            </div>`;
+            el.appendChild(div);
+            el.scrollTop = el.scrollHeight;
+          });
+        }
+        notesBarLoading = false;
+        return;
+      }
+
+      if (parsed.action === 'open_folder') {
+        const target = (parsed.folder || '').toLowerCase().replace(/[ʼ']/g, '');
+        const folders = [...new Set(getNotes().map(n => n.folder || 'Загальне'))];
+        const match = folders.find(f =>
+          f.toLowerCase().replace(/[ʼ']/g, '').includes(target) ||
+          target.includes(f.toLowerCase().replace(/[ʼ']/g, ''))
+        );
+        if (match) {
+          openNotesFolder(match);
+          addNotesChatMsg('agent', `Відкрив папку "${match}".`);
+        } else {
+          addNotesChatMsg('agent', `Папку "${parsed.folder}" не знайдено. Доступні: ${folders.join(', ')}.`);
+        }
+        notesBarLoading = false;
+        return;
+      }
+
+      if (parsed.action === 'open_note') {
+        const q = (parsed.query || '').toLowerCase();
+        const note = getNotes().find(n => n.text.toLowerCase().includes(q));
+        if (note) {
+          // Відкриваємо папку і потім нотатку
+          currentNotesFolder = note.folder || 'Загальне';
+          renderNotes();
+          setTimeout(() => openNoteView(note.id), 100);
+          addNotesChatMsg('agent', `Відкрив нотатку.`);
+        } else {
+          addNotesChatMsg('agent', `Нотатку не знайдено.`);
+        }
+        notesBarLoading = false;
+        return;
+      }
+
       if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
         safeAgentReply(reply, addNotesChatMsg);
       }

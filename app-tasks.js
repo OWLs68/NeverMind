@@ -206,12 +206,9 @@ function renderTasks() {
     return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
       <div id="task-del-${t.id}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
       <div id="task-item-${t.id}"
-        ontouchstart="taskSwipeStart(event,${t.id})"
-        ontouchmove="taskSwipeMove(event,${t.id})"
-        ontouchend="taskSwipeEnd(event,${t.id})"
-        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1">
+        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div data-task-check="1" ontouchend="event.stopPropagation();event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#ea580c' : 'rgba(234,88,12,0.3)'};background:rgba(255,255,255,0.78);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:#ea580c;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        <div data-task-check="1" ontouchend="event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
@@ -223,7 +220,7 @@ function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div data-step-check="1" ontouchend="event.stopPropagation();event.preventDefault();toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchend="event.preventDefault();toggleTaskStep(${t.id},${s.id})" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
@@ -232,6 +229,20 @@ function renderTasks() {
       ` : ''}
     </div></div>`;
   }).join('');
+  // Прикріплюємо non-passive touch listeners для свайп-видалення (iOS сумісність)
+  setupTaskSwipeListeners();
+}
+
+function setupTaskSwipeListeners() {
+  const tasks = getTasks();
+  tasks.forEach(t => {
+    const el = document.getElementById('task-item-' + t.id);
+    if (!el || el._swipeAttached) return;
+    el._swipeAttached = true;
+    el.addEventListener('touchstart', e => taskSwipeStart(e, t.id), { passive: true });
+    el.addEventListener('touchmove', e => taskSwipeMove(e, t.id), { passive: false });
+    el.addEventListener('touchend', e => taskSwipeEnd(e, t.id), { passive: false });
+  });
 }
 
 async function askAIAboutTask(title, desc, steps) {
@@ -723,7 +734,7 @@ function updateProdTabCounters() {
   const today = new Date().toDateString();
   const todayDow = (new Date().getDay() + 6) % 7;
   const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
-  const doneToday = todayHabits.filter(h => !!log[today]?.[h.id]).length;
+  const doneToday = todayHabits.filter(h => _habitDone(h, log[today])).length;
   const habitCountEl = document.getElementById('prod-tab-habits-count');
   const habitSubEl = document.getElementById('prod-tab-habits-sub');
   if (habitCountEl) habitCountEl.textContent = habits.length;
@@ -966,7 +977,6 @@ function renderProdHabits() {
 
 // === HABIT ME SWIPE TO DELETE ===
 const habitMeSwipeState = {};
-const HABIT_SWIPE_THRESHOLD = 150;
 
 function habitMeSwipeStart(e, id) {
   const t = e.touches[0];
@@ -976,24 +986,20 @@ function habitMeSwipeMove(e, id) {
   const s = habitMeSwipeState[id]; if (!s) return;
   const t = e.touches[0];
   const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  // Якщо рух більше вертикальний — скасовуємо свайп, даємо скролитись
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
-    delete habitMeSwipeState[id];
-    return;
-  }
+  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete habitMeSwipeState[id]; return; }
   if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
   if (!s.swiping) return;
   e.preventDefault();
   s.dx = Math.min(0, dx);
   const el = document.getElementById('habit-me-item-' + id);
-  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
-  const delBg = document.getElementById('habit-me-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+  const wrap = el ? el.parentElement : null;
+  applySwipeTrail(el, wrap, s.dx);
 }
 function habitMeSwipeEnd(e, id) {
   const s = habitMeSwipeState[id]; if (!s) return;
   const el = document.getElementById('habit-me-item-' + id);
-  if (s.dx < -HABIT_SWIPE_THRESHOLD) {
+  const wrap = el ? el.parentElement : null;
+  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
       const allHabits = getHabits();
@@ -1004,10 +1010,7 @@ function habitMeSwipeEnd(e, id) {
       if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
   } else {
-    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
-    const delBgMe = document.getElementById('habit-me-del-' + id);
-    if (delBgMe) { delBgMe.style.transition = 'opacity 0.25s'; delBgMe.style.opacity = '0'; setTimeout(() => { if(delBgMe) delBgMe.style.transition = ''; }, 300); }
-    // Якщо це тап (не свайп) — чекбокс або редагування
+    clearSwipeTrail(el, wrap);
     if (!s.swiping) {
       const target = e.changedTouches[0];
       const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
@@ -1043,14 +1046,14 @@ function prodHabitSwipeMove(e, id) {
   e.preventDefault();
   s.dx = Math.min(0, dx);
   const el = document.getElementById('prod-habit-item-' + id);
-  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
-  const delBg = document.getElementById('prod-habit-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+  const wrap = el ? el.parentElement : null;
+  applySwipeTrail(el, wrap, s.dx);
 }
 function prodHabitSwipeEnd(e, id) {
   const s = prodHabitSwipeState[id]; if (!s) return;
   const el = document.getElementById('prod-habit-item-' + id);
-  if (s.dx < -HABIT_SWIPE_THRESHOLD) {
+  const wrap = el ? el.parentElement : null;
+  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
       const allHabits = getHabits();
@@ -1062,9 +1065,7 @@ function prodHabitSwipeEnd(e, id) {
       if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
     }, 200);
   } else {
-    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
-    const delBg2 = document.getElementById('prod-habit-del-' + id);
-    if (delBg2) { delBg2.style.transition = 'opacity 0.25s'; delBg2.style.opacity = '0'; setTimeout(() => { if(delBg2) delBg2.style.transition = ''; }, 300); }
+    clearSwipeTrail(el, wrap);
     if (!s.swiping) {
       const target = e.changedTouches[0];
       const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
@@ -1084,7 +1085,6 @@ function prodHabitSwipeEnd(e, id) {
 
 // === TASK SWIPE TO DELETE ===
 const taskSwipeState = {};
-const TASK_SWIPE_THRESHOLD = 150;
 
 function taskSwipeStart(e, id) {
   const t = e.touches[0];
@@ -1097,30 +1097,29 @@ function taskSwipeMove(e, id) {
   if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete taskSwipeState[id]; return; }
   if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
   if (!s.swiping) return;
-  e.preventDefault();
+  if (s.dx <= 0) e.preventDefault();
   s.dx = Math.min(0, dx);
   const el = document.getElementById('task-item-' + id);
-  if (el) el.style.transform = 'translateX(' + s.dx + 'px)';
-  const delBg = document.getElementById('task-del-' + id);
-  if (delBg) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+  const wrap = document.getElementById('task-wrap-' + id);
+  applySwipeTrail(el, wrap, s.dx);
 }
 function taskSwipeEnd(e, id) {
   const s = taskSwipeState[id]; if (!s) return;
   const el = document.getElementById('task-item-' + id);
-  if (s.dx < -TASK_SWIPE_THRESHOLD) {
+  const wrap = document.getElementById('task-wrap-' + id);
+  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
     setTimeout(() => {
       const tasks = getTasks();
       const taskOrigIdx = tasks.findIndex(x => x.id === id);
       const item = tasks.find(x => x.id === id);
+      if (item) addToTrash('task', item);
       saveTasks(tasks.filter(x => x.id !== id));
       renderTasks();
       if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
     }, 200);
   } else {
-    if (el) { el.style.transition = 'transform 0.25s ease'; el.style.transform = 'translateX(0)'; setTimeout(() => { if(el) el.style.transition = ''; }, 300); }
-    const delBg = document.getElementById('task-del-' + id);
-    if (delBg) { delBg.style.transition = 'opacity 0.25s'; delBg.style.opacity = '0'; setTimeout(() => { if(delBg) delBg.style.transition = ''; }, 300); }
+    clearSwipeTrail(el, wrap);
     if (!s.swiping && !e.target.closest('[data-task-check],[data-step-check]')) openEditTask(id);
   }
   delete taskSwipeState[id];
@@ -1261,6 +1260,22 @@ function processUniversalAction(parsed, originalText, addMsg) {
     if (currentTab === 'notes') renderNotes();
     addMsg('agent', '✓ Нотатку збережено' + (parsed.folder ? ' в папку "' + parsed.folder + '"' : ''));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
+    return true;
+  }
+
+  if (action === 'create_folder') {
+    const folderName = (parsed.folder || '').trim();
+    if (!folderName) return false;
+    // Папка "існує" якщо є хоч одна нотатка з такою назвою
+    const notes = getNotes();
+    const exists = notes.some(n => (n.folder || 'Загальне') === folderName);
+    if (exists) {
+      addMsg('agent', `Папка "${folderName}" вже є.`);
+    } else {
+      // Створюємо папку через додавання порожньої нотатки-заглушки яку одразу прибираємо
+      // Правильний спосіб — просто кажемо юзеру що папка з'явиться при першій нотатці
+      addMsg('agent', `Папка "${folderName}" створена. Напиши нотатку і я покладу її туди.`);
+    }
     return true;
   }
 

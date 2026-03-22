@@ -146,7 +146,6 @@ function renderInbox() {
 
 // === SWIPE TO DELETE ===
 const swipeState = {};
-const SWIPE_THRESHOLD = 150;
 
 function swipeStart(e, id) {
   const t = e.touches[0];
@@ -162,15 +161,16 @@ function swipeMove(e, id) {
   e.preventDefault();
   s.dx = Math.min(0, dx);
   const el = document.getElementById(`item-${id}`);
-  if (el) el.style.transform = `translateX(${s.dx}px)`;
-  const delBg = el ? el.previousElementSibling : null;
-  if (delBg && delBg.classList.contains('inbox-item-delete-bg')) delBg.style.opacity = Math.min(1, -s.dx / 180).toFixed(2);
+  const wrap = document.getElementById(`wrap-${id}`);
+  applySwipeTrail(el, wrap, s.dx);
 }
 function swipeEnd(e, id) {
   const s = swipeState[id]; if (!s) return;
   const el = document.getElementById(`item-${id}`);
-  if (s.dx < -SWIPE_THRESHOLD) {
+  const wrap = document.getElementById(`wrap-${id}`);
+  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
     if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+    if (wrap) { wrap.style.transition = 'background 0.2s ease'; wrap.style.background = 'rgba(239,68,68,0.15)'; }
     setTimeout(() => {
       const allItems = getInbox();
       const originalIdx = allItems.findIndex(i => i.id === id);
@@ -180,9 +180,7 @@ function swipeEnd(e, id) {
       if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); const idx = Math.min(originalIdx, items.length); items.splice(idx, 0, item); saveInbox(items); renderInbox(); });
     }, 220);
   } else {
-    if (el) { el.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = 'translateX(0)'; setTimeout(() => { if (el) el.style.transition = ''; }, 300); }
-    const delBgEnd = el ? el.previousElementSibling : null;
-    if (delBgEnd && delBgEnd.classList.contains('inbox-item-delete-bg')) { delBgEnd.style.transition = 'opacity 0.25s'; delBgEnd.style.opacity = '0'; setTimeout(() => { if(delBgEnd) delBgEnd.style.transition = ''; }, 300); }
+    clearSwipeTrail(el, wrap);
   }
   delete swipeState[id];
 }
@@ -207,6 +205,8 @@ async function sendToAI() {
   addInboxChatMsg('user', text);
   input.value = ''; input.style.height = 'auto';
   input.focus();
+  // Зберігаємо відповідь якщо OWL чекав відповідь по темі провідника
+  try { saveGuideTopicAnswer(text); } catch(e) {}
   if (handleSurveyAnswer(text)) return;
 
   const key = localStorage.getItem('nm_gemini_key');
@@ -387,6 +387,8 @@ async function sendToAI() {
   aiLoading = false;
   btn.disabled = false;
   btn.innerHTML = SEND_SVG;
+  // Органічне питання провідника (25% шанс, не частіше 3 хв)
+  try { maybeAskGuideQuestion(); } catch(e) {}
 }
 
 // === CLARIFY SYSTEM ===
