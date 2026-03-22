@@ -502,6 +502,9 @@ function openChatBar(tab) {
 
   activeChatBar = tab;
 
+  // Очищуємо бейдж непрочитаних для Inbox
+  if (tab === 'inbox') { try { _clearInboxUnreadBadge(); } catch(e) {} }
+
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
 
@@ -845,9 +848,11 @@ function getOwlBoardContext() {
 
   // Звички
   const habits = getHabits();
+  const buildHabits = habits.filter(h => h.type !== 'quit');
+  const quitHabits = habits.filter(h => h.type === 'quit');
   const log = getHabitLog();
   const todayLog = log[todayStr] || {};
-  const todayHabits = habits.filter(h => h.days.includes(now.getDay()));
+  const todayHabits = buildHabits.filter(h => h.days.includes(now.getDay()));
   const doneHabits = todayHabits.filter(h => todayLog[h.id]);
   const pendingHabits = todayHabits.filter(h => !todayLog[h.id]);
 
@@ -877,6 +882,33 @@ function getOwlBoardContext() {
 
   if (todayHabits.length > 0) {
     normal.push(`Звички сьогодні: ${doneHabits.length}/${todayHabits.length}.`);
+  }
+
+  // Quit звички — нагадування і стрік
+  if (quitHabits.length > 0) {
+    const todayIso = now.toISOString().slice(0, 10);
+    const notHeldToday = quitHabits.filter(h => getQuitStatus(h.id).lastHeld !== todayIso);
+    // Ввечері — нагадати відмітити
+    if (hour >= 19 && notHeldToday.length > 0 && !owlAlreadySaid('quit_reminder_' + todayIso)) {
+      important.push(`[ВАЖЛИВО] Не відмічено сьогодні (кинути): ${notHeldToday.map(h => '"' + h.name + '"').join(', ')}.`);
+      markOwlBoardSaid('quit_reminder_' + todayIso);
+    }
+    // Великий стрік — відзначити
+    quitHabits.forEach(h => {
+      const s = getQuitStatus(h.id);
+      const streak = s.streak || 0;
+      const milestones = [7, 14, 21, 30, 60, 90];
+      const hit = milestones.find(m => m === streak);
+      if (hit && !owlAlreadySaid('quit_milestone_' + h.id + '_' + streak)) {
+        important.push(`[ВАЖЛИВО] ${streak} днів без "${h.name}"! 🎉`);
+        markOwlBoardSaid('quit_milestone_' + h.id + '_' + streak);
+      }
+    });
+    const quitInfo = quitHabits.map(h => {
+      const s = getQuitStatus(h.id);
+      return `"${h.name}": ${s.streak||0} дн`;
+    });
+    normal.push(`Челенджі: ${quitInfo.join(', ')}.`);
   }
 
   // Фінанси
@@ -971,7 +1003,14 @@ async function generateOwlBoardMessage() {
   // Список того що вже казали — щоб не повторювати
   const recentTexts = existing.map(m => m.text).join(' | ');
 
+  const now = new Date();
+  const hour = now.getHours();
+  const timeOfDay = hour < 6 ? 'ніч' : hour < 12 ? 'ранок' : hour < 18 ? 'день' : 'вечір';
+  const timeStr = now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+
   const systemPrompt = getOWLPersonality() + `
+
+Зараз: ${timeStr} (${timeOfDay}). Враховуй час доби у повідомленні.
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло в Inbox. Це НЕ відповідь на запит — це твоя ініціатива.
 

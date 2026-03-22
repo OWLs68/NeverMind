@@ -423,7 +423,8 @@ function setupDrumTabbar() {
     if (!item) return currentTranslateX;
     const { minX, maxX } = getDrumBounds();
     const capsuleW = capsule.offsetWidth;
-    const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+    const paddingLeft = parseInt(track.style.paddingLeft) || Math.floor(capsuleW / 2);
+    const itemCenter = paddingLeft + item.offsetLeft + item.offsetWidth / 2;
     return Math.max(minX, Math.min(maxX, capsuleW / 2 - itemCenter));
   }
 
@@ -568,14 +569,16 @@ function updateDrumTabbar(tab) {
     if (diff === 0) item.classList.add('active');
     else if (diff === 1) item.classList.add('near');
   });
-  // Центруємо активну вкладку в барабані через snapToTab-логіку
+  // Центруємо активну вкладку
   const track = document.getElementById('drumTrack');
   const capsule = document.getElementById('drumCapsule');
   if (!track || !capsule) return;
   const activeItem = document.querySelector('.tab-item.active');
   if (!activeItem) return;
   const capsuleW = capsule.offsetWidth;
-  const itemCenter = activeItem.offsetLeft + activeItem.offsetWidth / 2;
+  const paddingLeft = parseInt(track.style.paddingLeft) || Math.floor(capsuleW / 2);
+  // offsetLeft відносно track — потрібно додати paddingLeft
+  const itemCenter = paddingLeft + activeItem.offsetLeft + activeItem.offsetWidth / 2;
   const trackW = track.scrollWidth;
   const minX = Math.min(0, capsuleW - trackW);
   const newX = Math.max(minX, Math.min(0, capsuleW / 2 - itemCenter));
@@ -1399,6 +1402,20 @@ function getTabBoardContext(tab) {
     const stuck = active.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
     if (stuck.length > 0) parts.push(`[ВАЖЛИВО] Задачі без прогресу 3+ дні: ${stuck.map(t => '"' + t.title + '"').join(', ')}`);
     parts.push(`Активних задач: ${active.length}, закрито: ${tasks.filter(t => t.status === 'done').length}`);
+    // Quit звички
+    const allHabits = getHabits();
+    const quitHabits = allHabits.filter(h => h.type === 'quit');
+    if (quitHabits.length > 0) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const quitInfo = quitHabits.map(h => {
+        const s = getQuitStatus(h.id);
+        const heldToday = s.lastHeld === todayStr;
+        return `"${h.name}": стрік ${s.streak || 0} дн${heldToday ? ' ✓' : ' (не відмічено сьогодні)'}`;
+      });
+      parts.push(`Челенджі "Кинути": ${quitInfo.join('; ')}`);
+      const notHeld = quitHabits.filter(h => getQuitStatus(h.id).lastHeld !== todayStr);
+      if (notHeld.length > 0) parts.push(`[ВАЖЛИВО] Не відмічено сьогодні: ${notHeld.map(h => '"' + h.name + '"').join(', ')}`);
+    }
   }
 
   if (tab === 'notes') {
@@ -1410,14 +1427,24 @@ function getTabBoardContext(tab) {
 
   if (tab === 'me') {
     const habits = getHabits();
+    const buildHabits = habits.filter(h => h.type !== 'quit');
+    const quitHabits = habits.filter(h => h.type === 'quit');
     const log = getHabitLog();
     const today = new Date().toDateString();
+    const todayStr = new Date().toISOString().slice(0, 10);
     const todayDow = (new Date().getDay() + 6) % 7;
-    const todayH = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+    const todayH = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
     const doneToday = todayH.filter(h => !!log[today]?.[h.id]).length;
-    if (habits.length > 0) {
-      const streaks = habits.map(h => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
+    if (buildHabits.length > 0) {
+      const streaks = buildHabits.map(h => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
       parts.push(`Звички сьогодні: ${doneToday}/${todayH.length}. Стріки: ${streaks.filter(s => s.streak >= 2).map(s => s.name + '🔥' + s.streak).join(', ') || 'немає'}`);
+    }
+    if (quitHabits.length > 0) {
+      const quitInfo = quitHabits.map(h => {
+        const s = getQuitStatus(h.id);
+        return `"${h.name}": ${s.streak || 0} дн без зривів`;
+      });
+      parts.push(`Челенджі: ${quitInfo.join(', ')}`);
     }
     const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -1474,7 +1501,14 @@ async function generateTabBoardMessage(tab) {
   const existing = getTabBoardMsg(tab);
   const recentText = existing ? existing.text : '';
 
+  const _now = new Date();
+  const _hour = _now.getHours();
+  const _timeOfDay = _hour < 6 ? 'ніч' : _hour < 12 ? 'ранок' : _hour < 18 ? 'день' : 'вечір';
+  const _timeStr = _now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+
   const systemPrompt = getOWLPersonality() + `
+
+Зараз: ${_timeStr} (${_timeOfDay}). Враховуй час доби у повідомленні.
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло у вкладці "${tabLabels[tab] || tab}". Це НЕ відповідь на запит — це твоя ініціатива.
 
@@ -1530,27 +1564,51 @@ function tryTabBoardUpdate(tab) {
 const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для всіх вкладок
 
 // Застосовує червоний градієнтний шлейф і рух картки
-// el = картка (рухається), wrapEl = wrapper (на ньому шлейф)
+// el = картка (рухається), wrapEl = wrapper
 function applySwipeTrail(cardEl, wrapEl, dx) {
   if (!cardEl) return;
   cardEl.style.transform = `translateX(${dx}px)`;
   if (!wrapEl) return;
-  // Прогрес від 0 до 1 по відстані свайпу
+
   const progress = Math.min(1, -dx / 160);
+
+  // Знаходимо або створюємо trail div всередині wrapper
+  let trail = wrapEl.querySelector('.swipe-trail');
+  if (!trail) {
+    trail = document.createElement('div');
+    trail.className = 'swipe-trail';
+    trail.style.cssText = 'position:absolute;top:0;bottom:0;right:0;pointer-events:none;border-radius:inherit;z-index:0';
+    wrapEl.appendChild(trail);
+  }
+
   if (progress <= 0) {
-    wrapEl.style.background = '';
+    trail.style.background = '';
+    trail.style.width = '0';
     return;
   }
-  // Шлейф: градієнт від прозорого до червоного, яскравість зростає з прогресом
-  const alpha = (0.15 + progress * 0.85).toFixed(2); // 0.15 → 1.0
-  const midStop = Math.round(30 + progress * 40); // де починається насичений червоний
-  wrapEl.style.background = `linear-gradient(to right, transparent ${midStop}%, rgba(239,68,68,${alpha}) 100%)`;
+
+  // Ширина шлейфу = скільки відкрилось (картка зсунулась вліво)
+  const trailWidth = Math.round(-dx);
+  const alpha = (0.2 + progress * 0.8).toFixed(2);
+  trail.style.width = trailWidth + 'px';
+  trail.style.background = `linear-gradient(to right, transparent 0%, rgba(239,68,68,${alpha}) 100%)`;
 }
 
 // Скидає шлейф після відпускання
 function clearSwipeTrail(cardEl, wrapEl) {
-  if (cardEl) { cardEl.style.transition = 'transform 0.25s ease'; cardEl.style.transform = 'translateX(0)'; setTimeout(() => { if (cardEl) { cardEl.style.transition = ''; } }, 300); }
-  if (wrapEl) { wrapEl.style.transition = 'background 0.25s ease'; wrapEl.style.background = ''; setTimeout(() => { if (wrapEl) wrapEl.style.transition = ''; }, 300); }
+  if (cardEl) {
+    cardEl.style.transition = 'transform 0.25s ease';
+    cardEl.style.transform = 'translateX(0)';
+    setTimeout(() => { if (cardEl) cardEl.style.transition = ''; }, 300);
+  }
+  if (wrapEl) {
+    const trail = wrapEl.querySelector('.swipe-trail');
+    if (trail) {
+      trail.style.transition = 'opacity 0.25s ease';
+      trail.style.opacity = '0';
+      setTimeout(() => { if (trail) { trail.style.opacity = ''; trail.style.width = '0'; trail.style.background = ''; trail.style.transition = ''; } }, 300);
+    }
+  }
 }
 
 // === INIT ===

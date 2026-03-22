@@ -54,6 +54,36 @@ function addInboxChatMsg(role, text) {
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   saveChatMsg('inbox', role, text);
+
+  // Якщо агент надіслав повідомлення а чат закритий — показуємо бейдж
+  if (role === 'agent') {
+    const bar = document.getElementById('inbox-ai-bar');
+    const chatWin = bar ? bar.querySelector('.ai-bar-chat-window') : null;
+    const isOpen = chatWin && chatWin.classList.contains('open');
+    if (!isOpen) _showInboxUnreadBadge();
+  }
+}
+
+let _inboxUnreadCount = 0;
+function _showInboxUnreadBadge() {
+  _inboxUnreadCount++;
+  let badge = document.getElementById('inbox-chat-badge');
+  if (!badge) {
+    const sendBtn = document.getElementById('ai-send-btn');
+    if (!sendBtn) return;
+    badge = document.createElement('div');
+    badge.id = 'inbox-chat-badge';
+    badge.style.cssText = 'position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10';
+    sendBtn.style.position = 'relative';
+    sendBtn.appendChild(badge);
+  }
+  badge.textContent = _inboxUnreadCount > 9 ? '9+' : _inboxUnreadCount;
+}
+
+function _clearInboxUnreadBadge() {
+  _inboxUnreadCount = 0;
+  const badge = document.getElementById('inbox-chat-badge');
+  if (badge) badge.remove();
 }
 
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
@@ -123,9 +153,8 @@ function renderInbox() {
     };
     const cardStyle = cardStyles[item.category] || cardStyles.note;
     return `<div class="inbox-item-wrap" id="wrap-${item.id}">
-      <div class="inbox-item-delete-bg">🗑️</div>
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           style="${cardStyle}"
+           style="${cardStyle};position:relative;z-index:1"
            ontouchstart="swipeStart(event,${item.id})"
            ontouchmove="swipeMove(event,${item.id})"
            ontouchend="swipeEnd(event,${item.id})">
@@ -201,10 +230,9 @@ async function sendToAI() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Перехоплюємо відповідь якщо йде опитування
   addInboxChatMsg('user', text);
   input.value = ''; input.style.height = 'auto';
-  input.focus();
+  // НЕ фокусуємо input після відправки — щоб не відкривався чат автоматично
   // Зберігаємо відповідь якщо OWL чекав відповідь по темі провідника
   try { saveGuideTopicAnswer(text); } catch(e) {}
   if (handleSurveyAnswer(text)) return;

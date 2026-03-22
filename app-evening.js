@@ -136,14 +136,15 @@ function renderMe() {
     const prevWeekTasks = getTasks().filter(t => t.status === 'done' && t.completedAt >= prevStart.getTime() && t.completedAt < prevEnd.getTime()).length;
 
     const habits = getHabits(); const log = getHabitLog();
+    const buildHabitsMe = habits.filter(h => h.type !== 'quit');
     let thisHabitPct = 0, prevHabitPct = 0;
-    if (habits.length > 0) {
+    if (buildHabitsMe.length > 0) {
       let thisDone = 0, thisTotal = 0, prevDone = 0, prevTotal = 0;
       for (let i = 0; i <= todayDow; i++) {
         const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
         const dow = (d.getDay() + 6) % 7;
         const ds = d.toDateString();
-        const dayH = habits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+        const dayH = buildHabitsMe.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
         thisTotal += dayH.length;
         thisDone += dayH.filter(h => !!log[ds]?.[h.id]).length;
       }
@@ -151,7 +152,7 @@ function renderMe() {
         const d = new Date(prevStart); d.setDate(prevStart.getDate() + i);
         const dow = (d.getDay() + 6) % 7;
         const ds = d.toDateString();
-        const dayH = habits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+        const dayH = buildHabitsMe.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
         prevTotal += dayH.length;
         prevDone += dayH.filter(h => !!log[ds]?.[h.id]).length;
       }
@@ -322,6 +323,11 @@ function renderMeActivityChart() {
   const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
   const accent = '#7c4a2a';
 
+  // Базова норма = build звички на цей день + активні задачі / 7
+  const allBuildHabits = getHabits().filter(h => h.type !== 'quit');
+  const activeTasks = getTasks().filter(t => t.status === 'active').length;
+  const baseline = Math.max(1, Math.round(activeTasks / 7) + 1); // мінімум 1
+
   // Рахуємо активність за кожен день тижня
   const values = dayLabels.map((_, i) => {
     const daysAgo = todayDow - i;
@@ -331,25 +337,25 @@ function renderMeActivityChart() {
     if (daysAgo < 0) return null; // майбутнє
     const inboxCount = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
     const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-    const habits = getHabits();
     const log = getHabitLog();
     const dow = (d.getDay() + 6) % 7;
-    const todayH = habits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+    const todayH = allBuildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
     const doneH = todayH.filter(h => !!log[ds]?.[h.id]).length;
-    return inboxCount + doneTasks + doneH;
+    // Норма цього дня = build звички за цей день + 1 (мінімум)
+    return { val: inboxCount + doneTasks + doneH, norm: Math.max(1, todayH.length + Math.round(activeTasks / 7)) };
   });
 
   const validValues = values.filter(v => v !== null);
-  const maxVal = Math.max(...validValues, 1);
-  const totalActivity = validValues.reduce((s, v) => s + v, 0);
+  const maxVal = Math.max(...validValues.map(v => v.val), baseline * 2, 1);
+  const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
   if (totalEl) totalEl.textContent = `${totalActivity} дій`;
 
   const W = 100, H = 64;
   const points = values.map((v, i) => {
     if (v === null) return null;
     const x = values.length <= 1 ? W / 2 : (i / (values.length - 1)) * W;
-    const y = H - 8 - (v / maxVal) * (H - 16);
-    return { x, y, v, i };
+    const y = H - 8 - (v.val / maxVal) * (H - 16);
+    return { x, y, v: v.val, norm: v.norm, i };
   }).filter(Boolean);
 
   if (points.length < 2) {
@@ -358,11 +364,17 @@ function renderMeActivityChart() {
     return;
   }
 
+  // Базова лінія Y
+  const baselineY = H - 8 - (baseline / maxVal) * (H - 16);
+
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   const areaPath = `${linePath} L ${points[points.length-1].x} ${H} L ${points[0].x} ${H} Z`;
+
+  // Кольорові точки — зелені вище норми, червоні нижче
   const dots = points.map(p => {
     const isToday = p.i === todayDow;
-    const fill = p.v === 0 ? 'rgba(124,74,42,0.2)' : accent;
+    const aboveNorm = p.v >= p.norm;
+    const fill = p.v === 0 ? 'rgba(124,74,42,0.2)' : aboveNorm ? '#16a34a' : '#c2410c';
     const r = isToday ? 3.5 : 2.5;
     return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
   }).join('');
@@ -375,7 +387,9 @@ function renderMeActivityChart() {
       </linearGradient>
     </defs>
     <line x1="0" y1="${H-8}" x2="${W}" y2="${H-8}" stroke="rgba(30,16,64,0.06)" stroke-width="0.5"/>
-    <line x1="0" y1="${Math.round((H-8)/2)}" x2="${W}" y2="${Math.round((H-8)/2)}" stroke="rgba(30,16,64,0.06)" stroke-width="0.5"/>
+    <!-- Базова лінія норми — пунктир -->
+    <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}" stroke="rgba(30,16,64,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="${W}" y="${(baselineY - 2).toFixed(1)}" text-anchor="end" font-size="5" fill="rgba(30,16,64,0.35)" font-weight="700">норма</text>
     <path d="${areaPath}" fill="url(#actGrad)"/>
     <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}
@@ -461,9 +475,10 @@ function renderEvening() {
   if (statsEl) {
     const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
     const habits = getHabits();
+    const buildHabitsEvening = habits.filter(h => h.type !== 'quit');
     const log = getHabitLog();
     const todayDow = (new Date().getDay() + 6) % 7;
-    const todayH = habits.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow));
+    const todayH = buildHabitsEvening.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow));
     const doneH = todayH.filter(h => !!log[today]?.[h.id]).length;
     let todayExp = 0;
     try { todayExp = getFinance().filter(t => t.type === 'expense' && new Date(t.ts).toDateString() === today).reduce((s, t) => s + t.amount, 0); } catch(e) {}
@@ -485,7 +500,7 @@ function renderEvening() {
 
   // === 2. Кільце продуктивності ===
   const doneTasks2 = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-  const habits2 = getHabits(); const log2 = getHabitLog();
+  const habits2 = getHabits().filter(h => h.type !== 'quit'); const log2 = getHabitLog();
   const todayDow2 = (new Date().getDay() + 6) % 7;
   const todayH2 = habits2.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow2));
   const doneH2 = todayH2.filter(h => !!log2[today]?.[h.id]).length;
@@ -686,7 +701,19 @@ async function generateEveningSummary() {
   const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
 Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
 
-  const reply = await callAI(systemPrompt, dayData, {});
+  // Quit звички в контексті вечора
+  let _quitCtx = '';
+  try {
+    const _qh = getHabits().filter(h => h.type === 'quit');
+    if (_qh.length > 0) {
+      const _ts = new Date().toISOString().slice(0, 10);
+      _quitCtx = '\nЧеленджі "Кинути": ' + _qh.map(h => {
+        const s = getQuitStatus(h.id);
+        return '"' + h.name + '": ' + (s.streak||0) + ' дн, ' + (s.lastHeld===_ts ? 'тримався ✓' : 'не відмічено');
+      }).join('; ');
+    }
+  } catch(e) {}
+  const reply = await callAI(systemPrompt, dayData + _quitCtx, {});
   const text = reply || 'Не вдалось отримати підсумок.';
   el.textContent = text;
   // Зберігаємо підсумок в localStorage — відновиться після перезапуску

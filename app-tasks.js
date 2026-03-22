@@ -204,7 +204,6 @@ function renderTasks() {
     const isDone = t.status === 'done';
 
     return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
-      <div id="task-del-${t.id}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
       <div id="task-item-${t.id}"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
@@ -270,6 +269,131 @@ function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr
 function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
 function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
 
+// === QUIT HABITS — челендж "Кинути" ===
+function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
+function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); }
+
+// Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, lastRelapse }
+function getQuitStatus(habitId) {
+  const log = getQuitLog();
+  return log[habitId] || { streak: 0, longestStreak: 0, relapses: [], lastHeld: null };
+}
+
+// Відмітити що "тримається" сьогодні
+function holdQuitHabit(habitId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const log = getQuitLog();
+  if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null };
+  const s = log[habitId];
+  if (s.lastHeld === today) return; // вже відмічено сьогодні
+  // Перевіряємо чи стрік безперервний (вчора теж тримався)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (s.lastHeld === yesterday || s.lastHeld === null) {
+    s.streak = (s.streak || 0) + 1;
+  } else {
+    s.streak = 1; // пропустив — скидаємо
+  }
+  s.longestStreak = Math.max(s.streak, s.longestStreak || 0);
+  s.lastHeld = today;
+  log[habitId] = s;
+  saveQuitLog(log);
+  renderProdHabits();
+  showToast('💪 Тримаєшся! Стрік: ' + s.streak + ' ' + _dayWord(s.streak));
+}
+
+// Відмітити зрив
+function relapseQuitHabit(habitId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const log = getQuitLog();
+  if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null };
+  const s = log[habitId];
+  if (!s.relapses) s.relapses = [];
+  // Не дозволяємо два зриви в один день
+  if (s.relapses[s.relapses.length - 1] === today) {
+    showToast('Зрив вже відмічено сьогодні');
+    return;
+  }
+  s.relapses.push(today);
+  // Залишаємо тільки останні 90 днів
+  const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+  s.relapses = s.relapses.filter(d => d >= cutoff);
+  const prevStreak = s.streak;
+  s.streak = 0;
+  s.lastHeld = null;
+  log[habitId] = s;
+  saveQuitLog(log);
+  renderProdHabits();
+  // OWL реагує
+  _owlQuitRelapse(habitId, prevStreak);
+}
+
+function _dayWord(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return 'день';
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'дні';
+  return 'днів';
+}
+
+function _owlQuitRelapse(habitId, prevStreak) {
+  const habits = getHabits();
+  const h = habits.find(x => x.id === habitId);
+  const name = h ? h.name : 'звичку';
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addInboxChatMsg('agent', `Зрив з "${name}". Стрік скинуто. Але кожна спроба — це прогрес. Починай знову.`);
+    return;
+  }
+  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const owlMode = settings.owl_mode || 'balanced';
+  const tone = owlMode === 'brutal' ? 'різкий, чесний, без зайвого жалю' : owlMode === 'soft' ? 'м\'який, підтримуючий, співчутливий' : 'збалансований, чесний але підтримуючий';
+  fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      max_tokens: 80,
+      messages: [{
+        role: 'system',
+        content: `Ти OWL — персональний агент. Тон: ${tone}. Відповідай ТІЛЬКИ одним реченням українською. Без зайвих слів.`
+      }, {
+        role: 'user',
+        content: `Користувач зірвався з челенджу "${name}". Стрік був ${prevStreak} ${_dayWord(prevStreak)}. Скажи щось коротке.`
+      }]
+    })
+  }).then(r => r.json()).then(d => {
+    const reply = d.choices?.[0]?.message?.content;
+    if (reply) addInboxChatMsg('agent', reply);
+  }).catch(() => {
+    addInboxChatMsg('agent', `Зрив з "${name}". Починай знову — стрік обнулено.`);
+  });
+}
+
+// Поточний тип в модалці (build або quit)
+let _habitModalType = 'build';
+
+function setHabitModalType(type) {
+  _habitModalType = type;
+  const buildBtn = document.getElementById('habit-type-build');
+  const quitBtn = document.getElementById('habit-type-quit');
+  const countSection = document.getElementById('habit-count-section');
+  if (type === 'build') {
+    buildBtn.style.background = 'white';
+    buildBtn.style.color = '#16a34a';
+    buildBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    quitBtn.style.background = 'transparent';
+    quitBtn.style.color = 'rgba(30,16,64,0.4)';
+    quitBtn.style.boxShadow = 'none';
+    if (countSection) countSection.style.display = 'flex';
+  } else {
+    quitBtn.style.background = 'white';
+    quitBtn.style.color = '#c2410c';
+    quitBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    buildBtn.style.background = 'transparent';
+    buildBtn.style.color = 'rgba(30,16,64,0.4)';
+    buildBtn.style.boxShadow = 'none';
+    if (countSection) countSection.style.display = 'none';
+  }
+}
+
 function adjustHabitCount(delta) {
   const inp = document.getElementById('habit-input-count');
   const disp = document.getElementById('habit-count-display');
@@ -314,6 +438,7 @@ function openEditHabit(id) {
   document.querySelectorAll('.habit-day-btn').forEach(b => {
     b.classList.toggle('active', days.includes(parseInt(b.dataset.day)));
   });
+  setHabitModalType(h.type === 'quit' ? 'quit' : 'build');
   document.getElementById('habit-modal').style.display = 'flex';
   document.getElementById('habit-delete-btn').style.display = 'inline-block';
   setupModalSwipeClose(document.querySelector('#habit-modal > div:last-child'), closeHabitModal);
@@ -328,6 +453,7 @@ function openAddHabit() {
   document.getElementById('habit-input-count').value = '1';
   document.getElementById('habit-count-display').textContent = '1';
   document.getElementById('habit-delete-btn').style.display = 'none';
+  setHabitModalType('build');
   document.querySelectorAll('.habit-day-btn').forEach(b => {
     b.classList.toggle('active', [0,1,2,3,4].includes(parseInt(b.dataset.day)));
   });
@@ -350,22 +476,23 @@ function saveHabit() {
   const name = document.getElementById('habit-input-name').value.trim();
   if (!name) { showToast('Введи назву звички'); return; }
   const details = document.getElementById('habit-input-details').value.trim();
-  const emoji = document.getElementById('habit-input-emoji').value.trim() || '⭕';
+  const emoji = document.getElementById('habit-input-emoji').value.trim() || (_habitModalType === 'quit' ? '🚫' : '⭕');
   const days = [...document.querySelectorAll('.habit-day-btn.active')].map(b => parseInt(b.dataset.day));
-  const targetCount = parseInt(document.getElementById('habit-input-count').value || 1) || 1;
+  const targetCount = _habitModalType === 'quit' ? 1 : (parseInt(document.getElementById('habit-input-count').value || 1) || 1);
+  const type = _habitModalType;
   const habits = getHabits();
 
   if (editingHabitId) {
     const idx = habits.findIndex(x => x.id === editingHabitId);
-    if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount };
+    if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
   } else {
-    habits.push({ id: Date.now(), name, details, emoji, days, targetCount, createdAt: Date.now() });
+    habits.push({ id: Date.now(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
   }
   saveHabits(habits);
   closeHabitModal();
   renderHabits();
   renderProdHabits();
-  showToast(editingHabitId ? '✓ Звичку оновлено' : '✓ Звичку додано');
+  showToast(editingHabitId ? '✓ Звичку оновлено' : (type === 'quit' ? '🚫 Челендж створено' : '✓ Звичку додано'));
 }
 
 function deleteHabit(id) {
@@ -551,7 +678,6 @@ function renderHabits() {
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
     return '<div style="position:relative;border-radius:14px;margin-bottom:6px">'
-      + '<div id="habit-me-del-' + h.id + '" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:14px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>'
       + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')"'
         + ' ontouchstart="habitMeSwipeStart(event,' + h.id + ')"'
         + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
@@ -728,17 +854,31 @@ function updateProdTabCounters() {
   if (taskCountEl) taskCountEl.textContent = taskCount;
   if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? 'активна' : 'активних';
 
-  // Лічильник звичок
+  // Лічильник звичок — тільки build звички в основному лічильнику
   const habits = getHabits();
+  const buildHabitsAll = habits.filter(h => h.type !== 'quit');
+  const quitHabitsAll = habits.filter(h => h.type === 'quit');
   const log = getHabitLog();
   const today = new Date().toDateString();
+  const todayStr = new Date().toISOString().slice(0, 10);
   const todayDow = (new Date().getDay() + 6) % 7;
-  const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+  const todayHabits = buildHabitsAll.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
   const doneToday = todayHabits.filter(h => _habitDone(h, log[today])).length;
+  // Quit звички — скільки тримається сьогодні
+  const quitHeldToday = quitHabitsAll.filter(h => getQuitStatus(h.id).lastHeld === todayStr).length;
   const habitCountEl = document.getElementById('prod-tab-habits-count');
   const habitSubEl = document.getElementById('prod-tab-habits-sub');
-  if (habitCountEl) habitCountEl.textContent = habits.length;
-  if (habitSubEl) habitSubEl.textContent = todayHabits.length > 0 ? `${doneToday} з ${todayHabits.length} сьогодні` : 'звичок';
+  const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
+  if (habitCountEl) habitCountEl.textContent = totalHabits;
+  if (habitSubEl) {
+    if (todayHabits.length > 0 || quitHabitsAll.length > 0) {
+      const total = todayHabits.length + quitHabitsAll.length;
+      const done = doneToday + quitHeldToday;
+      habitSubEl.textContent = `${done} з ${total} сьогодні`;
+    } else {
+      habitSubEl.textContent = 'звичок';
+    }
+  }
 }
 
 function switchProdTab(tab) {
@@ -873,7 +1013,13 @@ function renderProdHabits() {
     return;
   }
 
-  el.innerHTML = habits.map(h => {
+  const buildHabits = habits.filter(h => h.type !== 'quit');
+  const quitHabits = habits.filter(h => h.type === 'quit');
+
+  let html = '';
+
+  // Звичайні звички
+  html += buildHabits.map(h => {
     const target = h.targetCount || 1;
     const rawVal = log[today]?.[h.id];
     const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
@@ -924,11 +1070,8 @@ function renderProdHabits() {
 
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
-    return '<div style="position:relative;border-radius:16px;margin-bottom:10px">'
-      + '<div id="prod-habit-del-' + h.id + '" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s">'
-        + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'
-      + '</div>'
-      + '<div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"'
+    return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
+      + '<div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"'
         + ' ontouchstart="prodHabitSwipeStart(event,' + h.id + ')"'
         + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
         + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
@@ -949,6 +1092,75 @@ function renderProdHabits() {
       + '</div>'
     + '</div>';
   }).join('');
+
+  // Челенджі "Кинути"
+  if (quitHabits.length > 0) {
+    html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">🚫 Челенджі</div>';
+    html += quitHabits.map(h => _renderQuitHabitCard(h)).join('');
+  }
+
+  el.innerHTML = html;
+}
+
+function _renderQuitHabitCard(h) {
+  const s = getQuitStatus(h.id);
+  const today = new Date().toISOString().slice(0, 10);
+  const heldToday = s.lastHeld === today;
+  const relapses30 = (s.relapses || []).filter(d => {
+    const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    return d >= cutoff;
+  }).length;
+  const streak = s.streak || 0;
+  const longest = s.longestStreak || 0;
+  const shortName = h.name.split(' ').slice(0,4).join(' ');
+
+  // Колір картки — темніший якщо зривів багато
+  const cardBg = relapses30 === 0 && streak > 0
+    ? 'background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)'
+    : 'background:rgba(245,238,232,0.8);border-color:rgba(194,65,12,0.15)';
+
+  const streakColor = streak > 0 ? '#16a34a' : 'rgba(30,16,64,0.35)';
+  const streakIcon = streak >= 7 ? '🔥' : streak >= 3 ? '✊' : '💪';
+
+  return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
+    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"'
+    + ' ontouchstart="prodHabitSwipeStart(event,' + h.id + ')"'
+    + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
+    + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
+
+    // Назва і стрік
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:2px">' + escapeHtml(shortName) + '</div>'
+        + '<div style="font-size:12px;font-weight:600;color:' + streakColor + '">'
+          + (streak > 0 ? streakIcon + ' ' + streak + ' ' + _dayWord(streak) + ' без зривів' : 'Починай сьогодні')
+          + (longest > streak ? ' · рекорд: ' + longest : '')
+        + '</div>'
+      + '</div>'
+      + '<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-align:right">'
+        + (relapses30 > 0 ? relapses30 + ' ' + (relapses30 === 1 ? 'зрив' : relapses30 < 5 ? 'зриви' : 'зривів') + '<br>за 30 днів' : '')
+      + '</div>'
+    + '</div>'
+
+    // Кнопки дій
+    + '<div style="display:flex;gap:8px" onclick="event.stopPropagation()">'
+      + '<button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;'
+        + (heldToday ? 'background:rgba(22,163,74,0.15);color:#16a34a' : 'background:rgba(22,163,74,0.1);color:#16a34a')
+        + '">' + (heldToday ? '✅ Тримаюсь сьогодні' : '✓ Тримаюсь') + '</button>'
+      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.4)">Зірвався</button>'
+    + '</div>'
+    + '</div>'
+  + '</div>';
+}
+
+function confirmQuitRelapse(habitId) {
+  const habits = getHabits();
+  const h = habits.find(x => x.id === habitId);
+  const name = h ? h.name : 'звичку';
+  // Простий confirm на iOS
+  if (window.confirm('Відмітити зрив з "' + name + '"?\nСтрік скинеться.')) {
+    relapseQuitHabit(habitId);
+  }
 }
 
 // === TAB SWIPE NAVIGATION ===

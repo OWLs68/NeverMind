@@ -281,11 +281,11 @@ function renderNotes(searchQuery = '') {
             <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:2px">${escapeHtml(folder)}</div>
             ${desc}
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
-            <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent">···</div>
-            <div style="font-size:18px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:44px">
+            <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
           </div>
+          <div ontouchend="event.stopPropagation();event.preventDefault();openFolderEditModal('${safeFolder}')" onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
         </div>
       </div>`;
     }).join('') + '</div>';
@@ -298,7 +298,6 @@ function renderNotesList(notes) {
     const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
     return `
       <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);margin-bottom:8px">
-        <div id="note-del-${n.id}" class="note-delete-bg" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:var(--card-radius);opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
         <div id="note-item-${n.id}" class="inbox-item"
           ontouchstart="noteSwipeStart(event,${n.id})"
           ontouchmove="noteSwipeMove(event,${n.id})"
@@ -371,10 +370,22 @@ function closeNoteMenu() {
 }
 function noteMenuEdit() {
   const id = activeNoteMenuId;
-  const fromView = activeNoteViewId === id;
   closeNoteMenu();
-  if (fromView) closeNoteView();
-  openEditNote(id);
+  // Відкриваємо нотатку і фокусуємо текст для редагування
+  if (activeNoteViewId !== id) openNoteView(id);
+  setTimeout(() => {
+    const textEl = document.getElementById('note-view-text');
+    if (textEl) {
+      textEl.focus();
+      // Переміщуємо курсор в кінець тексту
+      const range = document.createRange();
+      range.selectNodeContents(textEl);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }, 100);
 }
 function noteMenuDelete() {
   const id = activeNoteMenuId;
@@ -522,6 +533,13 @@ function openNoteView(id) {
 
   switchNoteViewTab('note');
   modal.style.display = 'flex';
+  // Скролимо до початку тексту
+  requestAnimationFrame(() => {
+    const panel = document.getElementById('note-view-panel-note');
+    if (panel) panel.scrollTop = 0;
+    const textEl2 = document.getElementById('note-view-text');
+    if (textEl2) textEl2.scrollTop = 0;
+  });
 }
 
 function closeNoteView() {
@@ -657,8 +675,25 @@ async function sendNoteChatMessage() {
   const notes = getNotes();
   const n = notes.find(x => x.id === activeNoteViewId);
   const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} Обговорюєш нотатку користувача. Короткі відповіді (2-4 речення). Допомагаєш розвинути думку, знайти рішення, структурувати ідею. Якщо просять зберегти відповідь — скажи що можна натиснути "Зберегти як нотатку".${aiContext ? '\n\n' + aiContext : ''}`;
-  const noteContext = `Нотатка: ${n?.text || ''}`;
+  const currentText = n?.text || '';
+
+  const systemPrompt = `${getOWLPersonality()} Ти асистент для роботи з нотаткою користувача.
+
+Поточний текст нотатки:
+---
+${currentText}
+---
+
+Ти можеш:
+1. Відповідати на питання про нотатку — звичайний текст
+2. Оновлювати нотатку — якщо просять написати, доповнити, змінити, структурувати, додати список тощо
+
+Якщо потрібно ОНОВИТИ нотатку — відповідай ТІЛЬКИ JSON:
+{"action":"update_note","text":"повний новий текст нотатки"}
+
+Якщо просто відповідаєш — відповідай звичайним текстом (2-4 речення).
+НЕ використовуй JSON якщо тільки обговорюєш або пояснюєш.
+${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -668,20 +703,46 @@ async function sendNoteChatMessage() {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: noteContext },
-          ...noteChatHistory.slice(-10)
+          ...noteChatHistory.slice(-10),
+          { role: 'user', content: text }
         ],
-        max_tokens: 300,
-        temperature: 0.75
+        max_tokens: 800,
+        temperature: 0.7
       })
     });
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content;
     if (reply) {
-      addNoteChatMsg('agent', reply);
+      noteChatHistory.push({ role: 'user', content: text });
       noteChatHistory.push({ role: 'assistant', content: reply });
-      // Show save button if meaningful response
-      showSaveAsNoteBtn(reply);
+      // Перевіряємо чи це JSON з update_note
+      try {
+        const clean = reply.replace(/^```json\s*|```\s*$/g, '').trim();
+        const parsed = JSON.parse(clean);
+        if (parsed.action === 'update_note' && parsed.text) {
+          // Оновлюємо нотатку
+          const allNotes = getNotes();
+          const idx = allNotes.findIndex(x => x.id === activeNoteViewId);
+          if (idx !== -1) {
+            allNotes[idx].text = parsed.text;
+            allNotes[idx].updatedAt = Date.now();
+            saveNotes(allNotes);
+            // Оновлюємо відображення в редакторі
+            const textEl = document.getElementById('note-view-text');
+            if (textEl) textEl.textContent = parsed.text;
+            renderNotes();
+            addNoteChatMsg('agent', '✓ Нотатку оновлено.');
+          } else {
+            addNoteChatMsg('agent', 'Не вдалося знайти нотатку.');
+          }
+        } else {
+          addNoteChatMsg('agent', reply);
+          showSaveAsNoteBtn(reply);
+        }
+      } catch {
+        addNoteChatMsg('agent', reply);
+        showSaveAsNoteBtn(reply);
+      }
     } else {
       addNoteChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
     }
