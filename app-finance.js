@@ -15,7 +15,7 @@ function getFinCats() {
   const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
   if (saved) return saved;
   return {
-    expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Трава','Інше'],
+    expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Інше'],
     income:  ['Зарплата','Надходження','Повернення','Інше'],
   };
 }
@@ -29,7 +29,6 @@ const FIN_SUBCATS = {
   'Здоровʼя':  ['Аптека','Лікар','Спортзал','Аналізи','Косметика'],
   'Житло':     ['Оренда','Комунальні','Інтернет','Ремонт','Меблі'],
   'Покупки':   ['Одяг','Техніка','Книги','Подарунки','Дім'],
-  'Трава':     ['Кальян','Диспенсарі','Квіти','Дорого','Онлайн'],
 };
 
 // State
@@ -110,18 +109,16 @@ function _hideOldFinBlocks() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  // Старий таб-перемикач — ховаємо батька (flex-контейнер перемикача)
+  // Старий таб-перемикач Витрати/Доходи/Баланс
   const expTab = document.getElementById('fin-tab-expense');
   if (expTab && expTab.parentElement) expTab.parentElement.style.display = 'none';
-  // Старий графік — ховаємо безпосередній батьківський блок fin-chart
+  // Старий графік-блок (батько fin-chart)
   const chartEl = document.getElementById('fin-chart');
-  if (chartEl && chartEl.parentElement) chartEl.parentElement.style.display = 'none';
-  // Старий блок транзакцій — ховаємо батька fin-transactions
+  if (chartEl && chartEl.parentElement && chartEl.parentElement.parentElement)
+    chartEl.parentElement.parentElement.style.display = 'none';
+  // Старий блок транзакцій (батько fin-transactions)
   const txEl = document.getElementById('fin-transactions');
   if (txEl && txEl.parentElement) txEl.parentElement.style.display = 'none';
-  // Старий перемикач періоду
-  const periodEl = document.getElementById('fin-period-week');
-  if (periodEl && periodEl.parentElement) periodEl.parentElement.style.display = 'none';
 }
 
 // Адаптивний бенчмарк на основі контексту користувача
@@ -164,18 +161,12 @@ function getFinAdaptiveBenchmark() {
 function renderFinance() {
   _hideOldFinBlocks();
 
-  // Вставляємо fin-v2-wrap напряму в скрол-контейнер — не через insertBefore
   let wrap = document.getElementById('fin-v2-wrap');
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.id = 'fin-v2-wrap';
-    const scroll = document.getElementById('fin-scroll');
-    if (scroll) scroll.insertBefore(wrap, scroll.firstChild);
-    else {
-      // fallback — перед fin-summary-block
-      const anchor = document.getElementById('fin-summary-block');
-      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(wrap, anchor);
-    }
+    const anchor = document.getElementById('fin-summary-block');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(wrap, anchor);
   }
 
   const from = getFinPeriodRange(currentFinPeriod);
@@ -335,6 +326,7 @@ function _finForecast(totalExp, totalInc) {
   const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   const daysLeft = daysInMonth - daysPassed;
   if (daysPassed < 5) return '';
+  if (totalExp === 0) return '';
 
   const rate = totalExp / daysPassed;
   const proj  = Math.round(totalExp + rate * daysLeft);
@@ -342,13 +334,26 @@ function _finForecast(totalExp, totalInc) {
   const proj3 = Math.round(totalExp + rate * 0.55 * daysLeft);
 
   const budget = getFinBudget();
+
+  // Немає ні доходу ні бюджету — показуємо підказку
+  if (totalInc === 0 && budget.total === 0) {
+    return `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:13px 16px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Прогноз</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-weight:600">Додай дохід або встанови бюджет — OWL порахує скільки залишиться</div>
+    </div>`;
+  }
+
+  // Є дохід — показуємо залишок
+  const showBalance = totalInc > 0;
+
+  // Попередження
   let warnHtml = '';
   if (budget.total > 0 && proj > budget.total) {
     warnHtml = `<div style="display:flex;align-items:flex-start;gap:6px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:9px 10px;margin-top:10px">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <span style="font-size:12px;color:#c2410c;font-weight:600;line-height:1.4">При поточному темпі перевищиш бюджет на ${formatMoney(proj - budget.total)}</span>
     </div>`;
-  } else if (totalInc > 0 && Math.max(0, totalInc - proj) < totalInc * 0.1) {
+  } else if (showBalance && Math.max(0, totalInc - proj) < totalInc * 0.1) {
     warnHtml = `<div style="display:flex;align-items:flex-start;gap:6px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:9px 10px;margin-top:10px">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <span style="font-size:12px;color:#c2410c;font-weight:600;line-height:1.4">При поточному темпі залишишся з ${formatMoney(Math.max(0, totalInc - proj))} — менше фінансової подушки</span>
@@ -362,23 +367,52 @@ function _finForecast(totalExp, totalInc) {
       <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);line-height:1.3">${lbl}</div>
     </div>`;
 
-  return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px">Прогноз до кінця місяця</div>
-    <div style="display:flex;gap:6px">
-      ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', 'rgba(30,16,64,0.06)', formatMoney(proj), '#1e1040', 'поточний темп')}
-      ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="20" y1="4" x2="4" y2="20"/></svg>', 'rgba(30,16,64,0.06)', formatMoney(proj2), '#d97706', '-25% витрат')}
-      ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>', 'rgba(22,163,74,0.1)', formatMoney(proj3), '#16a34a', 'оптимально', true)}
-    </div>
-    ${warnHtml}
-  </div>`;
+  if (showBalance) {
+    // З доходом — показуємо залишок
+    const v1 = formatMoney(Math.max(0, totalInc - proj));
+    const v2 = formatMoney(Math.max(0, totalInc - proj2));
+    const v3 = formatMoney(Math.max(0, totalInc - proj3));
+    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px">Прогноз · залишок до кінця місяця</div>
+      <div style="display:flex;gap:6px">
+        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', 'rgba(30,16,64,0.06)', v1, '#1e1040', 'зараз')}
+        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="20" y1="4" x2="4" y2="20"/></svg>', 'rgba(30,16,64,0.06)', v2, '#d97706', '-25% витрат')}
+        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>', 'rgba(22,163,74,0.1)', v3, '#16a34a', 'оптимально', true)}
+      </div>
+      ${warnHtml}
+    </div>`;
+  } else {
+    // Тільки бюджет — показуємо прогноз витрат відносно бюджету
+    const budgetTotal = budget.total;
+    const v1 = formatMoney(proj);
+    const pctOfBudget = Math.round(proj / budgetTotal * 100);
+    const overColor = proj > budgetTotal ? '#c2410c' : '#16a34a';
+    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Прогноз витрат на місяць</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div style="font-size:22px;font-weight:900;color:${overColor}">${v1}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">при поточному темпі · бюджет ${formatMoney(budgetTotal)}</div>
+        </div>
+        <div style="font-size:28px;font-weight:900;color:${overColor}">${pctOfBudget}%</div>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(pctOfBudget,100)}%;background:${overColor};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      ${warnHtml}
+    </div>`;
+  }
 }
 
 function _finCoachBlock() {
   const cached = localStorage.getItem('nm_fin_coach_' + currentFinPeriod);
   let coachText = 'OWL аналізує твої витрати…';
   if (cached) { try { coachText = JSON.parse(cached).text || coachText; } catch(e) {} }
-  return `<div id="fin-coach-block" style="background:linear-gradient(135deg,rgba(30,16,64,0.82),rgba(60,20,90,0.78));backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:9px">OWL · Порада тижня</div>
+  return `<div id="fin-coach-block" style="background:rgba(12,6,28,0.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:13px 15px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+      <div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
+      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em">OWL · порада</div>
+    </div>
     <div id="fin-coach-text" style="font-size:13px;font-weight:600;color:white;line-height:1.6">${escapeHtml(coachText)}</div>
   </div>`;
 }
@@ -982,7 +1016,7 @@ async function sendFinanceBarMessage() {
 Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}${getCurrency()} ${t.comment||''}`).join('; ') || 'немає'}
 Загальний бюджет: ${budget.total ? budget.total+getCurrency() : 'не встановлено'}
 Категорії витрат: ${cats.expense.join(', ')}
-Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка), Трава(джоінт,канабіс)
+Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка)
 Категорії доходів: ${cats.income.join(', ')}
 Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
 
@@ -1056,10 +1090,10 @@ async function sendFinanceBarMessage() {
         renderFinance();
         addFinanceChatMsg('agent', `✓ Категорію "${parsed.name}" додано`);
       } else {
-        addFinanceChatMsg('agent', reply);
+        safeAgentReply(reply, addFinanceChatMsg);
       }
     } catch {
-      addFinanceChatMsg('agent', reply);
+      safeAgentReply(reply, addFinanceChatMsg);
     }
   } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
   financeBarLoading = false;

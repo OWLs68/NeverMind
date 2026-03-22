@@ -116,16 +116,24 @@ function switchTab(tab) {
 }
 
 // === АКТИВНІ ВКЛАДКИ (вибір через кнопку +) ===
-const DEFAULT_TABS = ['inbox','tasks','notes','evening'];
+const DEFAULT_TABS = ['inbox','notes'];
 const ALL_TABS_CONFIG = [
-  { id: 'inbox',    label: 'Inbox',         icon: '📥' },
-  { id: 'tasks',    label: 'Продуктивність',icon: '⚡' },
-  { id: 'notes',    label: 'Нотатки',       icon: '📝' },
-  { id: 'me',       label: 'Я',             icon: '🪞' },
-  { id: 'evening',  label: 'Вечір',         icon: '🌙' },
-  { id: 'finance',  label: 'Фінанси',       icon: '💳' },
-  { id: 'health',   label: "Здоров'я",      icon: '🫀' },
-  { id: 'projects', label: 'Проекти',       icon: '🚀' },
+  { id: 'inbox',    label: 'Inbox',         accent: '#8b6914', bg: 'rgba(245,240,232,0.9)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>' },
+  { id: 'tasks',    label: 'Продуктив.',    accent: '#c2410c', bg: 'rgba(253,184,122,0.25)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
+  { id: 'notes',    label: 'Нотатки',       accent: '#c2620a', bg: 'rgba(254,215,170,0.3)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>' },
+  { id: 'me',       label: 'Я',             accent: '#7c4a2a', bg: 'rgba(232,213,196,0.35)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { id: 'evening',  label: 'Вечір',         accent: '#1e3350', bg: 'rgba(30,51,80,0.12)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>' },
+  { id: 'finance',  label: 'Фінанси',       accent: '#c2410c', bg: 'rgba(252,217,189,0.35)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="14" r="2"/></svg>' },
+  { id: 'health',   label: "Здоров'я",      accent: '#1a5c2a', bg: 'rgba(212,232,216,0.4)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' },
+  { id: 'projects', label: 'Проекти',       accent: '#3d2e1e', bg: 'rgba(232,224,213,0.4)',
+    svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
 ];
 
 function getActiveTabs() {
@@ -142,52 +150,79 @@ function saveActiveTabs(arr) {
 
 function openTabSelector() {
   const active = getActiveTabs();
-  const locked = ['inbox','tasks','notes','evening']; // не можна прибрати
+  const locked = ['inbox', 'notes'];
 
   const overlay = document.createElement('div');
   overlay.id = 'tab-selector-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 16px';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)';
 
   overlay.innerHTML = `
-    <div onclick="event.stopPropagation()" style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px 32px;border:1.5px solid rgba(255,255,255,0.7);box-shadow:0 20px 60px rgba(0,0,0,0.25)">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 16px"></div>
-      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:4px">Вкладки</div>
-      <div style="font-size:12px;color:rgba(30,16,64,0.4);font-weight:500;margin-bottom:16px">Обери які показувати в барабані</div>
-      <div id="tab-selector-list" style="display:flex;flex-direction:column;gap:4px">
+    <div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)">
+
+      <!-- Хедер -->
+      <div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)">
+        <div>
+          <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+          <div style="font-size:18px;font-weight:800;color:#1e1040">Вкладки</div>
+          <div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">Вибери що показувати в барабані</div>
+        </div>
+        <button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">Готово</button>
+      </div>
+
+      <!-- Сітка вкладок 2×4 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">
         ${ALL_TABS_CONFIG.map(t => {
           const isActive = active.includes(t.id);
           const isLocked = locked.includes(t.id);
-          return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:${isActive ? 'rgba(30,16,64,0.05)' : 'transparent'};cursor:${isLocked ? 'default' : 'pointer'}" onclick="${isLocked ? '' : `toggleTabSelection('${t.id}')`}" id="tab-sel-row-${t.id}">
-            <div style="width:36px;height:36px;border-radius:11px;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${t.icon}</div>
-            <div style="flex:1;font-size:15px;font-weight:600;color:#1e1040">${t.label}</div>
+          const borderColor = isActive ? t.accent : 'rgba(30,16,64,0.08)';
+          const cardBg = isActive ? t.bg : 'rgba(255,255,255,0.6)';
+          return `<div id="tab-sel-card-${t.id}"
+            onclick="${isLocked ? '' : `toggleTabSelection('${t.id}')`}"
+            style="border-radius:18px;padding:14px;background:${cardBg};border:2px solid ${borderColor};cursor:${isLocked ? 'default' : 'pointer'};transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">
+            <!-- Іконка -->
+            <div style="width:40px;height:40px;border-radius:12px;background:${isActive ? t.accent : 'rgba(30,16,64,0.06)'};display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:${isActive ? 'white' : 'rgba(30,16,64,0.4)'};transition:all 0.18s">
+              ${t.svg}
+            </div>
+            <!-- Назва -->
+            <div style="font-size:14px;font-weight:700;color:${isActive ? t.accent : 'rgba(30,16,64,0.45)'};line-height:1.2">${t.label}</div>
+            <!-- Завжди / Чекбокс -->
             ${isLocked
-              ? `<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.3);padding:3px 8px;border-radius:8px;background:rgba(30,16,64,0.05)">завжди</div>`
-              : `<div id="tab-sel-toggle-${t.id}" style="width:24px;height:24px;border-radius:8px;border:2px solid ${isActive ? '#1e1040' : 'rgba(30,16,64,0.15)'};background:${isActive ? '#1e1040' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s">
-                  ${isActive ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+              ? `<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">завжди</div>`
+              : `<div id="tab-sel-check-${t.id}" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ${isActive ? t.accent : 'rgba(30,16,64,0.15)'};background:${isActive ? t.accent : 'transparent'};display:flex;align-items:center;justify-content:center;transition:all 0.18s">
+                  ${isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                 </div>`
             }
           </div>`;
         }).join('')}
       </div>
-      <button onclick="applyTabSelection()" style="width:100%;margin-top:16px;padding:14px;background:#1e1040;color:white;border:none;border-radius:16px;font-size:15px;font-weight:700;cursor:pointer">Готово</button>
     </div>`;
 
   overlay.addEventListener('click', e => { if (e.target === overlay) closeTabSelector(); });
   document.body.appendChild(overlay);
 
+  // Анімація входу
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById('tab-sel-sheet').style.transform = 'translateY(0)';
+    });
+  });
+
   // Свайп вниз щоб закрити
-  const content = overlay.querySelector('div[onclick]');
-  let _sy = 0;
-  content.addEventListener('touchstart', e => { _sy = e.touches[0].clientY; }, { passive: true });
-  content.addEventListener('touchmove', e => {
-    const dy = e.touches[0].clientY - _sy;
-    if (dy > 0) content.style.transform = `translateY(${dy}px)`;
+  const sheet = document.getElementById('tab-sel-sheet');
+  let _sy = 0, _dragging = false;
+  sheet.addEventListener('touchstart', e => {
+    _sy = e.touches[0].clientY; _dragging = false;
+    sheet.style.transition = 'none';
   }, { passive: true });
-  content.addEventListener('touchend', e => {
+  sheet.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - _sy;
+    if (dy > 5) { _dragging = true; sheet.style.transform = `translateY(${dy}px)`; }
+  }, { passive: true });
+  sheet.addEventListener('touchend', e => {
     const dy = e.changedTouches[0].clientY - _sy;
-    content.style.transition = 'transform 0.25s ease';
-    if (dy > 80) { content.style.transform = 'translateY(100%)'; setTimeout(closeTabSelector, 250); }
-    else { content.style.transform = ''; setTimeout(() => content.style.transition = '', 300); }
+    sheet.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    if (_dragging && dy > 80) { sheet.style.transform = 'translateY(100%)'; setTimeout(closeTabSelector, 300); }
+    else { sheet.style.transform = 'translateY(0)'; }
   }, { passive: true });
 }
 
@@ -196,29 +231,43 @@ let _pendingTabs = null;
 
 function toggleTabSelection(tabId) {
   if (!_pendingTabs) _pendingTabs = [...getActiveTabs()];
-  const locked = ['inbox','tasks','notes','evening'];
+  const locked = ['inbox', 'notes'];
   if (locked.includes(tabId)) return;
 
   const idx = _pendingTabs.indexOf(tabId);
   if (idx !== -1) {
     _pendingTabs.splice(idx, 1);
   } else {
-    // Додаємо в правильному порядку
     const order = ALL_TABS_CONFIG.map(t => t.id);
     _pendingTabs.push(tabId);
     _pendingTabs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
   }
 
-  // Оновлюємо UI
-  const toggle = document.getElementById(`tab-sel-toggle-${tabId}`);
-  const row = document.getElementById(`tab-sel-row-${tabId}`);
   const isNowActive = _pendingTabs.includes(tabId);
-  if (toggle) {
-    toggle.style.borderColor = isNowActive ? '#1e1040' : 'rgba(30,16,64,0.15)';
-    toggle.style.background = isNowActive ? '#1e1040' : 'transparent';
-    toggle.innerHTML = isNowActive ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+  const cfg = ALL_TABS_CONFIG.find(t => t.id === tabId);
+  if (!cfg) return;
+
+  const card = document.getElementById(`tab-sel-card-${tabId}`);
+  const check = document.getElementById(`tab-sel-check-${tabId}`);
+  const iconDiv = card ? card.querySelector('div:first-child') : null;
+  const labelDiv = card ? card.querySelectorAll('div')[1] : null;
+
+  if (card) {
+    card.style.background = isNowActive ? cfg.bg : 'rgba(255,255,255,0.6)';
+    card.style.borderColor = isNowActive ? cfg.accent : 'rgba(30,16,64,0.08)';
   }
-  if (row) row.style.background = isNowActive ? 'rgba(30,16,64,0.05)' : 'transparent';
+  if (iconDiv) {
+    iconDiv.style.background = isNowActive ? cfg.accent : 'rgba(30,16,64,0.06)';
+    iconDiv.style.color = isNowActive ? 'white' : 'rgba(30,16,64,0.4)';
+  }
+  if (labelDiv) {
+    labelDiv.style.color = isNowActive ? cfg.accent : 'rgba(30,16,64,0.45)';
+  }
+  if (check) {
+    check.style.borderColor = isNowActive ? cfg.accent : 'rgba(30,16,64,0.15)';
+    check.style.background = isNowActive ? cfg.accent : 'transparent';
+    check.innerHTML = isNowActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+  }
 }
 
 function applyTabSelection() {
@@ -348,37 +397,34 @@ function setupDrumTabbar() {
   // Інерційна анімація через requestAnimationFrame
   function runMomentum(vel) {
     if (_rafId) cancelAnimationFrame(_rafId);
-    const { minX, maxX } = getDrumBounds();
-    const FRICTION = 0.92; // гальмування (0.9 = швидше, 0.95 = довше)
-    const MIN_VEL = 0.3;   // поріг зупинки
+    const FRICTION = 0.88;
+    const MIN_VEL = 0.5;
 
     function step() {
       vel *= FRICTION;
-      const newX = Math.max(minX, Math.min(maxX, currentTranslateX + vel));
+      const { minX, maxX } = getDrumBounds();
+      let newX = currentTranslateX + vel;
 
-      // Пружна межа — відскакує від країв
-      if (currentTranslateX + vel > maxX) {
-        vel *= -0.4;
-      } else if (currentTranslateX + vel < minX) {
-        vel *= -0.4;
-      }
+      // Досягли межі — зупиняємось, без відскоку
+      if (newX >= maxX) { newX = maxX; vel = 0; }
+      if (newX <= minX) { newX = minX; vel = 0; }
 
       setX(newX);
 
-      // Оновлюємо візуал під час інерції
       const centerTab = getTabAtCenter();
       if (centerTab) updateActiveVisual(centerTab);
 
       if (Math.abs(vel) > MIN_VEL) {
         _rafId = requestAnimationFrame(step);
       } else {
-        // Інерція зупинилась — snap до найближчої вкладки
+        _rafId = null;
+        // Snap до найближчої вкладки
         const snapTab = getTabAtCenter();
         if (snapTab) {
           const snapX = getSnapX(snapTab);
-          track.style.transition = 'transform 0.25s cubic-bezier(0.32,0.72,0,1)';
+          track.style.transition = 'transform 0.22s cubic-bezier(0.32,0.72,0,1)';
           setX(snapX);
-          setTimeout(() => { track.style.transition = ''; }, 260);
+          setTimeout(() => { track.style.transition = ''; }, 230);
           if (snapTab !== currentTab) switchTab(snapTab);
         }
       }
@@ -502,7 +548,12 @@ function applyTheme(tab) {
   // Темні таббари (вечір, здоров'я, проекти) — іконки і текст білі
   const isDark = ['evening','health','projects'].includes(tab);
   const tabLabels = tabBar ? tabBar.querySelectorAll('.tab-label') : [];
-  tabLabels.forEach(s => { s.style.color = isDark ? 'rgba(255,255,255,0.5)' : ''; });
+  tabLabels.forEach(s => {
+    const isActive = s.closest('.tab-item.active');
+    // Активний лейбл — завжди акцентний колір, не чіпаємо
+    if (isActive) { s.style.color = ''; return; }
+    s.style.color = isDark ? 'rgba(255,255,255,0.5)' : '';
+  });
   const tabIcons2 = tabBar ? tabBar.querySelectorAll('.tab-icon') : [];
   tabIcons2.forEach(ic => {
     const isActive = ic.closest('.tab-item.active');
@@ -709,7 +760,7 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats','nm_health_cards','nm_health_log','nm_projects','nm_evening_mood'];
   keys.forEach(k => {
     const v = localStorage.getItem(k);
     if (v) data[k] = JSON.parse(v);
@@ -727,7 +778,7 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log','nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me','nm_chat_evening','nm_chat_finance'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log','nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me','nm_chat_evening','nm_chat_finance','nm_health_cards','nm_health_log','nm_projects','nm_active_tabs','nm_evening_mood','nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'];
   keys.forEach(k => localStorage.removeItem(k));
   Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_') || k.startsWith('nm_owl_tab_')).forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
@@ -855,6 +906,38 @@ function showToast(msg, duration = 2000) {
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
 const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
+
+// Fuzzy пошук папки по назві — знаходить навіть з опечатками
+function fuzzyFindFolder(query) {
+  if (!query) return null;
+  const q = query.toLowerCase().trim();
+  try {
+    const folders = [...new Set(getNotes().map(n => n.folder).filter(Boolean))];
+    // Точний збіг
+    const exact = folders.find(f => f.toLowerCase() === q);
+    if (exact) return exact;
+    // Збіг по початку
+    const starts = folders.find(f => f.toLowerCase().startsWith(q) || q.startsWith(f.toLowerCase()));
+    if (starts) return starts;
+    // Fuzzy — мінімальна відстань Левенштейна
+    let best = null, bestDist = Infinity;
+    folders.forEach(f => {
+      const dist = levenshtein(q, f.toLowerCase());
+      if (dist < bestDist && dist <= Math.max(2, Math.floor(f.length / 3))) {
+        bestDist = dist; best = f;
+      }
+    });
+    return best;
+  } catch(e) { return null; }
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
 
 function getTrash() {
   try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }
@@ -1036,7 +1119,7 @@ function setupKeyboardAvoiding() {
     const aiBar = document.getElementById('inbox-ai-bar');
     const tabBar = document.getElementById('tab-bar');
     const tbH = tabBar ? tabBar.offsetHeight : 83;
-    const newBars = ['tasks-ai-bar','notes-ai-bar','me-ai-bar','evening-ai-bar','finance-ai-bar'].map(id => document.getElementById(id));
+    const newBars = ['tasks-ai-bar','notes-ai-bar','me-ai-bar','evening-ai-bar','finance-ai-bar','health-ai-bar','projects-ai-bar'].map(id => document.getElementById(id));
 
     if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору

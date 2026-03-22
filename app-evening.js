@@ -224,20 +224,23 @@ function renderMe() {
   const projBlock = document.getElementById('me-projects-block');
   const projList = document.getElementById('me-projects-list');
   if (projBlock && projList) {
-    // Шукаємо задачі з кроками як "проекти"
-    const projectTasks = getTasks().filter(t => t.status === 'active' && (t.steps || []).length > 0).slice(0, 3);
-    if (projectTasks.length > 0) {
+    // Реальні проекти з nm_projects
+    let activeProjects = [];
+    try { activeProjects = getProjects().slice(0, 3); } catch(e) {}
+
+    if (activeProjects.length > 0) {
       projBlock.style.display = 'block';
-      projList.innerHTML = projectTasks.map(t => {
-        const done = (t.steps || []).filter(s => s.done).length;
-        const total = (t.steps || []).length;
-        const pct = total > 0 ? Math.round(done / total * 100) : 0;
-        const nextStep = (t.steps || []).find(s => !s.done);
-        return `<div style="margin-bottom:10px">
+      projList.innerHTML = activeProjects.map(p => {
+        const steps = p.steps || [];
+        const done = steps.filter(s => s.done).length;
+        const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : (p.progress || 0);
+        const nextStep = steps.find(s => !s.done);
+        return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
             <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.title)}</div>
-              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">→ ${escapeHtml(nextStep.text)}</div>` : ''}
+              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
+              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ''}
+              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">→ ${escapeHtml(nextStep.text)}</div>` : ''}
             </div>
             <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
           </div>
@@ -302,6 +305,89 @@ function renderMe() {
 
   // === ЗВИЧКИ СТАТИСТИКА ===
   renderMeHabitsStats();
+
+  // === ГРАФІК АКТИВНОСТІ ===
+  renderMeActivityChart();
+}
+
+function renderMeActivityChart() {
+  const chartEl = document.getElementById('me-activity-chart');
+  const labelsEl = document.getElementById('me-activity-labels');
+  const totalEl = document.getElementById('me-activity-total');
+  if (!chartEl) return;
+
+  const now = new Date();
+  const todayDow = (now.getDay() + 6) % 7;
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  const accent = '#7c4a2a';
+
+  // Рахуємо активність за кожен день тижня
+  const values = dayLabels.map((_, i) => {
+    const daysAgo = todayDow - i;
+    const d = new Date(now);
+    d.setDate(now.getDate() - daysAgo);
+    const ds = d.toDateString();
+    if (daysAgo < 0) return null; // майбутнє
+    const inboxCount = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
+    const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+    const habits = getHabits();
+    const log = getHabitLog();
+    const dow = (d.getDay() + 6) % 7;
+    const todayH = habits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+    const doneH = todayH.filter(h => !!log[ds]?.[h.id]).length;
+    return inboxCount + doneTasks + doneH;
+  });
+
+  const validValues = values.filter(v => v !== null);
+  const maxVal = Math.max(...validValues, 1);
+  const totalActivity = validValues.reduce((s, v) => s + v, 0);
+  if (totalEl) totalEl.textContent = `${totalActivity} дій`;
+
+  const W = 100, H = 64;
+  const points = values.map((v, i) => {
+    if (v === null) return null;
+    const x = values.length <= 1 ? W / 2 : (i / (values.length - 1)) * W;
+    const y = H - 8 - (v / maxVal) * (H - 16);
+    return { x, y, v, i };
+  }).filter(Boolean);
+
+  if (points.length < 2) {
+    chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">Немає даних за тиждень</div>';
+    if (labelsEl) labelsEl.innerHTML = '';
+    return;
+  }
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaPath = `${linePath} L ${points[points.length-1].x} ${H} L ${points[0].x} ${H} Z`;
+  const dots = points.map(p => {
+    const isToday = p.i === todayDow;
+    const fill = p.v === 0 ? 'rgba(124,74,42,0.2)' : accent;
+    const r = isToday ? 3.5 : 2.5;
+    return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
+  }).join('');
+
+  chartEl.innerHTML = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="overflow:visible">
+    <defs>
+      <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    <line x1="0" y1="${H-8}" x2="${W}" y2="${H-8}" stroke="rgba(30,16,64,0.06)" stroke-width="0.5"/>
+    <line x1="0" y1="${Math.round((H-8)/2)}" x2="${W}" y2="${Math.round((H-8)/2)}" stroke="rgba(30,16,64,0.06)" stroke-width="0.5"/>
+    <path d="${areaPath}" fill="url(#actGrad)"/>
+    <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+
+  if (labelsEl) {
+    labelsEl.innerHTML = values.map((v, i) => {
+      const isToday = i === todayDow;
+      const isFuture = v === null;
+      return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : isFuture ? 'rgba(30,16,64,0.15)' : 'rgba(30,16,64,0.35)'}">${dayLabels[i]}</div>`;
+    }).join('');
+  }
 }
 
 async function refreshMeAnalysis() {
@@ -453,25 +539,29 @@ function renderEvening() {
     const todayTxs = getFinance().filter(t => new Date(t.ts).toDateString() === today);
     if (finBlock && finContent && todayTxs.length > 0) {
       finBlock.style.display = 'block';
+      const cur = getCurrency ? getCurrency() : '₴';
       const todayExpF = todayTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
       finContent.innerHTML = todayTxs.slice(0, 5).map(t =>
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
           <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.6)">${escapeHtml(t.category)}${t.comment ? ' · ' + escapeHtml(t.comment) : ''}</span>
-          <span style="font-size:14px;font-weight:800;color:${t.type === 'expense' ? '#c2410c' : '#16a34a'}">${t.type === 'expense' ? '-' : '+'}${formatMoney(t.amount)}</span>
+          <span style="font-size:14px;font-weight:800;color:${t.type === 'expense' ? '#c2410c' : '#16a34a'}">${t.type === 'expense' ? '-' : '+'}${cur}${Math.round(t.amount)}</span>
         </div>`
       ).join('') + `<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(30,16,64,0.06);display:flex;justify-content:space-between">
-        <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Всього сьогодні</span>
-        <span style="font-size:13px;font-weight:800;color:#c2410c">${todayExpF > 0 ? '-' + formatMoney(todayExpF) : '—'}</span>
+        <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Всього витрати</span>
+        <span style="font-size:13px;font-weight:800;color:#c2410c">${todayExpF > 0 ? '-' + cur + Math.round(todayExpF) : '—'}</span>
       </div>`;
     } else if (finBlock) { finBlock.style.display = 'none'; }
   } catch(e) { if (finBlock) finBlock.style.display = 'none'; }
 
-  // === 6. Відновлюємо підсумок ===
+  // === 6. Відновлюємо підсумок OWL ===
   try {
     const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
-    if (saved && saved.date === today && saved.text) {
-      const el = document.getElementById('evening-summary');
-      if (el && el.textContent.includes('Натисни')) el.textContent = saved.text;
+    const el = document.getElementById('evening-summary');
+    const btn = document.getElementById('evening-summary-btn');
+    if (saved && saved.date === today && saved.text && el) {
+      el.textContent = saved.text;
+      el.style.color = 'white';
+      if (btn) btn.textContent = 'Оновити';
     }
   } catch(e) {}
 }
@@ -722,58 +812,72 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-const UPDATE_VERSION = 'v028'; // змінювати при кожному оновленні зі слайдами
+const UPDATE_VERSION = 'v031';
 
 const UPDATE_SLIDES = [
   {
-    tag: '🆕 v0.28',
-    title: 'NeverMind став зручнішим',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Великий UX апдейт — навігація, редагування і дизайн стали простішими і логічнішими.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Всі твої дані на місці. Просто спробуй — відчуєш різницю.</p>`,
+    tag: '🆕 v0.31',
+    emoji: '✨',
+    title: 'Великий апдейт',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🌙</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Новий Вечір — продуктивність, настрій, фінанси</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🪞</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нова вкладка Я — тижневі кружечки, порівняння, настрій</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🫀</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нова вкладка Здоров'я — картки, трекер, препарати</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🚀</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нова вкладка Проекти — від ідеї до результату</div>
+  </div>
+</div>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: '👆 Тап по картці',
-    title: 'Тап — і одразу редагуєш',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Більше не треба шукати кнопку олівця або три крапки:</p>
-<div style="display:flex;flex-direction:column;gap:8px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Тап по картці</b> → відкриває вікно редагування</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Чекбокс</b> → виконати задачу або звичку</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Свайп вліво</b> → видалити картку</div>
+    tag: '🥁 Барабан',
+    emoji: '🥁',
+    title: 'Барабан став розумнішим',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">➕</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка + — обирай які вкладки показувати</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">💨</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кинь швидко — барабан долетить до крайньої вкладки</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🎯</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Крайні вкладки тепер точно доходять до центру</div>
+  </div>
 </div>`,
-    color: 'linear-gradient(135deg,#fdb87a,#f97316)',
+    color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
   },
   {
-    tag: '🥁 Новий таббар',
-    title: 'Барабан замість рядка',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Таббар тепер — капсула-барабан:</p>
-<div style="display:flex;flex-direction:column;gap:8px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Тягни барабан</b> ← → щоб переключати вкладки</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Свайп по екрану</b> також перемикає вкладки</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Задачі і Звички — <b style="color:#1e1040">окремі вкладки</b> в навігації</div>
+    tag: '🔧 Фікси',
+    emoji: '🔧',
+    title: 'Виправили баги',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">💳</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Фінанси більше не порожні після відкриття</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">↩️</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">"Відновити всі задачі" — тепер працює</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🎨</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нові кольори вкладок — чіткіше і красивіше</div>
+  </div>
 </div>`,
-    color: 'linear-gradient(135deg,#fed7aa,#f97316)',
-  },
-  {
-    tag: '📝 Нотатки',
-    title: 'Пиши прямо у вікні нотатки',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Відкрив нотатку — і одразу можна писати:</p>
-<div style="display:flex;flex-direction:column;gap:8px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Тап по тексту</b> → курсор і клавіатура</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)"><b style="color:#1e1040">Автозбереження</b> — зміни зберігаються самі</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Колір вікна = <b style="color:#1e1040">колір папки</b> нотатки</div>
-</div>`,
-    color: 'linear-gradient(135deg,#a7f3d0,#22c55e)',
-  },
-  {
-    tag: '❓ Довідка',
-    title: 'Довідка стала зрозумілішою',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:10px">Натисни <b style="color:#1e1040">?</b> на будь-якій вкладці:</p>
-<div style="display:flex;flex-direction:column;gap:8px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Кольоровий хедер — одразу видно про яку вкладку</div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Зрозумілі іконки і живий текст замість технічного</div>
-</div>`,
-    color: 'linear-gradient(135deg,#818cf8,#4f46e5)',
+    color: 'linear-gradient(135deg,#a7f3d0,#16a34a)',
     isLast: true,
   },
 ];
@@ -781,59 +885,83 @@ const UPDATE_SLIDES = [
 const SLIDES = [
   {
     tag: 'Що таке NeverMind',
-    title: 'Думки зникають. Записав — забув де.',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Нічого не виконується бо немає системи.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">NeverMind — один потік куди скидаєш все що в голові. Пишеш одним рядком — Агент визначає категорію, зберігає куди треба і підтверджує в чаті.</p>`,
+    emoji: '🧠',
+    title: 'Один потік для всього',
+    body: `<p style="font-size:14px;color:rgba(30,16,64,0.6);line-height:1.65;margin-bottom:12px">Думки зникають. Записи губляться по різних застосунках. Нічого не виконується бо немає системи.</p>
+<p style="font-size:14px;color:rgba(30,16,64,0.6);line-height:1.65">NeverMind — один рядок куди скидаєш все що в голові. OWL сам розбереться.</p>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
     tag: 'Inbox',
-    title: 'Один рядок — Агент розбирає',
+    emoji: '📥',
+    title: 'Пиши — OWL розбирає',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
-      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"купити хліб о 18:00" → <b style="color:#1e1040">задача з часом</b></div>
-      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"бігати щоранку" → <b style="color:#1e1040">звичка в трекері</b></div>
-      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"ідея про автоматизацію" → <b style="color:#1e1040">збережено в Ідеях. Обговори з Агентом</b></div>
-      <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"зустрівся з Вовою" → <b style="color:#1e1040">момент у Вечорі</b></div>
-    </div>`,
+  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"купити хліб" → <b style="color:#1e1040">задача</b></div>
+  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"бігати щоранку" → <b style="color:#1e1040">звичка</b></div>
+  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"витратив 50 на їжу" → <b style="color:#1e1040">фінанси</b></div>
+  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"класна ідея про стартап" → <b style="color:#1e1040">нотатка в Ідеях</b></div>
+</div>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: 'Задачі та Звички',
-    title: 'Списки і команди Агенту',
-    body: `<p style="font-size:13px;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">Пиши список одним записом — Агент розібʼє на кроки:</p>
-<div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:9px 12px;font-size:13px;color:#1e1040;font-style:italic;margin-bottom:12px">"Зробити ремонт: купити фарбу, найняти майстра, вибрати колір"</div>
-<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">Команди Агенту</div>
-<div style="display:flex;flex-direction:column;gap:5px">
-  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"додай крок: зателефонувати"</div>
-  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"відміни останній крок"</div>
-  <div style="background:rgba(79,70,229,0.07);border-radius:8px;padding:7px 10px;font-size:12px;font-family:monospace;color:#4f46e5;font-weight:600">"які задачі відкриті"</div>
+    tag: 'Продуктивність',
+    emoji: '⚡',
+    title: 'Задачі і звички',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">✅</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Тап на чекбокс — виконати задачу або звичку</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">👈</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Свайп вліво — видалити</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">💬</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Скажи OWL "додай крок до задачі X"</div>
+  </div>
 </div>`,
     color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
   },
   {
-    tag: 'Вечір',
-    title: 'Підсумок дня від Агента',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Щодня: що зробив, що було цікавого, про що думав. Додавай моменти — Агент бачить весь твій день і дає конкретну пораду на завтра.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Записи з Inbox автоматично потрапляють у Вечір.</p>`,
-    color: 'linear-gradient(135deg,#818cf8,#4f46e5)',
-  },
-  {
-    tag: 'Вкладка Я',
-    title: 'Твоя продуктивність чесно',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Активність щодня, скільки записів зробив, які звички пропускаєш, де провисаєш.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6">Агент дає чесний аналіз і конкретні поради — без лестощів.</p>`,
-    color: 'linear-gradient(135deg,#6ee7b7,#16a34a)',
-  },
-  {
-    tag: 'Фінанси',
-    title: 'Облік грошей без таблиць',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.58);line-height:1.6;margin-bottom:12px">Пиши в Inbox: "витратив 50 на їжу" — Агент сам запише у Фінанси, визначить категорію і стежитиме за бюджетом.</p>
-<div style="display:flex;flex-direction:column;gap:6px">
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"отримав зарплату 3000" → <b style="color:#1e1040">дохід зафіксовано</b></div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">"заплатив за Netflix 15" → <b style="color:#1e1040">Підписки</b></div>
-  <div style="background:rgba(30,16,64,0.04);border-radius:10px;padding:8px 12px;font-size:13px;color:rgba(30,16,64,0.65)">Перевищив ліміт → <b style="color:#1e1040">Агент попередить</b></div>
+    tag: 'Вечір і Я',
+    emoji: '🌙',
+    title: 'Закриття дня і дзеркало',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">🌙</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Вечір — задачі, звички, витрати за день + настрій</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">🪞</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Я — тижневі кружечки, настрій, порівняння</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">🤝</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">OWL аналізує тиждень і каже що насправді відбувається</div>
+  </div>
 </div>`,
-    color: 'linear-gradient(135deg,#fcd9bd,#f97316)',
+    color: 'linear-gradient(135deg,#1e3350,#3a5a80)',
+  },
+  {
+    tag: 'Нові вкладки',
+    emoji: '🆕',
+    title: "Здоров'я і Проекти",
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">🫀</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Здоров'я — картки хвороб, трекер самопочуття, препарати</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">🚀</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Проекти — від ідеї до результату з OWL як наставником</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:18px">➕</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка + в барабані — увімкни потрібні вкладки</div>
+  </div>
+</div>`,
+    color: 'linear-gradient(135deg,#d4e8d8,#16a34a)',
     isLast: true,
   },
 ];
@@ -907,11 +1035,12 @@ function renderSlide() {
     return `<div style="height:4px;width:${w};border-radius:2px;background:${bg};transition:all 0.3s"></div>`;
   }).join('');
 
-  // Контент
+  // Контент — новий дизайн з великим emoji зверху
   const contentEl = document.getElementById('slides-content');
   contentEl.innerHTML = `
+    ${slide.emoji ? `<div style="font-size:44px;margin-bottom:10px;line-height:1">${slide.emoji}</div>` : ''}
     <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.4);margin-bottom:10px">${slide.tag}</div>
-    <div style="font-size:17px;font-weight:800;color:#1e1040;line-height:1.35;margin-bottom:14px">${slide.title}</div>
+    <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1.3;margin-bottom:14px">${slide.title}</div>
     ${slide.body}
   `;
 
@@ -1124,6 +1253,39 @@ function openHelp(tab) {
     document.getElementById('help-drawer-panel').style.transform = 'translateX(0)';
   });
   _helpOpen = true;
+
+  // Свайп вправо — закрити
+  if (!panel._helpSwipe) {
+    panel._helpSwipe = true;
+    let _sx = 0, _sy = 0, _dragging = false;
+    panel.addEventListener('touchstart', e => {
+      _sx = e.touches[0].clientX;
+      _sy = e.touches[0].clientY;
+      _dragging = false;
+      panel.style.transition = 'none';
+    }, { passive: true });
+    panel.addEventListener('touchmove', e => {
+      const dx = e.touches[0].clientX - _sx;
+      const dy = Math.abs(e.touches[0].clientY - _sy);
+      if (!_dragging && dx > 8 && dy < dx) _dragging = true;
+      if (!_dragging) return;
+      if (dx > 0) panel.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
+    panel.addEventListener('touchend', e => {
+      if (!_dragging) { panel.style.transition = ''; panel.style.transform = 'translateX(0)'; return; }
+      const dx = e.changedTouches[0].clientX - _sx;
+      panel.style.transition = 'transform 0.24s cubic-bezier(0.32,0.72,0,1)';
+      if (dx > 80) {
+        panel.style.transform = 'translateX(100%)';
+        setTimeout(() => { drawer.style.display = 'none'; panel.style.transition = ''; }, 240);
+        _helpOpen = false;
+      } else {
+        panel.style.transform = 'translateX(0)';
+        setTimeout(() => { panel.style.transition = ''; }, 250);
+      }
+      _dragging = false;
+    }, { passive: true });
+  }
 }
 
 function closeHelp() {
@@ -1251,7 +1413,7 @@ async function finishSurvey() {
           addInboxChatMsg('agent', parsed.advice);
         }
       } catch(e) {
-        addInboxChatMsg('agent', reply);
+        safeAgentReply(reply, addInboxChatMsg);
       }
     }
   } catch(e) {
@@ -1440,10 +1602,10 @@ async function sendEveningBarMessage() {
       const jsonMatch = reply.match(/\{[\s\S]*\}/);
       const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim());
       if (!processUniversalAction(parsed, text, addEveningBarMsg)) {
-        addEveningBarMsg('agent', reply);
+        safeAgentReply(reply, addEveningBarMsg);
       }
     } catch {
-      addEveningBarMsg('agent', reply);
+      safeAgentReply(reply, addEveningBarMsg);
     }
   } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
   eveningBarLoading = false;

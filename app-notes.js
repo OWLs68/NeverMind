@@ -17,11 +17,10 @@ function getFolders() {
   return [...set].sort();
 }
 
-function addNoteFromInbox(text, category, folder = null) {
+function addNoteFromInbox(text, category, folder = null, source = 'inbox') {
   const notes = getNotes();
-  // Папка від агента має пріоритет, інакше fallback
   const resolvedFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
-  notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source: 'inbox', ts: Date.now(), lastViewed: Date.now() });
+  notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
 }
 
@@ -117,7 +116,7 @@ const FOLDER_ICONS = {
   'Фінанси':   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>',
   "Здоровʼя":  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>',
   'Здоровя':   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>',
-  'Робота':    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>',
+  'Робота':    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/></svg>',
   'Навчання':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
   'Ідеї':      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/></svg>',
   'Особисте':  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -245,7 +244,7 @@ function renderNotesList(notes) {
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : ''}</div>
+              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : n.source === 'agent' ? ' · через OWL' : ''}</div>
               <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
             </div>
           </div>
@@ -258,7 +257,7 @@ function renderNotesList(notes) {
 
 // === NOTE SWIPE TO DELETE ===
 const noteSwipeState = {};
-const NOTE_SWIPE_THRESHOLD = 250;
+const NOTE_SWIPE_THRESHOLD = 150;
 
 function noteSwipeStart(e, id) {
   const t = e.touches[0];
@@ -672,7 +671,7 @@ function saveAgentResponseAsNote(text) {
 
 // === FOLDER SWIPE TO DELETE ===
 const folderSwipeState = {};
-const FOLDER_SWIPE_THRESHOLD = 250;
+const FOLDER_SWIPE_THRESHOLD = 150;
 
 function _folderKey(folder) {
   return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
@@ -772,10 +771,13 @@ async function sendNotesBarMessage() {
   const aiContext = getAIContext();
   const systemPrompt = getOWLPersonality() + ` Ти допомагаєш у вкладці Нотатки. Відповідай JSON для дій:
 - Створити нотатку: {"action":"create_note","text":"текст","folder":"папка або null"}
+- Видалити папку: {"action":"delete_folder","folder":"назва папки"}
+- Перемістити нотатку: {"action":"move_note","query":"частина тексту нотатки","folder":"нова папка"}
 - Створити задачу: {"action":"create_task","title":"назва","steps":[]}
 - Зберегти фінанси: {"action":"save_finance","fin_type":"expense або income","amount":число,"category":"категорія","comment":"коментар"}
 - Просто відповісти: текст (1-3 речення)
-Нотатки: ` + (notes || 'немає') + `
+ВАЖЛИВО: для delete_folder і move_note — вказуй назву папки максимально близько до оригінальної.
+Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
 НЕ вигадуй дані яких немає в контексті.` + (aiContext ? ('\n\n' + aiContext) : '');
 
   try {
@@ -791,10 +793,10 @@ async function sendNotesBarMessage() {
     try {
       const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
       if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
-        addNotesChatMsg('agent', reply);
+        safeAgentReply(reply, addNotesChatMsg);
       }
     } catch {
-      addNotesChatMsg('agent', reply);
+      safeAgentReply(reply, addNotesChatMsg);
     }
   } catch { addNotesChatMsg('agent', 'Мережева помилка.'); }
   notesBarLoading = false;

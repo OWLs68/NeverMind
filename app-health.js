@@ -437,9 +437,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
       } else if (processUniversalAction(parsed, text, addHealthChatMsg)) {
         // handled
       } else {
-        addHealthChatMsg('agent', reply);
+        safeAgentReply(reply, addHealthChatMsg);
       }
-    } catch { addHealthChatMsg('agent', reply); }
+    } catch { safeAgentReply(reply, addHealthChatMsg); }
   } catch { addHealthChatMsg('agent', 'Мережева помилка.'); }
   healthBarLoading = false;
 }

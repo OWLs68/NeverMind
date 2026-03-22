@@ -96,7 +96,7 @@ function addTaskStep() {
   tempSteps.push({ id: Date.now(), text: val, done: false });
   inp.value = '';
   renderTempSteps();
-  setTimeout(() => { inp.focus(); }, 50);
+  inp.focus();
 }
 
 function toggleTempStep(id) {
@@ -259,6 +259,15 @@ function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr
 function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
 function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
 
+function adjustHabitCount(delta) {
+  const inp = document.getElementById('habit-input-count');
+  const disp = document.getElementById('habit-count-display');
+  if (!inp || !disp) return;
+  let val = Math.max(1, Math.min(20, parseInt(inp.value || 1) + delta));
+  inp.value = val;
+  disp.textContent = val;
+}
+
 function openEditHabit(id) {
   const habits = getHabits();
   const h = habits.find(x => x.id === id);
@@ -266,17 +275,17 @@ function openEditHabit(id) {
   editingHabitId = id;
   document.getElementById('habit-modal-title').textContent = 'Редагувати звичку';
   document.getElementById('habit-input-name').value = h.name;
-  // Деталі: якщо немає поля details — спробуй витягти з назви
   let details = h.details || '';
   if (!details && h.name) {
     const parts = h.name.split(/[,]\s*/);
-    if (parts.length > 1) {
-      details = parts.slice(1).join(', ').trim();
-    }
+    if (parts.length > 1) details = parts.slice(1).join(', ').trim();
   }
   document.getElementById('habit-input-details').value = details;
   document.getElementById('habit-input-emoji').value = h.emoji || '';
-  // Дні: якщо всі 7 активні але назва містить конкретні дні — запропонувати правильні
+  // Кількість разів
+  const cnt = h.targetCount || 1;
+  document.getElementById('habit-input-count').value = cnt;
+  document.getElementById('habit-count-display').textContent = cnt;
   let days = h.days || [0,1,2,3,4];
   const nameAndDetails = (h.name + ' ' + details).toLowerCase();
   const hasSpecificDays = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/.test(nameAndDetails);
@@ -305,6 +314,8 @@ function openAddHabit() {
   document.getElementById('habit-input-name').value = '';
   document.getElementById('habit-input-details').value = '';
   document.getElementById('habit-input-emoji').value = '';
+  document.getElementById('habit-input-count').value = '1';
+  document.getElementById('habit-count-display').textContent = '1';
   document.getElementById('habit-delete-btn').style.display = 'none';
   document.querySelectorAll('.habit-day-btn').forEach(b => {
     b.classList.toggle('active', [0,1,2,3,4].includes(parseInt(b.dataset.day)));
@@ -330,18 +341,19 @@ function saveHabit() {
   const details = document.getElementById('habit-input-details').value.trim();
   const emoji = document.getElementById('habit-input-emoji').value.trim() || '⭕';
   const days = [...document.querySelectorAll('.habit-day-btn.active')].map(b => parseInt(b.dataset.day));
+  const targetCount = parseInt(document.getElementById('habit-input-count').value || 1) || 1;
   const habits = getHabits();
 
   if (editingHabitId) {
     const idx = habits.findIndex(x => x.id === editingHabitId);
-    if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days };
+    if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount };
   } else {
-    habits.push({ id: Date.now(), name, details, emoji, days, createdAt: Date.now() });
+    habits.push({ id: Date.now(), name, details, emoji, days, targetCount, createdAt: Date.now() });
   }
   saveHabits(habits);
   closeHabitModal();
   renderHabits();
-  renderProdHabits(); // оновлюємо список у вкладці Продуктивність
+  renderProdHabits();
   showToast(editingHabitId ? '✓ Звичку оновлено' : '✓ Звичку додано');
 }
 
@@ -362,14 +374,27 @@ function deleteHabitFromModal() {
   if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
 }
 
+// Хелпер — чи вважається звичка виконаною за день
+function _habitDone(h, logDay) {
+  const target = h.targetCount || 1;
+  const val = logDay?.[h.id];
+  const cur = typeof val === 'boolean' ? (val ? 1 : 0) : (val || 0);
+  return cur >= target;
+}
+
 function toggleHabitToday(id) {
   const today = new Date().toDateString();
   const log = getHabitLog();
   if (!log[today]) log[today] = {};
-  log[today][id] = !log[today][id];
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  const target = h?.targetCount || 1;
+  const rawVal = log[today][id];
+  const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+  log[today][id] = cur + 1;
   saveHabitLog(log);
   renderHabits();
-  renderMeHabitsStats(); // оновлюємо статистику одразу після зміни
+  renderMeHabitsStats();
 }
 
 function getHabitStreak(id) {
@@ -383,7 +408,7 @@ function getHabitStreak(id) {
     const ds = d.toDateString();
     const dow = (d.getDay() + 6) % 7;
     if ((h.days || [0,1,2,3,4]).includes(dow)) {
-      if (log[ds]?.[id]) streak++;
+      if (_habitDone(h, log[ds])) streak++;
       else if (i > 0) break;
     }
     d.setDate(d.getDate() - 1);
@@ -391,24 +416,22 @@ function getHabitStreak(id) {
   return streak;
 }
 
-function getHabitPct(id, days30) {
+function getHabitPct(id) {
   const log = getHabitLog();
   const habits = getHabits();
   const h = habits.find(x => x.id === id);
   if (!h) return 0;
-  let done = 0;
   const plannedDays = h.days || [0,1,2,3,4];
-  // Рахуємо скільки запланованих днів було за 30 днів
   const d = new Date();
-  let total = 0;
+  let total = 0, done = 0;
   for (let i = 0; i < 30; i++) {
     const ds = d.toDateString();
     const dow = (d.getDay() + 6) % 7;
     if (plannedDays.includes(dow)) {
       total++;
-      if (log[ds]?.[id]) done++; // виконано в запланований день
-    } else if (log[ds]?.[id]) {
-      done++; // виконано навіть не в запланований день — теж рахуємо
+      if (_habitDone(h, log[ds])) done++;
+    } else if (_habitDone(h, log[ds])) {
+      done++;
     }
     d.setDate(d.getDate() - 1);
   }
@@ -465,21 +488,56 @@ function renderHabits() {
   }
 
   el.innerHTML = habits.map(function(h) {
-    const isDoneToday = !!log[today]?.[h.id];
+    const target = h.targetCount || 1;
+    const rawVal = log[today]?.[h.id];
+    const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+    const pct100 = Math.min(cur / target, 1);
+    const isOver = cur > target;
     const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
     const streak = getHabitStreak(h.id);
     const pct = getHabitPct(h.id);
     const weekDone = getHabitWeekDays(h.id);
     const shortName = h.name.split(' ').slice(0,4).join(' ');
     const dayDots = makeHabitDayDots(h, weekDone, todayDow);
-    const checkSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-    const checkBtn = isDoneToday
-      ? checkSvg.replace('stroke-width', 'stroke="white" stroke-width')
-      : checkSvg.replace('stroke-width', 'stroke="rgba(30,16,64,0.25)" stroke-width');
-    const btnBorder = isDoneToday ? '#16a34a' : 'rgba(30,16,64,0.15)';
-    const btnBg = isDoneToday ? '#16a34a' : 'rgba(30,16,64,0.03)';
     const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">🔥' + streak + '</span>' : '';
+
+    // Галочка — градієнт як у Продуктивності
+    let checkBg, checkStroke;
+    if (cur === 0) {
+      checkBg = 'background:rgba(30,16,64,0.03);border:2px solid rgba(30,16,64,0.15)';
+      checkStroke = 'rgba(30,16,64,0.25)';
+    } else if (isOver) {
+      checkBg = 'background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none';
+      checkStroke = 'white';
+    } else if (pct100 >= 1) {
+      checkBg = 'background:#16a34a;border:none';
+      checkStroke = 'white';
+    } else {
+      const fillH = Math.round(pct100 * 36);
+      checkBg = `background:linear-gradient(to top,#16a34a ${fillH}px,rgba(30,16,64,0.05) ${fillH}px);border:2px solid rgba(22,163,74,0.4)`;
+      checkStroke = pct100 > 0.5 ? 'white' : 'rgba(30,16,64,0.4)';
+    }
+
+    // Квадратики (тільки якщо target > 1)
+    let squaresHtml = '';
+    if (target > 1) {
+      const showCount = Math.min(Math.max(target, cur), 20);
+      squaresHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;padding-left:46px;margin-top:5px">';
+      for (let i = 0; i < showCount; i++) {
+        const filled = i < cur;
+        const isBonus = i >= target;
+        const bg = filled ? (isBonus ? '#fbbf24' : '#16a34a') : 'rgba(30,16,64,0.08)';
+        const border = filled ? 'none' : '1.5px solid rgba(30,16,64,0.12)';
+        squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquareMe(${h.id},${i})" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+        if (filled) squaresHtml += `<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+        squaresHtml += '</div>';
+      }
+      if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleHabitToday(${h.id})" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
+      squaresHtml += '</div>';
+    }
+
+    const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
     return '<div style="position:relative;border-radius:14px;margin-bottom:6px">'
       + '<div id="habit-me-del-' + h.id + '" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:14px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>'
@@ -488,18 +546,18 @@ function renderHabits() {
         + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
         + ' ontouchend="habitMeSwipeEnd(event,' + h.id + ')">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '<div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + btnBorder + ';background:' + btnBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">'
-            + checkBtn
+          + '<div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
+            + `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
           + '</div>'
           + '<div style="flex:1;min-width:0">'
             + '<div style="display:flex;align-items:center;gap:6px">'
               + '<span style="font-size:15px;font-weight:700;color:#1e1040">' + escapeHtml(shortName) + '</span>'
-              + streakHtml
+              + countLabel + streakHtml
             + '</div>'
             + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
           + '</div>'
-
         + '</div>'
+        + squaresHtml
         + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + '</div>'
       + '</div>'
     + '</div>';
@@ -711,6 +769,73 @@ function switchProdTab(tab) {
   if (isHabits) renderProdHabits();
 }
 
+function toggleProdHabitToday(id) {
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  const habits = getHabits();
+  const h = habits.find(x => x.id === id);
+  const target = h?.targetCount || 1;
+  const rawVal = log[today][id];
+  const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+  log[today][id] = cur + 1;
+  saveHabitLog(log);
+  if (cur + 1 === target) _habitConfetti(id);
+  renderProdHabits();
+}
+
+function tapHabitSquare(id, idx) {
+  // Тап на квадратик — якщо це останній заповнений, знімаємо одне виконання
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  const rawVal = log[today][id];
+  const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+  if (cur > 0 && idx === cur - 1) {
+    log[today][id] = cur - 1;
+    saveHabitLog(log);
+    renderProdHabits();
+  } else if (idx >= cur) {
+    toggleProdHabitToday(id);
+  }
+}
+
+function tapHabitSquareMe(id, idx) {
+  const today = new Date().toDateString();
+  const log = getHabitLog();
+  if (!log[today]) log[today] = {};
+  const rawVal = log[today][id];
+  const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+  if (cur > 0 && idx === cur - 1) {
+    log[today][id] = cur - 1;
+    saveHabitLog(log);
+    renderHabits();
+  } else if (idx >= cur) {
+    toggleHabitToday(id);
+  }
+}
+
+function _habitConfetti(habitId) {
+  const btn = document.querySelector(`#prod-habit-item-${habitId} [data-habit-check]`);
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const colors = ['#16a34a','#4ade80','#fbbf24','#f97316','#60a5fa','#a78bfa'];
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElement('div');
+    const angle = (Math.random() * 360) * Math.PI / 180;
+    const dist = 40 + Math.random() * 70;
+    el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:7px;height:7px;border-radius:${Math.random()>0.5?'50%':'2px'};background:${colors[Math.floor(Math.random()*colors.length)]};pointer-events:none;z-index:9999;transition:transform 0.6s ease-out,opacity 0.6s ease-out`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.transform = `translate(${Math.cos(angle)*dist}px,${Math.sin(angle)*dist-20}px) rotate(${Math.random()*360}deg)`;
+      el.style.opacity = '0';
+    });
+    setTimeout(() => el.remove(), 660);
+  }
+}
+
 function renderProdHabits() {
   updateProdTabCounters();
   const habits = getHabits();
@@ -720,9 +845,13 @@ function renderProdHabits() {
   const today = new Date().toDateString();
   const todayDow = (new Date().getDay() + 6) % 7;
 
-  // Update progress bar
   const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
-  const doneTodayCount = todayHabits.filter(h => !!log[today]?.[h.id]).length;
+  const doneTodayCount = todayHabits.filter(h => {
+    const target = h.targetCount || 1;
+    const rawVal = log[today]?.[h.id];
+    const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+    return cur >= target;
+  }).length;
   const countEl = document.getElementById('habits-today-count');
   const barEl = document.getElementById('habits-today-bar');
   if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
@@ -734,23 +863,56 @@ function renderProdHabits() {
   }
 
   el.innerHTML = habits.map(h => {
-    const isDoneToday = !!log[today]?.[h.id];
-    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
+    const target = h.targetCount || 1;
+    const rawVal = log[today]?.[h.id];
+    const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
+    const pct100 = Math.min(cur / target, 1);
+    const isOver = cur > target;
     const streak = getHabitStreak(h.id);
-    const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-
     const weekDone = getHabitWeekDays(h.id);
     const shortName2 = h.name.split(' ').slice(0,4).join(' ');
     const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
-    const pct = getHabitPct(h.id);
-    const pctColor2 = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
+    const habitPct = getHabitPct(h.id);
+    const pctColor2 = habitPct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
     const streakTxt = streak >= 2 ? '🔥 ' + streak + ' · ' : '';
-    const checkSvgProd = isDoneToday
-      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-    const checkBgProd = isDoneToday ? 'background:#16a34a;border:none;' : 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15);';
 
-    // ФІКС: галочка і редагування — окремі незалежні елементи, не вкладені один в одний
+    // Велика галочка — колір залежить від прогресу
+    let checkBg, checkStroke;
+    if (cur === 0) {
+      checkBg = 'background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15)';
+      checkStroke = 'rgba(30,16,64,0.25)';
+    } else if (isOver) {
+      checkBg = 'background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none';
+      checkStroke = 'white';
+    } else if (pct100 >= 1) {
+      checkBg = 'background:#16a34a;border:none';
+      checkStroke = 'white';
+    } else {
+      const fillH = Math.round(pct100 * 40);
+      checkBg = `background:linear-gradient(to top,#16a34a ${fillH}px,rgba(30,16,64,0.05) ${fillH}px);border:1.5px solid rgba(22,163,74,0.4)`;
+      checkStroke = pct100 > 0.5 ? 'white' : 'rgba(30,16,64,0.4)';
+    }
+
+    // Квадратики (тільки якщо target > 1)
+    let squaresHtml = '';
+    if (target > 1) {
+      const showCount = Math.min(Math.max(target, cur), 20);
+      squaresHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;padding-left:52px;margin-top:6px">';
+      for (let i = 0; i < showCount; i++) {
+        const filled = i < cur;
+        const isBonus = i >= target;
+        const bg = filled ? (isBonus ? '#fbbf24' : '#16a34a') : 'rgba(30,16,64,0.08)';
+        const border = filled ? 'none' : '1.5px solid rgba(30,16,64,0.12)';
+        squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquare(${h.id},${i})" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+        if (filled) squaresHtml += `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+        squaresHtml += '</div>';
+      }
+      if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleProdHabitToday(${h.id})" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
+      squaresHtml += '</div>';
+    }
+
+    const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
+
     return '<div style="position:relative;border-radius:16px;margin-bottom:10px">'
       + '<div id="prod-habit-del-' + h.id + '" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:16px;opacity:0;transition:opacity 0.15s">'
         + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'
@@ -760,27 +922,22 @@ function renderProdHabits() {
         + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
         + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
-        + '<div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;' + checkBgProd + '">'
-          + checkSvgProd
+        + '<div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
+          + `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
         + '</div>'
         + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:1px">' + escapeHtml(shortName2) + '</div>'
-          + '<div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + pct + '% за 30 днів</div>'
+          + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px">'
+            + '<span style="font-size:16px;font-weight:700;color:#1e1040">' + escapeHtml(shortName2) + '</span>'
+            + countLabel
+          + '</div>'
+          + '<div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + '% за 30 днів</div>'
         + '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:4px;padding-left:52px">' + dayDots2 + '</div>'
+      + squaresHtml
+      + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + '</div>'
       + '</div>'
     + '</div>';
   }).join('');
-}
-
-function toggleProdHabitToday(id) {
-  const today = new Date().toDateString();
-  const log = getHabitLog();
-  if (!log[today]) log[today] = {};
-  log[today][id] = !log[today][id];
-  saveHabitLog(log);
-  renderProdHabits(); // оновлюємо тільки вкладку Продуктивність
 }
 
 // === TAB SWIPE NAVIGATION ===
@@ -809,7 +966,7 @@ function toggleProdHabitToday(id) {
 
 // === HABIT ME SWIPE TO DELETE ===
 const habitMeSwipeState = {};
-const HABIT_SWIPE_THRESHOLD = 250;
+const HABIT_SWIPE_THRESHOLD = 150;
 
 function habitMeSwipeStart(e, id) {
   const t = e.touches[0];
@@ -927,7 +1084,7 @@ function prodHabitSwipeEnd(e, id) {
 
 // === TASK SWIPE TO DELETE ===
 const taskSwipeState = {};
-const TASK_SWIPE_THRESHOLD = 250;
+const TASK_SWIPE_THRESHOLD = 150;
 
 function taskSwipeStart(e, id) {
   const t = e.touches[0];
@@ -1042,6 +1199,35 @@ function addTaskBarMsg(role, text, _noSave = false) {
 }
 
 // === UNIVERSAL ACTION PROCESSOR — один мозок для всіх барів ===
+// Fuzzy пошук папки — знаходить найближчу по назві з урахуванням опечаток
+function _fuzzyFindFolder(query, folders) {
+  if (!query || !folders.length) return null;
+  const q = query.toLowerCase().replace(/[ʼ']/g, '');
+  // 1. Точний збіг
+  const exact = folders.find(f => f.toLowerCase() === query.toLowerCase());
+  if (exact) return exact;
+  // 2. Містить рядок
+  const contains = folders.find(f => f.toLowerCase().includes(q) || q.includes(f.toLowerCase()));
+  if (contains) return contains;
+  // 3. Відстань Левенштейна
+  let best = null, bestDist = Infinity;
+  folders.forEach(f => {
+    const d = _levenshtein(q, f.toLowerCase().replace(/[ʼ']/g, ''));
+    if (d < bestDist) { bestDist = d; best = f; }
+  });
+  // Приймаємо якщо відстань <= 3 або <= 40% довжини слова
+  return (bestDist <= 3 || bestDist <= Math.floor(q.length * 0.4)) ? best : null;
+}
+
+function _levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
 function processUniversalAction(parsed, originalText, addMsg) {
   const action = parsed.action;
 
@@ -1071,10 +1257,90 @@ function processUniversalAction(parsed, originalText, addMsg) {
   }
 
   if (action === 'create_note') {
-    addNoteFromInbox(parsed.text, 'note', parsed.folder || null);
+    addNoteFromInbox(parsed.text, 'note', parsed.folder || null, 'agent');
     if (currentTab === 'notes') renderNotes();
     addMsg('agent', '✓ Нотатку збережено' + (parsed.folder ? ' в папку "' + parsed.folder + '"' : ''));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
+    return true;
+  }
+
+  if (action === 'delete_folder') {
+    const targetName = (parsed.folder || '').trim();
+    if (!targetName) return false;
+    const notes = getNotes();
+    const folders = [...new Set(notes.map(n => n.folder || 'Загальне'))];
+    // Fuzzy match — знаходимо найближчу папку
+    const matched = _fuzzyFindFolder(targetName, folders);
+    if (!matched) {
+      addMsg('agent', `Папку "${targetName}" не знайшов. Доступні: ${folders.join(', ')}`);
+      return true;
+    }
+    const toDelete = notes.filter(n => (n.folder || 'Загальне') === matched);
+    toDelete.forEach(n => addToTrash('folder', n, null));
+    const remaining = notes.filter(n => (n.folder || 'Загальне') !== matched);
+    saveNotes(remaining);
+    if (currentTab === 'notes') { currentNotesFolder = null; renderNotes(); }
+    addMsg('agent', `✓ Папку "${matched}" видалено (${toDelete.length} нотаток)`);
+    return true;
+  }
+
+  if (action === 'move_note') {
+    const noteQuery = (parsed.query || parsed.text || '').toLowerCase().trim();
+    const targetFolder = (parsed.folder || '').trim();
+    if (!noteQuery || !targetFolder) return false;
+    const notes = getNotes();
+    const folders = [...new Set(notes.map(n => n.folder || 'Загальне'))];
+    const resolvedFolder = _fuzzyFindFolder(targetFolder, folders) || targetFolder;
+    // Знаходимо нотатку по тексту
+    const idx = notes.findIndex(n => n.text.toLowerCase().includes(noteQuery));
+    if (idx === -1) {
+      addMsg('agent', `Нотатку "${noteQuery}" не знайшов.`);
+      return true;
+    }
+    const oldFolder = notes[idx].folder || 'Загальне';
+    // Видаляємо зі старої папки
+    const oldIdx = notes.findIndex(n => n.id === notes[idx].id && (n.folder || 'Загальне') === oldFolder && n !== notes[idx]);
+    notes[idx] = { ...notes[idx], folder: resolvedFolder, updatedAt: Date.now() };
+    saveNotes(notes);
+    if (currentTab === 'notes') renderNotes();
+    addMsg('agent', `✓ Нотатку переміщено з "${oldFolder}" до "${resolvedFolder}"`);
+    return true;
+  }
+
+  if (action === 'delete_folder') {
+    const folderName = fuzzyFindFolder(parsed.folder || '');
+    if (!folderName) { addMsg('agent', 'Не знайшов папку "' + (parsed.folder || '') + '". Перевір назву.'); return true; }
+    const notes = getNotes();
+    const count = notes.filter(n => n.folder === folderName).length;
+    // Додаємо в trash
+    const folderNotes = notes.filter(n => n.folder === folderName);
+    addToTrash('folder', { folder: folderName }, folderNotes);
+    saveNotes(notes.filter(n => n.folder !== folderName));
+    if (currentTab === 'notes') renderNotes();
+    addMsg('agent', `🗑 Папку "${folderName}" видалено (${count} нотаток). Відновити — скажи "відновити папку ${folderName}".`);
+    return true;
+  }
+
+  if (action === 'move_note') {
+    const toFolder = parsed.to_folder || parsed.folder || 'Особисте';
+    const notes = getNotes();
+    let moved = 0;
+    // Шукаємо нотатку по тексту або id
+    const query = (parsed.query || parsed.text || '').toLowerCase();
+    const fromFolder = parsed.from_folder ? fuzzyFindFolder(parsed.from_folder) : null;
+    notes.forEach(n => {
+      const matchText = query && (n.text || '').toLowerCase().includes(query);
+      const matchId = parsed.note_id && n.id === parsed.note_id;
+      const matchFolder = !fromFolder || n.folder === fromFolder;
+      if ((matchText || matchId) && matchFolder) {
+        n.folder = toFolder;
+        moved++;
+      }
+    });
+    if (moved === 0) { addMsg('agent', 'Не знайшов нотатку для переміщення.'); return true; }
+    saveNotes(notes);
+    if (currentTab === 'notes') renderNotes();
+    addMsg('agent', `✓ ${moved === 1 ? 'Нотатку переміщено' : moved + ' нотаток переміщено'} в папку "${toFolder}"`);
     return true;
   }
 
@@ -1090,7 +1356,7 @@ function processUniversalAction(parsed, originalText, addMsg) {
     txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: Date.now() });
     saveFinance(txs);
     if (currentTab === 'finance') renderFinance();
-    addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · ' + category);
+    addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · категорія: ' + category + (parsed.comment ? ' · ' + parsed.comment : ''));
     return true;
   }
 
@@ -1202,7 +1468,7 @@ async function sendTasksBarMessage() {
           renderProdHabits();
           renderHabits();
           addTaskBarMsg('agent', '✅ Відмітив звичку "' + h.name + '" як виконану сьогодні');
-        } else { addTaskBarMsg('agent', reply); }
+        } else { safeAgentReply(reply, addTaskBarMsg); }
       } else if (parsed.action === 'create_habit') {
         const habits = getHabits();
         const name = (parsed.name || '').trim();
@@ -1234,8 +1500,8 @@ async function sendTasksBarMessage() {
             addTaskBarMsg('agent', `↩️ Скасував виконання "${step.text}"`);
           } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
         }
-      } else { addTaskBarMsg('agent', reply); }
-    } catch { addTaskBarMsg('agent', reply); }
+      } else { safeAgentReply(reply, addTaskBarMsg); }
+    } catch { safeAgentReply(reply, addTaskBarMsg); }
   } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
   taskBarLoading = false;
 }

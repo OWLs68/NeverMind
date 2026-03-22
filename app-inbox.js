@@ -146,7 +146,7 @@ function renderInbox() {
 
 // === SWIPE TO DELETE ===
 const swipeState = {};
-const SWIPE_THRESHOLD = 250;
+const SWIPE_THRESHOLD = 150;
 
 function swipeStart(e, id) {
   const t = e.touches[0];
@@ -477,29 +477,46 @@ async function processSaveAction(parsed, originalText) {
     const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
     if (!exists) {
       const txt = savedText.toLowerCase();
-      let days = [0,1,2,3,4,5,6];
-      const hasEveryDay = /щодня|кожного дня|кожен день/i.test(txt);
-      const hasWeekdays = /будн|пн.*ср.*пт/i.test(txt);
-      const hasWeekend = /вихідн|субот.*неділ|сб.*нд/i.test(txt);
-      const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/i.test(txt);
-      if (hasEveryDay) { days = [0,1,2,3,4,5,6]; }
-      else if (hasWeekdays) { days = [0,1,2,3,4]; }
-      else if (hasWeekend) { days = [5,6]; }
-      else if (hasWeekday) {
-        days = [];
-        if (/понеділ|пн/i.test(txt)) days.push(0);
-        if (/вівтор|вт/i.test(txt)) days.push(1);
-        if (/серед|ср/i.test(txt)) days.push(2);
-        if (/четвер|чт/i.test(txt)) days.push(3);
-        if (/п.ятниц|пт/i.test(txt)) days.push(4);
-        if (/субот|сб/i.test(txt)) days.push(5);
-        if (/неділ|нд/i.test(txt)) days.push(6);
-        if (days.length === 0) days = [0,1,2,3,4,5,6];
+      let days;
+
+      // Якщо агент передав days масив — використовуємо його
+      if (Array.isArray(parsed.days) && parsed.days.length > 0) {
+        days = parsed.days.filter(d => d >= 0 && d <= 6);
+      } else {
+        // Парсимо з тексту
+        days = [0,1,2,3,4,5,6];
+        const hasEveryDay = /щодня|кожного дня|кожен день/i.test(txt);
+        const hasWeekdays = /будн|пн.*ср.*пт/i.test(txt);
+        const hasWeekend = /вихідн|субот.*неділ|сб.*нд/i.test(txt);
+        const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ|^пн\b|^вт\b|^ср\b|^чт\b|^пт\b|^сб\b|^нд\b/i.test(txt);
+        if (hasEveryDay) { days = [0,1,2,3,4,5,6]; }
+        else if (hasWeekdays) { days = [0,1,2,3,4]; }
+        else if (hasWeekend) { days = [5,6]; }
+        else if (hasWeekday) {
+          days = [];
+          if (/понеділ|\bпн\b/i.test(txt)) days.push(0);
+          if (/вівтор|\bвт\b/i.test(txt)) days.push(1);
+          if (/серед|\bср\b/i.test(txt)) days.push(2);
+          if (/четвер|\bчт\b/i.test(txt)) days.push(3);
+          if (/п.ятниц|\bпт\b/i.test(txt)) days.push(4);
+          if (/субот|\bсб\b/i.test(txt)) days.push(5);
+          if (/неділ|\bнд\b/i.test(txt)) days.push(6);
+          if (days.length === 0) days = [0,1,2,3,4,5,6];
+        }
       }
+
       const habitParts = savedText.split(/[,.]\s*/);
       const habitName = habitParts[0].trim().split(' ').slice(0,5).join(' ');
       const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '';
-      habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, createdAt: Date.now() });
+
+      // Витягуємо кількість разів — з parsed або з тексту
+      let targetCount = parseInt(parsed.targetCount) || 1;
+      if (targetCount === 1) {
+        const countMatch = txt.match(/(\d+)\s*(рази?|раз|разів|склянок|склянки|стакан|кроків|хвилин|разу)/i);
+        if (countMatch) targetCount = Math.min(20, Math.max(2, parseInt(countMatch[1])));
+      }
+
+      habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, targetCount, createdAt: Date.now() });
       saveHabits(habits);
     }
   }

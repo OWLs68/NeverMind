@@ -699,7 +699,7 @@ body {
 /* === INBOX === */
 
 /* === INBOX LIST === */
-#inbox-list { padding: 0 16px 380px; } /* бокові відступи для вужчих карток */
+#inbox-list { } /* padding керується inline */
 
 /* Category selector chips */
 .cat-chips {
@@ -1237,41 +1237,44 @@ body {
   <div id="scroll-wrap">
 
     <!-- PAGE: INBOX -->
-    <div class="page active" id="page-inbox">
-      <div class="page-header">
-        <div>
-          <span class="page-title">Inbox</span>
-          <span id="inbox-count" style="margin-left:8px;font-size:14px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
+    <div class="page active" id="page-inbox" style="display:flex;flex-direction:column;overflow:hidden">
+      <!-- FIXED TOP -->
+      <div style="flex-shrink:0">
+        <div class="page-header" style="position:relative;top:auto">
+          <div>
+            <span class="page-title">Inbox</span>
+            <span id="inbox-count" style="margin-left:8px;font-size:14px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
+          </div>
+          <div class="header-actions">
+            <button class="icon-btn" onclick="openHelp('inbox')">?</button>
+            <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
+          </div>
         </div>
-        <div class="header-actions">
-          <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-          <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
-        </div>
-      </div>
 
-      <!-- OWL BOARD -->
-      <div id="owl-board" style="margin:0 14px 10px;display:none">
-        <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div id="owl-board-pulse" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
+        <!-- OWL BOARD -->
+        <div id="owl-board" style="margin:0 14px 10px;display:none">
+          <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div id="owl-board-pulse" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
+                <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
+              </div>
+              <button onclick="dismissOwlBoard()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;padding:0;line-height:1">&times;</button>
             </div>
-            <button onclick="dismissOwlBoard()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;padding:0;line-height:1">&times;</button>
+            <div id="owl-board-slider" style="overflow:hidden;touch-action:pan-y">
+              <div id="owl-board-track" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
+            </div>
+            <div id="owl-board-dots" style="display:flex;gap:4px;margin-top:8px;justify-content:center"></div>
           </div>
-          <div id="owl-board-slider" style="overflow:hidden;touch-action:pan-y">
-            <div id="owl-board-track" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
-          </div>
-          <div id="owl-board-dots" style="display:flex;gap:4px;margin-top:8px;justify-content:center"></div>
         </div>
       </div>
 
-      <!-- List -->
-      <div id="inbox-list"></div>
+      <!-- SCROLL: тільки картки -->
+      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
+        <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 120px)"></div>
+      </div>
     </div>
-
-    </div><!-- /page-inbox -->
 
     <!-- PAGE: TASKS -->
     <div class="page" id="page-tasks">
@@ -1286,7 +1289,23 @@ body {
         </div>
       </div>
 
-      <!-- Inner tabs: Задачі / Звички — великий перемикач (sticky) -->
+      <!-- OWL TAB BOARD: TASKS -->
+      <div id="owl-tab-board-tasks" style="display:none;margin:8px 14px 6px">
+        <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div id="owl-tab-pulse-tasks" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
+              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
+            </div>
+            <button onclick="dismissTabBoard('tasks')" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;padding:0;line-height:1">&times;</button>
+          </div>
+          <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5"></div>
+          <div id="owl-tab-chips-tasks" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+        </div>
+      </div>
+
+      <!-- Inner tabs: Задачі / Звички -->
       <div style="position:sticky;top:0;z-index:9;padding:4px 0 6px;background:linear-gradient(to bottom,rgb(253,184,122) 80%,transparent);margin-bottom:2px">
       <div style="display:flex;margin:0 14px;gap:8px">
         <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
@@ -1306,22 +1325,6 @@ body {
           <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">сьогодні</div>
         </div>
       </div>
-      </div>
-
-      <!-- OWL TAB BOARD: TASKS -->
-      <div id="owl-tab-board-tasks" style="display:none;margin:0 14px 8px">
-        <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div id="owl-tab-pulse-tasks" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
-            </div>
-            <button onclick="dismissTabBoard('tasks')" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;padding:0;line-height:1">&times;</button>
-          </div>
-          <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5"></div>
-          <div id="owl-tab-chips-tasks" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
-        </div>
       </div>
 
       <!-- TASKS SUB-PAGE -->
@@ -1349,9 +1352,6 @@ body {
         </div>
         <!-- Habits list -->
         <div id="prod-habits-list" style="padding:0 14px"></div>
-        <div style="margin:0 14px">
-          <button onclick="openAddHabit()" style="width:100%;padding:12px;background:rgba(22,163,74,0.08);border:1.5px dashed rgba(22,163,74,0.3);border-radius:12px;font-size:14px;font-weight:700;color:#16a34a;cursor:pointer">+ Додати звичку</button>
-        </div>
       </div>
     </div>
 
@@ -1472,6 +1472,16 @@ body {
         <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
           <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Цей тиждень vs минулий</div>
           <div id="me-week-compare" style="display:flex;gap:6px"></div>
+        </div>
+
+        <!-- Графік активності тижня (лінія) -->
+        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Активність тижня</div>
+            <span id="me-activity-total" style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600"></span>
+          </div>
+          <div id="me-activity-chart" style="position:relative;height:64px"></div>
+          <div id="me-activity-labels" style="display:flex;justify-content:space-between;margin-top:4px"></div>
         </div>
 
         <!-- Настрій тижня -->
@@ -1623,6 +1633,18 @@ body {
         <div id="evening-finance-block" style="display:none;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
           <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Фінанси сьогодні</div>
           <div id="evening-finance-content"></div>
+        </div>
+
+        <!-- Підсумок OWL -->
+        <div id="evening-summary-block" style="background:rgba(12,6,28,0.78);border-radius:18px;padding:13px 15px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
+              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em">OWL · підсумок дня</span>
+            </div>
+            <button id="evening-summary-btn" onclick="generateEveningSummary()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit">Згенерувати</button>
+          </div>
+          <div id="evening-summary" style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.75);line-height:1.6">Натисни "Згенерувати" — OWL підведе підсумок твого дня</div>
         </div>
 
       </div><!-- /scroll -->
@@ -1917,24 +1939,6 @@ body {
         </div>
 
       </div>
-
-      <!-- AI bar -->
-      <div id="health-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
-        <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
-          <div style="background:rgba(26,92,42,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
-            <div id="health-chat-window" class="ai-bar-chat-window">
-              <div id="health-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
-              <textarea id="health-bar-input" rows="1" placeholder="Прийняв ліки, болить голова..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendHealthBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
-              <button onclick="sendHealthBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#1a5c2a;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
 
     <!-- PAGE: PROJECTS -->
@@ -1978,27 +1982,43 @@ body {
           <button onclick="openAddProject()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Новий проект</button>
         </div>
       </div>
-
-      <!-- AI bar -->
-      <div id="projects-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
-        <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
-          <div style="background:rgba(61,46,30,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
-            <div id="projects-chat-window" class="ai-bar-chat-window">
-              <div id="projects-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
-              <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
-              <button onclick="sendProjectsBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#3d2e1e;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
 
 </div><!-- /app -->
+
+<!-- HEALTH AI BAR -->
+<div id="health-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
+  <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
+    <div style="background:rgba(26,92,42,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
+      <div id="health-chat-window" class="ai-bar-chat-window">
+        <div id="health-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
+        <textarea id="health-bar-input" rows="1" placeholder="Прийняв ліки, болить голова..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendHealthBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
+        <button onclick="sendHealthBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#1a5c2a;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECTS AI BAR -->
+<div id="projects-ai-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50">
+  <div style="max-width:480px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--tabbar-h, 83px) + 8px)">
+    <div style="background:rgba(61,46,30,0.92);backdrop-filter:blur(16px);border-radius:20px 20px 0 0;overflow:hidden">
+      <div id="projects-chat-window" class="ai-bar-chat-window">
+        <div id="projects-chat-messages" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px">
+        <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" style="flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:12px;padding:8px 12px;font-size:16px;color:white;resize:none;outline:none;font-family:inherit;max-height:100px;line-height:1.4"></textarea>
+        <button onclick="sendProjectsBarMessage()" style="width:36px;height:36px;border-radius:50%;background:#3d2e1e;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- HABIT MODAL -->
 <div id="habit-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
@@ -2010,7 +2030,20 @@ body {
       <button id="habit-delete-btn" onclick="deleteHabitFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
     </div>
     <input id="habit-input-name" type="text" placeholder="Назва звички" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px;box-sizing:border-box">
-    <textarea id="habit-input-details" placeholder="Деталі (необовʼязково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:16px;resize:none;min-height:64px;box-sizing:border-box"></textarea>
+    <textarea id="habit-input-details" placeholder="Деталі (необовʼязково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px;resize:none;min-height:64px;box-sizing:border-box"></textarea>
+    <!-- Кількість разів на день -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;padding:10px 16px;margin-bottom:16px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#1e1040">Разів на день</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:500;margin-top:1px">1 = звичайна звичка</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="adjustHabitCount(-1)" style="width:32px;height:32px;border-radius:50%;background:rgba(30,16,64,0.08);border:none;font-size:18px;font-weight:700;color:#1e1040;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
+        <span id="habit-count-display" style="font-size:20px;font-weight:800;color:#1e1040;min-width:24px;text-align:center">1</span>
+        <button onclick="adjustHabitCount(1)" style="width:32px;height:32px;border-radius:50%;background:rgba(30,16,64,0.08);border:none;font-size:18px;font-weight:700;color:#1e1040;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
+      </div>
+    </div>
+    <input id="habit-input-count" type="hidden" value="1">
     <input id="habit-input-emoji" type="text" style="display:none">
     <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Дні тижня</div>
     <div style="display:flex;gap:6px;margin-bottom:24px" id="habit-days-row">
@@ -2124,8 +2157,8 @@ body {
     <div style="font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
     <div id="task-steps-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()">
-      <button onclick="addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:700;color:#ea580c;cursor:pointer">+</button>
+      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()" onkeydown="if(event.key==='Enter'){event.preventDefault();addTaskStep();}">
+      <button onmousedown="event.preventDefault();addTaskStep()" ontouchend="event.preventDefault();addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:700;color:#ea580c;cursor:pointer;-webkit-tap-highlight-color:transparent">+</button>
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="closeTaskModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>

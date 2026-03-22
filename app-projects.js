@@ -451,7 +451,7 @@ ${aiContext ? '\n\n' + aiContext : ''}
             saveProjects(projs);
             renderProjects();
             addProjectsChatMsg('agent', `✅ Крок "${step.text}" виконано! Прогрес: ${p.progress}%`);
-          } else { addProjectsChatMsg('agent', reply); }
+          } else { safeAgentReply(reply, addProjectsChatMsg); }
         }
       } else if (parsed.action === 'add_project_step' && pid) {
         const projs = getProjects();
@@ -527,9 +527,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
       } else if (processUniversalAction(parsed, text, addProjectsChatMsg)) {
         // handled
       } else {
-        addProjectsChatMsg('agent', reply);
+        safeAgentReply(reply, addProjectsChatMsg);
       }
-    } catch { addProjectsChatMsg('agent', reply); }
+    } catch { safeAgentReply(reply, addProjectsChatMsg); }
   } catch { addProjectsChatMsg('agent', 'Мережева помилка.'); }
   projectsBarLoading = false;
 }
