@@ -177,20 +177,17 @@ function openTabSelector() {
           const borderColor = isActive ? t.accent : 'rgba(30,16,64,0.08)';
           const cardBg = isActive ? t.bg : 'rgba(255,255,255,0.6)';
           return `<div id="tab-sel-card-${t.id}"
-            onclick="${isLocked ? '' : `toggleTabSelection('${t.id}')`}"
+            onclick="${isLocked ? '' : 'toggleTabSelection(\'' + t.id + '\')'}"
             style="border-radius:18px;padding:14px;background:${cardBg};border:2px solid ${borderColor};cursor:${isLocked ? 'default' : 'pointer'};transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">
-            <!-- Іконка -->
             <div style="width:40px;height:40px;border-radius:12px;background:${isActive ? t.accent : 'rgba(30,16,64,0.06)'};display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:${isActive ? 'white' : 'rgba(30,16,64,0.4)'};transition:all 0.18s">
               ${t.svg}
             </div>
-            <!-- Назва -->
             <div style="font-size:14px;font-weight:700;color:${isActive ? t.accent : 'rgba(30,16,64,0.45)'};line-height:1.2">${t.label}</div>
-            <!-- Завжди / Чекбокс -->
             ${isLocked
-              ? `<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">завжди</div>`
-              : `<div id="tab-sel-check-${t.id}" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ${isActive ? t.accent : 'rgba(30,16,64,0.15)'};background:${isActive ? t.accent : 'transparent'};display:flex;align-items:center;justify-content:center;transition:all 0.18s">
-                  ${isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
-                </div>`
+              ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">завжди</div>'
+              : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? t.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
+                + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '')
+                + '</div>'
             }
           </div>`;
         }).join('')}
