@@ -104,7 +104,7 @@ function switchTab(tab) {
   if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
-  if (tab === 'finance') { renderFinance(); }
+  if (tab === 'finance') { try { renderFinance(); } catch(e) { console.error('renderFinance error:', e); } }
   if (tab === 'health') { try { renderHealth(); } catch(e) {} }
   if (tab === 'projects') { try { renderProjects(); } catch(e) {} }
 
@@ -906,38 +906,6 @@ function showToast(msg, duration = 2000) {
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
 const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
-
-// Fuzzy пошук папки по назві — знаходить навіть з опечатками
-function fuzzyFindFolder(query) {
-  if (!query) return null;
-  const q = query.toLowerCase().trim();
-  try {
-    const folders = [...new Set(getNotes().map(n => n.folder).filter(Boolean))];
-    // Точний збіг
-    const exact = folders.find(f => f.toLowerCase() === q);
-    if (exact) return exact;
-    // Збіг по початку
-    const starts = folders.find(f => f.toLowerCase().startsWith(q) || q.startsWith(f.toLowerCase()));
-    if (starts) return starts;
-    // Fuzzy — мінімальна відстань Левенштейна
-    let best = null, bestDist = Infinity;
-    folders.forEach(f => {
-      const dist = levenshtein(q, f.toLowerCase());
-      if (dist < bestDist && dist <= Math.max(2, Math.floor(f.length / 3))) {
-        bestDist = dist; best = f;
-      }
-    });
-    return best;
-  } catch(e) { return null; }
-}
-
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
-  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
-    dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-  return dp[m][n];
-}
 
 function getTrash() {
   try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }

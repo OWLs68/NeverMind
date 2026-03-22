@@ -1307,43 +1307,6 @@ function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
-  if (action === 'delete_folder') {
-    const folderName = fuzzyFindFolder(parsed.folder || '');
-    if (!folderName) { addMsg('agent', 'Не знайшов папку "' + (parsed.folder || '') + '". Перевір назву.'); return true; }
-    const notes = getNotes();
-    const count = notes.filter(n => n.folder === folderName).length;
-    // Додаємо в trash
-    const folderNotes = notes.filter(n => n.folder === folderName);
-    addToTrash('folder', { folder: folderName }, folderNotes);
-    saveNotes(notes.filter(n => n.folder !== folderName));
-    if (currentTab === 'notes') renderNotes();
-    addMsg('agent', `🗑 Папку "${folderName}" видалено (${count} нотаток). Відновити — скажи "відновити папку ${folderName}".`);
-    return true;
-  }
-
-  if (action === 'move_note') {
-    const toFolder = parsed.to_folder || parsed.folder || 'Особисте';
-    const notes = getNotes();
-    let moved = 0;
-    // Шукаємо нотатку по тексту або id
-    const query = (parsed.query || parsed.text || '').toLowerCase();
-    const fromFolder = parsed.from_folder ? fuzzyFindFolder(parsed.from_folder) : null;
-    notes.forEach(n => {
-      const matchText = query && (n.text || '').toLowerCase().includes(query);
-      const matchId = parsed.note_id && n.id === parsed.note_id;
-      const matchFolder = !fromFolder || n.folder === fromFolder;
-      if ((matchText || matchId) && matchFolder) {
-        n.folder = toFolder;
-        moved++;
-      }
-    });
-    if (moved === 0) { addMsg('agent', 'Не знайшов нотатку для переміщення.'); return true; }
-    saveNotes(notes);
-    if (currentTab === 'notes') renderNotes();
-    addMsg('agent', `✓ ${moved === 1 ? 'Нотатку переміщено' : moved + ' нотаток переміщено'} в папку "${toFolder}"`);
-    return true;
-  }
-
   if (action === 'save_finance' || action === 'save_expense' || action === 'save_income') {
     const type = action === 'save_income' ? 'income' : (parsed.fin_type || 'expense');
     const amount = parseFloat(parsed.amount) || 0;

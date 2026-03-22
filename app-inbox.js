@@ -354,6 +354,8 @@ async function sendToAI() {
               addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме, або скажи "відновити всі".`);
             }
           }
+        } else if (processUniversalAction(action, text, addInboxChatMsg)) {
+          // delete_folder, move_note, create_task, create_note тощо
         } else {
           // action === 'reply' — просто відповідь
           const replyText = action.comment || reply;
