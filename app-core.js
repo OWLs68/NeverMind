@@ -374,11 +374,6 @@ function rebuildDrumTabbar() {
     evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти',
   };
 
-  // Padding щоб крайні вкладки могли бути по центру
-  const half = Math.floor(capsule.offsetWidth / 2);
-  track.style.paddingLeft = half + 'px';
-  track.style.paddingRight = half + 'px';
-
   track.innerHTML = active.map(id =>
     `<div class="tab-item${id === currentTab ? ' active' : ''}" data-tab="${id}">
       <span class="tab-icon">${TAB_ICONS[id] || ''}</span>
@@ -386,7 +381,18 @@ function rebuildDrumTabbar() {
     </div>`
   ).join('');
 
-  updateDrumTabbar(currentTab);
+  // Padding і центрування після рендеру — rAF гарантує що layout готовий
+  requestAnimationFrame(() => {
+    const half = Math.floor(capsule.offsetWidth / 2);
+    if (half > 0) {
+      track.style.paddingLeft = half + 'px';
+      track.style.paddingRight = half + 'px';
+    }
+    window._drumCurrentX = 0;
+    track.style.transition = '';
+    track.style.transform = '';
+    updateDrumTabbar(currentTab);
+  });
 }
 
 function setupDrumTabbar() {
@@ -398,9 +404,14 @@ function setupDrumTabbar() {
 
   // Оновлюємо padding при зміні розміру
   window.addEventListener('resize', () => {
-    const half = Math.floor(capsule.offsetWidth / 2);
-    track.style.paddingLeft = half + 'px';
-    track.style.paddingRight = half + 'px';
+    requestAnimationFrame(() => {
+      const half = Math.floor(capsule.offsetWidth / 2);
+      if (half > 0) {
+        track.style.paddingLeft = half + 'px';
+        track.style.paddingRight = half + 'px';
+      }
+      updateDrumTabbar(currentTab);
+    });
   });
 
   let tx = 0;         // поточний translateX
@@ -449,7 +460,7 @@ function setupDrumTabbar() {
     return best;
   }
 
-  // Оновлює класи active/near за відстанню від центру
+  // Оновлює класи active/near/far за відстанню від центру
   function updateVisuals(centerItem) {
     const items = [...track.querySelectorAll('.tab-item[data-tab]')];
     const idx = centerItem ? items.indexOf(centerItem) : -1;
@@ -457,6 +468,7 @@ function setupDrumTabbar() {
       const d = Math.abs(i - idx);
       item.classList.toggle('active', d === 0);
       item.classList.toggle('near', d === 1);
+      item.classList.toggle('far', d === 2);
     });
   }
 
@@ -574,6 +586,7 @@ function updateDrumTabbar(tab) {
     const d = Math.abs(i - idx);
     item.classList.toggle('active', d === 0);
     item.classList.toggle('near', d === 1);
+    item.classList.toggle('far', d === 2);
   });
   // Центруємо активну вкладку через BoundingClientRect
   const cur = window._drumCurrentX || 0;

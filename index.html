@@ -360,14 +360,17 @@ body {
   border-radius: 20px;
   padding: 4px;
   position: relative;
-  overflow: hidden;
+  /* overflow: visible — дозволяє активній вкладці виходити за межі вертикально */
+  overflow: visible;
+  /* clip-path: обрізає по горизонталі, але дає +16px зверху для 3D-ефекту барабана */
+  clip-path: inset(-16px 0px round 20px);
   /* Глибокі внутрішні тіні — ефект заглибленого барабана */
   box-shadow:
-    inset 0 3px 10px rgba(0,0,0,0.18),
-    inset 0 -2px 6px rgba(0,0,0,0.12),
-    inset 3px 0 10px rgba(0,0,0,0.12),
-    inset -3px 0 10px rgba(0,0,0,0.12),
-    0 1px 0 rgba(255,255,255,0.5);
+    inset 0 4px 14px rgba(0,0,0,0.22),
+    inset 0 -3px 10px rgba(0,0,0,0.16),
+    inset 4px 0 14px rgba(0,0,0,0.15),
+    inset -4px 0 14px rgba(0,0,0,0.15),
+    0 2px 0 rgba(255,255,255,0.55);
 }
 /* Тіні по боках капсули — ефект загасання барабана */
 .drum-capsule::before {
@@ -404,6 +407,13 @@ body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
+  opacity: 0.55;
+  transform: scale(0.87);
+  /* Клітинки з обох боків — ефект циліндра барабана */
+  border-left: 1px solid rgba(255,255,255,0.18);
+  border-right: 1px solid rgba(0,0,0,0.10);
+}
+.tab-item.far {
   opacity: 0.7;
   transform: scale(0.93);
 }
@@ -414,11 +424,15 @@ body {
 .tab-item.active {
   background: white;
   box-shadow:
-    0 3px 12px rgba(0,0,0,0.18),
-    0 1px 0 rgba(255,255,255,0.9),
-    inset 0 1px 0 rgba(255,255,255,0.8);
+    0 6px 18px rgba(0,0,0,0.22),
+    0 2px 6px rgba(0,0,0,0.14),
+    0 1px 0 rgba(255,255,255,0.95),
+    inset 0 1px 0 rgba(255,255,255,0.9);
   opacity: 1;
-  transform: scale(1.06);
+  /* Виходить за межі барабана — ефект передньої частини циліндра */
+  transform: scale(1.16) translateY(-2px);
+  border-left-color: transparent;
+  border-right-color: transparent;
 }
 .tab-icon {
   width: 18px; height: 18px;
@@ -429,22 +443,20 @@ body {
 .tab-item.active .tab-icon { color: var(--active-accent); }
 .tab-item.near .tab-icon { color: rgba(30,16,64,0.8); }
 .tab-label {
-  font-size: 9px; font-weight: 700;
+  /* Базовий стан — крайні вкладки: маленький, ледь видимий (перспектива) */
+  font-size: 6.5px; font-weight: 600;
   color: rgba(30,16,64,0.65);
   white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.25s;
+  opacity: 0.22;
+  transition: opacity 0.25s, font-size 0.25s, font-weight 0.25s;
 }
-.tab-item.near .tab-label { opacity: 0.7; }
+.tab-item.far .tab-label { opacity: 0.42; font-size: 7.5px; }
+.tab-item.near .tab-label { opacity: 0.7; font-size: 8.5px; font-weight: 700; }
 .tab-item.active .tab-label {
   opacity: 1;
+  font-size: 9.5px;
   color: var(--active-accent);
   font-weight: 800;
-}
-/* Перегородки між вкладками — через border-left */
-.tab-item + .tab-item {
-  border-left: 1px solid rgba(0,0,0,0.12);
-  box-shadow: -1px 0 0 rgba(255,255,255,0.2);
 }
 .tab-item {
   position: relative;
