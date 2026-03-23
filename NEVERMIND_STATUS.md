@@ -27,12 +27,12 @@
 
 | | |
 |--|--|
-| **Версія** | 0.31 (не задеплоєно) |
+| **Версія** | 0.33 (не задеплоєно) |
 | **Файли** | index.html + 9 модулів (app-core, app-ai, app-inbox, app-tasks, app-notes, app-finance, app-evening, app-health, app-projects) |
 | **Хостинг** | owls68.github.io/NeverMind (GitHub Pages) |
 | **AI модель** | OpenAI GPT-4o-mini |
 | **Агент** | OWL |
-| **Статус** | Сесії 36-37 завершено. Всі баги ТЕСТУВАННЯ.md виправлено. Готово до деплою. |
+| **Статус** | Сесії 36-37 завершено. Всі баги ТЕСТУВАННЯ.md виправлено. Аудит файлів 23.03.2026. |
 
 ---
 
@@ -40,15 +40,15 @@
 
 | Модуль | Рядків | Статус |
 |--------|--------|--------|
-| app-evening.js | ~1613 | ⚠️ > 1500 |
-| app-core.js | ~1594 | ⚠️ > 1500 |
-| app-tasks.js | ~1508 | ⚠️ > 1500 |
-| app-ai.js | ~1171 | ✅ |
-| app-finance.js | ~1102 | ✅ |
-| app-notes.js | ~804 | ✅ |
-| app-projects.js | ~535 | ✅ |
-| app-inbox.js | ~631 | ✅ |
-| app-health.js | ~445 | ✅ |
+| app-evening.js | 1838 | ⚠️ > 1500 |
+| app-tasks.js | 1698 | ⚠️ > 1500 |
+| app-core.js | 1697 | ⚠️ > 1500 |
+| app-ai.js | 1210 | ✅ |
+| app-notes.js | 1117 | ✅ |
+| app-finance.js | 1108 | ✅ |
+| app-inbox.js | 663 | ✅ |
+| app-projects.js | 604 | ✅ |
+| app-health.js | 445 | ✅ |
 
 > Рефакторинг великих модулів — після деплою
 
@@ -153,10 +153,18 @@
 | nm_projects | Проекти |
 | nm_active_tabs | Активні вкладки барабана |
 | nm_trash | Кеш видалених (7 днів) |
-| nm_owl_board / nm_owl_board_ts / nm_owl_board_said | OWL табло |
-| nm_chat_{tab} | Чати вкладок (inbox/tasks/notes/me/evening/finance) |
+| nm_owl_board / nm_owl_board_ts / nm_owl_board_said / nm_owl_board_seen | OWL табло |
+| nm_chat_{tab} | Чати вкладок (inbox/tasks/notes/me/evening/finance) — Health/Projects НЕ зберігаються |
+| nm_task_chat_{id} | Чат окремої задачі |
 | nm_fin_coach_{period} | Порада OWL, TTL 24 год |
 | nm_error_log | JS помилки |
+| nm_folders_meta | Метадані папок нотаток |
+| nm_notes_folders_ts | Timestamp останнього оновлення папок |
+| nm_quit_log | Лог зривів звичок |
+| nm_seen_update | Яку версію слайдів оновлень вже бачив |
+| nm_survey_done | Флаг завершення опитування |
+| nm_guide_step / nm_guide_shown_tips / nm_guide_shown_topics / nm_guide_last_ts / nm_guide_waiting_topic | Онбординг-гід (покрокове навчання) |
+| nm_project_interview_step / nm_project_interview_name | Стан інтерв'ю при створенні проекту |
 
 ---
 
@@ -164,9 +172,11 @@
 
 | Пріоритет | Задача |
 |-----------|--------|
-| 🔴 | Деплой v0.31 — оновити UPDATE_SLIDES, UPDATE_VERSION |
+| 🔴 | Деплой v0.33 — оновити UPDATE_SLIDES, UPDATE_VERSION |
+| 🔴 | **БАГ** app-notes.js:85 — `noteOrigIdx` обчислюється ПІСЛЯ видалення → undo повертає нотатку в кінець, а не на оригінальну позицію |
 | 🔴 | Supabase Етап 1 — хмара, авторизація |
 | 🔴 | Supabase Етап 2 — Push, активний агент |
+| 🟡 | **БАГ** app-inbox.js:316,632 — `==` замість `===` при порівнянні task_id (потенційна проблема з типами) |
 | 🟡 | Рефакторинг > 1500 рядків (app-core, app-evening, app-tasks) |
 | 🟡 | Баг #11 — агент робить задачу замість проекту |
 | 🟡 | Баг #24 — тап на день в календарі |
@@ -179,6 +189,9 @@
 ---
 
 ## 📜 Історія сесій
+
+### Сесія 38 (23.03.2026) — аудит документації
+Аудит відповідності коду і документів. Виявлено: версія застаріла (v0.31→v0.33), розміри модулів розійшлись (app-notes +313 рядків), 12 незадокументованих storage ключів, чати Health/Projects не персистуються. STATUS.md і LOGIC.md оновлено.
 
 ### Сесія 37 (22.03.2026) — патч багів + нові фічі
 ~25 багів з СЕСІЯ_ТЕСТУВАННЯ.md. Множинні звички, підсумок OWL, графік активності, delete_folder/move_note. Аудит і чистка.
