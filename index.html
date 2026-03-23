@@ -438,18 +438,16 @@ body {
 .tab-item.active .tab-icon { color: var(--active-accent); }
 .tab-item.near .tab-icon { color: rgba(30,16,64,0.8); }
 .tab-label {
-  /* Базовий стан — крайні вкладки: маленький, ледь видимий (перспектива) */
-  font-size: 6.5px; font-weight: 600;
+  font-size: 9px; font-weight: 700;
   color: rgba(30,16,64,0.65);
   white-space: nowrap;
-  opacity: 0.22;
+  opacity: 0;
   transition: opacity 0.25s, font-size 0.25s, font-weight 0.25s;
 }
-.tab-item.far .tab-label { opacity: 0.42; font-size: 7.5px; }
-.tab-item.near .tab-label { opacity: 0.7; font-size: 8.5px; font-weight: 700; }
+.tab-item.far .tab-label { opacity: 0; }
+.tab-item.near .tab-label { opacity: 0.7; }
 .tab-item.active .tab-label {
   opacity: 1;
-  font-size: 9.5px;
   color: var(--active-accent);
   font-weight: 800;
 }
@@ -1289,7 +1287,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v40</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v43</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>
