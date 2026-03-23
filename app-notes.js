@@ -78,11 +78,11 @@ function saveNote() {
 
 function deleteNote(id) {
   const notes = getNotes();
+  const noteOrigIdx = notes.findIndex(x => x.id === id);
   const item = notes.find(x => x.id === id);
   if (item) addToTrash('note', item);
   saveNotes(notes.filter(x => x.id !== id));
   renderNotes();
-  const noteOrigIdx = getNotes().findIndex(x => x.id === id);
   if (item) showUndoToast('Нотатку видалено', () => { const n = getNotes(); const idx = Math.min(noteOrigIdx, n.length); n.splice(idx, 0, item); saveNotes(n); renderNotes(); });
 }
 
