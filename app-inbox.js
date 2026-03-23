@@ -313,7 +313,7 @@ async function sendToAI() {
           await processCompleteTask(action, text);
         } else if (action.action === 'add_step') {
           const tasks = getTasks();
-          const idx = tasks.findIndex(t => t.id == action.task_id);
+          const idx = tasks.findIndex(t => t.id === action.task_id);
           if (idx !== -1) {
             const steps = Array.isArray(action.steps) ? action.steps : (action.step ? [action.step] : []);
             steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
@@ -629,7 +629,7 @@ function processCompleteTask(parsed, originalText) {
   const tasks = getTasks();
   const completed = [];
   ids.forEach(taskId => {
-    const idx = tasks.findIndex(t => t.id == taskId);
+    const idx = tasks.findIndex(t => t.id === taskId);
     if (idx !== -1) {
       completed.push(tasks[idx].title);
       tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() };
