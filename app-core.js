@@ -187,8 +187,8 @@ function openTabSelector() {
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div>'
     + '<div style="padding:0 16px 8px">'
     + '<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Порядок</div>'
-    + '<div id="tab-order-list" style="display:flex;flex-direction:column;gap:6px"></div>'
-    + '<div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;margin-top:8px;text-align:center">Тапни вкладку → стрілки для переміщення</div>'
+    + '<div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>'
+    + '<div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">Тапни вкладку → ‹ › для переміщення</div>'
     + '</div></div>';
 
   overlay.addEventListener('click', e => { if (e.target === overlay) closeTabSelector(); });
@@ -298,19 +298,36 @@ function renderTabOrderList() {
   list.innerHTML = tabs.map((id, idx) => {
     const cfg = ALL_TABS_CONFIG.find(t => t.id === id);
     const isSelected = _selectedOrderTab === id;
-    const isLocked = id === 'inbox'; // Inbox завжди перший
-    return `<div id="tab-order-row-${id}" onclick="${isLocked ? '' : `selectTabOrder('${id}')`}"
-      style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:${isSelected ? (cfg?.bg || 'rgba(30,16,64,0.06)') : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isSelected ? (cfg?.accent || 'rgba(30,16,64,0.2)') : 'transparent'};cursor:${isLocked ? 'default' : 'pointer'};transition:all 0.18s;-webkit-tap-highlight-color:transparent">
-      <div style="width:8px;height:8px;border-radius:50%;background:${cfg?.accent || 'rgba(30,16,64,0.2)'};flex-shrink:0"></div>
-      <div style="flex:1;font-size:15px;font-weight:${isSelected ? 700 : 600};color:${isSelected ? '#1e1040' : 'rgba(30,16,64,0.6)'}">${TAB_LABELS[id] || id}</div>
-      ${isLocked ? `<div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">перший</div>` : ''}
-      ${isSelected ? `
-        <button onclick="event.stopPropagation();moveTabOrder('${id}',-1)" style="width:32px;height:32px;border-radius:10px;background:rgba(30,16,64,0.08);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;${idx <= 1 ? 'opacity:0.3;pointer-events:none' : ''}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    const isLocked = id === 'inbox';
+    const accent = cfg?.accent || 'rgba(30,16,64,0.2)';
+    const bg = cfg?.bg || 'rgba(30,16,64,0.06)';
+    const dot = `<div style="width:7px;height:7px;border-radius:50%;background:${accent};flex-shrink:0"></div>`;
+    const label = `<span style="font-size:14px;font-weight:${isSelected ? 700 : 600};color:${isSelected ? '#1e1040' : 'rgba(30,16,64,0.6)'};white-space:nowrap">${TAB_LABELS[id] || id}</span>`;
+    if (isLocked) {
+      return `<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:rgba(30,16,64,0.04);border:1.5px solid transparent;flex-shrink:0;cursor:default;-webkit-tap-highlight-color:transparent">
+        ${dot}${label}
+        <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 6px;border-radius:6px">перший</span>
+      </div>`;
+    }
+    if (isSelected) {
+      const btnBase = 'width:26px;height:26px;border-radius:50%;background:rgba(30,16,64,0.1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent';
+      const leftDisabled = idx <= 1 ? 'opacity:0.25;pointer-events:none;' : '';
+      const rightDisabled = idx >= tabs.length - 1 ? 'opacity:0.25;pointer-events:none;' : '';
+      return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
+        <button onclick="event.stopPropagation();moveTabOrder('${id}',-1)" style="${btnBase};${leftDisabled}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <button onclick="event.stopPropagation();moveTabOrder('${id}',1)" style="width:32px;height:32px;border-radius:10px;background:rgba(30,16,64,0.08);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;${idx >= tabs.length - 1 ? 'opacity:0.3;pointer-events:none' : ''}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>` : ''}
+        <div onclick="selectTabOrder('${id}')" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:${bg};border:1.5px solid ${accent};flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent">
+          ${dot}${label}
+        </div>
+        <button onclick="event.stopPropagation();moveTabOrder('${id}',1)" style="${btnBase};${rightDisabled}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>`;
+    }
+    return `<div id="tab-order-row-${id}" onclick="selectTabOrder('${id}')"
+      style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:rgba(30,16,64,0.04);border:1.5px solid transparent;flex-shrink:0;cursor:pointer;transition:all 0.18s;-webkit-tap-highlight-color:transparent">
+      ${dot}${label}
     </div>`;
   }).join('');
 }
