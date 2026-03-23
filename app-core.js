@@ -402,6 +402,7 @@ function setupDrumTabbar() {
   let velocity = 0, lastX = 0, lastTime = 0;
   let currentTranslateX = 0;
   let _rafId = null; // для інерційної анімації
+  let _bounds = null; // кешовані межі, обчислені в touchstart
 
   function updateEdgePadding() {
     const half = Math.floor(capsule.offsetWidth / 2);
@@ -417,15 +418,24 @@ function setupDrumTabbar() {
   });
 
   function getDrumBounds() {
+    if (_bounds) return _bounds;
+    // Fallback до простої формули (до першого дотику)
     const capsuleW = capsule.offsetWidth;
-    const paddingLeft = parseInt(track.style.paddingLeft) || Math.floor(capsuleW / 2);
+    const trackW = track.scrollWidth;
+    return { minX: Math.min(0, capsuleW - trackW), maxX: 0 };
+  }
+
+  function computeBounds() {
     const items = track.querySelectorAll('.tab-item[data-tab]');
     if (!items.length) return { minX: 0, maxX: 0 };
-    const first = items[0];
-    const last = items[items.length - 1];
-    const maxX = capsuleW / 2 - (paddingLeft + first.offsetLeft + first.offsetWidth / 2);
-    const minX = capsuleW / 2 - (paddingLeft + last.offsetLeft + last.offsetWidth / 2);
-    return { minX, maxX };
+    const capsuleRect = capsule.getBoundingClientRect();
+    const capsuleCenter = capsuleRect.left + capsuleRect.width / 2;
+    const firstRect = items[0].getBoundingClientRect();
+    const lastRect = items[items.length - 1].getBoundingClientRect();
+    return {
+      maxX: currentTranslateX + (capsuleCenter - (firstRect.left + firstRect.width / 2)),
+      minX: currentTranslateX + (capsuleCenter - (lastRect.left + lastRect.width / 2))
+    };
   }
 
   function getTabAtCenter() {
@@ -515,6 +525,9 @@ function setupDrumTabbar() {
     const mat = new DOMMatrix(getComputedStyle(track).transform);
     currentTranslateX = isNaN(mat.m41) ? (window._drumCurrentX || 0) : mat.m41;
     window._drumCurrentX = currentTranslateX;
+
+    // Обчислюємо межі зараз — позиції елементів точно відомі
+    _bounds = computeBounds();
 
     startX = e.touches[0].clientX;
     lastX = startX;
