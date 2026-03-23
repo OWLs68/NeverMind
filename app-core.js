@@ -418,8 +418,14 @@ function setupDrumTabbar() {
 
   function getDrumBounds() {
     const capsuleW = capsule.offsetWidth;
-    const trackW = track.scrollWidth;
-    return { minX: Math.min(0, capsuleW - trackW), maxX: 0 };
+    const paddingLeft = parseInt(track.style.paddingLeft) || Math.floor(capsuleW / 2);
+    const items = track.querySelectorAll('.tab-item[data-tab]');
+    if (!items.length) return { minX: 0, maxX: 0 };
+    const first = items[0];
+    const last = items[items.length - 1];
+    const maxX = capsuleW / 2 - (paddingLeft + first.offsetLeft + first.offsetWidth / 2);
+    const minX = capsuleW / 2 - (paddingLeft + last.offsetLeft + last.offsetWidth / 2);
+    return { minX, maxX };
   }
 
   function getTabAtCenter() {
