@@ -485,7 +485,11 @@ function setupDrumTabbar() {
       setTX(x);
     }
     updateVisuals(item);
-    if (item.dataset.tab !== currentTab) switchTab(item.dataset.tab);
+    if (item.dataset.tab !== currentTab) {
+      window._drumSuppressReposition = true;
+      switchTab(item.dataset.tab);
+      window._drumSuppressReposition = false;
+    }
   }
 
   // Snap до найближчої вкладки
