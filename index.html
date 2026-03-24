@@ -994,6 +994,12 @@ body {
   opacity: 1;
   pointer-events: all;
 }
+/* Inbox: вікно росте з повідомленнями, не займає весь екран */
+#inbox-chat-window { height: auto; }
+#inbox-chat-messages {
+  flex: none;
+  max-height: calc(100svh - var(--tabbar-h, 83px) - 64px - 160px);
+}
 
 /* Полоска зверху чат-вікна */
 .ai-bar-chat-handle {
@@ -1310,7 +1316,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v59</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v60</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>

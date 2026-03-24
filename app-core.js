@@ -1236,7 +1236,9 @@ function setupKeyboardAvoiding() {
   const update = () => {
     const vv = window.visualViewport;
     // Правильний розрахунок для iOS: враховуємо offsetTop (скільки зверху зрізано)
-    const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
+    // Не включаємо vv.offsetTop — він збільшується при скролі сторінки
+    // і тоді keyboardHeight хибно стає <250, таббар не ховається
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.height);
     const aiBar = document.getElementById('inbox-ai-bar');
     const tabBar = document.getElementById('tab-bar');
     const tbH = tabBar ? tabBar.offsetHeight : 83;
@@ -1245,6 +1247,14 @@ function setupKeyboardAvoiding() {
     if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
       if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
+      // Обмежуємо висоту inbox чату щоб не виходив за видиму зону
+      const inboxCw = document.getElementById('inbox-chat-window');
+      if (inboxCw) {
+        const availH = Math.max(80, vv.height - 80);
+        inboxCw.style.maxHeight = availH + 'px';
+        const inboxMsgs = document.getElementById('inbox-chat-messages');
+        if (inboxMsgs) inboxMsgs.style.maxHeight = Math.max(60, availH - 20) + 'px';
+      }
       // Ховаємо таббар — translateY достатньо великий щоб він пішов за екран
       if (tabBar) { tabBar.style.transform = `translateY(${tbH + keyboardHeight}px)`; tabBar.style.opacity = '0'; tabBar.style.pointerEvents = 'none'; }
       newBars.forEach(b => {
@@ -1253,13 +1263,20 @@ function setupKeyboardAvoiding() {
         // Якщо чат-вікно відкрите — обмежуємо його висоту щоб вміщалось на екрані
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
-          const availH = vv.height - keyboardHeight - 120; // 120 = поле вводу + відступи
+          const availH = vv.height - 120; // vv.height вже = екран без клавіатури
           chatWin.style.maxHeight = Math.max(140, availH) + 'px';
         }
       });
     } else {
       // Клавіатура закрита — повертаємо все на місце
       if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
+      // Скидаємо обмеження inbox чату
+      const inboxCw = document.getElementById('inbox-chat-window');
+      if (inboxCw) {
+        inboxCw.style.maxHeight = '';
+        const inboxMsgs = document.getElementById('inbox-chat-messages');
+        if (inboxMsgs) inboxMsgs.style.maxHeight = '';
+      }
       if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; tabBar.style.pointerEvents = ''; }
       newBars.forEach(b => {
         if (!b) return;
