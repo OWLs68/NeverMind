@@ -1745,9 +1745,9 @@ async function generateTabBoardMessage(tab) {
 
 function tryTabBoardUpdate(tab) {
   if (tab === 'inbox') return;
+  renderTabBoard(tab); // завжди показуємо збережені дані
   const hour = new Date().getHours();
-  if (hour >= 23 || hour < 7) return;
-  renderTabBoard(tab);
+  if (hour >= 23 || hour < 7) return; // тихі години — тільки генерація пропускається
   const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
   const elapsed = Date.now() - lastTs;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
@@ -1875,6 +1875,8 @@ function init() {
   } catch(e) {}
   try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
   try { renderInbox(); } catch(e) {}
+  // Рендеримо всі табло одразу — показуємо збережені дані без очікування switchTab
+  try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
   // Відновлюємо чат Inbox якщо є збережені повідомлення
   try { restoreChatUI('inbox'); } catch(e) {}
   // Показуємо inbox bar одразу — він тепер керується як tasks/me/evening
