@@ -48,7 +48,8 @@
 | app-evening.js | 1838 | 🔴 > 1500 |
 | app-tasks-core.js | 544 | ✅ |
 | app-habits.js | 1164 | ✅ |
-| app-ai.js | 1522 | 🔴 > 1500 |
+| app-ai-core.js | 589 | ✅ |
+| app-ai-chat.js | 937 | ✅ |
 | app-notes.js | 1117 | ✅ |
 | app-finance.js | 1108 | ✅ |
 | app-inbox.js | 663 | ✅ |
