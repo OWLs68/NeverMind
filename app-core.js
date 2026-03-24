@@ -1175,7 +1175,38 @@ function setupSW() {
 
 function autoResizeTextarea(el) {
   el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  const maxH = Math.floor(window.innerHeight * 0.5 - 20);
+  el.style.height = Math.min(el.scrollHeight, maxH) + 'px';
+  // Оновлюємо висоту чат-вікна якщо воно відкрите
+  const bar = el.closest('.ai-bar-new');
+  if (bar) {
+    const cw = bar.querySelector('.ai-bar-chat-window.open');
+    if (cw) updateChatWindowHeight(bar.id.replace('-ai-bar', ''));
+  }
+}
+
+// Розраховує висоту чат-вікна: від низу board до верху input-box
+function updateChatWindowHeight(tab) {
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return;
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  if (!chatWin) return;
+  const inputBox = bar.querySelector('.ai-bar-input-box');
+  const inputRect = inputBox ? inputBox.getBoundingClientRect() : null;
+  const inputTop = inputRect ? inputRect.top : window.innerHeight - 140;
+
+  // Знаходимо board поточної вкладки
+  const boardId = tab === 'inbox' ? 'owl-board' : 'owl-tab-board-' + tab;
+  const board = document.getElementById(boardId);
+  let topBound = 80; // fallback
+  if (board) {
+    const br = board.getBoundingClientRect();
+    if (br.bottom > 0 && br.bottom < inputTop) topBound = br.bottom + 8;
+  }
+
+  const maxH = inputTop - topBound - 8;
+  chatWin.style.maxHeight = Math.max(150, maxH) + 'px';
+  chatWin.style.height    = Math.max(150, maxH) + 'px';
 }
 
 // Офлайн-fallback: зберігає миттєво як нотатку

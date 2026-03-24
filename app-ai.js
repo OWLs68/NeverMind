@@ -511,7 +511,11 @@ function openChatBar(tab) {
   restoreChatUI(tab);
 
   const chatWin = bar.querySelector('.ai-bar-chat-window');
-  if (chatWin) requestAnimationFrame(() => { chatWin.classList.add('open'); });
+  if (chatWin) requestAnimationFrame(() => {
+    // Розраховуємо висоту до відкриття — від низу board до верху input
+    try { updateChatWindowHeight(tab); } catch(e) {}
+    chatWin.classList.add('open');
+  });
 }
 
 function closeChatBar(tab) {
