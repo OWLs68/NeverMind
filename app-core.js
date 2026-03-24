@@ -1401,11 +1401,24 @@ function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
 function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
 function getOwlTabSaidKey(tab) { return 'nm_owl_tab_said_' + tab; }
 
-function getTabBoardMsg(tab) {
-  try { return JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null'); } catch { return null; }
+function getTabBoardMsgs(tab) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null');
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return [raw]; // backward compat: старий формат → масив
+  } catch { return []; }
 }
-function saveTabBoardMsg(tab, msg) {
-  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msg)); } catch {} }
+function getTabBoardMsg(tab) {
+  const msgs = getTabBoardMsgs(tab);
+  return msgs[0] || null;
+}
+function saveTabBoardMsg(tab, newMsg) {
+  const msgs = getTabBoardMsgs(tab);
+  msgs.unshift(newMsg);          // новий → перший
+  if (msgs.length > 3) msgs.length = 3; // максимум 3
+  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs)); } catch {}
+}
 
 function getTabBoardSaid(tab) {
   const today = new Date().toDateString();
@@ -1431,33 +1444,117 @@ function dismissTabBoard(tab) {
 }
 
 function renderTabBoard(tab) {
-  const msg = getTabBoardMsg(tab);
+  const msgs = getTabBoardMsgs(tab);
   const board = document.getElementById('owl-tab-board-' + tab);
   if (!board) return;
-  // Завжди показуємо табло — показуємо '…' поки немає msg
   board.style.display = 'block';
-  if (!msg || !msg.text) {
-    const textEl2 = document.getElementById('owl-tab-text-' + tab);
-    if (textEl2 && !textEl2.textContent.trim()) textEl2.textContent = '…';
-    return;
+
+  const track = document.getElementById('owl-tab-track-' + tab);
+  const dots  = document.getElementById('owl-tab-dots-' + tab);
+  const pulse = document.getElementById('owl-tab-pulse-' + tab);
+  if (!track) return;
+
+  // Pulse — за поточним (першим) повідомленням
+  const current = msgs[0];
+  if (pulse) {
+    const p = current ? current.priority : 'normal';
+    pulse.style.background  = p === 'critical' ? '#ef4444' : p === 'important' ? '#f59e0b' : '#fbbf24';
+    pulse.style.boxShadow   = p === 'critical' ? '0 0 6px rgba(239,68,68,0.7)' : '';
   }
 
-  const pulse = document.getElementById('owl-tab-pulse-' + tab);
-  if (pulse) {
-    pulse.style.background = msg.priority === 'critical' ? '#ef4444' : msg.priority === 'important' ? '#f59e0b' : '#fbbf24';
-    pulse.style.boxShadow = msg.priority === 'critical' ? '0 0 6px rgba(239,68,68,0.7)' : '';
+  // Слайди — головний + історія
+  const CHIP_HTML = chips => chips && chips.length
+    ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${chips.map(c =>
+        `<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`
+      ).join('')}</div>`
+    : '';
+
+  if (msgs.length === 0) {
+    track.innerHTML = `<div style="min-width:100%"><div style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div></div>`;
+  } else {
+    track.innerHTML = msgs.map((msg, i) =>
+      `<div style="min-width:100%;box-sizing:border-box">
+        <div style="font-size:13px;font-weight:600;color:${i === 0 ? 'white' : 'rgba(255,255,255,0.5)'};line-height:1.55">${escapeHtml(msg.text)}</div>
+        ${CHIP_HTML(msg.chips)}
+      </div>`
+    ).join('');
   }
-  const textEl = document.getElementById('owl-tab-text-' + tab);
-  if (textEl) textEl.textContent = msg.text;
-  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
-  if (chipsEl) {
-    if (msg.chips && msg.chips.length > 0) {
-      chipsEl.style.display = 'flex';
-      chipsEl.innerHTML = msg.chips.map(c => `<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`).join('');
-    } else {
-      chipsEl.style.display = 'none';
+
+  // Зберігаємо/скидаємо поточний слайд
+  const sk = '_tabSlide_' + tab;
+  const maxIdx = Math.max(0, msgs.length - 1);
+  if (!window[sk] || window[sk] > maxIdx) window[sk] = 0;
+  track.style.transition = 'none';
+  track.style.transform   = `translateX(-${window[sk] * 100}%)`;
+
+  // Крапки-навігатори
+  if (dots) {
+    const n   = Math.max(1, msgs.length);
+    const cur = window[sk];
+    dots.innerHTML = Array.from({ length: n }, (_, i) =>
+      `<div style="height:3px;width:${i === cur ? 14 : 4}px;border-radius:2px;background:rgba(255,255,255,${i === cur ? '0.75' : '0.22'});transition:width 0.2s,background 0.2s"></div>`
+    ).join('');
+  }
+
+  // Свайп — ініціалізуємо один раз
+  const slider = document.getElementById('owl-tab-slider-' + tab);
+  if (slider && !slider._swipeReady) {
+    slider._swipeReady = true;
+    setupTabBoardSwipe(tab, slider, track, dots);
+  }
+}
+
+function setupTabBoardSwipe(tab, slider, track, dots) {
+  const sk = '_tabSlide_' + tab;
+  let startX = 0, startY = 0, locked = false, dx = 0;
+
+  slider.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    locked = false; dx = 0;
+    track.style.transition = 'none';
+  }, { passive: true });
+
+  slider.addEventListener('touchmove', e => {
+    const cx = e.touches[0].clientX;
+    const cy = e.touches[0].clientY;
+    const adx = Math.abs(cx - startX);
+    const ady = Math.abs(cy - startY);
+    if (!locked && adx < 8 && ady < 8) return;
+    if (!locked) {
+      if (ady > adx) return; // вертикаль — не перехоплюємо
+      locked = true;
     }
-  }
+    dx = cx - startX;
+    const msgs = getTabBoardMsgs(tab);
+    const cur  = window[sk] || 0;
+    const base = -cur * 100;
+    const pct  = (dx / slider.offsetWidth) * 100;
+    let offset = base + pct;
+    if (cur === 0 && dx > 0) offset = base + pct * 0.25; // гума на першому
+    if (cur >= msgs.length - 1 && dx < 0) offset = base + pct * 0.25; // гума на останньому
+    track.style.transform = `translateX(${offset}%)`;
+  }, { passive: true });
+
+  slider.addEventListener('touchend', () => {
+    if (!locked) return;
+    const msgs = getTabBoardMsgs(tab);
+    const cur  = window[sk] || 0;
+    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    let next = cur;
+    if (dx < -40 && cur < msgs.length - 1) next = cur + 1;
+    else if (dx > 40 && cur > 0) next = cur - 1;
+    window[sk] = next;
+    track.style.transform = `translateX(-${next * 100}%)`;
+    // Оновлюємо крапки
+    if (dots) {
+      [...dots.children].forEach((d, i) => {
+        d.style.width      = i === next ? '14px' : '4px';
+        d.style.background = `rgba(255,255,255,${i === next ? '0.75' : '0.22'})`;
+      });
+    }
+    locked = false; dx = 0;
+  }, { passive: true });
 }
 
 function getTabBoardContext(tab) {

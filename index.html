@@ -1305,7 +1305,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v53</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v54</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>
@@ -1359,8 +1359,10 @@ body {
                 <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
               </div>
             </div>
-            <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
-            <div id="owl-tab-chips-tasks" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <div id="owl-tab-slider-tasks" style="overflow:hidden">
+              <div id="owl-tab-track-tasks" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
+            </div>
+            <div id="owl-tab-dots-tasks" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
           </div>
         </div>
 
@@ -1444,8 +1446,10 @@ body {
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
             </div>
           </div>
-          <div id="owl-tab-text-notes" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
-          <div id="owl-tab-chips-notes" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+          <div id="owl-tab-slider-notes" style="overflow:hidden">
+            <div id="owl-tab-track-notes" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
+          </div>
+          <div id="owl-tab-dots-notes" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
         </div>
         </div><!-- /owl-tab-board-notes -->
       </div><!-- /sticky header -->
@@ -1502,13 +1506,10 @@ body {
               <div id="owl-tab-pulse-me" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · тиждень</span>
             </div>
-            <div id="owl-tab-text-me" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
-            <div id="owl-tab-chips-me" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
-            <div style="display:flex;gap:4px;margin-top:8px;align-items:center">
-              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            <div id="owl-tab-slider-me" style="overflow:hidden">
+              <div id="owl-tab-track-me" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
             </div>
+            <div id="owl-tab-dots-me" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
           </div>
         </div>
       </div>
@@ -1607,21 +1608,10 @@ body {
               <div id="owl-tab-pulse-evening" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · підсумок дня</span>
             </div>
-            <!-- Слайдер: головне + 2 архівних -->
             <div id="owl-tab-slider-evening" style="overflow:hidden">
-              <div id="owl-tab-track-evening" style="display:flex;transition:transform 0.3s ease">
-                <div style="min-width:100%">
-                  <div id="owl-tab-text-evening" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
-                </div>
-              </div>
+              <div id="owl-tab-track-evening" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
             </div>
-            <div id="owl-tab-chips-evening" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
-            <!-- Крапки (головна + 2 архівних) -->
-            <div id="owl-tab-dots-evening" style="display:flex;gap:4px;margin-top:8px;align-items:center">
-              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
-            </div>
+            <div id="owl-tab-dots-evening" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
           </div>
         </div>
       </div>
@@ -1728,8 +1718,10 @@ body {
                 <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; фінанси</span>
               </div>
             </div>
-            <div id="owl-tab-text-finance" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
-            <div id="owl-tab-chips-finance" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+            <div id="owl-tab-slider-finance" style="overflow:hidden">
+              <div id="owl-tab-track-finance" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
+            </div>
+            <div id="owl-tab-dots-finance" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
           </div>
         </div>
       </div><!-- /fin-fixed-top -->
@@ -1949,13 +1941,10 @@ body {
               <div id="owl-tab-pulse-health" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · нагадування</span>
             </div>
-            <div id="owl-tab-text-health" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
-            <div id="owl-tab-chips-health" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
-            <div style="display:flex;gap:4px;margin-top:8px;align-items:center">
-              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            <div id="owl-tab-slider-health" style="overflow:hidden">
+              <div id="owl-tab-track-health" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
             </div>
+            <div id="owl-tab-dots-health" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
           </div>
         </div>
       </div>
@@ -2026,13 +2015,10 @@ body {
               <div id="owl-tab-pulse-projects" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · проекти</span>
             </div>
-            <div id="owl-tab-text-projects" style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div>
-            <div id="owl-tab-chips-projects" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
-            <div style="display:flex;gap:4px;margin-top:8px;align-items:center">
-              <div style="height:3px;width:14px;border-radius:2px;background:rgba(255,255,255,0.75)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
-              <div style="height:3px;width:4px;border-radius:2px;background:rgba(255,255,255,0.22)"></div>
+            <div id="owl-tab-slider-projects" style="overflow:hidden">
+              <div id="owl-tab-track-projects" style="display:flex;transition:transform 0.3s cubic-bezier(0.32,0.72,0,1)"></div>
             </div>
+            <div id="owl-tab-dots-projects" style="display:flex;gap:4px;margin-top:8px;align-items:center"></div>
           </div>
         </div>
       </div>
