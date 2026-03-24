@@ -1209,32 +1209,6 @@ function updateChatWindowHeight(tab) {
   chatWin.style.height    = Math.max(150, maxH) + 'px';
 }
 
-// Inbox: висота чату = розмір контенту (росте з повідомленнями, але не більше доступного)
-function updateInboxChatHeight() {
-  const chatWin = document.getElementById('inbox-chat-window');
-  const msgs = document.getElementById('inbox-chat-messages');
-  const bar = document.getElementById('inbox-ai-bar');
-  if (!chatWin || !msgs || !bar) return;
-
-  const inputBox = bar.querySelector('.ai-bar-input-box');
-  const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 140;
-  const board = document.getElementById('owl-board');
-  let topBound = 80;
-  if (board) {
-    const br = board.getBoundingClientRect();
-    if (br.bottom > 0 && br.bottom < inputTop) topBound = br.bottom + 8;
-  }
-  const maxH = Math.max(80, inputTop - topBound - 8);
-
-  const handle = chatWin.querySelector('.ai-bar-chat-handle');
-  const handleH = handle ? handle.offsetHeight + 12 : 20;
-  const contentH = msgs.scrollHeight + handleH;
-
-  const finalH = Math.min(contentH, maxH);
-  chatWin.style.height = finalH + 'px';
-  chatWin.style.maxHeight = finalH + 'px';
-}
-
 // Офлайн-fallback: зберігає миттєво як нотатку
 function saveOffline(text) {
   const items = getInbox();
@@ -1270,17 +1244,7 @@ function setupKeyboardAvoiding() {
 
     if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
-      if (aiBar) {
-        aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px';
-        // Обмежуємо inbox чат щоб не виходив за екран
-        const inboxCw = aiBar.querySelector('.ai-bar-chat-window');
-        if (inboxCw) {
-          const availH = vv.height - 120;
-          inboxCw.style.maxHeight = Math.max(80, availH) + 'px';
-          const curH = parseInt(inboxCw.style.height) || 0;
-          if (curH > Math.max(80, availH)) inboxCw.style.height = Math.max(80, availH) + 'px';
-        }
-      }
+      if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
       // Ховаємо таббар — translateY достатньо великий щоб він пішов за екран
       if (tabBar) { tabBar.style.transform = `translateY(${tbH + keyboardHeight}px)`; tabBar.style.opacity = '0'; tabBar.style.pointerEvents = 'none'; }
       newBars.forEach(b => {
@@ -1289,17 +1253,13 @@ function setupKeyboardAvoiding() {
         // Якщо чат-вікно відкрите — обмежуємо його висоту щоб вміщалось на екрані
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
-          const availH = vv.height - 120; // vv.height вже не включає клавіатуру
+          const availH = vv.height - keyboardHeight - 120; // 120 = поле вводу + відступи
           chatWin.style.maxHeight = Math.max(140, availH) + 'px';
         }
       });
     } else {
       // Клавіатура закрита — повертаємо все на місце
-      if (aiBar) {
-        const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px';
-        const inboxCw = aiBar.querySelector('.ai-bar-chat-window');
-        if (inboxCw) { inboxCw.style.maxHeight = ''; try { updateInboxChatHeight(); } catch(e) {} }
-      }
+      if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
       if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; tabBar.style.pointerEvents = ''; }
       newBars.forEach(b => {
         if (!b) return;
@@ -1922,10 +1882,7 @@ function init() {
   // Показуємо inbox bar одразу — він тепер керується як tasks/me/evening
   try {
     const inboxBar = document.getElementById('inbox-ai-bar');
-    if (inboxBar) {
-      inboxBar.style.display = 'flex';
-      setTimeout(() => { try { updateInboxChatHeight(); } catch(e) {} }, 80);
-    }
+    if (inboxBar) inboxBar.style.display = 'flex';
   } catch(e) {}
   try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
   // Хедери стають overlay над контентом (ефект скролу під табло)

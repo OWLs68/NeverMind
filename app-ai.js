@@ -467,7 +467,6 @@ function restoreChatUI(tab) {
   // Рендеримо збережені повідомлення без повторного запису в storage
   if (tab === 'inbox') {
     msgs.forEach(m => _renderInboxChatMsg(m.role, m.text, el));
-    setTimeout(() => { try { updateInboxChatHeight(); } catch(e) {} }, 50);
   } else if (addMsgMap[tab]) {
     msgs.forEach(m => addMsgMap[tab](m.role, m.text));
   }

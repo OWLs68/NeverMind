@@ -54,7 +54,6 @@ function addInboxChatMsg(role, text) {
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   saveChatMsg('inbox', role, text);
-  try { updateInboxChatHeight(); } catch(e) {}
 
   // Якщо агент надіслав повідомлення а чат закритий — показуємо бейдж
   if (role === 'agent') {
