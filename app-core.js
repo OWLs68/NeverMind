@@ -1564,19 +1564,25 @@ function renderTabBoard(tab) {
   track.style.transition = 'none';
   track.style.transform   = `translateX(-${window[sk] * 100}%)`;
 
-  // Крапки-навігатори
+  // Крапки-навігатори — як в inbox: ховаємо для ≤1 слайду
   if (dots) {
-    const n   = Math.max(1, msgs.length);
-    const cur = window[sk];
-    dots.innerHTML = Array.from({ length: n }, (_, i) =>
-      `<div style="height:3px;width:${i === cur ? 14 : 4}px;border-radius:2px;background:rgba(255,255,255,${i === cur ? '0.75' : '0.22'});transition:width 0.2s,background 0.2s"></div>`
-    ).join('');
+    if (msgs.length > 1) {
+      const cur = window[sk];
+      dots.style.display = 'flex';
+      dots.style.justifyContent = 'center'; // горизонтальне центрування
+      dots.innerHTML = Array.from({ length: msgs.length }, (_, i) =>
+        `<div style="height:3px;width:${i === cur ? 14 : 4}px;border-radius:2px;background:rgba(255,255,255,${i === cur ? '0.75' : '0.22'});transition:width 0.2s,background 0.2s"></div>`
+      ).join('');
+    } else {
+      dots.style.display = 'none';
+    }
   }
 
   // Свайп — ініціалізуємо один раз
   const slider = document.getElementById('owl-tab-slider-' + tab);
   if (slider && !slider._swipeReady) {
     slider._swipeReady = true;
+    slider.style.touchAction = 'pan-y'; // браузер керує вертикаллю, JS — горизонталлю
     setupTabBoardSwipe(tab, slider, track, dots);
   }
 }
@@ -1584,6 +1590,15 @@ function renderTabBoard(tab) {
 function setupTabBoardSwipe(tab, slider, track, dots) {
   const sk = '_tabSlide_' + tab;
   let startX = 0, startY = 0, locked = false, dx = 0;
+
+  const updateDots = (next) => {
+    if (dots && dots.style.display !== 'none') {
+      [...dots.children].forEach((d, i) => {
+        d.style.width      = i === next ? '14px' : '4px';
+        d.style.background = `rgba(255,255,255,${i === next ? '0.75' : '0.22'})`;
+      });
+    }
+  };
 
   slider.addEventListener('touchstart', e => {
     startX = e.touches[0].clientX;
@@ -1602,6 +1617,9 @@ function setupTabBoardSwipe(tab, slider, track, dots) {
       if (ady > adx) return; // вертикаль — не перехоплюємо
       locked = true;
     }
+    // Заблокований горизонтальний свайп — перехоплюємо
+    e.preventDefault();
+    e.stopPropagation();
     dx = cx - startX;
     const msgs = getTabBoardMsgs(tab);
     const cur  = window[sk] || 0;
@@ -1611,9 +1629,9 @@ function setupTabBoardSwipe(tab, slider, track, dots) {
     if (cur === 0 && dx > 0) offset = base + pct * 0.25; // гума на першому
     if (cur >= msgs.length - 1 && dx < 0) offset = base + pct * 0.25; // гума на останньому
     track.style.transform = `translateX(${offset}%)`;
-  }, { passive: true });
+  }, { passive: false }); // passive:false щоб preventDefault спрацював
 
-  slider.addEventListener('touchend', () => {
+  const settle = () => {
     if (!locked) return;
     const msgs = getTabBoardMsgs(tab);
     const cur  = window[sk] || 0;
@@ -1623,13 +1641,16 @@ function setupTabBoardSwipe(tab, slider, track, dots) {
     else if (dx > 40 && cur > 0) next = cur - 1;
     window[sk] = next;
     track.style.transform = `translateX(-${next * 100}%)`;
-    // Оновлюємо крапки
-    if (dots) {
-      [...dots.children].forEach((d, i) => {
-        d.style.width      = i === next ? '14px' : '4px';
-        d.style.background = `rgba(255,255,255,${i === next ? '0.75' : '0.22'})`;
-      });
-    }
+    updateDots(next);
+    locked = false; dx = 0;
+  };
+
+  slider.addEventListener('touchend', settle, { passive: true });
+  slider.addEventListener('touchcancel', () => {
+    // Скидаємо на поточний слайд без переходу
+    if (!locked) return;
+    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    track.style.transform = `translateX(-${(window[sk] || 0) * 100}%)`;
     locked = false; dx = 0;
   }, { passive: true });
 }
