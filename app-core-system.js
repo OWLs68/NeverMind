@@ -1,0 +1,1011 @@
+// ============================================================
+// app-core-system.js — Trash, PWA, OWL board, ініціалізація
+// Залежності: app-core-nav.js
+// ============================================================
+
+// === TRASH CACHE (кеш видалених — 7 днів) ===
+const NM_TRASH_KEY = 'nm_trash';
+const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
+
+function getTrash() {
+  try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }
+}
+function saveTrash(arr) {
+  localStorage.setItem(NM_TRASH_KEY, JSON.stringify(arr));
+}
+
+// Додати запис в кеш при видаленні
+function addToTrash(type, item, extra) {
+  const trash = getTrash();
+  // Прибираємо старіші за 7 днів
+  const now = Date.now();
+  const fresh = trash.filter(t => now - t.deletedAt < TRASH_TTL);
+  fresh.push({ type, item, extra: extra || null, deletedAt: now });
+  // Максимум 200 записів
+  saveTrash(fresh.slice(-200));
+}
+
+// Пошук в кеші — для агента
+function searchTrash(query) {
+  const trash = getTrash();
+  const now = Date.now();
+  const q = query.toLowerCase();
+  return trash
+    .filter(t => now - t.deletedAt < TRASH_TTL)
+    .filter(t => {
+      const item = t.item;
+      const text = (item.text || item.title || item.name || item.category || '').toLowerCase();
+      const folder = (item.folder || '').toLowerCase();
+      return text.includes(q) || folder.includes(q);
+    })
+    .sort((a, b) => b.deletedAt - a.deletedAt);
+}
+
+// Відновити запис з кешу по id
+function restoreFromTrash(trashId) {
+  const trash = getTrash();
+  const entry = trash.find(t => t.deletedAt === trashId);
+  if (!entry) return false;
+  const { type, item, extra } = entry;
+  if (type === 'task') {
+    const tasks = getTasks();
+    tasks.unshift(item);
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+  } else if (type === 'note') {
+    const notes = getNotes();
+    notes.unshift(item);
+    saveNotes(notes);
+    if (currentTab === 'notes') renderNotes();
+  } else if (type === 'habit') {
+    const habits = getHabits();
+    habits.push(item);
+    saveHabits(habits);
+    renderHabits(); renderProdHabits();
+  } else if (type === 'inbox') {
+    const items = getInbox();
+    items.unshift(item);
+    saveInbox(items);
+    if (currentTab === 'inbox') renderInbox();
+  } else if (type === 'folder') {
+    // extra = масив нотаток папки
+    const notes = getNotes();
+    (extra || []).forEach(n => notes.push(n));
+    saveNotes(notes);
+    if (currentTab === 'notes') renderNotes();
+  } else if (type === 'finance') {
+    const txs = getFinance();
+    txs.unshift(item);
+    saveFinance(txs);
+    if (currentTab === 'finance') renderFinance();
+  }
+  // Прибираємо з кешу після відновлення
+  saveTrash(trash.filter(t => t.deletedAt !== trashId));
+  return true;
+}
+
+// Очистка кешу — викликається при старті
+function cleanupTrash() {
+  const trash = getTrash();
+  const now = Date.now();
+  const fresh = trash.filter(t => now - t.deletedAt < TRASH_TTL);
+  if (fresh.length !== trash.length) saveTrash(fresh);
+}
+
+function showUndoToast(msg, restoreFn) {
+  // Показує toast з кнопкою "Відновити" на 10 секунд
+  const el = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  const btn = document.getElementById('toast-undo-btn');
+  msgEl.textContent = msg;
+  btn.style.display = 'inline-block';
+  _undoData = restoreFn;
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  el.classList.add('show');
+  _undoToastTimer = setTimeout(() => {
+    el.classList.remove('show');
+    _undoData = null;
+  }, 10000);
+}
+
+function undoDelete() {
+  if (_undoData) {
+    _undoData(); // викликаємо функцію відновлення
+    _undoData = null;
+  }
+  if (_undoToastTimer) clearTimeout(_undoToastTimer);
+  document.getElementById('toast').classList.remove('show');
+}
+
+// === PWA MANIFEST ===
+function setupPWA() {
+  const manifest = {
+    name: 'NeverMind',
+    short_name: 'NeverMind',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#faf9ff',
+    theme_color: '#f5f1ff',
+    icons: [{
+      src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjM4IiBmaWxsPSIjMWUzYTVmIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSI2NiIgcj0iMTAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDQsNzYgUTM4LDkyIDQwLDExMiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI2IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMiIvPjxwYXRoIGQ9Ik00Miw5MiBMMjgsMTA4IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4yIi8+PHBhdGggZD0iTTQyLDkyIEw1MiwxMDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDAsMTEyIEwzMiwxMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48cGF0aCBkPSJNNDAsMTEyIEw0OCwxMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz48Y2lyY2xlIGN4PSI5NiIgY3k9IjYyIiByPSIxMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNSIvPjxwYXRoIGQ9Ik05Niw3MiBMOTYsMTE0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC41Ii8+PHBhdGggZD0iTTk2LDkwIEw4MCwxMDQiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsOTAgTDExMiwxMDQiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsMTE0IEw4NiwxNDAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiLz48cGF0aCBkPSJNOTYsMTE0IEwxMDYsMTQwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC41Ii8+PGNpcmNsZSBjeD0iMTUwIiBjeT0iNTgiIHI9IjExIiBmaWxsPSIjNjBhNWZhIi8+PHBhdGggZD0iTTE1MCw2OSBMMTUwLDExNiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsODYgTDEzMCw2NiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsODYgTDE3MCw2NiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNTAsMTE2IEwxMzgsMTQyIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTE1MCwxMTYgTDE2MiwxNDIiIHN0cm9rZT0iIzYwYTVmYSIgc3Ryb2tlLXdpZHRoPSI1IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=',
+      sizes: '192x192',
+      type: 'image/svg+xml'
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+}
+
+// === SERVICE WORKER ===
+function setupSW() {
+  if (!('serviceWorker' in navigator)) return;
+  const swCode = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => clients.claim());
+    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+
+function autoResizeTextarea(el) {
+  el.style.height = 'auto';
+  const maxH = Math.floor(window.innerHeight * 0.5 - 20);
+  el.style.height = Math.min(el.scrollHeight, maxH) + 'px';
+  // Оновлюємо висоту чат-вікна якщо воно відкрите
+  const bar = el.closest('.ai-bar-new');
+  if (bar) {
+    const cw = bar.querySelector('.ai-bar-chat-window.open');
+    if (cw) updateChatWindowHeight(bar.id.replace('-ai-bar', ''));
+  }
+}
+
+// Розраховує висоту чат-вікна: від низу board до верху input-box
+function updateChatWindowHeight(tab) {
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return;
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  if (!chatWin) return;
+  const inputBox = bar.querySelector('.ai-bar-input-box');
+  const inputRect = inputBox ? inputBox.getBoundingClientRect() : null;
+  const inputTop = inputRect ? inputRect.top : window.innerHeight - 140;
+
+  // Знаходимо board поточної вкладки
+  const boardId = tab === 'inbox' ? 'owl-board' : 'owl-tab-board-' + tab;
+  const board = document.getElementById(boardId);
+  let topBound = 80; // fallback
+  if (board) {
+    const br = board.getBoundingClientRect();
+    if (br.bottom > 0 && br.bottom < inputTop) topBound = br.bottom + 8;
+  }
+
+  const maxH = inputTop - topBound - 8;
+  chatWin.style.maxHeight = Math.max(150, maxH) + 'px';
+  chatWin.style.height    = Math.max(150, maxH) + 'px';
+}
+
+// Офлайн-fallback: зберігає миттєво як нотатку
+function saveOffline(text) {
+  const items = getInbox();
+  items.unshift({ id: Date.now(), text, category: 'note', ts: Date.now(), processed: false });
+  saveInbox(items);
+  renderInbox();
+
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'щойно';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' хв тому';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' год тому';
+  return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// === KEYBOARD AVOIDING ===
+function setupKeyboardAvoiding() {
+  if (!window.visualViewport) return;
+
+  const update = () => {
+    const vv = window.visualViewport;
+    // Правильний розрахунок для iOS: враховуємо offsetTop (скільки зверху зрізано)
+    // Не включаємо vv.offsetTop — він збільшується при скролі сторінки
+    // і тоді keyboardHeight хибно стає <250, таббар не ховається
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.height);
+    const aiBar = document.getElementById('inbox-ai-bar');
+    const tabBar = document.getElementById('tab-bar');
+    const tbH = tabBar ? tabBar.offsetHeight : 83;
+    const newBars = ['tasks-ai-bar','notes-ai-bar','me-ai-bar','evening-ai-bar','finance-ai-bar','health-ai-bar','projects-ai-bar'].map(id => document.getElementById(id));
+
+    if (keyboardHeight > 250) { // реальна клавіатура > 250px; менше — це просто Safari ховає свій тулбар під час свайпу
+      // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
+      if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
+      // Обмежуємо висоту inbox чату щоб не виходив за видиму зону
+      // Логіка: chatH = vv.height - barBottom - inputH - safeAreaTop
+      const inboxCw = document.getElementById('inbox-chat-window');
+      if (inboxCw) {
+        // barBottom = keyboardHeight + 8; inputH ≈ 64; safeAreaTop ≈ 60 (notch + margin)
+        const chatH = Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+        inboxCw.style.height = chatH + 'px';
+        inboxCw.style.maxHeight = chatH + 'px';
+        const inboxMsgs = document.getElementById('inbox-chat-messages');
+        if (inboxMsgs) {
+          inboxMsgs.style.maxHeight = Math.max(30, chatH - 20) + 'px';
+          // Авто-скрол до останнього повідомлення
+          setTimeout(() => { inboxMsgs.scrollTop = inboxMsgs.scrollHeight; }, 50);
+        }
+      }
+      // Ховаємо таббар — translateY достатньо великий щоб він пішов за екран
+      if (tabBar) { tabBar.style.transform = `translateY(${tbH + keyboardHeight}px)`; tabBar.style.opacity = '0'; tabBar.style.pointerEvents = 'none'; }
+      newBars.forEach(b => {
+        if (!b || b.style.display === 'none') return;
+        b.style.bottom = (keyboardHeight + 8) + 'px';
+        // Обмежуємо висоту чат-вікна щоб handle лишався видимим
+        // chatH = vv.height - barBottom - inputH - safeAreaTop
+        const chatWin = b.querySelector('.ai-bar-chat-window');
+        if (chatWin && chatWin.classList.contains('open')) {
+          const tab = b.id.replace('-ai-bar', '');
+          const state = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})[tab];
+          if (state === 'b') {
+            // Клавіатура з'явилась поки стан B → авто-колапс до A
+            if (typeof _tabChatState !== 'undefined') _tabChatState[tab] = 'a';
+            const aH = typeof _getTabChatAHeight === 'function'
+              ? _getTabChatAHeight(tab)
+              : Math.max(150, vv.height - (keyboardHeight + 8) - 64 - 60);
+            chatWin.style.transition = 'height 0.3s cubic-bezier(0.32,0.72,0,1)';
+            chatWin.style.height = aH + 'px';
+            chatWin.style.maxHeight = aH + 'px';
+            setTimeout(() => chatWin.style.transition = '', 300);
+          } else {
+            const chatH = typeof _getTabChatAHeight === 'function'
+              ? _getTabChatAHeight(tab)
+              : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+            chatWin.style.height = chatH + 'px';
+            chatWin.style.maxHeight = chatH + 'px';
+          }
+        }
+      });
+    } else {
+      // Клавіатура закрита — повертаємо все на місце
+      if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
+      // Скидаємо обмеження inbox чату
+      const inboxCw = document.getElementById('inbox-chat-window');
+      if (inboxCw) {
+        inboxCw.style.height = '';
+        inboxCw.style.maxHeight = '';
+        const inboxMsgs = document.getElementById('inbox-chat-messages');
+        if (inboxMsgs) inboxMsgs.style.maxHeight = '';
+      }
+      if (tabBar) { tabBar.style.transform = 'translateY(0)'; tabBar.style.opacity = ''; tabBar.style.pointerEvents = ''; }
+      newBars.forEach(b => {
+        if (!b) return;
+        b.style.bottom = (tbH + 4) + 'px';
+        const chatWin = b.querySelector('.ai-bar-chat-window');
+        if (chatWin && chatWin.classList.contains('open')) {
+          const tab = b.id.replace('-ai-bar', '');
+          const state = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})[tab];
+          if (state === 'b') {
+            // Стан B: перераховуємо до повної висоти без клавіатури
+            try {
+              const bH = typeof _getTabChatBHeight === 'function'
+                ? _getTabChatBHeight(tab)
+                : null;
+              if (bH) {
+                chatWin.style.height = bH + 'px';
+                chatWin.style.maxHeight = bH + 'px';
+              } else { updateChatWindowHeight(tab); }
+            } catch(e) {}
+          } else if (state === 'a') {
+            // Стан A: compact висота без клавіатури (обмежена)
+            try {
+              const aH = typeof _getTabChatAHeight === 'function'
+                ? _getTabChatAHeight(tab)
+                : null;
+              if (aH) {
+                chatWin.style.height = aH + 'px';
+                chatWin.style.maxHeight = aH + 'px';
+              } else { updateChatWindowHeight(tab); }
+            } catch(e) {}
+          }
+        } else if (chatWin) {
+          chatWin.style.height = '';
+          chatWin.style.maxHeight = '';
+        }
+      });
+    }
+  };
+
+  // iOS іноді надсилає scroll замість resize — слухаємо обидва
+  window.visualViewport.addEventListener('resize', update);
+  window.visualViewport.addEventListener('scroll', update);
+
+  // Фікс після повернення з фону / розблокування — viewport нестабільний ~600ms
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    // Очищуємо stuck-стани від незавершених gesture (touchcancel міг не спрацювати)
+    document.querySelectorAll('.ai-bar-chat-window').forEach(cw => {
+      // Скидаємо лише transform/opacity, НЕ height (може бути expanded-стан)
+      if (cw.style.transform && cw.style.transform !== 'translateY(0)' && cw.style.transform !== '') {
+        cw.style.transition = '';
+        cw.style.transform = '';
+        cw.style.opacity = '';
+      }
+    });
+    // iOS viewport стабілізується поступово — запускаємо update кілька разів
+    setTimeout(update, 80);
+    setTimeout(update, 350);
+    setTimeout(update, 750);
+  });
+
+  // Фікс повторного фокусу: iOS не генерує новий resize якщо viewport вже встановлений
+  // Викликаємо update() вручну при кожному фокусі на поле вводу
+  document.addEventListener('focusin', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+      setTimeout(update, 120);
+      setTimeout(update, 400); // другий раз — iOS іноді повільніше показує клавіатуру
+    }
+  }, { passive: true });
+
+  // При закритті клавіатури через кнопку Готово — iOS не завжди надсилає resize
+  document.addEventListener('focusout', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+      setTimeout(update, 150);
+    }
+  }, { passive: true });
+}
+
+// === PAGE TRANSITIONS ===
+let currentTabForAnim = 'inbox';
+function animateTabSwitch(newTab) {
+  const oldPage = document.getElementById(`page-${currentTabForAnim}`);
+  const newPage = document.getElementById(`page-${newTab}`);
+  if (!oldPage || !newPage || oldPage === newPage) {
+    currentTabForAnim = newTab;
+    return;
+  }
+
+  // Плавний fade — без translate щоб не було жорсткого контрасту між кольорами
+  newPage.style.transition = 'none';
+  newPage.style.opacity = '0';
+  newPage.style.visibility = 'visible';
+
+  // Стара — зникає
+  oldPage.style.transition = 'opacity 0.18s ease';
+  oldPage.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      newPage.style.transition = 'opacity 0.22s ease';
+      newPage.style.opacity = '1';
+    });
+  });
+
+  setTimeout(() => {
+    oldPage.style.transition = '';
+    oldPage.style.opacity = '';
+    oldPage.style.visibility = '';
+    newPage.style.transition = '';
+    newPage.style.opacity = '';
+  }, 260);
+
+  currentTabForAnim = newTab;
+}
+
+// === SETTINGS SWIPE TO CLOSE ===
+function setupSettingsSwipe() {
+  const panel = document.getElementById('settings-panel-el');
+  if (!panel) return;
+  let startY = 0, startScrollTop = 0;
+  panel.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    startScrollTop = panel.scrollTop;
+  }, { passive: true });
+  panel.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - startY;
+    // Close only if swiped down >80px AND panel is scrolled to top
+    if (dy > 80 && startScrollTop === 0) {
+      closeSettings();
+    }
+  }, { passive: true });
+}
+
+
+
+// === ERROR LOGGER ===
+const NM_LOG_KEY = 'nm_error_log';
+const NM_LOG_MAX = 100; // максимум записів
+
+function getErrorLog() {
+  try { return JSON.parse(localStorage.getItem(NM_LOG_KEY) || '[]'); } catch { return []; }
+}
+function saveErrorLog(arr) {
+  try { localStorage.setItem(NM_LOG_KEY, JSON.stringify(arr.slice(-NM_LOG_MAX))); } catch {}
+}
+
+function logError(type, message, source) {
+  const log = getErrorLog();
+  const entry = {
+    ts: Date.now(),
+    type,
+    msg: message,
+    src: source || '',
+    tab: typeof currentTab !== 'undefined' ? currentTab : '?'
+  };
+  log.push(entry);
+  saveErrorLog(log);
+}
+
+// Перехоплюємо всі JS помилки
+window.addEventListener('error', e => {
+  logError('error', e.message, (e.filename || '').replace(/.*\//, '') + ':' + e.lineno);
+});
+
+// Перехоплюємо unhandled promise rejections
+window.addEventListener('unhandledrejection', e => {
+  const msg = e.reason ? (e.reason.message || String(e.reason)) : 'Promise rejected';
+  logError('promise', msg, '');
+});
+
+function copyErrorLog() {
+  const log = getErrorLog();
+  if (log.length === 0) {
+    showToast('Лог порожній — помилок не знайдено 👍');
+    return;
+  }
+  const lines = log.map(e => {
+    const d = new Date(e.ts);
+    const time = d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return '[' + time + '] [' + e.type + '] [' + e.tab + '] ' + e.msg + (e.src ? ' → ' + e.src : '');
+  }).join('\n');
+  const text = 'NeverMind Error Log (' + log.length + ' записів)\n' + '='.repeat(40) + '\n' + lines;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Лог скопійовано (' + log.length + ' помилок)'));
+  } else {
+    showToast('Копіювання недоступне');
+  }
+}
+
+function clearErrorLog() {
+  localStorage.removeItem(NM_LOG_KEY);
+  showToast('✓ Лог очищено');
+  // Оновлюємо кнопку
+  const btn = document.getElementById('error-log-btn');
+  if (btn) btn.textContent = '🪲 Лог помилок (0)';
+}
+
+function updateErrorLogBtn() {
+  const btn = document.getElementById('error-log-btn');
+  if (!btn) return;
+  const count = getErrorLog().length;
+  btn.textContent = count > 0 ? '🪲 Лог помилок (' + count + ')' : '🪲 Лог помилок (0)';
+  btn.style.borderColor = count > 0 ? 'rgba(234,88,12,0.3)' : '';
+  btn.style.color = count > 0 ? '#ea580c' : '';
+}
+
+// === OWL TAB BOARDS (#37) ===
+const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
+
+function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
+function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
+function getOwlTabSaidKey(tab) { return 'nm_owl_tab_said_' + tab; }
+
+function getTabBoardMsgs(tab) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null');
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return [raw]; // backward compat: старий формат → масив
+  } catch { return []; }
+}
+function getTabBoardMsg(tab) {
+  const msgs = getTabBoardMsgs(tab);
+  return msgs[0] || null;
+}
+function saveTabBoardMsg(tab, newMsg) {
+  const msgs = getTabBoardMsgs(tab);
+  msgs.unshift(newMsg);          // новий → перший
+  if (msgs.length > 3) msgs.length = 3; // максимум 3
+  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs)); } catch {}
+}
+
+function getTabBoardSaid(tab) {
+  const today = new Date().toDateString();
+  try {
+    const raw = JSON.parse(localStorage.getItem(getOwlTabSaidKey(tab)) || '{}');
+    if (raw.date !== today) return {};
+    return raw.said || {};
+  } catch { return {}; }
+}
+function markTabBoardSaid(tab, topic) {
+  const today = new Date().toDateString();
+  const said = getTabBoardSaid(tab);
+  said[topic] = true;
+  try { localStorage.setItem(getOwlTabSaidKey(tab), JSON.stringify({ date: today, said })); } catch {}
+}
+function tabAlreadySaid(tab, topic) { return !!getTabBoardSaid(tab)[topic]; }
+
+function dismissTabBoard(tab) {
+  // Вечір — табло завжди активне, не закривається
+  if (tab === 'evening') return;
+  const el = document.getElementById('owl-tab-board-' + tab);
+  if (el) el.style.display = 'none';
+}
+
+function renderTabBoard(tab) {
+  const msgs = getTabBoardMsgs(tab);
+  const board = document.getElementById('owl-tab-board-' + tab);
+  if (!board) return;
+  board.style.display = 'block';
+
+  const track = document.getElementById('owl-tab-track-' + tab);
+  const dots  = document.getElementById('owl-tab-dots-' + tab);
+  const pulse = document.getElementById('owl-tab-pulse-' + tab);
+  if (!track) return;
+
+  // Pulse — за поточним (першим) повідомленням
+  const current = msgs[0];
+  if (pulse) {
+    const p = current ? current.priority : 'normal';
+    pulse.style.background  = p === 'critical' ? '#ef4444' : p === 'important' ? '#f59e0b' : '#fbbf24';
+    pulse.style.boxShadow   = p === 'critical' ? '0 0 6px rgba(239,68,68,0.7)' : '';
+  }
+
+  // Слайди — головний + історія
+  const CHIP_HTML = chips => chips && chips.length
+    ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${chips.map(c =>
+        `<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`
+      ).join('')}</div>`
+    : '';
+
+  if (msgs.length === 0) {
+    track.innerHTML = `<div style="min-width:100%"><div style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div></div>`;
+  } else {
+    track.innerHTML = msgs.map((msg, i) =>
+      `<div style="min-width:100%;box-sizing:border-box">
+        <div style="font-size:13px;font-weight:600;color:${i === 0 ? 'white' : 'rgba(255,255,255,0.5)'};line-height:1.55">${escapeHtml(msg.text)}</div>
+        ${CHIP_HTML(msg.chips)}
+      </div>`
+    ).join('');
+  }
+
+  // Зберігаємо/скидаємо поточний слайд
+  const sk = '_tabSlide_' + tab;
+  const maxIdx = Math.max(0, msgs.length - 1);
+  if (!window[sk] || window[sk] > maxIdx) window[sk] = 0;
+  track.style.transition = 'none';
+  track.style.transform   = `translateX(-${window[sk] * 100}%)`;
+
+  // Крапки-навігатори — як в inbox: ховаємо для ≤1 слайду
+  if (dots) {
+    if (msgs.length > 1) {
+      const cur = window[sk];
+      dots.style.display = 'flex';
+      dots.style.justifyContent = 'center'; // горизонтальне центрування
+      dots.innerHTML = Array.from({ length: msgs.length }, (_, i) =>
+        `<div style="height:3px;width:${i === cur ? 14 : 4}px;border-radius:2px;background:rgba(255,255,255,${i === cur ? '0.75' : '0.22'});transition:width 0.2s,background 0.2s"></div>`
+      ).join('');
+    } else {
+      dots.style.display = 'none';
+    }
+  }
+
+  // Свайп — ініціалізуємо один раз
+  const slider = document.getElementById('owl-tab-slider-' + tab);
+  if (slider && !slider._swipeReady) {
+    slider._swipeReady = true;
+    slider.style.touchAction = 'pan-y'; // браузер керує вертикаллю, JS — горизонталлю
+    setupTabBoardSwipe(tab, slider, track, dots);
+  }
+}
+
+function setupTabBoardSwipe(tab, slider, track, dots) {
+  const sk = '_tabSlide_' + tab;
+  let startX = 0, startY = 0, locked = false, dx = 0;
+
+  const updateDots = (next) => {
+    if (dots && dots.style.display !== 'none') {
+      [...dots.children].forEach((d, i) => {
+        d.style.width      = i === next ? '14px' : '4px';
+        d.style.background = `rgba(255,255,255,${i === next ? '0.75' : '0.22'})`;
+      });
+    }
+  };
+
+  slider.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    locked = false; dx = 0;
+    track.style.transition = 'none';
+  }, { passive: true });
+
+  slider.addEventListener('touchmove', e => {
+    const cx = e.touches[0].clientX;
+    const cy = e.touches[0].clientY;
+    const adx = Math.abs(cx - startX);
+    const ady = Math.abs(cy - startY);
+    if (!locked && adx < 8 && ady < 8) return;
+    if (!locked) {
+      if (ady > adx) return; // вертикаль — не перехоплюємо
+      locked = true;
+    }
+    // Заблокований горизонтальний свайп — перехоплюємо
+    e.preventDefault();
+    e.stopPropagation();
+    dx = cx - startX;
+    const msgs = getTabBoardMsgs(tab);
+    const cur  = window[sk] || 0;
+    const base = -cur * 100;
+    const pct  = (dx / slider.offsetWidth) * 100;
+    let offset = base + pct;
+    if (cur === 0 && dx > 0) offset = base + pct * 0.25; // гума на першому
+    if (cur >= msgs.length - 1 && dx < 0) offset = base + pct * 0.25; // гума на останньому
+    track.style.transform = `translateX(${offset}%)`;
+  }, { passive: false }); // passive:false щоб preventDefault спрацював
+
+  const settle = () => {
+    if (!locked) return;
+    const msgs = getTabBoardMsgs(tab);
+    const cur  = window[sk] || 0;
+    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    let next = cur;
+    if (dx < -40 && cur < msgs.length - 1) next = cur + 1;
+    else if (dx > 40 && cur > 0) next = cur - 1;
+    window[sk] = next;
+    track.style.transform = `translateX(-${next * 100}%)`;
+    updateDots(next);
+    locked = false; dx = 0;
+  };
+
+  slider.addEventListener('touchend', settle, { passive: true });
+  slider.addEventListener('touchcancel', () => {
+    // Скидаємо на поточний слайд без переходу
+    if (!locked) return;
+    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    track.style.transform = `translateX(-${(window[sk] || 0) * 100}%)`;
+    locked = false; dx = 0;
+  }, { passive: true });
+}
+
+function getTabBoardContext(tab) {
+  const parts = [];
+  try { const ctx = getAIContext(); if (ctx) parts.push(ctx); } catch(e) {}
+
+  if (tab === 'tasks') {
+    const tasks = getTasks();
+    const active = tasks.filter(t => t.status === 'active');
+    const now = Date.now();
+    const stuck = active.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
+    if (stuck.length > 0) parts.push(`[ВАЖЛИВО] Задачі без прогресу 3+ дні: ${stuck.map(t => '"' + t.title + '"').join(', ')}`);
+    parts.push(`Активних задач: ${active.length}, закрито: ${tasks.filter(t => t.status === 'done').length}`);
+    // Quit звички
+    const allHabits = getHabits();
+    const quitHabits = allHabits.filter(h => h.type === 'quit');
+    if (quitHabits.length > 0) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const quitInfo = quitHabits.map(h => {
+        const s = getQuitStatus(h.id);
+        const heldToday = s.lastHeld === todayStr;
+        return `"${h.name}": стрік ${s.streak || 0} дн${heldToday ? ' ✓' : ' (не відмічено сьогодні)'}`;
+      });
+      parts.push(`Челенджі "Кинути": ${quitInfo.join('; ')}`);
+      const notHeld = quitHabits.filter(h => getQuitStatus(h.id).lastHeld !== todayStr);
+      if (notHeld.length > 0) parts.push(`[ВАЖЛИВО] Не відмічено сьогодні: ${notHeld.map(h => '"' + h.name + '"').join(', ')}`);
+    }
+  }
+
+  if (tab === 'notes') {
+    const notes = getNotes();
+    const byFolder = {};
+    notes.forEach(n => { const f = n.folder || 'Загальне'; byFolder[f] = (byFolder[f] || 0) + 1; });
+    parts.push(`Нотатки: ${notes.length} записів. Папки: ${Object.entries(byFolder).map(([f, c]) => f + '(' + c + ')').join(', ') || 'немає'}`);
+  }
+
+  if (tab === 'me') {
+    const habits = getHabits();
+    const buildHabits = habits.filter(h => h.type !== 'quit');
+    const quitHabits = habits.filter(h => h.type === 'quit');
+    const log = getHabitLog();
+    const today = new Date().toDateString();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayDow = (new Date().getDay() + 6) % 7;
+    const todayH = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+    const doneToday = todayH.filter(h => !!log[today]?.[h.id]).length;
+    if (buildHabits.length > 0) {
+      const streaks = buildHabits.map(h => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
+      parts.push(`Звички сьогодні: ${doneToday}/${todayH.length}. Стріки: ${streaks.filter(s => s.streak >= 2).map(s => s.name + '🔥' + s.streak).join(', ') || 'немає'}`);
+    }
+    if (quitHabits.length > 0) {
+      const quitInfo = quitHabits.map(h => {
+        const s = getQuitStatus(h.id);
+        return `"${h.name}": ${s.streak || 0} дн без зривів`;
+      });
+      parts.push(`Челенджі: ${quitInfo.join(', ')}`);
+    }
+    const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    parts.push(`Записів за тиждень: ${inbox.filter(i => i.ts > weekAgo).length}. Задач активних: ${getTasks().filter(t => t.status === 'active').length}`);
+  }
+
+  if (tab === 'evening') {
+    const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+    const todayStr = new Date().toDateString();
+    const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === todayStr);
+    const summary = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+    const hour = new Date().getHours();
+    parts.push(`Моменти сьогодні: ${todayMoments.length}. Підсумок дня: ${hasSummary ? 'є' : 'ще не записано'}.`);
+    if (hour >= 20 && !hasSummary) parts.push('[ВАЖЛИВО] Вечір — підсумок ще не записано.');
+    const tasks = getTasks().filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 24*60*60*1000);
+    if (tasks.length > 0) parts.push(`Задач закрито сьогодні: ${tasks.length}`);
+  }
+
+  if (tab === 'finance') {
+    try { const finCtx = getFinanceContext(); if (finCtx) parts.push(finCtx); } catch(e) {}
+  }
+
+  return parts.filter(Boolean).join('\n\n');
+}
+
+function checkTabBoardTrigger(tab) {
+  if (tab === 'tasks') {
+    const tasks = getTasks().filter(t => t.status === 'active');
+    if (tasks.length === 0) return false;
+    const now = Date.now();
+    const stuck = tasks.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
+    return stuck.length > 0;
+  }
+  if (tab === 'notes') return getNotes().length > 0;
+  if (tab === 'me') return getHabits().length > 0 || getTasks().length > 0;
+  if (tab === 'evening') return true;
+  if (tab === 'finance') {
+    try { return getFinance().length > 0; } catch { return false; }
+  }
+  return true;
+}
+
+let _tabBoardGenerating = {};
+
+async function generateTabBoardMessage(tab) {
+  if (_tabBoardGenerating[tab]) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  _tabBoardGenerating[tab] = true;
+
+  const context = getTabBoardContext(tab);
+  const tabLabels = { tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси' };
+  const existing = getTabBoardMsg(tab);
+  const recentText = existing ? existing.text : '';
+
+  const _now = new Date();
+  const _hour = _now.getHours();
+  const _timeOfDay = _hour < 6 ? 'ніч' : _hour < 12 ? 'ранок' : _hour < 18 ? 'день' : 'вечір';
+  const _timeStr = _now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+
+  const systemPrompt = getOWLPersonality() + `
+
+Зараз: ${_timeStr} (${_timeOfDay}). Враховуй час доби у повідомленні.
+
+Ти пишеш КОРОТКЕ проактивне повідомлення для табло у вкладці "${tabLabels[tab] || tab}". Це НЕ відповідь на запит — це твоя ініціатива.
+
+ПРАВИЛА:
+- Максимум 2 речення. Коротко і конкретно про цю вкладку.
+- Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти і дані яких немає.
+- НЕ повторюй нещодавнє: "${recentText || 'нічого'}"
+- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
+- chips — 2-3 конкретні факти або дії. Максимум 3 слова кожен. Якщо нічого — [].
+- Відповідай українською.`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Дані: ${context}` }
+        ],
+        max_tokens: 120,
+        temperature: 0.75
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { _tabBoardGenerating[tab] = false; return; }
+    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+    if (!parsed.text) { _tabBoardGenerating[tab] = false; return; }
+    saveTabBoardMsg(tab, { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() });
+    localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+    renderTabBoard(tab);
+  } catch(e) {}
+  _tabBoardGenerating[tab] = false;
+}
+
+function tryTabBoardUpdate(tab) {
+  if (tab === 'inbox') return;
+  renderTabBoard(tab); // завжди показуємо збережені дані
+  const hour = new Date().getHours();
+  if (hour < 5) return; // тихі години — тільки генерація пропускається
+  const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
+  const elapsed = Date.now() - lastTs;
+  const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
+  const firstTime = lastTs === 0;
+  if (firstTime || isNewDay || (elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab))) {
+    generateTabBoardMessage(tab);
+  }
+}
+
+// === UNIVERSAL SWIPE DELETE TRAIL (#32) ===
+const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для всіх вкладок
+
+// Застосовує червоний градієнтний шлейф і рух картки
+// el = картка (рухається), wrapEl = wrapper
+function applySwipeTrail(cardEl, wrapEl, dx) {
+  if (!cardEl) return;
+  cardEl.style.transform = `translateX(${dx}px)`;
+  if (!wrapEl) return;
+
+  const progress = Math.min(1, -dx / 160);
+
+  // Знаходимо або створюємо trail div всередині wrapper
+  let trail = wrapEl.querySelector('.swipe-trail');
+  if (!trail) {
+    trail = document.createElement('div');
+    trail.className = 'swipe-trail';
+    trail.style.cssText = 'position:absolute;top:0;bottom:0;right:0;pointer-events:none;border-radius:inherit;z-index:0';
+    wrapEl.appendChild(trail);
+  }
+
+  if (progress <= 0) {
+    trail.style.background = '';
+    trail.style.width = '0';
+    return;
+  }
+
+  // Ширина шлейфу = скільки відкрилось (картка зсунулась вліво)
+  const trailWidth = Math.round(-dx);
+  const alpha = (0.2 + progress * 0.8).toFixed(2);
+  trail.style.width = trailWidth + 'px';
+  trail.style.background = `linear-gradient(to right, transparent 0%, rgba(239,68,68,${alpha}) 100%)`;
+}
+
+// Скидає шлейф після відпускання
+function clearSwipeTrail(cardEl, wrapEl) {
+  if (cardEl) {
+    cardEl.style.transition = 'transform 0.25s ease';
+    cardEl.style.transform = 'translateX(0)';
+    setTimeout(() => { if (cardEl) cardEl.style.transition = ''; }, 300);
+  }
+  if (wrapEl) {
+    const trail = wrapEl.querySelector('.swipe-trail');
+    if (trail) {
+      trail.style.transition = 'opacity 0.25s ease';
+      trail.style.opacity = '0';
+      setTimeout(() => { if (trail) { trail.style.opacity = ''; trail.style.width = '0'; trail.style.background = ''; trail.style.transition = ''; } }, 300);
+    }
+  }
+}
+
+// === BOARD OVERLAY: фіксований хедер стає абсолютним оверлеєм, контент скролиться за ним ===
+function applyBoardOverlays() {
+  const configs = [
+    { fixedId: 'me-fixed-top',       scrollId: 'me-content' },
+    { fixedId: 'evening-fixed-top',  scrollId: 'evening-scroll' },
+    { fixedId: 'health-fixed-top',   scrollId: 'health-scroll' },
+    { fixedId: 'projects-fixed-top', scrollId: 'projects-scroll' },
+    { fixedId: 'inbox-fixed-top',    scrollId: 'inbox-scroll' },
+    { fixedId: 'fin-fixed-top',      scrollId: 'fin-scroll' },
+  ];
+  configs.forEach(({ fixedId, scrollId }) => {
+    const fixed = document.getElementById(fixedId);
+    const scroll = document.getElementById(scrollId);
+    if (!fixed || !scroll) return;
+    // Хедер стає абсолютним — виходить з flex-flow, overlay поверх скролу
+    fixed.style.position = 'absolute';
+    fixed.style.top = '0';
+    fixed.style.left = '0';
+    fixed.style.right = '0';
+    fixed.style.zIndex = '5';
+    fixed.style.pointerEvents = 'none';
+    // Дочірні елементи хедера перехоплюють дотики (кнопки, табло)
+    [...fixed.children].forEach(c => { c.style.pointerEvents = 'all'; });
+    // Скрол розтягується на всю сторінку, padding-top = висота хедера + 14px відступ
+    const h = fixed.offsetHeight;
+    scroll.style.paddingTop = (h + 14) + 'px';
+  });
+}
+
+// === INIT ===
+function init() {
+  try { setupPWA(); } catch(e) {}
+  try { setupSW(); } catch(e) {}
+  try { setupKeyboardAvoiding(); } catch(e) {}
+  try { setupChatBarSwipe(); } catch(e) {}
+  try { setupDrumTabbar(); } catch(e) {}
+  try { setupSettingsSwipe(); } catch(e) {}
+  // Me chat enter key
+  // me-chat-input Enter handled via onkeydown in HTML
+  try { applyTheme('inbox'); } catch(e) {}
+  // Встановлюємо CSS змінну висоти таббару — після рендеру через rAF
+  try {
+    const tb = document.getElementById('tab-bar');
+    if (tb) {
+      const setTabbarH = () => {
+        const h = tb.offsetHeight;
+        if (h > 0) document.documentElement.style.setProperty('--tabbar-h', h + 'px');
+      };
+      // Перший раз — одразу
+      requestAnimationFrame(() => requestAnimationFrame(setTabbarH));
+      // Другий раз — після шрифтів
+      if (document.fonts) document.fonts.ready.then(() => requestAnimationFrame(setTabbarH));
+      // Третій раз — через 500ms як fallback
+      setTimeout(setTabbarH, 500);
+      // Оновлюємо при зміні орієнтації
+      window.addEventListener('resize', setTabbarH, { passive: true });
+    }
+  } catch(e) {}
+  // Force inbox tab active on every load
+  try {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-inbox').classList.add('active');
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab-item[data-tab="inbox"]').classList.add('active');
+  } catch(e) {}
+  try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
+  try { renderInbox(); } catch(e) {}
+  // Рендеримо всі табло одразу — показуємо збережені дані без очікування switchTab
+  try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
+  // Відновлюємо чат Inbox якщо є збережені повідомлення
+  try { restoreChatUI('inbox'); } catch(e) {}
+  // Показуємо inbox bar одразу — він тепер керується як tasks/me/evening
+  try {
+    const inboxBar = document.getElementById('inbox-ai-bar');
+    if (inboxBar) inboxBar.style.display = 'flex';
+  } catch(e) {}
+  try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
+  // Хедери стають overlay над контентом (ефект скролу під табло)
+  try { requestAnimationFrame(() => requestAnimationFrame(applyBoardOverlays)); } catch(e) {}
+  try { setTimeout(applyBoardOverlays, 500); } catch(e) {}
+  setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
+  try { setupAutoEveningSummary(); } catch(e) {}
+  try { cleanupTrash(); } catch(e) {}
+  setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 4000);
+}
+
+function showApp() {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.classList.add('gone'), 400);
+  }
+  try { checkOnboarding(); } catch(e) {}
+}
+
+// === SPLASH → APP ===
+function bootApp() {
+  try { init(); } catch(e) { console.error('init error:', e); }
+  // Show app after brief splash — use both timer and readyState check
+  const delay = document.readyState === 'complete' ? 300 : 500;
+  setTimeout(showApp, delay);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  // Already loaded (e.g. Chrome with cached page)
+  bootApp();
+}
+
+// Fallback: force hide splash after 3s no matter what
+setTimeout(() => {
+  const splash = document.getElementById('splash');
+  if (splash && !splash.classList.contains('gone')) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.classList.add('gone'), 600);
+  }
+}, 3000);
