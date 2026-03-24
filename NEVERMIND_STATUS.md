@@ -45,7 +45,8 @@
 |--------|--------|--------|
 | index.html | 2693 | ⚠️ велике |
 | app-core.js | 2033 | 🔴 > 1500 |
-| app-evening.js | 1838 | 🔴 > 1500 |
+| app-evening-moments.js | 947 | ✅ |
+| app-evening-onboarding.js | 920 | ✅ |
 | app-tasks-core.js | 544 | ✅ |
 | app-habits.js | 1164 | ✅ |
 | app-ai-core.js | 589 | ✅ |
