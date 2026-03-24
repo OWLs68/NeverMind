@@ -233,6 +233,8 @@ function setupKeyboardAvoiding() {
         const chatH = Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
         inboxCw.style.height = chatH + 'px';
         inboxCw.style.maxHeight = chatH + 'px';
+        // Клавіатура стискає чат до compact → скидаємо expanded-стан
+        if (typeof inboxChatExpanded !== 'undefined') inboxChatExpanded = false;
         const inboxMsgs = document.getElementById('inbox-chat-messages');
         if (inboxMsgs) {
           inboxMsgs.style.maxHeight = Math.max(30, chatH - 20) + 'px';
