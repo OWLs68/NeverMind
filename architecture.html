@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeverMind — Архітектура</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --green: #4ade80;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+    --orange: #fb923c;
+    --pink: #f472b6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 16px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 24px 0 12px;
+  }
+
+  /* ── STACK ── */
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+  }
+
+  .stack-layer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .stack-layer .icon {
+    font-size: 18px;
+    min-width: 28px;
+    text-align: center;
+  }
+
+  .stack-layer .info { flex: 1; }
+  .stack-layer .label { font-weight: 600; font-size: 13px; }
+  .stack-layer .detail { font-size: 11px; color: var(--muted); }
+
+  .arrow-down {
+    text-align: center;
+    color: var(--border);
+    font-size: 16px;
+    line-height: 1;
+    margin: 2px 0;
+  }
+
+  /* ── MODULES GRID ── */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 480px) {
+    .modules-grid { grid-template-columns: 1fr; }
+  }
+
+  .module-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .module-card.ok::before { background: var(--green); }
+  .module-card.warn::before { background: var(--yellow); }
+  .module-card.danger::before { background: var(--red); }
+
+  .module-name {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .module-size {
+    font-size: 11px;
+    font-weight: 600;
+    float: right;
+    margin-top: 1px;
+  }
+
+  .module-size.ok { color: var(--green); }
+  .module-size.warn { color: var(--yellow); }
+  .module-size.danger { color: var(--red); }
+
+  .module-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ── FLOW ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-left: 2px solid var(--border);
+    padding-left: 16px;
+    margin-left: 10px;
+    position: relative;
+  }
+
+  .flow-step::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 16px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+  }
+
+  .flow-step:last-child { border-left-color: transparent; }
+
+  .flow-dot {
+    position: absolute;
+    left: -6px;
+    top: 15px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .flow-step .step-title {
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .flow-step .step-detail {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── STORAGE TABLE ── */
+  .storage-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .storage-row {
+    display: flex;
+    gap: 8px;
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 7px 10px;
+    align-items: flex-start;
+  }
+
+  .storage-key {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    min-width: 160px;
+    flex-shrink: 0;
+  }
+
+  .storage-val {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 480px) {
+    .storage-key { min-width: 120px; font-size: 10px; }
+  }
+
+  /* ── DEPLOY PIPELINE ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding: 4px 0;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pipeline-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    text-align: center;
+    min-width: 90px;
+  }
+
+  .pipeline-step .p-icon { font-size: 16px; margin-bottom: 2px; }
+  .pipeline-step .p-name { font-weight: 600; font-size: 11px; }
+  .pipeline-step .p-desc { color: var(--muted); font-size: 10px; }
+
+  .pipeline-arrow {
+    color: var(--muted);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .badge-green { background: rgba(74,222,128,.15); color: var(--green); }
+  .badge-red { background: rgba(248,113,113,.15); color: var(--red); }
+  .badge-yellow { background: rgba(251,191,36,.15); color: var(--yellow); }
+
+  /* ── STAT ROW ── */
+  .stat-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    flex: 1;
+    min-width: 90px;
+  }
+
+  .stat-val {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .updated {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<h1>NeverMind — Архітектура</h1>
+<div class="subtitle">owls68.github.io/NeverMind · v65 задеплоєно · офіційний реліз v33</div>
+
+<div class="stat-row">
+  <div class="stat">
+    <div class="stat-val" style="color:var(--blue)">16 402</div>
+    <div class="stat-label">Рядків коду</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:var(--purple)">10</div>
+    <div class="stat-label">Модулів</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:var(--red)">4</div>
+    <div class="stat-label">Потребують рефакторингу</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" style="color:var(--green)">100%</div>
+    <div class="stat-label">Client-side</div>
+  </div>
+</div>
+
+<!-- TECH STACK -->
+<h2>Технологічний стек</h2>
+<div class="stack">
+  <div class="stack-layer">
+    <div class="icon">📱</div>
+    <div class="info">
+      <div class="label">PWA · Vanilla JS · CSS3</div>
+      <div class="detail">Без фреймворків. Встановлюється як застосунок.</div>
+    </div>
+  </div>
+  <div class="arrow-down">↕</div>
+  <div class="stack-layer">
+    <div class="icon">🧠</div>
+    <div class="info">
+      <div class="label">OpenAI GPT-4o-mini</div>
+      <div class="detail">AI агент OWL — coach / partner / mentor режими</div>
+    </div>
+  </div>
+  <div class="arrow-down">↕</div>
+  <div class="stack-layer">
+    <div class="icon">💾</div>
+    <div class="info">
+      <div class="label">localStorage (nm_* ключі)</div>
+      <div class="detail">Весь стан на клієнті. Бекенду немає. Supabase — наступний крок.</div>
+    </div>
+  </div>
+  <div class="arrow-down">↕</div>
+  <div class="stack-layer">
+    <div class="icon">🚀</div>
+    <div class="info">
+      <div class="label">GitHub Pages</div>
+      <div class="detail">Автодеплой. Claude пушить → merge → продакшн.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODULES -->
+<h2>Модулі <span class="badge badge-green">✅ &lt;1200</span> <span class="badge badge-yellow">⚠ 1200–1500</span> <span class="badge badge-red">🔴 &gt;1500</span></h2>
+<div class="modules-grid">
+
+  <div class="module-card danger">
+    <div class="module-size danger">2033 рядки</div>
+    <div class="module-name">app-core.js</div>
+    <div class="module-desc">Навігація між вкладками, барабан, теми, налаштування, OWL board, trash, PWA</div>
+  </div>
+
+  <div class="module-card danger">
+    <div class="module-size danger">1838 рядків</div>
+    <div class="module-name">app-evening.js</div>
+    <div class="module-desc">Вечірній огляд, моменти дня, вкладка "Я", слайди оновлень, онбординг</div>
+  </div>
+
+  <div class="module-card danger">
+    <div class="module-size danger">1698 рядків</div>
+    <div class="module-name">app-tasks.js</div>
+    <div class="module-desc">Задачі, звички, журнал звичок, fuzzy пошук папок, processUniversalAction</div>
+  </div>
+
+  <div class="module-card danger">
+    <div class="module-size danger">1522 рядки</div>
+    <div class="module-name">app-ai.js</div>
+    <div class="module-desc">callAI, getAIContext, OWL personality, safeAgentReply, памʼять агента</div>
+  </div>
+
+  <div class="module-card warn">
+    <div class="module-size warn">2693 рядки</div>
+    <div class="module-name">index.html</div>
+    <div class="module-desc">SPA shell, CSS дизайн-система, розмітка всіх вкладок, CSS змінні</div>
+  </div>
+
+  <div class="module-card ok">
+    <div class="module-size ok">1117 рядків</div>
+    <div class="module-name">app-notes.js</div>
+    <div class="module-desc">Нотатки, папки, undo/redo, трекінг джерела (inbox / agent / manual)</div>
+  </div>
+
+  <div class="module-card ok">
+    <div class="module-size ok">1108 рядків</div>
+    <div class="module-name">app-finance.js</div>
+    <div class="module-desc">Транзакції, бюджет, прогноз, AI фін-коуч (TTL 24 год)</div>
+  </div>
+
+  <div class="module-card ok">
+    <div class="module-size ok">663 рядки</div>
+    <div class="module-name">app-inbox.js</div>
+    <div class="module-desc">Єдина точка входу. Парсинг префіксів: task/ note/ habit/ finance/ …</div>
+  </div>
+
+  <div class="module-card ok">
+    <div class="module-size ok">604 рядки</div>
+    <div class="module-name">app-projects.js</div>
+    <div class="module-desc">Список проектів, воркспейс, AI бар, interview flow</div>
+  </div>
+
+  <div class="module-card ok">
+    <div class="module-size ok">445 рядків</div>
+    <div class="module-name">app-health.js</div>
+    <div class="module-desc">Картки здоровʼя, щоденні шкали, AI трекінг</div>
+  </div>
+
+</div>
+
+<!-- DATA FLOW -->
+<h2>Потік даних — типовий запис</h2>
+<div class="flow">
+  <div class="flow-step">
+    <div>
+      <div class="step-title">📥 Inbox — єдина точка входу</div>
+      <div class="step-detail">Користувач вводить: "task купити молоко завтра"<br>Або без префіксу → AI сам визначає тип</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div>
+      <div class="step-title">🔍 app-inbox.js — парсинг і роутинг</div>
+      <div class="step-detail">parseInboxInput() зчитує префікс → направляє в потрібний модуль</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div>
+      <div class="step-title">⚙️ Domain модуль — обробка</div>
+      <div class="step-detail">app-tasks.js → processUniversalAction() створює задачу</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div>
+      <div class="step-title">💾 localStorage — збереження</div>
+      <div class="step-detail">nm_tasks оновлюється. Відразу — без серверних запитів.</div>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div>
+      <div class="step-title">🖥 UI — рендер</div>
+      <div class="step-detail">Відповідний модуль перемальовує список.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STORAGE -->
+<h2>Storage (localStorage)</h2>
+<div class="storage-grid">
+  <div class="storage-row">
+    <div class="storage-key">nm_inbox</div>
+    <div class="storage-val">Записи Inbox</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_tasks</div>
+    <div class="storage-val">Задачі</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_habits2</div>
+    <div class="storage-val">Звички (targetCount для множинних)</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_habit_log2</div>
+    <div class="storage-val">Журнал виконання (число, не bool)</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_notes</div>
+    <div class="storage-val">Нотатки (source: inbox / agent / manual)</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_moments</div>
+    <div class="storage-val">Моменти дня (для вечірнього огляду)</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_finance · nm_finance_budget · nm_finance_cats</div>
+    <div class="storage-val">Транзакції, бюджет, категорії</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_health_cards · nm_health_log</div>
+    <div class="storage-val">Картки здоровʼя, щоденний лог</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_projects</div>
+    <div class="storage-val">Проекти</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_settings</div>
+    <div class="storage-val">Профіль, мова, валюта, owl_mode</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_memory · nm_memory_ts</div>
+    <div class="storage-val">Памʼять агента OWL</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_chat_{tab}</div>
+    <div class="storage-val">Чати вкладок (Health / Projects — не зберігаються)</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_task_chat_{id}</div>
+    <div class="storage-val">Чат окремої задачі</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_fin_coach_{period}</div>
+    <div class="storage-val">Порада OWL · TTL 24 год</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_active_tabs</div>
+    <div class="storage-val">Активні вкладки барабана</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_owl_board · _ts · _said · _seen</div>
+    <div class="storage-val">OWL табло (повідомлення, таймстемп, стан)</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_trash</div>
+    <div class="storage-val">Видалені записи · TTL 7 днів</div>
+  </div>
+  <div class="storage-row">
+    <div class="storage-key">nm_error_log</div>
+    <div class="storage-val">JS помилки</div>
+  </div>
+</div>
+
+<!-- DEPLOY -->
+<h2>Деплой пайплайн</h2>
+<div class="pipeline">
+  <div class="pipeline-step">
+    <div class="p-icon">💬</div>
+    <div class="p-name">Claude Code</div>
+    <div class="p-desc">Пише і пушить</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-step">
+    <div class="p-icon">🌿</div>
+    <div class="p-name">claude/* гілка</div>
+    <div class="p-desc">Тимчасова гілка</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-step">
+    <div class="p-icon">⚙️</div>
+    <div class="p-name">GitHub Actions</div>
+    <div class="p-desc">auto-merge.yml</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-step">
+    <div class="p-icon">🔀</div>
+    <div class="p-name">main гілка</div>
+    <div class="p-desc">Автозлиття</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-step">
+    <div class="p-icon">🌐</div>
+    <div class="p-name">GitHub Pages</div>
+    <div class="p-desc">Продакшн</div>
+  </div>
+</div>
+
+<!-- ROADMAP -->
+<h2>Наступні кроки</h2>
+<div class="stack">
+  <div class="stack-layer">
+    <div class="icon">🔴</div>
+    <div class="info">
+      <div class="label">Офіційний реліз</div>
+      <div class="detail">Оновити UPDATE_VERSION і UPDATE_SLIDES в index.html (зараз застрягло на v33)</div>
+    </div>
+  </div>
+  <div class="stack-layer">
+    <div class="icon">🔴</div>
+    <div class="info">
+      <div class="label">Supabase — Етап 1</div>
+      <div class="detail">Хмарне сховище, авторизація, синхронізація між пристроями</div>
+    </div>
+  </div>
+  <div class="stack-layer">
+    <div class="icon">🔴</div>
+    <div class="info">
+      <div class="label">Supabase — Етап 2</div>
+      <div class="detail">Push-сповіщення, активний агент</div>
+    </div>
+  </div>
+  <div class="stack-layer">
+    <div class="icon">🟡</div>
+    <div class="info">
+      <div class="label">Рефакторинг великих модулів</div>
+      <div class="detail">app-core, app-ai, app-evening, app-tasks — всі перевищують 1500 рядків</div>
+    </div>
+  </div>
+  <div class="stack-layer">
+    <div class="icon">🟡</div>
+    <div class="info">
+      <div class="label">Геймфікація</div>
+      <div class="detail">Рівні, бали, бейджі</div>
+    </div>
+  </div>
+</div>
+
+<div class="updated">
+  Оновлено: 24.03.2026 · <a href="https://owls68.github.io/NeverMind" target="_blank">Відкрити застосунок →</a>
+</div>
+
+</body>
+</html>
