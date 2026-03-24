@@ -92,12 +92,19 @@ function switchTab(tab) {
     if (!bar) return;
     const show = t === tab;
     bar.style.display = show ? 'flex' : 'none';
-    // Якщо вкладка стала неактивною — закриваємо вікно чату
     if (!show) {
-      const cw = bar.querySelector('.ai-bar-chat-window');
-      if (cw) cw.classList.remove('open');
+      // Закриваємо вікно чату (крім inbox — воно завжди відкрите)
+      if (t !== 'inbox') {
+        const cw = bar.querySelector('.ai-bar-chat-window');
+        if (cw) cw.classList.remove('open');
+      }
     }
   });
+  // Inbox чат завжди відкритий
+  if (tab === 'inbox') {
+    const inboxCw = document.getElementById('inbox-chat-window');
+    if (inboxCw) requestAnimationFrame(() => inboxCw.classList.add('open'));
+  }
 
   // Tab-specific render
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
@@ -1671,6 +1678,7 @@ function applyBoardOverlays() {
     { fixedId: 'health-fixed-top',   scrollId: 'health-scroll' },
     { fixedId: 'projects-fixed-top', scrollId: 'projects-scroll' },
     { fixedId: 'inbox-fixed-top',    scrollId: 'inbox-scroll' },
+    { fixedId: 'fin-fixed-top',      scrollId: 'fin-scroll' },
   ];
   configs.forEach(({ fixedId, scrollId }) => {
     const fixed = document.getElementById(fixedId);
@@ -1685,9 +1693,9 @@ function applyBoardOverlays() {
     fixed.style.pointerEvents = 'none';
     // Дочірні елементи хедера перехоплюють дотики (кнопки, табло)
     [...fixed.children].forEach(c => { c.style.pointerEvents = 'all'; });
-    // Скрол розтягується на всю сторінку, padding-top = висота хедера
+    // Скрол розтягується на всю сторінку, padding-top = висота хедера + 14px відступ
     const h = fixed.offsetHeight;
-    scroll.style.paddingTop = h + 'px';
+    scroll.style.paddingTop = (h + 14) + 'px';
   });
 }
 

@@ -1294,7 +1294,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v49</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v50</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>
@@ -1325,52 +1325,55 @@ body {
 
     <!-- PAGE: TASKS -->
     <div class="page" id="page-tasks">
-      <div class="page-header">
-        <span class="page-title">Продуктивність</span>
-        <div class="header-actions">
-          <button class="icon-btn" id="prod-add-btn" onclick="openAddTask()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-          <button class="icon-btn" onclick="openHelp('tasks')">?</button>
-          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+      <!-- Sticky header: заголовок + табло + перемикач вкладок -->
+      <div style="position:sticky;top:0;z-index:10;background:#fdb87a">
+        <div class="page-header" style="position:relative;top:auto">
+          <span class="page-title">Продуктивність</span>
+          <div class="header-actions">
+            <button class="icon-btn" id="prod-add-btn" onclick="openAddTask()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button class="icon-btn" onclick="openHelp('tasks')">?</button>
+            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+          </div>
         </div>
-      </div>
 
-      <!-- OWL TAB BOARD: TASKS -->
-      <div id="owl-tab-board-tasks" style="margin:8px 14px 6px">
-        <div class="tab-board-inner" style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div id="owl-tab-pulse-tasks" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-              <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
+        <!-- OWL TAB BOARD: TASKS -->
+        <div id="owl-tab-board-tasks" style="margin:8px 14px 0">
+          <div class="tab-board-inner" style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div id="owl-tab-pulse-tasks" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
+                <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
+              </div>
+            </div>
+            <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
+            <div id="owl-tab-chips-tasks" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+          </div>
+        </div>
+
+        <!-- Inner tabs: Задачі / Звички -->
+        <div style="padding:8px 0 6px;background:linear-gradient(to bottom,#fdb87a 80%,transparent)">
+          <div style="display:flex;margin:0 14px;gap:8px">
+            <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
+              style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:white;border:2px solid rgba(234,88,12,0.2);box-shadow:0 2px 10px rgba(234,88,12,0.1);transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+                <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
+                <div id="prod-tab-tasks-count" style="font-size:18px;font-weight:800;color:#ea580c;line-height:1">0</div>
+              </div>
+              <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.35)" id="prod-tab-tasks-sub">активних</div>
+            </div>
+            <div id="prod-tab-habits" onclick="switchProdTab('habits')"
+              style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:rgba(255,255,255,0.4);border:2px solid transparent;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+                <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
+                <div id="prod-tab-habits-count" style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3);line-height:1">0</div>
+              </div>
+              <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">сьогодні</div>
             </div>
           </div>
-          <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
-          <div id="owl-tab-chips-tasks" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
         </div>
-      </div>
-
-      <!-- Inner tabs: Задачі / Звички -->
-      <div style="position:sticky;top:0;z-index:9;padding:4px 0 6px;background:linear-gradient(to bottom,rgb(253,184,122) 80%,transparent);margin-bottom:2px">
-      <div style="display:flex;margin:0 14px;gap:8px">
-        <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
-          style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:white;border:2px solid rgba(234,88,12,0.2);box-shadow:0 2px 10px rgba(234,88,12,0.1);transition:all 0.2s;-webkit-tap-highlight-color:transparent">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-            <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
-            <div id="prod-tab-tasks-count" style="font-size:18px;font-weight:800;color:#ea580c;line-height:1">0</div>
-          </div>
-          <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.35)" id="prod-tab-tasks-sub">активних</div>
-        </div>
-        <div id="prod-tab-habits" onclick="switchProdTab('habits')"
-          style="flex:1;border-radius:16px;padding:10px 12px;cursor:pointer;background:rgba(255,255,255,0.4);border:2px solid transparent;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-            <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
-            <div id="prod-tab-habits-count" style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3);line-height:1">0</div>
-          </div>
-          <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">сьогодні</div>
-        </div>
-      </div>
       </div>
 
       <!-- TASKS SUB-PAGE -->
@@ -1407,19 +1410,21 @@ body {
 
     <!-- PAGE: NOTES -->
     <div class="page" id="page-notes">
-      <div class="page-header">
-        <span class="page-title">Нотатки</span>
-        <div class="header-actions">
-          <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-          <button class="icon-btn" onclick="openHelp('notes')">?</button>
-          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+      <!-- Sticky header: заголовок + табло -->
+      <div style="position:sticky;top:0;z-index:10;background:#fed7aa;padding-bottom:10px">
+        <div class="page-header" style="position:relative;top:auto">
+          <span class="page-title">Нотатки</span>
+          <div class="header-actions">
+            <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button class="icon-btn" onclick="openHelp('notes')">?</button>
+            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+          </div>
         </div>
-      </div>
 
-      <!-- OWL TAB BOARD: NOTES -->
-      <div id="owl-tab-board-notes" style="margin:0 14px 8px">
+        <!-- OWL TAB BOARD: NOTES -->
+        <div id="owl-tab-board-notes" style="margin:0 14px 0">
         <div class="tab-board-inner" style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
           <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1431,7 +1436,8 @@ body {
           <div id="owl-tab-text-notes" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
           <div id="owl-tab-chips-notes" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
         </div>
-      </div>
+        </div><!-- /owl-tab-board-notes -->
+      </div><!-- /sticky header -->
 
       <!-- AI suggestion banner -->
       <div id="notes-ai-banner" style="display:none;margin:0 14px 10px;background:rgba(26,10,46,0.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px">
@@ -1689,18 +1695,35 @@ body {
 
     <!-- PAGE: FINANCE -->
     <div class="page" id="page-finance" style="display:flex;flex-direction:column;height:100%">
-      <div class="page-header">
-        <span class="page-title">Фінанси</span>
-        <div class="header-actions">
-          <button class="icon-btn" onclick="openAddTransaction()" style="font-size:20px;font-weight:300;color:rgba(30,16,64,0.5)">+</button>
-          <button class="icon-btn" onclick="openHelp('finance')">?</button>
-          <button class="icon-btn" onclick="openSettings()">⚙️</button>
+
+      <!-- FIXED TOP: header + OWL board -->
+      <div id="fin-fixed-top" style="flex-shrink:0;padding:0 14px">
+        <div class="page-header" style="padding-left:0;padding-right:0">
+          <span class="page-title">Фінанси</span>
+          <div class="header-actions">
+            <button class="icon-btn" onclick="openAddTransaction()" style="font-size:20px;font-weight:300;color:rgba(30,16,64,0.5)">+</button>
+            <button class="icon-btn" onclick="openHelp('finance')">?</button>
+            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+          </div>
         </div>
-      </div>
+
+        <!-- OWL TAB BOARD: FINANCE -->
+        <div id="owl-tab-board-finance" style="margin-bottom:10px">
+          <div style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div id="owl-tab-pulse-finance" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
+                <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; фінанси</span>
+              </div>
+            </div>
+            <div id="owl-tab-text-finance" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
+            <div id="owl-tab-chips-finance" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
+          </div>
+        </div>
+      </div><!-- /fin-fixed-top -->
 
       <div id="fin-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 34px)">
-        <!-- OWL TAB BOARD: FINANCE — sticky всередині скролу -->
-        <div id="owl-tab-board-finance" style="display:none;position:-webkit-sticky;position:sticky;top:0;z-index:5;padding-bottom:10px"></div>
 
         <!-- Перемикач тип: Витрати / Доходи / Баланс -->
         <div style="display:flex;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px;margin-bottom:12px">
@@ -1773,7 +1796,7 @@ body {
 
 <!-- AI BARS — поза .page щоб position:fixed працював на iOS -->
 <div id="inbox-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
-  <div class="ai-bar-chat-window" id="inbox-chat-window">
+  <div class="ai-bar-chat-window open" id="inbox-chat-window">
     <div class="ai-bar-chat-handle" onclick="closeChatBar('inbox')"></div>
     <div class="ai-bar-messages" id="inbox-chat-messages">
       <div style="display:flex">
@@ -1788,7 +1811,6 @@ body {
     </button>
     <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
       oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('inbox')"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendToAI()}"></textarea>
     <!-- Мікрофон (неактивний) -->
     <button style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:0.5" disabled>
