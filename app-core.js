@@ -1271,9 +1271,25 @@ function setupKeyboardAvoiding() {
         // chatH = vv.height - barBottom - inputH - safeAreaTop
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
-          const chatH = Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
-          chatWin.style.height = chatH + 'px';
-          chatWin.style.maxHeight = chatH + 'px';
+          const tab = b.id.replace('-ai-bar', '');
+          const state = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})[tab];
+          if (state === 'b') {
+            // Клавіатура з'явилась поки стан B → авто-колапс до A
+            if (typeof _tabChatState !== 'undefined') _tabChatState[tab] = 'a';
+            const aH = typeof _getTabChatAHeight === 'function'
+              ? _getTabChatAHeight(tab)
+              : Math.max(150, vv.height - (keyboardHeight + 8) - 64 - 60);
+            chatWin.style.transition = 'height 0.3s cubic-bezier(0.32,0.72,0,1)';
+            chatWin.style.height = aH + 'px';
+            chatWin.style.maxHeight = aH + 'px';
+            setTimeout(() => chatWin.style.transition = '', 300);
+          } else {
+            const chatH = typeof _getTabChatAHeight === 'function'
+              ? _getTabChatAHeight(tab)
+              : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+            chatWin.style.height = chatH + 'px';
+            chatWin.style.maxHeight = chatH + 'px';
+          }
         }
       });
     } else {
@@ -1293,9 +1309,31 @@ function setupKeyboardAvoiding() {
         b.style.bottom = (tbH + 4) + 'px';
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
-          // Перераховуємо висоту для позиції без клавіатури
           const tab = b.id.replace('-ai-bar', '');
-          try { updateChatWindowHeight(tab); } catch(e) {}
+          const state = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})[tab];
+          if (state === 'b') {
+            // Стан B: перераховуємо до повної висоти без клавіатури
+            try {
+              const bH = typeof _getTabChatBHeight === 'function'
+                ? _getTabChatBHeight(tab)
+                : null;
+              if (bH) {
+                chatWin.style.height = bH + 'px';
+                chatWin.style.maxHeight = bH + 'px';
+              } else { updateChatWindowHeight(tab); }
+            } catch(e) {}
+          } else if (state === 'a') {
+            // Стан A: compact висота без клавіатури (обмежена)
+            try {
+              const aH = typeof _getTabChatAHeight === 'function'
+                ? _getTabChatAHeight(tab)
+                : null;
+              if (aH) {
+                chatWin.style.height = aH + 'px';
+                chatWin.style.maxHeight = aH + 'px';
+              } else { updateChatWindowHeight(tab); }
+            } catch(e) {}
+          }
         } else if (chatWin) {
           chatWin.style.height = '';
           chatWin.style.maxHeight = '';

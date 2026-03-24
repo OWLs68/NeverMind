@@ -512,9 +512,16 @@ function openChatBar(tab) {
 
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) requestAnimationFrame(() => {
-    // Розраховуємо висоту до відкриття — від низу board до верху input
-    try { updateChatWindowHeight(tab); } catch(e) {}
+    // Відкриваємо в стані A (compact)
+    const h = tab !== 'inbox' ? _getTabChatAHeight(tab) : null;
+    if (h !== null) {
+      chatWin.style.height = h + 'px';
+      chatWin.style.maxHeight = h + 'px';
+    } else {
+      try { updateChatWindowHeight(tab); } catch(e) {}
+    }
     chatWin.classList.add('open');
+    if (tab !== 'inbox') _tabChatState[tab] = 'a';
   });
 }
 
@@ -538,6 +545,7 @@ function closeChatBar(tab) {
 
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.remove('open');
+  _tabChatState[tab] = undefined;
 
   // Знімаємо фокус але НЕ очищуємо текст — користувач може повернутись
   const inputs = bar.querySelectorAll('input, textarea');
@@ -560,7 +568,7 @@ function closeAllChatBars(resetActive = true) {
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
     // Inbox: не закриваємо вікно чату (воно завжди відкрите)
-    if (chatWin && t !== 'inbox') chatWin.classList.remove('open');
+    if (chatWin && t !== 'inbox') { chatWin.classList.remove('open'); _tabChatState[t] = undefined; }
     const inputs = bar.querySelectorAll('input, textarea');
     inputs.forEach(i => i.blur());
   });
@@ -578,6 +586,59 @@ function getInboxExpandHeight() {
   const inputBox = bar.querySelector('.ai-bar-input-box');
   const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 80;
   return Math.max(100, inputTop - 80 - 8); // 80 = header + safe area
+}
+
+// === 3-СТЕЙТНА СИСТЕМА ЧАТУ ДЛЯ НЕ-INBOX ВКЛАДОК ===
+// Стани: undefined/відсутній = closed | 'a' = compact open | 'b' = full expand
+const _tabChatState = {};
+
+// Висота стану A: комфортна мала висота (без клавіатури – обмежена 320px; з клавіатурою – заповнює вільний простір)
+function _getTabChatAHeight(tab) {
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return 220;
+  const inputBox = bar.querySelector('.ai-bar-input-box');
+  const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 100;
+  const boardEl = document.getElementById('owl-tab-board-' + tab);
+  const boardBottom = (boardEl && boardEl.getBoundingClientRect().bottom > 0)
+    ? boardEl.getBoundingClientRect().bottom + 8
+    : 80;
+  const kbH = window.visualViewport
+    ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
+  if (kbH > 250) {
+    // Клавіатура активна: заповнюємо простір над нею
+    return Math.max(150, inputTop - boardBottom - 8);
+  }
+  // Без клавіатури: компактна висота до 320px
+  return Math.max(200, Math.min(320, inputTop - boardBottom - 8));
+}
+
+// Висота стану B: від шапки екрана до поля вводу (повний розгорт)
+function _getTabChatBHeight(tab) {
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return 400;
+  const inputBox = bar.querySelector('.ai-bar-input-box');
+  const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 100;
+  return Math.max(250, inputTop - 80 - 8);
+}
+
+// Відкрити чат у стані A БЕЗ клавіатури (жест свайп вгору від input)
+function openChatBarNoKeyboard(tab) {
+  if (_tabChatState[tab]) return; // вже відкрито
+  // Закриваємо інші бари
+  ['tasks','me','evening','finance','health','projects'].forEach(t => {
+    if (t !== tab) closeChatBar(t);
+  });
+  activeChatBar = tab;
+  const bar = document.getElementById(tab + '-ai-bar');
+  if (!bar) return;
+  restoreChatUI(tab);
+  const chatWin = bar.querySelector('.ai-bar-chat-window');
+  if (!chatWin) return;
+  const h = _getTabChatAHeight(tab);
+  chatWin.style.height = h + 'px';
+  chatWin.style.maxHeight = h + 'px';
+  chatWin.classList.add('open');
+  _tabChatState[tab] = 'a';
 }
 
 // Свайп вниз по чат-вікну щоб закрити
@@ -617,6 +678,13 @@ function setupChatBarSwipe() {
           chatWin.style.height = inboxCompactH + 'px'; // переводимо з auto → px
         }
         chatWin.style.transform = 'translateY(0)';
+      } else {
+        // Non-inbox: фіксуємо поточну висоту як px (потрібно для анімації A↔B)
+        if (_tabChatState[tab]) {
+          const curH = chatWin.offsetHeight;
+          chatWin.style.height = curH + 'px';
+        }
+        chatWin.style.transform = 'translateY(0)';
       }
     }, { passive: true });
 
@@ -653,18 +721,42 @@ function setupChatBarSwipe() {
         return;
       }
 
-      // --- ІНШІ ВКЛАДКИ: тільки свайп вниз ---
-      if (isDragging) {
+      // --- ІНШІ ВКЛАДКИ: 3-стейтна система ---
+      const kbOff = !(window.visualViewport && (window.innerHeight - window.visualViewport.height) > 250);
+      const state = _tabChatState[tab];
+
+      if (state === 'b') {
+        // Стан B: свайп вниз → стискаємо (з опором)
+        if (!isDragging) {
+          if (absDy < 8) return;
+          if (dx > absDy * 1.5) return;
+          isDragging = true;
+        }
         if (dy <= 0) { chatWin.style.transform = 'translateY(0)'; return; }
-        chatWin.style.transform = `translateY(${dy}px)`;
-        chatWin.style.opacity = Math.max(0, 1 - dy / 300).toFixed(2);
+        chatWin.style.transform = `translateY(${Math.min(dy * 0.7, 140)}px)`;
+        chatWin.style.opacity = Math.max(0.7, 1 - dy / 400).toFixed(2);
         return;
       }
-      if (dy <= 0) return;
-      if (dx > dy * 1.5) return;
-      isDragging = true;
-      chatWin.style.transform = `translateY(${dy}px)`;
-      chatWin.style.opacity = Math.max(0, 1 - dy / 300).toFixed(2);
+
+      // Стан A: свайп вгору (без клавіатури) → розгортаємо; свайп вниз → закриваємо
+      if (!isDragging) {
+        if (absDy < 8) return;
+        if (dx > absDy * 1.5) return;
+        isDragging = true;
+      }
+      if (dy < 0 && kbOff) {
+        // Вгору: збільшуємо висоту (A → до B)
+        const maxH = _getTabChatBHeight(tab);
+        const startH = parseFloat(chatWin.style.height) || chatWin.offsetHeight;
+        chatWin.style.height = Math.min(maxH, startH - dy) + 'px';
+        chatWin.style.transform = 'translateY(0)';
+        chatWin.style.opacity = '1';
+        return;
+      }
+      if (dy > 0) {
+        chatWin.style.transform = `translateY(${dy}px)`;
+        chatWin.style.opacity = Math.max(0, 1 - dy / 280).toFixed(2);
+      }
     }, { passive: true });
 
     // Cleanup при перериванні жесту (вихід з застосунку, дзвінок тощо)
@@ -760,15 +852,50 @@ function setupChatBarSwipe() {
         return;
       }
 
-      // === ІНШІ ВКЛАДКИ ===
-      if (!isDragging) {
-        chatWin.style.transition = '';
-        chatWin.style.transform = '';
-        chatWin.style.opacity = '';
+      // === ІНШІ ВКЛАДКИ: 3-стейтна логіка ===
+      isDragging = false;
+      const kbOffEnd = !(window.visualViewport && (window.innerHeight - window.visualViewport.height) > 250);
+      const stateEnd = _tabChatState[tab];
+
+      if (stateEnd === 'b') {
+        // Стан B: swipe down → стиснути до A; мало → пружина
+        if (finalDy > 80 || velocity > 0.5) {
+          const aH = _getTabChatAHeight(tab);
+          _tabChatState[tab] = 'a';
+          chatWin.style.transition = 'height 0.32s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
+          chatWin.style.height = aH + 'px';
+          chatWin.style.maxHeight = aH + 'px';
+          chatWin.style.transform = 'translateY(0)';
+          chatWin.style.opacity = '1';
+          setTimeout(() => chatWin.style.transition = '', 320);
+        } else {
+          // Пружина: повертаємо до B-висоти
+          const bH = _getTabChatBHeight(tab);
+          chatWin.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
+          chatWin.style.height = bH + 'px';
+          chatWin.style.transform = 'translateY(0)';
+          chatWin.style.opacity = '1';
+          setTimeout(() => chatWin.style.transition = '', 280);
+        }
         return;
       }
-      chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
-      if (finalDy > 80 || velocity > 0.5) {
+
+      // Стан A
+      if (finalDy < -40 && kbOffEnd) {
+        // Свайп вгору → розгорнути до B
+        const bH = _getTabChatBHeight(tab);
+        _tabChatState[tab] = 'b';
+        chatWin.style.transition = 'height 0.38s cubic-bezier(0.3,0.82,0,1)';
+        chatWin.style.height = bH + 'px';
+        chatWin.style.maxHeight = bH + 'px';
+        chatWin.style.transform = '';
+        chatWin.style.opacity = '1';
+        const msgs = chatWin.querySelector('.ai-bar-messages');
+        if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
+        setTimeout(() => chatWin.style.transition = '', 380);
+      } else if (finalDy > 80 || velocity > 0.5) {
+        // Свайп вниз → закрити
+        chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
         chatWin.style.transform = 'translateY(110%)';
         chatWin.style.opacity = '0';
         setTimeout(() => {
@@ -778,9 +905,14 @@ function setupChatBarSwipe() {
           chatWin.style.opacity = '';
         }, 280);
       } else {
-        snapBack();
+        // Пружина: повертаємо до A-висоти
+        const aH = _getTabChatAHeight(tab);
+        chatWin.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
+        chatWin.style.height = aH + 'px';
+        chatWin.style.transform = 'translateY(0)';
+        chatWin.style.opacity = '1';
+        setTimeout(() => chatWin.style.transition = '', 280);
       }
-      isDragging = false;
     }, { passive: true });
 
     // --- Блок: бар завжди зафіксований — вертикальний свайп заблокований ---
@@ -792,6 +924,33 @@ function setupChatBarSwipe() {
       if (textarea && textarea.contains(e.target)) return;
       e.preventDefault();
     }, { passive: false });
+
+    // --- Свайп ВГОРУ від поля вводу → відкрити чат без клавіатури (тільки не-inbox) ---
+    if (tab !== 'inbox') {
+      const inputBox = bar.querySelector('.ai-bar-input-box');
+      if (inputBox) {
+        let _inStartY = 0, _inSwiping = false;
+        inputBox.addEventListener('touchstart', e => {
+          _inStartY = e.touches[0].clientY;
+          _inSwiping = false;
+        }, { passive: true });
+        inputBox.addEventListener('touchmove', e => {
+          if (_tabChatState[tab]) return; // чат вже відкритий
+          const dy = _inStartY - e.touches[0].clientY; // positive = вгору
+          if (dy > 20) {
+            _inSwiping = true;
+            e.preventDefault(); // блокуємо textarea focus через scroll
+          }
+        }, { passive: false });
+        inputBox.addEventListener('touchend', e => {
+          if (_inSwiping) {
+            _inSwiping = false;
+            e.preventDefault(); // блокуємо tap → onfocus → клавіатура
+            openChatBarNoKeyboard(tab);
+          }
+        }, { passive: false });
+      }
+    }
   });
 
   // --- Тап поза вікном → закрити (але НЕ свайп) ---
