@@ -1747,7 +1747,7 @@ function tryTabBoardUpdate(tab) {
   if (tab === 'inbox') return;
   renderTabBoard(tab); // завжди показуємо збережені дані
   const hour = new Date().getHours();
-  if (hour >= 23 || hour < 7) return; // тихі години — тільки генерація пропускається
+  if (hour < 5) return; // тихі години — тільки генерація пропускається
   const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
   const elapsed = Date.now() - lastTs;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();

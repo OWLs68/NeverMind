@@ -719,7 +719,7 @@ function checkOwlBoardTrigger() {
   const min = now.getMinutes();
 
   // Тихий режим 23:00–7:00
-  if (hour >= 23 || hour < 7) return false;
+  if (hour < 5) return false;
 
   // Ранковий огляд 7:00–9:00 — раз за ранок
   if (hour >= 7 && hour <= 9 && !owlAlreadySaid('morning_brief')) return true;
@@ -1192,7 +1192,7 @@ function startOwlBoardCycle() {
 function tryOwlBoardUpdate() {
   // Тихий режим 23:00–7:00
   const hour = new Date().getHours();
-  if (hour >= 23 || hour < 7) return;
+  if (hour < 5) return;
 
   // Показуємо що є зараз
   const msgs = getOwlBoardMessages();
