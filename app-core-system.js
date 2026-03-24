@@ -142,13 +142,79 @@ function setupPWA() {
 // === SERVICE WORKER ===
 function setupSW() {
   if (!('serviceWorker' in navigator)) return;
-  const swCode = `
-    self.addEventListener('install', e => self.skipWaiting());
-    self.addEventListener('activate', e => clients.claim());
-    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-  `;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+  // Реєструємо повноцінний sw.js для офлайн-кешування
+  navigator.serviceWorker.register('./sw.js').catch(() => {
+    // Fallback: мінімальний SW через blob (без кешування)
+    const swCode = `
+      self.addEventListener('install', e => self.skipWaiting());
+      self.addEventListener('activate', e => clients.claim());
+      self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+    `;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+  });
+}
+
+// === СИНХРОНІЗАЦІЯ МІЖ ВКЛАДКАМИ ===
+// Механізм 1: storage event — браузер сам сповіщає інші вкладки коли localStorage змінився
+// Механізм 2: BroadcastChannel — явна "рація" між вкладками одного сайту
+function setupSync() {
+  // Карта: ключ localStorage → функція рендеру (тільки для активної вкладки)
+  const KEY_RENDER_MAP = {
+    'nm_inbox':           () => { if (currentTab === 'inbox') try { renderInbox(); } catch(e) {} },
+    'nm_tasks':           () => { if (currentTab === 'tasks') try { renderTasks(); updateProdTabCounters(); } catch(e) {} },
+    'nm_habits2':         () => { if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); } catch(e) {} },
+    'nm_habit_log2':      () => {
+                            if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); } catch(e) {}
+                            if (currentTab === 'me')    try { renderMe(); renderMeHabitsStats(); } catch(e) {}
+                          },
+    'nm_notes':           () => { if (currentTab === 'notes') try { renderNotes(); } catch(e) {} },
+    'nm_folders_meta':    () => { if (currentTab === 'notes') try { renderNotes(); } catch(e) {} },
+    'nm_moments':         () => {
+                            if (currentTab === 'me')      try { renderMe(); renderMeHabitsStats(); } catch(e) {}
+                            if (currentTab === 'evening') try { renderEvening(); } catch(e) {}
+                          },
+    'nm_finance':         () => { if (currentTab === 'finance')  try { renderFinance(); } catch(e) {} },
+    'nm_finance_budget':  () => { if (currentTab === 'finance')  try { renderFinance(); } catch(e) {} },
+    'nm_finance_cats':    () => { if (currentTab === 'finance')  try { renderFinance(); } catch(e) {} },
+    'nm_health_cards':    () => { if (currentTab === 'health')   try { renderHealth(); } catch(e) {} },
+    'nm_health_log':      () => { if (currentTab === 'health')   try { renderHealth(); } catch(e) {} },
+    'nm_projects':        () => { if (currentTab === 'projects') try { renderProjects(); } catch(e) {} },
+    'nm_evening_summary': () => { if (currentTab === 'evening')  try { renderEvening(); } catch(e) {} },
+    'nm_evening_mood':    () => { if (currentTab === 'evening')  try { renderEvening(); } catch(e) {} },
+    'nm_settings':        () => { try { applyTheme(currentTab); } catch(e) {} },
+  };
+
+  function handleSyncKey(key) {
+    const fn = KEY_RENDER_MAP[key];
+    if (fn) fn();
+  }
+
+  // --- Механізм 1: storage event ---
+  // Спрацьовує автоматично коли ІНША вкладка змінює localStorage
+  window.addEventListener('storage', e => {
+    if (e.key && e.key.startsWith('nm_')) handleSyncKey(e.key);
+  });
+
+  // --- Механізм 2: BroadcastChannel ---
+  // Дозволяє поточній вкладці надсилати повідомлення іншим
+  let nmChannel = null;
+  try {
+    nmChannel = new BroadcastChannel('nm_sync');
+    nmChannel.onmessage = e => {
+      if (e.data?.key) handleSyncKey(e.data.key);
+    };
+  } catch(e) {}
+
+  // Перехоплюємо localStorage.setItem — при кожному збереженні автоматично
+  // сповіщаємо інші вкладки через BroadcastChannel (без зміни кожної функції збереження)
+  const _origSetItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function(key, value) {
+    _origSetItem(key, value);
+    if (key.startsWith('nm_') && nmChannel) {
+      try { nmChannel.postMessage({ key, ts: Date.now() }); } catch(e) {}
+    }
+  };
 }
 
 function autoResizeTextarea(el) {
@@ -926,6 +992,7 @@ function applyBoardOverlays() {
 function init() {
   try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
+  try { setupSync(); } catch(e) {}
   try { setupKeyboardAvoiding(); } catch(e) {}
   try { setupChatBarSwipe(); } catch(e) {}
   try { setupDrumTabbar(); } catch(e) {}
