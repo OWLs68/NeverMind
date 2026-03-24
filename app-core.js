@@ -395,6 +395,22 @@ function rebuildDrumTabbar() {
   });
 }
 
+// 3D drum: застосовує perspective+rotateY до кожної вкладки відповідно до її позиції
+function applyDrum3D(items, capsule) {
+  const cc = capsule.getBoundingClientRect();
+  const capsuleCenter = cc.left + cc.width / 2;
+  const DRUM_RADIUS = 190; // px — менше = більша кривизна диска
+  items.forEach(item => {
+    const ir = item.getBoundingClientRect();
+    const offset = (ir.left + ir.width / 2) - capsuleCenter;
+    const angle = Math.atan2(offset, DRUM_RADIUS) * (180 / Math.PI);
+    const scale = item.classList.contains('active') ? 1.10
+      : item.classList.contains('near') ? 0.97
+      : item.classList.contains('far')  ? 0.93 : 0.87;
+    item.style.transform = `perspective(500px) rotateY(${angle.toFixed(1)}deg) scale(${scale})`;
+  });
+}
+
 function setupDrumTabbar() {
   const capsule = document.getElementById('drumCapsule');
   const track = document.getElementById('drumTrack');
@@ -460,7 +476,7 @@ function setupDrumTabbar() {
     return best;
   }
 
-  // Оновлює класи active/near/far за відстанню від центру
+  // Оновлює класи active/near/far і 3D-трансформ для ефекту диска-барабана
   function updateVisuals(centerItem) {
     const items = [...track.querySelectorAll('.tab-item[data-tab]')];
     const idx = centerItem ? items.indexOf(centerItem) : -1;
@@ -470,6 +486,7 @@ function setupDrumTabbar() {
       item.classList.toggle('near', d === 1);
       item.classList.toggle('far', d === 2);
     });
+    applyDrum3D(items, capsule);
   }
 
   // Перехід до конкретного item
@@ -479,7 +496,13 @@ function setupDrumTabbar() {
     if (animated) {
       track.style.transition = 'transform 0.25s cubic-bezier(0.32,0.72,0,1)';
       setTX(x);
-      setTimeout(() => { track.style.transition = ''; }, 260);
+      // RAF-петля: оновлюємо 3D-трансформи під час CSS-анімації треку
+      const endTime = Date.now() + 270;
+      (function tick() {
+        updateVisuals(item);
+        if (Date.now() < endTime) requestAnimationFrame(tick);
+        else track.style.transition = '';
+      })();
     } else {
       track.style.transition = '';
       setTX(x);
@@ -523,6 +546,7 @@ function setupDrumTabbar() {
   }
 
   capsule.addEventListener('touchstart', e => {
+    capsule.classList.add('drum-dragging');
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     track.style.transition = 'none';
     // Читаємо реальну позицію з DOM (може бути mid-transition)
@@ -556,6 +580,7 @@ function setupDrumTabbar() {
   }, { passive: true });
 
   capsule.addEventListener('touchend', () => {
+    capsule.classList.remove('drum-dragging');
     if (!isDragging) return;
     isDragging = false;
     if (Math.abs(tx - startTX) < 5) return;
@@ -600,6 +625,12 @@ function updateDrumTabbar(tab) {
   window._drumCurrentX = nx;
   track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
   track.style.transform = `translateX(${nx}px)`;
+  // RAF-петля: оновлюємо 3D-трансформи під час CSS-анімації
+  const endTime = Date.now() + 340;
+  (function tick() {
+    applyDrum3D([...track.querySelectorAll('.tab-item[data-tab]')], capsule);
+    if (Date.now() < endTime) requestAnimationFrame(tick);
+  })();
 }
 
 function applyTheme(tab) {

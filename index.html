@@ -341,7 +341,7 @@ body {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 100;
-  padding: 6px 12px 6px;
+  padding: 12px 12px 6px;
   background: var(--active-tabbar, rgb(243,211,94));
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
@@ -351,23 +351,26 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  overflow: visible;
 }
 /* Капсула барабан */
 .drum-capsule {
   flex: 1;
-  background: rgba(0,0,0,0.10);
-  border: 1.5px solid rgba(255,255,255,0.45);
+  background: rgba(0,0,0,0.12);
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-top: 2.5px solid rgba(255,255,255,0.78); /* яскравий верхній обід — виступаючий диск */
+  border-bottom: 1.5px solid rgba(0,0,0,0.18);    /* темніший нижній обід — глибина */
   border-radius: 20px;
   padding: 4px;
   position: relative;
   overflow: hidden;
-  /* Глибокі внутрішні тіні — ефект заглибленого барабана */
+  margin-top: -10px; /* диск виступає над таб-баром */
+  /* 3D: диск піднятий над поверхнею */
   box-shadow:
-    inset 0 4px 14px rgba(0,0,0,0.22),
-    inset 0 -3px 10px rgba(0,0,0,0.16),
-    inset 4px 0 14px rgba(0,0,0,0.15),
-    inset -4px 0 14px rgba(0,0,0,0.15),
-    0 2px 0 rgba(255,255,255,0.55);
+    0 5px 18px rgba(0,0,0,0.26),
+    0 10px 32px rgba(0,0,0,0.13),
+    0 -2px 6px rgba(0,0,0,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.22);
 }
 /* Тіні по боках капсули — ефект загасання барабана */
 .drum-capsule::before {
@@ -405,18 +408,16 @@ body {
   -webkit-tap-highlight-color: transparent;
   transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
   opacity: 0.55;
-  transform: scale(0.87);
+  /* transform керується через JS для 3D-ефекту барабана */
   /* Клітинки з обох боків — ефект циліндра барабана */
   border-left: 1px solid rgba(255,255,255,0.18);
   border-right: 1px solid rgba(0,0,0,0.10);
 }
 .tab-item.far {
   opacity: 0.7;
-  transform: scale(0.93);
 }
 .tab-item.near {
   opacity: 0.88;
-  transform: scale(0.97);
 }
 .tab-item.active {
   background: white;
@@ -425,7 +426,7 @@ body {
     0 1px 0 rgba(255,255,255,0.95),
     inset 0 1px 0 rgba(255,255,255,0.9);
   opacity: 1;
-  transform: scale(1.10);
+  /* transform: scale + rotateY — керується JS */
   border-left-color: transparent;
   border-right-color: transparent;
 }
@@ -467,6 +468,10 @@ body {
   transition: all 0.2s;
 }
 .drum-plus-btn:active { transform: scale(0.9); }
+/* 3D барабан: вимикаємо CSS-перехід під час перетягування — щоб не лагало */
+.drum-capsule.drum-dragging .tab-item {
+  transition: opacity 0.1s !important;
+}
 
 /* === SETTINGS OVERLAY === */
 #settings-overlay {
