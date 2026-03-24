@@ -1308,9 +1308,22 @@ function setupKeyboardAvoiding() {
   window.visualViewport.addEventListener('resize', update);
   window.visualViewport.addEventListener('scroll', update);
 
-  // Фікс після розблокування телефону — viewport скидається
+  // Фікс після повернення з фону / розблокування — viewport нестабільний ~600ms
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') setTimeout(update, 300);
+    if (document.visibilityState !== 'visible') return;
+    // Очищуємо stuck-стани від незавершених gesture (touchcancel міг не спрацювати)
+    document.querySelectorAll('.ai-bar-chat-window').forEach(cw => {
+      // Скидаємо лише transform/opacity, НЕ height (може бути expanded-стан)
+      if (cw.style.transform && cw.style.transform !== 'translateY(0)' && cw.style.transform !== '') {
+        cw.style.transition = '';
+        cw.style.transform = '';
+        cw.style.opacity = '';
+      }
+    });
+    // iOS viewport стабілізується поступово — запускаємо update кілька разів
+    setTimeout(update, 80);
+    setTimeout(update, 350);
+    setTimeout(update, 750);
   });
 
   // Фікс повторного фокусу: iOS не генерує новий resize якщо viewport вже встановлений
