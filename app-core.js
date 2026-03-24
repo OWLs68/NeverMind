@@ -1248,12 +1248,19 @@ function setupKeyboardAvoiding() {
       // Клавіатура відкрита — ховаємо таббар вниз, піднімаємо бар вгору
       if (aiBar) { aiBar.style.bottom = (keyboardHeight + 8) + 'px'; aiBar.style.left = '12px'; aiBar.style.right = '12px'; }
       // Обмежуємо висоту inbox чату щоб не виходив за видиму зону
+      // Логіка: chatH = vv.height - barBottom - inputH - safeAreaTop
       const inboxCw = document.getElementById('inbox-chat-window');
       if (inboxCw) {
-        const availH = Math.max(80, vv.height - 80);
-        inboxCw.style.maxHeight = availH + 'px';
+        // barBottom = keyboardHeight + 8; inputH ≈ 64; safeAreaTop ≈ 60 (notch + margin)
+        const chatH = Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+        inboxCw.style.height = chatH + 'px';
+        inboxCw.style.maxHeight = chatH + 'px';
         const inboxMsgs = document.getElementById('inbox-chat-messages');
-        if (inboxMsgs) inboxMsgs.style.maxHeight = Math.max(60, availH - 20) + 'px';
+        if (inboxMsgs) {
+          inboxMsgs.style.maxHeight = Math.max(30, chatH - 20) + 'px';
+          // Авто-скрол до останнього повідомлення
+          setTimeout(() => { inboxMsgs.scrollTop = inboxMsgs.scrollHeight; }, 50);
+        }
       }
       // Ховаємо таббар — translateY достатньо великий щоб він пішов за екран
       if (tabBar) { tabBar.style.transform = `translateY(${tbH + keyboardHeight}px)`; tabBar.style.opacity = '0'; tabBar.style.pointerEvents = 'none'; }
@@ -1273,6 +1280,7 @@ function setupKeyboardAvoiding() {
       // Скидаємо обмеження inbox чату
       const inboxCw = document.getElementById('inbox-chat-window');
       if (inboxCw) {
+        inboxCw.style.height = '';
         inboxCw.style.maxHeight = '';
         const inboxMsgs = document.getElementById('inbox-chat-messages');
         if (inboxMsgs) inboxMsgs.style.maxHeight = '';
