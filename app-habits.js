@@ -759,10 +759,13 @@ function confirmQuitRelapse(habitId) {
   const habits = getHabits();
   const h = habits.find(x => x.id === habitId);
   const name = h ? h.name : 'звичку';
-  // Простий confirm на iOS
-  if (window.confirm('Відмітити зрив з "' + name + '"?\nСтрік скинеться.')) {
-    relapseQuitHabit(habitId);
-  }
+  // Зберігаємо стан до зриву щоб можна було скасувати
+  const prevLog = JSON.parse(JSON.stringify(getQuitLog()));
+  relapseQuitHabit(habitId);
+  showUndoToast('Зрив з "' + name + '" — стрік скинуто', () => {
+    saveQuitLog(prevLog);
+    renderProdHabits();
+  });
 }
 
 
