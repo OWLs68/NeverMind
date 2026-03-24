@@ -106,6 +106,7 @@ function switchTab(tab) {
   }
 
   // Tab-specific render
+  if (tab === 'inbox') { try { renderInbox(); } catch(e) {} }
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
   if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
