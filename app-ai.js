@@ -628,13 +628,11 @@ function setupChatBarSwipe() {
       isDragging = false;
     }, { passive: true });
 
-    // --- Блок: бар не рухається при скролі сторінки ---
-    // Блокуємо тільки коли вікно чату ВІДКРИТЕ
+    // --- Блок: бар завжди зафіксований — вертикальний свайп заблокований ---
     bar.addEventListener('touchmove', e => {
-      // Якщо вікно закрите — пропускаємо все наскрізь
-      if (!chatWin.classList.contains('open')) return;
-      // Вікно відкрите — дозволяємо скрол повідомлень і поля
+      // Дозволяємо скрол списку повідомлень
       if (messages && messages.contains(e.target)) return;
+      // Дозволяємо взаємодію з textarea
       const textarea = bar.querySelector('textarea');
       if (textarea && textarea.contains(e.target)) return;
       e.preventDefault();

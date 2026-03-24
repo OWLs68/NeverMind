@@ -21,6 +21,7 @@
 html, body {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
 }
@@ -348,6 +349,7 @@ body {
   transition: transform 0.2s ease, opacity 0.2s ease, background 0.4s ease;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  touch-action: none; /* тільки горизонтальний JS-свайп для барабана */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -879,11 +881,20 @@ body {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   pointer-events: none; /* сам бар прозорий для дотиків */
+  touch-action: none; /* блокуємо будь-який свайп на бар */
 }
 /* тільки поле вводу і вікно чату перехоплюють дотики */
 .ai-bar-new .ai-bar-input-box,
 .ai-bar-new .ai-bar-chat-window.open {
   pointer-events: all;
+}
+/* textarea дозволяємо manipulation (тап/зум для вводу) */
+.ai-bar-new textarea {
+  touch-action: manipulation;
+}
+/* список повідомлень можна скролити вертикально */
+.ai-bar-new .ai-bar-messages {
+  touch-action: pan-y;
 }
 /* Коли вікно закрите — не перехоплює дотики */
 .ai-bar-handle {
@@ -1294,7 +1305,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v50</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v51</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>
