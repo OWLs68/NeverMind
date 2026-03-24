@@ -1267,11 +1267,13 @@ function setupKeyboardAvoiding() {
       newBars.forEach(b => {
         if (!b || b.style.display === 'none') return;
         b.style.bottom = (keyboardHeight + 8) + 'px';
-        // Якщо чат-вікно відкрите — обмежуємо його висоту щоб вміщалось на екрані
+        // Обмежуємо висоту чат-вікна щоб handle лишався видимим
+        // chatH = vv.height - barBottom - inputH - safeAreaTop
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
-          const availH = vv.height - 120; // vv.height вже = екран без клавіатури
-          chatWin.style.maxHeight = Math.max(140, availH) + 'px';
+          const chatH = Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+          chatWin.style.height = chatH + 'px';
+          chatWin.style.maxHeight = chatH + 'px';
         }
       });
     } else {
@@ -1289,9 +1291,15 @@ function setupKeyboardAvoiding() {
       newBars.forEach(b => {
         if (!b) return;
         b.style.bottom = (tbH + 4) + 'px';
-        // Повертаємо висоту чат-вікна
         const chatWin = b.querySelector('.ai-bar-chat-window');
-        if (chatWin) chatWin.style.maxHeight = '';
+        if (chatWin && chatWin.classList.contains('open')) {
+          // Перераховуємо висоту для позиції без клавіатури
+          const tab = b.id.replace('-ai-bar', '');
+          try { updateChatWindowHeight(tab); } catch(e) {}
+        } else if (chatWin) {
+          chatWin.style.height = '';
+          chatWin.style.maxHeight = '';
+        }
       });
     }
   };

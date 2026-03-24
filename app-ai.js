@@ -522,6 +522,20 @@ function closeChatBar(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
 
+  // Inbox: вікно чату завжди відкрите — тільки ховаємо клавіатуру і скидаємо розгорнутість
+  if (tab === 'inbox') {
+    if (inboxChatExpanded) {
+      inboxChatExpanded = false;
+      const cw = document.getElementById('inbox-chat-window');
+      if (cw) { cw.style.height = ''; cw.style.maxHeight = ''; }
+      const msgs = document.getElementById('inbox-chat-messages');
+      if (msgs) msgs.style.maxHeight = '';
+    }
+    bar.querySelectorAll('input, textarea').forEach(i => i.blur());
+    activeChatBar = null;
+    return;
+  }
+
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.remove('open');
 
@@ -545,11 +559,24 @@ function closeAllChatBars(resetActive = true) {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
-    if (chatWin) chatWin.classList.remove('open');
+    // Inbox: не закриваємо вікно чату (воно завжди відкрите)
+    if (chatWin && t !== 'inbox') chatWin.classList.remove('open');
     const inputs = bar.querySelectorAll('input, textarea');
     inputs.forEach(i => i.blur());
   });
   if (resetActive) activeChatBar = null;
+}
+
+// Стан розгорнутості inbox чату (свайп вгору)
+let inboxChatExpanded = false;
+
+// Повна висота inbox чат-вікна = від safe area до поля вводу
+function getInboxExpandHeight() {
+  const bar = document.getElementById('inbox-ai-bar');
+  if (!bar) return 200;
+  const inputBox = bar.querySelector('.ai-bar-input-box');
+  const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 80;
+  return Math.max(100, inputTop - 80 - 8); // 80 = header + safe area
 }
 
 // Свайп вниз по чат-вікну щоб закрити
@@ -597,6 +624,50 @@ function setupChatBarSwipe() {
     }, { passive: true });
 
     chatWin.addEventListener('touchend', e => {
+      const finalDy = e.changedTouches[0].clientY - winStartY;
+      const elapsed = Date.now() - startTime;
+      const velocity = finalDy / elapsed; // px/ms
+
+      // === INBOX: окрема логіка ===
+      if (tab === 'inbox') {
+        // Завжди повертаємо transform (drag-анімація)
+        chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
+        chatWin.style.transform = 'translateY(0)';
+        chatWin.style.opacity = '1';
+        setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; }, 280);
+
+        if (isDragging && (finalDy > 60 || velocity > 0.4)) {
+          // Свайп вниз: ховаємо клавіатуру + стискаємо якщо розгорнутий
+          bar.querySelectorAll('input, textarea').forEach(i => i.blur());
+          if (inboxChatExpanded) {
+            inboxChatExpanded = false;
+            setTimeout(() => {
+              chatWin.style.height = ''; chatWin.style.maxHeight = '';
+              const msgs = document.getElementById('inbox-chat-messages');
+              if (msgs) msgs.style.maxHeight = '';
+            }, 280);
+          }
+        } else if (finalDy < -40) {
+          // Свайп вгору: розгортаємо до максимальної висоти
+          if (!inboxChatExpanded) {
+            inboxChatExpanded = true;
+            const expandH = getInboxExpandHeight();
+            chatWin.style.transition = 'height 0.3s cubic-bezier(0.32,0.72,0,1)';
+            chatWin.style.height = expandH + 'px';
+            chatWin.style.maxHeight = expandH + 'px';
+            const msgs = document.getElementById('inbox-chat-messages');
+            if (msgs) {
+              msgs.style.maxHeight = Math.max(60, expandH - 24) + 'px';
+              setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 300);
+            }
+            setTimeout(() => { chatWin.style.transition = ''; }, 300);
+          }
+        }
+        isDragging = false;
+        return;
+      }
+
+      // === ІНШІ ВКЛАДКИ: стара логіка ===
       if (!isDragging) {
         // Це був тап — повертаємо в початковий стан
         chatWin.style.transition = '';
@@ -604,13 +675,10 @@ function setupChatBarSwipe() {
         chatWin.style.opacity = '';
         return;
       }
-      const dy = e.changedTouches[0].clientY - winStartY;
-      const elapsed = Date.now() - startTime;
-      const velocity = dy / elapsed; // px/ms
       // Вмикаємо transition назад
       chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
       // Закриваємо якщо: пройшли > 80px АБО швидкість > 0.5px/ms
-      if (dy > 80 || velocity > 0.5) {
+      if (finalDy > 80 || velocity > 0.5) {
         chatWin.style.transform = 'translateY(110%)';
         chatWin.style.opacity = '0';
         setTimeout(() => {
