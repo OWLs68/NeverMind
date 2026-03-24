@@ -930,9 +930,9 @@ body {
 .ai-bar-new {
   /* вже визначено вище */
 }
-/* Поле вводу — верхні кути з'єднуються з табло */
+/* Поле вводу — верхні кути більші (вільні), нижні менші (з'єднуються з табаром) */
 .ai-bar-input-box {
-  border-radius: 10px 10px 18px 18px !important;
+  border-radius: 18px 18px 10px 10px !important;
 }
 /* Табло — ширина = ширина бара (left:4px right:4px), нижні кути з'єднуються з полем вводу */
 [id^="owl-tab-board-"], #owl-board-wrap {
@@ -941,7 +941,7 @@ body {
 }
 [id^="owl-tab-board-"] > div,
 [id^="owl-tab-board-"] .tab-board-inner {
-  border-radius: 18px 18px 10px 10px !important;
+  border-radius: 10px 10px 18px 18px !important;
   margin: 0 !important;
 }
 /* Прибираємо відступ між заголовком і табло */
@@ -1289,7 +1289,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v44</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v45</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>
@@ -1467,6 +1467,7 @@ body {
               <span id="me-streak-count" style="font-size:12px;font-weight:900;color:#ea580c">0</span>
               <span style="font-size:10px;font-weight:700;color:rgba(234,88,12,0.6)">днів</span>
             </div>
+            <button class="icon-btn" onclick="openHelp('me')" style="color:rgba(124,74,42,0.5)">?</button>
             <button class="icon-btn" onclick="openSettings()" style="color:rgba(124,74,42,0.5)">⚙️</button>
           </div>
         </div>
@@ -1491,7 +1492,7 @@ body {
       </div>
 
       <!-- SCROLL контент -->
-      <div id="me-content" style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom) + 160px)">
+      <div id="me-content" style="flex:1;overflow-y:auto;padding:10px 14px calc(env(safe-area-inset-bottom) + 160px)">
 
         <!-- Кружечки тижня -->
         <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
