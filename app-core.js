@@ -604,6 +604,8 @@ function setupDrumTabbar() {
 }
 
 function updateDrumTabbar(tab) {
+  // Якщо викликано з snapToItem — позиція вже виставлена, не перезаписувати
+  if (window._drumSuppressReposition) return;
   const track = document.getElementById('drumTrack');
   const capsule = document.getElementById('drumCapsule');
   if (!track || !capsule) return;
