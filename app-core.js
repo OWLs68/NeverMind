@@ -113,6 +113,10 @@ function switchTab(tab) {
 
   // OWL табло для вкладки
   setTimeout(() => { try { tryTabBoardUpdate(tab); } catch(e) {} }, 700);
+  // Оновлюємо висоту overlay після зміни вмісту табло
+  if (['me','evening','health','projects','inbox'].includes(tab)) {
+    setTimeout(() => { try { applyBoardOverlays(); } catch(e) {} }, 750);
+  }
 }
 
 // === АКТИВНІ ВКЛАДКИ (вибір через кнопку +) ===
@@ -1413,13 +1417,13 @@ function renderTabBoard(tab) {
   const msg = getTabBoardMsg(tab);
   const board = document.getElementById('owl-tab-board-' + tab);
   if (!board) return;
-  // Вечір — завжди показуємо (навіть якщо немає msg ще)
+  // Завжди показуємо табло — показуємо '…' поки немає msg
+  board.style.display = 'block';
   if (!msg || !msg.text) {
-    if (tab !== 'evening') { board.style.display = 'none'; return; }
-    board.style.display = 'block';
+    const textEl2 = document.getElementById('owl-tab-text-' + tab);
+    if (textEl2 && !textEl2.textContent.trim()) textEl2.textContent = '…';
     return;
   }
-  board.style.display = 'block';
 
   const pulse = document.getElementById('owl-tab-pulse-' + tab);
   if (pulse) {
@@ -1659,6 +1663,34 @@ function clearSwipeTrail(cardEl, wrapEl) {
   }
 }
 
+// === BOARD OVERLAY: фіксований хедер стає абсолютним оверлеєм, контент скролиться за ним ===
+function applyBoardOverlays() {
+  const configs = [
+    { fixedId: 'me-fixed-top',       scrollId: 'me-content' },
+    { fixedId: 'evening-fixed-top',  scrollId: 'evening-scroll' },
+    { fixedId: 'health-fixed-top',   scrollId: 'health-scroll' },
+    { fixedId: 'projects-fixed-top', scrollId: 'projects-scroll' },
+    { fixedId: 'inbox-fixed-top',    scrollId: 'inbox-scroll' },
+  ];
+  configs.forEach(({ fixedId, scrollId }) => {
+    const fixed = document.getElementById(fixedId);
+    const scroll = document.getElementById(scrollId);
+    if (!fixed || !scroll) return;
+    // Хедер стає абсолютним — виходить з flex-flow, overlay поверх скролу
+    fixed.style.position = 'absolute';
+    fixed.style.top = '0';
+    fixed.style.left = '0';
+    fixed.style.right = '0';
+    fixed.style.zIndex = '5';
+    fixed.style.pointerEvents = 'none';
+    // Дочірні елементи хедера перехоплюють дотики (кнопки, табло)
+    [...fixed.children].forEach(c => { c.style.pointerEvents = 'all'; });
+    // Скрол розтягується на всю сторінку, padding-top = висота хедера
+    const h = fixed.offsetHeight;
+    scroll.style.paddingTop = h + 'px';
+  });
+}
+
 // === INIT ===
 function init() {
   try { setupPWA(); } catch(e) {}
@@ -1705,6 +1737,9 @@ function init() {
     if (inboxBar) inboxBar.style.display = 'flex';
   } catch(e) {}
   try { setTimeout(() => showFirstVisitTip('inbox'), 1500); } catch(e) {}
+  // Хедери стають overlay над контентом (ефект скролу під табло)
+  try { requestAnimationFrame(() => requestAnimationFrame(applyBoardOverlays)); } catch(e) {}
+  try { setTimeout(applyBoardOverlays, 500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
   try { setupAutoEveningSummary(); } catch(e) {}
   try { cleanupTrash(); } catch(e) {}

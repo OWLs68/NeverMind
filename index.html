@@ -1281,7 +1281,7 @@ body {
     <!-- PAGE: INBOX -->
     <div class="page active" id="page-inbox" style="display:flex;flex-direction:column;overflow:hidden">
       <!-- FIXED TOP -->
-      <div style="flex-shrink:0">
+      <div id="inbox-fixed-top" style="flex-shrink:0">
         <div class="page-header" style="position:relative;top:auto">
           <div>
             <span class="page-title">Inbox</span>
@@ -1289,7 +1289,7 @@ body {
           </div>
           <div class="header-actions">
             <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v46</span>
+            <span id="deploy-version" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none">v47</span>
             <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
           </div>
         </div>
@@ -1313,8 +1313,8 @@ body {
       </div>
 
       <!-- SCROLL: тільки картки -->
-      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
-        <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 120px)"></div>
+      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
+        <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 40px)"></div>
       </div>
     </div>
 
@@ -1332,7 +1332,7 @@ body {
       </div>
 
       <!-- OWL TAB BOARD: TASKS -->
-      <div id="owl-tab-board-tasks" style="display:none;margin:8px 14px 6px">
+      <div id="owl-tab-board-tasks" style="margin:8px 14px 6px">
         <div class="tab-board-inner" style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
           <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1341,7 +1341,7 @@ body {
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
             </div>
           </div>
-          <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5"></div>
+          <div id="owl-tab-text-tasks" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
           <div id="owl-tab-chips-tasks" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
         </div>
       </div>
@@ -1371,7 +1371,7 @@ body {
       <!-- TASKS SUB-PAGE -->
       <div id="prod-page-tasks">
         <div id="tasks-ai-comment" style="display:none;margin:0 16px 8px;background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:14px;padding:12px 14px;font-size:19px;line-height:1.8;color:#1e1040;font-weight:400"></div>
-        <div id="tasks-list" style="padding:0 0 calc(env(safe-area-inset-bottom) + 160px)"></div>
+        <div id="tasks-list" style="padding:0 0 calc(var(--tabbar-h,83px) + 40px)"></div>
         <div id="tasks-empty" style="display:none;text-align:center;padding:60px 32px;color:rgba(30,16,64,0.35)">
           <div style="font-size:46px;margin-bottom:12px;opacity:0.3">▣</div>
           <div style="font-weight:700;font-size:17px;margin-bottom:6px">Немає задач</div>
@@ -1380,7 +1380,7 @@ body {
       </div>
 
       <!-- HABITS SUB-PAGE -->
-      <div id="prod-page-habits" style="display:none;padding:0 0 calc(env(safe-area-inset-bottom) + 160px)">
+      <div id="prod-page-habits" style="display:none;padding:0 0 calc(var(--tabbar-h,83px) + 40px)">
         <!-- Day progress bar -->
         <div style="margin:0 14px 10px;background:rgba(255,255,255,0.8);border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px rgba(234,88,12,0.06)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1414,7 +1414,7 @@ body {
       </div>
 
       <!-- OWL TAB BOARD: NOTES -->
-      <div id="owl-tab-board-notes" style="display:none;margin:0 14px 8px">
+      <div id="owl-tab-board-notes" style="margin:0 14px 8px">
         <div class="tab-board-inner" style="background:rgba(26,10,46,0.49);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
           <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1423,7 +1423,7 @@ body {
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
             </div>
           </div>
-          <div id="owl-tab-text-notes" style="font-size:13px;font-weight:600;color:white;line-height:1.5"></div>
+          <div id="owl-tab-text-notes" style="font-size:13px;font-weight:600;color:white;line-height:1.5">…</div>
           <div id="owl-tab-chips-notes" style="display:none;gap:5px;flex-wrap:wrap;margin-top:7px"></div>
         </div>
       </div>
@@ -1444,7 +1444,7 @@ body {
       <!-- Folder header (назад + назва папки) -->
       <div id="notes-folder-header" style="display:none;align-items:center;justify-content:space-between;padding:4px 14px 10px;gap:8px"></div>
       <!-- Folders + notes list -->
-      <div id="notes-content" style="padding:0 0 calc(env(safe-area-inset-bottom) + 160px)"></div>
+      <div id="notes-content" style="padding:0 0 calc(var(--tabbar-h,83px) + 40px)"></div>
 
       <!-- Empty state -->
       <div id="notes-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
@@ -1458,7 +1458,7 @@ body {
     <div class="page" id="page-me" style="display:flex;flex-direction:column;height:100%">
 
       <!-- FIXED TOP: header + стрік + OWL board -->
-      <div style="flex-shrink:0;padding:0 14px">
+      <div id="me-fixed-top" style="flex-shrink:0;padding:0 14px">
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:#7c4a2a">Я</span>
           <div style="display:flex;align-items:center;gap:8px">
@@ -1492,7 +1492,7 @@ body {
       </div>
 
       <!-- SCROLL контент -->
-      <div id="me-content" style="flex:1;overflow-y:auto;padding:10px 14px calc(env(safe-area-inset-bottom) + 160px)">
+      <div id="me-content" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 40px)">
 
         <!-- Кружечки тижня -->
         <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
@@ -1568,7 +1568,7 @@ body {
     <div class="page" id="page-evening" style="display:flex;flex-direction:column;height:100%">
 
       <!-- FIXED TOP: header + OWL board -->
-      <div style="flex-shrink:0;padding:0 14px">
+      <div id="evening-fixed-top" style="flex-shrink:0;padding:0 14px">
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:white">Вечір</span>
           <div class="header-actions">
@@ -1605,7 +1605,7 @@ body {
       </div>
 
       <!-- SCROLL контент -->
-      <div style="flex:1;overflow-y:auto;padding:0 14px 130px">
+      <div id="evening-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 40px)">
 
         <!-- 3 статки -->
         <div id="evening-stats-row" style="display:flex;gap:8px;margin-bottom:10px">
@@ -1693,10 +1693,9 @@ body {
         </div>
       </div>
 
-      <!-- OWL TAB BOARD: FINANCE — фіксоване зверху поза скролом -->
-      <div id="owl-tab-board-finance" style="display:none;margin:0 14px 8px;flex-shrink:0"></div>
-
-      <div id="fin-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom) + 160px)">
+      <div id="fin-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 40px)">
+        <!-- OWL TAB BOARD: FINANCE — sticky всередині скролу -->
+        <div id="owl-tab-board-finance" style="display:none;position:-webkit-sticky;position:sticky;top:0;z-index:5;padding-bottom:10px"></div>
 
         <!-- Перемикач тип: Витрати / Доходи / Баланс -->
         <div style="display:flex;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px;margin-bottom:12px">
@@ -1891,7 +1890,7 @@ body {
     <div class="page" id="page-health" style="display:flex;flex-direction:column;height:100%">
 
       <!-- FIXED TOP -->
-      <div style="flex-shrink:0;padding:0 14px">
+      <div id="health-fixed-top" style="flex-shrink:0;padding:0 14px">
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:#1a5c2a">Здоров'я</span>
           <div class="header-actions">
@@ -1923,7 +1922,7 @@ body {
       </div>
 
       <!-- SCROLL -->
-      <div id="health-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom) + 160px)">
+      <div id="health-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 40px)">
 
         <!-- Трекер самопочуття тижня -->
         <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
@@ -1968,7 +1967,7 @@ body {
     <div class="page" id="page-projects" style="display:flex;flex-direction:column;height:100%">
 
       <!-- FIXED TOP -->
-      <div style="flex-shrink:0;padding:0 14px">
+      <div id="projects-fixed-top" style="flex-shrink:0;padding:0 14px">
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:#3d2e1e">Проекти</span>
           <div class="header-actions">
@@ -2000,7 +1999,7 @@ body {
       </div>
 
       <!-- SCROLL -->
-      <div id="projects-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom) + 160px)">
+      <div id="projects-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 40px)">
         <div id="projects-list"></div>
         <div id="projects-empty" style="display:none;text-align:center;padding:40px 0">
           <div style="font-size:36px;margin-bottom:10px">🚀</div>
