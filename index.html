@@ -341,7 +341,7 @@ body {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 100;
-  padding: 12px 12px 6px;
+  padding: 6px 12px 6px;
   background: var(--active-tabbar, rgb(243,211,94));
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
@@ -351,26 +351,23 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow: visible;
 }
 /* Капсула барабан */
 .drum-capsule {
   flex: 1;
-  background: rgba(0,0,0,0.12);
-  border: 1.5px solid rgba(255,255,255,0.35);
-  border-top: 2.5px solid rgba(255,255,255,0.78); /* яскравий верхній обід — виступаючий диск */
-  border-bottom: 1.5px solid rgba(0,0,0,0.18);    /* темніший нижній обід — глибина */
+  background: rgba(0,0,0,0.10);
+  border: 1.5px solid rgba(255,255,255,0.45);
   border-radius: 20px;
   padding: 4px;
   position: relative;
   overflow: hidden;
-  margin-top: -10px; /* диск виступає над таб-баром */
-  /* 3D: диск піднятий над поверхнею */
+  /* Глибокі внутрішні тіні — ефект втопленого барабана */
   box-shadow:
-    0 5px 18px rgba(0,0,0,0.26),
-    0 10px 32px rgba(0,0,0,0.13),
-    0 -2px 6px rgba(0,0,0,0.07),
-    inset 0 1px 0 rgba(255,255,255,0.22);
+    inset 0 4px 14px rgba(0,0,0,0.22),
+    inset 0 -3px 10px rgba(0,0,0,0.16),
+    inset 4px 0 14px rgba(0,0,0,0.15),
+    inset -4px 0 14px rgba(0,0,0,0.15),
+    0 2px 0 rgba(255,255,255,0.55);
 }
 /* Тіні по боках капсули — ефект загасання барабана */
 .drum-capsule::before {
@@ -445,7 +442,7 @@ body {
   opacity: 0;
   transition: opacity 0.25s, font-size 0.25s, font-weight 0.25s;
 }
-.tab-item.far .tab-label { opacity: 0; }
+.tab-item.far .tab-label { opacity: 0.45; font-size: 8px; }
 .tab-item.near .tab-label { opacity: 0.7; }
 .tab-item.active .tab-label {
   opacity: 1;
