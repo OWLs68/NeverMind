@@ -46,7 +46,8 @@
 | index.html | 2693 | ⚠️ велике |
 | app-core.js | 2033 | 🔴 > 1500 |
 | app-evening.js | 1838 | 🔴 > 1500 |
-| app-tasks.js | 1698 | 🔴 > 1500 |
+| app-tasks-core.js | 544 | ✅ |
+| app-habits.js | 1164 | ✅ |
 | app-ai.js | 1522 | 🔴 > 1500 |
 | app-notes.js | 1117 | ✅ |
 | app-finance.js | 1108 | ✅ |
@@ -126,7 +127,7 @@
 | 🟡 | Баг #24 — тап на день в календарі |
 | 🟡 | Баг #25 — картки обрізаються при скролі |
 | 🟡 | Баг #26 — поле вводу без blur/fade |
-| 🟡 | Рефакторинг > 1500 рядків (app-core, app-ai, app-evening, app-tasks) |
+| 🟡 | Рефакторинг > 1500 рядків (app-core, app-ai, app-evening) — app-tasks вже розбито |
 | 🟡 | Геймфікація — рівні, бали, бейджі |
 | 🟡 | Правові сторінки (Privacy Policy + ToS) |
 | 💤 | Голос, Vision, iOS, Apple Watch |
