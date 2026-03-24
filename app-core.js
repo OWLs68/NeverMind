@@ -400,9 +400,9 @@ function rebuildDrumTabbar() {
       track.style.paddingRight = half + 'px';
     }
     window._drumCurrentX = 0;
-    track.style.transition = '';
+    track.style.transition = 'none';
     track.style.transform = '';
-    updateDrumTabbar(currentTab);
+    updateDrumTabbar(currentTab, true); // без анімації — одразу на місце
   });
 }
 
@@ -437,7 +437,7 @@ function setupDrumTabbar() {
         track.style.paddingLeft = half + 'px';
         track.style.paddingRight = half + 'px';
       }
-      updateDrumTabbar(currentTab);
+      updateDrumTabbar(currentTab, true); // при resize — без анімації
     });
   });
 
@@ -614,7 +614,7 @@ function setupDrumTabbar() {
   });
 }
 
-function updateDrumTabbar(tab) {
+function updateDrumTabbar(tab, skipAnimation) {
   // Якщо викликано з snapToItem — позиція вже виставлена, не перезаписувати
   if (window._drumSuppressReposition) return;
   const track = document.getElementById('drumTrack');
@@ -636,14 +636,24 @@ function updateDrumTabbar(tab) {
   const ic = activeItem.getBoundingClientRect();
   const nx = cur + (cc.left + cc.width / 2) - (ic.left + ic.width / 2);
   window._drumCurrentX = nx;
-  track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-  track.style.transform = `translateX(${nx}px)`;
-  // RAF-петля: оновлюємо 3D-трансформи під час CSS-анімації
-  const endTime = Date.now() + 340;
-  (function tick() {
-    applyDrum3D([...track.querySelectorAll('.tab-item[data-tab]')], capsule);
-    if (Date.now() < endTime) requestAnimationFrame(tick);
-  })();
+  if (skipAnimation) {
+    // Під час ініціалізації — одразу на місце, без анімації
+    track.style.transition = 'none';
+    track.style.transform = `translateX(${nx}px)`;
+    requestAnimationFrame(() => {
+      applyDrum3D([...track.querySelectorAll('.tab-item[data-tab]')], capsule);
+      track.style.transition = ''; // повертаємо CSS transition для наступних свайпів
+    });
+  } else {
+    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    track.style.transform = `translateX(${nx}px)`;
+    // RAF-петля: оновлюємо 3D-трансформи під час CSS-анімації
+    const endTime = Date.now() + 340;
+    (function tick() {
+      applyDrum3D([...track.querySelectorAll('.tab-item[data-tab]')], capsule);
+      if (Date.now() < endTime) requestAnimationFrame(tick);
+    })();
+  }
 }
 
 function applyTheme(tab) {
@@ -1758,7 +1768,7 @@ function showApp() {
   const splash = document.getElementById('splash');
   if (splash) {
     splash.classList.add('hide');
-    setTimeout(() => splash.classList.add('gone'), 600);
+    setTimeout(() => splash.classList.add('gone'), 400);
   }
   try { checkOnboarding(); } catch(e) {}
 }
@@ -1767,7 +1777,7 @@ function showApp() {
 function bootApp() {
   try { init(); } catch(e) { console.error('init error:', e); }
   // Show app after brief splash — use both timer and readyState check
-  const delay = document.readyState === 'complete' ? 800 : 1200;
+  const delay = document.readyState === 'complete' ? 300 : 500;
   setTimeout(showApp, delay);
 }
 
