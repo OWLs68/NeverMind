@@ -839,88 +839,112 @@ async function sendDialogMessage() {
 }
 
 // === SLIDES TOUR ===
-const UPDATE_VERSION = 'v033';
+const UPDATE_VERSION = 'v065';
 
 const UPDATE_SLIDES = [
   {
-    tag: '🦉 OWL провідник',
-    emoji: '🦉',
-    title: 'OWL тебе вивчає',
+    tag: '🥁 Новий барабан',
+    emoji: '🥁',
+    title: 'Навігація переписана з нуля',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">❓</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">10 питань на старті — OWL дізнається хто ти</div>
+    <div style="font-size:20px">👆</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Тап на будь-яку вкладку — одразу переключає</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">💬</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Органічні питання в Inbox — поглиблює знання про тебе</div>
+    <div style="font-size:20px">🔚</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Гумова межа — крайні вкладки не перелітають</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🧠</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Підказки по функціях — покаже де що є</div>
+    <div style="font-size:20px">➕</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка + — увімкни або вимкни будь-яку вкладку</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#e0e7ff,#6366f1)',
   },
   {
-    tag: '🚀 Проекти',
-    emoji: '🚀',
-    title: 'Проект → план за хвилину',
+    tag: '🦉 OWL Board',
+    emoji: '🦉',
+    title: 'OWL завжди поруч',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🎙️</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Створив проект — OWL питає про капітал, час і страхи</div>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
     <div style="font-size:20px">📋</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Після відповідей — перші 3 кроки у воркспейсі</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">OWL табло — на кожній вкладці вгорі</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">📂</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка нотаток → відкриває папку проекту</div>
+    <div style="font-size:20px">🌀</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Scroll-behind ефект — контент прокручується під табло</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🌙</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Тихі години 0–5 — OWL не турбує вночі</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#fef9c3,#f59e0b)',
   },
   {
-    tag: '📁 Нотатки',
-    emoji: '📁',
-    title: 'Нотатки стали кращими',
+    tag: '💬 Новий чат',
+    emoji: '💬',
+    title: '3 стани чату',
     body: `<div style="display:flex;flex-direction:column;gap:7px">
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🔍</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Пошук через чат — «знайди нотатку про машину»</div>
+    <div style="font-size:20px">⬇️</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Закритий → маленький → на весь екран</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🎨</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Редагуй папки — іконка, колір, закріплення (···)</div>
+    <div style="font-size:20px">👈</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">iOS-like свайпи в Inbox — закрити клавіатуру</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">📌</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">30 іконок для папок і закріплення зверху</div>
-  </div>
-</div>`,
-    color: 'linear-gradient(135deg,#fed7aa,#c2620a)',
-  },
-  {
-    tag: '🔧 Фікси',
-    emoji: '🔧',
-    title: '20+ виправлень',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">👆</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Свайп-видалення: червоний шлейф, поріг 90px скрізь</div>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🟢</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Галочка виконання стала зеленою</div>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🥁</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Барабан більше не перелітає + порядок вкладок</div>
+    <div style="font-size:20px">🔁</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кожна вкладка памʼятає свій чат</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#d1fae5,#16a34a)',
+  },
+  {
+    tag: '🆕 Нові вкладки',
+    emoji: '🆕',
+    title: 'Вечір · Я · Здоровʼя · Проекти',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🌙</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Вечір — підводь підсумок дня і настрій</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🪞</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Я — твій профіль, цінності і памʼять OWL</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">❤️</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Здоровʼя — картки і щоденні шкали</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🚀</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Проекти — OWL будує план після 3 питань</div>
+  </div>
+</div>`,
+    color: 'linear-gradient(135deg,#fce7f3,#db2777)',
+  },
+  {
+    tag: '🔧 25+ фіксів',
+    emoji: '🔧',
+    title: 'Більше виправлень ніж будь-коли',
+    body: `<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🔢</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Множинні звички — тап кілька разів на день</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🗂️</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нотатки: переміщення між папками через OWL</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
+    <div style="font-size:20px">🛡️</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Відповіді OWL захищені від дублювання</div>
+  </div>
+</div>`,
+    color: 'linear-gradient(135deg,#fed7aa,#c2620a)',
     isLast: true,
   },
 ];
