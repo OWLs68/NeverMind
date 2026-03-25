@@ -898,7 +898,9 @@ function tryTabBoardUpdate(tab) {
   if (tab === 'inbox') return;
   renderTabBoard(tab); // завжди показуємо збережені дані
   const hour = new Date().getHours();
-  if (hour < 5) return; // тихі години — тільки генерація пропускається
+  if (hour < 5) return; // тихі години — генерація пропускається
+  // Вечірнє табло — "підсумок дня" не має сенсу зранку; генеруємо лише після 12:00
+  if (tab === 'evening' && hour < 12) return;
   const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
   const elapsed = Date.now() - lastTs;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();

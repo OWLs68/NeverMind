@@ -726,6 +726,9 @@ async function autoEveningSummary() {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
 
+  // Підсумок дня має сенс тільки з вечора — до 18:00 не генеруємо
+  if (new Date().getHours() < 18) return;
+
   // Перевіряємо чи є взагалі записи за сьогодні
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
