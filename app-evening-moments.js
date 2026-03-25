@@ -349,12 +349,19 @@ function renderMeActivityChart() {
   const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
   if (totalEl) totalEl.textContent = `${totalActivity} дій`;
 
-  const W = 100, H = 64;
+  // Реальна ширина контейнера — уникаємо preserveAspectRatio:none
+  const W = chartEl.offsetWidth || 300;
+  const H = 64;
+  const padT = 6, padB = 10;
+  const chartH = H - padT - padB;
+
+  // Центр колонки i при 7 рівних стовпцях = (i + 0.5) * W / 7
+  const xOf = i => (i + 0.5) * W / 7;
+  const yOf = val => padT + chartH * (1 - val / maxVal);
+
   const points = values.map((v, i) => {
     if (v === null) return null;
-    const x = values.length <= 1 ? W / 2 : (i / (values.length - 1)) * W;
-    const y = H - 8 - (v.val / maxVal) * (H - 16);
-    return { x, y, v: v.val, norm: v.norm, i };
+    return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
   }).filter(Boolean);
 
   if (points.length < 2) {
@@ -363,36 +370,39 @@ function renderMeActivityChart() {
     return;
   }
 
-  // Базова лінія Y
-  const baselineY = H - 8 - (baseline / maxVal) * (H - 16);
+  const baselineY = yOf(baseline);
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaPath = `${linePath} L ${points[points.length-1].x} ${H} L ${points[0].x} ${H} Z`;
+  const linePath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L ${points[points.length-1].x.toFixed(1)} ${H} L ${points[0].x.toFixed(1)} ${H} Z`;
 
   // Кольорові точки — зелені вище норми, червоні нижче
   const dots = points.map(p => {
     const isToday = p.i === todayDow;
     const aboveNorm = p.v >= p.norm;
     const fill = p.v === 0 ? 'rgba(124,74,42,0.2)' : aboveNorm ? '#16a34a' : '#c2410c';
-    const r = isToday ? 3.5 : 2.5;
-    return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
+    const r = isToday ? 5 : 3.5;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
   }).join('');
 
-  chartEl.innerHTML = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="overflow:visible">
-    <defs>
-      <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
-        <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
-      </linearGradient>
-    </defs>
-    <line x1="0" y1="${H-8}" x2="${W}" y2="${H-8}" stroke="rgba(30,16,64,0.06)" stroke-width="0.5"/>
-    <!-- Базова лінія норми — пунктир -->
-    <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}" stroke="rgba(30,16,64,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
-    <text x="${W}" y="${(baselineY - 2).toFixed(1)}" text-anchor="end" font-size="5" fill="rgba(30,16,64,0.35)" font-weight="700">норма</text>
-    <path d="${areaPath}" fill="url(#actGrad)"/>
-    <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}
-  </svg>`;
+  // Позиція мітки "НОРМА" — HTML-оверлей, точний шрифт без SVG-спотворень
+  const normLabelTop = Math.max(0, Math.round(baselineY) - 18);
+
+  chartEl.innerHTML = `
+    <svg width="${W}" height="${H}" style="display:block;overflow:visible">
+      <defs>
+        <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}"
+            stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
+      <path d="${areaPath}" fill="url(#actGrad)"/>
+      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>
+    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.45);background:rgba(245,240,235,0.85);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">НОРМА</div>
+  `;
 
   if (labelsEl) {
     labelsEl.innerHTML = values.map((v, i) => {
