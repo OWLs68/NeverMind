@@ -28,8 +28,12 @@ jobs:
         run: |
           VERSION=$(grep 'id="deploy-version"' index.html | grep -oP 'v\d+' | head -1)
           DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
+          CACHE_TAG=$(TZ='Europe/Kyiv' date '+%Y%m%d-%H%M')
+          # Оновлюємо мітку версії в Inbox
           sed -i "s|>v[0-9]* · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]<|>${VERSION} · ${DEPLOY_TIME}<|" index.html
-          echo "Injected: ${VERSION} · ${DEPLOY_TIME}"
+          # Оновлюємо ім'я кешу в SW — щоб браузер скинув старий кеш
+          sed -i "s|const CACHE_NAME = 'nm-[^']*'|const CACHE_NAME = 'nm-${CACHE_TAG}'|" sw.js
+          echo "Injected: ${VERSION} · ${DEPLOY_TIME} | cache: nm-${CACHE_TAG}"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
