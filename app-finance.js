@@ -797,6 +797,7 @@ function saveFinTransaction() {
   renderFinance();
   showToast(_finEditId ? '✓ Оновлено' : `✓ ${_finTxCurrentType === 'expense' ? 'Витрату' : 'Дохід'} збережено`);
   _finEditId = null;
+  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
 }
 
 function deleteFinTransaction() {
@@ -805,8 +806,10 @@ function deleteFinTransaction() {
   saveFinance(getFinance().filter(t => t.id !== _finEditId));
   closeFinTxModal();
   renderFinance();
+  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
   if (item) showUndoToast('Транзакцію видалено', () => {
     const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
+    try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
   });
   _finEditId = null;
 }
@@ -868,6 +871,7 @@ function saveFinBudgetFromModal() {
   closeFinBudgetModal();
   renderFinance();
   showToast('✓ Бюджет збережено');
+  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
 }
 
 function closeFinBudgetModal() {
@@ -1061,6 +1065,7 @@ async function sendFinanceBarMessage() {
         txs2.unshift({ id: Date.now(), type, amount: parseFloat(parsed.amount), category: parsed.category || 'Інше', comment: parsed.comment || '', ts: Date.now() });
         saveFinance(txs2);
         renderFinance();
+        try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
         addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(parsed.amount)} · ${parsed.category}`);
         checkFinBudgetWarning(type, parsed.category, parseFloat(parsed.amount));
       } else if (parsed.action === 'delete_transaction') {
