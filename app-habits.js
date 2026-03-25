@@ -15,19 +15,22 @@ function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringif
 function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
 function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); }
 
-// Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, lastRelapse }
+// Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }
+// freedomDays — сумарна кількість днів "тримався", ніколи не скидається
 function getQuitStatus(habitId) {
   const log = getQuitLog();
-  return log[habitId] || { streak: 0, longestStreak: 0, relapses: [], lastHeld: null };
+  return log[habitId] || { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
 }
 
 // Відмітити що "тримається" сьогодні
 function holdQuitHabit(habitId) {
   const today = new Date().toISOString().slice(0, 10);
   const log = getQuitLog();
-  if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null };
+  if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
   const s = log[habitId];
   if (s.lastHeld === today) return; // вже відмічено сьогодні
+  // freedomDays — ніколи не скидається, рахуємо кожен день "тримався"
+  s.freedomDays = (s.freedomDays || 0) + 1;
   // Перевіряємо чи стрік безперервний (вчора теж тримався)
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   if (s.lastHeld === yesterday || s.lastHeld === null) {
@@ -40,14 +43,15 @@ function holdQuitHabit(habitId) {
   log[habitId] = s;
   saveQuitLog(log);
   renderProdHabits();
-  showToast('💪 Тримаєшся! Стрік: ' + s.streak + ' ' + _dayWord(s.streak));
+  const fd = s.freedomDays;
+  showToast('💪 +1 вільний день! Всього: ' + fd + ' ' + _dayWord(fd));
 }
 
 // Відмітити зрив
 function relapseQuitHabit(habitId) {
   const today = new Date().toISOString().slice(0, 10);
   const log = getQuitLog();
-  if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null };
+  if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
   const s = log[habitId];
   if (!s.relapses) s.relapses = [];
   // Не дозволяємо два зриви в один день
@@ -60,13 +64,14 @@ function relapseQuitHabit(habitId) {
   const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   s.relapses = s.relapses.filter(d => d >= cutoff);
   const prevStreak = s.streak;
+  // freedomDays НЕ змінюється — зрив не анулює вільні дні
   s.streak = 0;
   s.lastHeld = null;
   log[habitId] = s;
   saveQuitLog(log);
   renderProdHabits();
   // OWL реагує
-  _owlQuitRelapse(habitId, prevStreak);
+  _owlQuitRelapse(habitId, prevStreak, s.freedomDays || 0);
 }
 
 function _dayWord(n) {
@@ -75,13 +80,14 @@ function _dayWord(n) {
   return 'днів';
 }
 
-function _owlQuitRelapse(habitId, prevStreak) {
+function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
   const habits = getHabits();
   const h = habits.find(x => x.id === habitId);
   const name = h ? h.name : 'звичку';
+  const fdText = freedomDays > 0 ? ` Твої ${freedomDays} вільних ${_dayWord(freedomDays)} — назавжди твої.` : '';
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
-    addInboxChatMsg('agent', `Зрив з "${name}". Стрік скинуто. Але кожна спроба — це прогрес. Починай знову.`);
+    addInboxChatMsg('agent', `Сьогодні важкий день з "${name}".${fdText} Завтра новий шанс.`);
     return;
   }
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
@@ -95,17 +101,17 @@ function _owlQuitRelapse(habitId, prevStreak) {
       max_tokens: 80,
       messages: [{
         role: 'system',
-        content: `Ти OWL — персональний агент. Тон: ${tone}. Відповідай ТІЛЬКИ одним реченням українською. Без зайвих слів.`
+        content: `Ти OWL — персональний агент. Тон: ${tone}. Відповідай ТІЛЬКИ одним реченням українською. Не згадуй "стрік обнулено". Підкресли що ${freedomDays} вільних днів нікуди не ділись.`
       }, {
         role: 'user',
-        content: `Користувач зірвався з челенджу "${name}". Стрік був ${prevStreak} ${_dayWord(prevStreak)}. Скажи щось коротке.`
+        content: `Користувач зірвався з "${name}". Серія була ${prevStreak} ${_dayWord(prevStreak)}, але загалом ${freedomDays} вільних ${_dayWord(freedomDays)} — вони залишаються. Скажи щось коротке та підтримуюче.`
       }]
     })
   }).then(r => r.json()).then(d => {
     const reply = d.choices?.[0]?.message?.content;
     if (reply) addInboxChatMsg('agent', reply);
   }).catch(() => {
-    addInboxChatMsg('agent', `Зрив з "${name}". Починай знову — стрік обнулено.`);
+    addInboxChatMsg('agent', `Сьогодні важкий день з "${name}".${fdText} Завтра — новий шанс.`);
   });
 }
 
@@ -704,6 +710,27 @@ function renderProdHabits() {
   el.innerHTML = html;
 }
 
+// Рівень стійкості на основі кількості зривів за 30 днів
+function _quitResilienceLamp(relapses30) {
+  if (relapses30 === 0) return { color: '#16a34a', glow: 'rgba(22,163,74,0.35)', label: 'Стійкий' };
+  if (relapses30 <= 2)  return { color: '#ca8a04', glow: 'rgba(202,138,4,0.35)',  label: 'Тримається' };
+  if (relapses30 <= 5)  return { color: '#ea580c', glow: 'rgba(234,88,12,0.35)',  label: 'Відновлюється' };
+  return                       { color: '#dc2626', glow: 'rgba(220,38,38,0.4)',   label: 'Небезпека!' };
+}
+
+// Тренд зривів: порівнюємо останні 14 днів з попередніми 14
+function _quitTrend(relapses) {
+  const now = Date.now();
+  const d14 = new Date(now - 14 * 86400000).toISOString().slice(0, 10);
+  const d28 = new Date(now - 28 * 86400000).toISOString().slice(0, 10);
+  const arr = relapses || [];
+  const recent = arr.filter(d => d >= d14).length;
+  const prev   = arr.filter(d => d >= d28 && d < d14).length;
+  if (recent < prev)  return { arrow: '↓', color: '#16a34a', text: 'зривів менше' };
+  if (recent > prev)  return { arrow: '↑', color: '#dc2626', text: 'зривів більше' };
+  return                     { arrow: '→', color: 'rgba(30,16,64,0.4)', text: 'без змін' };
+}
+
 function _renderQuitHabitCard(h) {
   const s = getQuitStatus(h.id);
   const today = new Date().toISOString().slice(0, 10);
@@ -712,17 +739,25 @@ function _renderQuitHabitCard(h) {
     const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
     return d >= cutoff;
   }).length;
-  const streak = s.streak || 0;
-  const longest = s.longestStreak || 0;
+  const streak    = s.streak || 0;
+  const longest   = s.longestStreak || 0;
+  const freedomDays = s.freedomDays || 0;
   const shortName = h.name.split(' ').slice(0,4).join(' ');
 
-  // Колір картки — темніший якщо зривів багато
+  const lamp  = _quitResilienceLamp(relapses30);
+  const trend = _quitTrend(s.relapses);
+
+  // Колір картки залежить від рівня стійкості
   const cardBg = relapses30 === 0 && streak > 0
     ? 'background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)'
-    : 'background:rgba(245,238,232,0.8);border-color:rgba(194,65,12,0.15)';
+    : relapses30 >= 6
+      ? 'background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)'
+      : 'background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)';
 
-  const streakColor = streak > 0 ? '#16a34a' : 'rgba(30,16,64,0.35)';
-  const streakIcon = streak >= 7 ? '🔥' : streak >= 3 ? '✊' : '💪';
+  const streakColor = streak > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
+
+  // Лампа — кругла індикаторна точка з підсвіткою
+  const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ';box-shadow:0 0 8px 3px ' + lamp.glow + ';margin-top:3px"></div>';
 
   return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
     + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"'
@@ -730,18 +765,33 @@ function _renderQuitHabitCard(h) {
     + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
     + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
 
-    // Назва і стрік
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    // Рядок 1: лампа + назва + тренд
+    + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">'
+      + lampHtml
       + '<div style="flex:1;min-width:0">'
-        + '<div style="font-size:16px;font-weight:700;color:#1e1040;margin-bottom:2px">' + escapeHtml(shortName) + '</div>'
-        + '<div style="font-size:12px;font-weight:600;color:' + streakColor + '">'
-          + (streak > 0 ? streakIcon + ' ' + streak + ' ' + _dayWord(streak) + ' без зривів' : 'Починай сьогодні')
-          + (longest > streak ? ' · рекорд: ' + longest : '')
-        + '</div>'
+        + '<div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div>'
+        + '<div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div>'
       + '</div>'
-      + '<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-align:right">'
-        + (relapses30 > 0 ? relapses30 + ' ' + (relapses30 === 1 ? 'зрив' : relapses30 < 5 ? 'зриви' : 'зривів') + '<br>за 30 днів' : '')
+      + '<div style="text-align:right;flex-shrink:0">'
+        + '<div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div>'
+        + '<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div>'
       + '</div>'
+    + '</div>'
+
+    // Рядок 2: Вільні дні (головна метрика) + серія маленько
+    + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">'
+      + '<div>'
+        + '<span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span>'
+        + '<span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">вільних ' + _dayWord(freedomDays) + '</span>'
+      + '</div>'
+      + (streak > 0
+        ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">'
+          + '🔥 серія ' + streak + ' ' + _dayWord(streak)
+          + (longest > streak ? ' · рекорд ' + longest : '')
+          + '</div>'
+        : (longest > 0
+          ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">рекорд ' + longest + ' ' + _dayWord(longest) + '</div>'
+          : ''))
     + '</div>'
 
     // Кнопки дій
@@ -749,18 +799,17 @@ function _renderQuitHabitCard(h) {
       + '<button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;'
         + (heldToday ? 'background:rgba(22,163,74,0.15);color:#16a34a' : 'background:rgba(22,163,74,0.1);color:#16a34a')
         + '">' + (heldToday ? '✅ Тримаюсь сьогодні' : '✓ Тримаюсь') + '</button>'
-      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.4)">Зірвався</button>'
+      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">Зірвався</button>'
     + '</div>'
     + '</div>'
   + '</div>';
 }
 
 function confirmQuitRelapse(habitId) {
-  const habits = getHabits();
-  const h = habits.find(x => x.id === habitId);
-  const name = h ? h.name : 'звичку';
-  // Простий confirm на iOS
-  if (window.confirm('Відмітити зрив з "' + name + '"?\nСтрік скинеться.')) {
+  const s = getQuitStatus(habitId);
+  const fd = s.freedomDays || 0;
+  const fdText = fd > 0 ? '\n' + fd + ' вільних ' + _dayWord(fd) + ' залишаться твоїми.' : '';
+  if (window.confirm('Важкий день? Відмітити зрив?' + fdText)) {
     relapseQuitHabit(habitId);
   }
 }
