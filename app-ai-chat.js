@@ -247,8 +247,17 @@ function setupChatBarSwipe() {
               if (msgs) msgs.style.maxHeight = '';
             }, 300);
           } else {
-            // Compact + свайп вниз — просто пружина (клавіатура вже захована через blur)
-            snapBack();
+            // Compact + свайп вниз — закриваємо вікно
+            chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
+            chatWin.style.transform = 'translateY(110%)';
+            chatWin.style.opacity = '0';
+            setTimeout(() => {
+              chatWin.classList.remove('open');
+              chatWin.style.transition = '';
+              chatWin.style.transform = '';
+              chatWin.style.opacity = '';
+              activeChatBar = null;
+            }, 280);
           }
         } else {
           // Жест малий або тап — пружина
