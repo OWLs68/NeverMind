@@ -143,7 +143,7 @@ function setupPWA() {
 function setupSW() {
   if (!('serviceWorker' in navigator)) return;
   // Реєструємо повноцінний sw.js для офлайн-кешування
-  navigator.serviceWorker.register('./sw.js').catch(() => {
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {
     // Fallback: мінімальний SW через blob (без кешування)
     const swCode = `
       self.addEventListener('install', e => self.skipWaiting());
