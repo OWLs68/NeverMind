@@ -24,4 +24,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout main
           git merge --ff-only ${{ github.ref_name }}
-          git push origin main
+
+      - name: Inject deploy timestamp and bust SW cache
+        run: |
+          VERSION=$(grep 'id="deploy-version"' index.html | grep -oP 'v\d+' | head -1)
+          DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
+          CACHE_TAG=$(TZ='Europe/Kyiv' date '+%Y%m%d-%H%M')
+          sed -i "s|>v[0-9]* · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]<|>${VERSION} · ${DEPLOY_TIME}<|" index.html
+          sed -i "s|const CACHE_NAME = 'nm-[^']*'|const CACHE_NAME = 'nm-${CACHE_TAG}'|" sw.js
+          git add index.html sw.js
+          git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME} [skip ci]"
+          echo "Deployed: ${VERSION} · ${DEPLOY_TIME} | cache: nm-${CACHE_TAG}"
+
+      - name: Push to main
+        run: git push origin main
