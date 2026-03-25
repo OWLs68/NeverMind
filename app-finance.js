@@ -195,7 +195,7 @@ function renderFinance() {
     _finInsightCards(allTxs, totalExp, totalInc) +
     _finForecast(totalExp, totalInc) +
     _finCoachBlock() +
-    _finWeekChart(allTxs) +
+    _finWeekChart() +
     _finCatsBlock(expenses, totalExp) +
     _finTxsBlock(allTxs);
 
@@ -461,52 +461,55 @@ async function _refreshFinCoach(totalExp, totalInc, expenses) {
   } catch(e) {}
 }
 
-function _finWeekChart(allTxs) {
-  const isWeek = currentFinPeriod === 'week';
-  const groups = [];
+function _finWeekChart() {
+  // Завжди показуємо поточний тиждень Пн–Нд
   const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Нд, 1=Пн, ...
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
 
-  if (isWeek) {
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now); d.setDate(now.getDate() - i);
-      const ds = d.toDateString();
-      groups.push({
-        exp: allTxs.filter(t => t.type==='expense' && new Date(t.ts).toDateString()===ds).reduce((s,t)=>s+t.amount,0),
-        inc: allTxs.filter(t => t.type==='income' && new Date(t.ts).toDateString()===ds).reduce((s,t)=>s+t.amount,0)
-      });
-    }
-  } else {
-    const weeks = currentFinPeriod === '3months' ? 12 : 4;
-    for (let i = weeks-1; i >= 0; i--) {
-      const wEnd = new Date(now); wEnd.setDate(now.getDate() - i*7);
-      const wStart = new Date(wEnd); wStart.setDate(wEnd.getDate() - 6);
-      groups.push({
-        exp: allTxs.filter(t => t.type==='expense' && t.ts >= wStart.getTime() && t.ts <= wEnd.getTime()).reduce((s,t)=>s+t.amount,0),
-        inc: allTxs.filter(t => t.type==='income' && t.ts >= wStart.getTime() && t.ts <= wEnd.getTime()).reduce((s,t)=>s+t.amount,0)
-      });
-    }
-  }
+  const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+  const allTxs = getFinance();
+  const groups = DAY_LABELS.map((label, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const nextD = new Date(d); nextD.setDate(d.getDate() + 1);
+    const from = d.getTime(), to = nextD.getTime();
+    return {
+      label,
+      isToday: d.toDateString() === now.toDateString(),
+      isFuture: d > now,
+      exp: allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).reduce((s,t) => s+t.amount, 0),
+      inc: allTxs.filter(t => t.type === 'income'  && t.ts >= from && t.ts < to).reduce((s,t) => s+t.amount, 0),
+    };
+  });
 
   const maxVal = Math.max(1, ...groups.map(g => Math.max(g.exp, g.inc)));
-  const bars = groups.map((g, i) => {
-    const expH = Math.max(2, Math.round(g.exp / maxVal * 56));
-    const incH = Math.max(2, Math.round(g.inc / maxVal * 56));
-    const isLast = i === groups.length - 1;
-    return `<div style="flex:1;display:flex;gap:2px;align-items:flex-end">
-      <div style="flex:1;height:${expH}px;background:${isLast?'#f97316':'rgba(249,115,22,0.5)'};border-radius:3px 3px 0 0"></div>
-      <div style="flex:1;height:${incH}px;background:${isLast?'#16a34a':'rgba(22,163,74,0.45)'};border-radius:3px 3px 0 0"></div>
+  const bars = groups.map(g => {
+    const expH = g.exp > 0 ? Math.max(4, Math.round(g.exp / maxVal * 52)) : 0;
+    const incH = g.inc > 0 ? Math.max(4, Math.round(g.inc / maxVal * 52)) : 0;
+    const opacity = g.isFuture ? '0.25' : '1';
+    const labelCol = g.isToday ? '#c2410c' : 'rgba(30,16,64,0.35)';
+    const labelW = g.isToday ? '700' : '600';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0">
+      <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
+        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0;opacity:${opacity}${g.exp===0?';visibility:hidden':''}"></div>
+        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0;opacity:${opacity}${g.inc===0?';visibility:hidden':''}"></div>
+      </div>
+      <div style="font-size:10px;font-weight:${labelW};color:${labelCol};margin-top:4px;letter-spacing:0.01em">${g.label}</div>
     </div>`;
   }).join('');
 
   return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">По ${isWeek?'днях':'тижнях'}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">За тиждень</div>
       <div style="display:flex;gap:10px">
         <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Витрати</span></div>
         <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Доходи</span></div>
       </div>
     </div>
-    <div style="display:flex;gap:4px;align-items:flex-end;height:60px">${bars}</div>
+    <div style="display:flex;gap:4px;align-items:flex-end;height:72px">${bars}</div>
   </div>`;
 }
 
@@ -522,13 +525,10 @@ function _finCatsBlock(expenses, totalExp) {
   const rows = sorted.map(([cat, amt]) => {
     const barPct = Math.round(amt / maxAmt * 100);
     const catLimit = budget.categories?.[cat];
-    let dotCol = '#16a34a';
+    let dotCol = 'rgba(30,16,64,0.25)';
     if (catLimit > 0) {
       const r = amt / catLimit;
       dotCol = r >= 1 ? '#ef4444' : r >= 0.8 ? '#f59e0b' : '#16a34a';
-    } else if (totalExp > 0) {
-      const share = amt / totalExp;
-      dotCol = share > 0.4 ? '#ef4444' : share > 0.25 ? '#f59e0b' : '#16a34a';
     }
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0"></div>
