@@ -323,6 +323,30 @@ async function sendToAI() {
           } else {
             addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
           }
+        } else if (action.action === 'create_project') {
+          const projects = getProjects();
+          const newProject = {
+            id: Date.now(),
+            name: action.name || text,
+            subtitle: action.subtitle || '',
+            progress: 0,
+            steps: [],
+            budget: { total: 0, spent: 0, items: [] },
+            metrics: [],
+            decisions: [],
+            resources: [],
+            risks: '',
+            tempoNow: '?',
+            tempoMore: '?',
+            tempoIdeal: '?',
+            notesPreview: '',
+            lastActivity: Date.now(),
+            createdAt: Date.now(),
+          };
+          projects.unshift(newProject);
+          saveProjects(projects);
+          addInboxChatMsg('agent', `✅ Проект "${newProject.name}" створено`);
+          setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
         } else if (action.action === 'restore_deleted') {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;
