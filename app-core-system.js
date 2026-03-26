@@ -985,8 +985,14 @@ function applyBoardOverlays() {
     // Дочірні елементи хедера перехоплюють дотики (кнопки, табло)
     [...fixed.children].forEach(c => { c.style.pointerEvents = 'all'; });
     // Скрол розтягується на всю сторінку, padding-top = висота хедера + 14px відступ
-    const h = fixed.offsetHeight;
-    scroll.style.paddingTop = (h + 14) + 'px';
+    const updatePadding = () => {
+      scroll.style.paddingTop = (fixed.offsetHeight + 14) + 'px';
+    };
+    updatePadding();
+    // Оновлюємо відступ коли хедер змінює висоту (OWL board з'являється/зникає)
+    if (window.ResizeObserver) {
+      new ResizeObserver(updatePadding).observe(fixed);
+    }
   });
 }
 
