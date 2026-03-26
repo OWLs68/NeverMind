@@ -594,7 +594,7 @@ function processCompleteHabit(parsed, originalText) {
   if (!log[today]) log[today] = {};
   const completed = [];
   ids.forEach(habitId => {
-    const habit = habits.find(h => h.id == habitId);
+    const habit = habits.find(h => h.id === habitId);
     if (habit) {
       log[today][habit.id] = true;
       completed.push(habit.name);

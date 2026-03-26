@@ -80,10 +80,21 @@ function deleteNote(id) {
   const notes = getNotes();
   const noteOrigIdx = notes.findIndex(x => x.id === id);
   const item = notes.find(x => x.id === id);
+  const predecessorId = noteOrigIdx > 0 ? notes[noteOrigIdx - 1].id : null;
   if (item) addToTrash('note', item);
   saveNotes(notes.filter(x => x.id !== id));
   renderNotes();
-  if (item) showUndoToast('Нотатку видалено', () => { const n = getNotes(); const idx = Math.min(noteOrigIdx, n.length); n.splice(idx, 0, item); saveNotes(n); renderNotes(); });
+  if (item) showUndoToast('Нотатку видалено', () => {
+    const n = getNotes();
+    let idx;
+    if (predecessorId === null) {
+      idx = 0;
+    } else {
+      const predIdx = n.findIndex(x => x.id === predecessorId);
+      idx = predIdx !== -1 ? predIdx + 1 : n.length;
+    }
+    n.splice(idx, 0, item); saveNotes(n); renderNotes();
+  });
 }
 
 let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
@@ -346,10 +357,21 @@ function noteSwipeEnd(e, id) {
     setTimeout(() => {
       const allNotes = getNotes();
       const noteSwipeIdx = allNotes.findIndex(x => x.id === id);
+      const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
       const item = allNotes.find(x => x.id === id);
       if (item) addToTrash('note', item);
       saveNotes(allNotes.filter(x => x.id !== id)); renderNotes();
-      if (item) showUndoToast('Нотатку видалено', () => { const notes = getNotes(); const idx = Math.min(noteSwipeIdx, notes.length); notes.splice(idx, 0, item); saveNotes(notes); renderNotes(); });
+      if (item) showUndoToast('Нотатку видалено', () => {
+        const notes = getNotes();
+        let idx;
+        if (swipePredecessorId === null) {
+          idx = 0;
+        } else {
+          const predIdx = notes.findIndex(x => x.id === swipePredecessorId);
+          idx = predIdx !== -1 ? predIdx + 1 : notes.length;
+        }
+        notes.splice(idx, 0, item); saveNotes(notes); renderNotes();
+      });
     }, 200);
   } else {
     clearSwipeTrail(el, wrap);
