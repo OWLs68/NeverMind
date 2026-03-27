@@ -246,3 +246,42 @@ const db = {
   getVisited(key)        { return localStorage.getItem(key); },
   setVisited(key)        { localStorage.setItem(key, '1'); },
 };
+
+// ============================================================
+// Глобальні враппери — зворотня сумісність для модулів
+// що викликають функції без префіксу db.
+// ============================================================
+function getTasks()              { return db.getTasks(); }
+function saveTasks(arr)          { db.saveTasks(arr); }
+function getInbox()              { return db.getInbox(); }
+function saveInbox(arr)          { db.saveInbox(arr); }
+function getNotes()              { return db.getNotes(); }
+function saveNotes(arr)          { db.saveNotes(arr); }
+function getHabits()             { return db.getHabits(); }
+function saveHabits(arr)         { db.saveHabits(arr); }
+function getHabitLog()           { return db.getHabitLog(); }
+function saveHabitLog(obj)       { db.saveHabitLog(obj); }
+function getQuitLog()            { return db.getQuitLog(); }
+function saveQuitLog(obj)        { db.saveQuitLog(obj); }
+function getFinance()            { return db.getFinance(); }
+function saveFinance(arr)        { db.saveFinance(arr); }
+function getFinBudget()          { return db.getFinBudget(); }
+function saveFinBudget(obj)      { db.saveFinBudget(obj); }
+function getFinCats()            { return db.getFinCats(); }
+function saveFinCats(obj)        { db.saveFinCats(obj); }
+function getHealthCards()        { return db.getHealthCards(); }
+function saveHealthCards(arr)    { db.saveHealthCards(arr); }
+function getHealthLog()          { return db.getHealthLog(); }
+function saveHealthLog(obj)      { db.saveHealthLog(obj); }
+function getProjects()           { return db.getProjects(); }
+function saveProjects(arr)       { db.saveProjects(arr); }
+function getMoments()            { return db.getMoments(); }
+function saveMoments(arr)        { db.saveMoments(arr); }
+function getEveningSummary()     { return db.getEveningSummary(); }
+function saveEveningSummary(obj) { db.saveEveningSummary(obj); }
+function getEveningMood()        { return db.getEveningMood(); }
+function saveEveningMood(obj)    { db.saveEveningMood(obj); }
+function getTrash()              { return db.getTrash(); }
+function saveTrash(arr)          { db.saveTrash(arr); }
+function getErrorLog()           { return db.getErrorLog(); }
+function saveErrorLog(arr)       { db.saveErrorLog(arr); }
