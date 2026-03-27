@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OWL Board — Мокапи</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;700;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #0f0a18;
+  color: #fff;
+  min-height: 100vh;
+  padding: 40px 20px 60px;
+}
+
+h1 {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 48px;
+}
+
+/* ---- Section labels ---- */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 14px;
+  padding-left: 4px;
+}
+
+/* ---- Phone frame ---- */
+.phones-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+.phone {
+  width: 260px;
+  border-radius: 40px;
+  background: linear-gradient(160deg, #f5f0e8, #f0ebe0);
+  padding: 52px 8px 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 0 1.5px rgba(255,255,255,0.3);
+  position: relative;
+  flex-shrink: 0;
+}
+.phone::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 6px;
+  background: rgba(30,16,64,0.15);
+  border-radius: 3px;
+}
+.phone-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(30,16,64,0.4);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* ---- Page header ---- */
+.page-header {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 19px;
+  font-weight: 900;
+  color: rgba(30,16,64,0.88);
+  padding: 0 10px 12px;
+  letter-spacing: -0.5px;
+}
+
+/* ---- OWL Board card (base) ---- */
+.owl-board {
+  border-radius: 10px 10px 18px 18px;
+  background: rgba(26,10,46,0.49);
+  backdrop-filter: blur(7px);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 13px 15px;
+  position: relative;
+  overflow: hidden;
+  margin: 0 4px;
+}
+
+/* Priority accent bar */
+.owl-board::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.owl-board.critical::before { background: #ef4444; }
+.owl-board.important::before { background: #fbbf24; }
+.owl-board.normal::before { background: rgba(255,255,255,0.15); }
+
+/* OWL header row */
+.owl-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+.owl-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(251,191,36,0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+.owl-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: 1;
+}
+.owl-time {
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+}
+
+/* OWL text */
+.owl-text {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.88);
+  margin-bottom: 12px;
+}
+
+/* Buttons row */
+.owl-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.owl-btn {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.owl-btn.primary {
+  background: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.92);
+}
+.owl-btn.secondary {
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+}
+.owl-btn.answer {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+  flex: 1;
+  text-align: center;
+}
+
+/* Chips (info type) */
+.owl-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.owl-chip {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.65);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Type badge */
+.type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+.type-badge.action  { background: rgba(239,68,68,0.18);  color: #fca5a5; }
+.type-badge.question { background: rgba(139,92,246,0.18); color: #c4b5fd; }
+.type-badge.info    { background: rgba(59,130,246,0.18);  color: #93c5fd; }
+
+/* ---- App content below board (fake) ---- */
+.fake-content {
+  padding: 12px 10px 0;
+}
+.fake-card {
+  background: rgba(255,255,255,0.55);
+  border-radius: 14px;
+  padding: 11px 13px;
+  margin-bottom: 8px;
+  border: 1.5px solid rgba(255,255,255,0.75);
+}
+.fake-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(30,16,64,0.8);
+  margin-bottom: 3px;
+}
+.fake-card-sub {
+  font-size: 11.5px;
+  color: rgba(30,16,64,0.45);
+}
+.fake-habit-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #bbf7d0;
+  border: 1.5px solid #22c55e;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.fake-habit-dot.empty {
+  background: rgba(30,16,64,0.06);
+  border-color: rgba(30,16,64,0.15);
+}
+
+/* ---- Dialog flow section ---- */
+.dialog-flow {
+  max-width: 640px;
+  margin: 0 auto 48px;
+}
+.flow-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.flow-step {
+  flex: 1;
+}
+.flow-arrow {
+  font-size: 22px;
+  color: rgba(255,255,255,0.25);
+  padding-top: 28px;
+  flex-shrink: 0;
+}
+.flow-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+/* ---- Tab comparison ---- */
+.tab-compare {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+.tab-phone {
+  width: 220px;
+  border-radius: 32px;
+  background: linear-gradient(160deg, #f5f0e8, #f0ebe0);
+  padding: 40px 6px 24px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4), inset 0 0 0 1.5px rgba(255,255,255,0.25);
+  position: relative;
+}
+.tab-phone::before {
+  content: '';
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 5px;
+  background: rgba(30,16,64,0.12);
+  border-radius: 3px;
+}
+.tab-tag {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(30,16,64,0.35);
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tab-header-sm {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(30,16,64,0.88);
+  padding: 0 8px 10px;
+  letter-spacing: -0.5px;
+}
+
+/* ---- Wrap ---- */
+.section {
+  max-width: 900px;
+  margin: 0 auto 16px;
+}
+</style>
+</head>
+<body>
+
+<h1>OWL Board — Мокапи</h1>
+<p class="subtitle">Нова концепція: інтерактивні картки з живим діалогом</p>
+
+<!-- === TRI TYPES === -->
+<div class="section">
+  <div class="section-label">Три типи карток</div>
+</div>
+<div class="phones-row">
+
+  <!-- ACTION -->
+  <div class="phone">
+    <div class="phone-label">action</div>
+    <div class="page-header">Звички</div>
+    <div class="owl-board important">
+      <div class="type-badge action">action</div>
+      <div class="owl-header">
+        <div class="owl-dot"></div>
+        <div class="owl-name">OWL</div>
+        <div class="owl-time">18:42</div>
+      </div>
+      <div class="owl-text">Медитацію ще не відмітив. Стрік 7 днів під загрозою.</div>
+      <div class="owl-buttons">
+        <button class="owl-btn primary">✓ Відмітити</button>
+        <button class="owl-btn secondary">Деталі →</button>
+      </div>
+    </div>
+    <div class="fake-content">
+      <div class="fake-card">
+        <div class="fake-card-title"><span class="fake-habit-dot"></span>Медитація</div>
+        <div class="fake-card-sub">Стрік: 7 днів · ще не виконано</div>
+      </div>
+      <div class="fake-card">
+        <div class="fake-card-title"><span class="fake-habit-dot" style="background:#bbf7d0;border-color:#22c55e"></span>Зарядка</div>
+        <div class="fake-card-sub">Стрік: 12 днів · виконано</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUESTION -->
+  <div class="phone">
+    <div class="phone-label">question</div>
+    <div class="page-header">Вечір</div>
+    <div class="owl-board normal">
+      <div class="type-badge question">question</div>
+      <div class="owl-header">
+        <div class="owl-dot"></div>
+        <div class="owl-name">OWL</div>
+        <div class="owl-time">21:05</div>
+      </div>
+      <div class="owl-text">Як пройшов день? Що було найважче сьогодні?</div>
+      <div class="owl-buttons">
+        <button class="owl-btn answer">Добре</button>
+        <button class="owl-btn answer">Важко</button>
+        <button class="owl-btn answer">···</button>
+      </div>
+    </div>
+    <div class="fake-content">
+      <div class="fake-card">
+        <div class="fake-card-title">Кільце дня</div>
+        <div class="fake-card-sub">Виконано 68% · 4/6 звичок</div>
+      </div>
+      <div class="fake-card">
+        <div class="fake-card-title">Моменти дня</div>
+        <div class="fake-card-sub">+ Додати момент</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <div class="phone">
+    <div class="phone-label">info</div>
+    <div class="page-header">Фінанси</div>
+    <div class="owl-board normal">
+      <div class="type-badge info">info</div>
+      <div class="owl-header">
+        <div class="owl-dot"></div>
+        <div class="owl-name">OWL</div>
+        <div class="owl-time">14:20</div>
+      </div>
+      <div class="owl-text">День іде добре. Витрачено 62% бюджету, до зарплати 8 днів.</div>
+      <div class="owl-chips">
+        <span class="owl-chip">Звичок 3/5</span>
+        <span class="owl-chip">Задач 2/4</span>
+        <span class="owl-chip">−12% ↓</span>
+      </div>
+    </div>
+    <div class="fake-content">
+      <div class="fake-card">
+        <div class="fake-card-title">Заощаджено цього місяця</div>
+        <div class="fake-card-sub">₴ 4 200 · 18% від доходу</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- === DIALOG FLOW === -->
+<div class="section">
+  <div class="section-label">Живий діалог — ланцюжок відповідей</div>
+</div>
+<div class="dialog-flow">
+  <div class="flow-row">
+    <div class="flow-step">
+      <div class="flow-label">OWL питає</div>
+      <div class="owl-board normal">
+        <div class="owl-header">
+          <div class="owl-dot"></div>
+          <div class="owl-name">OWL</div>
+          <div class="owl-time">09:05</div>
+        </div>
+        <div class="owl-text">Виконав ранкову медитацію?</div>
+        <div class="owl-buttons">
+          <button class="owl-btn answer">Так</button>
+          <button class="owl-btn answer">Пропустив</button>
+          <button class="owl-btn secondary">Пізніше</button>
+        </div>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-label">Юзер натискає "Так"</div>
+      <div class="owl-board important">
+        <div class="owl-header">
+          <div class="owl-dot"></div>
+          <div class="owl-name">OWL</div>
+          <div class="owl-time">09:05</div>
+        </div>
+        <div class="owl-text">Відмічаю. Стрік тепер 8 днів — так тримати! Ще одна звичка на сьогодні.</div>
+        <div class="owl-buttons">
+          <button class="owl-btn primary">Зарядка →</button>
+          <button class="owl-btn secondary">Пізніше</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === TAB COMPARISON === -->
+<div class="section">
+  <div class="section-label">Той самий момент — різні вкладки (контекст по вкладці)</div>
+</div>
+<div class="tab-compare">
+
+  <div class="tab-phone">
+    <div class="tab-tag">Вкладка: Звички</div>
+    <div class="tab-header-sm">Звички</div>
+    <div class="owl-board important">
+      <div class="owl-header">
+        <div class="owl-dot"></div>
+        <div class="owl-name">OWL</div>
+        <div class="owl-time">18:42</div>
+      </div>
+      <div class="owl-text" style="font-size:12.5px">Медитацію ще не відмітив. Стрік під загрозою.</div>
+      <div class="owl-buttons">
+        <button class="owl-btn primary" style="font-size:11.5px">✓ Відмітити</button>
+        <button class="owl-btn secondary" style="font-size:11.5px">Пізніше</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-phone">
+    <div class="tab-tag">Вкладка: Фінанси</div>
+    <div class="tab-header-sm">Фінанси</div>
+    <div class="owl-board critical">
+      <div class="owl-header">
+        <div class="owl-dot"></div>
+        <div class="owl-name">OWL</div>
+        <div class="owl-time">18:42</div>
+      </div>
+      <div class="owl-text" style="font-size:12.5px">Витрачено 90% бюджету на їжу. Залишилось 8 днів до зарплати.</div>
+      <div class="owl-buttons">
+        <button class="owl-btn primary" style="font-size:11.5px">Переглянути</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-phone">
+    <div class="tab-tag">Вкладка: Проекти</div>
+    <div class="tab-header-sm">Проекти</div>
+    <div class="owl-board normal">
+      <div class="owl-header">
+        <div class="owl-dot"></div>
+        <div class="owl-name">OWL</div>
+        <div class="owl-time">18:42</div>
+      </div>
+      <div class="owl-text" style="font-size:12.5px">NeverMind стоїть 3 дні без активності. Що блокує?</div>
+      <div class="owl-buttons">
+        <button class="owl-btn answer" style="font-size:11.5px">Нічого</button>
+        <button class="owl-btn answer" style="font-size:11.5px">Пояснити</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- === PRIORITY === -->
+<div class="section">
+  <div class="section-label">Пріоритети — кольорова смуга зліва</div>
+</div>
+<div style="max-width:400px;margin:0 auto 16px;display:flex;flex-direction:column;gap:10px;">
+  <div class="owl-board critical">
+    <div class="owl-header">
+      <div class="owl-dot"></div>
+      <div class="owl-name">OWL · critical</div>
+      <div class="owl-time">🔴</div>
+    </div>
+    <div class="owl-text">Дедлайн задачі "Здати звіт" через 45 хвилин!</div>
+    <div class="owl-buttons">
+      <button class="owl-btn primary">Відкрити задачу</button>
+    </div>
+  </div>
+
+  <div class="owl-board important">
+    <div class="owl-header">
+      <div class="owl-dot"></div>
+      <div class="owl-name">OWL · important</div>
+      <div class="owl-time">🟡</div>
+    </div>
+    <div class="owl-text">Стрік медитації 7 днів — відміть сьогодні щоб не скинути.</div>
+    <div class="owl-buttons">
+      <button class="owl-btn primary">✓ Відмітити</button>
+      <button class="owl-btn secondary">Пізніше</button>
+    </div>
+  </div>
+
+  <div class="owl-board normal">
+    <div class="owl-header">
+      <div class="owl-dot"></div>
+      <div class="owl-name">OWL · normal</div>
+      <div class="owl-time">⚪</div>
+    </div>
+    <div class="owl-text">Сьогодні 3 з 5 звичок виконано. Хороший день.</div>
+    <div class="owl-chips">
+      <span class="owl-chip">Звичок 3/5</span>
+      <span class="owl-chip">Задач 1/3</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
