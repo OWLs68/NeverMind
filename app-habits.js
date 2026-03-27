@@ -6,14 +6,7 @@
 // === HABITS ===
 let editingHabitId = null;
 
-function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
-function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
-function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
-function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
-
 // === QUIT HABITS — челендж "Кинути" ===
-function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
-function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); }
 
 // Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }
 // freedomDays — сумарна кількість днів "тримався", ніколи не скидається
@@ -85,12 +78,12 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
   const h = habits.find(x => x.id === habitId);
   const name = h ? h.name : 'звичку';
   const fdText = freedomDays > 0 ? ` Твої ${freedomDays} вільних ${_dayWord(freedomDays)} — назавжди твої.` : '';
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) {
     addInboxChatMsg('agent', `Сьогодні важкий день з "${name}".${fdText} Завтра новий шанс.`);
     return;
   }
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   const owlMode = settings.owl_mode || 'balanced';
   const tone = owlMode === 'brutal' ? 'різкий, чесний, без зайвого жалю' : owlMode === 'soft' ? 'м\'який, підтримуючий, співчутливий' : 'збалансований, чесний але підтримуючий';
   fetch('https://api.openai.com/v1/chat/completions', {
@@ -1074,7 +1067,7 @@ async function sendTasksBarMessage() {
   const input = document.getElementById('tasks-chat-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addTaskBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
 
   input.value = '';

@@ -120,8 +120,6 @@ const CAT_META = {
   finance: { icon: '₴',  label: 'Фінанси',  dotClass: 'cat-dot-finance', tagClass: 'cat-finance' },
 };
 
-function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
-function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
 
 
 function renderInbox() {
@@ -237,7 +235,7 @@ async function sendToAI() {
   try { saveGuideTopicAnswer(text); } catch(e) {}
   if (handleSurveyAnswer(text)) return;
 
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
 
   // Немає ключа або file:// — зберігаємо офлайн миттєво
   if (!key || location.protocol === 'file:') {
@@ -486,7 +484,7 @@ async function sendClarifyText() {
   if (!text) return;
   closeClarify();
   // Відправляємо уточнення назад в ШІ разом з оригінальним текстом
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   const combinedMsg = `Оригінальний запис: "${clarifyOriginalText}". Уточнення від користувача: "${text}"`;

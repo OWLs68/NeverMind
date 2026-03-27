@@ -6,21 +6,6 @@
 
 // === FINANCE ===
 
-// Storage
-function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
-function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); }
-function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
-function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
-function getFinCats() {
-  const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
-  if (saved) return saved;
-  return {
-    expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Інше'],
-    income:  ['Зарплата','Надходження','Повернення','Інше'],
-  };
-}
-function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
-
 // Підкатегорії — показуються після вибору головної
 const FIN_SUBCATS = {
   'Їжа':       ['Продукти','Ресторан','Кафе','Доставка','Фастфуд'],
@@ -35,14 +20,14 @@ const FIN_SUBCATS = {
 let currentFinTab = 'expense';
 let currentFinPeriod = 'month';
 function getCurrency() {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = db.getSettings();
   return s.currency || '₴';
 }
 
 function setCurrency(symbol) {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = db.getSettings();
   s.currency = symbol;
-  localStorage.setItem('nm_settings', JSON.stringify(s));
+  db.saveSettings(s);
   ['₴','$','€'].forEach(c => {
     const map = {'₴':'uah','$':'usd','€':'eur'};
     const btn = document.getElementById('btn-currency-' + map[c]);
@@ -125,8 +110,8 @@ function _hideOldFinBlocks() {
 
 // Адаптивний бенчмарк на основі контексту користувача
 function getFinAdaptiveBenchmark() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  const memory = (localStorage.getItem('nm_memory') || '').toLowerCase();
+  const settings = db.getSettings();
+  const memory = db.getMemory().toLowerCase();
   const age = parseInt(settings.age) || 0;
   const hasDebt = memory.includes('борг') || memory.includes('кредит') || memory.includes('позик');
   const from3m = getFinPeriodRange('3months');
@@ -412,7 +397,8 @@ function _finForecast(totalExp, totalInc) {
 }
 
 function _finCoachBlock() {
-  const cached = localStorage.getItem('nm_fin_coach_' + currentFinPeriod);
+  const cachedRaw = db.getFinCoachCache('nm_fin_coach_' + currentFinPeriod);
+  const cached = cachedRaw;
   let coachText = 'OWL аналізує твої витрати…';
   if (cached) { try { coachText = JSON.parse(cached).text || coachText; } catch(e) {} }
   return `<div id="fin-coach-block" style="background:rgba(12,6,28,0.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:13px 15px;margin-bottom:12px">
@@ -425,10 +411,10 @@ function _finCoachBlock() {
 }
 
 async function _refreshFinCoach(totalExp, totalInc, expenses) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   const cacheKey = 'nm_fin_coach_' + currentFinPeriod;
-  const cached = localStorage.getItem(cacheKey);
+  const cached = db.getFinCoachCache(cacheKey);
   if (cached) {
     try { if (Date.now() - JSON.parse(cached).ts < 24*60*60*1000) return; } catch(e) {}
   }
@@ -455,7 +441,7 @@ async function _refreshFinCoach(totalExp, totalInc, expenses) {
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) return;
-    localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now() }));
+    db.setFinCoachCache(cacheKey, JSON.stringify({ text, ts: Date.now() }));
     const el = document.getElementById('fin-coach-text');
     if (el) el.textContent = text;
   } catch(e) {}
@@ -797,7 +783,7 @@ function saveFinTransaction() {
   renderFinance();
   showToast(_finEditId ? '✓ Оновлено' : `✓ ${_finTxCurrentType === 'expense' ? 'Витрату' : 'Дохід'} збережено`);
   _finEditId = null;
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
+  try { db.saveOwlTabTs('finance', 0); tryTabBoardUpdate('finance'); } catch(e) {}
 }
 
 function deleteFinTransaction() {
@@ -806,10 +792,10 @@ function deleteFinTransaction() {
   saveFinance(getFinance().filter(t => t.id !== _finEditId));
   closeFinTxModal();
   renderFinance();
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
+  try { db.saveOwlTabTs('finance', 0); tryTabBoardUpdate('finance'); } catch(e) {}
   if (item) showUndoToast('Транзакцію видалено', () => {
     const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
-    try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
+    try { db.saveOwlTabTs('finance', 0); tryTabBoardUpdate('finance'); } catch(e) {}
   });
   _finEditId = null;
 }
@@ -871,7 +857,7 @@ function saveFinBudgetFromModal() {
   closeFinBudgetModal();
   renderFinance();
   showToast('✓ Бюджет збережено');
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
+  try { db.saveOwlTabTs('finance', 0); tryTabBoardUpdate('finance'); } catch(e) {}
 }
 
 function closeFinBudgetModal() {
@@ -1008,7 +994,7 @@ async function sendFinanceBarMessage() {
   const input = document.getElementById('finance-bar-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addFinanceChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
@@ -1065,7 +1051,7 @@ async function sendFinanceBarMessage() {
         txs2.unshift({ id: Date.now(), type, amount: parseFloat(parsed.amount), category: parsed.category || 'Інше', comment: parsed.comment || '', ts: Date.now() });
         saveFinance(txs2);
         renderFinance();
-        try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryTabBoardUpdate('finance'); } catch(e) {}
+        try { db.saveOwlTabTs('finance', 0); tryTabBoardUpdate('finance'); } catch(e) {}
         addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(parsed.amount)} · ${parsed.category}`);
         checkFinBudgetWarning(type, parsed.category, parseFloat(parsed.amount));
       } else if (parsed.action === 'delete_transaction') {

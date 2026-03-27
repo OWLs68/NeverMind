@@ -5,8 +5,6 @@
 // ============================================================
 
 // === STORAGE ===
-function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
-function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); }
 
 // State
 let activeProjectId = null;
@@ -365,7 +363,7 @@ async function startProjectInboxInterview(projectName, projectSubtitle) {
   // Переходимо на Inbox де відбувається вся комунікація
   if (typeof switchTab === 'function' && currentTab !== 'inbox') switchTab('inbox');
 
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) {
     setTimeout(() => addInboxChatMsg('agent',
       `Проект "${projectName}" створено! Розкажи — який у тебе стартовий капітал, скільки часу на тиждень можеш вкладати, і що найбільше лякає в цьому?`
@@ -397,12 +395,12 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
       setTimeout(() => {
         addInboxChatMsg('agent', reply);
         // Зберігаємо що OWL чекає відповідь по темі проекту
-        localStorage.setItem('nm_guide_waiting_topic', 'project_' + Date.now());
+        db.setGuideWaitingTopic('project_' + Date.now());
         // Додаємо в масив тем провідника щоб продовжити розпитувати
-        const shownTopics = JSON.parse(localStorage.getItem('nm_guide_shown_topics') || '[]');
+        const shownTopics = db.getGuideShownTopics();
         // Питання про час на тиждень — наступне
-        localStorage.setItem('nm_project_interview_step', '1');
-        localStorage.setItem('nm_project_interview_name', projectName);
+        db.setProjectInterviewStep(1);
+        db.setProjectInterviewName(projectName);
       }, 500);
     }
   } catch(e) {
@@ -458,7 +456,7 @@ async function sendProjectsBarMessage() {
   const input = document.getElementById('projects-bar-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addProjectsChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();

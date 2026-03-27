@@ -414,29 +414,19 @@ let _owlBoardMessages = [];
 let _owlBoardGenerating = false;
 let _owlBoardTimer = null;
 
-function getOwlBoardMessages() {
-  try { return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]'); } catch { return []; }
-}
-function saveOwlBoardMessages(arr) {
-  localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-3)));
-}
+function getOwlBoardMessages()      { return db.getOwlBoardMessages(); }
+function saveOwlBoardMessages(arr)  { db.saveOwlBoardMessages(arr); }
 
 // === OWL BOARD — повний розумний цикл ===
 
 // Ключ для антиповтору — що вже сказали сьогодні
 const OWL_BOARD_SAID_KEY = 'nm_owl_board_said'; // {date, topics:[]}
 
-function getOwlBoardSaid() {
-  try {
-    const s = JSON.parse(localStorage.getItem(OWL_BOARD_SAID_KEY) || '{}');
-    if (s.date !== new Date().toDateString()) return { date: new Date().toDateString(), topics: [] };
-    return s;
-  } catch { return { date: new Date().toDateString(), topics: [] }; }
-}
+function getOwlBoardSaid()  { return db.getOwlBoardSaid(); }
 function markOwlBoardSaid(topic) {
-  const s = getOwlBoardSaid();
+  const s = db.getOwlBoardSaid();
   if (!s.topics.includes(topic)) s.topics.push(topic);
-  localStorage.setItem(OWL_BOARD_SAID_KEY, JSON.stringify(s));
+  db.saveOwlBoardSaid(s);
 }
 function owlAlreadySaid(topic) {
   return getOwlBoardSaid().topics.includes(topic);
@@ -444,7 +434,7 @@ function owlAlreadySaid(topic) {
 
 // Перевірка чи є щось важливе — БЕЗ API
 function checkOwlBoardTrigger() {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return false;
 
   const now = new Date();
@@ -463,7 +453,7 @@ function checkOwlBoardTrigger() {
 
   // Вечірній підсумок 20:00 — раз
   if (hour >= 20 && !owlAlreadySaid('evening_prompt')) {
-    const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const s = db.getEveningSummary();
     if (!s || new Date(s.date).toDateString() !== todayStr) return true;
   }
 
@@ -527,7 +517,7 @@ function checkOwlBoardTrigger() {
   } catch(e) {}
 
   // Порожній день — немає нічого критичного, але треба щось показати
-  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const lastTs = db.getOwlBoardTs();
   const sinceLastH = (Date.now() - lastTs) / (60*60*1000);
   if (sinceLastH > 4 && !owlAlreadySaid('quiet_day_' + todayStr)) return true;
 
@@ -695,7 +685,7 @@ function getOwlBoardContext() {
 
   // Вечір без підсумку
   if (hour >= 20 && !owlAlreadySaid('evening_prompt')) {
-    const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const s = db.getEveningSummary();
     if (!s || new Date(s.date).toDateString() !== todayStr) {
       important.push('[ВАЖЛИВО] Вечір — підсумок дня ще не записано.');
       markOwlBoardSaid('evening_prompt');
@@ -716,7 +706,7 @@ function getOwlBoardContext() {
   }
 
   // Порожній день — немає нічого критичного або важливого
-  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const lastTs = db.getOwlBoardTs();
   const sinceLastH = (Date.now() - lastTs) / (60*60*1000);
   if (critical.length === 0 && important.length === 0 && sinceLastH > 4 && !owlAlreadySaid('quiet_day_' + todayStr)) {
     normal.push('[СПОКІЙНИЙ ДЕНЬ] Немає нічого термінового. OWL може сказати щось мотивуюче або поставити коротке питання.');
@@ -728,7 +718,7 @@ function getOwlBoardContext() {
 
 async function generateOwlBoardMessage() {
   if (_owlBoardGenerating) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
 
   _owlBoardGenerating = true;
@@ -789,7 +779,7 @@ async function generateOwlBoardMessage() {
     const msgs = getOwlBoardMessages();
     msgs.unshift({ id: Date.now(), text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [] });
     saveOwlBoardMessages(msgs.slice(0, 3));
-    localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
+    db.saveOwlBoardTs(Date.now());
 
     renderOwlBoard();
   } catch(e) {}
@@ -932,7 +922,7 @@ function tryOwlBoardUpdate() {
   const msgs = getOwlBoardMessages();
   if (msgs.length > 0) renderOwlBoard();
 
-  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const lastTs = db.getOwlBoardTs();
   const elapsed = Date.now() - lastTs;
   const isFirstTime = msgs.length === 0 && lastTs === 0;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();

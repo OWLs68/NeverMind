@@ -66,7 +66,7 @@ async function sendMeChatMessage() {
 
 // === ME TAB ===
 function renderMe() {
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const inbox = db.getInbox();
   const now = new Date();
   const todayDow = (now.getDay() + 6) % 7; // 0=Пн
 
@@ -194,7 +194,7 @@ function renderMe() {
       const date = new Date(now); date.setDate(now.getDate() - daysAgo);
       const ds = date.toDateString();
       try {
-        const saved = JSON.parse(localStorage.getItem('nm_evening_mood') || 'null');
+        const saved = db.get('nm_evening_mood', null);
         if (saved && saved.date === ds && saved.mood) {
           const val = moodMap[saved.mood] || 3;
           const maxH = 26;
@@ -318,7 +318,7 @@ function renderMeActivityChart() {
 
   const now = new Date();
   const todayDow = (now.getDay() + 6) % 7;
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const inbox = db.getInbox();
   const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
   const accent = '#7c4a2a';
 
@@ -420,8 +420,8 @@ async function refreshMeAnalysis() {
   btn.disabled = true;
   el.textContent = '…';
 
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
-  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const inbox = db.getInbox();
+  const tasks = db.getTasks();
   const notes = getNotes();
   const aiContext = getAIContext();
   const totalRecords = inbox.length + tasks.length + notes.length;
@@ -472,8 +472,6 @@ let currentMomentMood = 'positive';
 let dialogHistory = [];
 let dialogLoading = false;
 
-function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
-function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); }
 
 function renderEvening() {
   const today = new Date().toDateString();
@@ -579,7 +577,7 @@ function renderEvening() {
 
   // === 6. Відновлюємо підсумок OWL ===
   try {
-    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const saved = db.getEveningSummary();
     const el = document.getElementById('evening-summary');
     const btn = document.getElementById('evening-summary-btn');
     if (saved && saved.date === today && saved.text && el) {
@@ -590,18 +588,9 @@ function renderEvening() {
   } catch(e) {}
 }
 
-function getEveningMood() {
-  const today = new Date().toDateString();
-  try {
-    const saved = JSON.parse(localStorage.getItem('nm_evening_mood') || 'null');
-    if (saved && saved.date === today) return saved.mood;
-  } catch(e) {}
-  return null;
-}
-
 function setEveningMood(level) {
   const today = new Date().toDateString();
-  localStorage.setItem('nm_evening_mood', JSON.stringify({ mood: level, date: today }));
+  db.saveEveningMood({ mood: level, date: today });
   renderEveningMoodButtons(level);
 }
 
@@ -658,7 +647,7 @@ function saveMoment() {
 }
 
 async function generateMomentSummary(momentId, text) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   // Не генеруємо для коротких текстів — вони вже короткі
   if (text.length <= 60) return;
@@ -702,7 +691,7 @@ async function generateEveningSummary() {
 
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const inbox = db.getInbox().filter(i => new Date(i.ts).toDateString() === today);
   const aiContext = getAIContext();
 
   const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
@@ -726,14 +715,14 @@ async function generateEveningSummary() {
   const text = reply || 'Не вдалось отримати підсумок.';
   el.textContent = text;
   // Зберігаємо підсумок в localStorage — відновиться після перезапуску
-  localStorage.setItem('nm_evening_summary', JSON.stringify({ text, date: today }));
+  db.saveEveningSummary({ text, date: today });
   btn.textContent = '↻';
   btn.disabled = false;
 }
 
 // === АВТОПІДСУМОК ВЕЧОРА ЩОГОДИНИ ===
 async function autoEveningSummary() {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
 
   // Підсумок дня має сенс тільки з вечора — до 18:00 не генеруємо
@@ -742,12 +731,12 @@ async function autoEveningSummary() {
   // Перевіряємо чи є взагалі записи за сьогодні
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
+  const inbox = db.getInbox().filter(i => new Date(i.ts).toDateString() === today);
   if (moments.length === 0 && inbox.length === 0) return; // нема чого підсумовувати
 
   // Перевіряємо чи не оновлювали менше ніж 50 хвилин тому
   try {
-    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const saved = db.getEveningSummary();
     if (saved && saved.date === today && saved.autoTs) {
       const elapsed = Date.now() - saved.autoTs;
       if (elapsed < 50 * 60 * 1000) return; // 50 хвилин
@@ -763,7 +752,7 @@ async function autoEveningSummary() {
     const reply = await callAI(systemPrompt, dayData, {});
     if (!reply) return;
     // Зберігаємо з позначкою autoTs — щоб не запускати занадто часто
-    localStorage.setItem('nm_evening_summary', JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
+    db.saveEveningSummary({ text: reply, date: today, autoTs: Date.now() });
     // Якщо зараз відкрита вкладка Вечір — оновлюємо UI
     if (currentTab === 'evening') {
       const el = document.getElementById('evening-summary');
@@ -789,7 +778,7 @@ function openEveningDialog() {
   document.getElementById('dialog-input').value = '';
 
   // Перше повідомлення від агента
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   const name = settings.name ? `, ${settings.name}` : '';
   addDialogMessage('agent', `Привіт${name}. Розкажи як пройшов день — що вийшло, що ні. Без прикрас.`);
 }
@@ -825,7 +814,7 @@ async function sendDialogMessage() {
   const systemPrompt = `${getOWLPersonality()} Короткі відповіді (1-3 речення). Конкретно і по ділу. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
 Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
 
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addDialogMessage('agent', 'Введи OpenAI ключ в налаштуваннях.'); dialogLoading = false; return; }
 
   // Відправляємо всю історію
@@ -909,7 +898,7 @@ async function sendEveningBarMessage() {
   const input = document.getElementById('evening-bar-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus(); // утримуємо клавіатуру
@@ -919,8 +908,8 @@ async function sendEveningBarMessage() {
 
   const today = new Date().toDateString();
   const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
-  const todayNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]').filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
+  const inbox = db.getInbox().filter(i => new Date(i.ts).toDateString() === today);
+  const todayNotes = db.getNotes().filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
   const aiContext = getAIContext();
   const systemPrompt = `${getOWLPersonality()} Короткі відповіді (1-3 речення).
 Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}.

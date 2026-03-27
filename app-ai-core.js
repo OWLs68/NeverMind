@@ -5,7 +5,7 @@
 
 // ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
 function getOWLPersonality() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   const mode = settings.owl_mode || 'partner';
   const name = settings.name ? settings.name : '';
   const nameStr = name ? `, звертайся до користувача на імʼя "${name}"` : '';
@@ -40,7 +40,7 @@ function getOWLPersonality() {
 
 function getAIContext() {
   const profile = getProfile();
-  const memory = localStorage.getItem('nm_memory') || '';
+  const memory = db.getMemory();
   const parts = [];
 
   // === Дата і час ===
@@ -83,7 +83,7 @@ function getAIContext() {
   }
 
   // === Записи Inbox за сьогодні (останні 8) ===
-  const todayInbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]')
+  const todayInbox = db.getInbox()
     .filter(i => new Date(i.ts).toDateString() === today)
     .slice(0, 8);
   if (todayInbox.length > 0) {
@@ -332,7 +332,7 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 НЕ вигадуй ліміти, бюджети або плани яких немає в контексті. Якщо дані відсутні — не згадуй їх.`;
 
 async function callAI(systemPrompt, userMessage, contextData = {}) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) {
     showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000);
     return null;
@@ -382,7 +382,7 @@ async function callAI(systemPrompt, userMessage, contextData = {}) {
 
 
 async function callAIWithHistory(systemPrompt, history) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
   const controller = new AbortController();
@@ -415,34 +415,9 @@ async function callAIWithHistory(systemPrompt, history) {
   }
 }
 
-// === CHAT STORAGE — зберігає чати по вкладках ===
-const CHAT_STORE_MAX = 30; // максимум повідомлень на вкладку
-const CHAT_STORE_KEYS = {
-  inbox:   'nm_chat_inbox',
-  tasks:   'nm_chat_tasks',
-  notes:   'nm_chat_notes',
-  me:      'nm_chat_me',
-  evening: 'nm_chat_evening',
-  finance: 'nm_chat_finance',
-};
-
-function saveChatMsg(tab, role, text) {
-  if (role === 'typing') return;
-  const key = CHAT_STORE_KEYS[tab];
-  if (!key) return;
-  try {
-    const msgs = JSON.parse(localStorage.getItem(key) || '[]');
-    msgs.push({ role, text, ts: Date.now() });
-    if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
-    localStorage.setItem(key, JSON.stringify(msgs));
-  } catch(e) {}
-}
-
-function loadChatMsgs(tab) {
-  const key = CHAT_STORE_KEYS[tab];
-  if (!key) return [];
-  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
-}
+// === CHAT STORAGE — делегується до db ===
+function saveChatMsg(tab, role, text) { db.saveChatMsg(tab, role, text); }
+function loadChatMsgs(tab) { return db.loadChatMsgs(tab); }
 
 function restoreChatUI(tab) {
   const containerMap = {

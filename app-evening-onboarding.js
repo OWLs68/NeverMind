@@ -228,11 +228,11 @@ function closeSlidesTour(fromOnboarding = false) {
   el.style.transition = 'opacity 0.3s ease';
   // Зберігаємо що бачили поточне оновлення
   if (_slidesIsUpdate) {
-    localStorage.setItem('nm_seen_update', UPDATE_VERSION);
+    db.setSeenUpdate(UPDATE_VERSION);
   }
   setTimeout(() => {
     el.style.display = 'none'; el.style.opacity = ''; el.style.transition = '';
-    if (fromOnboarding && !localStorage.getItem('nm_survey_done')) {
+    if (fromOnboarding && !db.getSurveyDone()) {
       startSurvey();
     }
   }, 300);
@@ -537,8 +537,8 @@ function closeHelp() {
 // Підказка першого відвідування
 function showFirstVisitTip(tab) {
   const key = 'nm_visited_' + tab;
-  if (localStorage.getItem(key)) return;
-  localStorage.setItem(key, '1');
+  if (db.getVisited(key)) return;
+  db.setVisited(key);
   const tip = FIRST_VISIT_TIPS[tab];
   if (!tip) return;
 
@@ -622,14 +622,14 @@ function handleSurveyAnswer(text) {
 
 async function finishSurvey() {
   addInboxChatMsg('agent', 'Дякую! Зараз підготую персональні поради…');
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) {
     addInboxChatMsg('agent', 'Введи API ключ в налаштуваннях — і я збережу все про тебе в памʼять.');
-    localStorage.setItem('nm_survey_done', '1');
-    localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
+    db.setSurveyDone();
+    db.setGuideStep(SURVEY_QUESTIONS.length.toString());
     return;
   }
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   const name = settings.name || 'користувач';
   const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
   const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що відповів на питання онбордингу:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (4-6 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні практичні поради як використовувати NeverMind саме для цієї людини. Порекомендуй конкретні вкладки або функції.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
@@ -646,8 +646,8 @@ async function finishSurvey() {
       try {
         const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
         if (parsed.memory) {
-          localStorage.setItem('nm_memory', parsed.memory);
-          localStorage.setItem('nm_memory_ts', Date.now().toString());
+          db.saveMemory(parsed.memory);
+          db.saveMemoryTs(Date.now());
         }
         if (parsed.advice) {
           addInboxChatMsg('agent', parsed.advice);
@@ -659,8 +659,8 @@ async function finishSurvey() {
   } catch(e) {
     addInboxChatMsg('agent', 'Не вдалось зберегти — але твої відповіді я запамʼятав.');
   }
-  localStorage.setItem('nm_survey_done', '1');
-  localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
+  db.setSurveyDone();
+  db.setGuideStep(SURVEY_QUESTIONS.length.toString());
 
   // Через 30 секунд — перша рекомендація по застосунку
   setTimeout(() => owlGuideNextTip(), 30000);
@@ -702,8 +702,8 @@ function owlGuideNextTip() {
   if (typeof currentTab !== 'undefined' && currentTab !== 'inbox') return;
 
   // Продовження інтерв'ю по проекту
-  const projectStep = parseInt(localStorage.getItem('nm_project_interview_step') || '0');
-  const projectName = localStorage.getItem('nm_project_interview_name') || '';
+  const projectStep = db.getProjectInterviewStep();
+  const projectName = db.getProjectInterviewName();
   if (projectStep > 0 && projectName) {
     const projectQuestions = [
       `Скільки годин на тиждень реально можеш вкладати в "${projectName}"?`,
@@ -713,26 +713,26 @@ function owlGuideNextTip() {
     if (projectStep <= projectQuestions.length) {
       addInboxChatMsg('agent', projectQuestions[projectStep - 1]);
       if (projectStep < projectQuestions.length) {
-        localStorage.setItem('nm_project_interview_step', (projectStep + 1).toString());
+        db.setProjectInterviewStep(projectStep + 1);
       } else {
         // Після всіх питань — генеруємо перші кроки
-        localStorage.removeItem('nm_project_interview_step');
-        localStorage.removeItem('nm_project_interview_name');
+        db.clearProjectInterviewStep();
+        db.clearProjectInterviewName();
         setTimeout(() => generateProjectFirstSteps(projectName), 1500);
       }
       return;
     }
   }
 
-  const shownTips = JSON.parse(localStorage.getItem('nm_guide_shown_tips') || '[]');
-  const shownTopics = JSON.parse(localStorage.getItem('nm_guide_shown_topics') || '[]');
+  const shownTips = db.getGuideShownTips();
+  const shownTopics = db.getGuideShownTopics();
 
   // Спочатку показуємо підказки про функції (кожну один раз)
   const nextTip = OWL_APP_TIPS.find(t => !shownTips.includes(t.key));
   if (nextTip) {
     addInboxChatMsg('agent', nextTip.msg);
     shownTips.push(nextTip.key);
-    localStorage.setItem('nm_guide_shown_tips', JSON.stringify(shownTips));
+    db.setGuideShownTips(shownTips);
     return;
   }
 
@@ -741,30 +741,30 @@ function owlGuideNextTip() {
   if (nextTopic) {
     addInboxChatMsg('agent', nextTopic.q);
     shownTopics.push(nextTopic.key);
-    localStorage.setItem('nm_guide_shown_topics', JSON.stringify(shownTopics));
-    localStorage.setItem('nm_guide_waiting_topic', nextTopic.key);
+    db.setGuideShownTopics(shownTopics);
+    db.setGuideWaitingTopic(nextTopic.key);
   }
 }
 
 // Виклик після кожної відповіді агента в Inbox — вирішує чи питати зараз
 function maybeAskGuideQuestion() {
   // Тільки якщо онбординг завершено і є ключ
-  if (!localStorage.getItem('nm_survey_done')) return;
-  if (!localStorage.getItem('nm_gemini_key')) return;
+  if (!db.getSurveyDone()) return;
+  if (!db.getApiKey()) return;
   if (surveyWaiting) return;
 
   // Органічно — не кожного разу, а з вірогідністю ~25% і не частіше ніж раз на 3 хв
-  const lastGuideTs = parseInt(localStorage.getItem('nm_guide_last_ts') || '0');
+  const lastGuideTs = db.getGuideLastTs();
   const elapsed = Date.now() - lastGuideTs;
   if (elapsed < 3 * 60 * 1000) return; // не частіше 3 хвилин
   if (Math.random() > 0.25) return; // 25% шанс
 
-  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+  db.setGuideLastTs(Date.now());
   setTimeout(() => owlGuideNextTip(), 1200); // невелика пауза після відповіді агента
 }
 
 async function generateProjectFirstSteps(projectName) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   const aiContext = getAIContext();
   const systemPrompt = `${getOWLPersonality()} На основі розмови про проект "${projectName}" — запропонуй перші 3 конкретні кроки для старту. Кожен крок — одна дія, 4-8 слів, реальна і досяжна на цьому тижні.
@@ -805,14 +805,14 @@ async function generateProjectFirstSteps(projectName) {
 
 // Зберігає відповідь юзера в памʼять якщо OWL чекав на відповідь по темі
 async function saveGuideTopicAnswer(userText) {
-  const waitingTopic = localStorage.getItem('nm_guide_waiting_topic');
+  const waitingTopic = db.getGuideWaitingTopic();
   if (!waitingTopic) return;
-  localStorage.removeItem('nm_guide_waiting_topic');
+  db.clearGuideWaitingTopic();
 
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
 
-  const currentMemory = localStorage.getItem('nm_memory') || '';
+  const currentMemory = db.getMemory();
   const topicData = OWL_GUIDE_TOPICS.find(t => t.key === waitingTopic);
   if (!topicData) return;
 
@@ -830,22 +830,22 @@ async function saveGuideTopicAnswer(userText) {
     const data = await res.json();
     const updated = data.choices?.[0]?.message?.content?.trim();
     if (updated) {
-      localStorage.setItem('nm_memory', updated);
-      localStorage.setItem('nm_memory_ts', Date.now().toString());
+      db.saveMemory(updated);
+      db.saveMemoryTs(Date.now());
     }
   } catch(e) {}
 }
 
 
 function checkOnboarding() {
-  const done = localStorage.getItem('nm_onboarding_done');
+  const done = db.getOnboardingDone();
   if (!done) {
     // Новий користувач — показуємо онбординг
     document.getElementById('onboarding').style.display = 'block';
     return true;
   }
   // Існуючий користувач — перевіряємо чи бачив оновлення
-  const seenUpdate = localStorage.getItem('nm_seen_update');
+  const seenUpdate = db.getSeenUpdate();
   if (seenUpdate !== UPDATE_VERSION) {
     setTimeout(() => openUpdateSlides(), 500);
     return false;
@@ -858,23 +858,23 @@ function obNext(step) {
     const name = document.getElementById('ob-name').value.trim();
     const age = document.getElementById('ob-age').value.trim();
     if (!name) { showToast('Введи імʼя'); return; }
-    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    const settings = db.getSettings();
     settings.name = name;
     if (age) settings.age = age;
-    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    db.saveSettings(settings);
     document.getElementById('ob-step-1').style.display = 'none';
     document.getElementById('ob-step-2').style.display = 'block';
   } else if (step === 2) {
     const key = document.getElementById('ob-key').value.trim();
-    if (key) localStorage.setItem('nm_gemini_key', key);
+    if (key) db.saveApiKey(key);
     document.getElementById('ob-step-2').style.display = 'none';
     document.getElementById('ob-step-owl').style.display = 'block';
     // Дефолтно вибрати "partner"
     selectOwlMode('partner');
   } else if (step === 'owl') {
-    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    const settings = db.getSettings();
     if (!settings.owl_mode) settings.owl_mode = 'partner';
-    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    db.saveSettings(settings);
     document.getElementById('ob-step-owl').style.display = 'none';
     document.getElementById('ob-step-consent').style.display = 'block';
   }
@@ -887,9 +887,9 @@ function obSkipKey() {
 }
 
 function selectOwlMode(mode) {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   settings.owl_mode = mode;
-  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  db.saveSettings(settings);
   ['coach','partner','mentor'].forEach(m => {
     const card = document.getElementById('owl-card-' + m);
     if (!card) return;
@@ -899,14 +899,14 @@ function selectOwlMode(mode) {
 }
 
 function obShowWelcome() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   document.getElementById('ob-welcome-text').textContent = `Привіт, ${settings.name || 'друже'}! 👋`;
   document.getElementById('ob-step-2').style.display = 'none';
   document.getElementById('ob-step-3').style.display = 'block';
 }
 
 function obFinish() {
-  localStorage.setItem('nm_onboarding_done', '1');
+  db.setOnboardingDone();
   const ob = document.getElementById('onboarding');
   ob.style.opacity = '0';
   ob.style.transition = 'opacity 0.4s ease';
@@ -915,6 +915,6 @@ function obFinish() {
     // Показуємо тур після онбордингу
     openSlidesTour(true);
   }, 400);
-  updateKeyStatus(!!localStorage.getItem('nm_gemini_key'));
+  updateKeyStatus(!!db.getApiKey());
 }
 

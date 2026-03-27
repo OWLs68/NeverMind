@@ -8,8 +8,6 @@
 let editingNoteId = null;
 let pendingFolderSuggestion = null;
 
-function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
-function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); }
 
 function getFolders() {
   const notes = getNotes();
@@ -175,16 +173,11 @@ function getFolderIcon(folder) {
 }
 
 // === FOLDER META — кастомна іконка, колір, закріплення ===
-function getFoldersMeta() {
-  try { return JSON.parse(localStorage.getItem('nm_folders_meta') || '{}'); } catch { return {}; }
-}
-function saveFoldersMeta(obj) {
-  try { localStorage.setItem('nm_folders_meta', JSON.stringify(obj)); } catch {} }
-function getFolderMeta(folder) { return getFoldersMeta()[folder] || {}; }
+function getFolderMeta(folder) { return db.getFoldersMeta()[folder] || {}; }
 function setFolderMeta(folder, data) {
-  const all = getFoldersMeta();
+  const all = db.getFoldersMeta();
   all[folder] = { ...(all[folder] || {}), ...data };
-  saveFoldersMeta(all);
+  db.saveFoldersMeta(all);
 }
 
 const FOLDER_COLORS = {
@@ -451,9 +444,9 @@ function noteMenuMove() {
   }
 }
 async function checkAndSuggestFolders() {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
-  const lastTs = localStorage.getItem('nm_notes_folders_ts');
+  const lastTs = db.getNotesFoldersTs();
   if (lastTs) {
     const last = new Date(parseInt(lastTs));
     if (last.toDateString() === new Date().toDateString()) return;
@@ -474,7 +467,7 @@ async function suggestNoteFolders() {
     const clean = reply.replace(/```json|```/g, '').trim();
     const folders = JSON.parse(clean);
     pendingFolderSuggestion = folders;
-    localStorage.setItem('nm_notes_folders_ts', Date.now().toString());
+    db.setNotesFoldersTs(Date.now());
     const banner = document.getElementById('notes-ai-banner');
     const textEl = document.getElementById('notes-ai-text');
     if (banner && textEl) {
@@ -656,7 +649,7 @@ function switchNoteViewTab(tab) {
 }
 
 async function initNoteChatGreeting(note) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) {
     addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з агентом.');
     return;
@@ -683,7 +676,7 @@ async function sendNoteChatMessage() {
   const input = document.getElementById('note-chat-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
 
   input.value = '';
@@ -1028,7 +1021,7 @@ async function sendNotesBarMessage() {
   const input = document.getElementById('notes-bar-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addNotesChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();

@@ -4,12 +4,6 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
-// === STORAGE ===
-function getHealthCards() { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
-function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); }
-function getHealthLog() { return JSON.parse(localStorage.getItem('nm_health_log') || '{}'); }
-function saveHealthLog(obj) { localStorage.setItem('nm_health_log', JSON.stringify(obj)); }
-
 // State
 let activeHealthCardId = null; // null = список, id = воркспейс
 let healthBarLoading = false;
@@ -362,7 +356,7 @@ async function sendHealthBarMessage() {
   const input = document.getElementById('health-bar-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addHealthChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();

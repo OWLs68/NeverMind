@@ -147,17 +147,8 @@ const ALL_TABS_CONFIG = [
     svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
 ];
 
-function getActiveTabs() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('nm_active_tabs') || 'null');
-    if (Array.isArray(saved) && saved.length >= 1) return saved;
-  } catch(e) {}
-  return [...DEFAULT_TABS];
-}
-
-function saveActiveTabs(arr) {
-  localStorage.setItem('nm_active_tabs', JSON.stringify(arr));
-}
+function getActiveTabs() { return db.getActiveTabs(); }
+function saveActiveTabs(arr) { db.saveActiveTabs(arr); }
 
 function openTabSelector() {
   const active = getActiveTabs();
@@ -689,10 +680,10 @@ function openSettings() {
   overlay.classList.add('open');
   try { updateErrorLogBtn(); } catch(e) {}
 
-  const key = localStorage.getItem('nm_gemini_key') || '';
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  const memory = localStorage.getItem('nm_memory') || '';
-  const memoryTs = localStorage.getItem('nm_memory_ts');
+  const key = db.getApiKey();
+  const settings = db.getSettings();
+  const memory = db.getMemory();
+  const memoryTs = db.getMemoryTs();
 
   document.getElementById('input-api-key').value = key;
   document.getElementById('input-name').value = settings.name || '';
@@ -729,9 +720,9 @@ function openSettings() {
 }
 
 function setOwlModeSetting(mode) {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   settings.owl_mode = mode;
-  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  db.saveSettings(settings);
   updateOwlModeUI(mode);
   showToast('Стиль OWL змінено');
 }
@@ -753,14 +744,14 @@ function updateOwlModeUI(mode) {
 function closeSettings() {
   // Save memory edits before closing
   const memory = document.getElementById('input-memory').value;
-  localStorage.setItem('nm_memory', memory);
+  db.saveMemory(memory);
   document.getElementById('settings-overlay').classList.remove('open');
 }
 
 function setLanguage(lang) {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = db.getSettings();
   s.language = lang;
-  localStorage.setItem('nm_settings', JSON.stringify(s));
+  db.saveSettings(s);
   ['uk','en','nl'].forEach(l => {
     const btn = document.getElementById('btn-lang-' + l);
     if (btn) {
@@ -782,7 +773,7 @@ function closeMemoryModal() {
 }
 
 function renderMemoryCards() {
-  const raw = localStorage.getItem('nm_memory') || '';
+  const raw = db.getMemory();
   const list = document.getElementById('memory-cards-list');
   const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
   if (!entries.length) {
@@ -800,10 +791,10 @@ function addMemoryEntry() {
   const input = document.getElementById('memory-new-input');
   const text = input.value.trim();
   if (!text) return;
-  const raw = localStorage.getItem('nm_memory') || '';
+  const raw = db.getMemory();
   const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
   entries.push(text);
-  localStorage.setItem('nm_memory', entries.join('\n'));
+  db.saveMemory(entries.join('\n'));
   input.value = '';
   renderMemoryCards();
   // scroll to bottom
@@ -812,10 +803,10 @@ function addMemoryEntry() {
 }
 
 function deleteMemoryCard(idx) {
-  const raw = localStorage.getItem('nm_memory') || '';
+  const raw = db.getMemory();
   const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
   entries.splice(idx, 1);
-  localStorage.setItem('nm_memory', entries.join('\n'));
+  db.saveMemory(entries.join('\n'));
   renderMemoryCards();
 }
 
@@ -825,7 +816,7 @@ function saveMemoryCards() {
   const divs = list.querySelectorAll('[id^="memory-entry-"]');
   const entries = Array.from(divs).map(d => d.textContent.trim()).filter(Boolean);
   const text = entries.join('\n');
-  localStorage.setItem('nm_memory', text);
+  db.saveMemory(text);
   // sync hidden field
   const hidden = document.getElementById('input-memory');
   if (hidden) hidden.value = text;
@@ -866,14 +857,13 @@ function saveSettings() {
   const profileNotes = document.getElementById('input-profile-notes').value.trim();
   const memory = document.getElementById('input-memory').value.trim();
 
-  if (key) localStorage.setItem('nm_gemini_key', key);
-  else localStorage.removeItem('nm_gemini_key');
+  db.saveApiKey(key);
 
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = db.getSettings();
   Object.assign(settings, { name, age, weight, height, profileNotes });
-  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  db.saveSettings(settings);
 
-  if (memory) localStorage.setItem('nm_memory', memory);
+  if (memory) db.saveMemory(memory);
 
   updateKeyStatus(!!key);
   showToast('✓ Збережено');
@@ -884,8 +874,8 @@ function exportData() {
   const data = {};
   const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats','nm_health_cards','nm_health_log','nm_projects','nm_evening_mood'];
   keys.forEach(k => {
-    const v = localStorage.getItem(k);
-    if (v) data[k] = JSON.parse(v);
+    const v = db.get(k, null);
+    if (v !== null) data[k] = v;
   });
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -902,7 +892,7 @@ function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
   const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log','nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me','nm_chat_evening','nm_chat_finance','nm_health_cards','nm_health_log','nm_projects','nm_active_tabs','nm_evening_mood','nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'];
   keys.forEach(k => localStorage.removeItem(k));
-  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_') || k.startsWith('nm_owl_tab_')).forEach(k => localStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_') || k.startsWith('nm_owl_tab_') || k.startsWith('nm_guide_') || k.startsWith('nm_survey') || k.startsWith('nm_onboarding')).forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
   closeSettings();
 }
@@ -917,16 +907,14 @@ function saveFinanceSettings() {
 
 function clearFinanceData() {
   if (!confirm('Видалити всі фінансові дані?')) return;
-  localStorage.removeItem('nm_finance');
-  localStorage.removeItem('nm_finance_budget');
-  localStorage.removeItem('nm_finance_cats');
+  ['nm_finance','nm_finance_budget','nm_finance_cats'].forEach(k => localStorage.removeItem(k));
   if (currentTab === 'finance') renderFinance();
   showToast('🗑️ Фінансові дані видалено');
 }
 
 // === MEMORY SYSTEM ===
 function getProfile() {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = db.getSettings();
   const parts = [];
   if (s.name) parts.push(`Імʼя: ${s.name}`);
   if (s.age) parts.push(`Вік: ${s.age}`);
@@ -937,7 +925,7 @@ function getProfile() {
 }
 
 function shouldRefreshMemory() {
-  const lastTs = localStorage.getItem('nm_memory_ts');
+  const lastTs = db.getMemoryTs();
   if (!lastTs) return true;
   const last = new Date(parseInt(lastTs));
   const now = new Date();
@@ -945,10 +933,10 @@ function shouldRefreshMemory() {
 }
 
 async function autoRefreshMemory() {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   if (!shouldRefreshMemory()) return;
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const inbox = db.getInbox();
   if (inbox.length < 3) return; // недостатньо даних
   await doRefreshMemory(false);
 }
@@ -965,8 +953,8 @@ async function refreshMemory() {
 }
 
 async function doRefreshMemory(showResult) {
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
-  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const inbox = db.getInbox();
+  const tasks = db.getTasks();
   const notes = getNotes();
   const profile = getProfile();
 
@@ -993,8 +981,8 @@ ${notesList || 'немає'}
   const result = await callAI(systemPrompt, userMsg, {});
   if (!result) return;
 
-  localStorage.setItem('nm_memory', result);
-  localStorage.setItem('nm_memory_ts', Date.now().toString());
+  db.saveMemory(result);
+  db.saveMemoryTs(Date.now());
 
   // Оновити поле якщо відкрите
   const memEl = document.getElementById('input-memory');

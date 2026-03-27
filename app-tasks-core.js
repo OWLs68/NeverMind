@@ -7,8 +7,6 @@
 let editingTaskId = null;
 let tempSteps = [];
 
-function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
-function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); }
 
 function openAddTask() {
   editingTaskId = null;
@@ -244,7 +242,7 @@ function setupTaskSwipeListeners() {
 }
 
 async function askAIAboutTask(title, desc, steps) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   const aiContext = getAIContext();
   const systemPrompt = `${getOWLPersonality()} Користувач щойно додав задачу. Дай коротку (1-2 речення) реакцію у своєму стилі. Фокус на тому ЯК досягти мети. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
@@ -278,7 +276,7 @@ function openTaskChat(id) {
   document.getElementById('task-chat-modal').style.display = 'flex';
 
   // Restore saved chat history
-  const savedChat = JSON.parse(localStorage.getItem('nm_task_chat_' + id) || 'null');
+  const savedChat = db.getTaskChat(id);
   if (savedChat && savedChat.messages && savedChat.messages.length > 0) {
     taskChatHistory = savedChat.history || [];
     savedChat.messages.forEach(m => addTaskChatMsg(m.role, m.text));
@@ -287,7 +285,7 @@ function openTaskChat(id) {
 
   taskChatHistory = [];
   const steps = (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) {
     addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з Агентом.');
     return;
@@ -313,7 +311,7 @@ function saveTaskChatHistory() {
     const isAgent = div.style.justifyContent !== 'flex-end';
     return { role: isAgent ? 'agent' : 'user', text: bubble ? bubble.textContent : '' };
   }).filter(m => m.text && m.text !== '…');
-  localStorage.setItem('nm_task_chat_' + taskChatId, JSON.stringify({ messages, history: taskChatHistory }));
+  db.saveTaskChat(taskChatId, { messages, history: taskChatHistory });
 }
 
 function closeTaskChat() {
@@ -339,7 +337,7 @@ async function sendTaskChatMessage() {
   const input = document.getElementById('task-chat-input');
   const text = input.value.trim();
   if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) { addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
 
   input.value = '';
@@ -472,7 +470,7 @@ function taskSwipeEnd(e, id) {
 
 // === AUTO GENERATE TASK STEPS ===
 async function autoGenerateTaskSteps(taskId, title) {
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   const systemPrompt = `Ти — помічник планування. Отримуєш назву задачі і маєш вирішити чи варто розбивати на кроки.
 Якщо задача містить список (через кому, "і", "та") АБО потребує кількох дій — відповідай ТІЛЬКИ JSON: {"steps":["крок 1","крок 2"]}. Максимум 5 кроків. Кожен крок — коротко (2-5 слів).

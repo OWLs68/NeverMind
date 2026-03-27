@@ -7,12 +7,8 @@
 const NM_TRASH_KEY = 'nm_trash';
 const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
 
-function getTrash() {
-  try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }
-}
-function saveTrash(arr) {
-  localStorage.setItem(NM_TRASH_KEY, JSON.stringify(arr));
-}
+function getTrash() { return db.getTrash(); }
+function saveTrash(arr) { db.saveTrash(arr); }
 
 // Додати запис в кеш при видаленні
 function addToTrash(type, item, extra) {
@@ -488,12 +484,8 @@ function setupSettingsSwipe() {
 const NM_LOG_KEY = 'nm_error_log';
 const NM_LOG_MAX = 100; // максимум записів
 
-function getErrorLog() {
-  try { return JSON.parse(localStorage.getItem(NM_LOG_KEY) || '[]'); } catch { return []; }
-}
-function saveErrorLog(arr) {
-  try { localStorage.setItem(NM_LOG_KEY, JSON.stringify(arr.slice(-NM_LOG_MAX))); } catch {}
-}
+function getErrorLog() { return db.getErrorLog(); }
+function saveErrorLog(arr) { db.saveErrorLog(arr.slice(-NM_LOG_MAX)); }
 
 function logError(type, message, source) {
   const log = getErrorLog();
@@ -558,44 +550,20 @@ function updateErrorLogBtn() {
 // === OWL TAB BOARDS (#37) ===
 const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
 
-function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
-function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
-function getOwlTabSaidKey(tab) { return 'nm_owl_tab_said_' + tab; }
+function getOwlTabBoardKey(tab) { return db.getOwlTabBoardKey(tab); }
+function getOwlTabTsKey(tab)    { return db.getOwlTabTsKey(tab); }
+function getOwlTabSaidKey(tab)  { return db.getOwlTabSaidKey(tab); }
 
-function getTabBoardMsgs(tab) {
-  try {
-    const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null');
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    return [raw]; // backward compat: старий формат → масив
-  } catch { return []; }
-}
-function getTabBoardMsg(tab) {
-  const msgs = getTabBoardMsgs(tab);
-  return msgs[0] || null;
-}
-function saveTabBoardMsg(tab, newMsg) {
-  const msgs = getTabBoardMsgs(tab);
-  msgs.unshift(newMsg);          // новий → перший
-  if (msgs.length > 3) msgs.length = 3; // максимум 3
-  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs)); } catch {}
-}
-
-function getTabBoardSaid(tab) {
-  const today = new Date().toDateString();
-  try {
-    const raw = JSON.parse(localStorage.getItem(getOwlTabSaidKey(tab)) || '{}');
-    if (raw.date !== today) return {};
-    return raw.said || {};
-  } catch { return {}; }
-}
-function markTabBoardSaid(tab, topic) {
-  const today = new Date().toDateString();
-  const said = getTabBoardSaid(tab);
+function getTabBoardMsgs(tab)          { return db.getTabBoardMsgs(tab); }
+function getTabBoardMsg(tab)           { return db.getTabBoardMsgs(tab)[0] || null; }
+function saveTabBoardMsg(tab, newMsg)  { db.saveTabBoardMsg(tab, newMsg); }
+function getTabBoardSaid(tab)          { return db.getTabBoardSaid(tab); }
+function markTabBoardSaid(tab, topic)  {
+  const said = db.getTabBoardSaid(tab);
   said[topic] = true;
-  try { localStorage.setItem(getOwlTabSaidKey(tab), JSON.stringify({ date: today, said })); } catch {}
+  db.saveTabBoardSaid(tab, said);
 }
-function tabAlreadySaid(tab, topic) { return !!getTabBoardSaid(tab)[topic]; }
+function tabAlreadySaid(tab, topic) { return !!db.getTabBoardSaid(tab)[topic]; }
 
 function dismissTabBoard(tab) {
   // Вечір — табло завжди активне, не закривається
@@ -794,16 +762,16 @@ function getTabBoardContext(tab) {
       });
       parts.push(`Челенджі: ${quitInfo.join(', ')}`);
     }
-    const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+    const inbox = db.getInbox();
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     parts.push(`Записів за тиждень: ${inbox.filter(i => i.ts > weekAgo).length}. Задач активних: ${getTasks().filter(t => t.status === 'active').length}`);
   }
 
   if (tab === 'evening') {
-    const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+    const moments = db.getMoments();
     const todayStr = new Date().toDateString();
     const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === todayStr);
-    const summary = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const summary = db.getEveningSummary();
     const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
     const hour = new Date().getHours();
     parts.push(`Моменти сьогодні: ${todayMoments.length}. Підсумок дня: ${hasSummary ? 'є' : 'ще не записано'}.`);
@@ -840,7 +808,7 @@ let _tabBoardGenerating = {};
 
 async function generateTabBoardMessage(tab) {
   if (_tabBoardGenerating[tab]) return;
-  const key = localStorage.getItem('nm_gemini_key');
+  const key = db.getApiKey();
   if (!key) return;
   _tabBoardGenerating[tab] = true;
 
@@ -888,7 +856,7 @@ async function generateTabBoardMessage(tab) {
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
     if (!parsed.text) { _tabBoardGenerating[tab] = false; return; }
     saveTabBoardMsg(tab, { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() });
-    localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+    db.saveOwlTabTs(tab, Date.now());
     renderTabBoard(tab);
   } catch(e) {}
   _tabBoardGenerating[tab] = false;
@@ -901,7 +869,7 @@ function tryTabBoardUpdate(tab) {
   if (hour < 5) return; // тихі години — генерація пропускається
   // Вечірнє табло — "підсумок дня" не має сенсу зранку; генеруємо лише після 12:00
   if (tab === 'evening' && hour < 12) return;
-  const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
+  const lastTs = db.getOwlTabTs(tab);
   const elapsed = Date.now() - lastTs;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
   const firstTime = lastTs === 0;
@@ -1027,7 +995,7 @@ function init() {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelector('.tab-item[data-tab="inbox"]').classList.add('active');
   } catch(e) {}
-  try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
+  try { updateKeyStatus(!!db.getApiKey()); } catch(e) {}
   try { renderInbox(); } catch(e) {}
   // Рендеримо всі табло одразу — показуємо збережені дані без очікування switchTab
   try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
