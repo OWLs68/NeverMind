@@ -23,10 +23,7 @@ if (!GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel(
-  { model: "gemini-1.5-flash" },
-  { apiVersion: "v1" }
-);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Системний контекст — додається до кожного запиту вручну
 const SYSTEM_PROMPT = `Ти — AI-асистент розробника у проекті NeverMind.
