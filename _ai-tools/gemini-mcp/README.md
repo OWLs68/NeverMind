@@ -46,8 +46,9 @@
 
 5. Після деплою іди в **Variables** і додай:
    ```
-   GEMINI_API_KEY = твій-ключ-від-google
-   AUTH_TOKEN     = miy-secret-123
+   GEMINI_API_KEY   = твій-ключ-від-google
+   AUTH_TOKEN       = miy-secret-123
+   PROJECT_CONTEXT  = див. нижче
    ```
 
 6. Railway дасть тобі URL типу: `https://gemini-mcp-production-xxxx.up.railway.app`
@@ -97,4 +98,14 @@ _ai-tools/
 |--------|-------------|------|
 | `GEMINI_API_KEY` | Так | Ключ від Google AI Studio |
 | `AUTH_TOKEN` | Рекомендовано | Захист сервера від чужого доступу |
+| `PROJECT_CONTEXT` | Рекомендовано | Контекст проекту для Gemini (див. нижче) |
 | `PORT` | Ні | Порт (Railway встановлює автоматично) |
+
+### Що вставити в PROJECT_CONTEXT
+
+Це текст який Gemini отримує як постійний контекст — він завжди знатиме про що проект.
+Скопіюй це значення в Railway Variables:
+
+```
+NeverMind PWA. Ванільний JS, localStorage, GitHub Pages, без фреймворків і бекенду. 13 JS модулів: app-core-nav.js (стан, switchTab), app-core-system.js (boot, кошик), app-ai-core.js (callAI, getAIContext), app-inbox.js (sendToAI), app-tasks-core.js, app-habits.js, app-notes.js, app-finance.js, app-health.js, app-projects.js, app-evening-moments.js, app-evening-onboarding.js, app-ai-chat.js. Критично: не чіпати localStorage.setItem override в app-core-system.js, не додавати централізовану БД, не видаляти локальні getTasks/saveNotes функції, порядок скриптів в index.html важливий.
+```

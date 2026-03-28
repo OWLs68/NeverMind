@@ -2,10 +2,6 @@
  * Gemini MCP Server (HTTP / Remote)
  * Працює як віддалений сервер — доступний з будь-якого пристрою.
  * Підходить для claude.ai/code на комп'ютері і телефоні.
- *
- * Як працює:
- *   Claude отримує питання → викликає ask_gemini() →
- *   Gemini відповідає → Claude порівнює обидві думки → дає тобі фінал
  */
 
 import http from "http";
@@ -19,8 +15,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
-// Необов'язковий секрет для захисту сервера (рекомендовано)
 const AUTH_TOKEN = process.env.AUTH_TOKEN;
+// Контекст проекту — вставляється в кожен запит до Gemini автоматично
+const PROJECT_CONTEXT = process.env.PROJECT_CONTEXT || "";
 
 if (!GEMINI_API_KEY) {
   console.error("❌ Потрібна змінна середовища GEMINI_API_KEY");
@@ -28,9 +25,27 @@ if (!GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-// --- Інструменти ---
+// Gemini отримує системний промпт з контекстом проекту
+// Це робить його повноцінним учасником розробки, а не просто відповідачем на питання
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash",
+  systemInstruction: `Ти — AI-асистент розробника у проекті NeverMind.
+
+NeverMind — персональний PWA-агент продуктивності.
+Стек: ванільний JavaScript, localStorage, GitHub Pages. Без фреймворків, без бекенду.
+Мова UI: українська.
+
+Твоя роль: давати незалежну технічну думку поруч з Claude.
+- Аналізуй задачі критично і чесно
+- Якщо бачиш ризики — говори прямо
+- Пропонуй конкретні рішення, а не загальні поради
+- Відповідай стисло і по суті
+
+${PROJECT_CONTEXT ? `Додатковий контекст проекту:\n${PROJECT_CONTEXT}` : ""}`.trim(),
+});
+
+// --- MCP Server ---
 
 function buildServer() {
   const server = new Server(
@@ -44,29 +59,29 @@ function buildServer() {
         name: "ask_gemini",
         description:
           "Запитай Gemini і отримай його незалежну думку. " +
-          "Використовуй коли хочеш другу думку щодо архітектури, вибору підходу, " +
-          "або коли задача неоднозначна. Потім порівняй відповіді і дай користувачу синтез.",
+          "ЗАВЖДИ передавай у context: поточну задачу, релевантний код або файли, обмеження проекту. " +
+          "Gemini вже знає загальний контекст проекту — передавай специфіку поточної задачі.",
         inputSchema: {
           type: "object",
           properties: {
             question: {
               type: "string",
-              description: "Питання або задача для Gemini (укр або англ)",
+              description: "Питання або задача для Gemini",
             },
             context: {
               type: "string",
               description:
-                "Додатковий контекст: код, опис проекту, обмеження (необов'язково)",
+                "Обов'язково: поточна задача + релевантний код/файли + обмеження. " +
+                "Чим більше контексту — тим корисніша відповідь Gemini.",
             },
           },
-          required: ["question"],
+          required: ["question", "context"],
         },
       },
       {
         name: "gemini_review_code",
         description:
-          "Попроси Gemini зробити код-рев'ю. Він знайде баги, проблеми з безпекою " +
-          "або запропонує покращення незалежно від Claude.",
+          "Попроси Gemini зробити код-рев'ю. Знайде баги, проблеми з безпекою, неефективні місця.",
         inputSchema: {
           type: "object",
           properties: {
@@ -76,10 +91,14 @@ function buildServer() {
             },
             goal: {
               type: "string",
-              description: "Що цей код має робити / на що звернути увагу",
+              description: "Що цей код має робити і на що звернути особливу увагу",
+            },
+            file_context: {
+              type: "string",
+              description: "Назва файлу і його роль в проекті (необов'язково але корисно)",
             },
           },
-          required: ["code"],
+          required: ["code", "goal"],
         },
       },
     ],
@@ -89,27 +108,21 @@ function buildServer() {
     const { name, arguments: args } = request.params;
 
     if (name === "ask_gemini") {
-      const prompt = args.context
-        ? `Контекст:\n${args.context}\n\nПитання:\n${args.question}`
-        : args.question;
-
+      const prompt = `Контекст поточної задачі:\n${args.context}\n\nПитання:\n${args.question}`;
       const result = await model.generateContent(prompt);
       const text = result.response.text();
-
       return {
-        content: [{ type: "text", text: `**Gemini відповідає:**\n\n${text}` }],
+        content: [{ type: "text", text: `**Gemini:**\n\n${text}` }],
       };
     }
 
     if (name === "gemini_review_code") {
       const prompt =
-        `Зроби код-рев'ю. Знайди баги, проблеми з безпекою, неефективні місця.\n` +
-        `${args.goal ? `Мета коду: ${args.goal}\n` : ""}` +
-        `\nКод:\n\`\`\`\n${args.code}\n\`\`\``;
-
+        `Зроби код-рев'ю. Мета коду: ${args.goal}\n` +
+        `${args.file_context ? `Файл: ${args.file_context}\n` : ""}` +
+        `\nКод:\n\`\`\`javascript\n${args.code}\n\`\`\``;
       const result = await model.generateContent(prompt);
       const text = result.response.text();
-
       return {
         content: [{ type: "text", text: `**Gemini Code Review:**\n\n${text}` }],
       };
@@ -124,7 +137,7 @@ function buildServer() {
 // --- HTTP сервер з SSE транспортом ---
 
 const httpServer = http.createServer(async (req, res) => {
-  // Перевірка токена (якщо AUTH_TOKEN встановлено)
+  // Перевірка токена
   if (AUTH_TOKEN) {
     const token =
       req.headers["authorization"]?.replace("Bearer ", "") ||
@@ -151,9 +164,7 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
-  // Message endpoint (SSE transport надсилає сюди повідомлення)
   if (req.url?.startsWith("/message")) {
-    // Обробляється автоматично через SSEServerTransport
     return;
   }
 
@@ -163,10 +174,6 @@ const httpServer = http.createServer(async (req, res) => {
 
 httpServer.listen(PORT, () => {
   console.log(`✅ Gemini MCP сервер запущено на порту ${PORT}`);
-  console.log(`   SSE endpoint: http://localhost:${PORT}/sse`);
-  if (AUTH_TOKEN) {
-    console.log("   Захист токеном: увімкнено");
-  } else {
-    console.log("   Захист токеном: вимкнено (рекомендуємо встановити AUTH_TOKEN)");
-  }
+  if (AUTH_TOKEN) console.log("   Захист токеном: увімкнено");
+  if (PROJECT_CONTEXT) console.log("   Контекст проекту: завантажено");
 });
