@@ -1,7 +1,6 @@
 /**
  * Gemini MCP Server (HTTP / Remote)
  * Працює як віддалений сервер — доступний з будь-якого пристрою.
- * Підходить для claude.ai/code на комп'ютері і телефоні.
  */
 
 import http from "http";
@@ -16,7 +15,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
 const AUTH_TOKEN = process.env.AUTH_TOKEN;
-// Контекст проекту — вставляється в кожен запит до Gemini автоматично
 const PROJECT_CONTEXT = process.env.PROJECT_CONTEXT || "";
 
 if (!GEMINI_API_KEY) {
@@ -25,9 +23,6 @@ if (!GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-// Gemini отримує системний промпт з контекстом проекту
-// Це робить його повноцінним учасником розробки, а не просто відповідачем на питання
 const model = genAI.getGenerativeModel({
   model: "gemini-2.0-flash",
   systemInstruction: `Ти — AI-асистент розробника у проекті NeverMind.
@@ -45,7 +40,8 @@ NeverMind — персональний PWA-агент продуктивност
 ${PROJECT_CONTEXT ? `Додатковий контекст проекту:\n${PROJECT_CONTEXT}` : ""}`.trim(),
 });
 
-// --- MCP Server ---
+// Зберігаємо активні transport сесії
+const transports = {};
 
 function buildServer() {
   const server = new Server(
@@ -71,7 +67,7 @@ function buildServer() {
             context: {
               type: "string",
               description:
-                "Обов'язково: поточна задача + релевантний код/файли + обмеження. " +
+                "Поточна задача + релевантний код/файли + обмеження. " +
                 "Чим більше контексту — тим корисніша відповідь Gemini.",
             },
           },
@@ -134,37 +130,59 @@ function buildServer() {
   return server;
 }
 
-// --- HTTP сервер з SSE транспортом ---
+function checkAuth(req) {
+  if (!AUTH_TOKEN) return true;
+  const token =
+    req.headers["authorization"]?.replace("Bearer ", "") ||
+    new URL(req.url, "http://x").searchParams.get("token");
+  return token === AUTH_TOKEN;
+}
+
+// --- HTTP сервер ---
 
 const httpServer = http.createServer(async (req, res) => {
-  // Перевірка токена
-  if (AUTH_TOKEN) {
-    const token =
-      req.headers["authorization"]?.replace("Bearer ", "") ||
-      new URL(req.url, "http://x").searchParams.get("token");
-    if (token !== AUTH_TOKEN) {
-      res.writeHead(401, { "Content-Type": "text/plain" });
-      res.end("Unauthorized");
-      return;
-    }
-  }
+  const url = new URL(req.url, "http://x");
 
-  // Health check
-  if (req.url === "/health" || req.url === "/") {
+  // Health check — без авторизації (потрібно для Railway і перевірки з'єднання)
+  if (url.pathname === "/health" || url.pathname === "/") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok", name: "gemini-mcp" }));
     return;
   }
 
-  // SSE endpoint для MCP
-  if (req.url?.startsWith("/sse")) {
+  // Авторизація для всіх інших endpoints
+  if (!checkAuth(req)) {
+    res.writeHead(401, { "Content-Type": "text/plain" });
+    res.end("Unauthorized");
+    return;
+  }
+
+  // SSE endpoint — Claude підключається сюди
+  if (url.pathname === "/sse") {
     const server = buildServer();
     const transport = new SSEServerTransport("/message", res);
+    transports[transport.sessionId] = transport;
+
+    req.on("close", () => {
+      delete transports[transport.sessionId];
+    });
+
     await server.connect(transport);
     return;
   }
 
-  if (req.url?.startsWith("/message")) {
+  // Message endpoint — Claude надсилає повідомлення сюди
+  if (url.pathname === "/message") {
+    const sessionId = url.searchParams.get("sessionId");
+    const transport = transports[sessionId];
+
+    if (!transport) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Session not found");
+      return;
+    }
+
+    await transport.handlePostMessage(req, res);
     return;
   }
 
