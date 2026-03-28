@@ -24,24 +24,16 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel(
-  {
-    model: "gemini-1.5-flash",
-    systemInstruction: `Ти — AI-асистент розробника у проекті NeverMind.
-
-NeverMind — персональний PWA-агент продуктивності.
-Стек: ванільний JavaScript, localStorage, GitHub Pages. Без фреймворків, без бекенду.
-Мова UI: українська.
-
-Твоя роль: давати незалежну технічну думку поруч з Claude.
-- Аналізуй задачі критично і чесно
-- Якщо бачиш ризики — говори прямо
-- Пропонуй конкретні рішення, а не загальні поради
-- Відповідай стисло і по суті
-
-${PROJECT_CONTEXT ? `Додатковий контекст проекту:\n${PROJECT_CONTEXT}` : ""}`.trim(),
-  },
+  { model: "gemini-1.5-flash" },
   { apiVersion: "v1" }
 );
+
+// Системний контекст — додається до кожного запиту вручну
+const SYSTEM_PROMPT = `Ти — AI-асистент розробника у проекті NeverMind.
+NeverMind — персональний PWA-агент продуктивності.
+Стек: ванільний JavaScript, localStorage, GitHub Pages. Без фреймворків, без бекенду.
+Мова UI: українська. Відповідай стисло і по суті.
+${PROJECT_CONTEXT ? `Контекст проекту: ${PROJECT_CONTEXT}` : ""}`.trim();
 
 function buildServer() {
   const server = new Server(
@@ -91,14 +83,14 @@ function buildServer() {
     const { name, arguments: args } = request.params;
 
     if (name === "ask_gemini") {
-      const prompt = `Контекст:\n${args.context}\n\nПитання:\n${args.question}`;
+      const prompt = `${SYSTEM_PROMPT}\n\nКонтекст:\n${args.context}\n\nПитання:\n${args.question}`;
       const result = await model.generateContent(prompt);
       return { content: [{ type: "text", text: `**Gemini:**\n\n${result.response.text()}` }] };
     }
 
     if (name === "gemini_review_code") {
       const prompt =
-        `Зроби код-рев'ю. Мета: ${args.goal}\n` +
+        `${SYSTEM_PROMPT}\n\nЗроби код-рев'ю. Мета: ${args.goal}\n` +
         `${args.file_context ? `Файл: ${args.file_context}\n` : ""}` +
         `\nКод:\n\`\`\`javascript\n${args.code}\n\`\`\``;
       const result = await model.generateContent(prompt);
