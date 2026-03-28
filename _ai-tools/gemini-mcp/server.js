@@ -23,9 +23,10 @@ if (!GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-  systemInstruction: `Ти — AI-асистент розробника у проекті NeverMind.
+const model = genAI.getGenerativeModel(
+  {
+    model: "gemini-1.5-flash",
+    systemInstruction: `Ти — AI-асистент розробника у проекті NeverMind.
 
 NeverMind — персональний PWA-агент продуктивності.
 Стек: ванільний JavaScript, localStorage, GitHub Pages. Без фреймворків, без бекенду.
@@ -38,7 +39,9 @@ NeverMind — персональний PWA-агент продуктивност
 - Відповідай стисло і по суті
 
 ${PROJECT_CONTEXT ? `Додатковий контекст проекту:\n${PROJECT_CONTEXT}` : ""}`.trim(),
-});
+  },
+  { apiVersion: "v1" }
+);
 
 function buildServer() {
   const server = new Server(
