@@ -11,7 +11,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@google/generative-ai": "latest",
+    "@google/genai": "latest",
     "@modelcontextprotocol/sdk": "^1.0.0"
   }
 }

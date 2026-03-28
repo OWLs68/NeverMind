@@ -10,7 +10,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
@@ -22,8 +22,7 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Системний контекст — додається до кожного запиту вручну
 const SYSTEM_PROMPT = `Ти — AI-асистент розробника у проекті NeverMind.
@@ -81,8 +80,8 @@ function buildServer() {
 
     if (name === "ask_gemini") {
       const prompt = `${SYSTEM_PROMPT}\n\nКонтекст:\n${args.context}\n\nПитання:\n${args.question}`;
-      const result = await model.generateContent(prompt);
-      return { content: [{ type: "text", text: `**Gemini:**\n\n${result.response.text()}` }] };
+      const result = await ai.models.generateContent({ model: "gemini-2.0-flash", contents: prompt });
+      return { content: [{ type: "text", text: `**Gemini:**\n\n${result.text}` }] };
     }
 
     if (name === "gemini_review_code") {
@@ -90,8 +89,8 @@ function buildServer() {
         `${SYSTEM_PROMPT}\n\nЗроби код-рев'ю. Мета: ${args.goal}\n` +
         `${args.file_context ? `Файл: ${args.file_context}\n` : ""}` +
         `\nКод:\n\`\`\`javascript\n${args.code}\n\`\`\``;
-      const result = await model.generateContent(prompt);
-      return { content: [{ type: "text", text: `**Gemini Code Review:**\n\n${result.response.text()}` }] };
+      const result = await ai.models.generateContent({ model: "gemini-2.0-flash", contents: prompt });
+      return { content: [{ type: "text", text: `**Gemini Code Review:**\n\n${result.text}` }] };
     }
 
     throw new Error(`Невідомий інструмент: ${name}`);
