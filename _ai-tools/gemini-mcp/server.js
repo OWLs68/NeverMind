@@ -123,9 +123,6 @@ function checkAuth(req) {
   return token === AUTH_TOKEN;
 }
 
-// Зберігаємо сесії для stateful режиму
-const sessions = {};
-
 const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
 
@@ -145,7 +142,7 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
-  // MCP endpoint (Streamable HTTP)
+  // MCP endpoint — stateless, кожен запит незалежний
   if (url.pathname === "/mcp") {
     setCORS(res);
 
@@ -155,34 +152,17 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
-    // Читаємо тіло запиту
     let body = "";
     for await (const chunk of req) body += chunk;
+    const parsed = body ? JSON.parse(body) : undefined;
 
-    const sessionId = req.headers["mcp-session-id"];
-
-    // Повторне використання існуючої сесії
-    if (sessionId && sessions[sessionId]) {
-      const { transport } = sessions[sessionId];
-      await transport.handleRequest(req, res, body ? JSON.parse(body) : undefined);
-      return;
-    }
-
-    // Нова сесія
     const server = buildServer();
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => crypto.randomUUID(),
-      onsessioninitialized: (id) => {
-        sessions[id] = { transport };
-      },
+      sessionIdGenerator: undefined, // stateless режим
     });
 
-    transport.onclose = () => {
-      if (transport.sessionId) delete sessions[transport.sessionId];
-    };
-
     await server.connect(transport);
-    await transport.handleRequest(req, res, body ? JSON.parse(body) : undefined);
+    await transport.handleRequest(req, res, parsed);
     return;
   }
 
