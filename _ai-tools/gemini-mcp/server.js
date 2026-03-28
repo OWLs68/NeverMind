@@ -1,11 +1,11 @@
 /**
- * Gemini MCP Server (HTTP / Remote)
- * Працює як віддалений сервер — доступний з будь-якого пристрою.
+ * Gemini MCP Server — Streamable HTTP транспорт
+ * Сумісний з claude.ai connectors (веб, телефон, будь-який пристрій)
  */
 
 import http from "http";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -40,9 +40,6 @@ NeverMind — персональний PWA-агент продуктивност
 ${PROJECT_CONTEXT ? `Додатковий контекст проекту:\n${PROJECT_CONTEXT}` : ""}`.trim(),
 });
 
-// Зберігаємо активні transport сесії
-const transports = {};
-
 function buildServer() {
   const server = new Server(
     { name: "gemini-mcp", version: "1.0.0" },
@@ -55,8 +52,7 @@ function buildServer() {
         name: "ask_gemini",
         description:
           "Запитай Gemini і отримай його незалежну думку. " +
-          "ЗАВЖДИ передавай у context: поточну задачу, релевантний код або файли, обмеження проекту. " +
-          "Gemini вже знає загальний контекст проекту — передавай специфіку поточної задачі.",
+          "ЗАВЖДИ передавай у context: поточну задачу, релевантний код або файли, обмеження проекту.",
         inputSchema: {
           type: "object",
           properties: {
@@ -66,9 +62,7 @@ function buildServer() {
             },
             context: {
               type: "string",
-              description:
-                "Поточна задача + релевантний код/файли + обмеження. " +
-                "Чим більше контексту — тим корисніша відповідь Gemini.",
+              description: "Поточна задача + релевантний код/файли + обмеження проекту.",
             },
           },
           required: ["question", "context"],
@@ -76,23 +70,13 @@ function buildServer() {
       },
       {
         name: "gemini_review_code",
-        description:
-          "Попроси Gemini зробити код-рев'ю. Знайде баги, проблеми з безпекою, неефективні місця.",
+        description: "Попроси Gemini зробити код-рев'ю. Знайде баги, проблеми з безпекою, неефективні місця.",
         inputSchema: {
           type: "object",
           properties: {
-            code: {
-              type: "string",
-              description: "Код для рев'ю",
-            },
-            goal: {
-              type: "string",
-              description: "Що цей код має робити і на що звернути особливу увагу",
-            },
-            file_context: {
-              type: "string",
-              description: "Назва файлу і його роль в проекті (необов'язково але корисно)",
-            },
+            code: { type: "string", description: "Код для рев'ю" },
+            goal: { type: "string", description: "Що цей код має робити" },
+            file_context: { type: "string", description: "Назва файлу і його роль (необов'язково)" },
           },
           required: ["code", "goal"],
         },
@@ -104,24 +88,18 @@ function buildServer() {
     const { name, arguments: args } = request.params;
 
     if (name === "ask_gemini") {
-      const prompt = `Контекст поточної задачі:\n${args.context}\n\nПитання:\n${args.question}`;
+      const prompt = `Контекст:\n${args.context}\n\nПитання:\n${args.question}`;
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      return {
-        content: [{ type: "text", text: `**Gemini:**\n\n${text}` }],
-      };
+      return { content: [{ type: "text", text: `**Gemini:**\n\n${result.response.text()}` }] };
     }
 
     if (name === "gemini_review_code") {
       const prompt =
-        `Зроби код-рев'ю. Мета коду: ${args.goal}\n` +
+        `Зроби код-рев'ю. Мета: ${args.goal}\n` +
         `${args.file_context ? `Файл: ${args.file_context}\n` : ""}` +
         `\nКод:\n\`\`\`javascript\n${args.code}\n\`\`\``;
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      return {
-        content: [{ type: "text", text: `**Gemini Code Review:**\n\n${text}` }],
-      };
+      return { content: [{ type: "text", text: `**Gemini Code Review:**\n\n${result.response.text()}` }] };
     }
 
     throw new Error(`Невідомий інструмент: ${name}`);
@@ -130,9 +108,9 @@ function buildServer() {
   return server;
 }
 
-function setCORSHeaders(res) {
+function setCORS(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-session-id");
   res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
 }
@@ -145,63 +123,66 @@ function checkAuth(req) {
   return token === AUTH_TOKEN;
 }
 
-// --- HTTP сервер ---
+// Зберігаємо сесії для stateful режиму
+const sessions = {};
 
 const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
 
   // CORS preflight
   if (req.method === "OPTIONS") {
-    setCORSHeaders(res);
+    setCORS(res);
     res.writeHead(204);
     res.end();
     return;
   }
 
-  // Health check — без авторизації
+  // Health check
   if (url.pathname === "/health" || url.pathname === "/") {
-    setCORSHeaders(res);
+    setCORS(res);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok", name: "gemini-mcp" }));
     return;
   }
 
-  // Авторизація для всіх інших endpoints
-  if (!checkAuth(req)) {
-    setCORSHeaders(res);
-    res.writeHead(401, { "Content-Type": "text/plain" });
-    res.end("Unauthorized");
-    return;
-  }
+  // MCP endpoint (Streamable HTTP)
+  if (url.pathname === "/mcp") {
+    setCORS(res);
 
-  // SSE endpoint — Claude підключається сюди
-  if (url.pathname === "/sse") {
-    setCORSHeaders(res);
-    const server = buildServer();
-    const transport = new SSEServerTransport("/message", res);
-    transports[transport.sessionId] = transport;
-
-    req.on("close", () => {
-      delete transports[transport.sessionId];
-    });
-
-    await server.connect(transport);
-    return;
-  }
-
-  // Message endpoint — Claude надсилає повідомлення сюди
-  if (url.pathname === "/message") {
-    setCORSHeaders(res);
-    const sessionId = url.searchParams.get("sessionId");
-    const transport = transports[sessionId];
-
-    if (!transport) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end("Session not found");
+    if (!checkAuth(req)) {
+      res.writeHead(401, { "Content-Type": "text/plain" });
+      res.end("Unauthorized");
       return;
     }
 
-    await transport.handlePostMessage(req, res);
+    // Читаємо тіло запиту
+    let body = "";
+    for await (const chunk of req) body += chunk;
+
+    const sessionId = req.headers["mcp-session-id"];
+
+    // Повторне використання існуючої сесії
+    if (sessionId && sessions[sessionId]) {
+      const { transport } = sessions[sessionId];
+      await transport.handleRequest(req, res, body ? JSON.parse(body) : undefined);
+      return;
+    }
+
+    // Нова сесія
+    const server = buildServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => crypto.randomUUID(),
+      onsessioninitialized: (id) => {
+        sessions[id] = { transport };
+      },
+    });
+
+    transport.onclose = () => {
+      if (transport.sessionId) delete sessions[transport.sessionId];
+    };
+
+    await server.connect(transport);
+    await transport.handleRequest(req, res, body ? JSON.parse(body) : undefined);
     return;
   }
 
@@ -210,7 +191,7 @@ const httpServer = http.createServer(async (req, res) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`✅ Gemini MCP сервер запущено на порту ${PORT}`);
+  console.log(`✅ Gemini MCP сервер (Streamable HTTP) запущено на порту ${PORT}`);
+  console.log(`   MCP endpoint: /mcp`);
   if (AUTH_TOKEN) console.log("   Захист токеном: увімкнено");
-  if (PROJECT_CONTEXT) console.log("   Контекст проекту: завантажено");
 });
