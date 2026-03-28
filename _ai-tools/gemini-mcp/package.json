@@ -1,0 +1,14 @@
+{
+  "name": "gemini-mcp",
+  "version": "1.0.0",
+  "description": "MCP server — Gemini advisor for Claude Code",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
