@@ -130,6 +130,13 @@ function buildServer() {
   return server;
 }
 
+function setCORSHeaders(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-session-id");
+  res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
+}
+
 function checkAuth(req) {
   if (!AUTH_TOKEN) return true;
   const token =
@@ -143,8 +150,17 @@ function checkAuth(req) {
 const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
 
-  // Health check — без авторизації (потрібно для Railway і перевірки з'єднання)
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    setCORSHeaders(res);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // Health check — без авторизації
   if (url.pathname === "/health" || url.pathname === "/") {
+    setCORSHeaders(res);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok", name: "gemini-mcp" }));
     return;
@@ -152,6 +168,7 @@ const httpServer = http.createServer(async (req, res) => {
 
   // Авторизація для всіх інших endpoints
   if (!checkAuth(req)) {
+    setCORSHeaders(res);
     res.writeHead(401, { "Content-Type": "text/plain" });
     res.end("Unauthorized");
     return;
@@ -159,6 +176,7 @@ const httpServer = http.createServer(async (req, res) => {
 
   // SSE endpoint — Claude підключається сюди
   if (url.pathname === "/sse") {
+    setCORSHeaders(res);
     const server = buildServer();
     const transport = new SSEServerTransport("/message", res);
     transports[transport.sessionId] = transport;
@@ -173,6 +191,7 @@ const httpServer = http.createServer(async (req, res) => {
 
   // Message endpoint — Claude надсилає повідомлення сюди
   if (url.pathname === "/message") {
+    setCORSHeaders(res);
     const sessionId = url.searchParams.get("sessionId");
     const transport = transports[sessionId];
 
