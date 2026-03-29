@@ -40,7 +40,7 @@ function _getTabChatBHeight(tab) {
 function openChatBarNoKeyboard(tab) {
   if (_tabChatState[tab]) return; // вже відкрито
   // Закриваємо інші бари
-  ['tasks','me','evening','finance','health','projects'].forEach(t => {
+  ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
     if (t !== tab) closeChatBar(t);
   });
   activeChatBar = tab;
@@ -86,21 +86,12 @@ function setupChatBarSwipe() {
       chatWin.style.transition = 'none';
       chatWin.style.opacity = '1';
 
-      // INBOX: фіксуємо поточну висоту щоб можна було анімувати від/до неї
-      if (tab === 'inbox') {
-        if (!inboxChatExpanded) {
-          inboxCompactH = chatWin.offsetHeight;
-          chatWin.style.height = inboxCompactH + 'px'; // переводимо з auto → px
-        }
-        chatWin.style.transform = 'translateY(0)';
-      } else {
-        // Non-inbox: фіксуємо поточну висоту як px (потрібно для анімації A↔B)
-        if (_tabChatState[tab]) {
-          const curH = chatWin.offsetHeight;
-          chatWin.style.height = curH + 'px';
-        }
-        chatWin.style.transform = 'translateY(0)';
+      // Фіксуємо поточну висоту як px (потрібно для анімації A↔B)
+      if (_tabChatState[tab]) {
+        const curH = chatWin.offsetHeight;
+        chatWin.style.height = curH + 'px';
       }
+      chatWin.style.transform = 'translateY(0)';
     }, { passive: true });
 
     chatWin.addEventListener('touchmove', e => {
@@ -111,32 +102,7 @@ function setupChatBarSwipe() {
       const absDy = Math.abs(dy);
       const dx = Math.abs(e.touches[0].clientX - winStartX);
 
-      // --- INBOX: різна логіка для вгору/вниз ---
-      if (tab === 'inbox') {
-        if (!isDragging) {
-          if (absDy < 8) return; // мертва зона
-          if (dx > absDy * 1.5) return; // горизонтальний свайп — ігноруємо
-          isDragging = true;
-        }
-        if (dy < 0) {
-          // Свайп ВГОРУ — висота зростає за пальцем (якщо ще не розгорнутий)
-          if (!inboxChatExpanded) {
-            const maxH = getInboxExpandHeight();
-            chatWin.style.height = Math.min(maxH, inboxCompactH + absDy) + 'px';
-          }
-          chatWin.style.transform = 'translateY(0)';
-          chatWin.style.opacity = '1';
-        } else {
-          // Свайп ВНИЗ — вікно ковзає вниз за пальцем
-          // Якщо compact — пружинне загальмовування (40%), якщо expanded — повне слідування
-          const drag = inboxChatExpanded ? dy : dy * 0.4;
-          chatWin.style.transform = `translateY(${drag}px)`;
-          chatWin.style.opacity = Math.max(0.6, 1 - dy / 280).toFixed(2);
-        }
-        return;
-      }
-
-      // --- ІНШІ ВКЛАДКИ: 3-стейтна система ---
+      // --- 3-стейтна система ---
       const kbOff = !(window.visualViewport && (window.innerHeight - window.visualViewport.height) > 250);
       const state = _tabChatState[tab];
 
@@ -176,22 +142,10 @@ function setupChatBarSwipe() {
 
     // Cleanup при перериванні жесту (вихід з застосунку, дзвінок тощо)
     const cancelHandler = () => {
-      if (tab === 'inbox') {
-        chatWin.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease';
-        chatWin.style.transform = 'translateY(0)';
-        chatWin.style.opacity = '1';
-        if (!inboxChatExpanded) {
-          chatWin.style.height = inboxCompactH + 'px';
-          setTimeout(() => { chatWin.style.transition = ''; chatWin.style.height = ''; }, 280);
-        } else {
-          setTimeout(() => { chatWin.style.transition = ''; }, 280);
-        }
-      } else {
-        chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease';
-        chatWin.style.transform = 'translateY(0)';
-        chatWin.style.opacity = '1';
-        setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; }, 280);
-      }
+      chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease';
+      chatWin.style.transform = 'translateY(0)';
+      chatWin.style.opacity = '1';
+      setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; }, 280);
       isDragging = false;
     };
     chatWin.addEventListener('touchcancel', cancelHandler, { passive: true });
@@ -201,82 +155,7 @@ function setupChatBarSwipe() {
       const elapsed = Date.now() - startTime;
       const velocity = finalDy / elapsed; // px/ms
 
-      // === INBOX ===
-      if (tab === 'inbox') {
-        const expandH = getInboxExpandHeight();
-
-        if (!inboxChatExpanded && finalDy < 0) {
-          // --- Свайп ВГОРУ: розгорнути або повернути ---
-          if (Math.abs(finalDy) > 40 || velocity < -0.3) {
-            // Розгортаємо до максимуму
-            inboxChatExpanded = true;
-            chatWin.style.transition = 'height 0.38s cubic-bezier(0.3,0.82,0,1)';
-            chatWin.style.height = expandH + 'px';
-            chatWin.style.maxHeight = expandH + 'px';
-            chatWin.style.transform = '';
-            chatWin.style.opacity = '1';
-            const msgs = document.getElementById('inbox-chat-messages');
-            if (msgs) {
-              msgs.style.maxHeight = Math.max(60, expandH - 24) + 'px';
-              setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
-            }
-            setTimeout(() => { chatWin.style.transition = ''; }, 380);
-          } else {
-            // Жест занадто малий — повертаємо до compact
-            chatWin.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1)';
-            chatWin.style.height = inboxCompactH + 'px';
-            chatWin.style.transform = '';
-            chatWin.style.opacity = '1';
-            setTimeout(() => { chatWin.style.transition = ''; chatWin.style.height = ''; }, 280);
-          }
-        } else if (finalDy > 0 && isDragging && (finalDy > 60 || velocity > 0.4)) {
-          // --- Свайп ВНИЗ достатньо сильний ---
-          bar.querySelectorAll('input, textarea').forEach(i => i.blur());
-          if (inboxChatExpanded) {
-            // Стискаємо назад до compact
-            inboxChatExpanded = false;
-            chatWin.style.transition = 'height 0.3s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
-            chatWin.style.height = inboxCompactH + 'px';
-            chatWin.style.transform = 'translateY(0)';
-            chatWin.style.opacity = '1';
-            const msgs = document.getElementById('inbox-chat-messages');
-            setTimeout(() => {
-              chatWin.style.transition = '';
-              chatWin.style.height = '';
-              chatWin.style.maxHeight = '';
-              if (msgs) msgs.style.maxHeight = '';
-            }, 300);
-          } else {
-            // Compact + свайп вниз — закриваємо вікно
-            chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
-            chatWin.style.transform = 'translateY(110%)';
-            chatWin.style.opacity = '0';
-            setTimeout(() => {
-              chatWin.classList.remove('open');
-              chatWin.style.transition = '';
-              chatWin.style.transform = '';
-              chatWin.style.opacity = '';
-              activeChatBar = null;
-            }, 280);
-          }
-        } else {
-          // Жест малий або тап — пружина
-          chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease';
-          chatWin.style.transform = 'translateY(0)';
-          chatWin.style.opacity = '1';
-          if (!inboxChatExpanded) {
-            // Повертаємо height до auto якщо не змінили стан
-            chatWin.style.height = inboxCompactH + 'px';
-            setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; chatWin.style.height = ''; }, 280);
-          } else {
-            setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; }, 280);
-          }
-        }
-        isDragging = false;
-        return;
-      }
-
-      // === ІНШІ ВКЛАДКИ: 3-стейтна логіка ===
+      // === 3-стейтна логіка ===
       isDragging = false;
       const kbOffEnd = !(window.visualViewport && (window.innerHeight - window.visualViewport.height) > 250);
       const stateEnd = _tabChatState[tab];
@@ -349,31 +228,29 @@ function setupChatBarSwipe() {
       e.preventDefault();
     }, { passive: false });
 
-    // --- Свайп ВГОРУ від поля вводу → відкрити чат без клавіатури (тільки не-inbox) ---
-    if (tab !== 'inbox') {
-      const inputBox = bar.querySelector('.ai-bar-input-box');
-      if (inputBox) {
-        let _inStartY = 0, _inSwiping = false;
-        inputBox.addEventListener('touchstart', e => {
-          _inStartY = e.touches[0].clientY;
+    // --- Свайп ВГОРУ від поля вводу → відкрити чат без клавіатури ---
+    const inputBox = bar.querySelector('.ai-bar-input-box');
+    if (inputBox) {
+      let _inStartY = 0, _inSwiping = false;
+      inputBox.addEventListener('touchstart', e => {
+        _inStartY = e.touches[0].clientY;
+        _inSwiping = false;
+      }, { passive: true });
+      inputBox.addEventListener('touchmove', e => {
+        if (_tabChatState[tab]) return; // чат вже відкритий
+        const dy = _inStartY - e.touches[0].clientY; // positive = вгору
+        if (dy > 20) {
+          _inSwiping = true;
+          e.preventDefault(); // блокуємо textarea focus через scroll
+        }
+      }, { passive: false });
+      inputBox.addEventListener('touchend', e => {
+        if (_inSwiping) {
           _inSwiping = false;
-        }, { passive: true });
-        inputBox.addEventListener('touchmove', e => {
-          if (_tabChatState[tab]) return; // чат вже відкритий
-          const dy = _inStartY - e.touches[0].clientY; // positive = вгору
-          if (dy > 20) {
-            _inSwiping = true;
-            e.preventDefault(); // блокуємо textarea focus через scroll
-          }
-        }, { passive: false });
-        inputBox.addEventListener('touchend', e => {
-          if (_inSwiping) {
-            _inSwiping = false;
-            e.preventDefault(); // блокуємо tap → onfocus → клавіатура
-            openChatBarNoKeyboard(tab);
-          }
-        }, { passive: false });
-      }
+          e.preventDefault(); // блокуємо tap → onfocus → клавіатура
+          openChatBarNoKeyboard(tab);
+        }
+      }, { passive: false });
     }
   });
 
