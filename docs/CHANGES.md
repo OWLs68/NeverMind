@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-03-29 — Inbox чат 3-стейт + фікс деплою
+
+**Що зроблено:**
+- `app-ai-chat.js`, `app-ai-core.js`, `app-core-system.js`: inbox чат переведено на ту саму 3-стейтну систему що й інші вкладки (закрито → A compact → B full). Видалено `inboxChatExpanded`, `inboxCompactH`, `getInboxExpandHeight()` (~150 рядків)
+- `.github/workflows/auto-merge.yml`: додано `-X theirs` до merge (вирішення конфліктів на користь feature-гілки). Прибрано sed для sw.js (Claude оновлює CACHE_NAME локально)
+- `CLAUDE.md`: додано розділ "Система деплою" з поясненням архітектури CI і причини `-X theirs`
+- `app-ai-core.js`: виправлено `openChatBar()` і `closeChatBar()` — inbox тепер обробляється однаково з іншими вкладками
+
+**Змінені файли:** `app-ai-chat.js`, `app-ai-core.js`, `app-core-system.js`, `sw.js`, `.github/workflows/auto-merge.yml`, `CLAUDE.md`, `docs/CHANGES.md`
+
+**Корінь проблеми деплою:** і Claude, і CI модифікували `sw.js` → конфлікт при merge → CI падав тихо. Фікс: `-X theirs` + CI не чіпає sw.js.
+
+---
+
 ## 2026-03-29 — Реструктуризація: CSS винесено в style.css
 
 **Що зроблено:**

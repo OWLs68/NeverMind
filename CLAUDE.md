@@ -47,7 +47,8 @@
 - **Після структурних змін** — оновити `CLAUDE.md` (файлова структура, правила, дані)
 - **Після змін архітектури** — оновити `docs/ARCHITECTURE.md` (діаграми)
 - **При додаванні нових файлів** — обов'язково додати в `STATIC_ASSETS` у `sw.js`
-- **При кожному деплої** — змінити `CACHE_NAME` у `sw.js` (формат: `nm-YYYYMMDD-HHMM`)
+- **При кожному деплої** — змінити `CACHE_NAME` у `sw.js` (формат: `nm-YYYYMMDD-HHMM`) **локально, перед пушем** — CI не чіпає sw.js
+- **При кожному пуші в main** — повідомити Роману що має з'явитись на лічильнику: `v[версія] · ДД.ММ ГГ:ХХ` (Amsterdam час деплою)
 
 ---
 
@@ -57,7 +58,7 @@
 
 - Стек: ванільний JS, localStorage, GitHub Pages, без фреймворків і бекенду
 - API: OpenAI GPT-4o-mini (ключ зберігається в localStorage `nm_gemini_key`)
-- Деплой: автоматичний через GitHub Actions при пуші в `main`
+- Деплой: автоматичний через GitHub Actions при пуші в feature-гілку `claude/**`
 - Мова: Ukrainian (весь UI та AI промпти)
 
 ---
@@ -83,6 +84,23 @@
 | `app-evening-onboarding.js` | Онбординг, слайди, опитування, OWL Guide, help |
 
 **Порядок завантаження критичний** — скрипти залежать один від одного в порядку як вони в index.html.
+
+---
+
+## Система деплою (як це працює)
+
+**Флоу:** Claude пушить у `claude/read-repository-bd3qH` → `auto-merge.yml` мержить у `main` → `deploy.yml` деплоїть на GitHub Pages.
+
+**`auto-merge.yml` робить:**
+1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
+2. `sed` оновлює badge в `index.html` (Amsterdam час деплою)
+3. Комітить і пушить у `main`
+
+**CI НЕ чіпає `sw.js`** — тому Claude **зобов'язаний** оновити `CACHE_NAME` локально перед кожним пушем.
+
+**Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` → при звичайному merge виникає конфлікт → CI падає тихо → деплой не відбувається. `-X theirs` вирішує конфлікт автоматично на користь feature-гілки.
+
+**Якщо деплой не спрацював:** зроби порожній пуш: `git commit --allow-empty -m "ci: retrigger" && git push origin <branch>`
 
 ---
 
