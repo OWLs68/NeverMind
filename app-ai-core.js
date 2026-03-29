@@ -541,6 +541,9 @@ function openChatBar(tab) {
     chatWin.style.maxHeight = h + 'px';
     chatWin.classList.add('open');
     _tabChatState[tab] = 'a';
+    // Скролимо до останнього повідомлення після відкриття
+    const msgs = chatWin.querySelector('.ai-bar-messages');
+    if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
   });
 }
 
