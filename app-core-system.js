@@ -142,10 +142,20 @@ function setupPWA() {
 // === SERVICE WORKER ===
 function setupSW() {
   if (!('serviceWorker' in navigator)) return;
-  // Коли новий SW активувався — перезавантажуємо сторінку щоб взяти новий кеш
+
+  // Запам'ятовуємо ДО реєстрації — чи вже був активний SW
+  // Якщо null — це перший запуск, перезавантаження не потрібне
+  const hadController = !!navigator.serviceWorker.controller;
+  let _reloading = false;
+
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Перезавантажуємо тільки якщо це оновлення (не перший запуск)
+    // _reloading запобігає повторним reload якщо подія спрацює двічі
+    if (!hadController || _reloading) return;
+    _reloading = true;
     window.location.reload();
   });
+
   // Реєструємо повноцінний sw.js для офлайн-кешування
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {
     // Fallback: мінімальний SW через blob (без кешування)
