@@ -27,8 +27,8 @@ jobs:
       - name: Inject deploy timestamp
         run: |
           VERSION=$(grep 'id="deploy-version"' index.html | grep -oP 'v\d+' | head -1)
-          DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
-          CACHE_TAG=$(TZ='Europe/Kyiv' date '+%Y%m%d-%H%M')
+          DEPLOY_TIME=$(TZ='Europe/Amsterdam' date '+%d.%m %H:%M')
+          CACHE_TAG=$(TZ='Europe/Amsterdam' date '+%Y%m%d-%H%M')
           # Оновлюємо мітку версії в Inbox
           sed -i "s|>v[0-9]* · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]<|>${VERSION} · ${DEPLOY_TIME}<|" index.html
           # Оновлюємо ім'я кешу в SW — щоб браузер скинув старий кеш
