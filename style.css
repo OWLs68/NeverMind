@@ -996,8 +996,25 @@ body {
   display: block;
   width: 28px;
   height: 4px;
-  background: rgba(30,16,64,0.15);
+  background: rgba(255,255,255,0.45);
   border-radius: 2px;
+}
+
+/* Підказка над полем вводу коли чат закрито — показує що можна свайпнути вгору */
+.ai-bar-new:not(:has(.ai-bar-chat-window.open)) .ai-bar-input-box {
+  position: relative;
+}
+.ai-bar-new:not(:has(.ai-bar-chat-window.open)) .ai-bar-input-box::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 4px;
+  background: rgba(255,255,255,0.45);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 /* Повідомлення всередині чат-вікна */
