@@ -976,12 +976,6 @@ body {
   opacity: 1;
   pointer-events: all;
 }
-/* Inbox: вікно росте з повідомленнями, не займає весь екран */
-#inbox-chat-window { height: auto; }
-#inbox-chat-messages {
-  flex: none;
-  max-height: calc(100svh - var(--tabbar-h, 83px) - 64px - 160px);
-}
 
 /* Полоска зверху чат-вікна */
 .ai-bar-chat-handle {
