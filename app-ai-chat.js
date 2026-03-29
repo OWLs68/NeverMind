@@ -65,21 +65,14 @@ function setupChatBarSwipe() {
     const messages = bar.querySelector('.ai-bar-messages');
     if (!chatWin) return;
 
-    // --- Gesture-driven свайп по чат-вікну ---
+    // --- Зона A: handle — свайп для згортання/розгортання ---
+    // Зона B: messages — нативний скрол, без конфліктів (окремий DOM-елемент)
+    const handleEl = chatWin.querySelector('.ai-bar-chat-handle');
+    if (!handleEl) return;
+
     let winStartY = 0, winStartX = 0, winStartVpTop = 0, isDragging = false, startTime = 0;
-    let _startedOnMessages = false; // чи жест починався на списку повідомлень (скрол)
 
-    // Допоміжні: пружинне повернення
-    const snapBack = () => {
-      chatWin.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
-      chatWin.style.transform = 'translateY(0)';
-      chatWin.style.opacity = '1';
-      setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; }, 300);
-    };
-
-    chatWin.addEventListener('touchstart', e => {
-      _startedOnMessages = !!(messages && messages.contains(e.target));
-      if (_startedOnMessages) return;
+    handleEl.addEventListener('touchstart', e => {
       winStartY = e.touches[0].clientY;
       winStartX = e.touches[0].clientX;
       winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
@@ -87,29 +80,24 @@ function setupChatBarSwipe() {
       isDragging = false;
       chatWin.style.transition = 'none';
       chatWin.style.opacity = '1';
-
       // Фіксуємо поточну висоту як px (потрібно для анімації A↔B)
       if (_tabChatState[tab]) {
-        const curH = chatWin.offsetHeight;
-        chatWin.style.height = curH + 'px';
+        chatWin.style.height = chatWin.offsetHeight + 'px';
       }
       chatWin.style.transform = 'translateY(0)';
     }, { passive: true });
 
-    chatWin.addEventListener('touchmove', e => {
-      if (_startedOnMessages) return;
+    handleEl.addEventListener('touchmove', e => {
+      e.preventDefault(); // handle — тільки свайп, ніякого page scroll
       const vpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
       const vpDelta = vpTop - winStartVpTop;
       const dy = (e.touches[0].clientY - winStartY) + vpDelta;
       const absDy = Math.abs(dy);
       const dx = Math.abs(e.touches[0].clientX - winStartX);
-
-      // --- 3-стейтна система ---
       const kbOff = !(window.visualViewport && (window.innerHeight - window.visualViewport.height) > 250);
       const state = _tabChatState[tab];
 
       if (state === 'b') {
-        // Стан B: свайп вниз → стискаємо (з опором)
         if (!isDragging) {
           if (absDy < 8) return;
           if (dx > absDy * 1.5) return;
@@ -121,14 +109,13 @@ function setupChatBarSwipe() {
         return;
       }
 
-      // Стан A: свайп вгору (без клавіатури) → розгортаємо; свайп вниз → закриваємо
+      // Стан A: вгору → розгортаємо до B; вниз → закриваємо
       if (!isDragging) {
         if (absDy < 8) return;
         if (dx > absDy * 1.5) return;
         isDragging = true;
       }
       if (dy < 0 && kbOff) {
-        // Вгору: збільшуємо висоту (A → до B)
         const maxH = _getTabChatBHeight(tab);
         const startH = parseFloat(chatWin.style.height) || chatWin.offsetHeight;
         chatWin.style.height = Math.min(maxH, startH - dy) + 'px';
@@ -140,33 +127,28 @@ function setupChatBarSwipe() {
         chatWin.style.transform = `translateY(${dy}px)`;
         chatWin.style.opacity = Math.max(0, 1 - dy / 280).toFixed(2);
       }
-    }, { passive: true });
+    }, { passive: false });
 
-    // Cleanup при перериванні жесту (вихід з застосунку, дзвінок тощо)
     const cancelHandler = () => {
-      _startedOnMessages = false;
       chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease';
       chatWin.style.transform = 'translateY(0)';
       chatWin.style.opacity = '1';
       setTimeout(() => { chatWin.style.transition = ''; chatWin.style.transform = ''; chatWin.style.opacity = ''; }, 280);
       isDragging = false;
     };
-    chatWin.addEventListener('touchcancel', cancelHandler, { passive: true });
+    handleEl.addEventListener('touchcancel', cancelHandler, { passive: true });
 
-    chatWin.addEventListener('touchend', e => {
-      if (_startedOnMessages) { _startedOnMessages = false; return; }
+    handleEl.addEventListener('touchend', e => {
       const finalDy = e.changedTouches[0].clientY - winStartY;
       const elapsed = Date.now() - startTime;
-      const velocity = finalDy / elapsed; // px/ms
-
-      // === 3-стейтна логіка ===
+      const velocity = finalDy / elapsed;
       isDragging = false;
       const kbOffEnd = !(window.visualViewport && (window.innerHeight - window.visualViewport.height) > 250);
       const stateEnd = _tabChatState[tab];
 
       if (stateEnd === 'b') {
-        // Стан B: swipe down → стиснути до A; мало → пружина
         if (finalDy > 80 || velocity > 0.5) {
+          // B → A
           const aH = _getTabChatAHeight(tab);
           _tabChatState[tab] = 'a';
           chatWin.style.transition = 'height 0.32s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
@@ -176,7 +158,7 @@ function setupChatBarSwipe() {
           chatWin.style.opacity = '1';
           setTimeout(() => chatWin.style.transition = '', 320);
         } else {
-          // Пружина: повертаємо до B-висоти
+          // Пружина назад до B
           const bH = _getTabChatBHeight(tab);
           chatWin.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
           chatWin.style.height = bH + 'px';
@@ -189,7 +171,7 @@ function setupChatBarSwipe() {
 
       // Стан A
       if (finalDy < -40 && kbOffEnd) {
-        // Свайп вгору → розгорнути до B
+        // A → B
         const bH = _getTabChatBHeight(tab);
         _tabChatState[tab] = 'b';
         chatWin.style.transition = 'height 0.38s cubic-bezier(0.3,0.82,0,1)';
@@ -201,7 +183,7 @@ function setupChatBarSwipe() {
         if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
         setTimeout(() => chatWin.style.transition = '', 380);
       } else if (finalDy > 80 || velocity > 0.5) {
-        // Свайп вниз → закрити
+        // A → закрити
         chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
         chatWin.style.transform = 'translateY(110%)';
         chatWin.style.opacity = '0';
@@ -212,7 +194,7 @@ function setupChatBarSwipe() {
           chatWin.style.opacity = '';
         }, 280);
       } else {
-        // Пружина: повертаємо до A-висоти
+        // Пружина назад до A
         const aH = _getTabChatAHeight(tab);
         chatWin.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease';
         chatWin.style.height = aH + 'px';
@@ -222,11 +204,9 @@ function setupChatBarSwipe() {
       }
     }, { passive: true });
 
-    // --- Блок: бар завжди зафіксований — вертикальний свайп заблокований ---
+    // Блокуємо тільки небажаний scroll по решті бару (не messages, не textarea)
     bar.addEventListener('touchmove', e => {
-      // Дозволяємо скрол списку повідомлень
       if (messages && messages.contains(e.target)) return;
-      // Дозволяємо взаємодію з textarea
       const textarea = bar.querySelector('textarea');
       if (textarea && textarea.contains(e.target)) return;
       e.preventDefault();
