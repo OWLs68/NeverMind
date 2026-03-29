@@ -142,6 +142,10 @@ function setupPWA() {
 // === SERVICE WORKER ===
 function setupSW() {
   if (!('serviceWorker' in navigator)) return;
+  // Коли новий SW активувався — перезавантажуємо сторінку щоб взяти новий кеш
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
   // Реєструємо повноцінний sw.js для офлайн-кешування
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {
     // Fallback: мінімальний SW через blob (без кешування)
