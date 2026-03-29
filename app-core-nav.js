@@ -900,11 +900,11 @@ function exportData() {
 
 function clearAllData() {
   if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log','nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me','nm_chat_evening','nm_chat_finance','nm_health_cards','nm_health_log','nm_projects','nm_active_tabs','nm_evening_mood','nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_folders_meta','nm_moments','nm_settings','nm_gemini_key','nm_memory','nm_memory_ts','nm_notes_folders_ts','nm_habits2','nm_habit_log2','nm_quit_log','nm_onboarding_done','nm_evening_summary','nm_finance','nm_finance_budget','nm_finance_cats','nm_trash','nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log','nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me','nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects','nm_health_cards','nm_health_log','nm_projects','nm_active_tabs','nm_evening_mood','nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'];
   keys.forEach(k => localStorage.removeItem(k));
   Object.keys(localStorage).filter(k => k.startsWith('nm_task_chat_') || k.startsWith('nm_visited_') || k.startsWith('nm_owl_tab_')).forEach(k => localStorage.removeItem(k));
   showToast('🗑️ Всі дані видалено');
-  closeSettings();
+  setTimeout(() => window.location.reload(), 800);
 }
 
 function saveFinanceSettings() {
