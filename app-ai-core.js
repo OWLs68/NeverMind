@@ -467,15 +467,27 @@ function restoreChatUI(tab) {
   const containerId = containerMap[tab];
   if (!containerId) return;
   const el = document.getElementById(containerId);
-  if (!el || el.children.length > 0) return; // вже є повідомлення
+  if (!el || el.dataset.restored) return; // вже відновлено
+  el.dataset.restored = '1';
   const msgs = loadChatMsgs(tab);
-  if (msgs.length === 0) return;
-  // Додаємо розділювач "Попередня розмова"
+
+  if (msgs.length === 0) {
+    // Немає збереженої історії — показуємо welcome тільки для inbox
+    if (tab === 'inbox') {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex';
+      div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">Привіт! Напиши що завгодно — я розберусь 👋</div>`;
+      el.appendChild(div);
+    }
+    return;
+  }
+
+  // Є збережена історія — додаємо розділювач і відновлюємо
   const sep = document.createElement('div');
   sep.style.cssText = 'display:flex;align-items:center;gap:8px;margin:4px 0 8px;opacity:0.4';
   sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Попередня розмова</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
   el.appendChild(sep);
-  // Рендеримо збережені повідомлення без повторного запису в storage
+
   if (tab === 'inbox') {
     msgs.forEach(m => _renderInboxChatMsg(m.role, m.text, el));
   } else if (addMsgMap[tab]) {
