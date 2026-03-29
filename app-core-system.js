@@ -157,10 +157,17 @@ function setupSW() {
   });
 
   // Реєструємо повноцінний sw.js для офлайн-кешування
-  // .then(reg.update()) — примусово перевіряємо нову версію SW при кожному відкритті.
-  // Це критично для iOS Safari: без явного update() він може не перевіряти оновлення годинами.
+  // reg.update() — примусово перевіряємо нову версію SW при кожному відкритті.
+  // visibilitychange — iOS PWA часто не робить повний перезапуск при відкритті з домашнього
+  // екрану, а "відновлює з фону". В такому разі JS не виконується заново і reg.update()
+  // не викликається. Слухаємо visible → update() щоб ловити цей кейс.
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
-    .then(reg => { reg.update(); })
+    .then(reg => {
+      reg.update();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update();
+      });
+    })
     .catch(() => {
     // Fallback: мінімальний SW через blob (без кешування)
     const swCode = `
