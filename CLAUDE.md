@@ -102,9 +102,11 @@
 **Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → при звичайному merge конфлікт → CI падає тихо. `-X theirs` вирішує автоматично на користь feature-гілки.
 
 **Автооновлення у браузері (app-core-system.js `setupSW`):**
-- `controllerchange` → `window.location.reload()` — коли новий SW активується, сторінка перезавантажується
+- `reg.update()` — примусова перевірка нової версії SW при кожному відкритті. **Критично для iOS Safari**: без цього iOS може ігнорувати оновлення годинами навіть з `updateViaCache: 'none'`
+- `controllerchange` → `window.location.reload()` — коли новий SW активується, сторінка перезавантажується автоматично
 - `hadController` — перезавантаження тільки при оновленні (не при першому запуску)
 - `_reloading` — захист від подвійного reload
+- **НЕ видаляти і не спрощувати цю логіку** — кожна частина вирішує конкретну проблему iOS
 
 **Якщо деплой не спрацював:** зроби порожній пуш: `git commit --allow-empty -m "ci: retrigger" && git push origin <branch>`
 
