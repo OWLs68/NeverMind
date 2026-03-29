@@ -977,14 +977,27 @@ body {
   pointer-events: all;
 }
 
-/* Полоска зверху чат-вікна */
+/* Зона свайпу (handle) — повна ширина, зручна для пальця */
 .ai-bar-chat-handle {
-  width: 28px; height: 4px;
+  width: 100%;
+  padding: 12px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Візуальна полоска — тільки декор, через псевдоелемент */
+.ai-bar-chat-handle::after {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 4px;
   background: rgba(30,16,64,0.15);
   border-radius: 2px;
-  margin: 8px auto 4px;
-  flex-shrink: 0;
-  cursor: pointer;
 }
 
 /* Повідомлення всередині чат-вікна */
