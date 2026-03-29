@@ -513,12 +513,12 @@ function openChatBar(tab) {
   if (activeChatBar === tab) return;
 
   // Закриваємо інші бари
-  ['tasks','me','evening','finance','health','projects'].forEach(t => {
+  ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
     if (t === tab) return;
     const b = document.getElementById(t + '-ai-bar');
     if (!b) return;
     const cw = b.querySelector('.ai-bar-chat-window');
-    if (cw) cw.classList.remove('open');
+    if (cw) { cw.classList.remove('open'); _tabChatState[t] = undefined; }
     const inputs = b.querySelectorAll('input, textarea');
     inputs.forEach(i => i.blur());
   });
@@ -536,35 +536,17 @@ function openChatBar(tab) {
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) requestAnimationFrame(() => {
     // Відкриваємо в стані A (compact)
-    const h = tab !== 'inbox' ? _getTabChatAHeight(tab) : null;
-    if (h !== null) {
-      chatWin.style.height = h + 'px';
-      chatWin.style.maxHeight = h + 'px';
-    } else {
-      try { updateChatWindowHeight(tab); } catch(e) {}
-    }
+    const h = _getTabChatAHeight(tab);
+    chatWin.style.height = h + 'px';
+    chatWin.style.maxHeight = h + 'px';
     chatWin.classList.add('open');
-    if (tab !== 'inbox') _tabChatState[tab] = 'a';
+    _tabChatState[tab] = 'a';
   });
 }
 
 function closeChatBar(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
-
-  // Inbox: вікно чату завжди відкрите — тільки ховаємо клавіатуру і скидаємо розгорнутість
-  if (tab === 'inbox') {
-    if (inboxChatExpanded) {
-      inboxChatExpanded = false;
-      const cw = document.getElementById('inbox-chat-window');
-      if (cw) { cw.style.height = ''; cw.style.maxHeight = ''; }
-      const msgs = document.getElementById('inbox-chat-messages');
-      if (msgs) msgs.style.maxHeight = '';
-    }
-    bar.querySelectorAll('input, textarea').forEach(i => i.blur());
-    activeChatBar = null;
-    return;
-  }
 
   const chatWin = bar.querySelector('.ai-bar-chat-window');
   if (chatWin) chatWin.classList.remove('open');
@@ -590,24 +572,11 @@ function closeAllChatBars(resetActive = true) {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
-    // Inbox: не закриваємо вікно чату (воно завжди відкрите)
-    if (chatWin && t !== 'inbox') { chatWin.classList.remove('open'); _tabChatState[t] = undefined; }
+    if (chatWin) { chatWin.classList.remove('open'); _tabChatState[t] = undefined; }
     const inputs = bar.querySelectorAll('input, textarea');
     inputs.forEach(i => i.blur());
   });
   if (resetActive) activeChatBar = null;
 }
 
-// Стан розгорнутості inbox чату (свайп вгору)
-let inboxChatExpanded = false;
-let inboxCompactH = 0; // зафіксована compact-висота при touchstart
-
-// Повна висота inbox чат-вікна = від safe area до поля вводу
-function getInboxExpandHeight() {
-  const bar = document.getElementById('inbox-ai-bar');
-  if (!bar) return 200;
-  const inputBox = bar.querySelector('.ai-bar-input-box');
-  const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 80;
-  return Math.max(100, inputTop - 80 - 8); // 80 = header + safe area
-}
 

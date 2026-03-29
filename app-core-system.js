@@ -294,17 +294,19 @@ function setupKeyboardAvoiding() {
       // Обмежуємо висоту inbox чату щоб не виходив за видиму зону
       // Логіка: chatH = vv.height - barBottom - inputH - safeAreaTop
       const inboxCw = document.getElementById('inbox-chat-window');
-      if (inboxCw) {
-        // barBottom = keyboardHeight + 8; inputH ≈ 64; safeAreaTop ≈ 60 (notch + margin)
-        const chatH = Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+      if (inboxCw && inboxCw.classList.contains('open')) {
+        // Клавіатура відкрита — стискаємо до A-висоти
+        if (typeof _tabChatState !== 'undefined' && _tabChatState['inbox'] === 'b') {
+          _tabChatState['inbox'] = 'a';
+        }
+        const chatH = typeof _getTabChatAHeight === 'function'
+          ? _getTabChatAHeight('inbox')
+          : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
         inboxCw.style.height = chatH + 'px';
         inboxCw.style.maxHeight = chatH + 'px';
-        // Клавіатура стискає чат до compact → скидаємо expanded-стан
-        if (typeof inboxChatExpanded !== 'undefined') inboxChatExpanded = false;
         const inboxMsgs = document.getElementById('inbox-chat-messages');
         if (inboxMsgs) {
           inboxMsgs.style.maxHeight = Math.max(30, chatH - 20) + 'px';
-          // Авто-скрол до останнього повідомлення
           setTimeout(() => { inboxMsgs.scrollTop = inboxMsgs.scrollHeight; }, 50);
         }
       }
@@ -341,11 +343,17 @@ function setupKeyboardAvoiding() {
     } else {
       // Клавіатура закрита — повертаємо все на місце
       if (aiBar) { const h = getTabbarHeight(); aiBar.style.bottom = (h + 4) + 'px'; aiBar.style.left = '4px'; aiBar.style.right = '4px'; }
-      // Скидаємо обмеження inbox чату
+      // Відновлюємо висоту inbox чату після закриття клавіатури
       const inboxCw = document.getElementById('inbox-chat-window');
-      if (inboxCw) {
-        inboxCw.style.height = '';
-        inboxCw.style.maxHeight = '';
+      if (inboxCw && inboxCw.classList.contains('open')) {
+        try {
+          const inboxState = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})['inbox'];
+          const calcH = inboxState === 'b' && typeof _getTabChatBHeight === 'function'
+            ? _getTabChatBHeight('inbox')
+            : (typeof _getTabChatAHeight === 'function' ? _getTabChatAHeight('inbox') : null);
+          if (calcH) { inboxCw.style.height = calcH + 'px'; inboxCw.style.maxHeight = calcH + 'px'; }
+          else { inboxCw.style.height = ''; inboxCw.style.maxHeight = ''; }
+        } catch(e) { inboxCw.style.height = ''; inboxCw.style.maxHeight = ''; }
         const inboxMsgs = document.getElementById('inbox-chat-messages');
         if (inboxMsgs) inboxMsgs.style.maxHeight = '';
       }

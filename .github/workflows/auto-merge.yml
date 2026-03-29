@@ -24,19 +24,18 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Переходимо на main і мержимо feature-гілку
-          # Використовуємо звичайний merge (не --ff-only) щоб працювало навіть якщо гілки розійшлись
+          # -X theirs: при конфліктах (напр. sw.js CACHE_NAME) — feature-гілка виграє
           git checkout main
-          git merge --no-edit ${{ github.ref_name }}
+          git merge --no-edit -X theirs ${{ github.ref_name }}
 
-          # Інжектуємо Amsterdam timestamp в badge і CACHE_NAME
+          # Інжектуємо Amsterdam timestamp тільки в badge index.html
+          # sw.js CACHE_NAME не чіпаємо — Claude оновлює його локально перед кожним пушем
           VERSION=$(grep 'id="deploy-version"' index.html | grep -oP 'v\d+' | head -1)
           DEPLOY_TIME=$(TZ='Europe/Amsterdam' date '+%d.%m %H:%M')
-          CACHE_TAG=$(TZ='Europe/Amsterdam' date '+%Y%m%d-%H%M')
           sed -i "s|>v[0-9]* · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]<|>${VERSION} · ${DEPLOY_TIME}<|" index.html
-          sed -i "s|const CACHE_NAME = 'nm-[^']*'|const CACHE_NAME = 'nm-${CACHE_TAG}'|" sw.js
 
-          git add index.html sw.js
+          git add index.html
           git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME}"
 
           git push origin main
-          echo "Deployed: ${VERSION} · ${DEPLOY_TIME} | cache: nm-${CACHE_TAG}"
+          echo "Deployed: ${VERSION} · ${DEPLOY_TIME}"
