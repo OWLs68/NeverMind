@@ -67,6 +67,7 @@ function setupChatBarSwipe() {
 
     // --- Gesture-driven свайп по чат-вікну ---
     let winStartY = 0, winStartX = 0, winStartVpTop = 0, isDragging = false, startTime = 0;
+    let _startedOnMessages = false; // чи жест починався на списку повідомлень (скрол)
 
     // Допоміжні: пружинне повернення
     const snapBack = () => {
@@ -77,7 +78,8 @@ function setupChatBarSwipe() {
     };
 
     chatWin.addEventListener('touchstart', e => {
-      if (messages && messages.contains(e.target)) return;
+      _startedOnMessages = !!(messages && messages.contains(e.target));
+      if (_startedOnMessages) return;
       winStartY = e.touches[0].clientY;
       winStartX = e.touches[0].clientX;
       winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
@@ -95,7 +97,7 @@ function setupChatBarSwipe() {
     }, { passive: true });
 
     chatWin.addEventListener('touchmove', e => {
-      if (messages && messages.contains(e.target)) return;
+      if (_startedOnMessages) return;
       const vpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
       const vpDelta = vpTop - winStartVpTop;
       const dy = (e.touches[0].clientY - winStartY) + vpDelta;
@@ -142,6 +144,7 @@ function setupChatBarSwipe() {
 
     // Cleanup при перериванні жесту (вихід з застосунку, дзвінок тощо)
     const cancelHandler = () => {
+      _startedOnMessages = false;
       chatWin.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease';
       chatWin.style.transform = 'translateY(0)';
       chatWin.style.opacity = '1';
@@ -151,6 +154,7 @@ function setupChatBarSwipe() {
     chatWin.addEventListener('touchcancel', cancelHandler, { passive: true });
 
     chatWin.addEventListener('touchend', e => {
+      if (_startedOnMessages) { _startedOnMessages = false; return; }
       const finalDy = e.changedTouches[0].clientY - winStartY;
       const elapsed = Date.now() - startTime;
       const velocity = finalDy / elapsed; // px/ms
