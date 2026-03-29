@@ -95,10 +95,16 @@
 1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
 2. `sed` оновлює badge в `index.html` (Amsterdam час деплою)
 3. Комітить і пушить у `main`
+4. `concurrency: cancel-in-progress: true` — якщо два пуші швидко поспіль, запускається тільки останній
 
 **CI НЕ чіпає `sw.js`** — тому Claude **зобов'язаний** оновити `CACHE_NAME` локально перед кожним пушем.
 
-**Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` → при звичайному merge виникає конфлікт → CI падає тихо → деплой не відбувається. `-X theirs` вирішує конфлікт автоматично на користь feature-гілки.
+**Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → при звичайному merge конфлікт → CI падає тихо. `-X theirs` вирішує автоматично на користь feature-гілки.
+
+**Автооновлення у браузері (app-core-system.js `setupSW`):**
+- `controllerchange` → `window.location.reload()` — коли новий SW активується, сторінка перезавантажується
+- `hadController` — перезавантаження тільки при оновленні (не при першому запуску)
+- `_reloading` — захист від подвійного reload
 
 **Якщо деплой не спрацював:** зроби порожній пуш: `git commit --allow-empty -m "ci: retrigger" && git push origin <branch>`
 
