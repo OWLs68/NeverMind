@@ -157,7 +157,11 @@ function setupSW() {
   });
 
   // Реєструємо повноцінний sw.js для офлайн-кешування
-  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {
+  // .then(reg.update()) — примусово перевіряємо нову версію SW при кожному відкритті.
+  // Це критично для iOS Safari: без явного update() він може не перевіряти оновлення годинами.
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .then(reg => { reg.update(); })
+    .catch(() => {
     // Fallback: мінімальний SW через blob (без кешування)
     const swCode = `
       self.addEventListener('install', e => self.skipWaiting());
