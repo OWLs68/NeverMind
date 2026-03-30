@@ -52,10 +52,10 @@
 </div>
 
 <!-- ONBOARDING -->
-<div id="onboarding" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f5f1ff,#ede9ff,#e0d9ff);overflow-y:auto">
+<div id="onboarding" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#f5f0e8,#fffdf9,#fff8f0);overflow-y:auto">
   <div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px 60px">
-    <div style="width:72px;height:72px;border-radius:22px;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M12 13c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7" r="1" fill="#7c3aed"/><circle cx="14" cy="7" r="1" fill="#7c3aed"/><path d="M10.5 9.5c.4.3.9.5 1.5.5s1.1-.2 1.5-.5"/></svg>
+    <div style="width:72px;height:72px;border-radius:22px;background:rgba(194,121,10,0.12);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c2790a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M12 13c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7" r="1" fill="#c2790a"/><circle cx="14" cy="7" r="1" fill="#c2790a"/><path d="M10.5 9.5c.4.3.9.5 1.5.5s1.1-.2 1.5-.5"/></svg>
     </div>
     <div style="font-family:'Unbounded',sans-serif;font-size:25px;font-weight:900;color:#1e1040;text-align:center;margin-bottom:8px">NeverMind</div>
     <div style="font-size:15px;color:rgba(30,16,64,0.45);text-align:center;margin-bottom:36px">Твій особистий агент OWL</div>
@@ -63,17 +63,17 @@
     <div id="ob-step-1" style="width:100%;max-width:360px">
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">Як тебе звати?</div>
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:20px">Агент звертатиметься до тебе на ім'я</div>
-      <input id="ob-name" type="text" placeholder="Ім'я або нікнейм" autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
-      <input id="ob-age" type="number" placeholder="Вік (необов'язково)" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(1)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
+      <input id="ob-name" type="text" placeholder="Ім'я або нікнейм" autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.85);border:1.5px solid rgba(30,16,64,0.14);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
+      <input id="ob-age" type="number" placeholder="Вік (необов'язково)" style="width:100%;padding:16px;background:rgba(255,255,255,0.85);border:1.5px solid rgba(30,16,64,0.14);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
+      <button onclick="obNext(1)" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
     </div>
 
     <div id="ob-step-2" style="display:none;width:100%;max-width:360px">
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">API ключ OpenAI</div>
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:6px">Потрібен для роботи агента</div>
-      <div style="font-size:14px;color:rgba(124,58,237,0.7);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
-      <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(2)" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Далі →</button>
+      <div style="font-size:14px;color:rgba(194,121,10,0.85);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
+      <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.85);border:1.5px solid rgba(30,16,64,0.14);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
+      <button onclick="obNext(2)" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Далі →</button>
       <button onclick="obSkipKey()" style="width:100%;background:none;border:none;font-size:15px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
     </div>
 
@@ -82,7 +82,7 @@
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">Обери стиль OWL</div>
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:24px">Як агент буде спілкуватись з тобою?</div>
       <div id="owl-mode-cards" style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
-        <div onclick="selectOwlMode('coach')" id="owl-card-coach" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.8);border:2px solid rgba(124,58,237,0.15);border-radius:16px;cursor:pointer;transition:all 0.2s">
+        <div onclick="selectOwlMode('coach')" id="owl-card-coach" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <div style="width:32px;height:32px;border-radius:9px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -92,7 +92,7 @@
           <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Прямий і жорсткий</div>
           <div style="font-size:13px;color:rgba(30,16,64,0.5)">Підштовхує до дії, не дає відмовок, говорить як є</div>
         </div>
-        <div onclick="selectOwlMode('partner')" id="owl-card-partner" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.8);border:2px solid rgba(124,58,237,0.15);border-radius:16px;cursor:pointer;transition:all 0.2s">
+        <div onclick="selectOwlMode('partner')" id="owl-card-partner" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <div style="width:32px;height:32px;border-radius:9px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -102,10 +102,10 @@
           <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Збалансований і підтримуючий</div>
           <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає, радить, не осуджує</div>
         </div>
-        <div onclick="selectOwlMode('mentor')" id="owl-card-mentor" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.8);border:2px solid rgba(124,58,237,0.15);border-radius:16px;cursor:pointer;transition:all 0.2s">
+        <div onclick="selectOwlMode('mentor')" id="owl-card-mentor" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-            <div style="width:32px;height:32px;border-radius:9px;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7.2" r=".8" fill="#7c3aed"/><circle cx="14" cy="7.2" r=".8" fill="#7c3aed"/></svg>
+            <div style="width:32px;height:32px;border-radius:9px;background:rgba(194,121,10,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c2790a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7.2" r=".8" fill="#c2790a"/><circle cx="14" cy="7.2" r=".8" fill="#c2790a"/></svg>
             </div>
             <div style="font-size:17px;font-weight:700;color:#1e1040">Наставник</div>
           </div>
@@ -113,7 +113,7 @@
           <div style="font-size:13px;color:rgba(30,16,64,0.5)">Дивиться ширше, задає правильні питання, допомагає думати</div>
         </div>
       </div>
-      <button onclick="obNext('owl')" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
+      <button onclick="obNext('owl')" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
     </div>
 
     <div id="ob-step-consent" style="display:none;width:100%;max-width:360px">
@@ -137,7 +137,7 @@
           </div>
           <div>
             <div style="font-size:14px;font-weight:700;color:#1e1040;margin-bottom:2px">Запити передаються OpenAI</div>
-            <div style="font-size:13px;color:rgba(30,16,64,0.5);line-height:1.5">Коли пишеш агенту, текст обробляється GPT-4o-mini. На це поширюється <span style="color:#7c3aed;font-weight:600">Privacy Policy OpenAI</span>.</div>
+            <div style="font-size:13px;color:rgba(30,16,64,0.5);line-height:1.5">Коли пишеш агенту, текст обробляється GPT-4o-mini. На це поширюється <span style="color:#c2790a;font-weight:600">Privacy Policy OpenAI</span>.</div>
           </div>
         </div>
 
@@ -156,14 +156,14 @@
         NeverMind не є медичним або фінансовим сервісом.<br>Використовуй дані агента як рекомендації, не як поради спеціаліста.
       </div>
 
-      <button onclick="obFinish()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Погоджуюсь і починаю →</button>
+      <button onclick="obFinish()" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Погоджуюсь і починаю →</button>
     </div>
 
     <div id="ob-step-3" style="display:none;width:100%;max-width:360px;text-align:center">
       <div style="font-size:46px;margin-bottom:16px">🎯</div>
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:10px" id="ob-welcome-text">Привіт!</div>
       <div style="font-size:15px;color:rgba(30,16,64,0.5);line-height:1.6;margin-bottom:28px">Агент готовий. Пиши в Inbox будь-що — думки, задачі, ідеї. Він розбереться.</div>
-      <button onclick="obFinish()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Почати →</button>
+      <button onclick="obFinish()" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Почати →</button>
     </div>
   </div>
 </div>
@@ -1276,7 +1276,7 @@
         </div>
         <div onclick="setOwlModeSetting('mentor')" id="set-owl-mentor" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
           <div class="s-icon" style="background:rgba(124,58,237,0.1)">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7.2" r=".8" fill="#7c3aed"/><circle cx="14" cy="7.2" r=".8" fill="#7c3aed"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7.2" r=".8" fill="#c2790a"/><circle cx="14" cy="7.2" r=".8" fill="#c2790a"/></svg>
           </div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;color:#1e1040">Наставник</div>

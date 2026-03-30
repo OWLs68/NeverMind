@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-03-30 — UI фікси + онбординг редизайн
+
+**Що зроблено:**
+- `style.css`: риска в чат-handle → біла; підказка над input коли чат закрито → темна риска `::before`
+- `style.css`: уніфіковано кольори input-box і tab-board → `rgba(15,10,22,0.72)` (як чат-вікно)
+- `app-core-nav.js`: `clearAllData()` → `reload()` через 800мс; додано `nm_quit_log`, `nm_folders_meta`, `nm_chat_health`, `nm_chat_projects`
+- `app-core-system.js`: iOS PWA — `visibilitychange` → `reg.update()` (фікс "відновлення з фону")
+- `index.html`: онбординг — фіолетова палітра → тепла кремова. Фон `#f5f0e8`, акцент `#c2790a`, кнопки темні
+
+**Змінені файли:** `style.css`, `app-core-nav.js`, `app-core-system.js`, `index.html`, `sw.js`
+
+---
+
 ## 2026-03-29 — Inbox чат 3-стейт + фікс деплою
 
 **Що зроблено:**
