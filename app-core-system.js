@@ -148,24 +148,48 @@ function setupSW() {
   const hadController = !!navigator.serviceWorker.controller;
   let _reloading = false;
 
+  const doReload = () => {
+    if (_reloading) return;
+    _reloading = true;
+    // location.replace надійніше ніж reload() в iOS PWA standalone режимі
+    window.location.replace(window.location.href);
+  };
+
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     // Перезавантажуємо тільки якщо це оновлення (не перший запуск)
-    // _reloading запобігає повторним reload якщо подія спрацює двічі
-    if (!hadController || _reloading) return;
-    _reloading = true;
-    window.location.reload();
+    if (!hadController) return;
+    doReload();
   });
 
-  // Реєструємо повноцінний sw.js для офлайн-кешування
-  // reg.update() — примусово перевіряємо нову версію SW при кожному відкритті.
-  // visibilitychange — iOS PWA часто не робить повний перезапуск при відкритті з домашнього
-  // екрану, а "відновлює з фону". В такому разі JS не виконується заново і reg.update()
-  // не викликається. Слухаємо visible → update() щоб ловити цей кейс.
+  // _swReg реєструємо СИНХРОННО щоб visibilitychange/pageshow нижче могли кликати reg.update()
+  // навіть якщо вони спрацюють до того як .then() виконається
+  let _swReg = null;
+
+  // visibilitychange — iOS PWA "відновлення з фону": JS не перезапускається,
+  // тому register().then() вже виконався раніше. Але реєструємо слухач ТУТ (синхронно),
+  // щоб він був готовий ще до .then().
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && _swReg) _swReg.update();
+  });
+
+  // pageshow з persisted=true — iOS bfcache відновлення (окремий від visibilitychange кейс)
+  window.addEventListener('pageshow', e => {
+    if (e.persisted && _swReg) _swReg.update();
+  });
+
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
     .then(reg => {
+      _swReg = reg;
       reg.update();
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') reg.update();
+
+      // Резервний механізм: якщо controllerchange не спрацює —
+      // ловимо updatefound → installing → activated → reload
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'activated' && hadController) doReload();
+        });
       });
     })
     .catch(() => {
