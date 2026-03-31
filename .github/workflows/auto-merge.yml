@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write
+    outputs:
+      merged: ${{ steps.push.outputs.merged }}
 
     steps:
       - name: Checkout repo
@@ -24,6 +25,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Merge into main and inject deploy timestamp
+        id: push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -39,9 +41,34 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME}"
 
           git push origin main
+          echo "merged=true" >> $GITHUB_OUTPUT
           echo "Deployed: ${VERSION} · ${DEPLOY_TIME}"
 
-      - name: Trigger deploy to GitHub Pages
-        run: gh workflow run deploy.yml --ref main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  deploy:
+    needs: merge
+    if: needs.merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
