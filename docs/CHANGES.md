@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-03-31 — B-11/B-12 фінальний фікс: inner wrapper для iOS padding
+
+**Що зроблено:**
+- `index.html`: обидві модалки (задача, звичка) — outer panel тепер `overflow:hidden` без padding; inner div `overflow-y:auto` з `padding:28px`. Це вирішує iOS Safari баг де padding ігнорується на `overflow:auto` елементі.
+- Також створено `docs/DESIGN_SYSTEM.md` — дизайн-система з описом, поведінкою та HTML-шаблонами компонентів.
+
+**Змінені файли:** `index.html`, `sw.js`, `docs/DESIGN_SYSTEM.md`
+
+---
+
 ## 2026-03-31 — Баг B-10: чат авто-розгортається при переключенні на Inbox
 
 **Що зроблено:**
