@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_run:
-    workflows: ["Auto-merge claude branches to main"]
-    types:
-      - completed
 
 permissions:
   contents: read
@@ -20,8 +16,6 @@ concurrency:
 
 jobs:
   deploy:
-    # Для workflow_run — деплоїмо тільки якщо auto-merge завершився успішно
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -29,9 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # Для workflow_run — чекаутимо HEAD main (найсвіжіший коміт)
-          ref: main
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
