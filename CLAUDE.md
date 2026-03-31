@@ -89,17 +89,22 @@
 
 ## Система деплою (як це працює)
 
-**Флоу:** Claude пушить у `claude/read-repository-bd3qH` → `auto-merge.yml` мержить у `main` → `deploy.yml` деплоїть на GitHub Pages.
+**Флоу:** Claude пушить у `claude/**` → `auto-merge.yml` мержить у `main` **і одразу деплоїть** на GitHub Pages.
 
-**`auto-merge.yml` робить:**
+**`auto-merge.yml` робить (все в одному воркфлоу):**
 1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
 2. `sed` оновлює badge в `index.html` (Amsterdam час деплою)
 3. Комітить і пушить у `main`
-4. `concurrency: cancel-in-progress: true` — якщо два пуші швидко поспіль, запускається тільки останній
+4. `actions/configure-pages` + `upload-pages-artifact` + `deploy-pages` — деплоїть на GitHub Pages
+5. `concurrency: cancel-in-progress: true` — якщо два пуші швидко поспіль, запускається тільки останній
+
+**`deploy.yml`** — лишається як резерв тільки для прямих пушів у `main` (хотфікси вручну).
 
 **CI НЕ чіпає `sw.js`** — тому Claude **зобов'язаний** оновити `CACHE_NAME` локально перед кожним пушем.
 
 **Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → при звичайному merge конфлікт → CI падає тихо. `-X theirs` вирішує автоматично на користь feature-гілки.
+
+**Чому НЕ два окремі воркфлоу:** GitHub блокує запуск воркфлоу від `GITHUB_TOKEN` пушів (захист від петель). Якщо `auto-merge.yml` пушить у main через `GITHUB_TOKEN`, `deploy.yml` з тригером `push: main` **ніколи не запускається**. Тому деплой тепер прямо в `auto-merge.yml`.
 
 **Автооновлення у браузері (app-core-system.js `setupSW`):**
 - `reg.update()` — примусова перевірка нової версії SW при кожному відкритті. **Критично для iOS Safari**: без цього iOS може ігнорувати оновлення годинами навіть з `updateViaCache: 'none'`
