@@ -335,42 +335,38 @@ const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент 
 ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.
 НЕ вигадуй ліміти, бюджети або плани яких немає в контексті. Якщо дані відсутні — не згадуй їх.`;
 
-async function callAI(systemPrompt, userMessage, contextData = {}) {
+// === HTTP WRAPPER — єдине місце де робиться запит до AI ===
+// TODO після Supabase: змінити URL на Edge Function + auth header
+async function _fetchAI(messages, signal) {
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) {
-    showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000);
+  if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
+  if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    signal,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 300, temperature: 0.7 })
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);
     return null;
   }
-  if (location.protocol === 'file:') {
-    showToast('⚠️ Відкрий файл через сервер, не file://', 5000);
-    return null;
-  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || null;
+}
+
+async function callAI(systemPrompt, userMessage, contextData = {}) {
   const context = Object.keys(contextData).length > 0
     ? `\n\nКонтекст:\n${JSON.stringify(contextData, null, 2)}`
     : '';
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userMessage + context }
+  ];
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage + context }
-        ],
-        max_tokens: 300,
-        temperature: 0.7
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);
-      return null;
-    }
-    const text = data.choices?.[0]?.message?.content;
+    const text = await _fetchAI(messages, undefined);
+    if (text === null) return null;
     if (!text) { showToast('❌ Порожня відповідь від Агента', 3000); return null; }
     return text;
   } catch (e) {
@@ -383,34 +379,13 @@ async function callAI(systemPrompt, userMessage, contextData = {}) {
   }
 }
 
-
-
 async function callAIWithHistory(systemPrompt, history) {
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
-  if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000); // 25 сек таймаут
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'system', content: systemPrompt }, ...history],
-        max_tokens: 300,
-        temperature: 0.7
-      })
-    });
+    const messages = [{ role: 'system', content: systemPrompt }, ...history];
+    const reply = await _fetchAI(messages, controller.signal);
     clearTimeout(timeout);
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('OpenAI error:', res.status, errText);
-      return null;
-    }
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || null;
     return reply;
   } catch(e) {
     clearTimeout(timeout);
