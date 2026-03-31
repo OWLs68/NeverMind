@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-03-31 — Підготовка до Supabase: NM_KEYS, runMigrations, _fetchAI
+
+**Що зроблено:**
+- `app-core-system.js`: додано `NM_KEYS` — центральний реєстр всіх localStorage ключів (розбито на data/settings/chat/cache/patterns)
+- `app-core-system.js`: додано `runMigrations()` — запускається в `init()`, добиває `dueDate` і `priority` в старих задачах (потрібно для Календаря)
+- `app-core-nav.js`: `clearAllData()` тепер використовує `NM_KEYS` замість хардкодованого списку
+- `app-ai-core.js`: витягнуто `_fetchAI()` — HTTP запит до OpenAI в одному місці; `callAI` і `callAIWithHistory` спрощено
+
+**Чому:** підготовка до Supabase — щоб міграція не зламала нічого. Нові ключі тепер достатньо додати в `NM_KEYS.data`. Після Supabase — тільки `_fetchAI` потребує зміни URL.
+
+**Змінені файли:** `app-core-system.js`, `app-core-nav.js`, `app-ai-core.js`, `sw.js`
+
+---
+
 ## 2026-03-30 — UI фікси + онбординг редизайн
 
 **Що зроблено:**

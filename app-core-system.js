@@ -1083,8 +1083,43 @@ function applyBoardOverlays() {
   });
 }
 
+// === CENTRAL KEY REGISTRY (єдине джерело правди для localStorage) ===
+const NM_KEYS = {
+  // Основні дані (→ Supabase таблиці в майбутньому)
+  data: ['nm_inbox','nm_tasks','nm_notes','nm_folders_meta','nm_moments',
+         'nm_habits2','nm_habit_log2','nm_quit_log','nm_finance',
+         'nm_finance_budget','nm_finance_cats','nm_health_cards',
+         'nm_health_log','nm_projects','nm_trash'],
+  // Налаштування (→ Supabase user_settings)
+  settings: ['nm_settings','nm_gemini_key','nm_memory','nm_memory_ts',
+              'nm_active_tabs','nm_onboarding_done','nm_evening_mood',
+              'nm_evening_summary','nm_notes_folders_ts'],
+  // Чат-историки (→ Supabase chat_messages)
+  chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+         'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],
+  // Кеш/тимчасове (не потребує Supabase)
+  cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log',
+          'nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'],
+  // Динамічні патерни (видаляти через startsWith)
+  patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_'],
+};
+
+// === SCHEMA MIGRATIONS — "добиває" відсутні поля в старих даних ===
+function runMigrations() {
+  // v1: dueDate + priority для tasks (потрібні для Календаря)
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  let changed = false;
+  tasks.forEach(t => {
+    if (t.dueDate === undefined) { t.dueDate = null; changed = true; }
+    if (t.priority === undefined) { t.priority = 'normal'; changed = true; }
+  });
+  if (changed) localStorage.setItem('nm_tasks', JSON.stringify(tasks));
+  // v2: нові міграції додавати тут
+}
+
 // === INIT ===
 function init() {
+  try { runMigrations(); } catch(e) {}
   try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
   try { setupSync(); } catch(e) {}
