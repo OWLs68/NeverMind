@@ -92,19 +92,12 @@ function switchTab(tab) {
     const show = t === tab;
     bar.style.display = show ? 'flex' : 'none';
     if (!show) {
-      // Закриваємо вікно чату (крім inbox — воно завжди відкрите)
       if (t !== 'inbox') {
         const cw = bar.querySelector('.ai-bar-chat-window');
         if (cw) cw.classList.remove('open');
       }
     }
   });
-  // Inbox чат завжди відкритий
-  if (tab === 'inbox') {
-    const inboxCw = document.getElementById('inbox-chat-window');
-    if (inboxCw) requestAnimationFrame(() => inboxCw.classList.add('open'));
-  }
-
   // Tab-specific render
   if (tab === 'inbox') { try { renderInbox(); } catch(e) {} }
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
