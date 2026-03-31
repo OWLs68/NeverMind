@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-03-31 — Фікс deploy pipeline: GitHub Pages не оновлювався
+
+**Що зроблено:**
+- `.github/workflows/deploy.yml`: додано `workflow_run` тригер на завершення `auto-merge.yml`. Причина: GitHub Actions блокує запуск воркфлоу від `GITHUB_TOKEN` пушів (захист від нескінченних петель). `auto-merge.yml` пушив у `main` через `GITHUB_TOKEN` → `deploy.yml` ніколи не отримував push event → GitHub Pages не оновлювалось.
+- Додано умову `if: success` щоб не деплоїти при провалі auto-merge.
+- Додано `ref: main` в checkout щоб гарантовано взяти найсвіжіший коміт.
+- `sw.js`: CACHE_NAME оновлено до `nm-20260331-1846`.
+
+**Змінені файли:** `.github/workflows/deploy.yml`, `sw.js`
+
+---
+
 ## 2026-03-31 — B-11/B-12 фінальний фікс: inner wrapper для iOS padding
 
 **Що зроблено:**
