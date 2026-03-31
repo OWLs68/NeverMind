@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-03-31 — Баги B-07/B-08 + надійне оновлення iOS PWA
+
+**Що зроблено:**
+- `app-tasks-core.js`: B-07 — крок в задачі тепер ставить галочку тільки якщо тач рухнувся < 10px (тап), а не свайп/скрол. Логіка: `ontouchstart` зберігає координати, `ontouchend` порівнює рух
+- `app-tasks-core.js`: B-08 — `toggleTaskStep()` тепер повертає `task.status = 'active'` якщо не всі кроки виконані (раніше картка лишалась перекресленою після зняття галочки)
+- `app-core-system.js`: iOS PWA оновлення — переписано `setupSW()`: `visibilitychange` і `pageshow` реєструються синхронно (до `.then()`) через `_swReg`; додано `pageshow` для bfcache; `updatefound → statechange → activated` як резервний механізм; `location.replace()` замість `reload()` (надійніше в iOS standalone)
+
+**Чому:** B-07 — свайп по карточці ставив галочку на кроці. B-08 — зняття галочки не відновлювало картку. iOS PWA не оновлювалась після деплою через race condition між `visibilitychange` і `register().then()`.
+
+**Змінені файли:** `app-tasks-core.js`, `app-core-system.js`, `sw.js`
+
+---
+
 ## 2026-03-31 — Підготовка до Supabase: NM_KEYS, runMigrations, _fetchAI
 
 **Що зроблено:**
