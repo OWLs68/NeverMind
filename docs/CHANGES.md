@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-04-01 — B-11/B-12: фікс padding в модалках задачі і звички
+
+**Що зроблено:**
+- `index.html` рядки 958, 1129: `padding:28px 48px calc(...)` → `padding:28px 20px calc(...)` в inner wrapper обох модалок
+- `sw.js`: CACHE_NAME оновлено до `nm-20260401-0544`
+
+**Змінені файли:** `index.html`, `sw.js`
+
+---
+
 ## 2026-04-01 — Фікс deploy pipeline v2: прибрано workflow_run, deploy прямо в auto-merge.yml
 
 **Що зроблено:**
