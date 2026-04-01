@@ -71,7 +71,8 @@
 
 | Файл | Відповідальність |
 |------|-----------------|
-| `index.html` | Весь UI (~2600 рядків). Стилі вбудовані. 13 `<script>` тегів в кінці |
+| `index.html` | Весь UI (~1570 рядків). 13 `<script>` тегів в кінці |
+| `style.css` | Всі стилі (~1130 рядків). Винесено з index.html |
 | `sw.js` | Service Worker. **CACHE_NAME треба міняти при кожному деплої** |
 | `app-core-nav.js` | Глобальний стан (`currentTab`), switchTab, теми, налаштування, пам'ять |
 | `app-core-system.js` | bootApp, кошик (7 днів TTL), OWL Tab Boards, cross-tab sync, PWA setup |

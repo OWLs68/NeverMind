@@ -21,9 +21,9 @@
 |------|-------------|
 | `РОМАН_ПРОФІЛЬ.md` | Перша сесія або давно не працювали разом |
 | `NEVERMIND_ARCH.md` | Зміни архітектури, модулів або storage |
-| `CONCEPTS_ACTIVE.md` | Питання про концепцію вкладки (Finance, Evening, Me...) |
+| `CONCEPTS_ACTIVE.md` | Питання про реалізовану концепцію вкладки (Finance, Evening, Me...) |
 | `FEATURES_ROADMAP.md` | Питання про заплановані фічі (Calendar, Voice, OWL...) |
-| `NEVERMIND_LOGIC.md` | Питання про базову концепцію або OWL принципи |
+| `NEVERMIND_LOGIC.md` | Базова концепція, OWL принципи |
 | Конкретний `app-*.js` | Завжди перед змінами в цьому модулі |
 
 ---
@@ -44,7 +44,8 @@ CI оновлює бейдж в index.html автоматично. **Не виг
 ## 📁 Карта файлів проекту
 
 ```
-index.html              — HTML + CSS (~2600 рядків)
+index.html              — HTML (~1570 рядків)
+style.css               — Стилі (~1130 рядків)
 app-core-nav.js         — Навігація, вкладки, теми
 app-core-system.js      — Trash, PWA, ініціалізація, OWL board
 app-ai-core.js          — OpenAI API, getAIContext, chat storage
