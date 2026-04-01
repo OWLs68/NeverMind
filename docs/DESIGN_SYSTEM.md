@@ -23,137 +23,156 @@
 ## Модальне вікно (Bottom Sheet Modal)
 
 ### Опис
-Панель що виїжджає знизу екрану. Використовується для: редагування задачі, звички, проекту, моменту, та будь-якого іншого об'єкту. Всі такі вікна виглядають однаково — уніфікований стиль.
+Панель що виїжджає знизу екрану. Використовується для: редагування задачі, звички, проекту, моменту, та будь-якого іншого об'єкту.
+
+**Два типи** залежно від прозорості фону:
+| Тип | Де | background панелі |
+|-----|----|-------------------|
+| **Скляний** (glass) | задача, звичка | `rgba(255,255,255,0.30)` + `blur(32px)` |
+| **Непрозорий** | проект, момент, нотатка | `rgba(255,255,255,0.88)` + `blur(24px)` |
 
 ### Поведінка
-- Відкривається анімацією `translateY(0)` знизу
-- Закривається тапом по backdrop або свайпом вниз по панелі (handle зверху — підказка)
-- Клавіатура: поле вводу фокусується через `setTimeout 350ms` щоб анімація встигла завершитись перед підняттям клавіатури
-- `max-height: 80-85vh` + `overflow-y: auto` — якщо вміст не влізає, панель скролиться всередині
-- `env(safe-area-inset-bottom)` в нижньому padding — коректна відстань на iPhone з home indicator
+- Закривається тапом по backdrop або свайпом вниз
+- `max-height: 80-85vh` + scroll — якщо вміст не влізає
+- `env(safe-area-inset-bottom)` в нижньому padding — для iPhone з home indicator
 
-### CSS-специфікація
+### CSS-специфікація (актуальна, скляний тип — задача/звичка)
 
 **Зовнішній контейнер (overlay):**
 ```css
-position: fixed;
-inset: 0;
-z-index: 200;
-display: flex;              /* flex щоб center по горизонталі */
-align-items: flex-end;      /* притиснути до низу */
-justify-content: center;
-padding: 0 16px 16px;       /* 16px зазор від країв екрану */
+position: fixed; inset: 0; z-index: 200;
+display: flex; align-items: flex-end; justify-content: center;
+padding: 0 16px 16px;   /* відступ від країв екрана */
 ```
 
-**Backdrop (клік = закрити):**
+**Backdrop:**
 ```css
-position: absolute;
-inset: 0;
+position: absolute; inset: 0;
 background: rgba(0,0,0,0.35);
-backdrop-filter: blur(4px); /* легкий blur всього фону за модалкою */
+backdrop-filter: blur(4px);
 ```
 
-**Панель:**
+**Панель (outer panel):**
 ```css
 position: relative;
-width: 100%;
-max-width: 480px;
-background: rgba(255,255,255,0.30);   /* білий 30% — видно крізь нього */
-backdrop-filter: blur(32px);           /* сильний blur контенту за панеллю */
--webkit-backdrop-filter: blur(32px);   /* Safari */
+width: 100%; max-width: 480px;
+background: rgba(255,255,255,0.30);
+backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
 border-radius: 24px;
-padding: 32px 32px calc(env(safe-area-inset-bottom) + 32px);  /* 32px з усіх сторін */
 border: 1.5px solid rgba(255,255,255,0.5);
+overflow: hidden;          /* ВАЖЛИВО: clip контенту */
+padding: 0 20px;           /* горизонтальний відступ — ТІЛЬКИ тут, не на дочірніх */
 max-height: 85vh;
-overflow-y: auto;
-box-sizing: border-box;
 z-index: 1;
+```
+
+> ⚠️ **Правило:** горизонтальний padding (`0 20px`) ставити на `overflow:hidden` outer panel.
+> Padding на `overflow-y:auto` дочірніх елементах не дає ефекту в деяких браузерах.
+
+**Scroll-контейнер (всередині панелі):**
+```css
+overflow-y: auto;
+max-height: 85vh;   /* дублює max-height батька для коректного scroll */
+padding: 28px 0 calc(env(safe-area-inset-bottom) + 28px);
+box-sizing: border-box;
+/* горизонтальний padding — НЕ ставити тут, він вже є на outer panel */
 ```
 
 **Handle (риска зверху):**
 ```css
-width: 36px;
-height: 4px;
+width: 36px; height: 4px;
 background: rgba(0,0,0,0.12);
 border-radius: 2px;
 margin: 0 auto 18px;
 ```
 
-**Поля вводу всередині:**
+**Поля вводу (input / textarea):**
 ```css
-width: 100%;
-box-sizing: border-box;
+width: 100%; box-sizing: border-box;
 background: rgba(255,255,255,0.7);
 border: 1.5px solid rgba(30,16,64,0.12);
 border-radius: 12px;
 padding: 12px 14px;
-font-size: 16-17px;
-color: #1e1040;
-outline: none;
+font-size: 16-17px; color: #1e1040; outline: none;
 ```
 
-**Кнопки внизу (завжди два: скасувати + зберегти):**
+**Рядки списків (кроки задачі тощо):**
+```css
+display: flex; align-items: center; gap: 8px;
+background: rgba(255,255,255,0.7);        /* такий самий як поля вводу */
+border: 1.5px solid rgba(30,16,64,0.12);
+border-radius: 10px;
+padding: 8px 10px;
+```
+
+**Кнопки внизу:**
 ```css
 /* обгортка */
-display: flex;
-gap: 8px;
+display: flex; gap: 8-10px;
 
-/* Скасувати */
-flex: 1;
-background: rgba(30,16,64,0.06);
-border: none;
-border-radius: 12px;
-padding: 13-14px;
-font-size: 16px;
-font-weight: 700;
-color: rgba(30,16,64,0.5);
+/* Скасувати (flex:1) */
+background: rgba(30,16,64,0.06); border: none;
+border-radius: 12px; padding: 13-14px;
+font-size: 16px; font-weight: 700; color: rgba(30,16,64,0.5);
 
-/* Зберегти */
-flex: 2;
+/* Зберегти (flex:2) */
 background: linear-gradient(135deg, [акцент-light], [акцент-dark]);
-border: none;
-border-radius: 12px;
-padding: 13-14px;
-font-size: 16px;
-font-weight: 700;
-color: white;
+border: none; border-radius: 12px; padding: 13-14px;
+font-size: 16px; font-weight: 700; color: white;
 ```
 
-### HTML-шаблон
+**Акцентні градієнти по типу модалки:**
+| Модалка | Зберегти |
+|---------|----------|
+| Задача | `linear-gradient(135deg,#f97316,#ea580c)` |
+| Звичка | `linear-gradient(135deg,#4ade80,#16a34a)` |
+| Проект | `linear-gradient(135deg,#5c4a2a,#3d2e1e)` |
+| Момент | відповідно до настрою |
+
+### HTML-шаблон (актуальний)
 
 ```html
 <!-- MODAL: назва -->
 <div id="xxx-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <!-- Backdrop -->
   <div onclick="closeXxxModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <!-- Panel -->
-  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;padding:32px 32px calc(env(safe-area-inset-bottom)+32px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.5);">
-    <!-- Handle -->
-    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <!-- Заголовок + кнопка видалити -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:18px;font-weight:700;color:#1e1040">Заголовок</div>
-      <button style="background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
-    </div>
-    <!-- Поле вводу -->
-    <input type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Текст…">
-    <!-- Кнопки -->
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button onclick="closeXxxModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveXxx()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+  <!-- Outer panel: overflow:hidden + padding:0 20px для горизонтальних відступів -->
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
+    <!-- Scroll container: тільки вертикальний padding -->
+    <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
+      <!-- Handle -->
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+      <!-- Заголовок + кнопка видалити -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Заголовок</div>
+        <button style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+      </div>
+      <!-- Поле вводу -->
+      <input type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Текст…">
+      <!-- Кнопки -->
+      <div style="display:flex;gap:8px">
+        <button onclick="closeXxxModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+        <button onclick="saveXxx()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      </div>
     </div>
   </div>
 </div>
 ```
 
-### JS: свайп вниз щоб закрити
+### JS: відкриття + свайп
 ```javascript
-// Викликати після відкриття модалки:
+// Відкрити:
+document.getElementById('xxx-modal').style.display = 'flex';
+
+// Закрити:
+document.getElementById('xxx-modal').style.display = 'none';
+
+// Свайп вниз щоб закрити (викликати після відкриття):
 setupModalSwipeClose(
   document.querySelector('#xxx-modal > div:last-child'),
   closeXxxModal
 );
-// Функція setupModalSwipeClose знаходиться в app-tasks-core.js
+// setupModalSwipeClose знаходиться в app-tasks-core.js
 ```
 
 ---
