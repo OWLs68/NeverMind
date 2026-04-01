@@ -1,13 +1,12 @@
 name: Deploy to GitHub Pages
 
+# Резервний деплой — тільки для прямих хотфіксів у main.
+# Звичайний деплой відбувається через auto-merge.yml (job: deploy).
+
 on:
   push:
     branches:
       - main
-  workflow_run:
-    workflows: ["Auto-merge claude branches to main"]
-    types:
-      - completed
 
 permissions:
   contents: read
@@ -20,16 +19,14 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
