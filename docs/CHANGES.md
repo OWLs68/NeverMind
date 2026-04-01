@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-04-01 — Фікс deploy pipeline v2: прибрано workflow_run, deploy прямо в auto-merge.yml
+
+**Що зроблено:**
+- `.github/workflows/auto-merge.yml`: додано другий job `deploy` (needs: merge). Тепер merge і deploy — один workflow, без крос-workflow тригерів.
+- `.github/workflows/deploy.yml`: прибрано `workflow_run` тригер. Залишено тільки `push: main` (резерв для хотфіксів).
+- `sw.js`: CACHE_NAME оновлено до `nm-20260401-0448`.
+- **Причина зміни:** `workflow_run` ненадійний — GitHub часто пропускає/затримує ці події. Два окремі workflows не гарантують деплой після мержу.
+
+**Змінені файли:** `.github/workflows/auto-merge.yml`, `.github/workflows/deploy.yml`, `sw.js`
+
+---
+
 ## 2026-03-31 — Фікс deploy pipeline: GitHub Pages не оновлювався
 
 **Що зроблено:**
