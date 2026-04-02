@@ -740,12 +740,12 @@ body {
   padding: 14px 6px 4px;
 }
 
-/* --- Inbox: компактна стрічка --- */
+/* --- Inbox: компактна стрічка з кольоровим фоном --- */
 .inbox-item-wrap {
   position: relative;
   overflow: hidden;
   border-radius: 14px;
-  margin: 2px 0;
+  margin: 3px 0;
 }
 .task-item-wrap, .note-item-wrap {
   position: relative;
@@ -766,20 +766,24 @@ body {
 }
 .inbox-item {
   position: relative;
-  background: rgba(255,255,255,0.45);
   border-radius: 14px;
-  transition: transform 0.2s ease, background 0.15s;
+  border: 1px solid rgba(255,255,255,0.35);
+  transition: transform 0.2s ease;
   cursor: pointer;
   will-change: transform;
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
-.inbox-item:active {
-  background: rgba(255,255,255,0.65);
-}
+/* Кольорові фони за категорією */
+.inbox-item[data-cat="task"]    { background: linear-gradient(135deg, #d4f5fd, #b8effa); }
+.inbox-item[data-cat="habit"]   { background: linear-gradient(135deg, #c8f9d9, #b0f0c4); }
+.inbox-item[data-cat="note"]    { background: linear-gradient(135deg, #f5ede0, #ede0cc); }
+.inbox-item[data-cat="idea"]    { background: linear-gradient(135deg, #f5f0a8, #eee97a); }
+.inbox-item[data-cat="event"]   { background: linear-gradient(135deg, #c9dffe, #b0ccfe); }
+.inbox-item[data-cat="finance"] { background: linear-gradient(135deg, #fcddc4, #fbc89a); }
 .inbox-item-inner {
-  padding: 9px 12px;
+  padding: 8px 12px;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -1140,30 +1144,48 @@ body {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(251,191,36,0.4); }
   50% { opacity: 0.5; box-shadow: 0 0 0 4px rgba(251,191,36,0); }
 }
-/* --- OWL Board міні-чат --- */
+/* --- OWL Board --- */
 .owl-board-container {
-  background: rgba(15,10,22,0.72);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
-  border-radius: 16px;
+  background: rgba(15,10,22,0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.12);
   overflow: hidden;
+  position: relative;
 }
-.owl-board-compact {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+/* Glow для critical/important */
+.owl-priority-critical { border-color: rgba(239,68,68,0.4); box-shadow: 0 0 16px rgba(239,68,68,0.15); }
+.owl-priority-important { border-color: rgba(245,158,11,0.3); box-shadow: 0 0 12px rgba(245,158,11,0.1); }
+
+/* === Основний блок (завжди видимий) === */
+.owl-board-main {
+  padding: 14px 16px 12px;
   cursor: pointer;
 }
-.owl-pulse {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #fbbf24;
-  flex-shrink: 0;
-  animation: owlPulse 2s ease-in-out infinite;
+.owl-board-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
 }
-.owl-pulse.quiet { background: rgba(255,255,255,0.3); animation: none; }
+.owl-avatar {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(251,191,36,0.3));
+}
+.owl-avatar-sm {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.owl-board-content { flex: 1; min-width: 0; }
+.owl-board-text {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.5;
+}
 .owl-board-label {
   font-size: 10px;
   font-weight: 800;
@@ -1172,24 +1194,30 @@ body {
   letter-spacing: 0.1em;
   flex-shrink: 0;
 }
-.owl-board-preview {
-  flex: 1;
-  min-width: 0;
+/* Чіпи на основному блоці */
+.owl-board-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-left: 40px;
+}
+.owl-chip {
   font-size: 12.5px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.65);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-style: italic;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(251,191,36,0.15);
+  color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(251,191,36,0.3);
+  cursor: pointer;
+  transition: background 0.15s;
 }
-.owl-board-hint {
-  font-size: 10px;
-  color: rgba(251,191,36,0.8);
-  font-weight: 700;
-  flex-shrink: 0;
+.owl-chip:active {
+  background: rgba(251,191,36,0.4);
 }
-/* Розгорнутий чат */
+
+/* === Розгорнутий міні-чат === */
 .owl-chat-expanded {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
@@ -1197,7 +1225,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   cursor: pointer;
 }
 .owl-chat-close {
@@ -1207,9 +1235,9 @@ body {
   font-weight: 700;
 }
 .owl-chat-messages {
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
-  padding: 4px 12px 8px;
+  padding: 4px 14px 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1219,57 +1247,43 @@ body {
 .owl-msg-agent {
   background: rgba(255,255,255,0.1);
   color: rgba(255,255,255,0.9);
-  border-radius: 4px 14px 14px 14px;
-  padding: 7px 11px;
-  font-size: 13px;
+  border-radius: 4px 16px 16px 16px;
+  padding: 8px 12px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.5;
   max-width: 88%;
   align-self: flex-start;
 }
 .owl-msg-user {
   background: rgba(255,255,255,0.85);
   color: #1e1040;
-  border-radius: 14px 4px 14px 14px;
-  padding: 7px 11px;
-  font-size: 13px;
+  border-radius: 16px 4px 16px 16px;
+  padding: 8px 12px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.5;
   max-width: 88%;
   align-self: flex-end;
 }
 .owl-chat-chips {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
-  padding: 0 12px 6px;
-}
-.owl-chip {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(251,191,36,0.15);
-  color: rgba(255,255,255,0.8);
-  border: 1px solid rgba(251,191,36,0.25);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.owl-chip:active {
-  background: rgba(251,191,36,0.35);
+  padding: 2px 14px 8px;
 }
 .owl-chat-input-row {
   display: flex;
   gap: 6px;
-  padding: 6px 10px 10px;
+  padding: 6px 12px 12px;
 }
 .owl-chat-input-row input {
   flex: 1;
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: 8px 14px;
+  font-size: 14px;
   color: white;
   outline: none;
   font-family: inherit;
@@ -1278,11 +1292,11 @@ body {
   color: rgba(255,255,255,0.35);
 }
 .owl-chat-input-row button {
-  width: 32px; height: 32px;
+  width: 34px; height: 34px;
   border-radius: 50%;
-  background: rgba(251,191,36,0.2);
+  background: rgba(251,191,36,0.25);
   border: none;
-  color: rgba(255,255,255,0.8);
+  color: rgba(255,255,255,0.85);
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
