@@ -870,7 +870,7 @@ async function sendOwlReply(text) {
       renderOwlChatMessages();
 
       if (action) {
-        showOwlConfirm('Зроблено ✓');
+        executeOwlAction(action, text);
       }
     }
   } catch(e) {
@@ -887,6 +887,88 @@ function sendOwlReplyFromInput() {
   const text = inp.value.trim();
   inp.value = '';
   sendOwlReply(text);
+}
+
+// Виконання дій з OWL чату (ті самі що в Inbox, але без запису в inbox chat)
+function executeOwlAction(action, originalText) {
+  if (!action || !action.action) return;
+  const act = action.action;
+
+  if (act === 'complete_habit') {
+    const ids = action.habit_ids || (action.habit_id ? [action.habit_id] : []);
+    if (ids.length === 0) return;
+    const habits = getHabits();
+    const today = new Date().toDateString();
+    const log = getHabitLog();
+    if (!log[today]) log[today] = {};
+    let done = 0;
+    ids.forEach(hid => {
+      const h = habits.find(x => x.id === hid);
+      if (h) { log[today][h.id] = true; done++; }
+    });
+    if (done > 0) {
+      saveHabitLog(log);
+      renderProdHabits();
+      renderHabits();
+      showOwlConfirm('Звичку зараховано ✓');
+    }
+    return;
+  }
+
+  if (act === 'complete_task') {
+    const ids = action.task_ids || (action.task_id ? [action.task_id] : []);
+    if (ids.length === 0) return;
+    const tasks = getTasks();
+    let done = 0;
+    ids.forEach(tid => {
+      const idx = tasks.findIndex(t => t.id === tid);
+      if (idx !== -1) { tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() }; done++; }
+    });
+    if (done > 0) {
+      saveTasks(tasks);
+      renderTasks();
+      showOwlConfirm('Задачу закрито ✓');
+    }
+    return;
+  }
+
+  if (act === 'create_task') {
+    const title = (action.title || '').trim();
+    if (!title) return;
+    const steps = Array.isArray(action.steps) ? action.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+    const tasks = getTasks();
+    tasks.unshift({ id: Date.now(), title, desc: action.desc || '', steps, status: 'active', createdAt: Date.now() });
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    showOwlConfirm('Задачу створено ✓');
+    return;
+  }
+
+  if (act === 'create_note') {
+    const noteText = (action.text || originalText || '').trim();
+    if (!noteText) return;
+    addNoteFromInbox(noteText, 'note', action.folder || null, 'agent');
+    if (currentTab === 'notes') renderNotes();
+    showOwlConfirm('Нотатку збережено ✓');
+    return;
+  }
+
+  if (act === 'save_finance') {
+    const amount = parseFloat(action.amount) || 0;
+    if (amount <= 0) return;
+    const type = action.fin_type || 'expense';
+    const category = action.category || 'Інше';
+    const cats = getFinCats();
+    const catList = type === 'expense' ? cats.expense : cats.income;
+    if (!catList.includes(category)) { catList.push(category); saveFinCats(cats); }
+    const txs = getFinance();
+    txs.unshift({ id: Date.now(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
+    saveFinance(txs);
+    if (currentTab === 'finance') renderFinance();
+    const sign = type === 'expense' ? '-' : '+';
+    showOwlConfirm(`${sign}${formatMoney(amount)} · ${category} ✓`);
+    return;
+  }
 }
 
 function dismissOwlBoard() {
