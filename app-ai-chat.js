@@ -270,7 +270,6 @@ const OWL_BOARD_SEEN_KEY = 'nm_owl_board_seen'; // які ID вже показа
 const OWL_BOARD_TS_KEY = 'nm_owl_board_ts'; // timestamp останньої генерації
 const OWL_BOARD_INTERVAL = 3 * 60 * 1000;  // 3 хвилини
 
-let _owlBoardSlide = 0;
 let _owlBoardMessages = [];
 let _owlBoardGenerating = false;
 let _owlBoardTimer = null;
@@ -700,6 +699,16 @@ function renderOwlBoard() {
   const textEl = document.getElementById('owl-board-text');
   if (textEl) textEl.textContent = latest.text;
 
+  // Час повідомлення
+  const timeEl = document.getElementById('owl-board-time');
+  if (timeEl && latest.id) {
+    const ago = Date.now() - latest.id;
+    const mins = Math.floor(ago / 60000);
+    if (mins < 1) timeEl.textContent = 'щойно';
+    else if (mins < 60) timeEl.textContent = `${mins} хв тому`;
+    else { const hrs = Math.floor(mins / 60); timeEl.textContent = `${hrs} год тому`; }
+  }
+
   // Чіпи — завжди видимі на основному екрані
   const chipsEl = document.getElementById('owl-board-chips');
   if (chipsEl) {
@@ -825,6 +834,9 @@ async function sendOwlReply(text) {
   if (!text || _owlChatSending) return;
   _owlChatSending = true;
 
+  // Автоматично відкриваємо чат якщо він закритий
+  if (!_owlChatOpen) toggleOwlChat();
+
   // Додаємо повідомлення юзера
   saveOwlChatMsg('user', text);
   renderOwlChatMessages();
@@ -832,16 +844,17 @@ async function sendOwlReply(text) {
   // Показуємо typing
   showOwlTyping(true);
 
-  // Чіпи прибираємо
+  // Чіпи прибираємо (і в чаті, і на main board)
   const chipsEl = document.getElementById('owl-chat-chips');
   if (chipsEl) chipsEl.innerHTML = '';
+  const boardChips = document.getElementById('owl-board-chips');
+  if (boardChips) boardChips.innerHTML = '';
 
   try {
     const reply = await callOwlChat(text);
     showOwlTyping(false);
 
     if (reply) {
-      // Парсимо відповідь — може бути JSON з action
       let replyText = reply;
       let action = null;
       try {
@@ -849,12 +862,9 @@ async function sendOwlReply(text) {
         if (parsed.text) replyText = parsed.text;
         if (parsed.action) action = parsed.action;
         if (parsed.chips) {
-          // Оновлюємо чіпи
           renderOwlChips({ chips: parsed.chips });
         }
-      } catch(e) {
-        // Не JSON — просто текст
-      }
+      } catch(e) {}
 
       saveOwlChatMsg('agent', replyText);
       renderOwlChatMessages();
