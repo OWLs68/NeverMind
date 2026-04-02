@@ -1141,8 +1141,9 @@ body {
 }
 /* --- OWL Board --- */
 .owl-board-sticky {
-  position: relative;
-  z-index: 2;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   padding: 4px 4px 8px;
 }
 .owl-board-container {
