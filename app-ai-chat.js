@@ -975,17 +975,21 @@ function executeOwlAction(action, originalText) {
 let _owlSwipe = null;
 function owlSwipeStart(e) {
   const t = e.touches[0];
-  _owlSwipe = { startY: t.clientY, dy: 0 };
+  _owlSwipe = { startY: t.clientY, dy: 0, locked: false };
 }
 function owlSwipeMove(e) {
   if (!_owlSwipe) return;
   _owlSwipe.dy = e.touches[0].clientY - _owlSwipe.startY;
+  // Якщо вертикальний свайп >10px — блокуємо скрол карточок
+  if (Math.abs(_owlSwipe.dy) > 10) {
+    _owlSwipe.locked = true;
+    e.preventDefault();
+  }
 }
 function owlSwipeEnd() {
   if (!_owlSwipe) return;
   const dy = _owlSwipe.dy;
   _owlSwipe = null;
-  // Свайп вниз >40px = розгорнути, вгору >40px = згорнути
   if (dy > 40 && !_owlChatOpen) toggleOwlChat();
   else if (dy < -40 && _owlChatOpen) toggleOwlChat();
 }
