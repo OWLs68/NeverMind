@@ -657,122 +657,225 @@ async function generateOwlBoardMessage() {
   _owlBoardGenerating = false;
 }
 
+// === OWL MINI-CHAT STATE ===
+const OWL_CHAT_KEY = 'nm_owl_chat'; // [{role,text,ts}]
+const OWL_CHAT_MAX = 20;
+let _owlChatOpen = false;
+let _owlChatSending = false;
+
+function getOwlChatHistory() {
+  try { return JSON.parse(localStorage.getItem(OWL_CHAT_KEY) || '[]'); } catch { return []; }
+}
+function saveOwlChatMsg(role, text) {
+  const msgs = getOwlChatHistory();
+  msgs.push({ role, text, ts: Date.now() });
+  if (msgs.length > OWL_CHAT_MAX) msgs.splice(0, msgs.length - OWL_CHAT_MAX);
+  localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
+}
+
+// Рендер компактного превью — 5 станів
 function renderOwlBoard() {
-  const messages = getOwlBoardMessages();
+  const boardMessages = getOwlBoardMessages();
   const board = document.getElementById('owl-board');
   if (!board) return;
 
-  if (messages.length === 0) {
+  if (boardMessages.length === 0) {
     board.style.display = 'none';
     return;
   }
-
   board.style.display = 'block';
-  _owlBoardMessages = messages;
-  if (_owlBoardSlide >= messages.length) _owlBoardSlide = 0;
+  _owlBoardMessages = boardMessages;
 
-  // Рендер слайдів
-  const track = document.getElementById('owl-board-track');
-  if (track) {
-    track.innerHTML = messages.map((m, i) => {
-      const priorityDot = m.priority === 'critical'
-        ? '<div style="width:6px;height:6px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:5px;box-shadow:0 0 6px rgba(239,68,68,0.7)"></div>'
-        : m.priority === 'important'
-        ? '<div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0;margin-top:5px"></div>'
-        : '';
-      return `
-        <div style="min-width:100%;box-sizing:border-box">
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:7px">
-            ${priorityDot}
-            <div style="font-size:13px;font-weight:600;color:white;line-height:1.5;flex:1">${escapeHtml(m.text)}</div>
-          </div>
-          ${m.chips && m.chips.length > 0 ? `<div style="display:flex;gap:5px;flex-wrap:wrap">${m.chips.map(c=>`<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`).join('')}</div>` : ''}
-        </div>`;
-    }).join('');
-    track.style.transform = `translateX(-${_owlBoardSlide * 100}%)`;
+  const latest = boardMessages[0];
+  const pulse = document.getElementById('owl-board-pulse');
+  const preview = document.getElementById('owl-board-preview');
+  const hint = document.getElementById('owl-board-hint');
+
+  if (pulse && latest) {
+    pulse.className = latest.priority === 'critical' ? 'owl-pulse'
+      : latest.priority === 'important' ? 'owl-pulse' : 'owl-pulse quiet';
+    if (latest.priority === 'critical') pulse.style.background = '#ef4444';
+    else if (latest.priority === 'important') pulse.style.background = '#f59e0b';
+    else { pulse.style.background = ''; }
   }
 
-  // Крапки
-  const dots = document.getElementById('owl-board-dots');
-  if (dots && messages.length > 1) {
-    dots.style.display = 'flex';
-    dots.innerHTML = messages.map((_, i) => {
-      const active = i === _owlBoardSlide;
-      return `<div onclick="owlBoardGoTo(${i})" style="height:4px;width:${active?'12px':'4px'};border-radius:2px;background:${active?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.2)'};transition:all 0.3s;cursor:pointer"></div>`;
-    }).join('');
-  } else if (dots) {
-    dots.style.display = 'none';
+  if (preview) {
+    preview.textContent = latest ? latest.text : '';
+  }
+  if (hint) {
+    hint.style.display = (latest && latest.chips && latest.chips.length > 0) ? '' : 'none';
   }
 
-  // Свайп на слайдері
-  setupOwlBoardSwipe();
+  // Якщо чат відкритий — оновити повідомлення і чіпи
+  if (_owlChatOpen) {
+    renderOwlChatMessages();
+    renderOwlChips(latest);
+  }
 }
 
-function owlBoardGoTo(idx) {
-  _owlBoardSlide = idx;
-  const track = document.getElementById('owl-board-track');
-  if (track) track.style.transform = `translateX(-${idx * 100}%)`;
-  renderOwlBoard();
+// Розгорнути / згорнути міні-чат
+function toggleOwlChat() {
+  _owlChatOpen = !_owlChatOpen;
+  const compact = document.getElementById('owl-board-compact');
+  const expanded = document.getElementById('owl-chat-expanded');
+  if (!compact || !expanded) return;
+
+  if (_owlChatOpen) {
+    compact.style.display = 'none';
+    expanded.style.display = '';
+    renderOwlChatMessages();
+    const latest = _owlBoardMessages[0];
+    renderOwlChips(latest);
+    // Скрол вниз
+    const msgs = document.getElementById('owl-chat-messages');
+    if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+  } else {
+    compact.style.display = '';
+    expanded.style.display = 'none';
+  }
+}
+
+// Рендер повідомлень чату
+function renderOwlChatMessages() {
+  const el = document.getElementById('owl-chat-messages');
+  if (!el) return;
+
+  // Збираємо: останні board-повідомлення (як agent) + owl_chat історія
+  const chatHistory = getOwlChatHistory();
+  const boardMsgs = getOwlBoardMessages();
+
+  // Якщо чат порожній — показуємо останнє board повідомлення як початок
+  if (chatHistory.length === 0 && boardMsgs.length > 0) {
+    el.innerHTML = `<div class="owl-msg-agent">${escapeHtml(boardMsgs[0].text)}</div>`;
+    return;
+  }
+
+  // Показуємо chat history
+  let html = '';
+  // Спочатку останнє board повідомлення як контекст (якщо його немає в чаті)
+  if (boardMsgs.length > 0) {
+    const lastBoardText = boardMsgs[0].text;
+    const firstChatIsBoard = chatHistory.length > 0 && chatHistory[0].role === 'agent' && chatHistory[0].text === lastBoardText;
+    if (!firstChatIsBoard) {
+      html += `<div class="owl-msg-agent">${escapeHtml(lastBoardText)}</div>`;
+    }
+  }
+  chatHistory.forEach(m => {
+    const cls = m.role === 'user' ? 'owl-msg-user' : 'owl-msg-agent';
+    html += `<div class="${cls}">${escapeHtml(m.text)}</div>`;
+  });
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+// Рендер чіпів
+function renderOwlChips(boardMsg) {
+  const el = document.getElementById('owl-chat-chips');
+  if (!el) return;
+  if (!boardMsg || !boardMsg.chips || boardMsg.chips.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = boardMsg.chips.map(c => {
+    const safe = escapeHtml(c).replace(/'/g, '&#39;');
+    return `<div class="owl-chip" onclick="sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
+  }).join('');
+}
+
+// Typing індикатор
+function showOwlTyping(show) {
+  const el = document.getElementById('owl-chat-messages');
+  if (!el) return;
+  const existing = el.querySelector('.owl-typing-wrap');
+  if (existing) existing.remove();
+  if (show) {
+    const div = document.createElement('div');
+    div.className = 'owl-msg-agent owl-typing-wrap';
+    div.innerHTML = '<div class="owl-typing"><span></span><span></span><span></span></div>';
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  }
+  // Блокуємо input
+  const inp = document.getElementById('owl-chat-input');
+  const btn = document.getElementById('owl-chat-send');
+  if (inp) inp.disabled = show;
+  if (btn) btn.disabled = show;
+}
+
+// Зелений банер підтвердження
+function showOwlConfirm(text) {
+  const el = document.getElementById('owl-chat-messages');
+  if (!el) return;
+  const banner = document.createElement('div');
+  banner.className = 'owl-confirm-banner';
+  banner.textContent = text;
+  el.appendChild(banner);
+  el.scrollTop = el.scrollHeight;
+  setTimeout(() => banner.remove(), 2500);
+}
+
+// Відправка відповіді (від чіпа або input)
+async function sendOwlReply(text) {
+  if (!text || _owlChatSending) return;
+  _owlChatSending = true;
+
+  // Додаємо повідомлення юзера
+  saveOwlChatMsg('user', text);
+  renderOwlChatMessages();
+
+  // Показуємо typing
+  showOwlTyping(true);
+
+  // Чіпи прибираємо
+  const chipsEl = document.getElementById('owl-chat-chips');
+  if (chipsEl) chipsEl.innerHTML = '';
+
+  try {
+    const reply = await callOwlChat(text);
+    showOwlTyping(false);
+
+    if (reply) {
+      // Парсимо відповідь — може бути JSON з action
+      let replyText = reply;
+      let action = null;
+      try {
+        const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+        if (parsed.text) replyText = parsed.text;
+        if (parsed.action) action = parsed.action;
+        if (parsed.chips) {
+          // Оновлюємо чіпи
+          renderOwlChips({ chips: parsed.chips });
+        }
+      } catch(e) {
+        // Не JSON — просто текст
+      }
+
+      saveOwlChatMsg('agent', replyText);
+      renderOwlChatMessages();
+
+      if (action) {
+        showOwlConfirm('Зроблено ✓');
+      }
+    }
+  } catch(e) {
+    showOwlTyping(false);
+  }
+
+  _owlChatSending = false;
+}
+
+// Відправка з input
+function sendOwlReplyFromInput() {
+  const inp = document.getElementById('owl-chat-input');
+  if (!inp || !inp.value.trim()) return;
+  const text = inp.value.trim();
+  inp.value = '';
+  sendOwlReply(text);
 }
 
 function dismissOwlBoard() {
   const board = document.getElementById('owl-board');
   if (board) board.style.display = 'none';
-}
-
-let _owlSwipeStartX = 0;
-function setupOwlBoardSwipe() {
-  const slider = document.getElementById('owl-board-slider');
-  if (!slider || slider._owlSwipe) return;
-  slider._owlSwipe = true;
-
-  let _owlStartX = 0, _owlStartY = 0, _owlLocked = false;
-
-  slider.addEventListener('touchstart', e => {
-    _owlStartX = e.touches[0].clientX;
-    _owlStartY = e.touches[0].clientY;
-    _owlLocked = false;
-  }, { passive: true });
-
-  slider.addEventListener('touchmove', e => {
-    const dx = Math.abs(e.touches[0].clientX - _owlStartX);
-    const dy = Math.abs(e.touches[0].clientY - _owlStartY);
-    if (!_owlLocked && dx > dy && dx > 8) {
-      _owlLocked = true;
-    }
-    if (_owlLocked) {
-      e.stopPropagation();
-      // Показуємо рух треку під пальцем
-      const msgs = getOwlBoardMessages();
-      if (msgs.length <= 1) return;
-      const rawDx = e.touches[0].clientX - _owlStartX;
-      const track = document.getElementById('owl-board-track');
-      if (track) {
-        const base = -_owlBoardSlide * 100;
-        const pct = (rawDx / slider.offsetWidth) * 100;
-        // Опір на краях
-        let offset = pct;
-        if ((_owlBoardSlide === 0 && rawDx > 0) || (_owlBoardSlide === msgs.length - 1 && rawDx < 0)) {
-          offset = pct * 0.25;
-        }
-        track.style.transition = 'none';
-        track.style.transform = `translateX(${base + offset}%)`;
-      }
-    }
-  }, { passive: false });
-
-  slider.addEventListener('touchend', e => {
-    if (!_owlLocked) return;
-    e.stopPropagation();
-    const dx = e.changedTouches[0].clientX - _owlStartX;
-    const track = document.getElementById('owl-board-track');
-    if (track) track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    const msgs = getOwlBoardMessages();
-    if (dx < -40 && _owlBoardSlide < msgs.length - 1) owlBoardGoTo(_owlBoardSlide + 1);
-    else if (dx > 40 && _owlBoardSlide > 0) owlBoardGoTo(_owlBoardSlide - 1);
-    else owlBoardGoTo(_owlBoardSlide); // snap back
-    _owlLocked = false;
-  }, { passive: false });
 }
 
 // Запуск циклу перевірки

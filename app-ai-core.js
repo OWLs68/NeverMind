@@ -378,6 +378,48 @@ async function callAI(systemPrompt, userMessage, contextData = {}) {
   }
 }
 
+// === OWL MINI-CHAT — окремий AI виклик ===
+async function callOwlChat(userText) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return null;
+
+  const context = getOwlBoardContext();
+  const chatHistory = JSON.parse(localStorage.getItem('nm_owl_chat') || '[]');
+
+  // Беремо останні 6 обмінів для контексту
+  const recentChat = chatHistory.slice(-12).map(m => ({
+    role: m.role === 'user' ? 'user' : 'assistant',
+    content: m.text
+  }));
+
+  const systemPrompt = getOWLPersonality() + `
+
+Це міні-чат. Користувач відповідає на твоє проактивне повідомлення або ставить питання.
+
+КОНТЕКСТ ДАНИХ:
+${context}
+
+ПРАВИЛА:
+- Максимум 1-2 речення. Коротко і по-людськи.
+- Якщо відповідь передбачає дію (створити задачу, відмітити звичку тощо) — додай "action" поле.
+- Відповідай JSON: {"text":"відповідь","chips":["варіант1","варіант2"],"action":null}
+- chips — 0-3 варіанти швидкої відповіді (якщо доречно). Максимум 3 слова кожен.
+- Відповідай українською.`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...recentChat,
+    { role: 'user', content: userText }
+  ];
+
+  try {
+    const reply = await _fetchAI(messages, undefined);
+    return reply;
+  } catch(e) {
+    return null;
+  }
+}
+
 async function callAIWithHistory(systemPrompt, history) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000); // 25 сек таймаут

@@ -103,6 +103,15 @@ const CAT_DOT_BG = {
   event:   'background:rgba(59,130,246,0.15)',
   finance: 'background:rgba(194,65,12,0.15)',
 };
+// Solid кольори для 8px крапки в компактній стрічці
+const CAT_DOT_SOLID = {
+  task:    'background:#2fd0f9',
+  idea:    'background:#c4b820',
+  note:    'background:#a07850',
+  habit:   'background:#16a34a',
+  event:   'background:#3b82f6',
+  finance: 'background:#c2410c',
+};
 const CAT_TAG_STYLE = {
   task:    'background:rgba(47,208,249,0.2);color:#0a7a97',
   idea:    'background:rgba(245,240,168,0.5);color:#7a6c00',
@@ -124,6 +133,28 @@ function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'
 function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
 
 
+// Датовий сепаратор для стрічки
+function _inboxDateLabel(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((today - itemDay) / 86400000);
+  if (diff === 0) return 'СЬОГОДНІ';
+  if (diff === 1) return 'ВЧОРА';
+  const months = ['СІЧ','ЛЮТ','БЕР','КВІТ','ТРАВ','ЧЕРВ','ЛИП','СЕРП','ВЕР','ЖОВТ','ЛИСТ','ГРУД'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+// Тап: розгорнути/згорнути текст картки (блокується після свайпу)
+let _inboxSwipedRecently = false;
+function toggleInboxExpand(id) {
+  if (_inboxSwipedRecently) return;
+  const el = document.getElementById('item-' + id);
+  if (!el) return;
+  el.classList.toggle('inbox-expanded');
+}
+
 function renderInbox() {
   const items = getInbox();
   const list = document.getElementById('inbox-list');
@@ -141,36 +172,42 @@ function renderInbox() {
   countEl.style.display = 'inline';
   countEl.textContent = items.length;
 
-  list.innerHTML = items.map(item => {
+  let html = '';
+  let lastDateLabel = '';
+
+  items.forEach(item => {
+    // Датовий сепаратор
+    const dateLabel = _inboxDateLabel(item.ts);
+    if (dateLabel !== lastDateLabel) {
+      html += `<div class="inbox-date-sep">${dateLabel}</div>`;
+      lastDateLabel = dateLabel;
+    }
+
     const meta = CAT_META[item.category] || CAT_META.note;
-    const cardStyles = {
-      task:    'background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border-color:rgba(255,255,255,0.4)',
-      habit:   'background:linear-gradient(135deg,#bbf7d0,#a7f3c0);border-color:rgba(255,255,255,0.4)',
-      note:    'background:linear-gradient(135deg,#f5ede0,#ede0cc);border-color:rgba(255,255,255,0.4)',
-      idea:    'background:linear-gradient(135deg,#f5f0a8,#eee97a);border-color:rgba(255,255,255,0.4)',
-      event:   'background:linear-gradient(135deg,#bfdbfe,#a5c8fe);border-color:rgba(255,255,255,0.4)',
-      finance: 'background:linear-gradient(135deg,#fcd9bd,#fbbf8a);border-color:rgba(255,255,255,0.4)',
-    };
-    const cardStyle = cardStyles[item.category] || cardStyles.note;
-    return `<div class="inbox-item-wrap" id="wrap-${item.id}">
+    const dotBg = CAT_DOT_SOLID[item.category] || CAT_DOT_SOLID.note;
+    const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
+
+    html += `<div class="inbox-item-wrap" id="wrap-${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           style="${cardStyle};position:relative;z-index:1"
            ontouchstart="swipeStart(event,${item.id})"
            ontouchmove="swipeMove(event,${item.id})"
-           ontouchend="swipeEnd(event,${item.id})">
+           ontouchend="swipeEnd(event,${item.id})"
+           onclick="toggleInboxExpand(${item.id})">
         <div class="inbox-item-inner">
-          <div class="inbox-item-cat-dot" style="${CAT_DOT_BG[item.category] || CAT_DOT_BG.note}">${CAT_SVG[item.category] || CAT_SVG.note}</div>
+          <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">
             <div class="inbox-item-text">${escapeHtml(item.text)}</div>
-            <div class="inbox-item-meta">
-              <span class="inbox-item-time">${formatTime(item.ts)}</span>
-              <span class="inbox-item-tag" style="${CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note}">${meta.label}</span>
-            </div>
+          </div>
+          <div class="inbox-item-right">
+            <span class="inbox-item-time">${formatTime(item.ts)}</span>
+            <span class="inbox-item-tag" style="${tagStyle}">${meta.label}</span>
           </div>
         </div>
       </div>
     </div>`;
-  }).join('');
+  });
+
+  list.innerHTML = html;
 }
 
 // === SWIPE TO DELETE ===
@@ -195,6 +232,7 @@ function swipeMove(e, id) {
 }
 function swipeEnd(e, id) {
   const s = swipeState[id]; if (!s) return;
+  if (s.swiping) { _inboxSwipedRecently = true; setTimeout(() => _inboxSwipedRecently = false, 50); }
   const el = document.getElementById(`item-${id}`);
   const wrap = document.getElementById(`wrap-${id}`);
   if (s.dx < -SWIPE_DELETE_THRESHOLD) {
