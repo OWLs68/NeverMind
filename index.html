@@ -204,8 +204,8 @@
                ontouchmove="owlSwipeMove(event)"
                ontouchend="owlSwipeEnd(event)">
 
-            <!-- COLLAPSED: компактний рядок -->
-            <div id="owl-collapsed" class="owl-collapsed" onclick="toggleOwlChat()">
+            <!-- COLLAPSED: компактний рядок (hidden by default, shown after user collapses) -->
+            <div id="owl-collapsed" class="owl-collapsed" style="display:none" onclick="toggleOwlChat()">
               <div class="owl-collapsed-avatar">🦉</div>
               <div class="owl-collapsed-text" id="owl-collapsed-text"></div>
               <div class="owl-collapsed-time" id="owl-collapsed-time"></div>

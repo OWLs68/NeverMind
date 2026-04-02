@@ -653,12 +653,15 @@ async function generateOwlBoardMessage() {
     saveOwlBoardMessages(msgs.slice(0, 3));
     localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
 
+    // Нове повідомлення — показати expanded знову
+    _owlWasCollapsed = false;
     renderOwlBoard();
   } catch(e) {}
   _owlBoardGenerating = false;
 }
 
 // === OWL MINI-CHAT STATE ===
+let _owlWasCollapsed = false; // юзер вручну згорнув
 const OWL_CHAT_KEY = 'nm_owl_chat'; // [{role,text,ts}]
 const OWL_CHAT_MAX = 20;
 let _owlChatOpen = false;
@@ -701,6 +704,15 @@ function renderOwlBoard() {
     else { const hrs = Math.floor(mins / 60); collTime.textContent = `${hrs} год`; }
   }
 
+  // Дефолт: expanded (аватар + бабл). Collapsed — тільки після свайпу юзера.
+  if (!_owlWasCollapsed && !_owlChatOpen) {
+    _owlChatOpen = true;
+    const collapsed = document.getElementById('owl-collapsed');
+    const expanded = document.getElementById('owl-expanded');
+    if (collapsed) collapsed.style.display = 'none';
+    if (expanded) expanded.style.display = '';
+  }
+
   // Expanded: оновити чат і чіпи
   if (_owlChatOpen) {
     renderOwlChatMessages();
@@ -726,6 +738,7 @@ function toggleOwlChat() {
     const msgs = document.getElementById('owl-chat-messages');
     if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
   } else {
+    _owlWasCollapsed = true;
     collapsed.style.display = '';
     expanded.style.display = 'none';
   }
@@ -735,6 +748,7 @@ function toggleOwlChat() {
 function closeOwlChat() {
   if (!_owlChatOpen) return;
   _owlChatOpen = false;
+  _owlWasCollapsed = true;
   const collapsed = document.getElementById('owl-collapsed');
   const expanded = document.getElementById('owl-expanded');
   if (collapsed) collapsed.style.display = '';
