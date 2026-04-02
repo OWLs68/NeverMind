@@ -199,8 +199,11 @@
       <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
         <!-- OWL BOARD — міні-чат (sticky: карточки заходять під нього при скролі) -->
         <div id="owl-board" class="owl-board-sticky" style="display:none">
-          <div class="owl-board-container">
-            <!-- Основний вигляд: аватар + текст + чіпи (завжди видимі) -->
+          <div class="owl-board-container"
+               ontouchstart="owlSwipeStart(event)"
+               ontouchmove="owlSwipeMove(event)"
+               ontouchend="owlSwipeEnd(event)">
+            <!-- Основний вигляд: аватар + текст + чіпи -->
             <div id="owl-board-main" class="owl-board-main" onclick="toggleOwlChat()">
               <div class="owl-board-top">
                 <div class="owl-avatar">🦉</div>
@@ -211,20 +214,17 @@
               </div>
               <div id="owl-board-chips" class="owl-board-chips"></div>
             </div>
-            <!-- Розгорнутий міні-чат (з'являється після тапу на чіп або board) -->
+            <!-- Розгорнутий міні-чат -->
             <div id="owl-chat-expanded" class="owl-chat-expanded" style="display:none">
-              <div class="owl-chat-header" onclick="toggleOwlChat()">
-                <div class="owl-avatar-sm">🦉</div>
-                <span class="owl-board-label">OWL</span>
-                <span class="owl-chat-close">✕</span>
-              </div>
               <div id="owl-chat-messages" class="owl-chat-messages"></div>
               <div id="owl-chat-chips" class="owl-chat-chips"></div>
               <div class="owl-chat-input-row">
-                <input id="owl-chat-input" type="text" placeholder="Відповісти..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlReplyFromInput()}">
-                <button id="owl-chat-send" onclick="sendOwlReplyFromInput()">→</button>
+                <input id="owl-chat-input" type="text" placeholder="Відповісти OWL..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlReplyFromInput()}">
+                <button id="owl-chat-send" onclick="sendOwlReplyFromInput()">➤</button>
               </div>
             </div>
+            <!-- Свайп-полоска -->
+            <div class="owl-swipe-handle" onclick="toggleOwlChat()"><div class="owl-handle-bar"></div></div>
           </div>
         </div>
         <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 34px)"></div>

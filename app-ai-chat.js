@@ -971,6 +971,25 @@ function executeOwlAction(action, originalText) {
   }
 }
 
+// === OWL Board Swipe Gesture ===
+let _owlSwipe = null;
+function owlSwipeStart(e) {
+  const t = e.touches[0];
+  _owlSwipe = { startY: t.clientY, dy: 0 };
+}
+function owlSwipeMove(e) {
+  if (!_owlSwipe) return;
+  _owlSwipe.dy = e.touches[0].clientY - _owlSwipe.startY;
+}
+function owlSwipeEnd() {
+  if (!_owlSwipe) return;
+  const dy = _owlSwipe.dy;
+  _owlSwipe = null;
+  // Свайп вниз >40px = розгорнути, вгору >40px = згорнути
+  if (dy > 40 && !_owlChatOpen) toggleOwlChat();
+  else if (dy < -40 && _owlChatOpen) toggleOwlChat();
+}
+
 function dismissOwlBoard() {
   const board = document.getElementById('owl-board');
   if (board) board.style.display = 'none';
