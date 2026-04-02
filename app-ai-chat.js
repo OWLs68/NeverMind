@@ -674,7 +674,7 @@ function saveOwlChatMsg(role, text) {
   localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
 }
 
-// Рендер OWL Board — великий блок з аватаром, текстом і чіпами
+// Рендер OWL Board — персонаж який говорить
 function renderOwlBoard() {
   const boardMessages = getOwlBoardMessages();
   const board = document.getElementById('owl-board');
@@ -689,42 +689,19 @@ function renderOwlBoard() {
 
   const latest = boardMessages[0];
 
-  // Пріоритет — клас на контейнер
-  const container = board.querySelector('.owl-board-container');
-  if (container) {
-    container.classList.remove('owl-priority-critical', 'owl-priority-important');
-    if (latest.priority === 'critical') container.classList.add('owl-priority-critical');
-    else if (latest.priority === 'important') container.classList.add('owl-priority-important');
-  }
-
-  // Текст — повний, читабельний
-  const textEl = document.getElementById('owl-board-text');
-  if (textEl) textEl.textContent = latest.text;
-
-  // Час повідомлення
-  const timeEl = document.getElementById('owl-board-time');
-  if (timeEl && latest.id) {
+  // Collapsed: текст і час
+  const collText = document.getElementById('owl-collapsed-text');
+  if (collText) collText.textContent = latest.text;
+  const collTime = document.getElementById('owl-collapsed-time');
+  if (collTime && latest.id) {
     const ago = Date.now() - latest.id;
     const mins = Math.floor(ago / 60000);
-    if (mins < 1) timeEl.textContent = 'щойно';
-    else if (mins < 60) timeEl.textContent = `${mins} хв тому`;
-    else { const hrs = Math.floor(mins / 60); timeEl.textContent = `${hrs} год тому`; }
+    if (mins < 1) collTime.textContent = 'щойно';
+    else if (mins < 60) collTime.textContent = `${mins} хв`;
+    else { const hrs = Math.floor(mins / 60); collTime.textContent = `${hrs} год`; }
   }
 
-  // Чіпи — завжди видимі на основному екрані
-  const chipsEl = document.getElementById('owl-board-chips');
-  if (chipsEl) {
-    if (latest.chips && latest.chips.length > 0) {
-      chipsEl.innerHTML = latest.chips.map(c => {
-        const safe = escapeHtml(c).replace(/'/g, '&#39;');
-        return `<div class="owl-chip" onclick="event.stopPropagation();sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
-      }).join('');
-    } else {
-      chipsEl.innerHTML = '';
-    }
-  }
-
-  // Якщо чат відкритий — оновити повідомлення і чіпи чату
+  // Expanded: оновити чат і чіпи
   if (_owlChatOpen) {
     renderOwlChatMessages();
     renderOwlChips(latest);
@@ -734,14 +711,14 @@ function renderOwlBoard() {
 // Розгорнути / згорнути міні-чат
 function toggleOwlChat() {
   _owlChatOpen = !_owlChatOpen;
-  const main = document.getElementById('owl-board-main');
-  const expanded = document.getElementById('owl-chat-expanded');
-  if (!main || !expanded) return;
+  const collapsed = document.getElementById('owl-collapsed');
+  const expanded = document.getElementById('owl-expanded');
+  if (!collapsed || !expanded) return;
 
   if (_owlChatOpen) {
     // Закрити inbox чат якщо відкритий
     if (activeChatBar === 'inbox') closeChatBar('inbox');
-    main.style.display = 'none';
+    collapsed.style.display = 'none';
     expanded.style.display = '';
     renderOwlChatMessages();
     const latest = _owlBoardMessages[0];
@@ -749,18 +726,18 @@ function toggleOwlChat() {
     const msgs = document.getElementById('owl-chat-messages');
     if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
   } else {
-    main.style.display = '';
+    collapsed.style.display = '';
     expanded.style.display = 'none';
   }
 }
 
-// Закрити OWL чат ззовні (викликається з openChatBarNoKeyboard)
+// Закрити OWL чат ззовні
 function closeOwlChat() {
   if (!_owlChatOpen) return;
   _owlChatOpen = false;
-  const main = document.getElementById('owl-board-main');
-  const expanded = document.getElementById('owl-chat-expanded');
-  if (main) main.style.display = '';
+  const collapsed = document.getElementById('owl-collapsed');
+  const expanded = document.getElementById('owl-expanded');
+  if (collapsed) collapsed.style.display = '';
   if (expanded) expanded.style.display = 'none';
 }
 
@@ -861,8 +838,6 @@ async function sendOwlReply(text) {
   // Чіпи прибираємо (і в чаті, і на main board)
   const chipsEl = document.getElementById('owl-chat-chips');
   if (chipsEl) chipsEl.innerHTML = '';
-  const boardChips = document.getElementById('owl-board-chips');
-  if (boardChips) boardChips.innerHTML = '';
 
   try {
     const reply = await callOwlChat(text);
