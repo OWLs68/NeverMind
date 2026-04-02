@@ -836,11 +836,7 @@ body {
 .cat-note   { background: rgba(99,102,241,0.12); color: #4338ca; font-weight: 700; }
 .cat-event  { background: rgba(59,130,246,0.14); color: #1d4ed8; font-weight: 700; }
 
-.cat-dot-idea  { background: linear-gradient(135deg, #f5f3ff, #ede9fe); }
-.cat-dot-task  { background: linear-gradient(135deg, #fff7ed, #ffedd5); }
-.cat-dot-habit { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
-.cat-dot-note  { background: linear-gradient(135deg, #eef2ff, #e0e7ff); }
-.cat-dot-event { background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+
 
 /* Inbox empty state */
 .inbox-empty {
@@ -1140,10 +1136,6 @@ body {
   0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
   40% { opacity: 1; transform: scale(1); }
 }
-@keyframes owlPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(251,191,36,0.4); }
-  50% { opacity: 0.5; box-shadow: 0 0 0 4px rgba(251,191,36,0); }
-}
 /* --- OWL Board --- */
 .owl-board-container {
   background: rgba(15,10,22,0.75);
@@ -1180,6 +1172,17 @@ body {
   flex-shrink: 0;
 }
 .owl-board-content { flex: 1; min-width: 0; }
+.owl-board-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.owl-board-time {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.35);
+}
 .owl-board-text {
   font-size: 14.5px;
   font-weight: 600;
