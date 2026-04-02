@@ -39,6 +39,8 @@ function _getTabChatBHeight(tab) {
 // Відкрити чат у стані A БЕЗ клавіатури (жест свайп вгору від input)
 function openChatBarNoKeyboard(tab) {
   if (_tabChatState[tab]) return; // вже відкрито
+  // Закриваємо OWL чат якщо відкритий
+  try { closeOwlChat(); } catch(e) {}
   // Закриваємо інші бари
   ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
     if (t !== tab) closeChatBar(t);
@@ -737,6 +739,8 @@ function toggleOwlChat() {
   if (!main || !expanded) return;
 
   if (_owlChatOpen) {
+    // Закрити inbox чат якщо відкритий
+    if (activeChatBar === 'inbox') closeChatBar('inbox');
     main.style.display = 'none';
     expanded.style.display = '';
     renderOwlChatMessages();
@@ -748,6 +752,16 @@ function toggleOwlChat() {
     main.style.display = '';
     expanded.style.display = 'none';
   }
+}
+
+// Закрити OWL чат ззовні (викликається з openChatBarNoKeyboard)
+function closeOwlChat() {
+  if (!_owlChatOpen) return;
+  _owlChatOpen = false;
+  const main = document.getElementById('owl-board-main');
+  const expanded = document.getElementById('owl-chat-expanded');
+  if (main) main.style.display = '';
+  if (expanded) expanded.style.display = 'none';
 }
 
 // Рендер повідомлень чату
