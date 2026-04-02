@@ -1156,7 +1156,7 @@ body {
   overflow: hidden;
   position: relative;
   transition: box-shadow 0.3s ease;
-  touch-action: pan-y;
+  touch-action: none;
 }
 
 /* === Основний блок === */
