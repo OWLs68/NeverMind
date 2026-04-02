@@ -196,17 +196,20 @@
         <!-- OWL BOARD — міні-чат -->
         <div id="owl-board" style="margin:0 4px 0;display:none">
           <div class="owl-board-container">
-            <!-- Компактний превью (тап → розгорнути) -->
-            <div id="owl-board-compact" class="owl-board-compact" onclick="toggleOwlChat()">
-              <div id="owl-board-pulse" class="owl-pulse"></div>
-              <span class="owl-board-label">OWL</span>
-              <div id="owl-board-preview" class="owl-board-preview"></div>
-              <div id="owl-board-hint" class="owl-board-hint" style="display:none">тап ↓</div>
+            <!-- Основний вигляд: аватар + текст + чіпи (завжди видимі) -->
+            <div id="owl-board-main" class="owl-board-main" onclick="toggleOwlChat()">
+              <div class="owl-board-top">
+                <div class="owl-avatar">🦉</div>
+                <div class="owl-board-content">
+                  <div id="owl-board-text" class="owl-board-text"></div>
+                </div>
+              </div>
+              <div id="owl-board-chips" class="owl-board-chips"></div>
             </div>
-            <!-- Розгорнутий міні-чат -->
+            <!-- Розгорнутий міні-чат (з'являється після тапу на чіп або board) -->
             <div id="owl-chat-expanded" class="owl-chat-expanded" style="display:none">
               <div class="owl-chat-header" onclick="toggleOwlChat()">
-                <div class="owl-pulse"></div>
+                <div class="owl-avatar-sm">🦉</div>
                 <span class="owl-board-label">OWL</span>
                 <span class="owl-chat-close">✕</span>
               </div>

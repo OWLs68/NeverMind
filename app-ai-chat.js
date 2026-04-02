@@ -673,7 +673,7 @@ function saveOwlChatMsg(role, text) {
   localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
 }
 
-// Рендер компактного превью — 5 станів
+// Рендер OWL Board — великий блок з аватаром, текстом і чіпами
 function renderOwlBoard() {
   const boardMessages = getOwlBoardMessages();
   const board = document.getElementById('owl-board');
@@ -687,26 +687,33 @@ function renderOwlBoard() {
   _owlBoardMessages = boardMessages;
 
   const latest = boardMessages[0];
-  const pulse = document.getElementById('owl-board-pulse');
-  const preview = document.getElementById('owl-board-preview');
-  const hint = document.getElementById('owl-board-hint');
 
-  if (pulse && latest) {
-    pulse.className = latest.priority === 'critical' ? 'owl-pulse'
-      : latest.priority === 'important' ? 'owl-pulse' : 'owl-pulse quiet';
-    if (latest.priority === 'critical') pulse.style.background = '#ef4444';
-    else if (latest.priority === 'important') pulse.style.background = '#f59e0b';
-    else { pulse.style.background = ''; }
+  // Пріоритет — клас на контейнер
+  const container = board.querySelector('.owl-board-container');
+  if (container) {
+    container.classList.remove('owl-priority-critical', 'owl-priority-important');
+    if (latest.priority === 'critical') container.classList.add('owl-priority-critical');
+    else if (latest.priority === 'important') container.classList.add('owl-priority-important');
   }
 
-  if (preview) {
-    preview.textContent = latest ? latest.text : '';
-  }
-  if (hint) {
-    hint.style.display = (latest && latest.chips && latest.chips.length > 0) ? '' : 'none';
+  // Текст — повний, читабельний
+  const textEl = document.getElementById('owl-board-text');
+  if (textEl) textEl.textContent = latest.text;
+
+  // Чіпи — завжди видимі на основному екрані
+  const chipsEl = document.getElementById('owl-board-chips');
+  if (chipsEl) {
+    if (latest.chips && latest.chips.length > 0) {
+      chipsEl.innerHTML = latest.chips.map(c => {
+        const safe = escapeHtml(c).replace(/'/g, '&#39;');
+        return `<div class="owl-chip" onclick="event.stopPropagation();sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
+      }).join('');
+    } else {
+      chipsEl.innerHTML = '';
+    }
   }
 
-  // Якщо чат відкритий — оновити повідомлення і чіпи
+  // Якщо чат відкритий — оновити повідомлення і чіпи чату
   if (_owlChatOpen) {
     renderOwlChatMessages();
     renderOwlChips(latest);
@@ -716,21 +723,20 @@ function renderOwlBoard() {
 // Розгорнути / згорнути міні-чат
 function toggleOwlChat() {
   _owlChatOpen = !_owlChatOpen;
-  const compact = document.getElementById('owl-board-compact');
+  const main = document.getElementById('owl-board-main');
   const expanded = document.getElementById('owl-chat-expanded');
-  if (!compact || !expanded) return;
+  if (!main || !expanded) return;
 
   if (_owlChatOpen) {
-    compact.style.display = 'none';
+    main.style.display = 'none';
     expanded.style.display = '';
     renderOwlChatMessages();
     const latest = _owlBoardMessages[0];
     renderOwlChips(latest);
-    // Скрол вниз
     const msgs = document.getElementById('owl-chat-messages');
     if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
   } else {
-    compact.style.display = '';
+    main.style.display = '';
     expanded.style.display = 'none';
   }
 }
