@@ -1197,7 +1197,10 @@ function init() {
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
   try { setupAutoEveningSummary(); } catch(e) {}
   try { cleanupTrash(); } catch(e) {}
-  setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 4000);
+  // Показуємо кешований OWL Board одразу (без затримки)
+  try { const _msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]'); if (_msgs.length > 0) renderOwlBoard(); } catch(e) {}
+  // Цикл генерації нових повідомлень — з невеликою затримкою
+  setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 2000);
 }
 
 function showApp() {
