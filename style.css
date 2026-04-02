@@ -1138,6 +1138,12 @@ body {
   40% { opacity: 1; transform: scale(1); }
 }
 /* --- OWL Board --- */
+.owl-board-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 0 4px 4px;
+}
 .owl-board-container {
   background: rgba(255,255,255,0.72);
   backdrop-filter: blur(16px);
