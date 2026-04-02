@@ -126,6 +126,11 @@ function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr));
 
 
 // Датовий сепаратор для стрічки
+function _inboxFormatHour(ts) {
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
 function _inboxDateLabel(ts) {
   const d = new Date(ts);
   const now = new Date();
@@ -191,7 +196,7 @@ function renderInbox() {
             <div class="inbox-item-text">${escapeHtml(item.text)}</div>
           </div>
           <div class="inbox-item-right">
-            <span class="inbox-item-time">${formatTime(item.ts)}</span>
+            <span class="inbox-item-time">${_inboxFormatHour(item.ts)}</span>
             <span class="inbox-item-tag" style="${tagStyle}">${meta.label}</span>
           </div>
         </div>
