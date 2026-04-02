@@ -29,12 +29,19 @@ const STATIC_ASSETS = [
   './app-projects.js',
 ];
 
-// Встановлення: кешуємо всі статичні файли
+// Встановлення: кешуємо всі статичні файли (cache:'reload' — завжди з мережі, не з HTTP-кешу)
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting()) // активуємось одразу без очікування
+      .then(cache => Promise.all(
+        STATIC_ASSETS.map(url =>
+          fetch(url, { cache: 'reload' }).then(r => {
+            if (!r.ok) throw new Error(url + ' ' + r.status);
+            return cache.put(url, r);
+          })
+        )
+      ))
+      .then(() => self.skipWaiting())
   );
 });
 
