@@ -193,8 +193,12 @@
           </div>
         </div>
 
-        <!-- OWL BOARD — міні-чат -->
-        <div id="owl-board" style="margin:0 4px 0;display:none">
+      </div>
+
+      <!-- SCROLL: OWL board (sticky) + картки -->
+      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
+        <!-- OWL BOARD — міні-чат (sticky: карточки заходять під нього при скролі) -->
+        <div id="owl-board" class="owl-board-sticky" style="display:none">
           <div class="owl-board-container">
             <!-- Основний вигляд: аватар + текст + чіпи (завжди видимі) -->
             <div id="owl-board-main" class="owl-board-main" onclick="toggleOwlChat()">
@@ -223,10 +227,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- SCROLL: тільки картки -->
-      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
         <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 34px)"></div>
       </div>
     </div>
