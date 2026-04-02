@@ -541,6 +541,9 @@ function _renderInboxChatMsg(role, text, el) {
 function openChatBar(tab) {
   if (activeChatBar === tab) return;
 
+  // Закриваємо OWL чат якщо відкритий
+  try { closeOwlChat(); } catch(e) {}
+
   // Закриваємо інші бари
   ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
     if (t === tab) return;
