@@ -1173,19 +1173,19 @@ body {
   color: rgba(255,255,255,0.25); flex-shrink: 0;
 }
 
-/* === SPEECH: аватар зліва + бабл справа === */
+/* === SPEECH: аватар накладається на бабл === */
 .owl-speech {
   position: relative;
-  padding: 4px 4px 0 0;
+  padding: 4px 0 0 0;
   touch-action: none;
 }
 .owl-speech-avatar {
   position: absolute;
-  left: 0; top: 0;
+  left: -4px; top: -8px;
   font-size: 72px;
   line-height: 1;
   z-index: 2;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
   animation: owlBreathe 3s ease-in-out infinite;
 }
 @keyframes owlBreathe {
@@ -1193,16 +1193,16 @@ body {
   50% { transform: scale(1.03); }
 }
 .owl-speech-bubble {
-  margin-left: 68px;
+  margin-left: 0;
   background: rgba(15,10,22,0.78);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
+  border-radius: 28px;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  padding: 14px 18px 4px;
+  padding: 16px 18px 6px 80px;
   position: relative;
-  min-height: 48px;
+  min-height: 56px;
 }
 .owl-speech-text {
   font-size: 15px; font-weight: 500;
@@ -1210,14 +1210,14 @@ body {
   line-height: 1.55; padding-right: 36px;
 }
 .owl-speech-time {
-  position: absolute; top: 14px; right: 16px;
+  position: absolute; top: 16px; right: 18px;
   font-size: 10px; font-weight: 600;
   color: rgba(255,255,255,0.25);
 }
-/* Чіпи під баблом */
+/* Чіпи під баблом — на всю ширину */
 .owl-speech-chips {
   display: flex; gap: 8px; flex-wrap: wrap;
-  padding: 8px 4px 4px 72px;
+  padding: 10px 8px 4px;
 }
 .owl-chip {
   font-size: 13px; font-weight: 600;
