@@ -1196,9 +1196,8 @@ body {
   border-radius: 28px;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  padding: 16px 18px 6px 104px;
+  padding: 10px 18px 10px 104px;
   position: relative;
-  min-height: 56px;
 }
 .owl-speech-text {
   font-size: 15px; font-weight: 500;
