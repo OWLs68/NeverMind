@@ -1161,7 +1161,7 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   cursor: pointer;
 }
-.owl-collapsed-avatar { font-size: 24px; line-height: 1; flex-shrink: 0; }
+.owl-collapsed-avatar { width: 24px; height: 27px; flex-shrink: 0; }
 .owl-collapsed-text {
   flex: 1; min-width: 0;
   font-size: 14px; font-weight: 500;
@@ -1182,56 +1182,56 @@ body {
 .owl-speech-avatar {
   position: absolute;
   left: -4px; top: -8px;
-  font-size: 72px;
-  line-height: 1;
+  width: 72px; height: 81px;
   z-index: 2;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
   animation: owlAlive 14s ease-in-out infinite;
   transform-style: preserve-3d;
   perspective: 200px;
 }
-/* Повіки — псевдоелемент поверх очей */
-.owl-speech-avatar::after {
-  content: '';
-  position: absolute;
-  top: 22%; left: 15%; right: 15%;
-  height: 22%;
-  background: #8B6914;
-  border-radius: 50%;
-  transform: scaleY(0);
+.owl-speech-avatar svg, .owl-agent-avatar svg, .owl-collapsed-avatar svg {
+  width: 100%; height: 100%; display: block;
+}
+/* SVG повіки — кліпання очей */
+.owl-eyelid {
+  transform-box: fill-box;
   transform-origin: center top;
+  transform: scaleY(0);
+}
+.owl-speech-avatar .owl-eyelid,
+.owl-agent-avatar .owl-eyelid {
   animation: owlBlink 14s ease-in-out infinite;
-  pointer-events: none;
 }
 @keyframes owlBlink {
-  0%, 20%, 24%, 44%, 49%, 84%, 88%, 100% { transform: scaleY(0); }
-  22% { transform: scaleY(1); }
-  46% { transform: scaleY(1); }
-  47% { transform: scaleY(0); }
-  48% { transform: scaleY(1); }
-  86% { transform: scaleY(1); }
+  0%, 18%, 22%, 42%, 47%, 82%, 86%, 100% { transform: scaleY(0); }
+  20%  { transform: scaleY(1); }
+  21%  { transform: scaleY(0); }
+  44%  { transform: scaleY(1); }
+  45%  { transform: scaleY(0); }
+  46%  { transform: scaleY(1); }
+  84%  { transform: scaleY(1); }
+  85%  { transform: scaleY(0); }
 }
 @keyframes owlAlive {
   /* дихання */
   0%   { transform: scale(1) rotateY(0); }
   7%   { transform: scale(1.03) rotateY(0); }
   14%  { transform: scale(1) rotateY(0); }
-  21%  { transform: scale(1) rotateY(0); }
-  24%  { transform: scale(1) rotateY(0); }
   /* дихання */
-  30%  { transform: scale(1.03) rotateY(0); }
-  38%  { transform: scale(1) rotateY(0); }
-  49%  { transform: scale(1) rotateY(0); }
+  22%  { transform: scale(1) rotateY(0); }
+  29%  { transform: scale(1.03) rotateY(0); }
+  36%  { transform: scale(1) rotateY(0); }
   /* дихання */
-  55%  { transform: scale(1.03) rotateY(0); }
-  62%  { transform: scale(1) rotateY(0); }
-  /* повільний поворот голови вбік */
-  63%  { transform: scale(1) rotateY(0deg); }
-  80%  { transform: scale(1) rotateY(55deg); }
-  /* різкий повернення назад */
+  44%  { transform: scale(1) rotateY(0); }
+  51%  { transform: scale(1.03) rotateY(0); }
+  58%  { transform: scale(1) rotateY(0); }
+  /* повільний поворот голови на 90° */
+  60%  { transform: scale(1) rotateY(0deg); }
+  80%  { transform: scale(1) rotateY(90deg); }
+  /* різкий snap назад */
   82%  { transform: scale(1) rotateY(0deg); }
-  88%  { transform: scale(1) rotateY(0); }
   /* фінальне дихання */
+  88%  { transform: scale(1) rotateY(0); }
   94%  { transform: scale(1.03) rotateY(0); }
   100% { transform: scale(1) rotateY(0); }
 }
@@ -1289,7 +1289,7 @@ body {
   display: flex; flex-direction: column; align-items: center;
   padding: 14px 16px 6px; gap: 2px;
 }
-.owl-agent-avatar { font-size: 44px; line-height: 1; filter: drop-shadow(0 4px 12px rgba(251,191,36,0.2)); }
+.owl-agent-avatar { width: 44px; height: 50px; filter: drop-shadow(0 4px 12px rgba(251,191,36,0.2)); }
 .owl-agent-name { font-size: 9px; font-weight: 800; color: rgba(251,191,36,0.55); text-transform: uppercase; letter-spacing: 0.2em; }
 .owl-chat-messages { max-height: 220px; overflow-y: auto; padding: 4px 16px 6px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
 .owl-chat-messages::-webkit-scrollbar { display: none; }
