@@ -1182,9 +1182,9 @@ body {
 .owl-speech-avatar {
   position: absolute;
   left: -4px; top: -8px;
-  width: 72px; height: 72px;
+  width: 96px; height: 96px;
   z-index: 2;
-  font-size: 56px;
+  font-size: 88px;
   display: flex; align-items: center; justify-content: center;
 }
 .owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
@@ -1196,7 +1196,7 @@ body {
   border-radius: 28px;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  padding: 16px 18px 6px 80px;
+  padding: 16px 18px 6px 104px;
   position: relative;
   min-height: 56px;
 }
