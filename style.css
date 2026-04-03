@@ -1256,8 +1256,8 @@ body {
 .owl-chat-input-row button:active { background: rgba(251,191,36,0.28); transform: scale(0.94); }
 /* Свайп-полоска */
 .owl-swipe-handle { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); display: flex; justify-content: center; padding: 4px 12px; cursor: pointer; }
-.owl-handle-bar { width: 32px; height: 3.5px; border-radius: 2px; background: rgba(255,255,255,0.15); transition: background 0.2s, width 0.2s; }
-.owl-swipe-handle:active .owl-handle-bar { background: rgba(255,255,255,0.35); width: 44px; }
+.owl-handle-bar { width: 32px; height: 3.5px; border-radius: 2px; background: rgba(0,0,0,0.15); transition: background 0.2s, width 0.2s; }
+.owl-swipe-handle:active .owl-handle-bar { background: rgba(0,0,0,0.3); width: 44px; }
 /* Typing & confirm */
 .owl-typing { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
 .owl-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(251,191,36,0.6); animation: owlTypingDot 1.2s ease-in-out infinite; }
