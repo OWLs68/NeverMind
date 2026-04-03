@@ -1210,22 +1210,47 @@ body {
   color: rgba(255,255,255,0.25);
 }
 /* Чіпи під баблом — один рядок */
+.owl-chips-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
 .owl-speech-chips {
   display: flex; gap: 6px; flex-wrap: nowrap;
-  padding: 10px 8px 4px;
+  padding: 26px 0 4px;
   overflow-x: auto; scrollbar-width: none;
+  flex: 1;
 }
 .owl-speech-chips::-webkit-scrollbar { display: none; }
+.owl-chips-arrow {
+  display: none;
+  position: absolute;
+  top: calc(50% + 10px); transform: translateY(-50%);
+  width: 26px; height: 26px;
+  background: white;
+  border: 1.5px solid rgba(30,16,64,0.12);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+  font-size: 16px; font-weight: 700; color: #1e1040;
+  cursor: pointer; z-index: 2;
+  align-items: center; justify-content: center;
+  padding: 0; line-height: 1;
+}
+.owl-chips-arrow.visible { display: flex; }
+.owl-chips-arrow-left { left: 0; }
+.owl-chips-arrow-right { right: 0; }
 .owl-chip {
   font-size: 12px; font-weight: 600;
   padding: 7px 14px; border-radius: 22px;
-  background: rgba(30,16,64,0.06);
+  background: rgba(255,255,255,0.92);
   color: var(--text-primary);
   border: 1.5px solid rgba(30,16,64,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   cursor: pointer; transition: all 0.15s ease;
   white-space: nowrap; flex-shrink: 0;
 }
-.owl-chip:active { background: rgba(30,16,64,0.12); transform: scale(0.96); }
+.owl-chip:active { background: rgba(30,16,64,0.08); transform: scale(0.96); }
 
 /* === EXPANDED: повний чат === */
 .owl-agent-container {

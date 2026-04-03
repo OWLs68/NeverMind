@@ -734,6 +734,10 @@ function renderOwlBoard() {
     });
     chips.push('<div class="owl-chip" onclick="expandOwlChat()">Поговорити</div>');
     chipsEl.innerHTML = chips.join('');
+    chipsEl.scrollLeft = 0;
+    chipsEl.removeEventListener('scroll', updateOwlChipsArrows);
+    chipsEl.addEventListener('scroll', updateOwlChipsArrows, { passive: true });
+    setTimeout(updateOwlChipsArrows, 50);
   }
 
   // Якщо expanded — оновити чат
@@ -1065,5 +1069,21 @@ function tryOwlBoardUpdate() {
 
   const shouldGenerate = isFirstTime || isNewDay || (elapsed > interval && checkOwlBoardTrigger());
   if (shouldGenerate) generateOwlBoardMessage();
+}
+
+function updateOwlChipsArrows() {
+  const el = document.getElementById('owl-speech-chips');
+  const left = document.getElementById('owl-chips-left');
+  const right = document.getElementById('owl-chips-right');
+  if (!el || !left || !right) return;
+  left.classList.toggle('visible', el.scrollLeft > 4);
+  right.classList.toggle('visible', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+}
+
+function scrollOwlChips(dir) {
+  const el = document.getElementById('owl-speech-chips');
+  if (!el) return;
+  el.scrollBy({ left: dir * 130, behavior: 'smooth' });
+  setTimeout(updateOwlChipsArrows, 250);
 }
 
