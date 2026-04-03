@@ -283,7 +283,11 @@
             </div>
           </div>
           <!-- Чіпи під баблом -->
-          <div id="owl-speech-chips" class="owl-speech-chips"></div>
+          <div class="owl-chips-wrapper">
+            <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-chips-left" onclick="scrollOwlChips(-1)">‹</button>
+            <div id="owl-speech-chips" class="owl-speech-chips"></div>
+            <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-chips-right" onclick="scrollOwlChips(1)">›</button>
+          </div>
 
           <!-- EXPANDED: повний чат (після "Поговорити" або свайпу) -->
           <div id="owl-expanded" style="display:none"
