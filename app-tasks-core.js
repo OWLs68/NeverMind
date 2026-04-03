@@ -357,7 +357,7 @@ async function sendTaskChatMessage() {
   const aiContext = getAIContext();
   const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
   const stepInstruction = wantsSteps ? ' ВАЖЛИВО: користувач просить кроки. Відповідай ТІЛЬКИ валідним JSON і нічим іншим: {"steps":["крок 1","крок 2","крок 3"]}. Жодного тексту до або після JSON.' : '';
-  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках. ЗАБОРОНЕНО виводити {"action":...}, task_id, JSON з полем action або будь-який машинний формат — тільки звичайний текст або {"steps":[...]} коли потрібні кроки.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -383,14 +383,22 @@ async function sendTaskChatMessage() {
             const newSteps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
             allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
             saveTasks(allTasks);
-            renderTasks(); // оновлюємо картку одразу
+            renderTasks();
             addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроків до задачі. Перевір картку.`);
           }
+        } else if (parsed.action) {
+          // AI повернув формат дій з Inbox — ігноруємо сирий JSON, показуємо нейтральну відповідь
+          addTaskChatMsg('agent', 'Зроблено! Що ще хочеш додати?');
         } else {
           addTaskChatMsg('agent', reply);
         }
       } catch {
-        addTaskChatMsg('agent', reply);
+        // Якщо reply містить сирі JSON-дії — не показувати машинний текст
+        if (/\{"action"/.test(reply)) {
+          addTaskChatMsg('agent', 'Зроблено! Що ще хочеш додати?');
+        } else {
+          addTaskChatMsg('agent', reply);
+        }
       }
     }
     else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
