@@ -11,18 +11,19 @@
 | **Версія** | v70 |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini |
-| **Гілка** | `claude/improve-work-quality-vtVLu` |
+| **Гілка** | `claude/review-agent-communication-RoZF9` |
 
 ---
 
 ## Зараз робимо
 
-Налаштування якості роботи Claude: settings.json, скіли, хуки. UI фікси OWL Board: сова → 🦉 емодзі, розміри баблу, чіпи зі стрілками. Фікс B-14 (task chat показував сирий JSON).
+OWL Board: переписана логіка фаз дня і антиспаму. Персональний розклад юзера.
 
 ---
 
 ## Останні сесії
 
+- **03.04 (2)** — OWL Board: `getDayPhase()` + `getSchedule()` на основі `nm_settings.schedule`. Cooldown-система замінила `owlAlreadySaid` (раз на добу → час cooldown). Табло тепер оновлюється кожні 45 хв гарантовано (`phase_pulse`). Фаза дня передається в промпт. `getOwlBoardContext()` — чистий (без side effects). Розклад: UI в налаштуваннях (4 time-поля), питання #6 онбордингу, автопарсинг через `handleScheduleAnswer()`. `_owlAskScheduleIfNeeded()` — одноразовий запит якщо розклад порожній.
 - **03.04** — settings.json (хуки, дозволи), 5 скілів (.claude/commands/), правило пояснень в дужках в CLAUDE.md. SVG сову замінено на 🦉 (10 інстансів). OWL Board: бабл компактний по тексту, риска за межами баблу, чіпи зі стрілками + тіні. B-14: task chat більше не показує сирий JSON.
 - **02.04** — Inbox стрічка: компактні картки, датові сепаратори, тап-розгортання. OWL Board: міні-чат з 5 станами, чіпи, callOwlChat(). Action execution — executeOwlAction().
 - **01.04** — Реструктуризація доків: правила → CLAUDE.md, CONCEPTS → 2 файли, _archive/ створено. B-11/B-12: padding 20px в модалках.

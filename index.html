@@ -1353,6 +1353,29 @@
       </div>
     </div>
 
+      <!-- Розклад дня -->
+      <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:6px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Розклад дня</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div style="font-size:11px;color:rgba(30,16,64,0.38);margin-bottom:3px">Прокидаюсь</div>
+            <input class="settings-input" type="time" id="input-wake-up" style="width:100%;padding:7px 10px;font-size:15px;border-radius:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1);box-sizing:border-box">
+          </div>
+          <div>
+            <div style="font-size:11px;color:rgba(30,16,64,0.38);margin-bottom:3px">Починаю день</div>
+            <input class="settings-input" type="time" id="input-work-start" style="width:100%;padding:7px 10px;font-size:15px;border-radius:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1);box-sizing:border-box">
+          </div>
+          <div>
+            <div style="font-size:11px;color:rgba(30,16,64,0.38);margin-bottom:3px">Завершую роботу</div>
+            <input class="settings-input" type="time" id="input-work-end" style="width:100%;padding:7px 10px;font-size:15px;border-radius:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1);box-sizing:border-box">
+          </div>
+          <div>
+            <div style="font-size:11px;color:rgba(30,16,64,0.38);margin-bottom:3px">Лягаю спати</div>
+            <input class="settings-input" type="time" id="input-bed-time" style="width:100%;padding:7px 10px;font-size:15px;border-radius:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1);box-sizing:border-box">
+          </div>
+        </div>
+      </div>
+
     <!-- Зберегти профіль -->
     <div style="padding:0 14px 10px">
       <button class="btn-primary" onclick="saveSettings()">Зберегти</button>

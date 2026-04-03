@@ -271,6 +271,7 @@ async function sendToAI() {
   // Зберігаємо відповідь якщо OWL чекав відповідь по темі провідника
   try { saveGuideTopicAnswer(text); } catch(e) {}
   if (handleSurveyAnswer(text)) return;
+  try { if (handleScheduleAnswer(text)) return; } catch(e) {}
 
   const key = localStorage.getItem('nm_gemini_key');
 

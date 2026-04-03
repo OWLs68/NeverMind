@@ -1122,7 +1122,8 @@ const NM_KEYS = {
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],
   // Кеш/тимчасове (не потребує Supabase)
-  cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_board_said','nm_error_log',
+  cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
+          'nm_owl_schedule_pending','nm_error_log',
           'nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'],
   // Динамічні патерни (видаляти через startsWith)
   patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_'],

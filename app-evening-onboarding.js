@@ -574,7 +574,7 @@ const SURVEY_QUESTIONS = [
   'Що хочеш тримати під контролем — задачі, звички, ідеї, або все разом?',
   'Як у тебе зараз з фінансами — ведеш облік чи поки хаос?',
   'Є якийсь проект або велика ціль над якою зараз працюєш?',
-  'Як твій режим — більше ранкова людина чи вечірня?',
+  'Розкажи про свій день: о котрій зазвичай прокидаєшся, починаєш активну роботу і лягаєш спати? (наприклад: встаю о 7, працюю з 9 до 18, сплю о 23)',
   'Що найбільше заважає тобі бути продуктивним зараз?',
   'Які звички хочеш сформувати або вже намагаєшся підтримувати?',
   'Як ти зазвичай запамʼятовуєш ідеї — телефон, блокнот, голова?',
@@ -631,6 +631,29 @@ async function finishSurvey() {
   }
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const name = settings.name || 'користувач';
+
+  // Парсимо розклад з відповіді на питання #6 (індекс 5)
+  const scheduleAnswer = (surveyAnswers[5] || {}).a || '';
+  const parseScheduleTime = (text, patterns, def) => {
+    for (const re of patterns) {
+      const m = text.match(re);
+      if (m) {
+        const h = parseInt(m[1]);
+        if (!isNaN(h) && h >= 0 && h <= 23) return `${String(h).padStart(2,'0')}:00`;
+      }
+    }
+    return def;
+  };
+  const parsedSchedule = {
+    wakeUp:    parseScheduleTime(scheduleAnswer, [/встаю\s*о?\s*(\d{1,2})/i, /прокидаюсь\s*о?\s*(\d{1,2})/i, /підйом\s*о?\s*(\d{1,2})/i], '07:00'),
+    workStart: parseScheduleTime(scheduleAnswer, [/працюю\s*з\s*(\d{1,2})/i, /починаю\s*о?\s*(\d{1,2})/i, /роботу?\s*з\s*(\d{1,2})/i], '09:00'),
+    workEnd:   parseScheduleTime(scheduleAnswer, [/до\s*(\d{1,2})/i, /закінчую\s*о?\s*(\d{1,2})/i], '18:00'),
+    bedTime:   parseScheduleTime(scheduleAnswer, [/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], '23:00'),
+  };
+  const updSettings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  updSettings.schedule = parsedSchedule;
+  localStorage.setItem('nm_settings', JSON.stringify(updSettings));
+
   const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
   const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що відповів на питання онбордингу:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (4-6 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні практичні поради як використовувати NeverMind саме для цієї людини. Порекомендуй конкретні вкладки або функції.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
 

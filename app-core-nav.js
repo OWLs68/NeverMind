@@ -703,6 +703,17 @@ function openSettings() {
     tsEl.textContent = 'Ще не оновлювалась';
   }
 
+  // Розклад дня
+  const sc = settings.schedule || {};
+  const wakeEl   = document.getElementById('input-wake-up');
+  const wstartEl = document.getElementById('input-work-start');
+  const wendEl   = document.getElementById('input-work-end');
+  const bedEl    = document.getElementById('input-bed-time');
+  if (wakeEl)   wakeEl.value   = sc.wakeUp    || '07:00';
+  if (wstartEl) wstartEl.value = sc.workStart || '09:00';
+  if (wendEl)   wendEl.value   = sc.workEnd   || '18:00';
+  if (bedEl)    bedEl.value    = sc.bedTime   || '23:00';
+
   updateKeyStatus(!!key);
   updateOwlModeUI(settings.owl_mode || 'partner');
   setCurrency(settings.currency || '₴');
@@ -863,7 +874,17 @@ function saveSettings() {
   else localStorage.removeItem('nm_gemini_key');
 
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  Object.assign(settings, { name, age, weight, height, profileNotes });
+  const wakeEl   = document.getElementById('input-wake-up');
+  const wstartEl = document.getElementById('input-work-start');
+  const wendEl   = document.getElementById('input-work-end');
+  const bedEl    = document.getElementById('input-bed-time');
+  const schedule = {
+    wakeUp:    wakeEl   ? (wakeEl.value   || '07:00') : (settings.schedule?.wakeUp    || '07:00'),
+    workStart: wstartEl ? (wstartEl.value || '09:00') : (settings.schedule?.workStart || '09:00'),
+    workEnd:   wendEl   ? (wendEl.value   || '18:00') : (settings.schedule?.workEnd   || '18:00'),
+    bedTime:   bedEl    ? (bedEl.value    || '23:00') : (settings.schedule?.bedTime   || '23:00'),
+  };
+  Object.assign(settings, { name, age, weight, height, profileNotes, schedule });
   localStorage.setItem('nm_settings', JSON.stringify(settings));
 
   if (memory) localStorage.setItem('nm_memory', memory);

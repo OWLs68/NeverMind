@@ -285,23 +285,53 @@ function saveOwlBoardMessages(arr) {
 
 // === OWL BOARD — повний розумний цикл ===
 
-// Ключ для антиповтору — що вже сказали сьогодні
-const OWL_BOARD_SAID_KEY = 'nm_owl_board_said'; // {date, topics:[]}
+// === РОЗКЛАД ДНЯ ===
+function getSchedule() {
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const sc = s.schedule || {};
+  const parseH = (str, def) => {
+    if (!str) return def;
+    const h = parseInt(str.split(':')[0]);
+    return isNaN(h) ? def : h;
+  };
+  return {
+    wakeUp:    parseH(sc.wakeUp,    7),
+    workStart: parseH(sc.workStart, 9),
+    workEnd:   parseH(sc.workEnd,   18),
+    bedTime:   parseH(sc.bedTime,   23),
+  };
+}
 
-function getOwlBoardSaid() {
-  try {
-    const s = JSON.parse(localStorage.getItem(OWL_BOARD_SAID_KEY) || '{}');
-    if (s.date !== new Date().toDateString()) return { date: new Date().toDateString(), topics: [] };
-    return s;
-  } catch { return { date: new Date().toDateString(), topics: [] }; }
+// Фази: 'silent' | 'dawn' | 'morning' | 'work' | 'evening' | 'night'
+function getDayPhase() {
+  const sc = getSchedule();
+  const h = new Date().getHours();
+  if (h >= sc.bedTime || h < sc.wakeUp - 2) return 'silent';
+  if (h < sc.wakeUp)                         return 'dawn';
+  if (h < sc.workStart)                      return 'morning';
+  if (h < sc.workEnd)                        return 'work';
+  if (h < sc.bedTime - 1)                    return 'evening';
+  return 'night';
 }
-function markOwlBoardSaid(topic) {
-  const s = getOwlBoardSaid();
-  if (!s.topics.includes(topic)) s.topics.push(topic);
-  localStorage.setItem(OWL_BOARD_SAID_KEY, JSON.stringify(s));
+
+// === COOLDOWN-система (замінює owlAlreadySaid) ===
+// nm_owl_cooldowns = { topicKey: lastFiredTimestamp }
+const OWL_CD_KEY = 'nm_owl_cooldowns';
+
+function _getOwlCooldowns() {
+  try { return JSON.parse(localStorage.getItem(OWL_CD_KEY) || '{}'); } catch { return {}; }
 }
-function owlAlreadySaid(topic) {
-  return getOwlBoardSaid().topics.includes(topic);
+function owlCdExpired(topic, ms) {
+  const cd = _getOwlCooldowns();
+  return !cd[topic] || (Date.now() - cd[topic]) > ms;
+}
+function setOwlCd(topic) {
+  const cd = _getOwlCooldowns();
+  cd[topic] = Date.now();
+  // Чистимо записи старші 48 год
+  const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+  Object.keys(cd).forEach(k => { if (cd[k] < cutoff) delete cd[k]; });
+  localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
 }
 
 // Перевірка чи є щось важливе — БЕЗ API
@@ -309,89 +339,87 @@ function checkOwlBoardTrigger() {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return false;
 
+  const phase = getDayPhase();
+  if (phase === 'silent' || phase === 'dawn') return false;
+
   const now = new Date();
   const todayStr = now.toDateString();
   const hour = now.getHours();
-  const min = now.getMinutes();
+  const min  = now.getMinutes();
+  const sc   = getSchedule();
 
-  // Тихий режим 23:00–7:00
-  if (hour < 5) return false;
+  // Регулярний пульс — мінімум кожні 45 хв незалежно від теми
+  if (owlCdExpired('phase_pulse', 45 * 60 * 1000)) return true;
 
-  // Ранковий огляд 7:00–9:00 — раз за ранок
-  if (hour >= 7 && hour <= 9 && !owlAlreadySaid('morning_brief')) return true;
-
-  // Обід 13:00 — статус дня, раз
-  if (hour === 13 && min < 30 && !owlAlreadySaid('midday_check')) return true;
-
-  // Вечірній підсумок 20:00 — раз
-  if (hour >= 20 && !owlAlreadySaid('evening_prompt')) {
-    const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
-    if (!s || new Date(s.date).toDateString() !== todayStr) return true;
-  }
-
-  // Понеділок вранці — огляд тижня
-  if (now.getDay() === 1 && hour >= 8 && hour <= 10 && !owlAlreadySaid('week_start')) return true;
-
-  // Пʼятниця ввечері — підсумок тижня
-  if (now.getDay() === 5 && hour >= 17 && !owlAlreadySaid('week_end')) return true;
-
-  // Дедлайн через ~годину — не повторювати для тієї ж задачі
+  // КРИТИЧНІ — короткі cooldown, можуть повторитись
   const tasks = getTasks().filter(t => t.status !== 'done');
+
+  // Дедлайн через ~годину (30 хв cooldown — може повторно попередити)
   for (const t of tasks) {
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
     if (m) {
       const diff = (parseInt(m[1])*60+parseInt(m[2])) - (hour*60+min);
-      if (diff > 0 && diff <= 65 && !owlAlreadySaid('deadline_' + t.id)) return true;
+      if (diff > 0 && diff <= 65 && owlCdExpired('deadline_' + t.id, 30 * 60 * 1000)) return true;
     }
   }
 
-  // Задача 3+ дні не закривається
-  const now3d = Date.now() - 3*24*60*60*1000;
-  const stuck = tasks.filter(t => t.createdAt && t.createdAt < now3d && !owlAlreadySaid('stuck_' + t.id));
-  if (stuck.length > 0) return true;
-
-  // Звички не виконані після 10:00
-  if (hour >= 10) {
-    const habits = getHabits();
-    const log = getHabitLog();
-    const todayLog = log[todayStr] || {};
-    const pending = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
-    if (pending.length > 0 && !owlAlreadySaid('habits_' + todayStr)) return true;
-  }
-
-  // Стрік під загрозою після 20:00
-  if (hour >= 20) {
+  // Стрік під загрозою ввечері (1 год cooldown)
+  if (phase === 'evening' || phase === 'night') {
     const habits = getHabits();
     const log = getHabitLog();
     const todayLog = log[todayStr] || {};
     const atRisk = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
-    if (atRisk.length > 0 && !owlAlreadySaid('streak_risk_' + todayStr)) return true;
+    if (atRisk.length > 0 && owlCdExpired('streak_risk', 60 * 60 * 1000)) return true;
   }
 
-  // Всі звички виконані — привітати раз
-  if (hour >= 10) {
+  // ВАЖЛИВІ — середні cooldown
+
+  // Задача застрягла 3+ дні (6 год cooldown)
+  const stuck = tasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000);
+  if (stuck.length > 0 && owlCdExpired('stuck_tasks', 6 * 60 * 60 * 1000)) return true;
+
+  // Звички не виконані (3 год cooldown, тільки в робочий час і вечір)
+  if (phase === 'work' || phase === 'evening') {
+    const habits = getHabits();
+    const log = getHabitLog();
+    const todayLog = log[todayStr] || {};
+    const pending = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
+    if (pending.length > 0 && owlCdExpired('habits_check', 3 * 60 * 60 * 1000)) return true;
+  }
+
+  // Всі звички виконані — привітати (8 год cooldown)
+  if (phase === 'work' || phase === 'evening') {
     const habits = getHabits();
     const log = getHabitLog();
     const todayLog = log[todayStr] || {};
     const todayH = habits.filter(h => h.days.includes(now.getDay()));
-    if (todayH.length > 0 && todayH.every(h => todayLog[h.id]) && !owlAlreadySaid('all_habits_done_' + todayStr)) return true;
+    if (todayH.length > 0 && todayH.every(h => todayLog[h.id]) && owlCdExpired('habits_done', 8 * 60 * 60 * 1000)) return true;
   }
 
-  // Бюджет 80%+ витрачено
+  // Бюджет 80%+ (4 год cooldown)
   try {
     const budget = getFinBudget();
     if (budget.total > 0) {
       const from = getFinPeriodRange('month');
       const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
-      const pct = exp / budget.total;
-      if (pct >= 0.8 && !owlAlreadySaid('budget_80_' + new Date().toISOString().slice(0,7))) return true;
+      if (exp / budget.total >= 0.8 && owlCdExpired('budget_warn', 4 * 60 * 60 * 1000)) return true;
     }
   } catch(e) {}
 
-  // Порожній день — немає нічого критичного, але треба щось показати
-  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
-  const sinceLastH = (Date.now() - lastTs) / (60*60*1000);
-  if (sinceLastH > 4 && !owlAlreadySaid('quiet_day_' + todayStr)) return true;
+  // Вечір без підсумку (4 год cooldown)
+  if (phase === 'evening' || phase === 'night') {
+    const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    if ((!s || new Date(s.date).toDateString() !== todayStr) && owlCdExpired('evening_prompt', 4 * 60 * 60 * 1000)) return true;
+  }
+
+  // Ранковий брифінг (3 год cooldown)
+  if (phase === 'morning' && owlCdExpired('morning_brief', 3 * 60 * 60 * 1000)) return true;
+
+  // Понеділок — огляд тижня (6 год cooldown)
+  if (now.getDay() === 1 && (phase === 'morning' || phase === 'work') && owlCdExpired('week_start', 6 * 60 * 60 * 1000)) return true;
+
+  // Пʼятниця — підсумок тижня (6 год cooldown)
+  if (now.getDay() === 5 && phase === 'evening' && owlCdExpired('week_end', 6 * 60 * 60 * 1000)) return true;
 
   return false;
 }
@@ -402,13 +430,23 @@ function getOwlBoardContext() {
   const todayStr = now.toDateString();
   const hour = now.getHours();
   const min = now.getMinutes();
-  const weekDay = now.getDay(); // 0=нд, 1=пн...5=пт
+  const weekDay = now.getDay();
+  const phase = getDayPhase();
+  const sc = getSchedule();
   const critical = [];
   const important = [];
   const normal = [];
 
-  const timeOfDay = hour < 12 ? 'ранок' : hour < 18 ? 'день' : 'вечір';
-  normal.push(`Зараз ${timeOfDay}, ${now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}.`);
+  // Фаза дня — інструкція для агента
+  const phaseLabels = {
+    morning: `[ФАЗА: РАНОК] Час планування. Фокус: пріоритети на день, мотивація, що найважливіше зробити. Підйом о ${sc.wakeUp}:00, активний день починається о ${sc.workStart}:00.`,
+    work:    `[ФАЗА: РОБОТА] Активний час. Фокус: прогрес задач, виконання звичок, поточний стан.`,
+    evening: `[ФАЗА: ВЕЧІР] Час підсумків. Фокус: що зроблено, стріки звичок, підготовка до завтра. Робота завершується о ${sc.workEnd}:00.`,
+    night:   `[ФАЗА: НІЧ] Тихий час. Тільки критичне — стріки під загрозою. Коротко.`,
+  };
+  if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
+
+  normal.push(`Зараз ${now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}.`);
 
   // Задачі
   const tasks = getTasks();
@@ -422,20 +460,13 @@ function getOwlBoardContext() {
     return diff > 0 && diff <= 65;
   });
   urgent.forEach(t => {
-    if (!owlAlreadySaid('deadline_' + t.id)) {
-      critical.push(`[КРИТИЧНО] Дедлайн через ~годину: "${t.title}".`);
-      markOwlBoardSaid('deadline_' + t.id);
-    }
+    critical.push(`[КРИТИЧНО] Дедлайн через ~годину: "${t.title}".`);
   });
 
   // Задача завʼязла 3+ дні
-  const now3d = Date.now() - 3*24*60*60*1000;
-  const stuck = activeTasks.filter(t => t.createdAt && t.createdAt < now3d);
+  const stuck = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000);
   stuck.forEach(t => {
-    if (!owlAlreadySaid('stuck_' + t.id)) {
-      important.push(`[ВАЖЛИВО] Задача "${t.title}" відкрита вже 3+ дні.`);
-      markOwlBoardSaid('stuck_' + t.id);
-    }
+    important.push(`[ВАЖЛИВО] Задача "${t.title}" відкрита вже 3+ дні.`);
   });
 
   if (activeTasks.length > 0) {
@@ -454,58 +485,46 @@ function getOwlBoardContext() {
   const doneHabits = todayHabits.filter(h => todayLog[h.id]);
   const pendingHabits = todayHabits.filter(h => !todayLog[h.id]);
 
-  // Всі звички виконані — привітати
-  if (todayHabits.length > 0 && pendingHabits.length === 0 && !owlAlreadySaid('all_habits_done_' + todayStr)) {
+  // Всі звички виконані
+  if (todayHabits.length > 0 && pendingHabits.length === 0) {
     important.push(`[ВАЖЛИВО] Всі ${todayHabits.length} звичок виконано сьогодні!`);
-    markOwlBoardSaid('all_habits_done_' + todayStr);
   }
 
-  // Стрік під загрозою після 20:00
-  if (hour >= 20 && pendingHabits.length > 0 && !owlAlreadySaid('streak_risk_' + todayStr)) {
+  // Стрік під загрозою ввечері
+  if ((phase === 'evening' || phase === 'night') && pendingHabits.length > 0) {
     const atRisk = pendingHabits.filter(h => {
-      const allDays = Object.values(log);
-      return allDays.filter(d => d[h.id]).length >= 3;
+      return Object.values(log).filter(d => d[h.id]).length >= 3;
     });
     if (atRisk.length > 0) {
       critical.push(`[КРИТИЧНО] Стрік під загрозою: ${atRisk.map(h=>h.name).join(', ')}.`);
-      markOwlBoardSaid('streak_risk_' + todayStr);
     }
   }
 
-  // Звички не виконані після 10:00
-  if (hour >= 10 && pendingHabits.length > 0 && !owlAlreadySaid('habits_' + todayStr)) {
+  // Звички не виконані в робочий час або вечір
+  if ((phase === 'work' || phase === 'evening') && pendingHabits.length > 0) {
     important.push(`[ВАЖЛИВО] Не виконано звичок: ${pendingHabits.map(h=>h.name).join(', ')}.`);
-    markOwlBoardSaid('habits_' + todayStr);
   }
 
   if (todayHabits.length > 0) {
     normal.push(`Звички сьогодні: ${doneHabits.length}/${todayHabits.length}.`);
   }
 
-  // Quit звички — нагадування і стрік
+  // Quit звички
   if (quitHabits.length > 0) {
     const todayIso = now.toISOString().slice(0, 10);
     const notHeldToday = quitHabits.filter(h => getQuitStatus(h.id).lastHeld !== todayIso);
-    // Ввечері — нагадати відмітити
-    if (hour >= 19 && notHeldToday.length > 0 && !owlAlreadySaid('quit_reminder_' + todayIso)) {
+    if ((phase === 'evening' || phase === 'night') && notHeldToday.length > 0) {
       important.push(`[ВАЖЛИВО] Не відмічено сьогодні (кинути): ${notHeldToday.map(h => '"' + h.name + '"').join(', ')}.`);
-      markOwlBoardSaid('quit_reminder_' + todayIso);
     }
-    // Великий стрік — відзначити
     quitHabits.forEach(h => {
       const s = getQuitStatus(h.id);
       const streak = s.streak || 0;
       const milestones = [7, 14, 21, 30, 60, 90];
-      const hit = milestones.find(m => m === streak);
-      if (hit && !owlAlreadySaid('quit_milestone_' + h.id + '_' + streak)) {
+      if (milestones.includes(streak) && owlCdExpired('quit_milestone_' + h.id + '_' + streak, 24 * 60 * 60 * 1000)) {
         important.push(`[ВАЖЛИВО] ${streak} днів без "${h.name}"! 🎉`);
-        markOwlBoardSaid('quit_milestone_' + h.id + '_' + streak);
       }
     });
-    const quitInfo = quitHabits.map(h => {
-      const s = getQuitStatus(h.id);
-      return `"${h.name}": ${s.streak||0} дн`;
-    });
+    const quitInfo = quitHabits.map(h => `"${h.name}": ${(getQuitStatus(h.id).streak||0)} дн`);
     normal.push(`Челенджі: ${quitInfo.join(', ')}.`);
   }
 
@@ -517,72 +536,44 @@ function getOwlBoardContext() {
       const txs = getFinance().filter(t => t.ts >= from && t.type === 'expense');
       const exp = txs.reduce((s,t) => s+t.amount, 0);
       const pct = Math.round(exp/budget.total*100);
-      const monthKey = new Date().toISOString().slice(0,7);
       if (exp > budget.total) {
         important.push(`[ВАЖЛИВО] Бюджет перевищено! Витрачено ${formatMoney(exp)} з ${formatMoney(budget.total)} (${pct}%).`);
-      } else if (pct >= 80 && !owlAlreadySaid('budget_80_' + monthKey)) {
+      } else if (pct >= 80) {
         important.push(`[ВАЖЛИВО] Витрачено ${pct}% місячного бюджету.`);
-        markOwlBoardSaid('budget_80_' + monthKey);
       } else {
         normal.push(`Бюджет місяця: ${formatMoney(exp)} / ${formatMoney(budget.total)} (${pct}%).`);
       }
-
-      // Незвична витрата — більше ніж вдвічі від середньої по категорії
       if (txs.length >= 3) {
         const bycat = {};
         txs.forEach(t => { if (!bycat[t.category]) bycat[t.category] = []; bycat[t.category].push(t.amount); });
         const lastTx = txs[0];
         if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
           const avg = bycat[lastTx.category].reduce((a,b)=>a+b,0) / bycat[lastTx.category].length;
-          if (lastTx.amount > avg * 2.5 && !owlAlreadySaid('unusual_tx_' + lastTx.id)) {
+          if (lastTx.amount > avg * 2.5 && owlCdExpired('unusual_tx_' + lastTx.id, 8 * 60 * 60 * 1000)) {
             important.push(`[ВАЖЛИВО] Незвична витрата: ${formatMoney(lastTx.amount)} на "${lastTx.category}" — вище звичного вдвічі.`);
-            markOwlBoardSaid('unusual_tx_' + lastTx.id);
           }
         }
       }
     }
   } catch(e) {}
 
-  // Ранковий огляд
-  if (hour >= 7 && hour <= 9 && !owlAlreadySaid('morning_brief')) {
-    normal.push(`[РАНОК] Початок дня. Налаштуй пріоритети.`);
-    markOwlBoardSaid('morning_brief');
-  }
-
-  // Середина дня
-  if (hour === 13 && min < 30 && !owlAlreadySaid('midday_check')) {
-    normal.push(`[ОБІД] Середина дня — як справи?`);
-    markOwlBoardSaid('midday_check');
-  }
-
   // Вечір без підсумку
-  if (hour >= 20 && !owlAlreadySaid('evening_prompt')) {
+  if (phase === 'evening' || phase === 'night') {
     const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
     if (!s || new Date(s.date).toDateString() !== todayStr) {
       important.push('[ВАЖЛИВО] Вечір — підсумок дня ще не записано.');
-      markOwlBoardSaid('evening_prompt');
     }
   }
 
   // Понеділок — огляд тижня
-  if (weekDay === 1 && hour >= 8 && hour <= 10 && !owlAlreadySaid('week_start')) {
+  if (weekDay === 1 && (phase === 'morning' || phase === 'work')) {
     normal.push('[ТИЖДЕНЬ] Новий тиждень. Огляд планів і відкритих задач.');
-    markOwlBoardSaid('week_start');
   }
 
   // Пʼятниця — підсумок тижня
-  if (weekDay === 5 && hour >= 17 && !owlAlreadySaid('week_end')) {
+  if (weekDay === 5 && phase === 'evening') {
     const doneTasks = tasks.filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 7*24*60*60*1000);
     normal.push(`[ТИЖДЕНЬ] Кінець тижня. Закрито задач за тиждень: ${doneTasks.length}.`);
-    markOwlBoardSaid('week_end');
-  }
-
-  // Порожній день — немає нічого критичного або важливого
-  const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
-  const sinceLastH = (Date.now() - lastTs) / (60*60*1000);
-  if (critical.length === 0 && important.length === 0 && sinceLastH > 4 && !owlAlreadySaid('quiet_day_' + todayStr)) {
-    normal.push('[СПОКІЙНИЙ ДЕНЬ] Немає нічого термінового. OWL може сказати щось мотивуюче або поставити коротке питання.');
-    markOwlBoardSaid('quiet_day_' + todayStr);
   }
 
   return [...critical, ...important, ...normal].join(' ');
@@ -602,20 +593,25 @@ async function generateOwlBoardMessage() {
   const recentTexts = existing.map(m => m.text).join(' | ');
 
   const now = new Date();
-  const hour = now.getHours();
-  const timeOfDay = hour < 6 ? 'ніч' : hour < 12 ? 'ранок' : hour < 18 ? 'день' : 'вечір';
+  const phase = getDayPhase();
   const timeStr = now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+  const phaseInstr = {
+    morning: 'Ранок — твоя роль: надихнути і допомогти сфокусуватись на головному.',
+    work:    'Робочий час — твоя роль: тримати в курсі прогресу, м\'яко нагадувати про незавершене.',
+    evening: 'Вечір — твоя роль: допомогти підбити підсумок дня, не пропустити стріки.',
+    night:   'Ніч — говори тільки про критичне. Дуже коротко.',
+  };
 
   const systemPrompt = getOWLPersonality() + `
 
-Зараз: ${timeStr} (${timeOfDay}). Враховуй час доби у повідомленні.
+Зараз: ${timeStr}. ${phaseInstr[phase] || ''}
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло в Inbox. Це НЕ відповідь на запит — це твоя ініціатива.
 
 ПРІОРИТЕТ ПОВІДОМЛЕНЬ:
 1. Якщо є [КРИТИЧНО] — пиши ТІЛЬКИ про це. Нічого іншого.
 2. Якщо є [ВАЖЛИВО] і немає [КРИТИЧНО] — пиши про перше [ВАЖЛИВО].
-3. Якщо є [СПОКІЙНИЙ ДЕНЬ] — скажи щось коротке в своєму характері: мотивацію, коротке питання про день, або просте спостереження. БЕЗ згадки задач і звичок якщо їх немає.
+3. Якщо є [ФАЗА] але немає критичного/важливого — коротке повідомлення відповідно до фази дня.
 4. Інакше — обери найцікавіше зі звичайних даних.
 
 ПРАВИЛА:
@@ -623,7 +619,7 @@ async function generateOwlBoardMessage() {
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
-- chips — 2-3 конкретні факти або дії. Максимум 3 слова кожен. Якщо спокійний день — chips можуть бути порожнім масивом [].
+- chips — 2-3 конкретні факти або дії. Максимум 3 слова кожен.
 - Відповідай українською.`;
 
   try {
@@ -652,6 +648,9 @@ async function generateOwlBoardMessage() {
     msgs.unshift({ id: Date.now(), text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [] });
     saveOwlBoardMessages(msgs.slice(0, 3));
     localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
+
+    // Скидаємо регулярний cooldown після успішної генерації
+    setOwlCd('phase_pulse');
 
     // Нове повідомлення — повернути на speech
     if (_owlState === 'collapsed') _owlSetState('speech');
@@ -1043,6 +1042,8 @@ function dismissOwlBoard() {
 
 // Запуск циклу перевірки
 function startOwlBoardCycle() {
+  // Одноразовий запит розкладу якщо не заповнено
+  _owlAskScheduleIfNeeded();
   // Одразу при відкритті
   tryOwlBoardUpdate();
   // Потім кожні 3 хвилини
@@ -1051,24 +1052,60 @@ function startOwlBoardCycle() {
 }
 
 function tryOwlBoardUpdate() {
-  // Тихий режим 23:00–7:00
-  const hour = new Date().getHours();
-  if (hour < 5) return;
+  const phase = getDayPhase();
+  if (phase === 'silent') return;
 
   // Показуємо що є зараз
   const msgs = getOwlBoardMessages();
   if (msgs.length > 0) renderOwlBoard();
 
   const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
-  const elapsed = Date.now() - lastTs;
   const isFirstTime = msgs.length === 0 && lastTs === 0;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
 
-  // Вранці (7-9) — перевіряємо частіше (кожні 2 хв)
-  const interval = (hour >= 7 && hour <= 9) ? 2 * 60 * 1000 : OWL_BOARD_INTERVAL;
-
-  const shouldGenerate = isFirstTime || isNewDay || (elapsed > interval && checkOwlBoardTrigger());
+  const shouldGenerate = isFirstTime || isNewDay || checkOwlBoardTrigger();
   if (shouldGenerate) generateOwlBoardMessage();
+}
+
+// Одноразово запитує розклад якщо не заповнено
+function _owlAskScheduleIfNeeded() {
+  if (localStorage.getItem('nm_owl_schedule_asked')) return;
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  if (s.schedule && s.schedule.wakeUp) return; // вже заповнено
+  localStorage.setItem('nm_owl_schedule_asked', '1');
+  localStorage.setItem('nm_owl_schedule_pending', '1');
+  // Затримка 10 сек щоб не перебивати завантаження
+  setTimeout(() => {
+    try {
+      addInboxChatMsg('agent', 'Щоб краще підлаштовуватись під твій ритм — скажи приблизно: о котрій прокидаєшся, починаєш і завершуєш активний день, і лягаєш спати? (наприклад: встаю 7, працюю 9–18, сплю о 23)');
+    } catch(e) {}
+  }, 10000);
+}
+
+// Перехоплення відповіді на питання розкладу в Inbox
+function handleScheduleAnswer(text) {
+  if (!localStorage.getItem('nm_owl_schedule_pending')) return false;
+  localStorage.removeItem('nm_owl_schedule_pending');
+  const parseH = (patterns, def) => {
+    for (const re of patterns) {
+      const m = text.match(re);
+      if (m) { const h = parseInt(m[1]); if (!isNaN(h) && h >= 0 && h <= 23) return `${String(h).padStart(2,'0')}:00`; }
+    }
+    return def;
+  };
+  const schedule = {
+    wakeUp:    parseH([/встаю\s*о?\s*(\d{1,2})/i, /прокидаюсь\s*о?\s*(\d{1,2})/i, /підйом\s*о?\s*(\d{1,2})/i], '07:00'),
+    workStart: parseH([/працюю\s*з\s*(\d{1,2})/i, /починаю\s*о?\s*(\d{1,2})/i, /роботу?\s*з\s*(\d{1,2})/i, /з\s*(\d{1,2})\s*[-–до]/i], '09:00'),
+    workEnd:   parseH([/до\s*(\d{1,2})\b/i, /закінчую\s*о?\s*(\d{1,2})/i, /[-–]\s*(\d{1,2})\b/i], '18:00'),
+    bedTime:   parseH([/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], '23:00'),
+  };
+  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  s.schedule = schedule;
+  localStorage.setItem('nm_settings', JSON.stringify(s));
+  try {
+    addInboxChatMsg('agent', `Розклад збережено: підйом ${schedule.wakeUp}, робота ${schedule.workStart}–${schedule.workEnd}, спати ${schedule.bedTime}. Можеш змінити в Налаштуваннях.`);
+  } catch(e) {}
+  return true;
 }
 
 function updateOwlChipsArrows() {
