@@ -199,39 +199,49 @@
       <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
         <!-- OWL AGENT — персонаж який говорить -->
         <div id="owl-board" class="owl-board-sticky" style="display:none">
-          <div class="owl-agent-container"
+
+          <!-- COLLAPSED: компактний рядок -->
+          <div id="owl-collapsed" class="owl-collapsed" style="display:none" onclick="toggleOwlChat()">
+            <div class="owl-collapsed-avatar">🦉</div>
+            <div class="owl-collapsed-text" id="owl-collapsed-text"></div>
+            <div class="owl-collapsed-time" id="owl-collapsed-time"></div>
+          </div>
+
+          <!-- SPEECH: аватар + бабл + чіпи -->
+          <div id="owl-speech" class="owl-speech"
                ontouchstart="owlSwipeStart(event)"
                ontouchmove="owlSwipeMove(event)"
                ontouchend="owlSwipeEnd(event)">
-
-            <!-- COLLAPSED: компактний рядок (hidden by default, shown after user collapses) -->
-            <div id="owl-collapsed" class="owl-collapsed" style="display:none" onclick="toggleOwlChat()">
-              <div class="owl-collapsed-avatar">🦉</div>
-              <div class="owl-collapsed-text" id="owl-collapsed-text"></div>
-              <div class="owl-collapsed-time" id="owl-collapsed-time"></div>
+            <div class="owl-speech-avatar" id="owl-speech-avatar">🦉</div>
+            <div class="owl-speech-bubble">
+              <div class="owl-speech-text" id="owl-speech-text"></div>
+              <div class="owl-speech-time" id="owl-speech-time"></div>
+              <div class="owl-swipe-handle"><div class="owl-handle-bar"></div></div>
             </div>
+          </div>
+          <!-- Чіпи під баблом -->
+          <div id="owl-speech-chips" class="owl-speech-chips"></div>
 
-            <!-- EXPANDED: персонаж говорить -->
-            <div id="owl-expanded" class="owl-expanded">
-              <!-- Аватар по центру -->
+          <!-- EXPANDED: повний чат (після "Поговорити" або свайпу) -->
+          <div id="owl-expanded" style="display:none"
+               ontouchstart="owlSwipeStart(event)"
+               ontouchmove="owlSwipeMove(event)"
+               ontouchend="owlSwipeEnd(event)">
+            <div class="owl-agent-container">
               <div class="owl-agent-hero">
                 <div class="owl-agent-avatar" id="owl-agent-avatar">🦉</div>
                 <div class="owl-agent-name" id="owl-agent-name">OWL</div>
               </div>
-              <!-- Чат: бабли від агента і юзера -->
               <div id="owl-chat-messages" class="owl-chat-messages"></div>
-              <!-- Чіпи -->
               <div id="owl-chat-chips" class="owl-chat-chips"></div>
-              <!-- Поле вводу -->
               <div class="owl-chat-input-row">
                 <input id="owl-chat-input" type="text" placeholder="Написати OWL..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlReplyFromInput()}">
                 <button id="owl-chat-send" onclick="sendOwlReplyFromInput()">➤</button>
               </div>
+              <div class="owl-swipe-handle" onclick="collapseOwlToSpeech()"><div class="owl-handle-bar"></div></div>
             </div>
-
-            <!-- Handle -->
-            <div class="owl-swipe-handle" onclick="toggleOwlChat()"><div class="owl-handle-bar"></div></div>
           </div>
+
         </div>
         <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 34px)"></div>
       </div>
