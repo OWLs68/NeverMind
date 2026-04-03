@@ -1161,7 +1161,7 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   cursor: pointer;
 }
-.owl-collapsed-avatar { width: 24px; height: 29px; flex-shrink: 0; }
+.owl-collapsed-avatar { width: 24px; height: 24px; flex-shrink: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
 .owl-collapsed-text {
   flex: 1; min-width: 0;
   font-size: 14px; font-weight: 500;
@@ -1182,68 +1182,12 @@ body {
 .owl-speech-avatar {
   position: absolute;
   left: -4px; top: -8px;
-  width: 72px; height: 86px;
+  width: 72px; height: 72px;
   z-index: 2;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
-  animation: owlAlive 14s ease-in-out infinite;
-  transform-style: preserve-3d;
-  perspective: 200px;
+  font-size: 56px;
+  display: flex; align-items: center; justify-content: center;
 }
-.owl-speech-avatar svg, .owl-agent-avatar svg, .owl-collapsed-avatar svg, .owl-tab-avatar svg {
-  width: 100%; height: 100%; display: block;
-}
-.owl-tab-avatar { width: 20px; height: 24px; flex-shrink: 0; }
-/* SVG повіки — кліпання очей */
-.owl-eyelid {
-  transform-box: fill-box;
-  transform-origin: center top;
-  transform: scaleY(0);
-}
-.owl-speech-avatar .owl-eyelid,
-.owl-agent-avatar .owl-eyelid,
-.owl-tab-avatar .owl-eyelid {
-  animation: owlBlink 14s ease-in-out infinite;
-}
-@keyframes owlBlink {
-  0%, 18%, 22%, 42%, 47%, 82%, 86%, 100% { transform: scaleY(0); }
-  20%  { transform: scaleY(1); }
-  21%  { transform: scaleY(0); }
-  44%  { transform: scaleY(1); }
-  45%  { transform: scaleY(0); }
-  46%  { transform: scaleY(1); }
-  84%  { transform: scaleY(1); }
-  85%  { transform: scaleY(0); }
-}
-@keyframes owlAlive {
-  /* дихання */
-  0%   { transform: scale(1) rotateY(0); }
-  7%   { transform: scale(1.03) rotateY(0); }
-  14%  { transform: scale(1) rotateY(0); }
-  /* дихання */
-  22%  { transform: scale(1) rotateY(0); }
-  29%  { transform: scale(1.03) rotateY(0); }
-  36%  { transform: scale(1) rotateY(0); }
-  /* дихання */
-  44%  { transform: scale(1) rotateY(0); }
-  51%  { transform: scale(1.03) rotateY(0); }
-  58%  { transform: scale(1) rotateY(0); }
-  /* повільний поворот голови на 90° */
-  60%  { transform: scale(1) rotateY(0deg); }
-  80%  { transform: scale(1) rotateY(90deg); }
-  /* різкий snap назад */
-  82%  { transform: scale(1) rotateY(0deg); }
-  /* фінальне дихання */
-  88%  { transform: scale(1) rotateY(0); }
-  94%  { transform: scale(1.03) rotateY(0); }
-  100% { transform: scale(1) rotateY(0); }
-}
-/* Future animation hooks */
-.owl-pupil-left, .owl-pupil-right { transition: cx 0.3s ease, cy 0.3s ease; }
-.owl-wing-left, .owl-wing-right { transform-box: fill-box; }
-.owl-wing-left { transform-origin: top right; }
-.owl-wing-right { transform-origin: top left; }
-.owl-ear-left, .owl-ear-right { transform-box: fill-box; transform-origin: bottom center; }
-.owl-beak { transform-box: fill-box; transform-origin: center top; }
+.owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .owl-speech-bubble {
   margin-left: 0;
   background: rgba(15,10,22,0.78);
@@ -1298,7 +1242,7 @@ body {
   display: flex; flex-direction: column; align-items: center;
   padding: 14px 16px 6px; gap: 2px;
 }
-.owl-agent-avatar { width: 44px; height: 53px; filter: drop-shadow(0 4px 12px rgba(251,191,36,0.2)); }
+.owl-agent-avatar { width: 44px; height: 44px; font-size: 36px; display: flex; align-items: center; justify-content: center; }
 .owl-agent-name { font-size: 9px; font-weight: 800; color: rgba(251,191,36,0.55); text-transform: uppercase; letter-spacing: 0.2em; }
 .owl-chat-messages { max-height: 220px; overflow-y: auto; padding: 4px 16px 6px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
 .owl-chat-messages::-webkit-scrollbar { display: none; }
