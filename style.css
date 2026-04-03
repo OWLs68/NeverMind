@@ -1237,6 +1237,13 @@ body {
   94%  { transform: scale(1.03) rotateY(0); }
   100% { transform: scale(1) rotateY(0); }
 }
+/* Future animation hooks */
+.owl-pupil-left, .owl-pupil-right { transition: cx 0.3s ease, cy 0.3s ease; }
+.owl-wing-left, .owl-wing-right { transform-box: fill-box; }
+.owl-wing-left { transform-origin: top right; }
+.owl-wing-right { transform-origin: top left; }
+.owl-ear-left, .owl-ear-right { transform-box: fill-box; transform-origin: bottom center; }
+.owl-beak { transform-box: fill-box; transform-origin: center top; }
 .owl-speech-bubble {
   margin-left: 0;
   background: rgba(15,10,22,0.78);

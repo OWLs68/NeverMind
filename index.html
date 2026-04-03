@@ -19,9 +19,10 @@
 </head>
 <body>
 
-<!-- OWL SVG gradients (shared across all owl instances) -->
+<!-- OWL SVG gradients & filters (shared across all owl instances) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
+    <!-- Gradients -->
     <radialGradient id="owl-g-body" cx="50%" cy="38%" r="62%">
       <stop offset="0%" stop-color="#C48A20"/><stop offset="100%" stop-color="#8B5E14"/>
     </radialGradient>
@@ -34,6 +35,50 @@
     <radialGradient id="owl-g-belly" cx="50%" cy="28%" r="65%">
       <stop offset="0%" stop-color="#EACC7A"/><stop offset="100%" stop-color="#C49A1C"/>
     </radialGradient>
+    <radialGradient id="owl-g-sclera" cx="45%" cy="40%" r="58%">
+      <stop offset="0%" stop-color="#FFFDF5"/><stop offset="60%" stop-color="#FFF8E0"/><stop offset="100%" stop-color="#F0E4C0"/>
+    </radialGradient>
+    <linearGradient id="owl-g-ear" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#7D5518"/><stop offset="60%" stop-color="#5A3A0E"/><stop offset="100%" stop-color="#3D2808"/>
+    </linearGradient>
+    <linearGradient id="owl-g-beak" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#F0A840"/><stop offset="50%" stop-color="#E89830"/><stop offset="100%" stop-color="#C07820"/>
+    </linearGradient>
+    <radialGradient id="owl-g-wing" cx="60%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#7B5015"/><stop offset="100%" stop-color="#5A3A0E"/>
+    </radialGradient>
+    <linearGradient id="owl-g-foot" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#F0A840"/><stop offset="100%" stop-color="#D08828"/>
+    </linearGradient>
+    <radialGradient id="owl-g-pupil" cx="48%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#080818"/><stop offset="70%" stop-color="#0D0D1A"/><stop offset="100%" stop-color="#1A1A2E"/>
+    </radialGradient>
+    <!-- Filters -->
+    <filter id="owl-f-shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blur"/>
+      <feOffset in="blur" dx="0" dy="3" result="offset"/>
+      <feFlood flood-color="#2A1800" flood-opacity="0.3" result="color"/>
+      <feComposite in="color" in2="offset" operator="in" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="owl-f-eye-inset" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="blur"/>
+      <feOffset in="blur" dx="0" dy="1" result="off"/>
+      <feComposite in="SourceGraphic" in2="off" operator="out" result="inv"/>
+      <feFlood flood-color="#5A3A0E" flood-opacity="0.35" result="color"/>
+      <feComposite in="color" in2="inv" operator="in" result="shadow"/>
+      <feComposite in="shadow" in2="SourceGraphic" operator="over"/>
+    </filter>
+    <filter id="owl-f-iris-glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="owl-f-feather" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="3" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="gray"/>
+      <feBlend in="SourceGraphic" in2="gray" mode="soft-light" result="textured"/>
+      <feComposite in="textured" in2="SourceGraphic" operator="in"/>
+    </filter>
   </defs>
 </svg>
 
@@ -220,7 +265,7 @@
 
           <!-- COLLAPSED: компактний рядок -->
           <div id="owl-collapsed" class="owl-collapsed" style="display:none" onclick="toggleOwlChat()">
-            <div class="owl-collapsed-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><ellipse cx="50" cy="80" rx="22" ry="28" fill="url(#owl-g-belly)" opacity=".5"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><path d="M16 60Q10 74 18 96Q24 78 20 64Z" fill="#6B4510" opacity=".75"/><path d="M84 60Q90 74 82 96Q76 78 80 64Z" fill="#6B4510" opacity=".75"/><ellipse cx="40" cy="112" rx="8" ry="3.5" fill="#E89830"/><ellipse cx="60" cy="112" rx="8" ry="3.5" fill="#E89830"/></svg></div>
+            <div class="owl-collapsed-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><ellipse cx="50" cy="80" rx="22" ry="28" fill="url(#owl-g-belly)" opacity=".5"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="url(#owl-g-pupil)"/><circle cx="66" cy="41" r="5.5" fill="url(#owl-g-pupil)"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><path d="M16 58Q8 72 14 98Q22 80 20 62Z" fill="url(#owl-g-wing)"/><path d="M84 58Q92 72 86 98Q78 80 80 62Z" fill="url(#owl-g-wing)"/><ellipse cx="38" cy="112" rx="9" ry="4" fill="url(#owl-g-foot)"/><ellipse cx="62" cy="112" rx="9" ry="4" fill="url(#owl-g-foot)"/></svg></div>
             <div class="owl-collapsed-text" id="owl-collapsed-text"></div>
             <div class="owl-collapsed-time" id="owl-collapsed-time"></div>
           </div>
@@ -230,7 +275,70 @@
                ontouchstart="owlSwipeStart(event)"
                ontouchmove="owlSwipeMove(event)"
                ontouchend="owlSwipeEnd(event)">
-            <div class="owl-speech-avatar" id="owl-speech-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><ellipse cx="50" cy="80" rx="22" ry="28" fill="url(#owl-g-belly)" opacity=".5"/><path d="M38 70L50 75L62 70" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".3"/><path d="M36 78L50 83L64 78" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".25"/><path d="M38 86L50 91L62 86" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".2"/><path d="M40 94L50 98L60 94" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".15"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><path d="M24 21L28 8L34 23Z" fill="#7D5518" opacity=".5"/><path d="M76 21L72 8L66 23Z" fill="#7D5518" opacity=".5"/><ellipse cx="36" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/><ellipse cx="64" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="36" cy="41" r="10" fill="none" stroke="#C47A0A" stroke-width=".5" opacity=".4"/><circle cx="64" cy="41" r="10" fill="none" stroke="#C47A0A" stroke-width=".5" opacity=".4"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="34" cy="45" r="1.2" fill="white" opacity=".3"/><circle cx="62" cy="45" r="1.2" fill="white" opacity=".3"/><path d="M22 32Q36 26 48 34" stroke="#5A3A0E" stroke-width="1.2" fill="none" opacity=".3"/><path d="M78 32Q64 26 52 34" stroke="#5A3A0E" stroke-width="1.2" fill="none" opacity=".3"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><path d="M50 53L48 59L52 59Z" fill="#D08020" opacity=".4"/><path d="M16 60Q10 74 18 96Q24 78 20 64Z" fill="#6B4510" opacity=".75"/><path d="M84 60Q90 74 82 96Q76 78 80 64Z" fill="#6B4510" opacity=".75"/><path d="M16 72Q20 76 18 84" stroke="#5A3A0E" stroke-width=".7" fill="none" opacity=".3"/><path d="M84 72Q80 76 82 84" stroke="#5A3A0E" stroke-width=".7" fill="none" opacity=".3"/><ellipse cx="40" cy="112" rx="8" ry="3.5" fill="#E89830"/><ellipse cx="60" cy="112" rx="8" ry="3.5" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+            <div class="owl-speech-avatar" id="owl-speech-avatar"><svg viewBox="0 0 100 120" fill="none">
+              <!-- Ground shadow -->
+              <g class="owl-shadow"><ellipse cx="50" cy="116" rx="28" ry="4.5" fill="#000" opacity=".1" filter="url(#owl-f-shadow)"/></g>
+              <!-- Feet -->
+              <g class="owl-feet">
+                <g class="owl-foot-left"><ellipse cx="38" cy="112" rx="9" ry="4" fill="url(#owl-g-foot)"/><path d="M31 112L34 112L32 116Z" fill="#D08828"/><path d="M36 112L39 112L37 116Z" fill="#D08828"/><path d="M41 112L44 112L42 116Z" fill="#D08828"/></g>
+                <g class="owl-foot-right"><ellipse cx="62" cy="112" rx="9" ry="4" fill="url(#owl-g-foot)"/><path d="M56 112L59 112L57 116Z" fill="#D08828"/><path d="M61 112L64 112L62 116Z" fill="#D08828"/><path d="M66 112L69 112L67 116Z" fill="#D08828"/></g>
+              </g>
+              <!-- Wings -->
+              <g class="owl-wings">
+                <g class="owl-wing-left"><path d="M16 58Q8 72 14 98Q22 80 20 62Z" fill="url(#owl-g-wing)"/><path d="M15 70Q19 74 17 84" stroke="#4A2E0A" stroke-width=".7" fill="none" opacity=".4"/><path d="M17 66Q21 72 19 80" stroke="#4A2E0A" stroke-width=".5" fill="none" opacity=".3"/></g>
+                <g class="owl-wing-right"><path d="M84 58Q92 72 86 98Q78 80 80 62Z" fill="url(#owl-g-wing)"/><path d="M85 70Q81 74 83 84" stroke="#4A2E0A" stroke-width=".7" fill="none" opacity=".4"/><path d="M83 66Q79 72 81 80" stroke="#4A2E0A" stroke-width=".5" fill="none" opacity=".3"/></g>
+              </g>
+              <!-- Body -->
+              <g class="owl-body" filter="url(#owl-f-feather)">
+                <ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/>
+                <ellipse cx="50" cy="80" rx="22" ry="28" fill="url(#owl-g-belly)" opacity=".5"/>
+                <g class="owl-belly-feathers" opacity=".3"><path d="M38 70L50 75L62 70" stroke="#9A6A15" stroke-width="1" fill="none"/><path d="M36 78L50 83L64 78" stroke="#9A6A15" stroke-width=".9" fill="none" opacity=".85"/><path d="M38 86L50 91L62 86" stroke="#9A6A15" stroke-width=".8" fill="none" opacity=".7"/><path d="M40 94L50 98L60 94" stroke="#9A6A15" stroke-width=".7" fill="none" opacity=".55"/></g>
+                <ellipse cx="50" cy="74" rx="34" ry="40" fill="none" stroke="#D4A030" stroke-width=".5" opacity=".2"/>
+              </g>
+              <!-- Head -->
+              <g class="owl-head">
+                <circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/>
+                <g class="owl-facial-disc"><circle cx="50" cy="42" r="28" fill="none" stroke="#A87020" stroke-width=".6" opacity=".2"/><circle cx="50" cy="42" r="24" fill="none" stroke="#A87020" stroke-width=".5" opacity=".15"/></g>
+                <circle cx="44" cy="28" r="18" fill="#D4A030" opacity=".08"/>
+                <!-- Ears -->
+                <g class="owl-ears">
+                  <g class="owl-ear-left"><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M24 21L28 8L34 23Z" fill="#7D5518" opacity=".5"/><path d="M27 12L29 20" stroke="#9A6A15" stroke-width=".5" opacity=".4"/></g>
+                  <g class="owl-ear-right"><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><path d="M76 21L72 8L66 23Z" fill="#7D5518" opacity=".5"/><path d="M73 12L71 20" stroke="#9A6A15" stroke-width=".5" opacity=".4"/></g>
+                </g>
+                <!-- Brows -->
+                <g class="owl-brows"><path d="M20 32Q34 24 48 34" stroke="#5A3A0E" stroke-width="1.4" fill="none" opacity=".3"/><path d="M80 32Q66 24 52 34" stroke="#5A3A0E" stroke-width="1.4" fill="none" opacity=".3"/></g>
+                <!-- Eyes -->
+                <g class="owl-eyes">
+                  <ellipse cx="36" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/><ellipse cx="64" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/>
+                  <g class="owl-eye-left">
+                    <circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)" filter="url(#owl-f-eye-inset)"/>
+                    <circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)" filter="url(#owl-f-iris-glow)"/>
+                    <circle cx="36" cy="41" r="10" fill="none" stroke="#C47A0A" stroke-width=".5" opacity=".4"/>
+                    <circle cx="36" cy="41" r="7.5" fill="none" stroke="#B8840F" stroke-width=".3" opacity=".25"/>
+                    <circle class="owl-pupil-left" cx="38" cy="41" r="5.5" fill="url(#owl-g-pupil)"/>
+                    <circle cx="40" cy="38" r="2.8" fill="white" opacity=".9"/>
+                    <circle cx="34" cy="44" r="1.2" fill="white" opacity=".3"/>
+                    <circle class="owl-eyelid owl-eyelid-left" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/>
+                  </g>
+                  <g class="owl-eye-right">
+                    <circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)" filter="url(#owl-f-eye-inset)"/>
+                    <circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)" filter="url(#owl-f-iris-glow)"/>
+                    <circle cx="64" cy="41" r="10" fill="none" stroke="#C47A0A" stroke-width=".5" opacity=".4"/>
+                    <circle cx="64" cy="41" r="7.5" fill="none" stroke="#B8840F" stroke-width=".3" opacity=".25"/>
+                    <circle class="owl-pupil-right" cx="66" cy="41" r="5.5" fill="url(#owl-g-pupil)"/>
+                    <circle cx="68" cy="38" r="2.8" fill="white" opacity=".9"/>
+                    <circle cx="62" cy="44" r="1.2" fill="white" opacity=".3"/>
+                    <circle class="owl-eyelid owl-eyelid-right" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/>
+                  </g>
+                </g>
+                <!-- Beak -->
+                <g class="owl-beak">
+                  <path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/>
+                  <path d="M50 53L48 59L52 59Z" fill="#F0B850" opacity=".3"/>
+                  <circle cx="48" cy="56" r=".6" fill="#A06820" opacity=".5"/><circle cx="52" cy="56" r=".6" fill="#A06820" opacity=".5"/>
+                </g>
+              </g>
+            </svg></div>
             <div class="owl-speech-bubble">
               <div class="owl-speech-text" id="owl-speech-text"></div>
               <div class="owl-speech-time" id="owl-speech-time"></div>
@@ -247,7 +355,22 @@
                ontouchend="owlSwipeEnd(event)">
             <div class="owl-agent-container">
               <div class="owl-agent-hero">
-                <div class="owl-agent-avatar" id="owl-agent-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><ellipse cx="50" cy="80" rx="22" ry="28" fill="url(#owl-g-belly)" opacity=".5"/><path d="M38 70L50 75L62 70" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".3"/><path d="M36 78L50 83L64 78" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".25"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><path d="M24 21L28 8L34 23Z" fill="#7D5518" opacity=".5"/><path d="M76 21L72 8L66 23Z" fill="#7D5518" opacity=".5"/><ellipse cx="36" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/><ellipse cx="64" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><path d="M16 60Q10 74 18 96Q24 78 20 64Z" fill="#6B4510" opacity=".75"/><path d="M84 60Q90 74 82 96Q76 78 80 64Z" fill="#6B4510" opacity=".75"/><ellipse cx="40" cy="112" rx="8" ry="3.5" fill="#E89830"/><ellipse cx="60" cy="112" rx="8" ry="3.5" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+                <div class="owl-agent-avatar" id="owl-agent-avatar"><svg viewBox="0 0 100 120" fill="none">
+                  <g class="owl-feet"><ellipse cx="38" cy="112" rx="9" ry="4" fill="url(#owl-g-foot)"/><ellipse cx="62" cy="112" rx="9" ry="4" fill="url(#owl-g-foot)"/></g>
+                  <g class="owl-wings"><g class="owl-wing-left"><path d="M16 58Q8 72 14 98Q22 80 20 62Z" fill="url(#owl-g-wing)"/></g><g class="owl-wing-right"><path d="M84 58Q92 72 86 98Q78 80 80 62Z" fill="url(#owl-g-wing)"/></g></g>
+                  <g class="owl-body"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><ellipse cx="50" cy="80" rx="22" ry="28" fill="url(#owl-g-belly)" opacity=".5"/><path d="M38 70L50 75L62 70" stroke="#9A6A15" stroke-width="1" fill="none" opacity=".3"/><path d="M36 78L50 83L64 78" stroke="#9A6A15" stroke-width=".9" fill="none" opacity=".25"/></g>
+                  <g class="owl-head">
+                    <circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/>
+                    <g class="owl-ears"><g class="owl-ear-left"><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M24 21L28 8L34 23Z" fill="#7D5518" opacity=".5"/></g><g class="owl-ear-right"><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><path d="M76 21L72 8L66 23Z" fill="#7D5518" opacity=".5"/></g></g>
+                    <g class="owl-brows"><path d="M20 32Q34 24 48 34" stroke="#5A3A0E" stroke-width="1.4" fill="none" opacity=".3"/><path d="M80 32Q66 24 52 34" stroke="#5A3A0E" stroke-width="1.4" fill="none" opacity=".3"/></g>
+                    <g class="owl-eyes">
+                      <ellipse cx="36" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/><ellipse cx="64" cy="40" rx="16" ry="17" fill="#C49828" opacity=".3"/>
+                      <g class="owl-eye-left"><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)" filter="url(#owl-f-eye-inset)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)" filter="url(#owl-f-iris-glow)"/><circle cx="36" cy="41" r="10" fill="none" stroke="#C47A0A" stroke-width=".5" opacity=".4"/><circle class="owl-pupil-left" cx="38" cy="41" r="5.5" fill="url(#owl-g-pupil)"/><circle cx="40" cy="38" r="2.8" fill="white" opacity=".9"/><circle class="owl-eyelid owl-eyelid-left" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/></g>
+                      <g class="owl-eye-right"><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)" filter="url(#owl-f-eye-inset)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)" filter="url(#owl-f-iris-glow)"/><circle cx="64" cy="41" r="10" fill="none" stroke="#C47A0A" stroke-width=".5" opacity=".4"/><circle class="owl-pupil-right" cx="66" cy="41" r="5.5" fill="url(#owl-g-pupil)"/><circle cx="68" cy="38" r="2.8" fill="white" opacity=".9"/><circle class="owl-eyelid owl-eyelid-right" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></g>
+                    </g>
+                    <g class="owl-beak"><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/></g>
+                  </g>
+                </svg></div>
                 <div class="owl-agent-name" id="owl-agent-name">OWL</div>
               </div>
               <div id="owl-chat-messages" class="owl-chat-messages"></div>
@@ -286,7 +409,7 @@
             <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div style="display:flex;align-items:center;gap:6px">
-                <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+                <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
                 <div id="owl-tab-pulse-tasks" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
                 <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
               </div>
@@ -374,7 +497,7 @@
           <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="display:flex;align-items:center;gap:6px">
-              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
               <div id="owl-tab-pulse-notes" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; зараз</span>
             </div>
@@ -436,7 +559,7 @@
           <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
             <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
-              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
               <div id="owl-tab-pulse-me" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · тиждень</span>
             </div>
@@ -539,7 +662,7 @@
           <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
             <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
-              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
               <div id="owl-tab-pulse-evening" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · підсумок дня</span>
             </div>
@@ -649,7 +772,7 @@
             <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div style="display:flex;align-items:center;gap:6px">
-                <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+                <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
                 <div id="owl-tab-pulse-finance" style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
                 <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL &middot; фінанси</span>
               </div>
@@ -871,7 +994,7 @@
           <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
             <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
-              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
               <div id="owl-tab-pulse-health" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · нагадування</span>
             </div>
@@ -946,7 +1069,7 @@
           <div style="background:rgba(8,4,20,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:18px;padding:13px 15px;position:relative;overflow:hidden">
             <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(255,200,50,0.12);border-radius:50%;filter:blur(18px);pointer-events:none"></div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
-              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="#6B4510"/><path d="M78 22L73 4L64 24Z" fill="#6B4510"/><circle cx="36" cy="40" r="13" fill="#FFF8E0"/><circle cx="64" cy="40" r="13" fill="#FFF8E0"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L46 59L54 59Z" fill="#E89830"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
+              <div class="owl-tab-avatar"><svg viewBox="0 0 100 120" fill="none"><ellipse cx="50" cy="74" rx="34" ry="40" fill="url(#owl-g-body)"/><circle cx="50" cy="38" r="32" fill="url(#owl-g-head)"/><path d="M22 22L27 4L36 24Z" fill="url(#owl-g-ear)"/><path d="M78 22L73 4L64 24Z" fill="url(#owl-g-ear)"/><circle cx="36" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="64" cy="40" r="13" fill="url(#owl-g-sclera)"/><circle cx="36" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="64" cy="41" r="10" fill="url(#owl-g-iris)"/><circle cx="38" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="66" cy="41" r="5.5" fill="#0D0D1A"/><circle cx="40" cy="38" r="2.5" fill="white" opacity=".9"/><circle cx="68" cy="38" r="2.5" fill="white" opacity=".9"/><path d="M50 51L45 60L55 60Z" fill="url(#owl-g-beak)"/><circle class="owl-eyelid" cx="36" cy="40" r="14" fill="url(#owl-g-head)"/><circle class="owl-eyelid" cx="64" cy="40" r="14" fill="url(#owl-g-head)"/></svg></div>
               <div id="owl-tab-pulse-projects" style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.6);flex-shrink:0"></div>
               <span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;flex:1">OWL · проекти</span>
             </div>
