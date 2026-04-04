@@ -683,7 +683,7 @@ body {
 }
 
 /* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
-#page-inbox .page-header { background: linear-gradient(to bottom, #f5f0e8 30%, transparent); padding-bottom: 1px; }
+#page-inbox .page-header { background: linear-gradient(to bottom, #f5f0e8 30%, transparent); padding-bottom: 0; }
 #page-tasks .page-header { background: linear-gradient(to bottom, #fdb87a 30%, transparent); }
 #page-notes .page-header { background: linear-gradient(to bottom, #fed7aa 30%, transparent); }
 #page-me .page-header { background: linear-gradient(to bottom, #e8d5c4 30%, transparent); }
@@ -1225,7 +1225,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0 8px;
-  margin-top: -4px;
+  margin-top: 10px;
 }
 .owl-speech-chips {
   display: flex; gap: 6px; flex-wrap: nowrap;
@@ -1263,12 +1263,12 @@ body {
 }
 .owl-chip:active { background: rgba(30,16,64,0.08); transform: scale(0.96); }
 .owl-chip-speak {
-  background: rgba(109,40,217,0.88);
-  color: rgba(255,255,255,0.95);
-  border-color: rgba(139,92,246,0.3);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.25), 0 4px 16px rgba(109,40,217,0.4);
+  background: rgba(194,100,10,0.90);
+  color: rgba(255,255,255,0.97);
+  border-color: rgba(217,119,6,0.3);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.25), 0 4px 16px rgba(194,100,10,0.35);
 }
-.owl-chip-speak:active { background: rgba(109,40,217,0.75); }
+.owl-chip-speak:active { background: rgba(180,80,5,0.90); }
 
 /* === EXPANDED: повний чат === */
 .owl-agent-container {
