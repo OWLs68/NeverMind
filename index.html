@@ -242,7 +242,7 @@
 
     <!-- PAGE: INBOX -->
     <div class="page active" id="page-inbox" style="display:flex;flex-direction:column;overflow:hidden">
-      <!-- FIXED TOP -->
+      <!-- FIXED TOP: шапка + табло сови -->
       <div id="inbox-fixed-top" style="flex-shrink:0">
         <div class="page-header" style="position:relative;top:auto">
           <div>
@@ -256,11 +256,7 @@
           </div>
         </div>
 
-      </div>
-
-      <!-- SCROLL: OWL board (sticky) + картки -->
-      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
-        <!-- OWL AGENT — персонаж який говорить -->
+        <!-- OWL AGENT — всередині fixed-top, не прокручується -->
         <div id="owl-board" class="owl-board-sticky" style="display:none">
 
           <!-- COLLAPSED: компактний рядок -->
@@ -310,6 +306,10 @@
           </div>
 
         </div>
+      </div>
+
+      <!-- SCROLL: тільки картки -->
+      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
         <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 34px)"></div>
       </div>
     </div>

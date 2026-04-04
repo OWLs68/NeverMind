@@ -1141,10 +1141,9 @@ body {
 }
 /* --- OWL Agent — персонаж який говорить --- */
 .owl-board-sticky {
-  position: sticky;
-  top: 0;
   z-index: 5;
   padding: 0 4px;
+  margin-top: -20px;
 }
 
 /* === COLLAPSED: компактний рядок === */
@@ -1225,7 +1224,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0 8px 8px;
-  margin-top: 10px;
+  margin-top: 30px;
 }
 .owl-speech-chips {
   display: flex; gap: 6px; flex-wrap: nowrap;
