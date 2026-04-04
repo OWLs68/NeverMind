@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-04 21:45
+**Оновлено:** 2026-04-04 22:10
 
 ---
 
@@ -11,67 +11,34 @@
 | **Версія** | v70 |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini |
-| **Гілка** | `claude/refactor-codebase-fpYpu` |
+| **Гілка** | `claude/remove-dead-functions-ftmCH` |
 
 ---
 
 ## Зараз робимо
 
-**Рефакторинг: ES Modules + esbuild bundler** — Кроки 0-6 завершені. Залишилось прибирання мусору.
+**Прибирання мусору після ES Modules рефакторингу** — пункти 1-3 з аудиту завершені.
 
 ---
 
-## Остання сесія (04.04, п'ята частина — ES Modules рефакторинг)
+## Остання сесія (04.04, шоста частина — прибирання мусору)
 
-### Що зроблено (Кроки 0-6 рефакторинг-плану)
+### Що зроблено (пункти 1-3 з аудиту мусору)
 
-**Крок 0-4 (попередня сесія цього ж дня):**
-- Розбито 13 монолітних JS файлів на 22 модулі в `src/` (core/, ai/, owl/, ui/, tabs/)
-- Створено `build.js` (esbuild конфіг), `package.json`, `.gitignore`
-- Оновлено CI (`auto-merge.yml`) — build після merge
-- `index.html` — один `<script src="bundle.js">`
-- `sw.js` — STATIC_ASSETS тільки bundle.js
+**1. Видалено 2 мертві функції** (inbox-board.js):
+- `updateOwlChipsArrows()` і `scrollOwlChips()` — одно-рядкові обгортки, 0 викликів
+- Прибрано зайві імпорти `_updateOwlTabChipsArrows`, `scrollOwlTabChips`
 
-**Крок 6 (ця сесія — найбільший крок):**
-- Конвертація всіх `window.xxx` → proper ES `import`/`export`
-- 22 файли оброблені 4 паралельними агентами
-- Shared `let` змінні (currentTab, activeChatBar, currentNotesFolder, taskBarLoading, _undoData/_undoToastTimer) — через setter-функції (setActiveChatBar, setCurrentNotesFolder, setTaskBarLoading, setUndoData, setUndoTimer)
-- `_financeTypingEl`, `_eveningTypingEl`, `_notesTypingEl` — перенесені з tasks.js у відповідні модулі
-- `Object.defineProperty(window, ...)` — всі видалені (було 5)
-- `Object.assign(window, {...})` — скорочені до тільки HTML-handler функцій (162 функції на window)
-- 0 перейменованих функцій у bundle (було ~20 типу switchTab→switchTab2)
+**2. Прибрано 12 зайвих typeof перевірок** (5 файлів):
+- keyboard.js (7), inbox-board.js (2), proactive.js (1), board.js (1), projects.js (1)
+- Після ES Modules всі функції гарантовано визначені через import/export
 
-**Очистка після аудиту:**
-- Видалено 12 мертвих функцій з `owl/board.js` (залишки архітектури v1)
-- board.js: 266 → 157 рядків (−109)
+**3. Об'єднано дублікати swipe в habits.js** (−44 рядки):
+- Створено `_createHabitSwipe(stateObj, prefix, toggleFn)` — фабрика обробників
+- `habitMeSwipe*` і `prodHabitSwipe*` — тонкі обгортки над єдиною реалізацією
+- habits.js: 1235 → 1191 рядків (під поріг 1200)
 
-### Повний аудит — результати
-- Build: ✓ без помилок
-- Баланс div: ✓ 608/608
-- Дублікати функцій: ✓ 0
-- Object.defineProperty: ✓ 0 залишилось
-- HTML обробники: ✓ 162 на window
-- Мертвий код: ✓ очищено
-
-### Глибокий аудит мусору — що залишилось доробити
-
-**1. Мертві функції (2 штуки):**
-- `scrollOwlChips()` — src/owl/inbox-board.js:1102
-- `updateOwlChipsArrows()` — src/owl/inbox-board.js:1101
-- Обидві — одно-рядкові обгортки, 0 викликів
-
-**2. Зайві typeof перевірки (12 штук):**
-Після import/export функції завжди визначені. Ці перевірки зайві:
-- src/ui/keyboard.js — 7 штук (рядки 30, 55, 63, 79, 81, 99, 110)
-- src/owl/inbox-board.js — 2 (рядки 702, 742)
-- src/owl/proactive.js — 1 (рядок 206)
-- src/owl/board.js — 1 (рядок 110)
-- src/tabs/projects.js — 1 (рядок 375)
-
-**3. Дублікований swipe-код в habits.js (~45 рядків економії):**
-- habitMeSwipeStart/Move/End (рядки 832-883)
-- prodHabitSwipeStart/Move/End (рядки 886-933)
-- Код майже ідентичний, різниця тільки в назві state-об'єкта і CSS-селекторі
+### Що залишилось доробити
 
 **4. Промпти AI — 3 неузгодженості:**
 - chips: inbox-board.js "враховуй що знаєш" vs proactive.js "НЕ додавай випадкові"
@@ -95,7 +62,7 @@
 | src/core/utils.js | 61 | autoResize, formatTime, escapeHtml |
 | src/core/logger.js | 136 | Error logging, console override |
 | src/ai/core.js | 650 | AI контекст, callAI, чат, OWL особистість |
-| src/owl/inbox-board.js | 1105 | OWL Board Inbox, ChatBar swipe |
+| src/owl/inbox-board.js | 1100 | OWL Board Inbox, ChatBar swipe |
 | src/owl/board.js | 157 | OWL Tab Boards рендер |
 | src/owl/proactive.js | 234 | Генерація проактивних повідомлень |
 | src/owl/chips.js | 56 | owlChipToChat — навігація/текст |
@@ -103,7 +70,7 @@
 | src/ui/swipe-delete.js | 51 | Swipe trail для видалення |
 | src/tabs/inbox.js | 741 | Inbox + AI обробка |
 | src/tabs/tasks.js | 566 | Задачі CRUD + чат |
-| src/tabs/habits.js | 1235 | Звички build/quit ⚠️>1200 |
+| src/tabs/habits.js | 1191 | Звички build/quit |
 | src/tabs/notes.js | 1162 | Нотатки, папки, пошук |
 | src/tabs/finance.js | 1133 | Фінанси, бюджет, AI-коуч |
 | src/tabs/evening.js | 978 | Моменти, підсумок, "Я" |
@@ -118,6 +85,7 @@
 
 ## Попередні сесії
 
+- **04.04 (6)** — Прибирання мусору: видалено 2 мертві функції, 12 typeof guards, об'єднано swipe-дублікати (−68 рядків).
 - **04.04 (5)** — ES Modules рефакторинг: 22 модулі import/export, 162 window handlers, аудит, очистка мертвого коду.
 - **04.04 (4)** — Repo audit: handleScheduleAnswer TTL, людська мова, чіпи-навігація, пам'ять 30 повідомлень.
 - **04.04 (3)** — Концептуальний редизайн: табло read-only, чіпи через чат-бар, owlChipToChat.
@@ -140,6 +108,7 @@
 
 ## Наступне
 
-1. **Прибирання мусору** (пункти 1-3 з аудиту вище)
-2. Баги B-04/B-09, B-05, B-06
+1. ~~Прибирання мусору (пункти 1-3)~~ ✓ зроблено
+2. Прибирання мусору (пункти 4-5 — промпти AI, inline стилі)
+3. Баги B-04/B-09, B-05, B-06
 3. Закріплені картки нагадувань
