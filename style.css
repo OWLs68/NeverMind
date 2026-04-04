@@ -1145,6 +1145,7 @@ body {
   top: 0;
   z-index: 5;
   padding: 0 4px;
+  margin-top: -15px;
 }
 
 /* === COLLAPSED: компактний рядок === */
@@ -1187,6 +1188,16 @@ body {
   font-size: 88px;
   display: flex; align-items: center; justify-content: center;
 }
+.owl-speech-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: 2px; left: 50%;
+  transform: translateX(-50%);
+  width: 54px; height: 10px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 72%);
+  border-radius: 50%;
+  z-index: -1;
+}
 .owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .owl-speech-bubble {
   margin-left: 0;
@@ -1215,10 +1226,11 @@ body {
   display: flex;
   align-items: center;
   padding: 0 8px;
+  margin-top: -4px;
 }
 .owl-speech-chips {
   display: flex; gap: 6px; flex-wrap: nowrap;
-  padding: 26px 0 4px;
+  padding: 0 0 4px;
   overflow-x: auto; scrollbar-width: none;
   flex: 1;
 }
@@ -1226,7 +1238,7 @@ body {
 .owl-chips-arrow {
   display: none;
   position: absolute;
-  top: calc(50% + 10px); transform: translateY(-50%);
+  top: 50%; transform: translateY(-50%);
   width: 26px; height: 26px;
   background: white;
   border: 1.5px solid rgba(30,16,64,0.12);
@@ -1246,11 +1258,18 @@ body {
   background: rgba(255,255,255,0.92);
   color: var(--text-primary);
   border: 1.5px solid rgba(30,16,64,0.1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.14);
   cursor: pointer; transition: all 0.15s ease;
   white-space: nowrap; flex-shrink: 0;
 }
 .owl-chip:active { background: rgba(30,16,64,0.08); transform: scale(0.96); }
+.owl-chip-speak {
+  background: rgba(109,40,217,0.88);
+  color: rgba(255,255,255,0.95);
+  border-color: rgba(139,92,246,0.3);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.25), 0 4px 16px rgba(109,40,217,0.4);
+}
+.owl-chip-speak:active { background: rgba(109,40,217,0.75); }
 
 /* === EXPANDED: повний чат === */
 .owl-agent-container {
