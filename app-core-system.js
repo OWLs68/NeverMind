@@ -743,7 +743,9 @@ function _owlTabHTML(tab) {
       </div>
     </div>
     <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">‹</button>
       <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">›</button>
     </div>
     <div id="owl-tab-expanded-${t}" style="display:none"
          ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
@@ -859,6 +861,22 @@ function sendOwlTabReplyFromInput(tab) {
   sendOwlTabReply(tab, text);
 }
 
+function _updateOwlTabChipsArrows(tab) {
+  const el    = document.getElementById('owl-tab-chips-' + tab);
+  const left  = document.getElementById('owl-tab-chips-left-' + tab);
+  const right = document.getElementById('owl-tab-chips-right-' + tab);
+  if (!el || !left || !right) return;
+  left.classList.toggle('visible', el.scrollLeft > 4);
+  right.classList.toggle('visible', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+}
+
+function scrollOwlTabChips(tab, dir) {
+  const el = document.getElementById('owl-tab-chips-' + tab);
+  if (!el) return;
+  el.scrollBy({ left: dir * 130, behavior: 'smooth' });
+  setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
+}
+
 function renderTabBoard(tab) {
   const msgs = getTabBoardMsgs(tab);
   const board = document.getElementById('owl-tab-board-' + tab);
@@ -894,6 +912,11 @@ function renderTabBoard(tab) {
     });
     chips.push(`<div class="owl-chip owl-chip-speak" onclick="expandOwlTabChat('${tab}')">Поговорити</div>`);
     chipsEl.innerHTML = chips.join('');
+    chipsEl.scrollLeft = 0;
+    chipsEl.removeEventListener('scroll', chipsEl._arrowHandler);
+    chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
+    chipsEl.addEventListener('scroll', chipsEl._arrowHandler, { passive: true });
+    setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
   }
 }
 
