@@ -372,7 +372,7 @@ function saveNewProject() {
 
 export async function startProjectInboxInterview(projectName, projectSubtitle) {
   // Переходимо на Inbox де відбувається вся комунікація
-  if (typeof switchTab === 'function' && currentTab !== 'inbox') switchTab('inbox');
+  if (currentTab !== 'inbox') switchTab('inbox');
 
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {

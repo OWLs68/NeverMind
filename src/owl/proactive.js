@@ -203,7 +203,7 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
       const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
       chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
       localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-      if (typeof restoreChatUI === 'function') restoreChatUI(chatTab);
+      restoreChatUI(chatTab);
     } catch(e) {}
     renderTabBoard(tab);
   } catch(e) {}

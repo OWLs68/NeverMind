@@ -107,7 +107,7 @@ export function scrollOwlTabChips(tab, dir) {
 
 export function renderTabBoard(tab) {
   const isInbox = tab === 'inbox';
-  const msgs = isInbox ? (typeof getOwlBoardMessages === 'function' ? getOwlBoardMessages() : []) : getTabBoardMsgs(tab);
+  const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
   const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
   if (!board) return;
   if (!msgs.length) { board.style.display = 'none'; return; }

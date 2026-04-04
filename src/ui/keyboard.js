@@ -24,12 +24,10 @@ export function setupKeyboardAvoiding() {
       const inboxCw = document.getElementById('inbox-chat-window');
       if (inboxCw && inboxCw.classList.contains('open')) {
         // Клавіатура відкрита — стискаємо до A-висоти
-        if (typeof _tabChatState !== 'undefined' && _tabChatState['inbox'] === 'b') {
+        if (_tabChatState['inbox'] === 'b') {
           _tabChatState['inbox'] = 'a';
         }
-        const chatH = typeof _getTabChatAHeight === 'function'
-          ? _getTabChatAHeight('inbox')
-          : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+        const chatH = _getTabChatAHeight('inbox');
         inboxCw.style.height = chatH + 'px';
         inboxCw.style.maxHeight = chatH + 'px';
         const inboxMsgs = document.getElementById('inbox-chat-messages');
@@ -48,21 +46,17 @@ export function setupKeyboardAvoiding() {
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
           const tab = b.id.replace('-ai-bar', '');
-          const state = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})[tab];
+          const state = _tabChatState[tab];
           if (state === 'b') {
             // Клавіатура з'явилась поки стан B → авто-колапс до A
-            if (typeof _tabChatState !== 'undefined') _tabChatState[tab] = 'a';
-            const aH = typeof _getTabChatAHeight === 'function'
-              ? _getTabChatAHeight(tab)
-              : Math.max(150, vv.height - (keyboardHeight + 8) - 64 - 60);
+            _tabChatState[tab] = 'a';
+            const aH = _getTabChatAHeight(tab);
             chatWin.style.transition = 'height 0.3s cubic-bezier(0.32,0.72,0,1)';
             chatWin.style.height = aH + 'px';
             chatWin.style.maxHeight = aH + 'px';
             setTimeout(() => chatWin.style.transition = '', 300);
           } else {
-            const chatH = typeof _getTabChatAHeight === 'function'
-              ? _getTabChatAHeight(tab)
-              : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+            const chatH = _getTabChatAHeight(tab);
             chatWin.style.height = chatH + 'px';
             chatWin.style.maxHeight = chatH + 'px';
           }
@@ -75,12 +69,9 @@ export function setupKeyboardAvoiding() {
       const inboxCw = document.getElementById('inbox-chat-window');
       if (inboxCw && inboxCw.classList.contains('open')) {
         try {
-          const inboxState = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})['inbox'];
-          const calcH = inboxState === 'b' && typeof _getTabChatBHeight === 'function'
-            ? _getTabChatBHeight('inbox')
-            : (typeof _getTabChatAHeight === 'function' ? _getTabChatAHeight('inbox') : null);
-          if (calcH) { inboxCw.style.height = calcH + 'px'; inboxCw.style.maxHeight = calcH + 'px'; }
-          else { inboxCw.style.height = ''; inboxCw.style.maxHeight = ''; }
+          const inboxState = _tabChatState['inbox'];
+          const calcH = inboxState === 'b' ? _getTabChatBHeight('inbox') : _getTabChatAHeight('inbox');
+          inboxCw.style.height = calcH + 'px'; inboxCw.style.maxHeight = calcH + 'px';
         } catch(e) { inboxCw.style.height = ''; inboxCw.style.maxHeight = ''; }
         const inboxMsgs = document.getElementById('inbox-chat-messages');
         if (inboxMsgs) inboxMsgs.style.maxHeight = '';
@@ -92,29 +83,17 @@ export function setupKeyboardAvoiding() {
         const chatWin = b.querySelector('.ai-bar-chat-window');
         if (chatWin && chatWin.classList.contains('open')) {
           const tab = b.id.replace('-ai-bar', '');
-          const state = (typeof _tabChatState !== 'undefined' ? _tabChatState : {})[tab];
+          const state = _tabChatState[tab];
           if (state === 'b') {
             // Стан B: перераховуємо до повної висоти без клавіатури
-            try {
-              const bH = typeof _getTabChatBHeight === 'function'
-                ? _getTabChatBHeight(tab)
-                : null;
-              if (bH) {
-                chatWin.style.height = bH + 'px';
-                chatWin.style.maxHeight = bH + 'px';
-              } else { updateChatWindowHeight(tab); }
-            } catch(e) {}
+            const bH = _getTabChatBHeight(tab);
+            chatWin.style.height = bH + 'px';
+            chatWin.style.maxHeight = bH + 'px';
           } else if (state === 'a') {
             // Стан A: compact висота без клавіатури (обмежена)
-            try {
-              const aH = typeof _getTabChatAHeight === 'function'
-                ? _getTabChatAHeight(tab)
-                : null;
-              if (aH) {
-                chatWin.style.height = aH + 'px';
-                chatWin.style.maxHeight = aH + 'px';
-              } else { updateChatWindowHeight(tab); }
-            } catch(e) {}
+            const aH = _getTabChatAHeight(tab);
+            chatWin.style.height = aH + 'px';
+            chatWin.style.maxHeight = aH + 'px';
           }
         } else if (chatWin) {
           chatWin.style.height = '';

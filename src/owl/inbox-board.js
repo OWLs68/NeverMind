@@ -699,7 +699,7 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
       const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
       chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
       localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-      if (typeof restoreChatUI === 'function') restoreChatUI('inbox');
+      restoreChatUI('inbox');
     } catch(e) {}
 
     // Нове повідомлення — повернути на speech
@@ -739,7 +739,7 @@ function _owlSetState(state) {
 // Рендер OWL Board — делегує в уніфікований renderTabBoard('inbox')
 export function renderOwlBoard() {
   _owlBoardMessages = getOwlBoardMessages();
-  if (typeof renderTabBoard === 'function') renderTabBoard('inbox');
+  renderTabBoard('inbox');
 }
 
 // Розгорнути чат — тепер відкриває чат-бар знизу (табло read-only)
