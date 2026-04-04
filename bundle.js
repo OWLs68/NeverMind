@@ -1607,7 +1607,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
   }
   async function startProjectInboxInterview(projectName, projectSubtitle) {
-    if (typeof switchTab === "function" && currentTab !== "inbox") switchTab("inbox");
+    if (currentTab !== "inbox") switchTab("inbox");
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
       setTimeout(() => addInboxChatMsg(
@@ -3776,7 +3776,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
         const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || "[]");
         chatMsgs.push({ role: "agent", text: "\u{1F989} " + parsed.text, ts: Date.now() });
         localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-        if (typeof restoreChatUI === "function") restoreChatUI("inbox");
+        restoreChatUI("inbox");
       } catch (e) {
       }
       if (_getOwlState() === "collapsed") _owlSetState("speech");
@@ -3814,7 +3814,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
   }
   function renderOwlBoard() {
     _owlBoardMessages = getOwlBoardMessages();
-    if (typeof renderTabBoard === "function") renderTabBoard("inbox");
+    renderTabBoard("inbox");
   }
   function expandOwlChat() {
     openChatBar("inbox");
@@ -4181,7 +4181,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
   }
   function renderTabBoard(tab) {
     const isInbox = tab === "inbox";
-    const msgs = isInbox ? typeof getOwlBoardMessages === "function" ? getOwlBoardMessages() : [] : getTabBoardMsgs(tab);
+    const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
     if (!board) return;
     if (!msgs.length) {
@@ -4443,7 +4443,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
         const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || "[]");
         chatMsgs.push({ role: "agent", text: "\u{1F989} " + parsed.text, ts: Date.now() });
         localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-        if (typeof restoreChatUI === "function") restoreChatUI(chatTab);
+        restoreChatUI(chatTab);
       } catch (e) {
       }
       renderTabBoard(tab);
@@ -6168,139 +6168,94 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       relapseQuitHabit(habitId);
     }
   }
-  var habitMeSwipeState = {};
+  function _createHabitSwipe(stateObj, prefix, toggleFn) {
+    function start(e, id) {
+      const t = e.touches[0];
+      stateObj[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+    }
+    function move(e, id) {
+      const s = stateObj[id];
+      if (!s) return;
+      const t = e.touches[0];
+      const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+      if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
+        delete stateObj[id];
+        return;
+      }
+      if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+      if (!s.swiping) return;
+      e.preventDefault();
+      s.dx = Math.min(0, dx);
+      const el = document.getElementById(prefix + id);
+      const wrap = el ? el.parentElement : null;
+      applySwipeTrail(el, wrap, s.dx);
+    }
+    function end(e, id) {
+      const s = stateObj[id];
+      if (!s) return;
+      const el = document.getElementById(prefix + id);
+      const wrap = el ? el.parentElement : null;
+      if (s.dx < -SWIPE_DELETE_THRESHOLD) {
+        if (el) {
+          el.style.transition = "transform 0.2s ease, opacity 0.2s";
+          el.style.transform = "translateX(-110%)";
+          el.style.opacity = "0";
+        }
+        setTimeout(() => {
+          const allHabits = getHabits();
+          const habitOrigIdx = allHabits.findIndex((h) => h.id === id);
+          const item = allHabits.find((h) => h.id === id);
+          if (item) addToTrash("habit", item);
+          saveHabits(allHabits.filter((h) => h.id !== id));
+          renderHabits();
+          renderProdHabits();
+          if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+            const habits = getHabits();
+            const idx = Math.min(habitOrigIdx, habits.length);
+            habits.splice(idx, 0, item);
+            saveHabits(habits);
+            renderHabits();
+            renderProdHabits();
+          });
+        }, 200);
+      } else {
+        clearSwipeTrail(el, wrap);
+        if (!s.swiping) {
+          const target = e.changedTouches[0];
+          const checkBtn = el ? el.querySelector("[data-habit-check]") : null;
+          if (checkBtn) {
+            const rect = checkBtn.getBoundingClientRect();
+            if (target.clientX >= rect.left && target.clientX <= rect.right && target.clientY >= rect.top && target.clientY <= rect.bottom) {
+              toggleFn(id);
+            } else {
+              openEditHabit(id);
+            }
+          }
+        }
+      }
+      delete stateObj[id];
+    }
+    return { start, move, end };
+  }
+  var _habitMeSwipe = _createHabitSwipe({}, "habit-me-item-", toggleHabitToday);
   function habitMeSwipeStart(e, id) {
-    const t = e.touches[0];
-    habitMeSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+    _habitMeSwipe.start(e, id);
   }
   function habitMeSwipeMove(e, id) {
-    const s = habitMeSwipeState[id];
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
-      delete habitMeSwipeState[id];
-      return;
-    }
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById("habit-me-item-" + id);
-    const wrap = el ? el.parentElement : null;
-    applySwipeTrail(el, wrap, s.dx);
+    _habitMeSwipe.move(e, id);
   }
   function habitMeSwipeEnd(e, id) {
-    const s = habitMeSwipeState[id];
-    if (!s) return;
-    const el = document.getElementById("habit-me-item-" + id);
-    const wrap = el ? el.parentElement : null;
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) {
-        el.style.transition = "transform 0.2s ease, opacity 0.2s";
-        el.style.transform = "translateX(-110%)";
-        el.style.opacity = "0";
-      }
-      setTimeout(() => {
-        const allHabits = getHabits();
-        const habitOrigIdx = allHabits.findIndex((h) => h.id === id);
-        const item = allHabits.find((h) => h.id === id);
-        if (item) addToTrash("habit", item);
-        saveHabits(allHabits.filter((h) => h.id !== id));
-        renderHabits();
-        renderProdHabits();
-        if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-          const habits = getHabits();
-          const idx = Math.min(habitOrigIdx, habits.length);
-          habits.splice(idx, 0, item);
-          saveHabits(habits);
-          renderHabits();
-          renderProdHabits();
-        });
-      }, 200);
-    } else {
-      clearSwipeTrail(el, wrap);
-      if (!s.swiping) {
-        const target = e.changedTouches[0];
-        const checkBtn = el ? el.querySelector("[data-habit-check]") : null;
-        if (checkBtn) {
-          const rect = checkBtn.getBoundingClientRect();
-          if (target.clientX >= rect.left && target.clientX <= rect.right && target.clientY >= rect.top && target.clientY <= rect.bottom) {
-            toggleHabitToday(id);
-          } else {
-            openEditHabit(id);
-          }
-        }
-      }
-    }
-    delete habitMeSwipeState[id];
+    _habitMeSwipe.end(e, id);
   }
-  var prodHabitSwipeState = {};
+  var _prodHabitSwipe = _createHabitSwipe({}, "prod-habit-item-", toggleProdHabitToday);
   function prodHabitSwipeStart(e, id) {
-    const t = e.touches[0];
-    prodHabitSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+    _prodHabitSwipe.start(e, id);
   }
   function prodHabitSwipeMove(e, id) {
-    const s = prodHabitSwipeState[id];
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
-      delete prodHabitSwipeState[id];
-      return;
-    }
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById("prod-habit-item-" + id);
-    const wrap = el ? el.parentElement : null;
-    applySwipeTrail(el, wrap, s.dx);
+    _prodHabitSwipe.move(e, id);
   }
   function prodHabitSwipeEnd(e, id) {
-    const s = prodHabitSwipeState[id];
-    if (!s) return;
-    const el = document.getElementById("prod-habit-item-" + id);
-    const wrap = el ? el.parentElement : null;
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) {
-        el.style.transition = "transform 0.2s ease, opacity 0.2s";
-        el.style.transform = "translateX(-110%)";
-        el.style.opacity = "0";
-      }
-      setTimeout(() => {
-        const allHabits = getHabits();
-        const habitOrigIdx = allHabits.findIndex((h) => h.id === id);
-        const item = allHabits.find((h) => h.id === id);
-        if (item) addToTrash("habit", item);
-        saveHabits(allHabits.filter((h) => h.id !== id));
-        renderHabits();
-        renderProdHabits();
-        if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-          const habits = getHabits();
-          const idx = Math.min(habitOrigIdx, habits.length);
-          habits.splice(idx, 0, item);
-          saveHabits(habits);
-          renderHabits();
-          renderProdHabits();
-        });
-      }, 200);
-    } else {
-      clearSwipeTrail(el, wrap);
-      if (!s.swiping) {
-        const target = e.changedTouches[0];
-        const checkBtn = el ? el.querySelector("[data-habit-check]") : null;
-        if (checkBtn) {
-          const rect = checkBtn.getBoundingClientRect();
-          if (target.clientX >= rect.left && target.clientX <= rect.right && target.clientY >= rect.top && target.clientY <= rect.bottom) {
-            toggleProdHabitToday(id);
-          } else {
-            openEditHabit(id);
-          }
-        }
-      }
-    }
-    delete prodHabitSwipeState[id];
+    _prodHabitSwipe.end(e, id);
   }
   function _fuzzyFindFolder(query, folders) {
     if (!query || !folders.length) return null;
@@ -9385,10 +9340,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         }
         const inboxCw = document.getElementById("inbox-chat-window");
         if (inboxCw && inboxCw.classList.contains("open")) {
-          if (typeof _tabChatState !== "undefined" && _tabChatState["inbox"] === "b") {
+          if (_tabChatState["inbox"] === "b") {
             _tabChatState["inbox"] = "a";
           }
-          const chatH = typeof _getTabChatAHeight === "function" ? _getTabChatAHeight("inbox") : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+          const chatH = _getTabChatAHeight("inbox");
           inboxCw.style.height = chatH + "px";
           inboxCw.style.maxHeight = chatH + "px";
           const inboxMsgs = document.getElementById("inbox-chat-messages");
@@ -9410,16 +9365,16 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const chatWin = b.querySelector(".ai-bar-chat-window");
           if (chatWin && chatWin.classList.contains("open")) {
             const tab = b.id.replace("-ai-bar", "");
-            const state = (typeof _tabChatState !== "undefined" ? _tabChatState : {})[tab];
+            const state = _tabChatState[tab];
             if (state === "b") {
-              if (typeof _tabChatState !== "undefined") _tabChatState[tab] = "a";
-              const aH = typeof _getTabChatAHeight === "function" ? _getTabChatAHeight(tab) : Math.max(150, vv.height - (keyboardHeight + 8) - 64 - 60);
+              _tabChatState[tab] = "a";
+              const aH = _getTabChatAHeight(tab);
               chatWin.style.transition = "height 0.3s cubic-bezier(0.32,0.72,0,1)";
               chatWin.style.height = aH + "px";
               chatWin.style.maxHeight = aH + "px";
               setTimeout(() => chatWin.style.transition = "", 300);
             } else {
-              const chatH = typeof _getTabChatAHeight === "function" ? _getTabChatAHeight(tab) : Math.max(50, vv.height - (keyboardHeight + 8) - 64 - 60);
+              const chatH = _getTabChatAHeight(tab);
               chatWin.style.height = chatH + "px";
               chatWin.style.maxHeight = chatH + "px";
             }
@@ -9435,15 +9390,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const inboxCw = document.getElementById("inbox-chat-window");
         if (inboxCw && inboxCw.classList.contains("open")) {
           try {
-            const inboxState = (typeof _tabChatState !== "undefined" ? _tabChatState : {})["inbox"];
-            const calcH = inboxState === "b" && typeof _getTabChatBHeight === "function" ? _getTabChatBHeight("inbox") : typeof _getTabChatAHeight === "function" ? _getTabChatAHeight("inbox") : null;
-            if (calcH) {
-              inboxCw.style.height = calcH + "px";
-              inboxCw.style.maxHeight = calcH + "px";
-            } else {
-              inboxCw.style.height = "";
-              inboxCw.style.maxHeight = "";
-            }
+            const inboxState = _tabChatState["inbox"];
+            const calcH = inboxState === "b" ? _getTabChatBHeight("inbox") : _getTabChatAHeight("inbox");
+            inboxCw.style.height = calcH + "px";
+            inboxCw.style.maxHeight = calcH + "px";
           } catch (e) {
             inboxCw.style.height = "";
             inboxCw.style.maxHeight = "";
@@ -9462,29 +9412,15 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const chatWin = b.querySelector(".ai-bar-chat-window");
           if (chatWin && chatWin.classList.contains("open")) {
             const tab = b.id.replace("-ai-bar", "");
-            const state = (typeof _tabChatState !== "undefined" ? _tabChatState : {})[tab];
+            const state = _tabChatState[tab];
             if (state === "b") {
-              try {
-                const bH = typeof _getTabChatBHeight === "function" ? _getTabChatBHeight(tab) : null;
-                if (bH) {
-                  chatWin.style.height = bH + "px";
-                  chatWin.style.maxHeight = bH + "px";
-                } else {
-                  updateChatWindowHeight(tab);
-                }
-              } catch (e) {
-              }
+              const bH = _getTabChatBHeight(tab);
+              chatWin.style.height = bH + "px";
+              chatWin.style.maxHeight = bH + "px";
             } else if (state === "a") {
-              try {
-                const aH = typeof _getTabChatAHeight === "function" ? _getTabChatAHeight(tab) : null;
-                if (aH) {
-                  chatWin.style.height = aH + "px";
-                  chatWin.style.maxHeight = aH + "px";
-                } else {
-                  updateChatWindowHeight(tab);
-                }
-              } catch (e) {
-              }
+              const aH = _getTabChatAHeight(tab);
+              chatWin.style.height = aH + "px";
+              chatWin.style.maxHeight = aH + "px";
             }
           } else if (chatWin) {
             chatWin.style.height = "";
