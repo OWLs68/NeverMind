@@ -1,0 +1,271 @@
+// === OWL TAB BOARDS (#37) ===
+const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
+
+function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
+function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
+function getOwlTabSaidKey(tab) { return 'nm_owl_tab_said_' + tab; }
+
+function getTabBoardMsgs(tab) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null');
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return [raw]; // backward compat: старий формат → масив
+  } catch { return []; }
+}
+function getTabBoardMsg(tab) {
+  const msgs = getTabBoardMsgs(tab);
+  return msgs[0] || null;
+}
+function saveTabBoardMsg(tab, newMsg) {
+  const msgs = getTabBoardMsgs(tab);
+  msgs.unshift(newMsg);          // новий → перший
+  if (msgs.length > 30) msgs.length = 30; // максимум 30
+  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs)); } catch {}
+}
+
+function getTabBoardSaid(tab) {
+  const today = new Date().toDateString();
+  try {
+    const raw = JSON.parse(localStorage.getItem(getOwlTabSaidKey(tab)) || '{}');
+    if (raw.date !== today) return {};
+    return raw.said || {};
+  } catch { return {}; }
+}
+function markTabBoardSaid(tab, topic) {
+  const today = new Date().toDateString();
+  const said = getTabBoardSaid(tab);
+  said[topic] = true;
+  try { localStorage.setItem(getOwlTabSaidKey(tab), JSON.stringify({ date: today, said })); } catch {}
+}
+function tabAlreadySaid(tab, topic) { return !!getTabBoardSaid(tab)[topic]; }
+
+function dismissTabBoard(tab) {
+  // Вечір — табло завжди активне, не закривається
+  if (tab === 'evening') return;
+  const el = document.getElementById('owl-tab-board-' + tab);
+  if (el) el.style.display = 'none';
+}
+
+// === OWL TAB BOARD — новий стиль (як Інбокс) ===
+
+const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
+const _owlTabSwipes = {};
+
+const OWL_TAB_EXPANDED_H = 204; // чат + padding-top:29px щоб повідомлення під совою
+
+function _owlTabHTML(tab) {
+  const t = tab;
+  return `
+    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+      <div class="owl-collapsed-avatar">🦉</div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
+    </div>
+    <div id="owl-tab-speech-${t}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+      <div class="owl-speech-avatar">🦉</div>
+      <div class="owl-tab-card">
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
+          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">‹</button>
+      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">›</button>
+    </div>`;
+}
+
+function _owlTabApplyState(tab) {
+  const st = _owlTabStates[tab] || 'speech';
+  const collapsed = document.getElementById('owl-tab-collapsed-' + tab);
+  const speech    = document.getElementById('owl-tab-speech-' + tab);
+  const chipsWrap = document.getElementById('owl-tab-chips-wrap-' + tab);
+  if (!speech) return;
+  if (collapsed) collapsed.style.display = st === 'collapsed' ? 'flex' : 'none';
+  speech.style.display = st === 'collapsed' ? 'none' : 'block';
+  if (chipsWrap) chipsWrap.style.display = 'flex';
+}
+
+function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
+function collapseOwlTabToSpeech(tab){ _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
+// Додати початкове повідомлення сови у чат якщо він пустий
+function _seedOwlTabChat(tab) {
+  const key = 'nm_owl_tab_chat_' + tab;
+  const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+  if (msgs.length === 0) {
+    const text = (document.getElementById('owl-tab-text-' + tab) || {}).textContent;
+    if (text && text.trim()) {
+      msgs.push({ role: 'agent', text: text.trim(), ts: Date.now() });
+      localStorage.setItem(key, JSON.stringify(msgs));
+    }
+  }
+}
+
+function expandOwlTabChat(tab) {
+  // Табло read-only — відкриваємо чат-бар знизу замість expanded стану
+  openChatBar(tab === 'inbox' ? 'inbox' : tab);
+}
+
+function owlTabSwipeStart(e, tab) {
+  _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
+}
+function owlTabSwipeMove(e, tab) {
+  if (!_owlTabSwipes[tab]) return;
+  _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
+}
+
+function owlTabSwipeEnd(e, tab) {
+  const sw = _owlTabSwipes[tab]; if (!sw) return;
+  _owlTabSwipes[tab] = null;
+  const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
+
+  if (dy < -40) {
+    // Свайп вгору — згорнути табло
+    if (st === 'speech') { _owlTabStates[tab] = 'collapsed'; _owlTabApplyState(tab); }
+  } else if (dy > 40) {
+    // Свайп вниз — розгорнути або відкрити чат-бар
+    if (st === 'collapsed') { _owlTabStates[tab] = 'speech'; _owlTabApplyState(tab); }
+    else if (st === 'speech') openChatBar(tab === 'inbox' ? 'inbox' : tab);
+  }
+}
+
+function renderOwlTabMsgs(tab) {
+  const el = document.getElementById('owl-tab-msgs-' + tab);
+  if (!el) return;
+  const msgs = JSON.parse(localStorage.getItem('nm_owl_tab_chat_' + tab) || '[]');
+  el.innerHTML = msgs.map(m =>
+    `<div class="owl-msg-${m.role === 'user' ? 'user' : 'agent'}">${escapeHtml(m.text)}</div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendOwlTabReply(tab, text) {
+  if (tab === 'inbox') { if (typeof sendOwlReply === 'function') sendOwlReply(text); return; }
+  expandOwlTabChat(tab);
+  const key = 'nm_owl_tab_chat_' + tab;
+  const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+  msgs.push({ role: 'user', text, ts: Date.now() });
+  localStorage.setItem(key, JSON.stringify(msgs));
+  renderOwlTabMsgs(tab);
+  // Typing indicator (індикатор набору)
+  const el = document.getElementById('owl-tab-msgs-' + tab);
+  if (el) {
+    const d = document.createElement('div');
+    d.className = 'owl-msg-agent owl-typing-wrap';
+    d.innerHTML = '<div class="owl-typing"><span></span><span></span><span></span></div>';
+    el.appendChild(d); el.scrollTop = el.scrollHeight;
+  }
+  const apiKey = localStorage.getItem('nm_gemini_key');
+  if (!apiKey) return;
+  try {
+    const context = getTabBoardContext(tab);
+    const history = msgs.slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: (typeof getOWLPersonality === 'function' ? getOWLPersonality() : '') + '\n\nКонтекст:\n' + context }, ...history],
+        max_tokens: 250, temperature: 0.8
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { renderOwlTabMsgs(tab); return; }
+    const all = JSON.parse(localStorage.getItem(key) || '[]');
+    all.push({ role: 'agent', text: reply, ts: Date.now() });
+    localStorage.setItem(key, JSON.stringify(all));
+    renderOwlTabMsgs(tab);
+  } catch(e) { renderOwlTabMsgs(tab); }
+}
+
+function sendOwlTabReplyFromInput(tab) {
+  if (tab === 'inbox') { if (typeof sendOwlReplyFromInput === 'function') sendOwlReplyFromInput(); return; }
+  const input = document.getElementById('owl-tab-input-' + tab);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendOwlTabReply(tab, text);
+}
+
+function _updateOwlTabChipsArrows(tab) {
+  const el    = document.getElementById('owl-tab-chips-' + tab);
+  const left  = document.getElementById('owl-tab-chips-left-' + tab);
+  const right = document.getElementById('owl-tab-chips-right-' + tab);
+  if (!el || !left || !right) return;
+  left.classList.toggle('visible', el.scrollLeft > 4);
+  right.classList.toggle('visible', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+}
+
+function scrollOwlTabChips(tab, dir) {
+  const el = document.getElementById('owl-tab-chips-' + tab);
+  if (!el) return;
+  el.scrollBy({ left: dir * 130, behavior: 'smooth' });
+  setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
+}
+
+function renderTabBoard(tab) {
+  const isInbox = tab === 'inbox';
+  const msgs = isInbox ? (typeof getOwlBoardMessages === 'function' ? getOwlBoardMessages() : []) : getTabBoardMsgs(tab);
+  const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
+  if (!board) return;
+  if (!msgs.length) { board.style.display = 'none'; return; }
+  board.style.display = 'block';
+
+  // Ініціалізація структури — один раз (inbox вже має HTML в index.html)
+  if (!board._owlReady) {
+    if (!isInbox) board.innerHTML = _owlTabHTML(tab);
+    board._owlReady = true;
+    _owlTabStates[tab] = _owlTabStates[tab] || 'speech';
+    _owlTabApplyState(tab);
+  }
+
+  const msg = msgs[0];
+  const ago = Date.now() - (msg.ts || msg.id || Date.now());
+  const mins = Math.floor(ago / 60000);
+  const timeStr = mins < 1 ? 'щойно' : mins < 60 ? mins + ' хв' : Math.floor(mins / 60) + ' год';
+
+  const tEl = document.getElementById('owl-tab-text-' + tab);
+  const cEl = document.getElementById('owl-tab-ctext-' + tab);
+  const tmEl = document.getElementById('owl-tab-time-' + tab);
+  if (tEl) tEl.textContent = msg.text;
+  if (cEl) cEl.textContent = msg.text;
+  if (tmEl) tmEl.textContent = timeStr;
+
+  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
+  const chipsHTML = (msg.chips || []).map(c => {
+    const s = escapeHtml(c).replace(/'/g, '&#39;');
+    return `<div class="owl-chip" onclick="owlChipToChat('${tab}','${s}')">${escapeHtml(c)}</div>`;
+  });
+  if (chipsEl) {
+    const barTab = tab === 'me' ? 'me' : tab;
+    const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak" onclick="openChatBar('${barTab}')">Поговорити</div>`];
+    chipsEl.innerHTML = speechChips.join('');
+    chipsEl.scrollLeft = 0;
+    chipsEl.removeEventListener('scroll', chipsEl._arrowHandler);
+    chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
+    chipsEl.addEventListener('scroll', chipsEl._arrowHandler, { passive: true });
+    setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
+  }
+}
+
+// === WINDOW GLOBALS (перехідний період) ===
+Object.assign(window, {
+  OWL_TAB_BOARD_MIN_INTERVAL,
+  getOwlTabBoardKey, getOwlTabTsKey, getOwlTabSaidKey,
+  getTabBoardMsgs, getTabBoardMsg, saveTabBoardMsg,
+  getTabBoardSaid, markTabBoardSaid, tabAlreadySaid,
+  dismissTabBoard,
+  _owlTabStates, _owlTabSwipes, OWL_TAB_EXPANDED_H,
+  _owlTabHTML, _owlTabApplyState,
+  toggleOwlTabChat, collapseOwlTabToSpeech,
+  _seedOwlTabChat, expandOwlTabChat,
+  owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
+  renderOwlTabMsgs, sendOwlTabReply, sendOwlTabReplyFromInput,
+  _updateOwlTabChipsArrows, scrollOwlTabChips,
+  renderTabBoard,
+});
