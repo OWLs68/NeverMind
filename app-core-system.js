@@ -803,6 +803,10 @@ function _seedOwlTabChat(tab) {
 }
 
 function expandOwlTabChat(tab) {
+  if (tab === 'inbox') {
+    if (typeof expandOwlChat === 'function') expandOwlChat();
+    return;
+  }
   _owlTabStates[tab] = 'expanded';
   _owlTabApplyState(tab);
   _seedOwlTabChat(tab);
@@ -903,6 +907,7 @@ function renderOwlTabMsgs(tab) {
 }
 
 async function sendOwlTabReply(tab, text) {
+  if (tab === 'inbox') { if (typeof sendOwlReply === 'function') sendOwlReply(text); return; }
   expandOwlTabChat(tab);
   const key = 'nm_owl_tab_chat_' + tab;
   const msgs = JSON.parse(localStorage.getItem(key) || '[]');
@@ -942,6 +947,7 @@ async function sendOwlTabReply(tab, text) {
 }
 
 function sendOwlTabReplyFromInput(tab) {
+  if (tab === 'inbox') { if (typeof sendOwlReplyFromInput === 'function') sendOwlReplyFromInput(); return; }
   const input = document.getElementById('owl-tab-input-' + tab);
   if (!input) return;
   const text = input.value.trim();

@@ -653,7 +653,7 @@ async function generateOwlBoardMessage() {
     setOwlCd('phase_pulse');
 
     // Нове повідомлення — повернути на speech
-    if (_owlState === 'collapsed') _owlSetState('speech');
+    if (_getOwlState() === 'collapsed') _owlSetState('speech');
     renderOwlBoard();
   } catch(e) {}
   _owlBoardGenerating = false;
@@ -675,19 +675,14 @@ function saveOwlChatMsg(role, text) {
   localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
 }
 
-// 3 стани OWL: 'speech' (дефолт) | 'expanded' (чат) | 'collapsed' (рядок)
+// 3 стани OWL — тепер alias до _owlTabStates['inbox']
 let _owlState = 'speech';
+function _getOwlState() { return _owlTabStates['inbox'] || _owlState || 'speech'; }
 
 function _owlSetState(state) {
   _owlState = state;
-  const collapsed = document.getElementById('owl-collapsed');
-  const speech = document.getElementById('owl-speech');
-  const speechChips = document.getElementById('owl-speech-chips');
-  const expanded = document.getElementById('owl-expanded');
-  if (collapsed) collapsed.style.display = state === 'collapsed' ? '' : 'none';
-  if (speech) speech.style.display = state === 'speech' ? '' : 'none';
-  if (speechChips) speechChips.style.display = state === 'speech' ? '' : 'none';
-  if (expanded) expanded.style.display = state === 'expanded' ? '' : 'none';
+  _owlTabStates['inbox'] = state;
+  _owlTabApplyState('inbox');
   _owlChatOpen = (state === 'expanded');
 }
 
@@ -706,26 +701,22 @@ function renderOwlBoard() {
 
   const latest = boardMessages[0];
 
-  // Speech: текст і час в баблі
-  const speechText = document.getElementById('owl-speech-text');
-  if (speechText) speechText.textContent = latest.text;
-  const speechTime = document.getElementById('owl-speech-time');
-  if (speechTime && latest.id) {
+  // Speech text + time
+  const tEl = document.getElementById('owl-tab-text-inbox');
+  if (tEl) tEl.textContent = latest.text;
+  const ctEl = document.getElementById('owl-tab-ctext-inbox');
+  if (ctEl) ctEl.textContent = latest.text;
+  const tmEl = document.getElementById('owl-tab-time-inbox');
+  if (tmEl && latest.id) {
     const ago = Date.now() - latest.id;
     const mins = Math.floor(ago / 60000);
-    if (mins < 1) speechTime.textContent = 'щойно';
-    else if (mins < 60) speechTime.textContent = `${mins} хв`;
-    else { const hrs = Math.floor(mins / 60); speechTime.textContent = `${hrs} год`; }
+    if (mins < 1) tmEl.textContent = 'щойно';
+    else if (mins < 60) tmEl.textContent = `${mins} хв`;
+    else tmEl.textContent = `${Math.floor(mins / 60)} год`;
   }
 
-  // Collapsed: текст і час
-  const collText = document.getElementById('owl-collapsed-text');
-  if (collText) collText.textContent = latest.text;
-  const collTime = document.getElementById('owl-collapsed-time');
-  if (collTime) collTime.textContent = speechTime ? speechTime.textContent : '';
-
   // Speech chips: AI чіпи + "Поговорити"
-  const chipsEl = document.getElementById('owl-speech-chips');
+  const chipsEl = document.getElementById('owl-tab-chips-inbox');
   if (chipsEl) {
     let chips = (latest.chips || []).map(c => {
       const safe = escapeHtml(c).replace(/'/g, '&#39;');
@@ -734,19 +725,19 @@ function renderOwlBoard() {
     chips.push('<div class="owl-chip owl-chip-speak" onclick="expandOwlChat()">Поговорити</div>');
     chipsEl.innerHTML = chips.join('');
     chipsEl.scrollLeft = 0;
-    chipsEl.removeEventListener('scroll', updateOwlChipsArrows);
-    chipsEl.addEventListener('scroll', updateOwlChipsArrows, { passive: true });
-    setTimeout(updateOwlChipsArrows, 50);
+    chipsEl.removeEventListener('scroll', () => _updateOwlTabChipsArrows('inbox'));
+    chipsEl.addEventListener('scroll', () => _updateOwlTabChipsArrows('inbox'), { passive: true });
+    setTimeout(() => _updateOwlTabChipsArrows('inbox'), 50);
   }
 
   // Якщо expanded — оновити чат
-  if (_owlState === 'expanded') {
+  if ((_owlTabStates['inbox'] || 'speech') === 'expanded') {
     renderOwlChatMessages();
     renderOwlChips(latest);
   }
 
   // Дефолт: speech. Нове повідомлення → повернути на speech.
-  if (_owlState === 'collapsed') {
+  if (_getOwlState() === 'collapsed') {
     // Залишаємо collapsed якщо юзер згорнув
   }
 }
@@ -758,7 +749,7 @@ function expandOwlChat() {
   renderOwlChatMessages();
   const latest = _owlBoardMessages[0];
   renderOwlChips(latest);
-  const msgs = document.getElementById('owl-chat-messages');
+  const msgs = document.getElementById('owl-tab-msgs-inbox');
   if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
 }
 
@@ -769,9 +760,9 @@ function collapseOwlToSpeech() {
 
 // Toggle: collapsed ↔ speech
 function toggleOwlChat() {
-  if (_owlState === 'collapsed') {
+  if (_getOwlState() === 'collapsed') {
     _owlSetState('speech');
-  } else if (_owlState === 'speech') {
+  } else if (_getOwlState() === 'speech') {
     _owlSetState('collapsed');
   } else {
     // expanded → speech
@@ -781,14 +772,14 @@ function toggleOwlChat() {
 
 // Закрити OWL чат ззовні (з inbox chat)
 function closeOwlChat() {
-  if (_owlState === 'expanded') {
+  if (_getOwlState() === 'expanded') {
     _owlSetState('speech');
   }
 }
 
 // Рендер повідомлень чату
 function renderOwlChatMessages() {
-  const el = document.getElementById('owl-chat-messages');
+  const el = document.getElementById('owl-tab-msgs-inbox');
   if (!el) return;
 
   // Збираємо: останні board-повідомлення (як agent) + owl_chat історія
@@ -821,7 +812,7 @@ function renderOwlChatMessages() {
 
 // Рендер чіпів
 function renderOwlChips(boardMsg) {
-  const el = document.getElementById('owl-chat-chips');
+  const el = document.getElementById('owl-tab-exp-chips-inbox');
   if (!el) return;
   if (!boardMsg || !boardMsg.chips || boardMsg.chips.length === 0) {
     el.innerHTML = '';
@@ -835,7 +826,7 @@ function renderOwlChips(boardMsg) {
 
 // Typing індикатор
 function showOwlTyping(show) {
-  const el = document.getElementById('owl-chat-messages');
+  const el = document.getElementById('owl-tab-msgs-inbox');
   if (!el) return;
   const existing = el.querySelector('.owl-typing-wrap');
   if (existing) existing.remove();
@@ -846,16 +837,13 @@ function showOwlTyping(show) {
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
   }
-  // Блокуємо input
-  const inp = document.getElementById('owl-chat-input');
-  const btn = document.getElementById('owl-chat-send');
+  const inp = document.getElementById('owl-tab-input-inbox');
   if (inp) inp.disabled = show;
-  if (btn) btn.disabled = show;
 }
 
 // Зелений банер підтвердження
 function showOwlConfirm(text) {
-  const el = document.getElementById('owl-chat-messages');
+  const el = document.getElementById('owl-tab-msgs-inbox');
   if (!el) return;
   const banner = document.createElement('div');
   banner.className = 'owl-confirm-banner';
@@ -871,7 +859,7 @@ async function sendOwlReply(text) {
   _owlChatSending = true;
 
   // Автоматично відкриваємо чат якщо не expanded
-  if (_owlState !== 'expanded') expandOwlChat();
+  if (_getOwlState() !== 'expanded') expandOwlChat();
 
   // Додаємо повідомлення юзера
   saveOwlChatMsg('user', text);
@@ -880,8 +868,7 @@ async function sendOwlReply(text) {
   // Показуємо typing
   showOwlTyping(true);
 
-  // Чіпи прибираємо (і в чаті, і на main board)
-  const chipsEl = document.getElementById('owl-chat-chips');
+  const chipsEl = document.getElementById('owl-tab-exp-chips-inbox');
   if (chipsEl) chipsEl.innerHTML = '';
 
   try {
@@ -916,7 +903,7 @@ async function sendOwlReply(text) {
 
 // Відправка з input
 function sendOwlReplyFromInput() {
-  const inp = document.getElementById('owl-chat-input');
+  const inp = document.getElementById('owl-tab-input-inbox');
   if (!inp || !inp.value.trim()) return;
   const text = inp.value.trim();
   inp.value = '';
@@ -1029,11 +1016,11 @@ function owlSwipeEnd() {
   // Свайп вниз: expanded → speech, speech → expanded (розгорнути чат)
   // Свайп вгору: speech → collapsed, expanded → speech
   if (dy < -40) {
-    if (_owlState === 'expanded') collapseOwlToSpeech();
-    else if (_owlState === 'speech') _owlSetState('collapsed');
+    if (_getOwlState() === 'expanded') collapseOwlToSpeech();
+    else if (_getOwlState() === 'speech') _owlSetState('collapsed');
   } else if (dy > 40) {
-    if (_owlState === 'speech') expandOwlChat();
-    else if (_owlState === 'collapsed') _owlSetState('speech');
+    if (_getOwlState() === 'speech') expandOwlChat();
+    else if (_getOwlState() === 'collapsed') _owlSetState('speech');
   }
 }
 
@@ -1110,19 +1097,6 @@ function handleScheduleAnswer(text) {
   return true;
 }
 
-function updateOwlChipsArrows() {
-  const el = document.getElementById('owl-speech-chips');
-  const left = document.getElementById('owl-chips-left');
-  const right = document.getElementById('owl-chips-right');
-  if (!el || !left || !right) return;
-  left.classList.toggle('visible', el.scrollLeft > 4);
-  right.classList.toggle('visible', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-}
-
-function scrollOwlChips(dir) {
-  const el = document.getElementById('owl-speech-chips');
-  if (!el) return;
-  el.scrollBy({ left: dir * 130, behavior: 'smooth' });
-  setTimeout(updateOwlChipsArrows, 250);
-}
+function updateOwlChipsArrows() { _updateOwlTabChipsArrows('inbox'); }
+function scrollOwlChips(dir) { scrollOwlTabChips('inbox', dir); }
 
