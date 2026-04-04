@@ -296,7 +296,7 @@ function saveOwlBoardMessages(arr) {
 // === OWL BOARD — повний розумний цикл ===
 
 // === РОЗКЛАД ДНЯ ===
-function getSchedule() {
+export function getSchedule() {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const sc = s.schedule || {};
   const parseH = (str, def) => {
@@ -313,7 +313,7 @@ function getSchedule() {
 }
 
 // Фази: 'silent' | 'dawn' | 'morning' | 'work' | 'evening' | 'night'
-function getDayPhase() {
+export function getDayPhase() {
   const sc = getSchedule();
   const h = new Date().getHours();
   if (h >= sc.bedTime || h < sc.wakeUp - 2) return 'silent';
