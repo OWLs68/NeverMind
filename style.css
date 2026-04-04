@@ -1271,6 +1271,8 @@ body {
   box-shadow: 0 8px 40px rgba(0,0,0,0.22);
   overflow: hidden;
 }
+/* owl-tab-exp-chips — кнопки справа від сови у expanded стані */
+.owl-tab-exp-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 0 8px; }
 /* owl-tab-chat-msgs — повідомлення всередині бабла без темного контейнера */
 .owl-tab-chat-msgs { max-height: 160px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 14px 4px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
 .owl-tab-chat-msgs::-webkit-scrollbar { display: none; }

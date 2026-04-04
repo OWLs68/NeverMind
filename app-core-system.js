@@ -726,8 +726,8 @@ function dismissTabBoard(tab) {
 const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
 const _owlTabSwipes = {};
 
-// Висота розгорнутого чату в пікселях (повідомлення + поле вводу + полоска)
-const OWL_TAB_EXPANDED_H = 248;
+// Висота розгорнутого чату (chips + separator + chat + input + handle)
+const OWL_TAB_EXPANDED_H = 290;
 
 function _owlTabHTML(tab) {
   const t = tab;
@@ -743,17 +743,22 @@ function _owlTabHTML(tab) {
         <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
         <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
         <div class="owl-swipe-handle"><div class="owl-handle-bar"></div></div>
-        <!-- Чат розгортається всередині бабла, висота 0 → OWL_TAB_EXPANDED_H -->
-        <div id="owl-tab-expanded-${t}" style="height:0;overflow:hidden;margin:4px -18px -10px -104px">
-          <div id="owl-tab-msgs-${t}" class="owl-chat-messages owl-tab-chat-msgs"></div>
-          <div class="owl-chat-input-row">
-            <input id="owl-tab-input-${t}" type="text" placeholder="Написати OWL..." autocomplete="off"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlTabReplyFromInput('${t}')}">
-            <button onclick="sendOwlTabReplyFromInput('${t}')">➤</button>
+        <!-- Expanded: кнопки справа від сови, чат нижче на повну ширину -->
+        <div id="owl-tab-expanded-${t}" style="height:0;overflow:hidden">
+          <!-- Кнопки в зоні правого контенту (104px відступ = справа від сови) -->
+          <div id="owl-tab-exp-chips-${t}" class="owl-tab-exp-chips"></div>
+          <!-- Чат на повну ширину (від'ємні margins скасовують padding бабла) -->
+          <div style="margin:0 -18px 0 -104px;border-top:1px solid rgba(255,255,255,0.07)">
+            <div id="owl-tab-msgs-${t}" class="owl-tab-chat-msgs"></div>
+            <div class="owl-chat-input-row">
+              <input id="owl-tab-input-${t}" type="text" placeholder="Написати OWL..." autocomplete="off"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlTabReplyFromInput('${t}')}">
+              <button onclick="sendOwlTabReplyFromInput('${t}')">➤</button>
+            </div>
+            <div class="owl-swipe-handle owl-tab-close-handle"
+                 ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')"
+                 onclick="collapseOwlTabToSpeech('${t}')"><div class="owl-handle-bar"></div></div>
           </div>
-          <div class="owl-swipe-handle owl-tab-close-handle"
-               ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')"
-               onclick="collapseOwlTabToSpeech('${t}')"><div class="owl-handle-bar"></div></div>
         </div>
       </div>
     </div>
@@ -985,20 +990,23 @@ function renderTabBoard(tab) {
   if (cEl) cEl.textContent = msg.text;
   if (tmEl) tmEl.textContent = timeStr;
 
-  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
+  const chipsEl    = document.getElementById('owl-tab-chips-' + tab);
+  const expChipsEl = document.getElementById('owl-tab-exp-chips-' + tab);
+  const chipsHTML = (msg.chips || []).map(c => {
+    const s = escapeHtml(c).replace(/'/g, '&#39;');
+    return `<div class="owl-chip" onclick="sendOwlTabReply('${tab}','${s}')">${escapeHtml(c)}</div>`;
+  });
   if (chipsEl) {
-    const chips = (msg.chips || []).map(c => {
-      const s = escapeHtml(c).replace(/'/g, '&#39;');
-      return `<div class="owl-chip" onclick="sendOwlTabReply('${tab}','${s}')">${escapeHtml(c)}</div>`;
-    });
-    chips.push(`<div class="owl-chip owl-chip-speak" onclick="expandOwlTabChat('${tab}')">Поговорити</div>`);
-    chipsEl.innerHTML = chips.join('');
+    const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak" onclick="expandOwlTabChat('${tab}')">Поговорити</div>`];
+    chipsEl.innerHTML = speechChips.join('');
     chipsEl.scrollLeft = 0;
     chipsEl.removeEventListener('scroll', chipsEl._arrowHandler);
     chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
     chipsEl.addEventListener('scroll', chipsEl._arrowHandler, { passive: true });
     setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
   }
+  // Expanded chips: ті самі кнопки справа від сови (без "Поговорити")
+  if (expChipsEl) expChipsEl.innerHTML = chipsHTML.join('');
 }
 
 function getTabBoardContext(tab) {
