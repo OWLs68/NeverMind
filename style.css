@@ -1282,9 +1282,11 @@ body {
   overflow: hidden; /* для заокруглених кутів */
 }
 /* Секція тексту агента (завжди видима, 104px зліва = справа від сови) */
+/* min-height:67px → загальна висота 87px = нижній край сови (84px) + 3px */
 .owl-tab-bubble {
   padding: 10px 18px 10px 104px;
   position: relative;
+  min-height: 67px;
 }
 /* Кнопки справа від сови у expanded стані */
 .owl-tab-exp-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 18px 8px 104px; }

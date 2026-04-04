@@ -745,7 +745,6 @@ function _owlTabHTML(tab) {
         <div class="owl-tab-bubble">
           <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
           <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
-          <div class="owl-swipe-handle"><div class="owl-handle-bar"></div></div>
         </div>
         <!-- Expanded: height:0→N, повна ширина карточки, без хаків -->
         <div id="owl-tab-expanded-${t}" style="height:0;overflow:hidden">
@@ -1175,6 +1174,11 @@ async function generateTabBoardMessage(tab) {
 
 function tryTabBoardUpdate(tab) {
   if (tab === 'inbox') return;
+  // Скидаємо стан до speech при кожному переключенні вкладки
+  if (_owlTabStates[tab] && _owlTabStates[tab] !== 'speech') {
+    _owlTabStates[tab] = 'speech';
+    _owlTabApplyState(tab);
+  }
   renderTabBoard(tab); // завжди показуємо збережені дані
   const hour = new Date().getHours();
   if (hour < 5) return; // тихі години — генерація пропускається
