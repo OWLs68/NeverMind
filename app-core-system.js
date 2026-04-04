@@ -721,139 +721,180 @@ function dismissTabBoard(tab) {
   if (el) el.style.display = 'none';
 }
 
+// === OWL TAB BOARD — новий стиль (як Інбокс) ===
+
+const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
+const _owlTabSwipes = {};
+
+function _owlTabHTML(tab) {
+  const t = tab;
+  return `
+    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+      <div class="owl-collapsed-avatar">🦉</div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
+    </div>
+    <div id="owl-tab-speech-${t}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+      <div class="owl-speech-avatar">🦉</div>
+      <div class="owl-speech-bubble">
+        <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
+        <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+        <div class="owl-swipe-handle"><div class="owl-handle-bar"></div></div>
+      </div>
+    </div>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
+      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
+    </div>
+    <div id="owl-tab-expanded-${t}" style="display:none"
+         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+      <div class="owl-agent-container">
+        <div class="owl-agent-hero">
+          <div class="owl-agent-avatar">🦉</div>
+          <div class="owl-agent-name">OWL</div>
+        </div>
+        <div id="owl-tab-msgs-${t}" class="owl-chat-messages"></div>
+        <div class="owl-chat-input-row">
+          <input id="owl-tab-input-${t}" type="text" placeholder="Написати OWL..." autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlTabReplyFromInput('${t}')}">
+          <button onclick="sendOwlTabReplyFromInput('${t}')">➤</button>
+        </div>
+        <div class="owl-swipe-handle" onclick="collapseOwlTabToSpeech('${t}')"><div class="owl-handle-bar"></div></div>
+      </div>
+    </div>`;
+}
+
+function _owlTabApplyState(tab) {
+  const st = _owlTabStates[tab] || 'speech';
+  const collapsed = document.getElementById('owl-tab-collapsed-' + tab);
+  const speech    = document.getElementById('owl-tab-speech-' + tab);
+  const expanded  = document.getElementById('owl-tab-expanded-' + tab);
+  const chipsWrap = document.getElementById('owl-tab-chips-wrap-' + tab);
+  if (!speech) return;
+  if (collapsed) collapsed.style.display = st === 'collapsed' ? 'flex' : 'none';
+  speech.style.display    = st === 'speech'   ? 'block' : 'none';
+  if (expanded)  expanded.style.display  = st === 'expanded'  ? 'block' : 'none';
+  if (chipsWrap) chipsWrap.style.display = st === 'expanded'  ? 'none'  : 'flex';
+}
+
+function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
+function collapseOwlTabToSpeech(tab){ _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
+function expandOwlTabChat(tab)      { _owlTabStates[tab] = 'expanded'; _owlTabApplyState(tab); renderOwlTabMsgs(tab); }
+
+function owlTabSwipeStart(e, tab) {
+  _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
+}
+function owlTabSwipeMove(e, tab) {
+  if (!_owlTabSwipes[tab]) return;
+  _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
+  if (Math.abs(_owlTabSwipes[tab].dy) > 10) e.preventDefault();
+}
+function owlTabSwipeEnd(e, tab) {
+  const sw = _owlTabSwipes[tab]; if (!sw) return;
+  _owlTabSwipes[tab] = null;
+  const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
+  if (dy < -40) {
+    if (st === 'expanded') collapseOwlTabToSpeech(tab);
+    else if (st === 'speech') { _owlTabStates[tab] = 'collapsed'; _owlTabApplyState(tab); }
+  } else if (dy > 40) {
+    if (st === 'speech') expandOwlTabChat(tab);
+    else if (st === 'collapsed') toggleOwlTabChat(tab);
+  }
+}
+
+function renderOwlTabMsgs(tab) {
+  const el = document.getElementById('owl-tab-msgs-' + tab);
+  if (!el) return;
+  const msgs = JSON.parse(localStorage.getItem('nm_owl_tab_chat_' + tab) || '[]');
+  el.innerHTML = msgs.map(m =>
+    `<div class="owl-msg-${m.role === 'user' ? 'user' : 'agent'}">${escapeHtml(m.text)}</div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendOwlTabReply(tab, text) {
+  expandOwlTabChat(tab);
+  const key = 'nm_owl_tab_chat_' + tab;
+  const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+  msgs.push({ role: 'user', text, ts: Date.now() });
+  localStorage.setItem(key, JSON.stringify(msgs));
+  renderOwlTabMsgs(tab);
+  // Typing indicator (індикатор набору)
+  const el = document.getElementById('owl-tab-msgs-' + tab);
+  if (el) {
+    const d = document.createElement('div');
+    d.className = 'owl-msg-agent owl-typing-wrap';
+    d.innerHTML = '<div class="owl-typing"><span></span><span></span><span></span></div>';
+    el.appendChild(d); el.scrollTop = el.scrollHeight;
+  }
+  const apiKey = localStorage.getItem('nm_gemini_key');
+  if (!apiKey) return;
+  try {
+    const context = getTabBoardContext(tab);
+    const history = msgs.slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'system', content: (typeof getOWLPersonality === 'function' ? getOWLPersonality() : '') + '\n\nКонтекст:\n' + context }, ...history],
+        max_tokens: 250, temperature: 0.8
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) { renderOwlTabMsgs(tab); return; }
+    const all = JSON.parse(localStorage.getItem(key) || '[]');
+    all.push({ role: 'agent', text: reply, ts: Date.now() });
+    localStorage.setItem(key, JSON.stringify(all));
+    renderOwlTabMsgs(tab);
+  } catch(e) { renderOwlTabMsgs(tab); }
+}
+
+function sendOwlTabReplyFromInput(tab) {
+  const input = document.getElementById('owl-tab-input-' + tab);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendOwlTabReply(tab, text);
+}
+
 function renderTabBoard(tab) {
   const msgs = getTabBoardMsgs(tab);
   const board = document.getElementById('owl-tab-board-' + tab);
   if (!board) return;
+  if (!msgs.length) { board.style.display = 'none'; return; }
   board.style.display = 'block';
 
-  const track = document.getElementById('owl-tab-track-' + tab);
-  const dots  = document.getElementById('owl-tab-dots-' + tab);
-  const pulse = document.getElementById('owl-tab-pulse-' + tab);
-  if (!track) return;
-
-  // Pulse — за поточним (першим) повідомленням
-  const current = msgs[0];
-  if (pulse) {
-    const p = current ? current.priority : 'normal';
-    pulse.style.background  = p === 'critical' ? '#ef4444' : p === 'important' ? '#f59e0b' : '#fbbf24';
-    pulse.style.boxShadow   = p === 'critical' ? '0 0 6px rgba(239,68,68,0.7)' : '';
+  // Ініціалізація структури — один раз
+  if (!board._owlReady) {
+    board.innerHTML = _owlTabHTML(tab);
+    board._owlReady = true;
+    _owlTabStates[tab] = 'speech';
+    _owlTabApplyState(tab);
   }
 
-  // Слайди — головний + історія
-  const CHIP_HTML = chips => chips && chips.length
-    ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${chips.map(c =>
-        `<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15)">${escapeHtml(c)}</div>`
-      ).join('')}</div>`
-    : '';
+  const msg = msgs[0];
+  const ago = Date.now() - (msg.ts || msg.id || Date.now());
+  const mins = Math.floor(ago / 60000);
+  const timeStr = mins < 1 ? 'щойно' : mins < 60 ? mins + ' хв' : Math.floor(mins / 60) + ' год';
 
-  if (msgs.length === 0) {
-    track.innerHTML = `<div style="min-width:100%"><div style="font-size:13px;font-weight:600;color:white;line-height:1.55">…</div></div>`;
-  } else {
-    track.innerHTML = msgs.map((msg, i) =>
-      `<div style="min-width:100%;box-sizing:border-box">
-        <div style="font-size:13px;font-weight:600;color:${i === 0 ? 'white' : 'rgba(255,255,255,0.5)'};line-height:1.55">${escapeHtml(msg.text)}</div>
-        ${CHIP_HTML(msg.chips)}
-      </div>`
-    ).join('');
+  const tEl = document.getElementById('owl-tab-text-' + tab);
+  const cEl = document.getElementById('owl-tab-ctext-' + tab);
+  const tmEl = document.getElementById('owl-tab-time-' + tab);
+  if (tEl) tEl.textContent = msg.text;
+  if (cEl) cEl.textContent = msg.text;
+  if (tmEl) tmEl.textContent = timeStr;
+
+  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
+  if (chipsEl) {
+    const chips = (msg.chips || []).map(c => {
+      const s = escapeHtml(c).replace(/'/g, '&#39;');
+      return `<div class="owl-chip" onclick="sendOwlTabReply('${tab}','${s}')">${escapeHtml(c)}</div>`;
+    });
+    chips.push(`<div class="owl-chip owl-chip-speak" onclick="expandOwlTabChat('${tab}')">Поговорити</div>`);
+    chipsEl.innerHTML = chips.join('');
   }
-
-  // Зберігаємо/скидаємо поточний слайд
-  const sk = '_tabSlide_' + tab;
-  const maxIdx = Math.max(0, msgs.length - 1);
-  if (!window[sk] || window[sk] > maxIdx) window[sk] = 0;
-  track.style.transition = 'none';
-  track.style.transform   = `translateX(-${window[sk] * 100}%)`;
-
-  // Крапки-навігатори — як в inbox: ховаємо для ≤1 слайду
-  if (dots) {
-    if (msgs.length > 1) {
-      const cur = window[sk];
-      dots.style.display = 'flex';
-      dots.style.justifyContent = 'center'; // горизонтальне центрування
-      dots.innerHTML = Array.from({ length: msgs.length }, (_, i) =>
-        `<div style="height:3px;width:${i === cur ? 14 : 4}px;border-radius:2px;background:rgba(255,255,255,${i === cur ? '0.75' : '0.22'});transition:width 0.2s,background 0.2s"></div>`
-      ).join('');
-    } else {
-      dots.style.display = 'none';
-    }
-  }
-
-  // Свайп — ініціалізуємо один раз
-  const slider = document.getElementById('owl-tab-slider-' + tab);
-  if (slider && !slider._swipeReady) {
-    slider._swipeReady = true;
-    slider.style.touchAction = 'pan-y'; // браузер керує вертикаллю, JS — горизонталлю
-    setupTabBoardSwipe(tab, slider, track, dots);
-  }
-}
-
-function setupTabBoardSwipe(tab, slider, track, dots) {
-  const sk = '_tabSlide_' + tab;
-  let startX = 0, startY = 0, locked = false, dx = 0;
-
-  const updateDots = (next) => {
-    if (dots && dots.style.display !== 'none') {
-      [...dots.children].forEach((d, i) => {
-        d.style.width      = i === next ? '14px' : '4px';
-        d.style.background = `rgba(255,255,255,${i === next ? '0.75' : '0.22'})`;
-      });
-    }
-  };
-
-  slider.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    locked = false; dx = 0;
-    track.style.transition = 'none';
-  }, { passive: true });
-
-  slider.addEventListener('touchmove', e => {
-    const cx = e.touches[0].clientX;
-    const cy = e.touches[0].clientY;
-    const adx = Math.abs(cx - startX);
-    const ady = Math.abs(cy - startY);
-    if (!locked && adx < 8 && ady < 8) return;
-    if (!locked) {
-      if (ady > adx) return; // вертикаль — не перехоплюємо
-      locked = true;
-    }
-    // Заблокований горизонтальний свайп — перехоплюємо
-    e.preventDefault();
-    e.stopPropagation();
-    dx = cx - startX;
-    const msgs = getTabBoardMsgs(tab);
-    const cur  = window[sk] || 0;
-    const base = -cur * 100;
-    const pct  = (dx / slider.offsetWidth) * 100;
-    let offset = base + pct;
-    if (cur === 0 && dx > 0) offset = base + pct * 0.25; // гума на першому
-    if (cur >= msgs.length - 1 && dx < 0) offset = base + pct * 0.25; // гума на останньому
-    track.style.transform = `translateX(${offset}%)`;
-  }, { passive: false }); // passive:false щоб preventDefault спрацював
-
-  const settle = () => {
-    if (!locked) return;
-    const msgs = getTabBoardMsgs(tab);
-    const cur  = window[sk] || 0;
-    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    let next = cur;
-    if (dx < -40 && cur < msgs.length - 1) next = cur + 1;
-    else if (dx > 40 && cur > 0) next = cur - 1;
-    window[sk] = next;
-    track.style.transform = `translateX(-${next * 100}%)`;
-    updateDots(next);
-    locked = false; dx = 0;
-  };
-
-  slider.addEventListener('touchend', settle, { passive: true });
-  slider.addEventListener('touchcancel', () => {
-    // Скидаємо на поточний слайд без переходу
-    if (!locked) return;
-    track.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    track.style.transform = `translateX(-${(window[sk] || 0) * 100}%)`;
-    locked = false; dx = 0;
-  }, { passive: true });
 }
 
 function getTabBoardContext(tab) {

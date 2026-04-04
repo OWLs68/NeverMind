@@ -935,20 +935,9 @@ body {
 .ai-bar-input-box {
   border-radius: 18px 18px 10px 10px !important;
 }
-/* Табло — ширина = ширина бара (left:4px right:4px), нижні кути з'єднуються з полем вводу */
-[id^="owl-tab-board-"], #owl-board-wrap {
-  margin: 0 4px 0 !important;
-  padding: 0 !important;
-}
-[id^="owl-tab-board-"] > div,
-[id^="owl-tab-board-"] .tab-board-inner {
-  border-radius: 10px 10px 18px 18px !important;
-  margin: 0 !important;
-  background: rgba(15,10,22,0.72) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.10) !important;
+/* Табло — padding як в Інбокс */
+[id^="owl-tab-board-"] {
+  padding: 0 4px !important;
 }
 /* Прибираємо відступ між заголовком і табло */
 .page-header + [id^="owl-tab-board-"],
