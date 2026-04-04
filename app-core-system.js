@@ -727,7 +727,7 @@ const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
 const _owlTabSwipes = {};
 
 // Висота розгорнутого чату (chips + separator + chat + input + handle)
-const OWL_TAB_EXPANDED_H = 290;
+const OWL_TAB_EXPANDED_H = 210;
 
 function _owlTabHTML(tab) {
   const t = tab;
@@ -783,7 +783,12 @@ function _owlTabApplyState(tab) {
   if (collapsed) collapsed.style.display = st === 'collapsed' ? 'flex' : 'none';
   // Speech завжди видима коли не collapsed — сова залишається
   speech.style.display = st === 'collapsed' ? 'none' : 'block';
-  // Expanded росте всередині speech-bubble
+  // Текст і час зникають у expanded — замість них показуються кнопки
+  const textEl = document.getElementById('owl-tab-text-' + tab);
+  const timeEl = document.getElementById('owl-tab-time-' + tab);
+  if (textEl) textEl.style.display = st === 'expanded' ? 'none' : '';
+  if (timeEl) timeEl.style.display = st === 'expanded' ? 'none' : '';
+  // Expanded росте всередині owl-tab-card
   if (expanded) {
     expanded.style.transition = '';
     expanded.style.height = st === 'expanded' ? OWL_TAB_EXPANDED_H + 'px' : '0';
