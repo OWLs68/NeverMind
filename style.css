@@ -1261,6 +1261,16 @@ body {
 .owl-chip-speak:active { background: rgba(180,80,5,0.90); }
 
 /* === EXPANDED: чат розгортається всередині speech-bubble === */
+/* owl-agent-container — темний контейнер для Inbox розгорнутого стану */
+.owl-agent-container {
+  background: rgba(15,10,22,0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  overflow: hidden;
+}
 /* owl-tab-chat-msgs — повідомлення всередині бабла без темного контейнера */
 .owl-tab-chat-msgs { max-height: 160px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 14px 4px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
 .owl-tab-chat-msgs::-webkit-scrollbar { display: none; }
