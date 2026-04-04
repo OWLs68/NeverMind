@@ -721,3 +721,25 @@ function getTabbarHeight() {
   return tb ? tb.offsetHeight : 83;
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  _inboxTypingEl, addInboxChatMsg, _inboxUnreadCount, _showInboxUnreadBadge,
+  _clearInboxUnreadBadge, CAT_DOT_BG, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META,
+  getInbox, saveInbox, _inboxFormatHour, _inboxDateLabel,
+  _inboxSwipedRecently, toggleInboxExpand, renderInbox,
+  swipeState, swipeStart, swipeMove, swipeEnd,
+  aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG,
+  unifiedInputKeydown, sendToAI,
+  clarifyParsed, clarifyOriginalText,
+  showClarify, closeClarify, selectClarifyOption, sendClarifyText,
+  processSaveAction, processCompleteHabit, processCompleteTask,
+  getTabbarHeight,
+});
+
+// activeChatBar needs getter/setter (modified by app-ai-core.js and app-ai-chat.js)
+Object.defineProperty(window, 'activeChatBar', {
+  get() { return activeChatBar; },
+  set(v) { activeChatBar = v; },
+  configurable: true
+});

@@ -602,3 +602,17 @@ ${aiContext ? '\n\n' + aiContext : ''}
   } catch { addProjectsChatMsg('agent', 'Мережева помилка.'); }
   projectsBarLoading = false;
 }
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  getProjects, saveProjects,
+  activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl,
+  renderProjects, renderProjectsList,
+  openProjectWorkspace, closeProjectWorkspace, renderProjectWorkspace,
+  _countProjectNotes, toggleProjectTimeline, toggleProjectStep,
+  _syncProjectStepToTasks,
+  openAddProject, closeProjectModal, saveNewProject,
+  startProjectInboxInterview,
+  getProjectsContext,
+  addProjectsChatMsg, sendProjectsBarMessage,
+});

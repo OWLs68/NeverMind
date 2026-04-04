@@ -1137,3 +1137,42 @@ async function sendNotesBarMessage() {
   notesBarLoading = false;
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  editingNoteId, pendingFolderSuggestion,
+  getNotes, saveNotes, getFolders,
+  addNoteFromInbox, openAddNote, openEditNote, closeNoteModal,
+  updateFolderSuggestions, saveNote, deleteNote,
+  openNotesFolder, closeNotesFolder,
+  _S, _ico, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS,
+  FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, getFolderIcon,
+  getFoldersMeta, saveFoldersMeta, getFolderMeta, setFolderMeta,
+  FOLDER_COLORS, DEFAULT_NOTE_FOLDER,
+  renderNotes, renderNotesList,
+  noteSwipeState, noteSwipeStart, noteSwipeMove, noteSwipeEnd,
+  activeNoteMenuId, openNoteMenu, closeNoteMenu,
+  noteMenuEdit, noteMenuDelete, noteMenuCopy, noteMenuMove,
+  checkAndSuggestFolders, suggestNoteFolders, applyFolderSuggestion,
+  activeNoteViewId, noteChatHistory, noteChatLoading,
+  getFolderColor, openNoteView, closeNoteView,
+  _autoSaveNoteTimer, autoSaveNoteView,
+  openNoteViewMenu, openEditNoteFromView, switchNoteViewTab,
+  initNoteChatGreeting, addNoteChatMsg, sendNoteChatMessage,
+  _pendingAgentNote, showSaveAsNoteBtn, saveAgentResponseAsNote,
+  folderSwipeState, _folderKey, folderSwipeStart, folderSwipeMove, folderSwipeEnd,
+  _editingFolder, openFolderEditModal, closeFolderEditModal,
+  _autoIconKey, _selectedIconKey, _selectedColorKey,
+  renderFolderIconGrid, selectFolderIcon,
+  FOLDER_COLOR_PALETTE, renderFolderColorGrid, selectFolderColor,
+  saveFolderEdit,
+  notesBarHistory, notesBarLoading,
+  addNotesChatMsg, sendNotesBarMessage,
+});
+
+// currentNotesFolder needs getter/setter (referenced by app-core-nav.js)
+Object.defineProperty(window, 'currentNotesFolder', {
+  get() { return currentNotesFolder; },
+  set(v) { currentNotesFolder = v; },
+  configurable: true
+});

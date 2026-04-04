@@ -1111,3 +1111,26 @@ async function sendFinanceBarMessage() {
   financeBarLoading = false;
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  getFinance, saveFinance, getFinBudget, saveFinBudget,
+  getFinCats, saveFinCats,
+  FIN_SUBCATS, currentFinTab, currentFinPeriod,
+  getCurrency, setCurrency, formatMoney,
+  FIN_CAT_COLORS, getFinColor,
+  getFinPeriodRange, getFilteredTransactions,
+  switchFinTab, setFinPeriod, _hideOldFinBlocks,
+  getFinAdaptiveBenchmark, renderFinance,
+  _finEmptyState, _finHeroCard, _finInsightCards, _finForecast,
+  _finCoachBlock, _refreshFinCoach,
+  _finWeekChart, _finCatsBlock, _finTxsBlock, openAllTransactions,
+  _finEditId, openAddTransaction, openEditTransaction, _showTransactionModal,
+  _finTxCurrentType, _finTxSelectedCat,
+  toggleFinTxType, selectFinTxCat,
+  saveFinTransaction, deleteFinTransaction, closeFinTxModal,
+  openFinBudgetModal, saveFinBudgetFromModal, closeFinBudgetModal,
+  processFinanceAction, checkFinBudgetWarning, getFinanceContext,
+  financeBarHistory, financeBarLoading,
+  addFinanceChatMsg, sendFinanceBarMessage,
+});

@@ -443,3 +443,15 @@ ${aiContext ? '\n\n' + aiContext : ''}
   } catch { addHealthChatMsg('agent', 'Мережева помилка.'); }
   healthBarLoading = false;
 }
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  getHealthCards, saveHealthCards, getHealthLog, saveHealthLog,
+  activeHealthCardId, healthBarLoading, healthBarHistory, _healthTypingEl,
+  renderHealth, renderHealthList,
+  _renderHealthWeekBars, _renderHealthTodayScales,
+  setHealthScale, openHealthCard, closeHealthCard,
+  renderHealthWorkspace, setHealthCardStatus,
+  openAddHealthCard, getHealthContext,
+  addHealthChatMsg, sendHealthBarMessage,
+});

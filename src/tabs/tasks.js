@@ -551,3 +551,22 @@ function addTaskBarMsg(role, text, _noSave = false) {
   if (!_noSave) saveChatMsg('tasks', role, text);
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  editingTaskId, tempSteps,
+  getTasks, saveTasks, openAddTask, openEditTask,
+  setupModalSwipeClose, closeTaskModal, deleteTaskFromModal,
+  addTaskStep, toggleTempStep, removeTempStep, renderTempSteps,
+  saveTask, toggleTaskStep, deleteTask, toggleTaskStatus,
+  renderTasks, setupTaskSwipeListeners, askAIAboutTask,
+  taskChatId, taskChatHistory, taskChatLoading,
+  openTaskChat, saveTaskChatHistory, closeTaskChat,
+  addTaskChatMsg, sendTaskChatMessage,
+  taskSwipeState, taskSwipeStart, taskSwipeMove, taskSwipeEnd,
+  autoGenerateTaskSteps,
+  taskBarLoading, taskBarHistory,
+  showTasksChatMessages,
+  _taskTypingEl, _financeTypingEl, _eveningTypingEl, _notesTypingEl,
+  addTaskBarMsg,
+});

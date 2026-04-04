@@ -54,7 +54,7 @@
 - **Після КОЖНОЇ зміни** — оновити `_ai-tools/SESSION_STATE.md` і запушити. Не чекати кінця сесії.
 - **Після структурних змін** — оновити `CLAUDE.md` (файлова структура, правила, дані).
 - **Після змін архітектури** — оновити `docs/ARCHITECTURE.md` (діаграми).
-- **При додаванні нових файлів** — обов'язково додати в `STATIC_ASSETS` у `sw.js`.
+- **При додаванні нових файлів** — додавати в `src/` та імпортувати в `src/app.js`. `sw.js` STATIC_ASSETS кешує тільки `bundle.js`.
 
 ### Деплой
 - **При кожному деплої** — змінити `CACHE_NAME` у `sw.js` (формат: `nm-YYYYMMDD-HHMM`) **локально, перед пушем**. CI не чіпає sw.js. Використовуй `date` в терміналі.
@@ -70,7 +70,7 @@
 - `localStorage.setItem` override в `app-core-system.js` (~207-212) — cross-tab sync
 - `app-db.js` або будь-яка централізована БД-абстракція — вже пробували, зламало все
 - Локальні функції `getTasks()`, `saveNotes()` і т.д. — інші модулі їх кличуть напряму
-- Порядок `<script>` тегів в index.html
+- Порядок імпортів в `src/app.js`
 - Логіку `setupSW()` в app-core-system.js — кожна частина вирішує конкретну iOS проблему
 
 ### Чеклист аудиту (коли Роман каже "перевір роботу")
@@ -89,36 +89,50 @@
 
 | Файл | Відповідальність |
 |------|-----------------|
-| `index.html` | Весь UI (~1570 рядків). 13 `<script>` тегів в кінці |
+| `index.html` | Весь UI (~1475 рядків). Один `<script src="bundle.js">` |
 | `style.css` | Всі стилі (~1130 рядків). Винесено з index.html |
 | `sw.js` | Service Worker. **CACHE_NAME треба міняти при кожному деплої** |
-| `app-core-nav.js` | Глобальний стан (`currentTab`), switchTab, теми, налаштування, пам'ять |
-| `app-core-system.js` | bootApp, кошик (7 днів TTL), OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox), `owlChipToChat()`, cross-tab sync, PWA setup |
-| `app-ai-core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість |
-| `app-ai-chat.js` | OWL Board Inbox (проактивні повідомлення), генерація повідомлень, делегує рендер в `renderTabBoard('inbox')` |
-| `app-inbox.js` | sendToAI(), processSaveAction(), renderInbox(), swipe delete |
-| `app-tasks-core.js` | Задачі (CRUD), кроки задач, task chat |
-| `app-habits.js` | Звички + quit-звички, лог виконання, стріки |
-| `app-notes.js` | Нотатки, папки, note view з чатом, пошук |
-| `app-finance.js` | Фінанси, бюджет, категорії, AI-коуч (кешований) |
-| `app-health.js` | Карточки здоров'я, денні шкали (енергія/сон/біль) |
-| `app-projects.js` | Проекти, воркспейс, кроки, метрики, темп |
-| `app-evening-moments.js` | Моменти дня, вечірній підсумок, "Я" вкладка, денний скор |
-| `app-evening-onboarding.js` | Онбординг, слайди, опитування, OWL Guide, help |
+| `bundle.js` | Згенерований esbuild з `src/`. **Не комітити** — генерується CI |
+| `build.js` | Конфіг esbuild (10 рядків) |
+| `package.json` | Одна залежність: esbuild |
+| `src/app.js` | Точка входу — імпортує всі модулі |
+| `src/core/nav.js` | Глобальний стан (`currentTab`), switchTab, теми, налаштування, пам'ять |
+| `src/core/boot.js` | bootApp, PWA setup, cross-tab sync, NM_KEYS, init |
+| `src/core/trash.js` | Кошик (7 днів TTL), showUndoToast, undoDelete |
+| `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml |
+| `src/core/logger.js` | Error logging, console override |
+| `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість |
+| `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
+| `src/owl/board.js` | OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox) |
+| `src/owl/proactive.js` | Генерація проактивних повідомлень, getTabBoardContext |
+| `src/owl/chips.js` | owlChipToChat() — навігаційні та текстові чіпи |
+| `src/ui/keyboard.js` | setupKeyboardAvoiding (iOS-specific) |
+| `src/ui/swipe-delete.js` | Swipe trail для видалення |
+| `src/tabs/inbox.js` | sendToAI(), processSaveAction(), renderInbox(), swipe delete |
+| `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat |
+| `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки |
+| `src/tabs/notes.js` | Нотатки, папки, note view з чатом, пошук |
+| `src/tabs/finance.js` | Фінанси, бюджет, категорії, AI-коуч (кешований) |
+| `src/tabs/health.js` | Карточки здоров'я, денні шкали (енергія/сон/біль) |
+| `src/tabs/projects.js` | Проекти, воркспейс, кроки, метрики, темп |
+| `src/tabs/evening.js` | Моменти дня, вечірній підсумок, "Я" вкладка, денний скор |
+| `src/tabs/onboarding.js` | Онбординг, слайди, опитування, OWL Guide, help |
 
-**Порядок завантаження критичний** — скрипти залежать один від одного в порядку як вони в index.html.
+**Збірка:** `node build.js` → `src/app.js` → `bundle.js` (esbuild, IIFE формат).
+**Порядок імпортів в `src/app.js`** — критичний, відповідає порядку оригінальних `<script>` тегів.
 
 ---
 
 ## Система деплою
 
-**Флоу:** Claude пушить у `claude/**` → `auto-merge.yml` мержить у `main` і одразу деплоїть на GitHub Pages.
+**Флоу:** Claude пушить у `claude/**` → `auto-merge.yml` мержить у `main`, збирає bundle, деплоїть на GitHub Pages.
 
 **`auto-merge.yml` робить:**
 1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
 2. `sed` оновлює badge в `index.html` (Amsterdam час деплою)
-3. Комітить і пушить у `main`
-4. Деплоїть на GitHub Pages
+3. `npm ci && node build.js` — збирає bundle.js з src/
+4. Комітить bundle.js і пушить у `main`
+5. Деплоїть на GitHub Pages
 
 **Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → конфлікт → CI падає тихо. `-X theirs` вирішує на користь feature-гілки.
 

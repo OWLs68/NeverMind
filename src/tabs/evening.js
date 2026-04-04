@@ -958,3 +958,21 @@ async function sendEveningBarMessage() {
   eveningBarLoading = false;
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  meChatHistory,
+  renderMeHabitsStats, sendMeChatMessage, renderMe,
+  renderMeActivityChart, refreshMeAnalysis,
+  currentMomentMood, dialogHistory, dialogLoading,
+  getMoments, saveMoments,
+  renderEvening, getEveningMood, setEveningMood, renderEveningMoodButtons,
+  openAddMoment, closeMomentModal, setMomentMood, updateMoodButtons,
+  saveMoment, generateMomentSummary, deleteMoment,
+  EVENING_SUMMARY_PROMPT,
+  generateEveningSummary, autoEveningSummary, setupAutoEveningSummary,
+  openEveningDialog, closeEveningDialog, addDialogMessage, sendDialogMessage,
+  meBarLoading, showMeChatMessages, addMeChatMsg,
+  eveningBarHistory, eveningBarLoading,
+  showEveningBarMessages, addEveningBarMsg, sendEveningBarMessage,
+});

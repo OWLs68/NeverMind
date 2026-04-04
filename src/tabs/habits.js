@@ -1211,3 +1211,34 @@ async function sendTasksBarMessage() {
   taskBarLoading = false;
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  editingHabitId,
+  getHabits, saveHabits, getHabitLog, saveHabitLog,
+  getQuitLog, saveQuitLog, getQuitStatus,
+  holdQuitHabit, relapseQuitHabit,
+  _dayWord, _owlQuitRelapse,
+  _habitModalType, setHabitModalType,
+  adjustHabitCount, openEditHabit, openAddHabit, closeHabitModal,
+  saveHabit, deleteHabit, deleteHabitFromModal,
+  _habitDone, toggleHabitToday,
+  getHabitStreak, getHabitPct, getHabitWeekDays,
+  makeHabitDayDots, renderHabits,
+  updateProdTabCounters, switchProdTab,
+  toggleProdHabitToday, tapHabitSquare, tapHabitSquareMe,
+  _habitConfetti, renderProdHabits,
+  _quitResilienceLamp, _quitTrend, _renderQuitHabitCard,
+  confirmQuitRelapse,
+  habitMeSwipeState, habitMeSwipeStart, habitMeSwipeMove, habitMeSwipeEnd,
+  prodHabitSwipeState, prodHabitSwipeStart, prodHabitSwipeMove, prodHabitSwipeEnd,
+  _fuzzyFindFolder, _levenshtein,
+  processUniversalAction, sendTasksBarMessage,
+});
+
+// currentProdTab needs getter/setter (referenced by app-core-nav.js)
+Object.defineProperty(window, 'currentProdTab', {
+  get() { return currentProdTab; },
+  set(v) { currentProdTab = v; },
+  configurable: true
+});

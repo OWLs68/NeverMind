@@ -941,3 +941,20 @@ function obFinish() {
   updateKeyStatus(!!localStorage.getItem('nm_gemini_key'));
 }
 
+
+// === WINDOW EXPORTS ===
+Object.assign(window, {
+  UPDATE_VERSION, UPDATE_SLIDES, SLIDES,
+  currentSlide, _slidesIsUpdate, _slidesFromOnboarding,
+  openSlidesTour, openUpdateSlides, closeSlidesTour,
+  getCurrentSlides, slidesNext, renderSlide,
+  HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS,
+  openHelp, closeHelp, showFirstVisitTip,
+  SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting,
+  startSurvey, askSurveyQuestion, handleSurveyAnswer, finishSurvey,
+  OWL_GUIDE_TOPICS, OWL_APP_TIPS,
+  owlGuideNextTip, maybeAskGuideQuestion,
+  generateProjectFirstSteps, saveGuideTopicAnswer,
+  checkOnboarding, obNext, obSkipKey, selectOwlMode,
+  obShowWelcome, obFinish,
+});
