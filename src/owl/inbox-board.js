@@ -6,7 +6,7 @@
 import { currentTab } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { activeChatBar, callOwlChat, closeChatBar, getOWLPersonality, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
-import { _owlTabApplyState, _owlTabStates, _updateOwlTabChipsArrows, renderTabBoard, scrollOwlTabChips } from './board.js';
+import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
 import { addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getQuitStatus, renderHabits, renderProdHabits, saveHabitLog } from '../tabs/habits.js';
@@ -1097,9 +1097,6 @@ export function handleScheduleAnswer(text) {
   } catch(e) {}
   return true;
 }
-
-function updateOwlChipsArrows() { _updateOwlTabChipsArrows('inbox'); }
-function scrollOwlChips(dir) { scrollOwlTabChips('inbox', dir); }
 
 // === WINDOW GLOBALS (HTML handlers only) ===
 window.sendOwlReply = sendOwlReply;
