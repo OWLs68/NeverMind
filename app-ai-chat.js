@@ -619,7 +619,7 @@ async function generateOwlBoardMessage() {
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
-- chips — 2-3 конкретні факти або дії. Максимум 3 слова кожен.
+- chips — кнопки швидких дій. ТІЛЬКИ дії що прямо стосуються твого повідомлення. Наприклад якщо пишеш "закрий задачі X і Y" → chips: ["закрити задачі"]. Якщо пишеш "запиши підсумки" → chips: ["записати підсумки"]. НЕ додавай випадкові дії які не згадуються в тексті. Максимум 3 слова кожен. Якщо нічого конкретного — [].
 - Відповідай українською.`;
 
   try {
@@ -1012,7 +1012,7 @@ function _owlAskScheduleIfNeeded() {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   if (s.schedule && s.schedule.wakeUp) return; // вже заповнено
   localStorage.setItem('nm_owl_schedule_asked', '1');
-  localStorage.setItem('nm_owl_schedule_pending', '1');
+  localStorage.setItem('nm_owl_schedule_pending', String(Date.now()));
   // Затримка 10 сек щоб не перебивати завантаження
   setTimeout(() => {
     try {
@@ -1023,12 +1023,19 @@ function _owlAskScheduleIfNeeded() {
 
 // Перехоплення відповіді на питання розкладу в Inbox
 function handleScheduleAnswer(text) {
-  if (!localStorage.getItem('nm_owl_schedule_pending')) return false;
-  localStorage.removeItem('nm_owl_schedule_pending');
+  const pending = localStorage.getItem('nm_owl_schedule_pending');
+  if (!pending) return false;
+  // TTL 1 година — якщо питання задане давно, ігноруємо
+  const pendingTs = parseInt(pending);
+  if (!isNaN(pendingTs) && Date.now() - pendingTs > 3600000) {
+    localStorage.removeItem('nm_owl_schedule_pending');
+    return false;
+  }
+  let found = 0;
   const parseH = (patterns, def) => {
     for (const re of patterns) {
       const m = text.match(re);
-      if (m) { const h = parseInt(m[1]); if (!isNaN(h) && h >= 0 && h <= 23) return `${String(h).padStart(2,'0')}:00`; }
+      if (m) { const h = parseInt(m[1]); if (!isNaN(h) && h >= 0 && h <= 23) { found++; return `${String(h).padStart(2,'0')}:00`; } }
     }
     return def;
   };
@@ -1038,6 +1045,9 @@ function handleScheduleAnswer(text) {
     workEnd:   parseH([/до\s*(\d{1,2})\b/i, /закінчую\s*о?\s*(\d{1,2})/i, /[-–]\s*(\d{1,2})\b/i], '18:00'),
     bedTime:   parseH([/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], '23:00'),
   };
+  // Якщо жодного часу не знайдено — не перехоплюємо, пускаємо далі до AI
+  if (found === 0) return false;
+  localStorage.removeItem('nm_owl_schedule_pending');
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   s.schedule = schedule;
   localStorage.setItem('nm_settings', JSON.stringify(s));
