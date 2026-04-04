@@ -1276,7 +1276,7 @@ body {
 }
 .owl-agent-avatar { width: 44px; height: 44px; font-size: 36px; display: flex; align-items: center; justify-content: center; }
 .owl-agent-name { font-size: 9px; font-weight: 800; color: rgba(251,191,36,0.55); text-transform: uppercase; letter-spacing: 0.2em; }
-.owl-chat-messages { max-height: 220px; overflow-y: auto; padding: 4px 16px 6px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
+.owl-chat-messages { max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 16px 6px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
 .owl-chat-messages::-webkit-scrollbar { display: none; }
 .owl-msg-agent { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.92); border-radius: 4px 18px 18px 18px; padding: 10px 14px; font-size: 14px; font-weight: 500; line-height: 1.5; max-width: 88%; align-self: flex-start; }
 .owl-msg-user { background: rgba(251,191,36,0.12); color: rgba(255,255,255,0.95); border-radius: 18px 4px 18px 18px; padding: 10px 14px; font-size: 14px; font-weight: 500; line-height: 1.5; max-width: 88%; align-self: flex-end; border: 1px solid rgba(251,191,36,0.1); }

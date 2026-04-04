@@ -747,8 +747,7 @@ function _owlTabHTML(tab) {
       <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
       <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">›</button>
     </div>
-    <div id="owl-tab-expanded-${t}" style="display:none"
-         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+    <div id="owl-tab-expanded-${t}" style="display:none">
       <div class="owl-agent-container">
         <div class="owl-agent-hero">
           <div class="owl-agent-avatar">🦉</div>
@@ -759,7 +758,9 @@ function _owlTabHTML(tab) {
                  onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlTabReplyFromInput('${t}')}">
           <button onclick="sendOwlTabReplyFromInput('${t}')">➤</button>
         </div>
-        <div class="owl-swipe-handle" onclick="collapseOwlTabToSpeech('${t}')"><div class="owl-handle-bar"></div></div>
+        <div class="owl-swipe-handle"
+             ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')"
+             onclick="collapseOwlTabToSpeech('${t}')"><div class="owl-handle-bar"></div></div>
       </div>
     </div>`;
 }
