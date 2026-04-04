@@ -1183,8 +1183,8 @@ async function generateTabBoardMessage(tab) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Дані: ${context}` }
         ],
-        max_tokens: 120,
-        temperature: 0.75
+        max_tokens: 150,
+        temperature: 0.8
       })
     });
     const data = await res.json();

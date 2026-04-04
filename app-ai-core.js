@@ -546,7 +546,7 @@ function openChatBar(tab) {
   try { closeOwlChat(); } catch(e) {}
 
   // Закриваємо інші бари
-  ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
+  ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(t => {
     if (t === tab) return;
     const b = document.getElementById(t + '-ai-bar');
     if (!b) return;
