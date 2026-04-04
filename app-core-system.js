@@ -738,7 +738,7 @@ function getTabBoardMsg(tab) {
 function saveTabBoardMsg(tab, newMsg) {
   const msgs = getTabBoardMsgs(tab);
   msgs.unshift(newMsg);          // новий → перший
-  if (msgs.length > 3) msgs.length = 3; // максимум 3
+  if (msgs.length > 30) msgs.length = 30; // максимум 30
   try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs)); } catch {}
 }
 
@@ -1104,8 +1104,16 @@ async function generateTabBoardMessage(tab) {
 
   const context = getTabBoardContext(tab);
   const tabLabels = { tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
-  const existing = getTabBoardMsg(tab);
+  const allMsgs = getTabBoardMsgs(tab);
+  const existing = allMsgs[0] || null;
   const recentText = existing ? existing.text : '';
+  // Історія повідомлень для контексту (до 20 останніх)
+  const tabHistory = allMsgs.slice(0, 20).map(m => {
+    const ago = Date.now() - (m.ts || 0);
+    const hours = Math.floor(ago / 3600000);
+    const when = hours < 1 ? 'щойно' : hours < 24 ? hours + ' год тому' : Math.floor(hours / 24) + ' дн тому';
+    return `[${when}] ${m.text}`;
+  }).join('\n');
 
   const _now = new Date();
   const _hour = _now.getHours();
@@ -1117,6 +1125,12 @@ async function generateTabBoardMessage(tab) {
 Зараз: ${_timeStr} (${_timeOfDay}). Враховуй час доби у повідомленні.
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло у вкладці "${tabLabels[tab] || tab}". Це НЕ відповідь на запит — це твоя ініціатива.
+
+ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
+${tabHistory || '(ще нічого не казав)'}
+
+ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА:
+${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 
 ПРАВИЛА:
 - Максимум 2 речення. Коротко і конкретно про цю вкладку.

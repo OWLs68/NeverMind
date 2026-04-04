@@ -280,7 +280,7 @@ function getOwlBoardMessages() {
   try { return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]'); } catch { return []; }
 }
 function saveOwlBoardMessages(arr) {
-  localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-3)));
+  localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
 }
 
 // === OWL BOARD — повний розумний цикл ===
@@ -581,6 +581,18 @@ function getOwlBoardContext() {
     normal.push(`[ТИЖДЕНЬ] Кінець тижня. Закрито задач за тиждень: ${doneTasks.length}.`);
   }
 
+  // Активні вкладки — агент цікавиться тільки тим що використовує користувач
+  const activeTabs = [];
+  if (tasks.length > 0 || getHabits().length > 0) activeTabs.push('Продуктивність (задачі, звички)');
+  try { if (getNotes().length > 0) activeTabs.push('Нотатки'); } catch(e) {}
+  try { if (getFinance().length > 0) activeTabs.push('Фінанси'); } catch(e) {}
+  try { if (JSON.parse(localStorage.getItem('nm_health_cards') || '[]').length > 0) activeTabs.push('Здоров\'я'); } catch(e) {}
+  try { if (JSON.parse(localStorage.getItem('nm_projects') || '[]').length > 0) activeTabs.push('Проекти'); } catch(e) {}
+  try { if (JSON.parse(localStorage.getItem('nm_moments') || '[]').length > 0) activeTabs.push('Вечір (моменти дня)'); } catch(e) {}
+  if (activeTabs.length > 0) {
+    normal.push(`[АКТИВНІ ВКЛАДКИ] Користувач використовує: ${activeTabs.join(', ')}. Цікався ТІЛЬКИ цими темами.`);
+  }
+
   return [...critical, ...important, ...normal].join(' ');
 }
 
@@ -594,8 +606,15 @@ async function generateOwlBoardMessage() {
   const context = getOwlBoardContext();
   const existing = getOwlBoardMessages();
 
-  // Список того що вже казали — щоб не повторювати
-  const recentTexts = existing.map(m => m.text).join(' | ');
+  // Історія повідомлень — агент пам'ятає що казав раніше
+  const recentTexts = existing.slice(0, 5).map(m => m.text).join(' | ');
+  // Повна історія для контексту (до 20 повідомлень з часом)
+  const boardHistory = existing.slice(0, 20).map(m => {
+    const ago = Date.now() - (m.id || 0);
+    const hours = Math.floor(ago / 3600000);
+    const when = hours < 1 ? 'щойно' : hours < 24 ? hours + ' год тому' : Math.floor(hours / 24) + ' дн тому';
+    return `[${when}] ${m.text}`;
+  }).join('\n');
 
   const now = new Date();
   const phase = getDayPhase();
@@ -613,6 +632,12 @@ async function generateOwlBoardMessage() {
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло в Inbox. Це НЕ відповідь на запит — це твоя ініціатива.
 
+ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
+${boardHistory || '(ще нічого не казав)'}
+
+ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
+${localStorage.getItem('nm_memory') || '(ще не знаю)'}
+
 ПРІОРИТЕТ ПОВІДОМЛЕНЬ:
 1. Якщо є [КРИТИЧНО] — пиши ТІЛЬКИ про це. Нічого іншого.
 2. Якщо є [ВАЖЛИВО] і немає [КРИТИЧНО] — пиши про перше [ВАЖЛИВО].
@@ -625,7 +650,7 @@ async function generateOwlBoardMessage() {
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
-- chips — кнопки швидких дій. ТІЛЬКИ дії що прямо стосуються твого повідомлення. Наприклад якщо пишеш "закрий задачі X і Y" → chips: ["закрити задачі"]. Якщо пишеш "запиши підсумки" → chips: ["записати підсумки"]. НЕ додавай випадкові дії які не згадуються в тексті. Максимум 3 слова кожен. Якщо нічого конкретного — [].
+- chips — кнопки швидких дій. ТІЛЬКИ дії що прямо стосуються твого повідомлення. Наприклад якщо пишеш "закрий задачі X і Y" → chips: ["закрити задачі"]. Якщо пишеш "запиши підсумки" → chips: ["записати підсумки"]. НЕ додавай випадкові дії які не згадуються в тексті. Максимум 3 слова кожен. Якщо нічого конкретного — []. Враховуй що знаєш про людину — пропонуй те що їй корисно.
 - Відповідай українською.`;
 
   try {
