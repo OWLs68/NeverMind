@@ -1256,7 +1256,7 @@ body {
   background: rgba(255,255,255,0.92);
   color: var(--text-primary);
   border: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.14);
+  box-shadow: 0 2px 7px rgba(0,0,0,0.32);
   cursor: pointer; transition: all 0.15s ease;
   white-space: nowrap; flex-shrink: 0;
 }
@@ -1265,7 +1265,7 @@ body {
   background: rgba(194,100,10,0.90);
   color: rgba(255,255,255,0.97);
   border-color: rgba(217,119,6,0.3);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.25), 0 4px 16px rgba(194,100,10,0.35);
+  box-shadow: 0 2px 7px rgba(130,60,0,0.45);
 }
 .owl-chip-speak:active { background: rgba(180,80,5,0.90); }
 
