@@ -17,52 +17,58 @@
 
 ## Зараз робимо
 
-OWL Board: Inbox отримав ту саму структуру що вкладки (tasks/notes/etc). Фіксуємо баги.
+Документація оновлена після архітектурного рефактору OWL Board. Наступне — баги B-04/B-09, B-05, B-06.
 
 ---
 
-## Остання сесія (04.04)
+## Остання сесія (04.04, друга частина)
 
-### OWL Board — Inbox
-- `owl-board` перенесено в `inbox-fixed-top` (не прокручується зі списком)
-- Позиціювання: `margin-top: 0` на board, `margin-top: 11px` на chips-wrapper, `margin-top: -10px` на inbox-scroll
-- Кнопки: `border: none`, тінь `0 2px 7px rgba(0,0,0,0.32)`, padding всередині `owl-speech-chips` щоб iOS не обрізав тінь
-- Кнопка "Поговорити": бурштиновий `rgba(194,100,10,0.90)` (не фіолетовий)
-- Тінь під ногами сови: `::after` радіальний градієнт
+### Концептуальний редизайн взаємодії агента з користувачем
 
-### OWL Board — Логіка
-- Cooldown-система (`nm_owl_cooldowns`) замість `owlAlreadySaid` (раз на добу)
-- `getDayPhase()` + `getSchedule()` — фази дня під розклад користувача
-- UI розкладу в налаштуваннях (4 time-поля: підйом / початок роботи / кінець / сон)
-- Питання онбордингу #6 → парсинг розкладу
-- `handleScheduleAnswer()` перехоплює відповідь в Inbox
+**Проблема:** Два окремих чати (міні-чат в табло зверху + чат-бар знизу) плутали користувача. Один OWL — два "мозки".
 
-### OWL Board — всі вкладки (Tasks, Notes, Finance, Me, Evening, Health, Projects)
-- Замінено компактні слайдери → той самий стиль що Inbox (велика сова + бабл + чіпи)
-- HTML: 7 порожніх контейнерів, структура будується JS динамічно
-- Нові функції в `app-core-system.js`: `_owlTabHTML`, `_owlTabApplyState`, `toggleOwlTabChat`, `expandOwlTabChat`, `collapseOwlTabToSpeech`, `owlTabSwipe*`, `sendOwlTabReply`, `sendOwlTabReplyFromInput`, `renderOwlTabMsgs`
-- Стани: `speech` → `collapsed` (свайп вгору) / `expanded` (свайп вниз або "Поговорити")
-- Чат в expanded: зберігається в `nm_owl_tab_chat_{tab}`, викликає GPT з контекстом вкладки
+**Рішення:**
+- **Табло (Board)** стало read-only (тільки для читання) — агент говорить, користувач не друкує
+- **Чат-бар (Chat Bar)** — єдиний канал взаємодії користувача з агентом
+- Чіпи на табло → `owlChipToChat(tab, text)` → відкривають чат-бар і відправляють текст
+- Кнопка "Поговорити" → `openChatBar(tab)`
+- Свайп вниз → відкриває чат-бар (замість старого expanded-стану)
+- Проактивні повідомлення дублюються в `nm_chat_{tab}` → видно в історії чату
 
-### Аудит та фікси (04.04 14:24)
-- Аудит: `<div>` баланс ✅, синтаксис ✅, дублікати ✅
-- Фікс: `owlTabSwipeStart/owlSwipeStart` — не починати свайп якщо торкаємось повідомлень → scroll в чаті тепер працює, табло не згортається від скролу
-- Фікс: `owlTabSwipeMove` — `e.preventDefault()` тільки коли реально змінюємо висоту
-- Фікс: `tabLabels` — додано `health` і `projects` (раніше AI отримував `undefined`)
-- Фікс: `getTabBoardContext` + `checkTabBoardTrigger` — додано контекст для `health` і `projects`
+### Зміни у файлах
 
-### Inbox board = структура вкладок (04.04 14:55)
-- `owl-board` тепер використовує ТОЧНО ту саму HTML-структуру що `_owlTabHTML` для інших вкладок
-- Обробники свайпу: `owlTabSwipeStart/Move/End('inbox')` (замість старих `owlSwipeStart/Move/End`)
-- Стан: `_owlTabStates['inbox']` + `_owlTabApplyState('inbox')` (через `_owlSetState`)
-- `_getOwlState()` — читає `_owlTabStates['inbox']` для правильної синхронізації
-- Логіка чату збережена: `sendOwlTabReply('inbox',...)` → `sendOwlReply(...)` (з обробкою дій)
-- Нові ID елементів: `owl-tab-text-inbox`, `owl-tab-msgs-inbox`, `owl-tab-exp-chips-inbox`, `owl-tab-input-inbox` тощо
+**`app-core-system.js`:**
+- `_owlTabHTML()` — видалено весь expanded-блок (input, msgs, close handle)
+- `_owlTabApplyState()` — тільки 2 стани: speech + collapsed (без expanded)
+- Новий `owlChipToChat(tab, text)` — маршрутизує чіпи через чат-бар
+- `expandOwlTabChat()` → тепер просто `openChatBar(tab)`
+- Свайп: вгору=collapse, вниз з collapsed=speech, вниз з speech=openChatBar
+- `generateTabBoardMessage()` дублює повідомлення в `nm_chat_{tab}`
+
+**`app-ai-chat.js`:**
+- `renderOwlBoard()` → тонкий wrapper, делегує в `renderTabBoard('inbox')`
+- `expandOwlChat()` → `openChatBar('inbox')`
+- `generateOwlBoardMessage()` дублює повідомлення в `nm_chat_inbox`
+
+**`app-ai-core.js`:**
+- `openChatBar()` — додано `'notes'` в список закриття
+- `getAIContext()` — додано поточне повідомлення табло в контекст AI
+
+**`index.html`:**
+- Видалено expanded-секцію з inbox board (owl-tab-expanded-inbox, owl-tab-msgs-inbox, owl-tab-input-inbox)
+
+### Попередні зміни цієї сесії (04.04, перша частина)
+- OWL Board Inbox: перенесено в `inbox-fixed-top`, позиціювання, стилі кнопок
+- Cooldown-система (`nm_owl_cooldowns`), `getDayPhase()` + `getSchedule()`
+- Всі вкладки: єдиний стиль (велика сова + бабл + чіпи)
+- Аудит: баланс div, синтаксис, дублікати ✅
+- Фікси: свайп не ламає scroll, `tabLabels` для health/projects, контекст для health/projects
 
 ---
 
 ## Попередні сесії
 
+- **04.04 (3)** — Концептуальний редизайн: табло read-only, чіпи через чат-бар, owlChipToChat, board→AI context. Документація.
 - **04.04 (2)** — OWL Board: аудит + inbox рефактор = структура вкладок. Scroll fix.
 - **03.04 (2)** — OWL Board: `getDayPhase()` + `getSchedule()`. Cooldown-система.
 - **03.04** — settings.json хуки, 5 скілів, правило пояснень в дужках. SVG → 🦉. OWL Board UI.
