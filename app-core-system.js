@@ -752,7 +752,6 @@ function _owlTabHTML(tab) {
       <div class="owl-agent-container">
         <div class="owl-agent-hero">
           <div class="owl-agent-avatar">🦉</div>
-          <div class="owl-agent-name">OWL</div>
         </div>
         <div id="owl-tab-msgs-${t}" class="owl-chat-messages"></div>
         <div class="owl-chat-input-row">
