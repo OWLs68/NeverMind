@@ -726,8 +726,7 @@ function dismissTabBoard(tab) {
 const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
 const _owlTabSwipes = {};
 
-// Висота розгорнутого чату (chips + separator + chat + input + handle)
-const OWL_TAB_EXPANDED_H = 210;
+const OWL_TAB_EXPANDED_H = 175; // тільки чат (без chips — вони поза expanded div)
 
 function _owlTabHTML(tab) {
   const t = tab;
@@ -739,18 +738,16 @@ function _owlTabHTML(tab) {
     <div id="owl-tab-speech-${t}" class="owl-speech"
          ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
       <div class="owl-speech-avatar">🦉</div>
-      <!-- Темна карточка що росте при розгортанні -->
       <div class="owl-tab-card">
-        <!-- Текст агента (завжди видимий, 104px зліва = справа від сови) -->
-        <div class="owl-tab-bubble">
+        <!-- Кнопки зверху справа від сови (expanded state, display:none за замовчуванням) -->
+        <div id="owl-tab-exp-chips-${t}" class="owl-tab-exp-chips" style="display:none"></div>
+        <!-- Текст агента (speech state) -->
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
           <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
           <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
         </div>
-        <!-- Expanded: height:0→N, повна ширина карточки, без хаків -->
+        <!-- Чат розгортається знизу (height:0 → OWL_TAB_EXPANDED_H) -->
         <div id="owl-tab-expanded-${t}" style="height:0;overflow:hidden">
-          <!-- Кнопки справа від сови (104px зліва) -->
-          <div id="owl-tab-exp-chips-${t}" class="owl-tab-exp-chips"></div>
-          <!-- Роздільник + чат на повну ширину карточки -->
           <div class="owl-tab-chat-section">
             <div id="owl-tab-msgs-${t}" class="owl-tab-chat-msgs"></div>
             <div class="owl-chat-input-row">
@@ -780,18 +777,13 @@ function _owlTabApplyState(tab) {
   const chipsWrap = document.getElementById('owl-tab-chips-wrap-' + tab);
   if (!speech) return;
   if (collapsed) collapsed.style.display = st === 'collapsed' ? 'flex' : 'none';
-  // Speech завжди видима коли не collapsed — сова залишається
   speech.style.display = st === 'collapsed' ? 'none' : 'block';
-  // Текст і час зникають у expanded — замість них показуються кнопки
-  const textEl = document.getElementById('owl-tab-text-' + tab);
-  const timeEl = document.getElementById('owl-tab-time-' + tab);
-  if (textEl) textEl.style.display = st === 'expanded' ? 'none' : '';
-  if (timeEl) timeEl.style.display = st === 'expanded' ? 'none' : '';
-  // Expanded росте всередині owl-tab-card
-  if (expanded) {
-    expanded.style.transition = '';
-    expanded.style.height = st === 'expanded' ? OWL_TAB_EXPANDED_H + 'px' : '0';
-  }
+  // У expanded: текст→ховається, chips→зверху; у speech: текст→видно, chips→ховається
+  const bubbleEl   = document.getElementById('owl-tab-bubble-' + tab);
+  const expChipsEl = document.getElementById('owl-tab-exp-chips-' + tab);
+  if (bubbleEl)   bubbleEl.style.display   = st === 'expanded' ? 'none' : 'block';
+  if (expChipsEl) expChipsEl.style.display = st === 'expanded' ? 'flex'  : 'none';
+  if (expanded) { expanded.style.transition = ''; expanded.style.height = st === 'expanded' ? OWL_TAB_EXPANDED_H + 'px' : '0'; }
   if (chipsWrap) chipsWrap.style.display = st === 'expanded' ? 'none' : 'flex';
 }
 
