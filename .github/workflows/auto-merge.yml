@@ -22,6 +22,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Merge into main and inject deploy timestamp
         run: |
           git config user.name "github-actions[bot]"
@@ -37,8 +42,19 @@ jobs:
           git add index.html
           git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME}"
 
+      - name: Build bundle
+        run: |
+          npm ci
+          node build.js
+
+      - name: Commit bundle and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bundle.js -f
+          git diff --staged --quiet || git commit -m "build: generate bundle.js"
           git push origin main
-          echo "Deployed: ${VERSION} · ${DEPLOY_TIME}"
+          echo "Deployed"
 
   deploy:
     needs: merge
