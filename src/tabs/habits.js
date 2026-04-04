@@ -826,113 +826,69 @@ function confirmQuitRelapse(habitId) {
 }
 
 
-// === HABIT ME SWIPE TO DELETE ===
-const habitMeSwipeState = {};
-
-function habitMeSwipeStart(e, id) {
-  const t = e.touches[0];
-  habitMeSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-}
-function habitMeSwipeMove(e, id) {
-  const s = habitMeSwipeState[id]; if (!s) return;
-  const t = e.touches[0];
-  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete habitMeSwipeState[id]; return; }
-  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-  if (!s.swiping) return;
-  e.preventDefault();
-  s.dx = Math.min(0, dx);
-  const el = document.getElementById('habit-me-item-' + id);
-  const wrap = el ? el.parentElement : null;
-  applySwipeTrail(el, wrap, s.dx);
-}
-function habitMeSwipeEnd(e, id) {
-  const s = habitMeSwipeState[id]; if (!s) return;
-  const el = document.getElementById('habit-me-item-' + id);
-  const wrap = el ? el.parentElement : null;
-  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    setTimeout(() => {
-      const allHabits = getHabits();
-      const habitOrigIdx = allHabits.findIndex(h => h.id === id);
-      const item = allHabits.find(h => h.id === id);
-      if (item) addToTrash('habit', item);
-      saveHabits(allHabits.filter(h => h.id !== id)); renderHabits(); renderProdHabits();
-      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
-    }, 200);
-  } else {
-    clearSwipeTrail(el, wrap);
-    if (!s.swiping) {
-      const target = e.changedTouches[0];
-      const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
-      if (checkBtn) {
-        const rect = checkBtn.getBoundingClientRect();
-        if (target.clientX >= rect.left && target.clientX <= rect.right &&
-            target.clientY >= rect.top && target.clientY <= rect.bottom) {
-          toggleHabitToday(id);
-        } else {
-          openEditHabit(id);
+// === HABIT SWIPE TO DELETE (unified) ===
+function _createHabitSwipe(stateObj, prefix, toggleFn) {
+  function start(e, id) {
+    const t = e.touches[0];
+    stateObj[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
+  }
+  function move(e, id) {
+    const s = stateObj[id]; if (!s) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
+    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete stateObj[id]; return; }
+    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
+    if (!s.swiping) return;
+    e.preventDefault();
+    s.dx = Math.min(0, dx);
+    const el = document.getElementById(prefix + id);
+    const wrap = el ? el.parentElement : null;
+    applySwipeTrail(el, wrap, s.dx);
+  }
+  function end(e, id) {
+    const s = stateObj[id]; if (!s) return;
+    const el = document.getElementById(prefix + id);
+    const wrap = el ? el.parentElement : null;
+    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
+      if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
+      setTimeout(() => {
+        const allHabits = getHabits();
+        const habitOrigIdx = allHabits.findIndex(h => h.id === id);
+        const item = allHabits.find(h => h.id === id);
+        if (item) addToTrash('habit', item);
+        saveHabits(allHabits.filter(h => h.id !== id)); renderHabits(); renderProdHabits();
+        if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+      }, 200);
+    } else {
+      clearSwipeTrail(el, wrap);
+      if (!s.swiping) {
+        const target = e.changedTouches[0];
+        const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
+        if (checkBtn) {
+          const rect = checkBtn.getBoundingClientRect();
+          if (target.clientX >= rect.left && target.clientX <= rect.right &&
+              target.clientY >= rect.top && target.clientY <= rect.bottom) {
+            toggleFn(id);
+          } else {
+            openEditHabit(id);
+          }
         }
       }
     }
+    delete stateObj[id];
   }
-  delete habitMeSwipeState[id];
+  return { start, move, end };
 }
 
+const _habitMeSwipe = _createHabitSwipe({}, 'habit-me-item-', toggleHabitToday);
+function habitMeSwipeStart(e, id) { _habitMeSwipe.start(e, id); }
+function habitMeSwipeMove(e, id) { _habitMeSwipe.move(e, id); }
+function habitMeSwipeEnd(e, id) { _habitMeSwipe.end(e, id); }
 
-// === PROD HABIT SWIPE TO DELETE ===
-const prodHabitSwipeState = {};
-
-function prodHabitSwipeStart(e, id) {
-  const t = e.touches[0];
-  prodHabitSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-}
-function prodHabitSwipeMove(e, id) {
-  const s = prodHabitSwipeState[id]; if (!s) return;
-  const t = e.touches[0];
-  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete prodHabitSwipeState[id]; return; }
-  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-  if (!s.swiping) return;
-  e.preventDefault();
-  s.dx = Math.min(0, dx);
-  const el = document.getElementById('prod-habit-item-' + id);
-  const wrap = el ? el.parentElement : null;
-  applySwipeTrail(el, wrap, s.dx);
-}
-function prodHabitSwipeEnd(e, id) {
-  const s = prodHabitSwipeState[id]; if (!s) return;
-  const el = document.getElementById('prod-habit-item-' + id);
-  const wrap = el ? el.parentElement : null;
-  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    setTimeout(() => {
-      const allHabits = getHabits();
-      const habitOrigIdx = allHabits.findIndex(h => h.id === id);
-      const item = allHabits.find(h => h.id === id);
-      if (item) addToTrash('habit', item);
-      saveHabits(allHabits.filter(h => h.id !== id));
-      renderHabits(); renderProdHabits();
-      if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
-    }, 200);
-  } else {
-    clearSwipeTrail(el, wrap);
-    if (!s.swiping) {
-      const target = e.changedTouches[0];
-      const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
-      if (checkBtn) {
-        const rect = checkBtn.getBoundingClientRect();
-        if (target.clientX >= rect.left && target.clientX <= rect.right &&
-            target.clientY >= rect.top && target.clientY <= rect.bottom) {
-          toggleProdHabitToday(id);
-        } else {
-          openEditHabit(id);
-        }
-      }
-    }
-  }
-  delete prodHabitSwipeState[id];
-}
+const _prodHabitSwipe = _createHabitSwipe({}, 'prod-habit-item-', toggleProdHabitToday);
+function prodHabitSwipeStart(e, id) { _prodHabitSwipe.start(e, id); }
+function prodHabitSwipeMove(e, id) { _prodHabitSwipe.move(e, id); }
+function prodHabitSwipeEnd(e, id) { _prodHabitSwipe.end(e, id); }
 
 
 // === UNIVERSAL ACTION PROCESSOR — один мозок для всіх барів ===
