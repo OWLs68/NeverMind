@@ -780,7 +780,38 @@ function _owlTabApplyState(tab) {
 
 function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
 function collapseOwlTabToSpeech(tab){ _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
-function expandOwlTabChat(tab)      { _owlTabStates[tab] = 'expanded'; _owlTabApplyState(tab); renderOwlTabMsgs(tab); }
+function expandOwlTabChat(tab) {
+  _owlTabStates[tab] = 'expanded';
+  _owlTabApplyState(tab);
+
+  // Якщо чат пустий — сіємо поточне повідомлення сови як першу репліку
+  const key = 'nm_owl_tab_chat_' + tab;
+  const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+  if (msgs.length === 0) {
+    const speechEl = document.getElementById('owl-tab-text-' + tab);
+    const text = speechEl && speechEl.textContent.trim();
+    if (text) {
+      msgs.push({ role: 'agent', text, ts: Date.now() });
+      localStorage.setItem(key, JSON.stringify(msgs));
+    }
+  }
+
+  renderOwlTabMsgs(tab);
+
+  // Показуємо кнопки-підказки (chips) під повідомленнями, якщо є
+  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
+  const msgsEl  = document.getElementById('owl-tab-msgs-' + tab);
+  if (chipsEl && msgsEl && msgs.length <= 1) {
+    const clone = chipsEl.cloneNode(true);
+    clone.id = 'owl-tab-echips-' + tab;
+    clone.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;padding:4px 16px 8px;overflow:visible;mask-image:none;-webkit-mask-image:none';
+    // Видаляємо кнопку "Поговорити" зі скопійованих чіпів
+    Array.from(clone.children).forEach(c => { if (c.classList.contains('owl-chip-speak')) c.remove(); });
+    const existing = document.getElementById('owl-tab-echips-' + tab);
+    if (existing) existing.remove();
+    if (clone.children.length > 0) msgsEl.after(clone);
+  }
+}
 
 function owlTabSwipeStart(e, tab) {
   _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
