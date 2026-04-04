@@ -7,7 +7,7 @@
 //   3. Якщо немає інтернету — все одно відкривається з кешу
 //   4. При оновленні версії — старий кеш автоматично видаляється
 
-const CACHE_NAME = 'nm-20260404-2003';
+const CACHE_NAME = 'nm-20260404-2011';
 
 // Список файлів які кешуємо при встановленні
 const STATIC_ASSETS = [
@@ -15,15 +15,6 @@ const STATIC_ASSETS = [
   './index.html',
   './style.css',
   './bundle.js',
-  './app-inbox.js',
-  './app-tasks-core.js',
-  './app-habits.js',
-  './app-notes.js',
-  './app-finance.js',
-  './app-evening-moments.js',
-  './app-evening-onboarding.js',
-  './app-health.js',
-  './app-projects.js',
 ];
 
 // Встановлення: кешуємо всі статичні файли (cache:'reload' — завжди з мережі, не з HTTP-кешу)
