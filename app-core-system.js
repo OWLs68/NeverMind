@@ -672,6 +672,30 @@ function updateErrorLogBtn() {
   btn.style.color = count > 0 ? '#ea580c' : '';
 }
 
+// Chip (кнопка табло) → відкрити чат-бар і відправити текст як повідомлення
+function owlChipToChat(tab, text) {
+  const barTab = tab === 'inbox' ? 'inbox' : (tab || 'inbox');
+  openChatBar(barTab);
+  // Знаходимо input (поле вводу) чат-бару і відправляємо
+  const inputId = barTab === 'inbox' ? 'inbox-input' : barTab + '-chat-input';
+  const input = document.getElementById(inputId);
+  if (input) {
+    input.value = text;
+    input.dispatchEvent(new Event('input')); // автозміна висоти textarea
+  }
+  // Відправляємо автоматично через відповідну функцію
+  setTimeout(() => {
+    if (barTab === 'inbox') { if (typeof sendToAI === 'function') sendToAI(); }
+    else if (barTab === 'tasks') { if (typeof sendTasksBarMessage === 'function') sendTasksBarMessage(); }
+    else if (barTab === 'notes') { if (typeof sendNotesBarMessage === 'function') sendNotesBarMessage(); }
+    else if (barTab === 'finance') { if (typeof sendFinanceBarMessage === 'function') sendFinanceBarMessage(); }
+    else if (barTab === 'health') { if (typeof sendHealthBarMessage === 'function') sendHealthBarMessage(); }
+    else if (barTab === 'projects') { if (typeof sendProjectsBarMessage === 'function') sendProjectsBarMessage(); }
+    else if (barTab === 'me') { if (typeof sendMeChatMessage === 'function') sendMeChatMessage(); }
+    else if (barTab === 'evening') { if (typeof sendEveningBarMessage === 'function') sendEveningBarMessage(); }
+  }, 100);
+}
+
 // === OWL TAB BOARDS (#37) ===
 const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
 
@@ -739,26 +763,9 @@ function _owlTabHTML(tab) {
          ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
       <div class="owl-speech-avatar">🦉</div>
       <div class="owl-tab-card">
-        <!-- Кнопки зверху справа від сови (expanded state, display:none за замовчуванням) -->
-        <div id="owl-tab-exp-chips-${t}" class="owl-tab-exp-chips" style="display:none"></div>
-        <!-- Текст агента (speech state) -->
         <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
           <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
           <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
-        </div>
-        <!-- Чат розгортається знизу (height:0 → OWL_TAB_EXPANDED_H) -->
-        <div id="owl-tab-expanded-${t}" style="height:0;overflow:hidden">
-          <div class="owl-tab-chat-section">
-            <div id="owl-tab-msgs-${t}" class="owl-tab-chat-msgs"></div>
-            <div class="owl-chat-input-row">
-              <input id="owl-tab-input-${t}" type="text" placeholder="Написати OWL..." autocomplete="off"
-                     onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlTabReplyFromInput('${t}')}">
-              <button onclick="sendOwlTabReplyFromInput('${t}')">➤</button>
-            </div>
-            <div class="owl-swipe-handle owl-tab-close-handle"
-                 ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')"
-                 onclick="collapseOwlTabToSpeech('${t}')"><div class="owl-handle-bar"></div></div>
-          </div>
         </div>
       </div>
     </div>
@@ -773,18 +780,11 @@ function _owlTabApplyState(tab) {
   const st = _owlTabStates[tab] || 'speech';
   const collapsed = document.getElementById('owl-tab-collapsed-' + tab);
   const speech    = document.getElementById('owl-tab-speech-' + tab);
-  const expanded  = document.getElementById('owl-tab-expanded-' + tab);
   const chipsWrap = document.getElementById('owl-tab-chips-wrap-' + tab);
   if (!speech) return;
   if (collapsed) collapsed.style.display = st === 'collapsed' ? 'flex' : 'none';
   speech.style.display = st === 'collapsed' ? 'none' : 'block';
-  // У expanded: текст→ховається, chips→зверху; у speech: текст→видно, chips→ховається
-  const bubbleEl   = document.getElementById('owl-tab-bubble-' + tab);
-  const expChipsEl = document.getElementById('owl-tab-exp-chips-' + tab);
-  if (bubbleEl)   bubbleEl.style.display   = st === 'expanded' ? 'none' : 'block';
-  if (expChipsEl) expChipsEl.style.display = st === 'expanded' ? 'flex'  : 'none';
-  if (expanded) { expanded.style.transition = ''; expanded.style.height = st === 'expanded' ? OWL_TAB_EXPANDED_H + 'px' : '0'; }
-  if (chipsWrap) chipsWrap.style.display = st === 'expanded' ? 'none' : 'flex';
+  if (chipsWrap) chipsWrap.style.display = 'flex';
 }
 
 function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
@@ -803,81 +803,16 @@ function _seedOwlTabChat(tab) {
 }
 
 function expandOwlTabChat(tab) {
-  if (tab === 'inbox') {
-    if (typeof expandOwlChat === 'function') expandOwlChat();
-    return;
-  }
-  _owlTabStates[tab] = 'expanded';
-  _owlTabApplyState(tab);
-  _seedOwlTabChat(tab);
-  renderOwlTabMsgs(tab);
+  // Табло read-only — відкриваємо чат-бар знизу замість expanded стану
+  openChatBar(tab === 'inbox' ? 'inbox' : tab);
 }
 
 function owlTabSwipeStart(e, tab) {
-  const msgsEl = document.getElementById('owl-tab-msgs-' + tab);
-  if (msgsEl && msgsEl.contains(e.target)) return; // дозволяємо скрол в повідомленнях
   _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
 }
 function owlTabSwipeMove(e, tab) {
   if (!_owlTabSwipes[tab]) return;
-  const dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-  _owlTabSwipes[tab].dy = dy;
-
-  const st = _owlTabStates[tab] || 'speech';
-  const chips    = document.getElementById('owl-tab-chips-wrap-' + tab);
-  const expanded = document.getElementById('owl-tab-expanded-' + tab);
-
-  if (st === 'speech' && dy > 0) {
-    // Розгортання: висота expanded слідкує за пальцем
-    if (Math.abs(dy) > 10) e.preventDefault();
-    if (expanded) expanded.style.transition = 'none';
-    if (chips)    chips.style.transition    = 'none';
-    const h = Math.min(dy, OWL_TAB_EXPANDED_H);
-    if (expanded) expanded.style.height = h + 'px';
-    if (chips) chips.style.opacity = String(Math.max(0, 1 - dy / 60));
-  } else if (st === 'expanded' && dy < 0) {
-    // Згортання: зменшуємо висоту
-    if (Math.abs(dy) > 10) e.preventDefault();
-    if (expanded) expanded.style.transition = 'none';
-    if (chips)    chips.style.transition    = 'none';
-    const h = Math.max(0, OWL_TAB_EXPANDED_H + dy);
-    if (expanded) expanded.style.height = h + 'px';
-    if (chips) chips.style.opacity = String(Math.min(1, Math.abs(dy) / 60));
-  }
-}
-
-// Плавний snap висоти після відпускання пальця
-function _snapOwlTab(tab, newSt) {
-  const chips    = document.getElementById('owl-tab-chips-wrap-' + tab);
-  const expanded = document.getElementById('owl-tab-expanded-' + tab);
-  const cur = _owlTabStates[tab] || 'speech';
-  const HT = 'height 0.3s cubic-bezier(0.4,0,0.2,1)';
-  const OT = 'opacity 0.22s ease';
-
-  if (expanded) expanded.style.transition = HT;
-  if (chips)    chips.style.transition    = OT;
-
-  if (newSt === 'expanded') {
-    if (expanded) expanded.style.height = OWL_TAB_EXPANDED_H + 'px';
-    if (chips)    chips.style.opacity   = '0';
-  } else if (newSt === 'speech' || newSt === 'collapsed') {
-    if (expanded) expanded.style.height = '0';
-    if (chips && newSt === 'speech') chips.style.opacity = '1';
-  } else {
-    // Snap back — повернути до поточного стану
-    if (expanded) expanded.style.height = cur === 'expanded' ? OWL_TAB_EXPANDED_H + 'px' : '0';
-    if (chips)    chips.style.opacity   = cur === 'expanded' ? '0' : '1';
-  }
-
-  setTimeout(() => {
-    if (expanded) expanded.style.transition = '';
-    if (chips)    { chips.style.transition = ''; chips.style.opacity = ''; }
-    if (newSt !== cur) {
-      _owlTabStates[tab] = newSt;
-      _owlTabApplyState(tab);
-      if (newSt === 'expanded') { _seedOwlTabChat(tab); renderOwlTabMsgs(tab); }
-    }
-  }, 320);
+  _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
 }
 
 function owlTabSwipeEnd(e, tab) {
@@ -886,13 +821,12 @@ function owlTabSwipeEnd(e, tab) {
   const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
 
   if (dy < -40) {
-    if (st === 'expanded') _snapOwlTab(tab, 'speech');
-    else if (st === 'speech') _snapOwlTab(tab, 'collapsed');
+    // Свайп вгору — згорнути табло
+    if (st === 'speech') { _owlTabStates[tab] = 'collapsed'; _owlTabApplyState(tab); }
   } else if (dy > 40) {
-    if (st === 'speech') _snapOwlTab(tab, 'expanded');
-    else if (st === 'collapsed') toggleOwlTabChat(tab);
-  } else {
-    _snapOwlTab(tab, st); // snap back
+    // Свайп вниз — розгорнути або відкрити чат-бар
+    if (st === 'collapsed') { _owlTabStates[tab] = 'speech'; _owlTabApplyState(tab); }
+    else if (st === 'speech') openChatBar(tab === 'inbox' ? 'inbox' : tab);
   }
 }
 
@@ -1000,14 +934,14 @@ function renderTabBoard(tab) {
   if (cEl) cEl.textContent = msg.text;
   if (tmEl) tmEl.textContent = timeStr;
 
-  const chipsEl    = document.getElementById('owl-tab-chips-' + tab);
-  const expChipsEl = document.getElementById('owl-tab-exp-chips-' + tab);
+  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
   const chipsHTML = (msg.chips || []).map(c => {
     const s = escapeHtml(c).replace(/'/g, '&#39;');
-    return `<div class="owl-chip" onclick="sendOwlTabReply('${tab}','${s}')">${escapeHtml(c)}</div>`;
+    return `<div class="owl-chip" onclick="owlChipToChat('${tab}','${s}')">${escapeHtml(c)}</div>`;
   });
   if (chipsEl) {
-    const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak" onclick="expandOwlTabChat('${tab}')">Поговорити</div>`];
+    const barTab = tab === 'me' ? 'me' : tab;
+    const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak" onclick="openChatBar('${barTab}')">Поговорити</div>`];
     chipsEl.innerHTML = speechChips.join('');
     chipsEl.scrollLeft = 0;
     chipsEl.removeEventListener('scroll', chipsEl._arrowHandler);
@@ -1015,8 +949,6 @@ function renderTabBoard(tab) {
     chipsEl.addEventListener('scroll', chipsEl._arrowHandler, { passive: true });
     setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
   }
-  // Expanded chips: ті самі кнопки справа від сови (без "Поговорити")
-  if (expChipsEl) expChipsEl.innerHTML = chipsHTML.join('');
 }
 
 function getTabBoardContext(tab) {
@@ -1195,6 +1127,15 @@ async function generateTabBoardMessage(tab) {
     if (!parsed.text) { _tabBoardGenerating[tab] = false; return; }
     saveTabBoardMsg(tab, { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() });
     localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+    // Дублюємо проактивне повідомлення в чат-бар поточної вкладки
+    try {
+      const chatTab = tab;
+      const chatKey = 'nm_chat_' + chatTab;
+      const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
+      chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
+      localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
+      if (typeof restoreChatUI === 'function') restoreChatUI(chatTab);
+    } catch(e) {}
     renderTabBoard(tab);
   } catch(e) {}
   _tabBoardGenerating[tab] = false;

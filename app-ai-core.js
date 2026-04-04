@@ -111,6 +111,23 @@ function getAIContext() {
     }
   } catch(e) {}
 
+  // === Поточне повідомлення OWL на табло (щоб AI розумів контекст розмови) ===
+  try {
+    const tab = typeof currentTab !== 'undefined' ? currentTab : 'inbox';
+    let boardText = '';
+    if (tab === 'inbox') {
+      const msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
+      if (msgs.length > 0) boardText = msgs[0].text;
+    } else {
+      const msgs = JSON.parse(localStorage.getItem('nm_owl_tab_' + tab) || '[]');
+      if (Array.isArray(msgs) && msgs.length > 0) boardText = msgs[0].text;
+      else if (msgs && msgs.text) boardText = msgs.text;
+    }
+    if (boardText) {
+      parts.push(`OWL щойно сказав на табло (вкладка "${tab}"): "${boardText}". Якщо користувач відповідає на це — це відповідь на питання OWL, НЕ нова задача/нотатка.`);
+    }
+  } catch(e) {}
+
   return parts.join('\n\n');
 }
 

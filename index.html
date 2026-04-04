@@ -259,7 +259,7 @@
         <!-- OWL AGENT — всередині fixed-top, не прокручується -->
         <div id="owl-board" class="owl-board-sticky" style="display:none">
 
-          <!-- Inbox board — та сама структура що вкладки (tasks/notes/etc) -->
+          <!-- Inbox board — read-only табло (чат через чат-бар знизу) -->
           <div id="owl-tab-collapsed-inbox" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('inbox')">
             <div class="owl-collapsed-avatar">🦉</div>
             <div class="owl-collapsed-text" id="owl-tab-ctext-inbox"></div>
@@ -268,23 +268,9 @@
                ontouchstart="owlTabSwipeStart(event,'inbox')" ontouchmove="owlTabSwipeMove(event,'inbox')" ontouchend="owlTabSwipeEnd(event,'inbox')">
             <div class="owl-speech-avatar">🦉</div>
             <div class="owl-tab-card">
-              <div id="owl-tab-exp-chips-inbox" class="owl-tab-exp-chips" style="display:none"></div>
               <div class="owl-tab-bubble" id="owl-tab-bubble-inbox">
                 <div class="owl-speech-text" id="owl-tab-text-inbox"></div>
                 <div class="owl-speech-time" id="owl-tab-time-inbox"></div>
-              </div>
-              <div id="owl-tab-expanded-inbox" style="height:0;overflow:hidden">
-                <div class="owl-tab-chat-section">
-                  <div id="owl-tab-msgs-inbox" class="owl-tab-chat-msgs"></div>
-                  <div class="owl-chat-input-row">
-                    <input id="owl-tab-input-inbox" type="text" placeholder="Написати OWL..." autocomplete="off"
-                           onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlTabReplyFromInput('inbox')}">
-                    <button onclick="sendOwlTabReplyFromInput('inbox')">➤</button>
-                  </div>
-                  <div class="owl-swipe-handle owl-tab-close-handle"
-                       ontouchstart="owlTabSwipeStart(event,'inbox')" ontouchmove="owlTabSwipeMove(event,'inbox')" ontouchend="owlTabSwipeEnd(event,'inbox')"
-                       onclick="collapseOwlTabToSpeech('inbox')"><div class="owl-handle-bar"></div></div>
-                </div>
               </div>
             </div>
           </div>
