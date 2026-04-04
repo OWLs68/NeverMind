@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-04
+**Оновлено:** 2026-04-04 14:24
 
 ---
 
@@ -43,6 +43,14 @@ OWL Board: повний редизайн Inbox + всіх вкладок. Фік
 - Нові функції в `app-core-system.js`: `_owlTabHTML`, `_owlTabApplyState`, `toggleOwlTabChat`, `expandOwlTabChat`, `collapseOwlTabToSpeech`, `owlTabSwipe*`, `sendOwlTabReply`, `sendOwlTabReplyFromInput`, `renderOwlTabMsgs`
 - Стани: `speech` → `collapsed` (свайп вгору) / `expanded` (свайп вниз або "Поговорити")
 - Чат в expanded: зберігається в `nm_owl_tab_chat_{tab}`, викликає GPT з контекстом вкладки
+
+### Аудит та фікси (04.04 14:24)
+- Аудит: `<div>` баланс ✅, синтаксис ✅, дублікати ✅
+- Фікс: `owlTabSwipeMove` — `e.preventDefault()` перенесено всередину умов → scroll у чаті тепер не блокується
+- Фікс: `tabLabels` — додано `health` і `projects` (раніше AI отримував `undefined`)
+- Фікс: `getTabBoardContext` — додано специфічний контекст для `health` і `projects`
+- Фікс: `checkTabBoardTrigger` — додано перевірку даних для `health` і `projects`
+- Мертвий код: `getTabBoardSaid`, `markTabBoardSaid`, `tabAlreadySaid`, `dismissTabBoard` — не викликаються, але залишені
 
 ---
 

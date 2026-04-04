@@ -816,23 +816,26 @@ function owlTabSwipeMove(e, tab) {
   if (!_owlTabSwipes[tab]) return;
   const dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
   _owlTabSwipes[tab].dy = dy;
-  if (Math.abs(dy) > 10) e.preventDefault();
 
   const st = _owlTabStates[tab] || 'speech';
-  const speech   = document.getElementById('owl-tab-speech-' + tab);
   const chips    = document.getElementById('owl-tab-chips-wrap-' + tab);
   const expanded = document.getElementById('owl-tab-expanded-' + tab);
 
-  if (expanded) expanded.style.transition = 'none';
-  if (chips)    chips.style.transition    = 'none';
-
   if (st === 'speech' && dy > 0) {
     // Розгортання: висота expanded слідкує за пальцем
+    if (Math.abs(dy) > 10) e.preventDefault();
+    if (expanded) expanded.style.transition = 'none';
+    if (chips)    chips.style.transition    = 'none';
     const h = Math.min(dy, OWL_TAB_EXPANDED_H);
     if (expanded) expanded.style.height = h + 'px';
     if (chips) chips.style.opacity = String(Math.max(0, 1 - dy / 60));
   } else if (st === 'expanded' && dy < 0) {
-    // Згортання: зменшуємо висоту
+    // Згортання: зменшуємо висоту (тільки якщо свайп не в чаті)
+    const msgsEl = document.getElementById('owl-tab-msgs-' + tab);
+    if (msgsEl && msgsEl.contains(e.target) && msgsEl.scrollTop > 0) return;
+    if (Math.abs(dy) > 10) e.preventDefault();
+    if (expanded) expanded.style.transition = 'none';
+    if (chips)    chips.style.transition    = 'none';
     const h = Math.max(0, OWL_TAB_EXPANDED_H + dy);
     if (expanded) expanded.style.height = h + 'px';
     if (chips) chips.style.opacity = String(Math.min(1, Math.abs(dy) / 60));
@@ -1086,6 +1089,26 @@ function getTabBoardContext(tab) {
     try { const finCtx = getFinanceContext(); if (finCtx) parts.push(finCtx); } catch(e) {}
   }
 
+  if (tab === 'health') {
+    try {
+      const cards = JSON.parse(localStorage.getItem('nm_health_cards') || '[]');
+      const log = JSON.parse(localStorage.getItem('nm_health_log') || '{}');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayLog = log[todayStr] || {};
+      parts.push(`Карточок здоров'я: ${cards.length}. Сьогодні: енергія ${todayLog.energy || '—'}, сон ${todayLog.sleep || '—'}, біль ${todayLog.pain || '—'}`);
+    } catch(e) {}
+  }
+
+  if (tab === 'projects') {
+    try {
+      const projects = JSON.parse(localStorage.getItem('nm_projects') || '[]');
+      const active = projects.filter(p => p.status === 'active');
+      const paused = projects.filter(p => p.status === 'paused');
+      parts.push(`Проектів активних: ${active.length}, на паузі: ${paused.length}, всього: ${projects.length}.`);
+      if (active.length > 0) parts.push(`Активні: ${active.slice(0,3).map(p => '"' + p.name + '"').join(', ')}`);
+    } catch(e) {}
+  }
+
   return parts.filter(Boolean).join('\n\n');
 }
 
@@ -1103,6 +1126,12 @@ function checkTabBoardTrigger(tab) {
   if (tab === 'finance') {
     try { return getFinance().length > 0; } catch { return false; }
   }
+  if (tab === 'health') {
+    try { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]').length > 0; } catch { return false; }
+  }
+  if (tab === 'projects') {
+    try { return JSON.parse(localStorage.getItem('nm_projects') || '[]').length > 0; } catch { return false; }
+  }
   return true;
 }
 
@@ -1115,7 +1144,7 @@ async function generateTabBoardMessage(tab) {
   _tabBoardGenerating[tab] = true;
 
   const context = getTabBoardContext(tab);
-  const tabLabels = { tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси' };
+  const tabLabels = { tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
   const existing = getTabBoardMsg(tab);
   const recentText = existing ? existing.text : '';
 
