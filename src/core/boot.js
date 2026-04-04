@@ -1,3 +1,19 @@
+import { applyTheme, autoRefreshMemory, closeSettings, currentTab, setupDrumTabbar, updateKeyStatus } from './nav.js';
+import { cleanupTrash } from './trash.js';
+import { restoreChatUI } from '../ai/core.js';
+import { renderTabBoard } from '../owl/board.js';
+import { renderOwlBoard, setupChatBarSwipe, startOwlBoardCycle } from '../owl/inbox-board.js';
+import { setupKeyboardAvoiding } from '../ui/keyboard.js';
+import { renderInbox } from '../tabs/inbox.js';
+import { renderTasks } from '../tabs/tasks.js';
+import { renderHabits, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
+import { renderNotes } from '../tabs/notes.js';
+import { renderFinance } from '../tabs/finance.js';
+import { renderEvening, renderMe, renderMeHabitsStats, setupAutoEveningSummary } from '../tabs/evening.js';
+import { checkOnboarding, showFirstVisitTip } from '../tabs/onboarding.js';
+import { renderHealth } from '../tabs/health.js';
+import { renderProjects } from '../tabs/projects.js';
+
 // === PWA MANIFEST ===
 function setupPWA() {
   const manifest = {
@@ -149,7 +165,7 @@ function setupSync() {
 
 // === PAGE TRANSITIONS ===
 let currentTabForAnim = 'inbox';
-function animateTabSwitch(newTab) {
+export function animateTabSwitch(newTab) {
   const oldPage = document.getElementById(`page-${currentTabForAnim}`);
   const newPage = document.getElementById(`page-${newTab}`);
   if (!oldPage || !newPage || oldPage === newPage) {
@@ -202,7 +218,7 @@ function setupSettingsSwipe() {
   }, { passive: true });
 }
 
-function applyBoardOverlays() {
+export function applyBoardOverlays() {
   const configs = [
     { fixedId: 'me-fixed-top',       scrollId: 'me-content' },
     { fixedId: 'evening-fixed-top',  scrollId: 'evening-scroll' },
@@ -231,7 +247,7 @@ function applyBoardOverlays() {
 }
 
 // === CENTRAL KEY REGISTRY (єдине джерело правди для localStorage) ===
-const NM_KEYS = {
+export const NM_KEYS = {
   // Основні дані (→ Supabase таблиці в майбутньому)
   data: ['nm_inbox','nm_tasks','nm_notes','nm_folders_meta','nm_moments',
          'nm_habits2','nm_habit_log2','nm_quit_log','nm_finance',
@@ -360,9 +376,3 @@ setTimeout(() => {
   }
 }, 3000);
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  setupPWA, setupSW, setupSync,
-  animateTabSwitch, setupSettingsSwipe, applyBoardOverlays,
-  NM_KEYS, runMigrations, init, showApp, bootApp,
-});

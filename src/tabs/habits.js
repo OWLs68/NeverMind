@@ -3,13 +3,24 @@
 // Залежності: app-core.js, app-ai.js, app-tasks-core.js
 // ============================================================
 
+import { currentTab, showToast } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
+import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { addInboxChatMsg } from './inbox.js';
+import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
+import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats } from './finance.js';
+import { renderMeHabitsStats } from './evening.js';
+
 // === HABITS ===
 let editingHabitId = null;
 
-function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
-function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
-function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
-function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
+export function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
+export function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
+export function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
+export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
 
 // === QUIT HABITS — челендж "Кинути" ===
 function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
@@ -17,7 +28,7 @@ function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(o
 
 // Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }
 // freedomDays — сумарна кількість днів "тримався", ніколи не скидається
-function getQuitStatus(habitId) {
+export function getQuitStatus(habitId) {
   const log = getQuitLog();
   return log[habitId] || { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
 }
@@ -283,7 +294,7 @@ function toggleHabitToday(id) {
   renderMeHabitsStats();
 }
 
-function getHabitStreak(id) {
+export function getHabitStreak(id) {
   const log = getHabitLog();
   const habits = getHabits();
   const h = habits.find(x => x.id === id);
@@ -302,7 +313,7 @@ function getHabitStreak(id) {
   return streak;
 }
 
-function getHabitPct(id) {
+export function getHabitPct(id) {
   const log = getHabitLog();
   const habits = getHabits();
   const h = habits.find(x => x.id === id);
@@ -359,7 +370,7 @@ function makeHabitDayDots(h, weekDone, todayDow) {
   }).join('');
 }
 
-function renderHabits() {
+export function renderHabits() {
   const habits = getHabits();
   const el = document.getElementById('me-habits-stats-list');
   const block = document.getElementById('me-habits-stats');
@@ -452,9 +463,9 @@ function renderHabits() {
 
 
 // === PRODUCTIVITY INNER TABS ===
-let currentProdTab = 'tasks';
+export let currentProdTab = 'tasks';
 
-function updateProdTabCounters() {
+export function updateProdTabCounters() {
   // Лічильник задач
   const taskCount = getTasks().filter(t => t.status !== 'done').length;
   const taskCountEl = document.getElementById('prod-tab-tasks-count');
@@ -595,7 +606,7 @@ function _habitConfetti(habitId) {
   }
 }
 
-function renderProdHabits() {
+export function renderProdHabits() {
   updateProdTabCounters();
   const habits = getHabits();
   const el = document.getElementById('prod-habits-list');
@@ -954,7 +965,7 @@ function _levenshtein(a, b) {
   return dp[m][n];
 }
 
-function processUniversalAction(parsed, originalText, addMsg) {
+export function processUniversalAction(parsed, originalText, addMsg) {
   const action = parsed.action;
 
   if (action === 'create_task') {
@@ -1021,7 +1032,7 @@ function processUniversalAction(parsed, originalText, addMsg) {
     toDelete.forEach(n => addToTrash('folder', n, null));
     const remaining = notes.filter(n => (n.folder || 'Загальне') !== matched);
     saveNotes(remaining);
-    if (currentTab === 'notes') { currentNotesFolder = null; renderNotes(); }
+    if (currentTab === 'notes') { setCurrentNotesFolder(null); renderNotes(); }
     addMsg('agent', `✓ Папку "${matched}" видалено (${toDelete.length} нотаток)`);
     return true;
   }
@@ -1069,7 +1080,7 @@ function processUniversalAction(parsed, originalText, addMsg) {
 }
 
 
-async function sendTasksBarMessage() {
+export async function sendTasksBarMessage() {
   if (taskBarLoading) return;
   const input = document.getElementById('tasks-chat-input');
   const text = input.value.trim();
@@ -1080,7 +1091,7 @@ async function sendTasksBarMessage() {
   input.value = '';
   input.style.height = 'auto';
   addTaskBarMsg('user', text);
-  taskBarLoading = true;
+  setTaskBarLoading(true);
   addTaskBarMsg('typing', '');
 
   const tasks = getTasks().filter(t => t.status !== 'done');
@@ -1128,7 +1139,7 @@ async function sendTasksBarMessage() {
     });
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content?.trim();
-    if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); taskBarLoading = false; return; }
+    if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); setTaskBarLoading(false); return; }
 
     // Спробуємо розпарсити JSON дію
     try {
@@ -1208,37 +1219,17 @@ async function sendTasksBarMessage() {
       } else { safeAgentReply(reply, addTaskBarMsg); }
     } catch { safeAgentReply(reply, addTaskBarMsg); }
   } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
-  taskBarLoading = false;
+  setTaskBarLoading(false);
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  editingHabitId,
-  getHabits, saveHabits, getHabitLog, saveHabitLog,
-  getQuitLog, saveQuitLog, getQuitStatus,
-  holdQuitHabit, relapseQuitHabit,
-  _dayWord, _owlQuitRelapse,
-  _habitModalType, setHabitModalType,
-  adjustHabitCount, openEditHabit, openAddHabit, closeHabitModal,
-  saveHabit, deleteHabit, deleteHabitFromModal,
-  _habitDone, toggleHabitToday,
-  getHabitStreak, getHabitPct, getHabitWeekDays,
-  makeHabitDayDots, renderHabits,
-  updateProdTabCounters, switchProdTab,
-  toggleProdHabitToday, tapHabitSquare, tapHabitSquareMe,
-  _habitConfetti, renderProdHabits,
-  _quitResilienceLamp, _quitTrend, _renderQuitHabitCard,
-  confirmQuitRelapse,
-  habitMeSwipeState, habitMeSwipeStart, habitMeSwipeMove, habitMeSwipeEnd,
-  prodHabitSwipeState, prodHabitSwipeStart, prodHabitSwipeMove, prodHabitSwipeEnd,
-  _fuzzyFindFolder, _levenshtein,
-  processUniversalAction, sendTasksBarMessage,
-});
-
-// currentProdTab needs getter/setter (referenced by app-core-nav.js)
-Object.defineProperty(window, 'currentProdTab', {
-  get() { return currentProdTab; },
-  set(v) { currentProdTab = v; },
-  configurable: true
+  switchProdTab, saveHabit, closeHabitModal, setHabitModalType,
+  deleteHabitFromModal, adjustHabitCount, sendTasksBarMessage,
+  openEditHabit, toggleHabitToday, toggleProdHabitToday,
+  tapHabitSquare, tapHabitSquareMe,
+  habitMeSwipeStart, habitMeSwipeMove, habitMeSwipeEnd,
+  prodHabitSwipeStart, prodHabitSwipeMove, prodHabitSwipeEnd,
+  holdQuitHabit, confirmQuitRelapse,
 });

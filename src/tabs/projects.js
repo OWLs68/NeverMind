@@ -4,9 +4,18 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
+import { currentTab, showToast, switchTab } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { addInboxChatMsg } from './inbox.js';
+import { getTasks, saveTasks } from './tasks.js';
+import { processUniversalAction } from './habits.js';
+import { getNotes, openNotesFolder } from './notes.js';
+import { getCurrency } from './finance.js';
+
 // === STORAGE ===
-function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
-function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); }
+export function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
+export function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); }
 
 // State
 let activeProjectId = null;
@@ -15,7 +24,7 @@ let projectsBarHistory = [];
 let _projectsTypingEl = null;
 
 // === ГОЛОВНИЙ РЕНДЕР ===
-function renderProjects() {
+export function renderProjects() {
   if (activeProjectId !== null) {
     renderProjectWorkspace(activeProjectId);
   } else {
@@ -361,7 +370,7 @@ function saveNewProject() {
   setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
 }
 
-async function startProjectInboxInterview(projectName, projectSubtitle) {
+export async function startProjectInboxInterview(projectName, projectSubtitle) {
   // Переходимо на Inbox де відбувається вся комунікація
   if (typeof switchTab === 'function' && currentTab !== 'inbox') switchTab('inbox');
 
@@ -453,7 +462,7 @@ function addProjectsChatMsg(role, text, _noSave = false) {
   if (!_noSave) saveChatMsg('projects', role, text);
 }
 
-async function sendProjectsBarMessage() {
+export async function sendProjectsBarMessage() {
   if (projectsBarLoading) return;
   const input = document.getElementById('projects-bar-input');
   const text = input.value.trim();
@@ -603,16 +612,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
   projectsBarLoading = false;
 }
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  getProjects, saveProjects,
-  activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl,
-  renderProjects, renderProjectsList,
-  openProjectWorkspace, closeProjectWorkspace, renderProjectWorkspace,
-  _countProjectNotes, toggleProjectTimeline, toggleProjectStep,
-  _syncProjectStepToTasks,
-  openAddProject, closeProjectModal, saveNewProject,
-  startProjectInboxInterview,
-  getProjectsContext,
-  addProjectsChatMsg, sendProjectsBarMessage,
+  openAddProject, saveNewProject, closeProjectModal,
+  sendProjectsBarMessage, openProjectWorkspace, closeProjectWorkspace,
+  toggleProjectTimeline, toggleProjectStep, switchTab,
 });

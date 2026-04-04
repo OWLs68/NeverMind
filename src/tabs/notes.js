@@ -4,12 +4,19 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
+import { currentTab, showToast } from '../core/nav.js';
+import { escapeHtml, formatTime } from '../core/utils.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
+import { callAI, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { processUniversalAction } from './habits.js';
+
 // === NOTES ===
 let editingNoteId = null;
 let pendingFolderSuggestion = null;
 
-function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
-function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); }
+export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
+export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); }
 
 function getFolders() {
   const notes = getNotes();
@@ -17,7 +24,7 @@ function getFolders() {
   return [...set].sort();
 }
 
-function addNoteFromInbox(text, category, folder = null, source = 'inbox') {
+export function addNoteFromInbox(text, category, folder = null, source = 'inbox') {
   const notes = getNotes();
   const resolvedFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
   notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
@@ -97,9 +104,10 @@ function deleteNote(id) {
   });
 }
 
-let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
+export let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
+export function setCurrentNotesFolder(v) { currentNotesFolder = v; }
 
-function openNotesFolder(folderName) {
+export function openNotesFolder(folderName) {
   currentNotesFolder = folderName;
   renderNotes();
 }
@@ -200,7 +208,7 @@ const FOLDER_COLORS = {
 };
 const DEFAULT_NOTE_FOLDER = { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '📝' };
 
-function renderNotes(searchQuery = '') {
+export function renderNotes(searchQuery = '') {
   let notes = getNotes();
   const content = document.getElementById('notes-content');
   const empty = document.getElementById('notes-empty');
@@ -450,7 +458,7 @@ function noteMenuMove() {
     showToast(`✓ Переміщено в "${newFolder.trim()}"`);
   }
 }
-async function checkAndSuggestFolders() {
+export async function checkAndSuggestFolders() {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const lastTs = localStorage.getItem('nm_notes_folders_ts');
@@ -564,7 +572,7 @@ function openNoteView(id) {
   });
 }
 
-function closeNoteView() {
+export function closeNoteView() {
   // Зберігаємо перед закриттям
   if (activeNoteViewId) {
     const textEl = document.getElementById('note-view-text');
@@ -995,10 +1003,11 @@ function saveFolderEdit() {
 }
 
 // === NOTES AI BAR ===
+let _notesTypingEl = null;
 let notesBarHistory = [];
 let notesBarLoading = false;
 
-function addNotesChatMsg(role, text, _noSave = false) {
+export function addNotesChatMsg(role, text, _noSave = false) {
   const el = document.getElementById('notes-chat-messages');
   if (!el) return;
   if (_notesTypingEl) { _notesTypingEl.remove(); _notesTypingEl = null; }
@@ -1023,7 +1032,7 @@ function addNotesChatMsg(role, text, _noSave = false) {
   if (!_noSave) saveChatMsg('notes', role, text);
 }
 
-async function sendNotesBarMessage() {
+export async function sendNotesBarMessage() {
   if (notesBarLoading) return;
   const input = document.getElementById('notes-bar-input');
   const text = input.value.trim();
@@ -1138,41 +1147,16 @@ async function sendNotesBarMessage() {
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  editingNoteId, pendingFolderSuggestion,
-  getNotes, saveNotes, getFolders,
-  addNoteFromInbox, openAddNote, openEditNote, closeNoteModal,
-  updateFolderSuggestions, saveNote, deleteNote,
-  openNotesFolder, closeNotesFolder,
-  _S, _ico, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS,
-  FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, getFolderIcon,
-  getFoldersMeta, saveFoldersMeta, getFolderMeta, setFolderMeta,
-  FOLDER_COLORS, DEFAULT_NOTE_FOLDER,
-  renderNotes, renderNotesList,
-  noteSwipeState, noteSwipeStart, noteSwipeMove, noteSwipeEnd,
-  activeNoteMenuId, openNoteMenu, closeNoteMenu,
-  noteMenuEdit, noteMenuDelete, noteMenuCopy, noteMenuMove,
-  checkAndSuggestFolders, suggestNoteFolders, applyFolderSuggestion,
-  activeNoteViewId, noteChatHistory, noteChatLoading,
-  getFolderColor, openNoteView, closeNoteView,
-  _autoSaveNoteTimer, autoSaveNoteView,
-  openNoteViewMenu, openEditNoteFromView, switchNoteViewTab,
-  initNoteChatGreeting, addNoteChatMsg, sendNoteChatMessage,
-  _pendingAgentNote, showSaveAsNoteBtn, saveAgentResponseAsNote,
-  folderSwipeState, _folderKey, folderSwipeStart, folderSwipeMove, folderSwipeEnd,
-  _editingFolder, openFolderEditModal, closeFolderEditModal,
-  _autoIconKey, _selectedIconKey, _selectedColorKey,
-  renderFolderIconGrid, selectFolderIcon,
-  FOLDER_COLOR_PALETTE, renderFolderColorGrid, selectFolderColor,
-  saveFolderEdit,
-  notesBarHistory, notesBarLoading,
-  addNotesChatMsg, sendNotesBarMessage,
-});
-
-// currentNotesFolder needs getter/setter (referenced by app-core-nav.js)
-Object.defineProperty(window, 'currentNotesFolder', {
-  get() { return currentNotesFolder; },
-  set(v) { currentNotesFolder = v; },
-  configurable: true
+  openAddNote, saveNote, closeNoteModal, openNoteView, closeNoteView,
+  switchNoteViewTab, openNoteViewMenu, closeNoteMenu,
+  noteMenuCopy, noteMenuEdit, noteMenuDelete, noteMenuMove,
+  saveFolderEdit, closeFolderEditModal, applyFolderSuggestion,
+  sendNoteChatMessage, sendNotesBarMessage,
+  openNotesFolder, closeNotesFolder, openFolderEditModal,
+  selectFolderIcon, selectFolderColor,
+  folderSwipeStart, folderSwipeMove, folderSwipeEnd,
+  noteSwipeStart, noteSwipeMove, noteSwipeEnd,
+  addNotesChatMsg, autoSaveNoteView, openNoteMenu,
 });

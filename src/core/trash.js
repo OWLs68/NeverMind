@@ -1,8 +1,15 @@
+import { currentTab, _undoData, _undoToastTimer, setUndoData, setUndoTimer } from './nav.js';
+import { getInbox, saveInbox, renderInbox } from '../tabs/inbox.js';
+import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
+import { getNotes, saveNotes, renderNotes } from '../tabs/notes.js';
+import { getHabits, saveHabits, renderHabits, renderProdHabits } from '../tabs/habits.js';
+import { getFinance, saveFinance, renderFinance } from '../tabs/finance.js';
+
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
 const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
 
-function getTrash() {
+export function getTrash() {
   try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }
 }
 function saveTrash(arr) {
@@ -10,7 +17,7 @@ function saveTrash(arr) {
 }
 
 // Додати запис в кеш при видаленні
-function addToTrash(type, item, extra) {
+export function addToTrash(type, item, extra) {
   const trash = getTrash();
   // Прибираємо старіші за 7 днів
   const now = Date.now();
@@ -21,7 +28,7 @@ function addToTrash(type, item, extra) {
 }
 
 // Пошук в кеші — для агента
-function searchTrash(query) {
+export function searchTrash(query) {
   const trash = getTrash();
   const now = Date.now();
   const q = query.toLowerCase();
@@ -37,7 +44,7 @@ function searchTrash(query) {
 }
 
 // Відновити запис з кешу по id
-function restoreFromTrash(trashId) {
+export function restoreFromTrash(trashId) {
   const trash = getTrash();
   const entry = trash.find(t => t.deletedAt === trashId);
   if (!entry) return false;
@@ -80,41 +87,37 @@ function restoreFromTrash(trashId) {
 }
 
 // Очистка кешу — викликається при старті
-function cleanupTrash() {
+export function cleanupTrash() {
   const trash = getTrash();
   const now = Date.now();
   const fresh = trash.filter(t => now - t.deletedAt < TRASH_TTL);
   if (fresh.length !== trash.length) saveTrash(fresh);
 }
 
-function showUndoToast(msg, restoreFn) {
+export function showUndoToast(msg, restoreFn) {
   // Показує toast з кнопкою "Відновити" на 10 секунд
   const el = document.getElementById('toast');
   const msgEl = document.getElementById('toast-msg');
   const btn = document.getElementById('toast-undo-btn');
   msgEl.textContent = msg;
   btn.style.display = 'inline-block';
-  _undoData = restoreFn;
+  setUndoData(restoreFn);
   if (_undoToastTimer) clearTimeout(_undoToastTimer);
   el.classList.add('show');
-  _undoToastTimer = setTimeout(() => {
+  setUndoTimer(setTimeout(() => {
     el.classList.remove('show');
-    _undoData = null;
-  }, 10000);
+    setUndoData(null);
+  }, 10000));
 }
 
-function undoDelete() {
+export function undoDelete() {
   if (_undoData) {
     _undoData(); // викликаємо функцію відновлення
-    _undoData = null;
+    setUndoData(null);
   }
   if (_undoToastTimer) clearTimeout(_undoToastTimer);
   document.getElementById('toast').classList.remove('show');
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  getTrash, saveTrash, addToTrash, searchTrash, restoreFromTrash,
-  cleanupTrash, showUndoToast, undoDelete,
-  NM_TRASH_KEY, TRASH_TTL,
-});
+// Functions called from HTML event handlers
+window.undoDelete = undoDelete;

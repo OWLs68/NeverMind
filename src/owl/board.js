@@ -1,11 +1,17 @@
+import { escapeHtml } from '../core/utils.js';
+import { openChatBar, getOWLPersonality } from '../ai/core.js';
+import { owlChipToChat } from './chips.js';
+import { getOwlBoardMessages, sendOwlReply, sendOwlReplyFromInput } from './inbox-board.js';
+import { getTabBoardContext } from './proactive.js';
+
 // === OWL TAB BOARDS (#37) ===
-const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
+export const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
 
 function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
-function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
+export function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
 function getOwlTabSaidKey(tab) { return 'nm_owl_tab_said_' + tab; }
 
-function getTabBoardMsgs(tab) {
+export function getTabBoardMsgs(tab) {
   try {
     const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null');
     if (!raw) return [];
@@ -17,7 +23,7 @@ function getTabBoardMsg(tab) {
   const msgs = getTabBoardMsgs(tab);
   return msgs[0] || null;
 }
-function saveTabBoardMsg(tab, newMsg) {
+export function saveTabBoardMsg(tab, newMsg) {
   const msgs = getTabBoardMsgs(tab);
   msgs.unshift(newMsg);          // новий → перший
   if (msgs.length > 30) msgs.length = 30; // максимум 30
@@ -49,7 +55,7 @@ function dismissTabBoard(tab) {
 
 // === OWL TAB BOARD — новий стиль (як Інбокс) ===
 
-const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
+export const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
 const _owlTabSwipes = {};
 
 const OWL_TAB_EXPANDED_H = 204; // чат + padding-top:29px щоб повідомлення під совою
@@ -78,7 +84,7 @@ function _owlTabHTML(tab) {
     </div>`;
 }
 
-function _owlTabApplyState(tab) {
+export function _owlTabApplyState(tab) {
   const st = _owlTabStates[tab] || 'speech';
   const collapsed = document.getElementById('owl-tab-collapsed-' + tab);
   const speech    = document.getElementById('owl-tab-speech-' + tab);
@@ -89,7 +95,7 @@ function _owlTabApplyState(tab) {
   if (chipsWrap) chipsWrap.style.display = 'flex';
 }
 
-function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
+export function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
 function collapseOwlTabToSpeech(tab){ _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
 // Додати початкове повідомлення сови у чат якщо він пустий
 function _seedOwlTabChat(tab) {
@@ -109,15 +115,15 @@ function expandOwlTabChat(tab) {
   openChatBar(tab === 'inbox' ? 'inbox' : tab);
 }
 
-function owlTabSwipeStart(e, tab) {
+export function owlTabSwipeStart(e, tab) {
   _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
 }
-function owlTabSwipeMove(e, tab) {
+export function owlTabSwipeMove(e, tab) {
   if (!_owlTabSwipes[tab]) return;
   _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
 }
 
-function owlTabSwipeEnd(e, tab) {
+export function owlTabSwipeEnd(e, tab) {
   const sw = _owlTabSwipes[tab]; if (!sw) return;
   _owlTabSwipes[tab] = null;
   const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
@@ -192,7 +198,7 @@ function sendOwlTabReplyFromInput(tab) {
   sendOwlTabReply(tab, text);
 }
 
-function _updateOwlTabChipsArrows(tab) {
+export function _updateOwlTabChipsArrows(tab) {
   const el    = document.getElementById('owl-tab-chips-' + tab);
   const left  = document.getElementById('owl-tab-chips-left-' + tab);
   const right = document.getElementById('owl-tab-chips-right-' + tab);
@@ -201,14 +207,14 @@ function _updateOwlTabChipsArrows(tab) {
   right.classList.toggle('visible', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
 }
 
-function scrollOwlTabChips(tab, dir) {
+export function scrollOwlTabChips(tab, dir) {
   const el = document.getElementById('owl-tab-chips-' + tab);
   if (!el) return;
   el.scrollBy({ left: dir * 130, behavior: 'smooth' });
   setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
 }
 
-function renderTabBoard(tab) {
+export function renderTabBoard(tab) {
   const isInbox = tab === 'inbox';
   const msgs = isInbox ? (typeof getOwlBoardMessages === 'function' ? getOwlBoardMessages() : []) : getTabBoardMsgs(tab);
   const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
@@ -253,19 +259,8 @@ function renderTabBoard(tab) {
   }
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
+// === WINDOW GLOBALS (HTML handlers only) ===
 Object.assign(window, {
-  OWL_TAB_BOARD_MIN_INTERVAL,
-  getOwlTabBoardKey, getOwlTabTsKey, getOwlTabSaidKey,
-  getTabBoardMsgs, getTabBoardMsg, saveTabBoardMsg,
-  getTabBoardSaid, markTabBoardSaid, tabAlreadySaid,
-  dismissTabBoard,
-  _owlTabStates, _owlTabSwipes, OWL_TAB_EXPANDED_H,
-  _owlTabHTML, _owlTabApplyState,
-  toggleOwlTabChat, collapseOwlTabToSpeech,
-  _seedOwlTabChat, expandOwlTabChat,
-  owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
-  renderOwlTabMsgs, sendOwlTabReply, sendOwlTabReplyFromInput,
-  _updateOwlTabChipsArrows, scrollOwlTabChips,
-  renderTabBoard,
+  toggleOwlTabChat, owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
+  scrollOwlTabChips, owlChipToChat, openChatBar,
 });

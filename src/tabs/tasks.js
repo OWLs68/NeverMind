@@ -3,14 +3,22 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
+import { showToast } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
+import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
+import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { updateProdTabCounters } from './habits.js';
+import { closeNoteView } from './notes.js';
+
 // === TASKS ===
 let editingTaskId = null;
 let tempSteps = [];
 
-function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
-function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); }
+export function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
+export function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); }
 
-function openAddTask() {
+export function openAddTask() {
   editingTaskId = null;
   tempSteps = [];
   document.getElementById('task-modal-title').textContent = 'Нова задача';
@@ -43,7 +51,7 @@ function openEditTask(id) {
 }
 
 // === SWIPE DOWN TO CLOSE MODALS ===
-function setupModalSwipeClose(contentEl, closeFn) {
+export function setupModalSwipeClose(contentEl, closeFn) {
   if (!contentEl || contentEl._swipeClose) return;
   contentEl._swipeClose = true;
   let startY = 0, startX = 0, dy = 0;
@@ -180,7 +188,7 @@ function toggleTaskStatus(id) {
   renderTasks();
 }
 
-function renderTasks() {
+export function renderTasks() {
   const tasks = getTasks();
   const list = document.getElementById('tasks-list');
   const empty = document.getElementById('tasks-empty');
@@ -480,7 +488,7 @@ function taskSwipeEnd(e, id) {
 }
 
 // === AUTO GENERATE TASK STEPS ===
-async function autoGenerateTaskSteps(taskId, title) {
+export async function autoGenerateTaskSteps(taskId, title) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const systemPrompt = `Ти — помічник планування. Отримуєш назву задачі і маєш вирішити чи варто розбивати на кроки.
@@ -514,19 +522,17 @@ async function autoGenerateTaskSteps(taskId, title) {
 }
 
 
-let taskBarLoading = false;
-let taskBarHistory = [];
+export let taskBarLoading = false;
+export function setTaskBarLoading(v) { taskBarLoading = v; }
+export let taskBarHistory = [];
 
 function showTasksChatMessages() {
   openChatBar('tasks');
 }
 
 let _taskTypingEl = null;
-let _financeTypingEl = null;
-let _eveningTypingEl = null;
-let _notesTypingEl = null;
 
-function addTaskBarMsg(role, text, _noSave = false) {
+export function addTaskBarMsg(role, text, _noSave = false) {
   const el = document.getElementById('tasks-chat-messages');
   if (!el) return;
   if (_taskTypingEl) { _taskTypingEl.remove(); _taskTypingEl = null; }
@@ -552,21 +558,9 @@ function addTaskBarMsg(role, text, _noSave = false) {
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  editingTaskId, tempSteps,
-  getTasks, saveTasks, openAddTask, openEditTask,
-  setupModalSwipeClose, closeTaskModal, deleteTaskFromModal,
-  addTaskStep, toggleTempStep, removeTempStep, renderTempSteps,
-  saveTask, toggleTaskStep, deleteTask, toggleTaskStatus,
-  renderTasks, setupTaskSwipeListeners, askAIAboutTask,
-  taskChatId, taskChatHistory, taskChatLoading,
-  openTaskChat, saveTaskChatHistory, closeTaskChat,
-  addTaskChatMsg, sendTaskChatMessage,
-  taskSwipeState, taskSwipeStart, taskSwipeMove, taskSwipeEnd,
-  autoGenerateTaskSteps,
-  taskBarLoading, taskBarHistory,
-  showTasksChatMessages,
-  _taskTypingEl, _financeTypingEl, _eveningTypingEl, _notesTypingEl,
-  addTaskBarMsg,
+  openAddTask, saveTask, closeTaskModal, deleteTaskFromModal,
+  addTaskStep, toggleTempStep, removeTempStep, closeTaskChat,
+  sendTaskChatMessage, toggleTaskStatus, toggleTaskStep,
 });

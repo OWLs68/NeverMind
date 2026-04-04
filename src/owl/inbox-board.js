@@ -3,12 +3,22 @@
 // Залежності: app-core.js, app-ai-core.js
 // ============================================================
 
+import { currentTab } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { activeChatBar, callOwlChat, closeChatBar, getOWLPersonality, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
+import { _owlTabApplyState, _owlTabStates, _updateOwlTabChipsArrows, renderTabBoard, scrollOwlTabChips } from './board.js';
+import { addInboxChatMsg } from '../tabs/inbox.js';
+import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
+import { getHabits, getHabitLog, getQuitStatus, renderHabits, renderProdHabits, saveHabitLog } from '../tabs/habits.js';
+import { getNotes, renderNotes, addNoteFromInbox } from '../tabs/notes.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, getFinBudget, getFinCats, getFinPeriodRange, saveFinCats } from '../tabs/finance.js';
+
 // === 3-СТЕЙТНА СИСТЕМА ЧАТУ ДЛЯ НЕ-INBOX ВКЛАДОК ===
 // Стани: undefined/відсутній = closed | 'a' = compact open | 'b' = full expand
-const _tabChatState = {};
+export const _tabChatState = {};
 
 // Висота стану A: комфортна мала висота (без клавіатури – обмежена 320px; з клавіатурою – заповнює вільний простір)
-function _getTabChatAHeight(tab) {
+export function _getTabChatAHeight(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return 220;
   const inputBox = bar.querySelector('.ai-bar-input-box');
@@ -28,7 +38,7 @@ function _getTabChatAHeight(tab) {
 }
 
 // Висота стану B: від шапки екрана до поля вводу (повний розгорт)
-function _getTabChatBHeight(tab) {
+export function _getTabChatBHeight(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return 400;
   const inputBox = bar.querySelector('.ai-bar-input-box');
@@ -45,7 +55,7 @@ function openChatBarNoKeyboard(tab) {
   ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
     if (t !== tab) closeChatBar(t);
   });
-  activeChatBar = tab;
+  setActiveChatBar(tab);
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
   restoreChatUI(tab);
@@ -59,7 +69,7 @@ function openChatBarNoKeyboard(tab) {
 }
 
 // Свайп вниз по чат-вікну щоб закрити
-function setupChatBarSwipe() {
+export function setupChatBarSwipe() {
   ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(tab => {
     const bar = document.getElementById(tab + '-ai-bar');
     if (!bar) return;
@@ -276,7 +286,7 @@ let _owlBoardMessages = [];
 let _owlBoardGenerating = false;
 let _owlBoardTimer = null;
 
-function getOwlBoardMessages() {
+export function getOwlBoardMessages() {
   try { return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]'); } catch { return []; }
 }
 function saveOwlBoardMessages(arr) {
@@ -425,7 +435,7 @@ function checkOwlBoardTrigger() {
 }
 
 // Будуємо контекст для табло з пріоритетами
-function getOwlBoardContext() {
+export function getOwlBoardContext() {
   const now = new Date();
   const todayStr = now.toDateString();
   const hour = now.getHours();
@@ -727,7 +737,7 @@ function _owlSetState(state) {
 }
 
 // Рендер OWL Board — делегує в уніфікований renderTabBoard('inbox')
-function renderOwlBoard() {
+export function renderOwlBoard() {
   _owlBoardMessages = getOwlBoardMessages();
   if (typeof renderTabBoard === 'function') renderTabBoard('inbox');
 }
@@ -752,7 +762,7 @@ function toggleOwlChat() {
 }
 
 // Закрити OWL чат ззовні (з inbox chat)
-function closeOwlChat() {
+export function closeOwlChat() {
   if (_getOwlState() === 'expanded') {
     _owlSetState('speech');
   }
@@ -835,7 +845,7 @@ function showOwlConfirm(text) {
 }
 
 // Відправка відповіді (від чіпа або input)
-async function sendOwlReply(text) {
+export async function sendOwlReply(text) {
   if (!text || _owlChatSending) return;
   _owlChatSending = true;
 
@@ -883,7 +893,7 @@ async function sendOwlReply(text) {
 }
 
 // Відправка з input
-function sendOwlReplyFromInput() {
+export function sendOwlReplyFromInput() {
   const inp = document.getElementById('owl-tab-input-inbox');
   if (!inp || !inp.value.trim()) return;
   const text = inp.value.trim();
@@ -1011,7 +1021,7 @@ function dismissOwlBoard() {
 }
 
 // Запуск циклу перевірки
-function startOwlBoardCycle() {
+export function startOwlBoardCycle() {
   // Одноразовий запит розкладу якщо не заповнено
   _owlAskScheduleIfNeeded();
   // Одразу при відкритті
@@ -1053,7 +1063,7 @@ function _owlAskScheduleIfNeeded() {
 }
 
 // Перехоплення відповіді на питання розкладу в Inbox
-function handleScheduleAnswer(text) {
+export function handleScheduleAnswer(text) {
   const pending = localStorage.getItem('nm_owl_schedule_pending');
   if (!pending) return false;
   // TTL 1 година — якщо питання задане давно, ігноруємо
@@ -1091,22 +1101,5 @@ function handleScheduleAnswer(text) {
 function updateOwlChipsArrows() { _updateOwlTabChipsArrows('inbox'); }
 function scrollOwlChips(dir) { scrollOwlTabChips('inbox', dir); }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  _tabChatState, _getTabChatAHeight, _getTabChatBHeight,
-  openChatBarNoKeyboard, setupChatBarSwipe,
-  OWL_BOARD_KEY, OWL_BOARD_SEEN_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL,
-  getOwlBoardMessages, saveOwlBoardMessages,
-  getSchedule, getDayPhase,
-  owlCdExpired, setOwlCd,
-  checkOwlBoardTrigger, getOwlBoardContext,
-  generateOwlBoardMessage,
-  getOwlChatHistory, saveOwlChatMsg,
-  renderOwlBoard, expandOwlChat, collapseOwlToSpeech, toggleOwlChat, closeOwlChat,
-  renderOwlChatMessages, renderOwlChips, showOwlTyping, showOwlConfirm,
-  sendOwlReply, sendOwlReplyFromInput, executeOwlAction,
-  owlSwipeStart, owlSwipeMove, owlSwipeEnd,
-  dismissOwlBoard, startOwlBoardCycle, tryOwlBoardUpdate,
-  _owlAskScheduleIfNeeded, handleScheduleAnswer,
-  updateOwlChipsArrows, scrollOwlChips,
-});
+// === WINDOW GLOBALS (HTML handlers only) ===
+window.sendOwlReply = sendOwlReply;

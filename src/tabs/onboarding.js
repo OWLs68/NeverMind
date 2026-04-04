@@ -3,6 +3,11 @@
 // Залежності: app-core.js, app-ai-core.js, app-evening-moments.js
 // ============================================================
 
+import { currentTab, showToast, switchTab, updateKeyStatus } from '../core/nav.js';
+import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { addInboxChatMsg } from './inbox.js';
+import { getProjects, saveProjects } from './projects.js';
+
 // === SLIDES TOUR ===
 const UPDATE_VERSION = 'v065';
 
@@ -535,7 +540,7 @@ function closeHelp() {
 }
 
 // Підказка першого відвідування
-function showFirstVisitTip(tab) {
+export function showFirstVisitTip(tab) {
   const key = 'nm_visited_' + tab;
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, '1');
@@ -607,7 +612,7 @@ function askSurveyQuestion() {
 }
 
 // Перехоплюємо відповіді під час опитування
-function handleSurveyAnswer(text) {
+export function handleSurveyAnswer(text) {
   if (!surveyWaiting) return false;
   surveyWaiting = false;
   surveyAnswers.push({ q: SURVEY_QUESTIONS[surveyStep], a: text });
@@ -770,7 +775,7 @@ function owlGuideNextTip() {
 }
 
 // Виклик після кожної відповіді агента в Inbox — вирішує чи питати зараз
-function maybeAskGuideQuestion() {
+export function maybeAskGuideQuestion() {
   // Тільки якщо онбординг завершено і є ключ
   if (!localStorage.getItem('nm_survey_done')) return;
   if (!localStorage.getItem('nm_gemini_key')) return;
@@ -827,7 +832,7 @@ async function generateProjectFirstSteps(projectName) {
 }
 
 // Зберігає відповідь юзера в памʼять якщо OWL чекав на відповідь по темі
-async function saveGuideTopicAnswer(userText) {
+export async function saveGuideTopicAnswer(userText) {
   const waitingTopic = localStorage.getItem('nm_guide_waiting_topic');
   if (!waitingTopic) return;
   localStorage.removeItem('nm_guide_waiting_topic');
@@ -860,7 +865,7 @@ async function saveGuideTopicAnswer(userText) {
 }
 
 
-function checkOnboarding() {
+export function checkOnboarding() {
   const done = localStorage.getItem('nm_onboarding_done');
   if (!done) {
     // Новий користувач — показуємо онбординг
@@ -942,19 +947,8 @@ function obFinish() {
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  UPDATE_VERSION, UPDATE_SLIDES, SLIDES,
-  currentSlide, _slidesIsUpdate, _slidesFromOnboarding,
-  openSlidesTour, openUpdateSlides, closeSlidesTour,
-  getCurrentSlides, slidesNext, renderSlide,
-  HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS,
-  openHelp, closeHelp, showFirstVisitTip,
-  SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting,
-  startSurvey, askSurveyQuestion, handleSurveyAnswer, finishSurvey,
-  OWL_GUIDE_TOPICS, OWL_APP_TIPS,
-  owlGuideNextTip, maybeAskGuideQuestion,
-  generateProjectFirstSteps, saveGuideTopicAnswer,
-  checkOnboarding, obNext, obSkipKey, selectOwlMode,
-  obShowWelcome, obFinish,
+  openHelp, closeHelp, openSlidesTour, closeSlidesTour, slidesNext,
+  obNext, obSkipKey, obFinish, selectOwlMode, openUpdateSlides,
 });
