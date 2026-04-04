@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-04 14:24
+**Оновлено:** 2026-04-04 14:59
 
 ---
 
@@ -17,7 +17,7 @@
 
 ## Зараз робимо
 
-OWL Board: повний редизайн Inbox + всіх вкладок. Фіксуємо баги.
+OWL Board: Inbox отримав ту саму структуру що вкладки (tasks/notes/etc). Фіксуємо баги.
 
 ---
 
@@ -46,16 +46,24 @@ OWL Board: повний редизайн Inbox + всіх вкладок. Фік
 
 ### Аудит та фікси (04.04 14:24)
 - Аудит: `<div>` баланс ✅, синтаксис ✅, дублікати ✅
-- Фікс: `owlTabSwipeMove` — `e.preventDefault()` перенесено всередину умов → scroll у чаті тепер не блокується
+- Фікс: `owlTabSwipeStart/owlSwipeStart` — не починати свайп якщо торкаємось повідомлень → scroll в чаті тепер працює, табло не згортається від скролу
+- Фікс: `owlTabSwipeMove` — `e.preventDefault()` тільки коли реально змінюємо висоту
 - Фікс: `tabLabels` — додано `health` і `projects` (раніше AI отримував `undefined`)
-- Фікс: `getTabBoardContext` — додано специфічний контекст для `health` і `projects`
-- Фікс: `checkTabBoardTrigger` — додано перевірку даних для `health` і `projects`
-- Мертвий код: `getTabBoardSaid`, `markTabBoardSaid`, `tabAlreadySaid`, `dismissTabBoard` — не викликаються, але залишені
+- Фікс: `getTabBoardContext` + `checkTabBoardTrigger` — додано контекст для `health` і `projects`
+
+### Inbox board = структура вкладок (04.04 14:55)
+- `owl-board` тепер використовує ТОЧНО ту саму HTML-структуру що `_owlTabHTML` для інших вкладок
+- Обробники свайпу: `owlTabSwipeStart/Move/End('inbox')` (замість старих `owlSwipeStart/Move/End`)
+- Стан: `_owlTabStates['inbox']` + `_owlTabApplyState('inbox')` (через `_owlSetState`)
+- `_getOwlState()` — читає `_owlTabStates['inbox']` для правильної синхронізації
+- Логіка чату збережена: `sendOwlTabReply('inbox',...)` → `sendOwlReply(...)` (з обробкою дій)
+- Нові ID елементів: `owl-tab-text-inbox`, `owl-tab-msgs-inbox`, `owl-tab-exp-chips-inbox`, `owl-tab-input-inbox` тощо
 
 ---
 
 ## Попередні сесії
 
+- **04.04 (2)** — OWL Board: аудит + inbox рефактор = структура вкладок. Scroll fix.
 - **03.04 (2)** — OWL Board: `getDayPhase()` + `getSchedule()`. Cooldown-система.
 - **03.04** — settings.json хуки, 5 скілів, правило пояснень в дужках. SVG → 🦉. OWL Board UI.
 - **02.04** — Inbox стрічка: компактні картки, датові сепаратори. OWL Board: міні-чат.
@@ -66,7 +74,6 @@ OWL Board: повний редизайн Inbox + всіх вкладок. Фік
 
 ## Відкриті баги
 
-- **B-03** — ~~агент створює задачу замість проекту~~ → **FIXED 04.04**: промпт в `app-ai-core.js` — додано явну заборону `save` якщо є тригер проекту
 - B-04/B-09 — тап на день в календарі не працює
 - B-05 — картки обрізаються при скролі
 - B-06 — поле вводу без blur/fade ефекту
