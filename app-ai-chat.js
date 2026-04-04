@@ -652,6 +652,15 @@ async function generateOwlBoardMessage() {
     // Скидаємо регулярний cooldown після успішної генерації
     setOwlCd('phase_pulse');
 
+    // Дублюємо проактивне повідомлення в чат-бар inbox
+    try {
+      const chatKey = 'nm_chat_inbox';
+      const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
+      chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
+      localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
+      if (typeof restoreChatUI === 'function') restoreChatUI('inbox');
+    } catch(e) {}
+
     // Нове повідомлення — повернути на speech
     if (_getOwlState() === 'collapsed') _owlSetState('speech');
     renderOwlBoard();
@@ -688,44 +697,26 @@ function _owlSetState(state) {
 
 // Рендер OWL Board — делегує в уніфікований renderTabBoard('inbox')
 function renderOwlBoard() {
-  const boardMessages = getOwlBoardMessages();
-  _owlBoardMessages = boardMessages;
-
-  // Рендер через уніфіковану функцію (text, time, chips)
+  _owlBoardMessages = getOwlBoardMessages();
   if (typeof renderTabBoard === 'function') renderTabBoard('inbox');
-
-  // Якщо expanded — додатково оновити чат і expanded chips
-  if ((_owlTabStates['inbox'] || 'speech') === 'expanded' && boardMessages.length) {
-    renderOwlChatMessages();
-    renderOwlChips(boardMessages[0]);
-  }
 }
 
-// Розгорнути повний чат
+// Розгорнути чат — тепер відкриває чат-бар знизу (табло read-only)
 function expandOwlChat() {
-  if (activeChatBar === 'inbox') closeChatBar('inbox');
-  _owlSetState('expanded');
-  renderOwlChatMessages();
-  const latest = _owlBoardMessages[0];
-  renderOwlChips(latest);
-  const msgs = document.getElementById('owl-tab-msgs-inbox');
-  if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+  openChatBar('inbox');
 }
 
-// Згорнути з expanded → speech
+// Згорнути → speech
 function collapseOwlToSpeech() {
   _owlSetState('speech');
 }
 
-// Toggle: collapsed ↔ speech
+// Toggle: collapsed ↔ speech (expanded прибрано)
 function toggleOwlChat() {
   if (_getOwlState() === 'collapsed') {
     _owlSetState('speech');
-  } else if (_getOwlState() === 'speech') {
-    _owlSetState('collapsed');
   } else {
-    // expanded → speech
-    _owlSetState('speech');
+    _owlSetState('collapsed');
   }
 }
 
