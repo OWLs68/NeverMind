@@ -739,16 +739,20 @@ function _owlTabHTML(tab) {
     <div id="owl-tab-speech-${t}" class="owl-speech"
          ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
       <div class="owl-speech-avatar">🦉</div>
-      <div class="owl-speech-bubble">
-        <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
-        <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
-        <div class="owl-swipe-handle"><div class="owl-handle-bar"></div></div>
-        <!-- Expanded: кнопки справа від сови, чат нижче на повну ширину -->
+      <!-- Темна карточка що росте при розгортанні -->
+      <div class="owl-tab-card">
+        <!-- Текст агента (завжди видимий, 104px зліва = справа від сови) -->
+        <div class="owl-tab-bubble">
+          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+          <div class="owl-swipe-handle"><div class="owl-handle-bar"></div></div>
+        </div>
+        <!-- Expanded: height:0→N, повна ширина карточки, без хаків -->
         <div id="owl-tab-expanded-${t}" style="height:0;overflow:hidden">
-          <!-- Кнопки в зоні правого контенту (104px відступ = справа від сови) -->
+          <!-- Кнопки справа від сови (104px зліва) -->
           <div id="owl-tab-exp-chips-${t}" class="owl-tab-exp-chips"></div>
-          <!-- Чат на повну ширину (від'ємні margins скасовують padding бабла) -->
-          <div style="margin:0 -18px 0 -104px;border-top:1px solid rgba(255,255,255,0.07)">
+          <!-- Роздільник + чат на повну ширину карточки -->
+          <div class="owl-tab-chat-section">
             <div id="owl-tab-msgs-${t}" class="owl-tab-chat-msgs"></div>
             <div class="owl-chat-input-row">
               <input id="owl-tab-input-${t}" type="text" placeholder="Написати OWL..." autocomplete="off"
