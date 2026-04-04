@@ -1140,9 +1140,8 @@ body {
   40% { opacity: 1; transform: scale(1); }
 }
 /* --- OWL Agent — персонаж який говорить --- */
-.owl-board-sticky {
-  position: sticky;
-  top: 0;
+.owl-board-fixed {
+  flex-shrink: 0;
   z-index: 5;
   padding: 0 4px;
 }
@@ -1224,7 +1223,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 8px 8px;
   margin-top: 10px;
 }
 .owl-speech-chips {

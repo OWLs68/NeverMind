@@ -257,11 +257,7 @@
         </div>
 
       </div>
-
-      <!-- SCROLL: OWL board (sticky) + картки -->
-      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
-        <!-- OWL AGENT — персонаж який говорить -->
-        <div id="owl-board" class="owl-board-sticky" style="display:none">
+      <div id="owl-board" class="owl-board-fixed" style="display:none">
 
           <!-- COLLAPSED: компактний рядок -->
           <div id="owl-collapsed" class="owl-collapsed" style="display:none" onclick="toggleOwlChat()">
@@ -309,7 +305,12 @@
             </div>
           </div>
 
-        </div>
+      </div>
+
+      </div>
+
+      <!-- SCROLL: картки -->
+      <div id="inbox-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;scrollbar-width:none">
         <div id="inbox-list" style="padding:0 16px calc(var(--tabbar-h,83px) + 34px)"></div>
       </div>
     </div>
