@@ -3,8 +3,22 @@
 // Залежності: app-core.js
 // ============================================================
 
+import { currentTab, getProfile, showToast } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { getTrash } from '../core/trash.js';
+import { getInbox, _clearInboxUnreadBadge } from '../tabs/inbox.js';
+import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
+import { getHabits, getHabitLog } from '../tabs/habits.js';
+import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
+import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
+import { addEveningBarMsg, addMeChatMsg } from '../tabs/evening.js';
+import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
+
+export let activeChatBar = null;
+export function setActiveChatBar(v) { activeChatBar = v; }
+
 // ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
-function getOWLPersonality() {
+export function getOWLPersonality() {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const mode = settings.owl_mode || 'partner';
   const name = settings.name ? settings.name : '';
@@ -38,7 +52,7 @@ function getOWLPersonality() {
   return personas[mode] || personas.partner;
 }
 
-function getAIContext() {
+export function getAIContext() {
   const profile = getProfile();
   const memory = localStorage.getItem('nm_memory') || '';
   const parts = [];
@@ -131,7 +145,7 @@ function getAIContext() {
   return parts.join('\n\n');
 }
 
-function getMeStatsContext() {
+export function getMeStatsContext() {
   // Короткий контекст — не більше 800 символів щоб не ламати JSON-режим
   const tasks = getTasks().filter(t => t.status === 'active').slice(0, 10);
   const habits = getHabits();
@@ -152,7 +166,7 @@ function getMeStatsContext() {
 
 // Захист від показу сирого JSON в чаті агента
 // Якщо відповідь схожа на JSON — показуємо нейтральну фразу
-function safeAgentReply(reply, addMsg) {
+export function safeAgentReply(reply, addMsg) {
   if (!reply) return;
   const trimmed = reply.trim();
   // Перевіряємо чи це JSON об'єкт або масив
@@ -172,7 +186,7 @@ function safeAgentReply(reply, addMsg) {
 }
 
 // === OpenAI API === (ключ зберігається як nm_gemini_key — стара назва з часів Gemini)
-const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
+export const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
 Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія, або звіт про виконане.
 
 ГРАМАТИКА: Якщо бачиш очевидну помилку або опечатку — виправляй в полі "text" без питань. Наприклад: "голити в зал" → "ходити в зал", "купити хіб" → "купити хліб".
@@ -373,7 +387,7 @@ async function _fetchAI(messages, signal) {
   return data.choices?.[0]?.message?.content || null;
 }
 
-async function callAI(systemPrompt, userMessage, contextData = {}) {
+export async function callAI(systemPrompt, userMessage, contextData = {}) {
   const context = Object.keys(contextData).length > 0
     ? `\n\nКонтекст:\n${JSON.stringify(contextData, null, 2)}`
     : '';
@@ -397,7 +411,7 @@ async function callAI(systemPrompt, userMessage, contextData = {}) {
 }
 
 // === OWL MINI-CHAT — окремий AI виклик ===
-async function callOwlChat(userText) {
+export async function callOwlChat(userText) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return null;
 
@@ -451,7 +465,7 @@ ID задач і звичок є в КОНТЕКСТ ДАНИХ вище. Вик
   }
 }
 
-async function callAIWithHistory(systemPrompt, history) {
+export async function callAIWithHistory(systemPrompt, history) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000); // 25 сек таймаут
   try {
@@ -477,7 +491,7 @@ const CHAT_STORE_KEYS = {
   finance: 'nm_chat_finance',
 };
 
-function saveChatMsg(tab, role, text) {
+export function saveChatMsg(tab, role, text) {
   if (role === 'typing') return;
   const key = CHAT_STORE_KEYS[tab];
   if (!key) return;
@@ -489,13 +503,13 @@ function saveChatMsg(tab, role, text) {
   } catch(e) {}
 }
 
-function loadChatMsgs(tab) {
+export function loadChatMsgs(tab) {
   const key = CHAT_STORE_KEYS[tab];
   if (!key) return [];
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
 
-function restoreChatUI(tab) {
+export function restoreChatUI(tab) {
   const containerMap = {
     inbox:   'inbox-chat-messages',
     tasks:   'tasks-chat-messages',
@@ -556,7 +570,7 @@ function _renderInboxChatMsg(role, text, el) {
   el.scrollTop = el.scrollHeight;
 }
 
-function openChatBar(tab) {
+export function openChatBar(tab) {
   if (activeChatBar === tab) return;
 
   // Закриваємо OWL чат якщо відкритий
@@ -597,7 +611,7 @@ function openChatBar(tab) {
   });
 }
 
-function closeChatBar(tab) {
+export function closeChatBar(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
 
@@ -612,7 +626,7 @@ function closeChatBar(tab) {
   activeChatBar = null;
 }
 
-function toggleChatBar(tab) {
+export function toggleChatBar(tab) {
   if (activeChatBar === tab) {
     closeChatBar(tab);
   } else {
@@ -620,7 +634,7 @@ function toggleChatBar(tab) {
   }
 }
 
-function closeAllChatBars(resetActive = true) {
+export function closeAllChatBars(resetActive = true) {
   ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
@@ -632,10 +646,5 @@ function closeAllChatBars(resetActive = true) {
   if (resetActive) activeChatBar = null;
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  getOWLPersonality, getAIContext, getMeStatsContext, safeAgentReply,
-  INBOX_SYSTEM_PROMPT, _fetchAI, callAI, callOwlChat, callAIWithHistory,
-  CHAT_STORE_MAX, CHAT_STORE_KEYS, saveChatMsg, loadChatMsgs, restoreChatUI,
-  _renderInboxChatMsg, openChatBar, closeChatBar, toggleChatBar, closeAllChatBars,
-});
+// === WINDOW GLOBALS (HTML handlers only) ===
+Object.assign(window, { openChatBar, closeChatBar });

@@ -4,14 +4,25 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
+import { currentTab, showToast } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
+import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { tryTabBoardUpdate } from '../owl/proactive.js';
+import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
+import { processUniversalAction } from './habits.js';
+import { setupModalSwipeClose } from './tasks.js';
+
 // === FINANCE ===
 
+let _financeTypingEl = null;
+
 // Storage
-function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
-function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); }
-function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
-function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
-function getFinCats() {
+export function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
+export function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); }
+export function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
+export function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
+export function getFinCats() {
   const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
   if (saved) return saved;
   return {
@@ -19,7 +30,7 @@ function getFinCats() {
     income:  ['Зарплата','Надходження','Повернення','Інше'],
   };
 }
-function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
+export function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
 
 // Підкатегорії — показуються після вибору головної
 const FIN_SUBCATS = {
@@ -34,12 +45,12 @@ const FIN_SUBCATS = {
 // State
 let currentFinTab = 'expense';
 let currentFinPeriod = 'month';
-function getCurrency() {
+export function getCurrency() {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   return s.currency || '₴';
 }
 
-function setCurrency(symbol) {
+export function setCurrency(symbol) {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   s.currency = symbol;
   localStorage.setItem('nm_settings', JSON.stringify(s));
@@ -54,7 +65,7 @@ function setCurrency(symbol) {
   if (currentTab === 'finance') renderFinance();
 }
 
-function formatMoney(n) {
+export function formatMoney(n) {
   return getCurrency() + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
 }
 
@@ -64,7 +75,7 @@ const FIN_CAT_COLORS = ['#f97316','#0ea5e9','#a855f7','#22c55e','#ef4444','#eab3
 function getFinColor(idx) { return FIN_CAT_COLORS[idx % FIN_CAT_COLORS.length]; }
 
 // Фільтр транзакцій по періоду
-function getFinPeriodRange(period) {
+export function getFinPeriodRange(period) {
   const now = new Date();
   let from;
   if (period === 'week') {
@@ -160,7 +171,7 @@ function getFinAdaptiveBenchmark() {
 }
 
 // Головний рендер
-function renderFinance() {
+export function renderFinance() {
   _hideOldFinBlocks();
 
   let wrap = document.getElementById('fin-v2-wrap');
@@ -879,7 +890,7 @@ function closeFinBudgetModal() {
 }
 
 // Обробка фінансів з Inbox
-function processFinanceAction(parsed, originalText) {
+export function processFinanceAction(parsed, originalText) {
   const cats = getFinCats();
   const type = parsed.fin_type || 'expense';
   const amount = parseFloat(parsed.amount) || 0;
@@ -943,7 +954,7 @@ function checkFinBudgetWarning(type, category, amount) {
 }
 
 // Finance контекст для getAIContext
-function getFinanceContext() {
+export function getFinanceContext() {
   const today = new Date().toDateString();
   const from = getFinPeriodRange('month');
   const txs = getFinance().filter(t => t.ts >= from);
@@ -978,7 +989,7 @@ function getFinanceContext() {
 let financeBarHistory = [];
 let financeBarLoading = false;
 
-function addFinanceChatMsg(role, text, _noSave = false) {
+export function addFinanceChatMsg(role, text, _noSave = false) {
   const el = document.getElementById('finance-chat-messages');
   if (!el) return;
   if (_financeTypingEl) { _financeTypingEl.remove(); _financeTypingEl = null; }
@@ -1003,7 +1014,7 @@ function addFinanceChatMsg(role, text, _noSave = false) {
   if (!_noSave) saveChatMsg('finance', role, text);
 }
 
-async function sendFinanceBarMessage() {
+export async function sendFinanceBarMessage() {
   if (financeBarLoading) return;
   const input = document.getElementById('finance-bar-input');
   const text = input.value.trim();
@@ -1112,25 +1123,11 @@ async function sendFinanceBarMessage() {
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  getFinance, saveFinance, getFinBudget, saveFinBudget,
-  getFinCats, saveFinCats,
-  FIN_SUBCATS, currentFinTab, currentFinPeriod,
-  getCurrency, setCurrency, formatMoney,
-  FIN_CAT_COLORS, getFinColor,
-  getFinPeriodRange, getFilteredTransactions,
-  switchFinTab, setFinPeriod, _hideOldFinBlocks,
-  getFinAdaptiveBenchmark, renderFinance,
-  _finEmptyState, _finHeroCard, _finInsightCards, _finForecast,
-  _finCoachBlock, _refreshFinCoach,
-  _finWeekChart, _finCatsBlock, _finTxsBlock, openAllTransactions,
-  _finEditId, openAddTransaction, openEditTransaction, _showTransactionModal,
-  _finTxCurrentType, _finTxSelectedCat,
-  toggleFinTxType, selectFinTxCat,
-  saveFinTransaction, deleteFinTransaction, closeFinTxModal,
-  openFinBudgetModal, saveFinBudgetFromModal, closeFinBudgetModal,
-  processFinanceAction, checkFinBudgetWarning, getFinanceContext,
-  financeBarHistory, financeBarLoading,
-  addFinanceChatMsg, sendFinanceBarMessage,
+  openAddTransaction, setCurrency, setFinPeriod, switchFinTab,
+  sendFinanceBarMessage, openFinBudgetModal,
+  openEditTransaction, closeFinTxModal, toggleFinTxType,
+  selectFinTxCat, saveFinTransaction, deleteFinTransaction,
+  closeFinBudgetModal, saveFinBudgetFromModal, openAllTransactions,
 });

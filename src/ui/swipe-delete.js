@@ -1,9 +1,9 @@
 // === UNIVERSAL SWIPE DELETE TRAIL (#32) ===
-const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для всіх вкладок
+export const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для всіх вкладок
 
 // Застосовує червоний градієнтний шлейф і рух картки
 // el = картка (рухається), wrapEl = wrapper
-function applySwipeTrail(cardEl, wrapEl, dx) {
+export function applySwipeTrail(cardEl, wrapEl, dx) {
   if (!cardEl) return;
   cardEl.style.transform = `translateX(${dx}px)`;
   if (!wrapEl) return;
@@ -33,7 +33,7 @@ function applySwipeTrail(cardEl, wrapEl, dx) {
 }
 
 // Скидає шлейф після відпускання
-function clearSwipeTrail(cardEl, wrapEl) {
+export function clearSwipeTrail(cardEl, wrapEl) {
   if (cardEl) {
     cardEl.style.transition = 'transform 0.25s ease';
     cardEl.style.transform = 'translateX(0)';
@@ -49,5 +49,3 @@ function clearSwipeTrail(cardEl, wrapEl) {
   }
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail });

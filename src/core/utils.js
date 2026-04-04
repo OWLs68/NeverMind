@@ -1,4 +1,6 @@
-function autoResizeTextarea(el) {
+import { getInbox, saveInbox, renderInbox } from '../tabs/inbox.js';
+
+export function autoResizeTextarea(el) {
   el.style.height = 'auto';
   const maxH = Math.floor(window.innerHeight * 0.5 - 20);
   el.style.height = Math.min(el.scrollHeight, maxH) + 'px';
@@ -11,7 +13,7 @@ function autoResizeTextarea(el) {
 }
 
 // Розраховує висоту чат-вікна: від низу board до верху input-box
-function updateChatWindowHeight(tab) {
+export function updateChatWindowHeight(tab) {
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;
   const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -35,7 +37,7 @@ function updateChatWindowHeight(tab) {
 }
 
 // Офлайн-fallback: зберігає миттєво як нотатку
-function saveOffline(text) {
+export function saveOffline(text) {
   const items = getInbox();
   items.unshift({ id: Date.now(), text, category: 'note', ts: Date.now(), processed: false });
   saveInbox(items);
@@ -43,7 +45,7 @@ function saveOffline(text) {
 
 }
 
-function formatTime(ts) {
+export function formatTime(ts) {
   const diff = Date.now() - ts;
   if (diff < 60000) return 'щойно';
   if (diff < 3600000) return Math.floor(diff / 60000) + ' хв тому';
@@ -51,11 +53,9 @@ function formatTime(ts) {
   return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 }
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  autoResizeTextarea, updateChatWindowHeight, saveOffline, formatTime, escapeHtml,
-});
+// Functions called from HTML event handlers
+window.autoResizeTextarea = autoResizeTextarea;

@@ -4,10 +4,24 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
+import { currentTab } from '../core/nav.js';
+import { escapeHtml, saveOffline } from '../core/utils.js';
+import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
+import { INBOX_SYSTEM_PROMPT, callAI, callAIWithHistory, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { handleScheduleAnswer } from '../owl/inbox-board.js';
+import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
+import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
+import { addNoteFromInbox } from './notes.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction } from './finance.js';
+import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
+import { getProjects, saveProjects, startProjectInboxInterview } from './projects.js';
+import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
+
 // === INBOX CHAT MESSAGES ===
 let _inboxTypingEl = null;
 
-function addInboxChatMsg(role, text) {
+export function addInboxChatMsg(role, text) {
   const el = document.getElementById('inbox-chat-messages');
   if (!el) return;
 
@@ -80,7 +94,7 @@ function _showInboxUnreadBadge() {
   badge.textContent = _inboxUnreadCount > 9 ? '9+' : _inboxUnreadCount;
 }
 
-function _clearInboxUnreadBadge() {
+export function _clearInboxUnreadBadge() {
   _inboxUnreadCount = 0;
   const badge = document.getElementById('inbox-chat-badge');
   if (badge) badge.remove();
@@ -121,8 +135,8 @@ const CAT_META = {
   finance: { icon: '₴',  label: 'Фінанси',  dotClass: 'cat-dot-finance', tagClass: 'cat-finance' },
 };
 
-function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
-function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
+export function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
+export function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
 
 
 // Датовий сепаратор для стрічки
@@ -152,7 +166,7 @@ function toggleInboxExpand(id) {
   el.classList.toggle('inbox-expanded');
 }
 
-function renderInbox() {
+export function renderInbox() {
   const items = getInbox();
   const list = document.getElementById('inbox-list');
   const countEl = document.getElementById('inbox-count');
@@ -259,7 +273,7 @@ function unifiedInputKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
 }
 
-async function sendToAI() {
+export async function sendToAI() {
   if (aiLoading) return;
   const input = document.getElementById('inbox-input');
   const text = input.value.trim();
@@ -714,32 +728,14 @@ function processCompleteTask(parsed, originalText) {
 
 
 
-let activeChatBar = null;
-
-function getTabbarHeight() {
+export function getTabbarHeight() {
   const tb = document.getElementById('tab-bar');
   return tb ? tb.offsetHeight : 83;
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  _inboxTypingEl, addInboxChatMsg, _inboxUnreadCount, _showInboxUnreadBadge,
-  _clearInboxUnreadBadge, CAT_DOT_BG, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META,
-  getInbox, saveInbox, _inboxFormatHour, _inboxDateLabel,
-  _inboxSwipedRecently, toggleInboxExpand, renderInbox,
-  swipeState, swipeStart, swipeMove, swipeEnd,
-  aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG,
-  unifiedInputKeydown, sendToAI,
-  clarifyParsed, clarifyOriginalText,
-  showClarify, closeClarify, selectClarifyOption, sendClarifyText,
-  processSaveAction, processCompleteHabit, processCompleteTask,
-  getTabbarHeight,
-});
-
-// activeChatBar needs getter/setter (modified by app-ai-core.js and app-ai-chat.js)
-Object.defineProperty(window, 'activeChatBar', {
-  get() { return activeChatBar; },
-  set(v) { activeChatBar = v; },
-  configurable: true
+  sendToAI, sendClarifyText, closeClarify, selectClarifyOption,
+  toggleInboxExpand, swipeStart, swipeMove, swipeEnd,
 });

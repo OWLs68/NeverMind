@@ -3,10 +3,20 @@
 // Залежності: app-core.js, app-ai-core.js
 // ============================================================
 
+import { currentTab, showToast, switchTab } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { callAI, callAIWithHistory, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { getTasks } from './tasks.js';
+import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus, processUniversalAction } from './habits.js';
+import { getNotes } from './notes.js';
+import { getCurrency, getFinance } from './finance.js';
+import { getProjects } from './projects.js';
+
 // === ME TAB CHAT ===
+let _eveningTypingEl = null;
 let meChatHistory = [];
 
-function renderMeHabitsStats() {
+export function renderMeHabitsStats() {
   const habits = getHabits();
   const el = document.getElementById('me-habits-stats-list');
   const block = document.getElementById('me-habits-stats');
@@ -39,7 +49,7 @@ function renderMeHabitsStats() {
   }).join('');
 }
 
-async function sendMeChatMessage() {
+export async function sendMeChatMessage() {
   const input = document.getElementById('me-chat-input');
   const text = input.value.trim();
   if (!text) return;
@@ -65,7 +75,7 @@ async function sendMeChatMessage() {
 }
 
 // === ME TAB ===
-function renderMe() {
+export function renderMe() {
   const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
   const now = new Date();
   const todayDow = (now.getDay() + 6) % 7; // 0=Пн
@@ -472,10 +482,10 @@ let currentMomentMood = 'positive';
 let dialogHistory = [];
 let dialogLoading = false;
 
-function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
-function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); }
+export function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
+export function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); }
 
-function renderEvening() {
+export function renderEvening() {
   const today = new Date().toDateString();
   const todayMoments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
 
@@ -657,7 +667,7 @@ function saveMoment() {
   generateMomentSummary(newMoment.id, text);
 }
 
-async function generateMomentSummary(momentId, text) {
+export async function generateMomentSummary(momentId, text) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   // Не генеруємо для коротких текстів — вони вже короткі
@@ -772,7 +782,7 @@ async function autoEveningSummary() {
   } catch(e) {}
 }
 
-function setupAutoEveningSummary() {
+export function setupAutoEveningSummary() {
   // Перший раз — через 5 хвилин після старту
   setTimeout(() => {
     autoEveningSummary();
@@ -858,7 +868,7 @@ function showMeChatMessages() {
   openChatBar('me');
 }
 
-function addMeChatMsg(role, text, _noSave = false, id = '') {
+export function addMeChatMsg(role, text, _noSave = false, id = '') {
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
   try { openChatBar('me'); } catch(e) {}
@@ -879,7 +889,7 @@ function showEveningBarMessages() {
   openChatBar('evening');
 }
 
-function addEveningBarMsg(role, text, _noSave = false) {
+export function addEveningBarMsg(role, text, _noSave = false) {
   const el = document.getElementById('evening-bar-messages');
   if (!el) return;
   if (_eveningTypingEl) { _eveningTypingEl.remove(); _eveningTypingEl = null; }
@@ -904,7 +914,7 @@ function addEveningBarMsg(role, text, _noSave = false) {
   if (!_noSave) saveChatMsg('evening', role, text);
 }
 
-async function sendEveningBarMessage() {
+export async function sendEveningBarMessage() {
   if (eveningBarLoading) return;
   const input = document.getElementById('evening-bar-input');
   const text = input.value.trim();
@@ -959,20 +969,10 @@ async function sendEveningBarMessage() {
 }
 
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  meChatHistory,
-  renderMeHabitsStats, sendMeChatMessage, renderMe,
-  renderMeActivityChart, refreshMeAnalysis,
-  currentMomentMood, dialogHistory, dialogLoading,
-  getMoments, saveMoments,
-  renderEvening, getEveningMood, setEveningMood, renderEveningMoodButtons,
-  openAddMoment, closeMomentModal, setMomentMood, updateMoodButtons,
-  saveMoment, generateMomentSummary, deleteMoment,
-  EVENING_SUMMARY_PROMPT,
-  generateEveningSummary, autoEveningSummary, setupAutoEveningSummary,
-  openEveningDialog, closeEveningDialog, addDialogMessage, sendDialogMessage,
-  meBarLoading, showMeChatMessages, addMeChatMsg,
-  eveningBarHistory, eveningBarLoading,
-  showEveningBarMessages, addEveningBarMsg, sendEveningBarMessage,
+  openAddMoment, saveMoment, closeMomentModal, setMomentMood,
+  generateEveningSummary, closeEveningDialog, setEveningMood,
+  sendDialogMessage, sendEveningBarMessage, sendMeChatMessage,
+  switchTab, deleteMoment,
 });

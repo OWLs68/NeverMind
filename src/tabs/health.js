@@ -4,10 +4,16 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
+import { showToast } from '../core/nav.js';
+import { escapeHtml } from '../core/utils.js';
+import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { processUniversalAction } from './habits.js';
+import { openNotesFolder } from './notes.js';
+
 // === STORAGE ===
-function getHealthCards() { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
+export function getHealthCards() { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
 function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); }
-function getHealthLog() { return JSON.parse(localStorage.getItem('nm_health_log') || '{}'); }
+export function getHealthLog() { return JSON.parse(localStorage.getItem('nm_health_log') || '{}'); }
 function saveHealthLog(obj) { localStorage.setItem('nm_health_log', JSON.stringify(obj)); }
 
 // State
@@ -17,7 +23,7 @@ let healthBarHistory = [];
 let _healthTypingEl = null;
 
 // === RENDER HEALTH (головний екран — список) ===
-function renderHealth() {
+export function renderHealth() {
   if (activeHealthCardId !== null) {
     renderHealthWorkspace(activeHealthCardId);
     return;
@@ -357,7 +363,7 @@ function addHealthChatMsg(role, text, _noSave = false) {
   if (!_noSave) saveChatMsg('health', role, text);
 }
 
-async function sendHealthBarMessage() {
+export async function sendHealthBarMessage() {
   if (healthBarLoading) return;
   const input = document.getElementById('health-bar-input');
   const text = input.value.trim();
@@ -444,14 +450,8 @@ ${aiContext ? '\n\n' + aiContext : ''}
   healthBarLoading = false;
 }
 
-// === WINDOW EXPORTS ===
+// === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  getHealthCards, saveHealthCards, getHealthLog, saveHealthLog,
-  activeHealthCardId, healthBarLoading, healthBarHistory, _healthTypingEl,
-  renderHealth, renderHealthList,
-  _renderHealthWeekBars, _renderHealthTodayScales,
-  setHealthScale, openHealthCard, closeHealthCard,
-  renderHealthWorkspace, setHealthCardStatus,
-  openAddHealthCard, getHealthContext,
-  addHealthChatMsg, sendHealthBarMessage,
+  openAddHealthCard, sendHealthBarMessage,
+  openHealthCard, closeHealthCard, setHealthScale, setHealthCardStatus,
 });

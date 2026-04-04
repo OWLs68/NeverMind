@@ -1,3 +1,5 @@
+import { currentTab, showToast } from './nav.js';
+
 // === LOGGER ===
 const NM_LOG_KEY = 'nm_error_log';
 const NM_LOG_MAX = 200;
@@ -9,14 +11,14 @@ function saveErrorLog(arr) {
   try { localStorage.setItem(NM_LOG_KEY, JSON.stringify(arr.slice(-NM_LOG_MAX))); } catch {}
 }
 
-function logError(type, message, source) {
+export function logError(type, message, source) {
   const log = getErrorLog();
   log.push({
     ts: Date.now(),
     type,
     msg: String(message).slice(0, 500),
     src: source || '',
-    tab: typeof currentTab !== 'undefined' ? currentTab : '?'
+    tab: currentTab || '?'
   });
   saveErrorLog(log);
   updateErrorLogBtn();
@@ -120,7 +122,7 @@ function clearErrorLog() {
   if (list) list.innerHTML = '<div style="text-align:center;padding:48px 20px;color:rgba(30,16,64,0.35);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
 }
 
-function updateErrorLogBtn() {
+export function updateErrorLogBtn() {
   const btn = document.getElementById('error-log-btn');
   if (!btn) return;
   const count = getErrorLog().length;
@@ -130,8 +132,5 @@ function updateErrorLogBtn() {
 }
 
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  getErrorLog, saveErrorLog, logError, showErrorLog,
-  copyLogForClaude, closeLogPanel, copyErrorLog, clearErrorLog, updateErrorLogBtn,
-});
+// Functions called from HTML event handlers
+Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog });

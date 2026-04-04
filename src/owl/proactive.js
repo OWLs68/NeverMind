@@ -1,4 +1,11 @@
-function getTabBoardContext(tab) {
+import { getAIContext, getOWLPersonality, restoreChatUI } from '../ai/core.js';
+import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
+import { getTasks } from '../tabs/tasks.js';
+import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
+import { getNotes } from '../tabs/notes.js';
+import { getFinance, getFinanceContext } from '../tabs/finance.js';
+
+export function getTabBoardContext(tab) {
   const parts = [];
   try { const ctx = getAIContext(); if (ctx) parts.push(ctx); } catch(e) {}
 
@@ -203,7 +210,7 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
   _tabBoardGenerating[tab] = false;
 }
 
-function tryTabBoardUpdate(tab) {
+export function tryTabBoardUpdate(tab) {
   if (tab === 'inbox') return;
   // Скидаємо стан до speech при кожному переключенні вкладки
   if (_owlTabStates[tab] && _owlTabStates[tab] !== 'speech') {
@@ -224,8 +231,4 @@ function tryTabBoardUpdate(tab) {
   }
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, {
-  getTabBoardContext, checkTabBoardTrigger,
-  generateTabBoardMessage, tryTabBoardUpdate,
-});
+// No window globals needed — all consumed via imports

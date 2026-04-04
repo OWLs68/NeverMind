@@ -1,7 +1,20 @@
 // ============================================================
 // app-core-nav.js — Теми, навігація між вкладками, налаштування, памʼять
-// Залежності: (немає)
 // ============================================================
+import { updateErrorLogBtn } from './logger.js';
+import { escapeHtml } from './utils.js';
+import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
+import { callAI, closeAllChatBars } from '../ai/core.js';
+import { tryTabBoardUpdate } from '../owl/proactive.js';
+import { renderEvening, renderMe, renderMeHabitsStats } from '../tabs/evening.js';
+import { getFinBudget, renderFinance, saveFinBudget, setCurrency } from '../tabs/finance.js';
+import { currentProdTab, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
+import { renderHealth } from '../tabs/health.js';
+import { renderInbox } from '../tabs/inbox.js';
+import { checkAndSuggestFolders, currentNotesFolder, getNotes, renderNotes, setCurrentNotesFolder } from '../tabs/notes.js';
+import { showFirstVisitTip } from '../tabs/onboarding.js';
+import { renderProjects } from '../tabs/projects.js';
+import { renderTasks } from '../tabs/tasks.js';
 
 // === TAB THEMES ===
 const TAB_THEMES = {
@@ -64,10 +77,10 @@ const TAB_THEMES = {
 };
 
 // === CURRENT STATE ===
-let currentTab = 'inbox';
+export let currentTab = 'inbox';
 
 // === SWITCH TAB ===
-function switchTab(tab) {
+export function switchTab(tab) {
   if (tab === currentTab) return;
   animateTabSwitch(tab);
   currentTab = tab;
@@ -101,7 +114,7 @@ function switchTab(tab) {
   // Tab-specific render
   if (tab === 'inbox') { try { renderInbox(); } catch(e) {} }
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
-  if (tab === 'notes') { currentNotesFolder = null; renderNotes(); checkAndSuggestFolders(); }
+  if (tab === 'notes') { setCurrentNotesFolder(null); renderNotes(); checkAndSuggestFolders(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
   if (tab === 'finance') { try { renderFinance(); } catch(e) { console.error('renderFinance error:', e); } }
@@ -140,7 +153,7 @@ const ALL_TABS_CONFIG = [
     svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
 ];
 
-function getActiveTabs() {
+export function getActiveTabs() {
   try {
     const saved = JSON.parse(localStorage.getItem('nm_active_tabs') || 'null');
     if (Array.isArray(saved) && saved.length >= 1) return saved;
@@ -148,7 +161,7 @@ function getActiveTabs() {
   return [...DEFAULT_TABS];
 }
 
-function saveActiveTabs(arr) {
+export function saveActiveTabs(arr) {
   localStorage.setItem('nm_active_tabs', JSON.stringify(arr));
 }
 
@@ -415,7 +428,7 @@ function applyDrum3D(items, capsule) {
   });
 }
 
-function setupDrumTabbar() {
+export function setupDrumTabbar() {
   const capsule = document.getElementById('drumCapsule');
   const track = document.getElementById('drumTrack');
   if (!capsule || !track) return;
@@ -649,7 +662,7 @@ function updateDrumTabbar(tab, skipAnimation) {
   }
 }
 
-function applyTheme(tab) {
+export function applyTheme(tab) {
   const theme = TAB_THEMES[tab];
   const root = document.documentElement;
   const bg = document.getElementById('bg');
@@ -677,7 +690,7 @@ function applyTheme(tab) {
 }
 
 // === SETTINGS ===
-function openSettings() {
+export function openSettings() {
   const overlay = document.getElementById('settings-overlay');
   overlay.classList.add('open');
   try { updateErrorLogBtn(); } catch(e) {}
@@ -754,7 +767,7 @@ function updateOwlModeUI(mode) {
   });
 }
 
-function closeSettings() {
+export function closeSettings() {
   // Save memory edits before closing
   const memory = document.getElementById('input-memory').value;
   localStorage.setItem('nm_memory', memory);
@@ -850,7 +863,7 @@ function openFeedback() {
   showToast('Написати автору — незабаром');
 }
 
-function updateKeyStatus(hasKey) {
+export function updateKeyStatus(hasKey) {
   const el = document.getElementById('key-status');
   if (hasKey) {
     el.className = 'key-status has-key';
@@ -942,7 +955,7 @@ function clearFinanceData() {
 }
 
 // === MEMORY SYSTEM ===
-function getProfile() {
+export function getProfile() {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const parts = [];
   if (s.name) parts.push(`Імʼя: ${s.name}`);
@@ -953,7 +966,7 @@ function getProfile() {
   return parts.join(', ');
 }
 
-function shouldRefreshMemory() {
+export function shouldRefreshMemory() {
   const lastTs = localStorage.getItem('nm_memory_ts');
   if (!lastTs) return true;
   const last = new Date(parseInt(lastTs));
@@ -961,7 +974,7 @@ function shouldRefreshMemory() {
   return last.toDateString() !== now.toDateString();
 }
 
-async function autoRefreshMemory() {
+export async function autoRefreshMemory() {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   if (!shouldRefreshMemory()) return;
@@ -1028,10 +1041,12 @@ ${notesList || 'немає'}
 
 // Додаємо профіль і памʼять до кожного AI запиту
 
-let _undoToastTimer = null;
-let _undoData = null; // { type, item, restore }
+export let _undoToastTimer = null;
+export let _undoData = null; // { type, item, restore }
+export function setUndoTimer(v) { _undoToastTimer = v; }
+export function setUndoData(v) { _undoData = v; }
 
-function showToast(msg, duration = 2000) {
+export function showToast(msg, duration = 2000) {
   const el = document.getElementById('toast');
   const msgEl = document.getElementById('toast-msg');
   const btn = document.getElementById('toast-undo-btn');
@@ -1042,35 +1057,13 @@ function showToast(msg, duration = 2000) {
   _undoToastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
-// === EXPORTS (ES modules) ===
-export {
-  TAB_THEMES, currentTab, switchTab, getActiveTabs, saveActiveTabs,
-  setupDrumTabbar, applyTheme, showToast, getProfile, updateKeyStatus,
-  closeSettings, openSettings, shouldRefreshMemory, autoRefreshMemory,
-  refreshMemory, _undoToastTimer, _undoData
-};
-
-// === WINDOW GLOBALS (перехідний період — поки всі модулі не мігрують) ===
+// Functions called from HTML event handlers (onclick, oninput, etc.)
 Object.assign(window, {
-  // Стан
-  get currentTab() { return currentTab; },
-  set currentTab(v) { currentTab = v; },
-  get _undoToastTimer() { return _undoToastTimer; },
-  set _undoToastTimer(v) { _undoToastTimer = v; },
-  get _undoData() { return _undoData; },
-  set _undoData(v) { _undoData = v; },
-  TAB_THEMES,
-  // Навігація
-  switchTab, getActiveTabs, saveActiveTabs, openTabSelector, toggleTabSelection,
-  applyTabSelection, closeTabSelector, renderTabOrderList, selectTabOrder, moveTabOrder,
-  rebuildDrumTabbar, applyDrum3D, setupDrumTabbar, updateDrumTabbar, applyTheme,
-  // Налаштування
-  openSettings, setOwlModeSetting, updateOwlModeUI, closeSettings, setLanguage,
-  // Пам'ять
-  openMemoryModal, closeMemoryModal, renderMemoryCards, addMemoryEntry,
-  deleteMemoryCard, saveMemoryCards, refreshMemory, autoRefreshMemory,
-  // Утиліти
-  openPrivacyPolicy, openTerms, openFeedback, updateKeyStatus,
-  saveSettings, exportData, clearAllData, saveFinanceSettings, clearFinanceData,
-  getProfile, shouldRefreshMemory, showToast,
+  switchTab, showToast, closeSettings, openSettings, saveSettings,
+  setLanguage, setOwlModeSetting, openTabSelector, openFeedback,
+  clearAllData, openMemoryModal, closeMemoryModal, refreshMemory,
+  saveMemoryCards, addMemoryEntry, openPrivacyPolicy, openTerms,
+  applyTabSelection, selectTabOrder, moveTabOrder,
+  deleteMemoryCard, saveFinanceSettings, clearFinanceData, exportData,
+  toggleTabSelection,
 });

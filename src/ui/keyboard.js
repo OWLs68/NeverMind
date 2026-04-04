@@ -1,4 +1,8 @@
-function setupKeyboardAvoiding() {
+import { updateChatWindowHeight } from '../core/utils.js';
+import { _getTabChatAHeight, _getTabChatBHeight, _tabChatState } from '../owl/inbox-board.js';
+import { getTabbarHeight } from '../tabs/inbox.js';
+
+export function setupKeyboardAvoiding() {
   if (!window.visualViewport) return;
 
   const update = () => {
@@ -159,5 +163,3 @@ function setupKeyboardAvoiding() {
   }, { passive: true });
 }
 
-// === WINDOW GLOBALS (перехідний період) ===
-Object.assign(window, { setupKeyboardAvoiding });
