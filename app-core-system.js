@@ -780,37 +780,24 @@ function _owlTabApplyState(tab) {
 
 function toggleOwlTabChat(tab)      { _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
 function collapseOwlTabToSpeech(tab){ _owlTabStates[tab] = 'speech';   _owlTabApplyState(tab); }
-function expandOwlTabChat(tab) {
-  _owlTabStates[tab] = 'expanded';
-  _owlTabApplyState(tab);
-
-  // Якщо чат пустий — сіємо поточне повідомлення сови як першу репліку
+// Додати початкове повідомлення сови у чат якщо він пустий
+function _seedOwlTabChat(tab) {
   const key = 'nm_owl_tab_chat_' + tab;
   const msgs = JSON.parse(localStorage.getItem(key) || '[]');
   if (msgs.length === 0) {
-    const speechEl = document.getElementById('owl-tab-text-' + tab);
-    const text = speechEl && speechEl.textContent.trim();
-    if (text) {
-      msgs.push({ role: 'agent', text, ts: Date.now() });
+    const text = (document.getElementById('owl-tab-text-' + tab) || {}).textContent;
+    if (text && text.trim()) {
+      msgs.push({ role: 'agent', text: text.trim(), ts: Date.now() });
       localStorage.setItem(key, JSON.stringify(msgs));
     }
   }
+}
 
+function expandOwlTabChat(tab) {
+  _owlTabStates[tab] = 'expanded';
+  _owlTabApplyState(tab);
+  _seedOwlTabChat(tab);
   renderOwlTabMsgs(tab);
-
-  // Показуємо кнопки-підказки (chips) під повідомленнями, якщо є
-  const chipsEl = document.getElementById('owl-tab-chips-' + tab);
-  const msgsEl  = document.getElementById('owl-tab-msgs-' + tab);
-  if (chipsEl && msgsEl && msgs.length <= 1) {
-    const clone = chipsEl.cloneNode(true);
-    clone.id = 'owl-tab-echips-' + tab;
-    clone.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;padding:4px 16px 8px;overflow:visible;mask-image:none;-webkit-mask-image:none';
-    // Видаляємо кнопку "Поговорити" зі скопійованих чіпів
-    Array.from(clone.children).forEach(c => { if (c.classList.contains('owl-chip-speak')) c.remove(); });
-    const existing = document.getElementById('owl-tab-echips-' + tab);
-    if (existing) existing.remove();
-    if (clone.children.length > 0) msgsEl.after(clone);
-  }
 }
 
 function owlTabSwipeStart(e, tab) {
@@ -827,36 +814,67 @@ function owlTabSwipeMove(e, tab) {
   const chips    = document.getElementById('owl-tab-chips-wrap-' + tab);
   const expanded = document.getElementById('owl-tab-expanded-' + tab);
 
+  // Прибираємо transition під час drag — щоб елементи слідкували за пальцем без затримки
+  [speech, chips, expanded].forEach(el => { if (el) el.style.transition = 'none'; });
+
   if (st === 'speech') {
     if (dy > 0) {
-      // Свайп вниз — прев'ю expanded (розгорнутого чату)
-      const p = Math.min(dy / 140, 1); // прогрес від 0 до 1
-      const resist = dy * (1 - p * 0.5); // гумка: зменшуємо опір при завершенні
-      if (speech) { speech.style.transform = `translateY(${-resist * 0.22}px)`; speech.style.opacity = String(1 - p * 0.65); }
-      if (chips)  { chips.style.transform  = `translateY(${-resist * 0.14}px)`; chips.style.opacity  = String(1 - p * 0.85); }
+      const p = Math.min(dy / 140, 1);
+      const resist = dy * (1 - p * 0.5);
+      if (speech)   { speech.style.transform = `translateY(${-resist * 0.22}px)`; speech.style.opacity = String(1 - p * 0.65); }
+      if (chips)    { chips.style.transform  = `translateY(${-resist * 0.14}px)`; chips.style.opacity  = String(1 - p * 0.85); }
       if (expanded) { expanded.style.display = 'block'; expanded.style.opacity = String(p * 0.97); expanded.style.transform = `translateY(${(1 - p) * 22}px)`; }
     } else if (dy < 0) {
-      // Свайп вгору — прев'ю collapsed (згорнутого стану)
       const resist = dy * 0.45;
       if (speech) speech.style.transform = `translateY(${resist}px)`;
       if (chips)  chips.style.transform  = `translateY(${resist}px)`;
     }
   } else if (st === 'expanded' && dy < 0) {
-    // Свайп вгору з expanded — прев'ю повернення до speech
     const p = Math.min(Math.abs(dy) / 120, 1);
     if (expanded) { expanded.style.transform = `translateY(${dy * 0.32}px)`; expanded.style.opacity = String(1 - p * 0.55); }
   }
 }
 
-function _clearOwlTabDrag(tab) {
-  ['speech', 'chips-wrap', 'expanded'].forEach(part => {
-    const el = document.getElementById(`owl-tab-${part}-${tab}`);
-    if (!el) return;
-    el.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.26s ease';
-    el.style.transform = '';
-    el.style.opacity = '';
-    setTimeout(() => { if (el) el.style.transition = ''; }, 340);
-  });
+// Анімований snap до нового стану після відпускання пальця
+function _snapOwlTab(tab, newSt) {
+  const speech   = document.getElementById('owl-tab-speech-' + tab);
+  const chips    = document.getElementById('owl-tab-chips-wrap-' + tab);
+  const expanded = document.getElementById('owl-tab-expanded-' + tab);
+  const T = 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease';
+  const cur = _owlTabStates[tab] || 'speech';
+
+  // Включаємо transition для плавного snap
+  [speech, chips, expanded].forEach(el => { if (el) el.style.transition = T; });
+
+  if (newSt === 'expanded' && cur === 'speech') {
+    if (speech)   { speech.style.transform   = 'translateY(-15px)'; speech.style.opacity   = '0'; }
+    if (chips)    { chips.style.transform    = 'translateY(-10px)'; chips.style.opacity    = '0'; }
+    if (expanded) { expanded.style.transform = 'translateY(0)';     expanded.style.opacity = '1'; }
+  } else if (newSt === 'speech' && cur === 'expanded') {
+    if (expanded) { expanded.style.transform = 'translateY(20px)'; expanded.style.opacity = '0'; }
+    if (speech)   { speech.style.display = 'flex'; speech.style.transform = 'translateY(0)'; speech.style.opacity = '1'; }
+    if (chips)    { chips.style.display  = 'flex'; chips.style.transform  = 'translateY(0)'; chips.style.opacity  = '1'; }
+  } else if (newSt === 'collapsed' && cur === 'speech') {
+    if (speech) { speech.style.transform = 'translateY(-20px)'; speech.style.opacity = '0'; }
+    if (chips)  { chips.style.transform  = 'translateY(-12px)'; chips.style.opacity  = '0'; }
+  } else {
+    // Snap back (відпружинити)
+    if (speech)   { speech.style.transform = ''; speech.style.opacity = ''; }
+    if (chips)    { chips.style.transform  = ''; chips.style.opacity  = ''; }
+    if (expanded && cur !== 'expanded') { expanded.style.opacity = '0'; expanded.style.transform = 'translateY(15px)'; }
+  }
+
+  setTimeout(() => {
+    [speech, chips, expanded].forEach(el => { if (el) { el.style.transition = ''; el.style.transform = ''; el.style.opacity = ''; } });
+    if (newSt !== cur) {
+      _owlTabStates[tab] = newSt;
+      _owlTabApplyState(tab);
+      if (newSt === 'expanded') { _seedOwlTabChat(tab); renderOwlTabMsgs(tab); }
+    } else {
+      // Повернення до поточного стану
+      _owlTabApplyState(tab);
+    }
+  }, 300);
 }
 
 function owlTabSwipeEnd(e, tab) {
@@ -864,28 +882,14 @@ function owlTabSwipeEnd(e, tab) {
   _owlTabSwipes[tab] = null;
   const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
 
-  const expanded = document.getElementById('owl-tab-expanded-' + tab);
-
   if (dy < -40) {
-    if (st === 'expanded') {
-      _clearOwlTabDrag(tab);
-      collapseOwlTabToSpeech(tab);
-    } else if (st === 'speech') {
-      _clearOwlTabDrag(tab);
-      _owlTabStates[tab] = 'collapsed';
-      _owlTabApplyState(tab);
-    }
+    if (st === 'expanded') _snapOwlTab(tab, 'speech');
+    else if (st === 'speech') _snapOwlTab(tab, 'collapsed');
   } else if (dy > 40) {
-    if (st === 'speech') {
-      _clearOwlTabDrag(tab);
-      expandOwlTabChat(tab);
-    } else if (st === 'collapsed') {
-      toggleOwlTabChat(tab);
-    }
+    if (st === 'speech') _snapOwlTab(tab, 'expanded');
+    else if (st === 'collapsed') toggleOwlTabChat(tab);
   } else {
-    // Не достатньо далеко — відпружинити назад
-    if (expanded && st !== 'expanded') expanded.style.display = 'none';
-    _clearOwlTabDrag(tab);
+    _snapOwlTab(tab, st); // snap back
   }
 }
 
