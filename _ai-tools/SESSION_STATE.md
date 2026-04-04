@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-03
+**Оновлено:** 2026-04-04
 
 ---
 
@@ -8,7 +8,7 @@
 
 | | |
 |--|--|
-| **Версія** | v70 |
+| **Версія** | v69 |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini |
 | **Гілка** | `claude/review-agent-communication-RoZF9` |
@@ -17,33 +17,55 @@
 
 ## Зараз робимо
 
-OWL Board: переписана логіка фаз дня і антиспаму. Персональний розклад юзера.
+OWL Board: повний редизайн Inbox + всіх вкладок. Фіксуємо баги.
 
 ---
 
-## Останні сесії
+## Остання сесія (04.04)
 
-- **03.04 (2)** — OWL Board: `getDayPhase()` + `getSchedule()` на основі `nm_settings.schedule`. Cooldown-система замінила `owlAlreadySaid` (раз на добу → час cooldown). Табло тепер оновлюється кожні 45 хв гарантовано (`phase_pulse`). Фаза дня передається в промпт. `getOwlBoardContext()` — чистий (без side effects). Розклад: UI в налаштуваннях (4 time-поля), питання #6 онбордингу, автопарсинг через `handleScheduleAnswer()`. `_owlAskScheduleIfNeeded()` — одноразовий запит якщо розклад порожній.
-- **03.04** — settings.json (хуки, дозволи), 5 скілів (.claude/commands/), правило пояснень в дужках в CLAUDE.md. SVG сову замінено на 🦉 (10 інстансів). OWL Board: бабл компактний по тексту, риска за межами баблу, чіпи зі стрілками + тіні. B-14: task chat більше не показує сирий JSON.
-- **02.04** — Inbox стрічка: компактні картки, датові сепаратори, тап-розгортання. OWL Board: міні-чат з 5 станами, чіпи, callOwlChat(). Action execution — executeOwlAction().
-- **01.04** — Реструктуризація доків: правила → CLAUDE.md, CONCEPTS → 2 файли, _archive/ створено. B-11/B-12: padding 20px в модалках.
-- **31.03** — B-07/B-08/B-10: кроки задачі, відновлення статусу, чат не розгортається. Deploy pipeline v2.
+### OWL Board — Inbox
+- `owl-board` перенесено в `inbox-fixed-top` (не прокручується зі списком)
+- Позиціювання: `margin-top: 0` на board, `margin-top: 11px` на chips-wrapper, `margin-top: -10px` на inbox-scroll
+- Кнопки: `border: none`, тінь `0 2px 7px rgba(0,0,0,0.32)`, padding всередині `owl-speech-chips` щоб iOS не обрізав тінь
+- Кнопка "Поговорити": бурштиновий `rgba(194,100,10,0.90)` (не фіолетовий)
+- Тінь під ногами сови: `::after` радіальний градієнт
+
+### OWL Board — Логіка
+- Cooldown-система (`nm_owl_cooldowns`) замість `owlAlreadySaid` (раз на добу)
+- `getDayPhase()` + `getSchedule()` — фази дня під розклад користувача
+- UI розкладу в налаштуваннях (4 time-поля: підйом / початок роботи / кінець / сон)
+- Питання онбордингу #6 → парсинг розкладу
+- `handleScheduleAnswer()` перехоплює відповідь в Inbox
+
+### OWL Board — всі вкладки (Tasks, Notes, Finance, Me, Evening, Health, Projects)
+- Замінено компактні слайдери → той самий стиль що Inbox (велика сова + бабл + чіпи)
+- HTML: 7 порожніх контейнерів, структура будується JS динамічно
+- Нові функції в `app-core-system.js`: `_owlTabHTML`, `_owlTabApplyState`, `toggleOwlTabChat`, `expandOwlTabChat`, `collapseOwlTabToSpeech`, `owlTabSwipe*`, `sendOwlTabReply`, `sendOwlTabReplyFromInput`, `renderOwlTabMsgs`
+- Стани: `speech` → `collapsed` (свайп вгору) / `expanded` (свайп вниз або "Поговорити")
+- Чат в expanded: зберігається в `nm_owl_tab_chat_{tab}`, викликає GPT з контекстом вкладки
+
+---
+
+## Попередні сесії
+
+- **03.04 (2)** — OWL Board: `getDayPhase()` + `getSchedule()`. Cooldown-система.
+- **03.04** — settings.json хуки, 5 скілів, правило пояснень в дужках. SVG → 🦉. OWL Board UI.
+- **02.04** — Inbox стрічка: компактні картки, датові сепаратори. OWL Board: міні-чат.
+- **01.04** — Реструктуризація доків. B-11/B-12.
+- **31.03** — B-07/B-08/B-10. Deploy pipeline v2.
 
 ---
 
 ## Відкриті баги
 
-Деталі → `NEVERMIND_BUGS.md`
-
-- B-03 — агент створює задачу замість проекту
+- **B-03** — ~~агент створює задачу замість проекту~~ → **FIXED 04.04**: промпт в `app-ai-core.js` — додано явну заборону `save` якщо є тригер проекту
 - B-04/B-09 — тап на день в календарі не працює
 - B-05 — картки обрізаються при скролі
 - B-06 — поле вводу без blur/fade ефекту
-- B-11/B-12 — модалки звичок/задач: код виправлено 31.03, деплой не перевірено
 
 ---
 
 ## Наступне
 
-- **Закріплені картки нагадувань** — потребує фічі Календар (dueDate, events)
-- Баги з NEVERMIND_BUGS.md
+- Баги B-04/B-09, B-05, B-06
+- Закріплені картки нагадувань (потребує dueDate, Calendar)
