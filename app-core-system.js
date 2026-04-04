@@ -973,17 +973,18 @@ function scrollOwlTabChips(tab, dir) {
 }
 
 function renderTabBoard(tab) {
-  const msgs = getTabBoardMsgs(tab);
-  const board = document.getElementById('owl-tab-board-' + tab);
+  const isInbox = tab === 'inbox';
+  const msgs = isInbox ? (typeof getOwlBoardMessages === 'function' ? getOwlBoardMessages() : []) : getTabBoardMsgs(tab);
+  const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
   if (!board) return;
   if (!msgs.length) { board.style.display = 'none'; return; }
   board.style.display = 'block';
 
-  // Ініціалізація структури — один раз
+  // Ініціалізація структури — один раз (inbox вже має HTML в index.html)
   if (!board._owlReady) {
-    board.innerHTML = _owlTabHTML(tab);
+    if (!isInbox) board.innerHTML = _owlTabHTML(tab);
     board._owlReady = true;
-    _owlTabStates[tab] = 'speech';
+    _owlTabStates[tab] = _owlTabStates[tab] || 'speech';
     _owlTabApplyState(tab);
   }
 

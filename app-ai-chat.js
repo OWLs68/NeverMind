@@ -686,59 +686,18 @@ function _owlSetState(state) {
   _owlChatOpen = (state === 'expanded');
 }
 
-// Рендер OWL Board — персонаж який говорить
+// Рендер OWL Board — делегує в уніфікований renderTabBoard('inbox')
 function renderOwlBoard() {
   const boardMessages = getOwlBoardMessages();
-  const board = document.getElementById('owl-board');
-  if (!board) return;
-
-  if (boardMessages.length === 0) {
-    board.style.display = 'none';
-    return;
-  }
-  board.style.display = 'block';
   _owlBoardMessages = boardMessages;
 
-  const latest = boardMessages[0];
+  // Рендер через уніфіковану функцію (text, time, chips)
+  if (typeof renderTabBoard === 'function') renderTabBoard('inbox');
 
-  // Speech text + time
-  const tEl = document.getElementById('owl-tab-text-inbox');
-  if (tEl) tEl.textContent = latest.text;
-  const ctEl = document.getElementById('owl-tab-ctext-inbox');
-  if (ctEl) ctEl.textContent = latest.text;
-  const tmEl = document.getElementById('owl-tab-time-inbox');
-  if (tmEl && latest.id) {
-    const ago = Date.now() - latest.id;
-    const mins = Math.floor(ago / 60000);
-    if (mins < 1) tmEl.textContent = 'щойно';
-    else if (mins < 60) tmEl.textContent = `${mins} хв`;
-    else tmEl.textContent = `${Math.floor(mins / 60)} год`;
-  }
-
-  // Speech chips: AI чіпи + "Поговорити"
-  const chipsEl = document.getElementById('owl-tab-chips-inbox');
-  if (chipsEl) {
-    let chips = (latest.chips || []).map(c => {
-      const safe = escapeHtml(c).replace(/'/g, '&#39;');
-      return `<div class="owl-chip" onclick="sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
-    });
-    chips.push('<div class="owl-chip owl-chip-speak" onclick="expandOwlChat()">Поговорити</div>');
-    chipsEl.innerHTML = chips.join('');
-    chipsEl.scrollLeft = 0;
-    chipsEl.removeEventListener('scroll', () => _updateOwlTabChipsArrows('inbox'));
-    chipsEl.addEventListener('scroll', () => _updateOwlTabChipsArrows('inbox'), { passive: true });
-    setTimeout(() => _updateOwlTabChipsArrows('inbox'), 50);
-  }
-
-  // Якщо expanded — оновити чат
-  if ((_owlTabStates['inbox'] || 'speech') === 'expanded') {
+  // Якщо expanded — додатково оновити чат і expanded chips
+  if ((_owlTabStates['inbox'] || 'speech') === 'expanded' && boardMessages.length) {
     renderOwlChatMessages();
-    renderOwlChips(latest);
-  }
-
-  // Дефолт: speech. Нове повідомлення → повернути на speech.
-  if (_getOwlState() === 'collapsed') {
-    // Залишаємо collapsed якщо юзер згорнув
+    renderOwlChips(boardMessages[0]);
   }
 }
 
