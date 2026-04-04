@@ -726,7 +726,7 @@ function dismissTabBoard(tab) {
 const _owlTabStates = {}; // 'speech' | 'collapsed' | 'expanded'
 const _owlTabSwipes = {};
 
-const OWL_TAB_EXPANDED_H = 175; // тільки чат (без chips — вони поза expanded div)
+const OWL_TAB_EXPANDED_H = 204; // чат + padding-top:29px щоб повідомлення під совою
 
 function _owlTabHTML(tab) {
   const t = tab;
