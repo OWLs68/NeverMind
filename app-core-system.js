@@ -786,19 +786,74 @@ function owlTabSwipeStart(e, tab) {
 }
 function owlTabSwipeMove(e, tab) {
   if (!_owlTabSwipes[tab]) return;
-  _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-  if (Math.abs(_owlTabSwipes[tab].dy) > 10) e.preventDefault();
+  const dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
+  _owlTabSwipes[tab].dy = dy;
+  if (Math.abs(dy) > 10) e.preventDefault();
+
+  const st = _owlTabStates[tab] || 'speech';
+  const speech   = document.getElementById('owl-tab-speech-' + tab);
+  const chips    = document.getElementById('owl-tab-chips-wrap-' + tab);
+  const expanded = document.getElementById('owl-tab-expanded-' + tab);
+
+  if (st === 'speech') {
+    if (dy > 0) {
+      // Свайп вниз — прев'ю expanded (розгорнутого чату)
+      const p = Math.min(dy / 140, 1); // прогрес від 0 до 1
+      const resist = dy * (1 - p * 0.5); // гумка: зменшуємо опір при завершенні
+      if (speech) { speech.style.transform = `translateY(${-resist * 0.22}px)`; speech.style.opacity = String(1 - p * 0.65); }
+      if (chips)  { chips.style.transform  = `translateY(${-resist * 0.14}px)`; chips.style.opacity  = String(1 - p * 0.85); }
+      if (expanded) { expanded.style.display = 'block'; expanded.style.opacity = String(p * 0.97); expanded.style.transform = `translateY(${(1 - p) * 22}px)`; }
+    } else if (dy < 0) {
+      // Свайп вгору — прев'ю collapsed (згорнутого стану)
+      const resist = dy * 0.45;
+      if (speech) speech.style.transform = `translateY(${resist}px)`;
+      if (chips)  chips.style.transform  = `translateY(${resist}px)`;
+    }
+  } else if (st === 'expanded' && dy < 0) {
+    // Свайп вгору з expanded — прев'ю повернення до speech
+    const p = Math.min(Math.abs(dy) / 120, 1);
+    if (expanded) { expanded.style.transform = `translateY(${dy * 0.32}px)`; expanded.style.opacity = String(1 - p * 0.55); }
+  }
 }
+
+function _clearOwlTabDrag(tab) {
+  ['speech', 'chips-wrap', 'expanded'].forEach(part => {
+    const el = document.getElementById(`owl-tab-${part}-${tab}`);
+    if (!el) return;
+    el.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.26s ease';
+    el.style.transform = '';
+    el.style.opacity = '';
+    setTimeout(() => { if (el) el.style.transition = ''; }, 340);
+  });
+}
+
 function owlTabSwipeEnd(e, tab) {
   const sw = _owlTabSwipes[tab]; if (!sw) return;
   _owlTabSwipes[tab] = null;
   const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
+
+  const expanded = document.getElementById('owl-tab-expanded-' + tab);
+
   if (dy < -40) {
-    if (st === 'expanded') collapseOwlTabToSpeech(tab);
-    else if (st === 'speech') { _owlTabStates[tab] = 'collapsed'; _owlTabApplyState(tab); }
+    if (st === 'expanded') {
+      _clearOwlTabDrag(tab);
+      collapseOwlTabToSpeech(tab);
+    } else if (st === 'speech') {
+      _clearOwlTabDrag(tab);
+      _owlTabStates[tab] = 'collapsed';
+      _owlTabApplyState(tab);
+    }
   } else if (dy > 40) {
-    if (st === 'speech') expandOwlTabChat(tab);
-    else if (st === 'collapsed') toggleOwlTabChat(tab);
+    if (st === 'speech') {
+      _clearOwlTabDrag(tab);
+      expandOwlTabChat(tab);
+    } else if (st === 'collapsed') {
+      toggleOwlTabChat(tab);
+    }
+  } else {
+    // Не достатньо далеко — відпружинити назад
+    if (expanded && st !== 'expanded') expanded.style.display = 'none';
+    _clearOwlTabDrag(tab);
   }
 }
 
