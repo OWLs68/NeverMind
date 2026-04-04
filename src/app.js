@@ -11,6 +11,9 @@ import './core/logger.js';
 import './ui/keyboard.js';
 import './ui/swipe-delete.js';
 
+// AI
+import './ai/core.js';
+
 // OWL
 import './owl/chips.js';
 import './owl/board.js';
