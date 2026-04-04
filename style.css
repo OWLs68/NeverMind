@@ -1224,7 +1224,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0 8px;
-  margin-top: 6px;
+  margin-top: 11px;
 }
 .owl-speech-chips {
   display: flex; gap: 6px; flex-wrap: nowrap;
