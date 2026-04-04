@@ -1220,6 +1220,8 @@ body {
   padding: 6px 2px 10px;
   overflow-x: auto; scrollbar-width: none;
   flex: 1;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
 }
 .owl-speech-chips::-webkit-scrollbar { display: none; }
 .owl-chips-arrow {
