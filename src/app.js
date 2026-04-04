@@ -15,6 +15,7 @@ import './ui/swipe-delete.js';
 import './ai/core.js';
 
 // OWL
+import './owl/inbox-board.js';
 import './owl/chips.js';
 import './owl/board.js';
 import './owl/proactive.js';

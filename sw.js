@@ -7,7 +7,7 @@
 //   3. Якщо немає інтернету — все одно відкривається з кешу
 //   4. При оновленні версії — старий кеш автоматично видаляється
 
-const CACHE_NAME = 'nm-20260404-2000';
+const CACHE_NAME = 'nm-20260404-2003';
 
 // Список файлів які кешуємо при встановленні
 const STATIC_ASSETS = [
@@ -15,7 +15,6 @@ const STATIC_ASSETS = [
   './index.html',
   './style.css',
   './bundle.js',
-  './app-ai-chat.js',
   './app-inbox.js',
   './app-tasks-core.js',
   './app-habits.js',
