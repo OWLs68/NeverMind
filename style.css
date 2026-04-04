@@ -697,7 +697,6 @@ body {
 
 /* === INBOX LIST === */
 #inbox-list { } /* padding керується inline */
-#inbox-scroll { margin-top: -10px; }
 
 /* Category selector chips */
 .cat-chips {
