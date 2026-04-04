@@ -731,7 +731,7 @@ function renderOwlBoard() {
       const safe = escapeHtml(c).replace(/'/g, '&#39;');
       return `<div class="owl-chip" onclick="sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
     });
-    chips.push('<div class="owl-chip" onclick="expandOwlChat()">Поговорити</div>');
+    chips.push('<div class="owl-chip owl-chip-speak" onclick="expandOwlChat()">Поговорити</div>');
     chipsEl.innerHTML = chips.join('');
     chipsEl.scrollLeft = 0;
     chipsEl.removeEventListener('scroll', updateOwlChipsArrows);
