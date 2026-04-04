@@ -290,17 +290,19 @@
                ontouchstart="owlSwipeStart(event)"
                ontouchmove="owlSwipeMove(event)"
                ontouchend="owlSwipeEnd(event)">
-            <div class="owl-agent-container">
-              <div class="owl-agent-hero">
-                <div class="owl-agent-avatar" id="owl-agent-avatar">🦉</div>
+            <div style="position:relative">
+              <div class="owl-speech-avatar">🦉</div>
+              <div class="owl-agent-container">
+                <div id="owl-chat-chips" class="owl-tab-exp-chips"></div>
+                <div class="owl-tab-chat-section">
+                  <div id="owl-chat-messages" class="owl-chat-messages"></div>
+                  <div class="owl-chat-input-row">
+                    <input id="owl-chat-input" type="text" placeholder="Написати OWL..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlReplyFromInput()}">
+                    <button id="owl-chat-send" onclick="sendOwlReplyFromInput()">➤</button>
+                  </div>
+                  <div class="owl-swipe-handle owl-tab-close-handle" onclick="collapseOwlToSpeech()"><div class="owl-handle-bar"></div></div>
+                </div>
               </div>
-              <div id="owl-chat-messages" class="owl-chat-messages"></div>
-              <div id="owl-chat-chips" class="owl-chat-chips"></div>
-              <div class="owl-chat-input-row">
-                <input id="owl-chat-input" type="text" placeholder="Написати OWL..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();sendOwlReplyFromInput()}">
-                <button id="owl-chat-send" onclick="sendOwlReplyFromInput()">➤</button>
-              </div>
-              <div class="owl-swipe-handle" onclick="collapseOwlToSpeech()"><div class="owl-handle-bar"></div></div>
             </div>
           </div>
 
