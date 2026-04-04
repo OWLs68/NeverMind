@@ -1260,22 +1260,15 @@ body {
 }
 .owl-chip-speak:active { background: rgba(180,80,5,0.90); }
 
-/* === EXPANDED: повний чат === */
-.owl-agent-container {
-  background: rgba(15,10,22,0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
-  overflow: hidden;
-}
-.owl-agent-hero {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 14px 16px 6px; gap: 2px;
-}
-.owl-agent-avatar { width: 44px; height: 44px; font-size: 36px; display: flex; align-items: center; justify-content: center; }
-.owl-agent-name { font-size: 9px; font-weight: 800; color: rgba(251,191,36,0.55); text-transform: uppercase; letter-spacing: 0.2em; }
+/* === EXPANDED: чат розгортається всередині speech-bubble === */
+/* owl-tab-chat-msgs — повідомлення всередині бабла без темного контейнера */
+.owl-tab-chat-msgs { max-height: 160px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 14px 4px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
+.owl-tab-chat-msgs::-webkit-scrollbar { display: none; }
+/* Полоска закриття всередині expanded (не absolute, flows normally) */
+.owl-tab-close-handle { position: relative; bottom: auto; left: auto; transform: none; padding: 6px 12px 8px; }
+.owl-tab-close-handle .owl-handle-bar { background: rgba(255,255,255,0.18); }
+.owl-tab-close-handle:active .owl-handle-bar { background: rgba(255,255,255,0.4); }
+/* Старий dark container — більше не використовується, залишаємо для inbox */
 .owl-chat-messages { max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 16px 6px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
 .owl-chat-messages::-webkit-scrollbar { display: none; }
 .owl-msg-agent { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.92); border-radius: 4px 18px 18px 18px; padding: 10px 14px; font-size: 14px; font-weight: 500; line-height: 1.5; max-width: 88%; align-self: flex-start; }
