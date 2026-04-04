@@ -1284,7 +1284,7 @@ body {
 /* Секція тексту агента (speech state, 104px зліва = справа від сови) */
 .owl-tab-bubble { padding: 10px 18px 10px 104px; position: relative; }
 /* Кнопки справа від сови у expanded стані */
-.owl-tab-exp-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 15px 18px 8px 104px; }
+.owl-tab-exp-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 9px 18px 8px 104px; }
 /* Роздільник + чат; padding-top:29px → перше повідомлення 3px нижче сови */
 .owl-tab-chat-section { border-top: 1px solid rgba(255,255,255,0.07); padding-top: 29px; }
 /* Повідомлення чату */
