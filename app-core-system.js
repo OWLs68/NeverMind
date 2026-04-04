@@ -810,6 +810,8 @@ function expandOwlTabChat(tab) {
 }
 
 function owlTabSwipeStart(e, tab) {
+  const msgsEl = document.getElementById('owl-tab-msgs-' + tab);
+  if (msgsEl && msgsEl.contains(e.target)) return; // дозволяємо скрол в повідомленнях
   _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
 }
 function owlTabSwipeMove(e, tab) {
@@ -830,9 +832,7 @@ function owlTabSwipeMove(e, tab) {
     if (expanded) expanded.style.height = h + 'px';
     if (chips) chips.style.opacity = String(Math.max(0, 1 - dy / 60));
   } else if (st === 'expanded' && dy < 0) {
-    // Згортання: зменшуємо висоту (тільки якщо свайп не в чаті)
-    const msgsEl = document.getElementById('owl-tab-msgs-' + tab);
-    if (msgsEl && msgsEl.contains(e.target) && msgsEl.scrollTop > 0) return;
+    // Згортання: зменшуємо висоту
     if (Math.abs(dy) > 10) e.preventDefault();
     if (expanded) expanded.style.transition = 'none';
     if (chips)    chips.style.transition    = 'none';

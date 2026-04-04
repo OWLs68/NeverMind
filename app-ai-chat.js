@@ -1008,6 +1008,8 @@ function executeOwlAction(action, originalText) {
 // === OWL Board Swipe Gesture ===
 let _owlSwipe = null;
 function owlSwipeStart(e) {
+  const msgsEl = document.getElementById('owl-chat-messages');
+  if (msgsEl && msgsEl.contains(e.target)) return; // дозволяємо скрол в повідомленнях
   const t = e.touches[0];
   _owlSwipe = { startY: t.clientY, dy: 0, locked: false };
 }
