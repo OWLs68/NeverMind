@@ -798,8 +798,8 @@ function owlTabSwipeEnd(e, tab) {
     if (st === 'expanded') collapseOwlTabToSpeech(tab);
     else if (st === 'speech') { _owlTabStates[tab] = 'collapsed'; _owlTabApplyState(tab); }
   } else if (dy > 40) {
-    if (st === 'collapsed') toggleOwlTabChat(tab);
-    // speech → expanded тільки через кнопку "Поговорити", не свайп
+    if (st === 'speech') expandOwlTabChat(tab);
+    else if (st === 'collapsed') toggleOwlTabChat(tab);
   }
 }
 
