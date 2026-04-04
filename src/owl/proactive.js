@@ -1,5 +1,6 @@
 import { getAIContext, getOWLPersonality, restoreChatUI } from '../ai/core.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
+import { getDayPhase } from './inbox-board.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
 import { getNotes } from '../tabs/notes.js';
@@ -149,22 +150,32 @@ async function generateTabBoardMessage(tab) {
     return `[${when}] ${m.text}`;
   }).join('\n');
 
-  const _now = new Date();
-  const _hour = _now.getHours();
-  const _timeOfDay = _hour < 6 ? 'ніч' : _hour < 12 ? 'ранок' : _hour < 18 ? 'день' : 'вечір';
-  const _timeStr = _now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+  const phase = getDayPhase();
+  const _timeStr = new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+  const phaseInstr = {
+    morning: 'Ранок — твоя роль: надихнути і допомогти сфокусуватись на головному.',
+    work:    'Робочий час — твоя роль: тримати в курсі прогресу, м\'яко нагадувати про незавершене.',
+    evening: 'Вечір — твоя роль: допомогти підбити підсумок дня, не пропустити стріки.',
+    night:   'Ніч — говори тільки про критичне. Дуже коротко.',
+  };
 
   const systemPrompt = getOWLPersonality() + `
 
-Зараз: ${_timeStr} (${_timeOfDay}). Враховуй час доби у повідомленні.
+Зараз: ${_timeStr}. ${phaseInstr[phase] || ''}
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло у вкладці "${tabLabels[tab] || tab}". Це НЕ відповідь на запит — це твоя ініціатива.
 
 ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
 ${tabHistory || '(ще нічого не казав)'}
 
-ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА:
+ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
 ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
+
+ПРІОРИТЕТ ПОВІДОМЛЕНЬ:
+1. Якщо є [КРИТИЧНО] — пиши ТІЛЬКИ про це. Нічого іншого.
+2. Якщо є [ВАЖЛИВО] і немає [КРИТИЧНО] — пиши про перше [ВАЖЛИВО].
+3. Якщо є [ФАЗА] але немає критичного/важливого — коротке повідомлення відповідно до фази дня.
+4. Інакше — обери найцікавіше зі звичайних даних.
 
 ПРАВИЛА:
 - Максимум 2 речення. Коротко і конкретно про цю вкладку.
@@ -172,7 +183,7 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти і дані яких немає.
 - НЕ повторюй нещодавнє: "${recentText || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
-- chips — кнопки швидких дій. ТІЛЬКИ дії що прямо стосуються твого повідомлення. НЕ додавай випадкові дії які не згадуються в тексті. Максимум 3 слова кожен. Якщо нічого конкретного — [].
+- chips — кнопки швидких дій. ТІЛЬКИ дії що прямо стосуються твого повідомлення. Наприклад якщо пишеш "закрий задачі X і Y" → chips: ["закрити задачі"]. Якщо пишеш "запиши підсумки" → chips: ["записати підсумки"]. НЕ додавай випадкові дії які не згадуються в тексті. Максимум 3 слова кожен. Якщо нічого конкретного — []. Враховуй що знаєш про людину — пропонуй те що їй корисно.
 - Відповідай українською.`;
 
   try {
