@@ -3855,10 +3855,17 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       el.innerHTML = "";
       return;
     }
-    el.innerHTML = boardMsg.chips.map((c) => {
-      const safe = escapeHtml(c).replace(/'/g, "&#39;");
-      return `<div class="owl-chip" onclick="sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
-    }).join("");
+    el.innerHTML = boardMsg.chips.map(
+      (c) => `<div class="owl-chip" data-chip-text="${escapeHtml(c)}">${escapeHtml(c)}</div>`
+    ).join("");
+    if (!el._chipClickReady) {
+      el.addEventListener("click", (e) => {
+        const chip = e.target.closest(".owl-chip");
+        if (!chip) return;
+        sendOwlReply(chip.dataset.chipText || "");
+      });
+      el._chipClickReady = true;
+    }
   }
   function showOwlTyping(show) {
     const el = document.getElementById("owl-tab-msgs-inbox");
@@ -4206,15 +4213,22 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     if (cEl) cEl.textContent = msg.text;
     if (tmEl) tmEl.textContent = timeStr;
     const chipsEl = document.getElementById("owl-tab-chips-" + tab);
-    const chipsHTML = (msg.chips || []).map((c) => {
-      const s = escapeHtml(c).replace(/'/g, "&#39;");
-      return `<div class="owl-chip" onclick="owlChipToChat('${tab}','${s}')">${escapeHtml(c)}</div>`;
-    });
+    const chipsHTML = (msg.chips || []).map(
+      (c) => `<div class="owl-chip" data-chip-text="${escapeHtml(c)}">${escapeHtml(c)}</div>`
+    );
     if (chipsEl) {
       const barTab = tab === "me" ? "me" : tab;
-      const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak" onclick="openChatBar('${barTab}')">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`];
+      const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`];
       chipsEl.innerHTML = speechChips.join("");
       chipsEl.scrollLeft = 0;
+      if (chipsEl._chipClickHandler) chipsEl.removeEventListener("click", chipsEl._chipClickHandler);
+      chipsEl._chipClickHandler = (e) => {
+        const chip = e.target.closest(".owl-chip");
+        if (!chip) return;
+        if (chip.classList.contains("owl-chip-speak")) openChatBar(barTab);
+        else owlChipToChat(tab, chip.dataset.chipText || "");
+      };
+      chipsEl.addEventListener("click", chipsEl._chipClickHandler);
       chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
       chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
       chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
