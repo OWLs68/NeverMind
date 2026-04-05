@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-05 08:10
+**Оновлено:** 2026-04-05 (investigate-account-block)
 
 ---
 
@@ -11,11 +11,41 @@
 | **Версія** | v70 |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini |
-| **Гілка** | `claude/extract-js-styles-css-o75oo` |
+| **Гілка** | `claude/investigate-account-block-bxmCZ` |
 
 ---
 
 ## Зараз робимо
+
+**Згортання Gemini MCP експерименту + новий скіл `/gemini`.**
+
+### Що сталось
+Роман засвітив `GEMINI_API_KEY` у чаті claude.ai/code — спрацював secret scanner, сесія `01ADwSEQttu5G2s4LUkBrydv` заблокована. Причина витоку — дебаг Railway-деплойменту MCP-сервера `_ai-tools/gemini-mcp/`.
+
+### Рішення
+Remote MCP через Railway — занадто складний стек (7 шарів: Railway, Node.js, env vars, SSE transport, Gemini API, MCP client у claude.ai/code, ротація ключів). Кожен шар ламається окремо. Не виправдано для солодевелопера.
+
+**Замість MCP — простий ручний workflow:**
+- Скіл `/gemini [питання]` збирає контекст (CLAUDE.md + SESSION_STATE + git diff + повні файли)
+- Виводить одним код-блоком у чаті
+- Роман копіює → вставляє в https://aistudio.google.com (Gemini 2.5 Pro, 1M контекст)
+- Отримує відповідь → повертає в чат → Claude реагує
+
+Нуль інфраструктури, нуль витоків ключів, Роман — арбітр між двома AI.
+
+### Зроблено (ця сесія)
+- Видалено `_ai-tools/gemini-mcp/` (server.js, package.json, package-lock.json, README.md, .gitignore) — 5 файлів
+- Створено `.claude/commands/gemini.md` — новий скіл
+- Оновлено цей SESSION_STATE.md
+
+### Що Роман робить сам (поза репо)
+- Видалив старий `GEMINI_API_KEY` на aistudio.google.com ✅
+- Видаляє Railway-проект `humorous-gentleness` (сервіс `NeverMind`)
+- Видаляє MCP-конектор з `claude.ai/code` → Settings → Connectors
+
+---
+
+## Попередня сесія (05.04 — inline стилі → CSS)
 
 **Винесення inline стилів з JS у CSS-класи** — основна робота завершена.
 
