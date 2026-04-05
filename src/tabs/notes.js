@@ -1020,7 +1020,7 @@ export function addNotesChatMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
-  try { openChatBar('notes'); } catch(e) {}
+  if (!_noSave) { try { openChatBar('notes'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;

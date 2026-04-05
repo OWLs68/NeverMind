@@ -545,7 +545,7 @@ export function addTaskBarMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
-  try { openChatBar('tasks'); } catch(e) {}
+  if (!_noSave) { try { openChatBar('tasks'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;

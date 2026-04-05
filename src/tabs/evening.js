@@ -871,7 +871,7 @@ function showMeChatMessages() {
 export function addMeChatMsg(role, text, _noSave = false, id = '') {
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
-  try { openChatBar('me'); } catch(e) {}
+  if (!_noSave) { try { openChatBar('me'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
@@ -902,7 +902,7 @@ export function addEveningBarMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
-  try { openChatBar('evening'); } catch(e) {}
+  if (!_noSave) { try { openChatBar('evening'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;

@@ -1002,7 +1002,7 @@ export function addFinanceChatMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
-  try { openChatBar('finance'); } catch(e) {}
+  if (!_noSave) { try { openChatBar('finance'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
