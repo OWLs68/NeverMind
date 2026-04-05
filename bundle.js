@@ -1120,7 +1120,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 11px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") notesBarHistory.push({ role: "user", content: text });
@@ -1311,7 +1311,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
       const silenceWarn = silenceDays !== null && silenceDays >= 3;
       const visibleSteps = steps.slice(0, 4);
-      return `<div onclick="openProjectWorkspace(${p.id})" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer">
+      return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -1382,7 +1382,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     </div>
 
     <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
-    <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    <div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:16px;font-weight:900;color:#1e1040">${escapeHtml(p.name)}</div>
@@ -1411,8 +1411,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     </div>
 
     <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
-    ${budget.total > 0 || budget.items.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
+    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
+      <div class="section-label" style="margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
         <span style="font-size:12px;font-weight:700;color:#1e1040">\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E</span>
         <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
@@ -1435,8 +1435,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     </div>` : ""}
 
     <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
-    ${metrics.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
+    ${metrics.length > 0 ? `<div class="card-glass">
+      <div class="section-label">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
           <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
@@ -1446,9 +1446,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     </div>` : ""}
 
     <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
-    ${steps.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px" id="proj-timeline-${p.id}">
+    ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
+        <div class="section-label" style="margin-bottom:0">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
         <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193</span>
       </div>
       <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
@@ -1472,9 +1472,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     </div>` : ""}
 
     <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
-    ${decisions.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    ${decisions.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
+        <div class="section-label" style="margin-bottom:0">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
         <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL \xB7 \u0430\u0432\u0442\u043E</span>
       </div>
       ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
@@ -1502,9 +1502,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     </div>` : ""}
 
     <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
-    ${resources.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    ${resources.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
+        <div class="section-label" style="margin-bottom:0">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
         <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F</span>
       </div>
       ${resources.map((r, i) => {
@@ -1687,7 +1687,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
@@ -2589,7 +2589,7 @@ ${aiContext}` : "");
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div ${id ? `id="${id}"` : ""} style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
@@ -2619,7 +2619,7 @@ ${aiContext}` : "");
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 11px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
@@ -2749,7 +2749,7 @@ ${aiContext}` : "");
       const nextStep = card.nextStep || "";
       const pills = (card.treatments || []).slice(0, 4);
       const isDone = card.status === "done";
-      return `<div onclick="openHealthCard(${card.id})" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer;opacity:${st.opacity}">
+      return `<div onclick="openHealthCard(${card.id})" class="card-glass" style="cursor:pointer;opacity:${st.opacity}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -2880,7 +2880,7 @@ ${aiContext}` : "");
     </div>
 
     <!-- \u041F\u0440\u043E\u0433\u0440\u0435\u0441 + \u0441\u0442\u0430\u0442\u0443\u0441 -->
-    <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    <div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1">
           <div style="font-size:18px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -2900,8 +2900,8 @@ ${aiContext}` : "");
     </div>
 
     <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u043A\u0430 \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 -->
-    <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u0421\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>
+    <div class="card-glass">
+      <div class="section-label">\u0421\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>
       <div style="display:flex;gap:8px">
         ${[
       { k: "energy", l: "\u0415\u043D\u0435\u0440\u0433\u0456\u044F", c: "#16a34a" },
@@ -2915,10 +2915,10 @@ ${aiContext}` : "");
     </div>
 
     <!-- \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438 -->
-    ${meds.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
+    ${meds.length > 0 ? `<div class="card-glass">
+      <div class="section-label">\u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
       ${meds.map((m, i) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.06)" : ""}">
-        <div style="width:28px;height:28px;border-radius:9px;background:rgba(26,92,42,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div class="icon-circle" style="width:28px;height:28px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
         </div>
         <div style="flex:1">
@@ -2930,8 +2930,8 @@ ${aiContext}` : "");
     </div>` : ""}
 
     <!-- \u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F -->
-    ${doctorNotes.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F</div>
+    ${doctorNotes.length > 0 ? `<div class="card-glass">
+      <div class="section-label">\u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F</div>
       ${doctorNotes.map((n) => `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
         <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(n.date || "")} \xB7 ${escapeHtml(n.doctor || "")}</div>
         <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(n.text || "")}</div>
@@ -2946,7 +2946,7 @@ ${aiContext}` : "");
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
     <div onclick="openNotesFolder('${escapeHtml(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
-      <div style="width:30px;height:30px;border-radius:9px;background:rgba(26,92,42,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div style="flex:1">
@@ -3032,7 +3032,7 @@ ${aiContext}` : "");
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") healthBarHistory.push({ role: "user", content: text });
@@ -4701,7 +4701,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     }
     const savedCol = savedPct >= 20 ? "#16a34a" : savedPct >= 10 ? "#d97706" : "#c2410c";
     return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:24px;padding:18px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">\u0424\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442</div>
+    <div class="fin-section-label" style="margin-bottom:4px">\u0424\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442</div>
     <div style="font-size:44px;font-weight:900;line-height:1;margin-bottom:4px;background:linear-gradient(135deg,#c2410c,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${savedPct}%</div>
     <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:500;margin-bottom:12px">\u0434\u043E\u0445\u043E\u0434\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${periodLbl}</div>
     ${trendHtml}
@@ -4771,7 +4771,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     const budget = getFinBudget();
     if (totalInc === 0 && budget.total === 0) {
       return `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:13px 16px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437</div>
+      <div class="fin-section-label" style="margin-bottom:8px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437</div>
       <div style="font-size:13px;color:rgba(30,16,64,0.5);font-weight:600">\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0430\u0431\u043E \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u2014 OWL \u043F\u043E\u0440\u0430\u0445\u0443\u0454 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0437\u0430\u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F</div>
     </div>`;
     }
@@ -4797,8 +4797,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       const v1 = formatMoney(Math.max(0, totalInc - proj));
       const v2 = formatMoney(Math.max(0, totalInc - proj2));
       const v3 = formatMoney(Math.max(0, totalInc - proj3));
-      return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \xB7 \u0437\u0430\u043B\u0438\u0448\u043E\u043A \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F</div>
+      return `<div class="card-glass-blur">
+      <div class="fin-section-label" style="margin-bottom:12px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \xB7 \u0437\u0430\u043B\u0438\u0448\u043E\u043A \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F</div>
       <div style="display:flex;gap:6px">
         ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', "rgba(30,16,64,0.06)", v1, "#1e1040", "\u0437\u0430\u0440\u0430\u0437")}
         ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="20" y1="4" x2="4" y2="20"/></svg>', "rgba(30,16,64,0.06)", v2, "#d97706", "-25% \u0432\u0438\u0442\u0440\u0430\u0442")}
@@ -4811,8 +4811,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       const v1 = formatMoney(proj);
       const pctOfBudget = Math.round(proj / budgetTotal * 100);
       const overColor = proj > budgetTotal ? "#c2410c" : "#16a34a";
-      return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C</div>
+      return `<div class="card-glass-blur">
+      <div class="fin-section-label" style="margin-bottom:10px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div>
           <div style="font-size:22px;font-weight:900;color:${overColor}">${v1}</div>
@@ -4923,9 +4923,9 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       <div style="font-size:10px;font-weight:${labelW};color:${labelCol};margin-top:4px;letter-spacing:0.01em">${g.label}</div>
     </div>`;
     }).join("");
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+    return `<div class="card-glass-blur">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">\u0417\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>
+      <div class="fin-section-label">\u0417\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>
       <div style="display:flex;gap:10px">
         <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0412\u0438\u0442\u0440\u0430\u0442\u0438</span></div>
         <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0414\u043E\u0445\u043E\u0434\u0438</span></div>
@@ -4961,9 +4961,9 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.5);min-width:52px;text-align:right">${formatMoney(amt)}</div>
     </div>`;
     }).join("");
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+    return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442</div>
+      <div class="fin-section-label">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442</div>
       <button onclick="openFinBudgetModal()" style="font-size:12px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:inherit">\u041B\u0456\u043C\u0456\u0442\u0438 \u270E</button>
     </div>
     ${rows}
@@ -4975,7 +4975,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     const rows = sorted.map((t) => {
       const isExp = t.type === "expense";
       const dateStr = new Date(t.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05);cursor:pointer" onclick="openEditTransaction(${t.id})">
+      return `<div class="tx-row" onclick="openEditTransaction(${t.id})">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ""}
@@ -4987,9 +4987,9 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     </div>`;
     }).join("");
     const moreBtn = allTxs.length > 8 ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">\u0412\u0441\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 (${allTxs.length}) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+    return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457</div>
+      <div class="fin-section-label">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457</div>
       <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">+ \u0434\u043E\u0434\u0430\u0442\u0438</button>
     </div>
     ${rows || '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">\u041D\u0435\u043C\u0430\u0454 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0439 \u0437\u0430 \u0446\u0435\u0439 \u043F\u0435\u0440\u0456\u043E\u0434</div>'}
@@ -5007,7 +5007,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     const rows = allTxs.map((t) => {
       const isExp = t.type === "expense";
       const dateStr = new Date(t.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05);cursor:pointer" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
+      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ""}
@@ -5019,9 +5019,9 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     </div>`;
     }).join("");
     modal.innerHTML = `
-    <div onclick="document.getElementById('fin-all-txs-modal').remove()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom)+16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+      <div class="modal-handle"></div>
       <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">\u0412\u0441\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 (${allTxs.length})</div>
       ${rows || '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">\u041D\u0435\u043C\u0430\u0454 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0439</div>'}
     </div>`;
@@ -5051,10 +5051,10 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     modal.id = "fin-tx-modal";
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
     modal.innerHTML = `
-    <div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div onclick="closeFinTxModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);box-sizing:border-box">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
-      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">${_finEditId ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" : "\u041D\u043E\u0432\u0430"} ${isExpense ? "\u0432\u0438\u0442\u0440\u0430\u0442\u0430" : "\u0434\u043E\u0445\u0456\u0434"}</div>
+      <div class="modal-handle"></div>
+      <div class="modal-title">${_finEditId ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" : "\u041D\u043E\u0432\u0430"} ${isExpense ? "\u0432\u0438\u0442\u0440\u0430\u0442\u0430" : "\u0434\u043E\u0445\u0456\u0434"}</div>
 
       <!-- \u0422\u0438\u043F -->
       <div style="display:flex;gap:6px;margin-bottom:12px">
@@ -5085,8 +5085,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
 
       <div style="display:flex;gap:8px">
         ${_finEditId ? `<button onclick="deleteFinTransaction()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:15px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">\u{1F5D1}</button>` : ""}
-        <button onclick="closeFinTxModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-        <button onclick="saveFinTransaction()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+        <button onclick="closeFinTxModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+        <button onclick="saveFinTransaction()" class="btn-save-primary">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -5242,10 +5242,10 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     modal.id = "fin-budget-modal";
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
     modal.innerHTML = `
-    <div onclick="closeFinBudgetModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div onclick="closeFinBudgetModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
-      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C</div>
+      <div class="modal-handle"></div>
+      <div class="modal-title">\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C</div>
 
       <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442</div>
       <input id="finbdg-total" type="number" placeholder="\u20AC 0 \u2014 \u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443" inputmode="decimal"
@@ -5264,8 +5264,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       </div>
 
       <div style="display:flex;gap:8px">
-        <button onclick="closeFinBudgetModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-        <button onclick="saveFinBudgetFromModal()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+        <button onclick="closeFinBudgetModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -5388,7 +5388,7 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
@@ -7631,7 +7631,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:85%;background:${isAgent ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.88)"};color:${isAgent ? "white" : "#1e1040"};border-radius:${isAgent ? "4px 12px 12px 12px" : "12px 4px 12px 12px"};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") taskBarHistory.push({ role: "user", content: text });
@@ -7749,18 +7749,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u{1F941} \u041D\u043E\u0432\u0438\u0439 \u0431\u0430\u0440\u0430\u0431\u0430\u043D",
       emoji: "\u{1F941}",
       title: "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u0430\u043D\u0430 \u0437 \u043D\u0443\u043B\u044F",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F446}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0422\u0430\u043F \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2014 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0454</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F446}</div>
+    <div class="ob-text">\u0422\u0430\u043F \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2014 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0454</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F51A}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0413\u0443\u043C\u043E\u0432\u0430 \u043C\u0435\u0436\u0430 \u2014 \u043A\u0440\u0430\u0439\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u043B\u0456\u0442\u0430\u044E\u0442\u044C</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F51A}</div>
+    <div class="ob-text">\u0413\u0443\u043C\u043E\u0432\u0430 \u043C\u0435\u0436\u0430 \u2014 \u043A\u0440\u0430\u0439\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u043B\u0456\u0442\u0430\u044E\u0442\u044C</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u2795</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041A\u043D\u043E\u043F\u043A\u0430 + \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0430\u0431\u043E \u0432\u0438\u043C\u043A\u043D\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u2795</div>
+    <div class="ob-text">\u041A\u043D\u043E\u043F\u043A\u0430 + \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0430\u0431\u043E \u0432\u0438\u043C\u043A\u043D\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#e0e7ff,#6366f1)"
@@ -7769,18 +7769,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u{1F989} OWL Board",
       emoji: "\u{1F989}",
       title: "OWL \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F4CB}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">OWL \u0442\u0430\u0431\u043B\u043E \u2014 \u043D\u0430 \u043A\u043E\u0436\u043D\u0456\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0432\u0433\u043E\u0440\u0456</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F4CB}</div>
+    <div class="ob-text">OWL \u0442\u0430\u0431\u043B\u043E \u2014 \u043D\u0430 \u043A\u043E\u0436\u043D\u0456\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0432\u0433\u043E\u0440\u0456</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F300}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Scroll-behind \u0435\u0444\u0435\u043A\u0442 \u2014 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u043F\u0440\u043E\u043A\u0440\u0443\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0430\u0431\u043B\u043E</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F300}</div>
+    <div class="ob-text">Scroll-behind \u0435\u0444\u0435\u043A\u0442 \u2014 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u043F\u0440\u043E\u043A\u0440\u0443\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0430\u0431\u043B\u043E</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F319}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0422\u0438\u0445\u0456 \u0433\u043E\u0434\u0438\u043D\u0438 0\u20135 \u2014 OWL \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u0454 \u0432\u043D\u043E\u0447\u0456</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F319}</div>
+    <div class="ob-text">\u0422\u0438\u0445\u0456 \u0433\u043E\u0434\u0438\u043D\u0438 0\u20135 \u2014 OWL \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u0454 \u0432\u043D\u043E\u0447\u0456</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#fef9c3,#f59e0b)"
@@ -7789,18 +7789,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u{1F4AC} \u041D\u043E\u0432\u0438\u0439 \u0447\u0430\u0442",
       emoji: "\u{1F4AC}",
       title: "3 \u0441\u0442\u0430\u043D\u0438 \u0447\u0430\u0442\u0443",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u2B07\uFE0F</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0417\u0430\u043A\u0440\u0438\u0442\u0438\u0439 \u2192 \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u2192 \u043D\u0430 \u0432\u0435\u0441\u044C \u0435\u043A\u0440\u0430\u043D</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u2B07\uFE0F</div>
+    <div class="ob-text">\u0417\u0430\u043A\u0440\u0438\u0442\u0438\u0439 \u2192 \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u2192 \u043D\u0430 \u0432\u0435\u0441\u044C \u0435\u043A\u0440\u0430\u043D</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F448}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">iOS-like \u0441\u0432\u0430\u0439\u043F\u0438 \u0432 Inbox \u2014 \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0443</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F448}</div>
+    <div class="ob-text">iOS-like \u0441\u0432\u0430\u0439\u043F\u0438 \u0432 Inbox \u2014 \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0443</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F501}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041A\u043E\u0436\u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0454 \u0441\u0432\u0456\u0439 \u0447\u0430\u0442</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F501}</div>
+    <div class="ob-text">\u041A\u043E\u0436\u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0454 \u0441\u0432\u0456\u0439 \u0447\u0430\u0442</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#d1fae5,#16a34a)"
@@ -7809,22 +7809,22 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u{1F195} \u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
       emoji: "\u{1F195}",
       title: "\u0412\u0435\u0447\u0456\u0440 \xB7 \u042F \xB7 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \xB7 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F319}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0432\u043E\u0434\u044C \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0456 \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F319}</div>
+    <div class="ob-text">\u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0432\u043E\u0434\u044C \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0456 \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1FA9E}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u042F \u2014 \u0442\u0432\u0456\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C, \u0446\u0456\u043D\u043D\u043E\u0441\u0442\u0456 \u0456 \u043F\u0430\u043C\u02BC\u044F\u0442\u044C OWL</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1FA9E}</div>
+    <div class="ob-text">\u042F \u2014 \u0442\u0432\u0456\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C, \u0446\u0456\u043D\u043D\u043E\u0441\u0442\u0456 \u0456 \u043F\u0430\u043C\u02BC\u044F\u0442\u044C OWL</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u2764\uFE0F</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u2764\uFE0F</div>
+    <div class="ob-text">\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F680}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 OWL \u0431\u0443\u0434\u0443\u0454 \u043F\u043B\u0430\u043D \u043F\u0456\u0441\u043B\u044F 3 \u043F\u0438\u0442\u0430\u043D\u044C</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F680}</div>
+    <div class="ob-text">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 OWL \u0431\u0443\u0434\u0443\u0454 \u043F\u043B\u0430\u043D \u043F\u0456\u0441\u043B\u044F 3 \u043F\u0438\u0442\u0430\u043D\u044C</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#fce7f3,#db2777)"
@@ -7833,18 +7833,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u{1F527} 25+ \u0444\u0456\u043A\u0441\u0456\u0432",
       emoji: "\u{1F527}",
       title: "\u0411\u0456\u043B\u044C\u0448\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044C \u043D\u0456\u0436 \u0431\u0443\u0434\u044C-\u043A\u043E\u043B\u0438",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F522}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041C\u043D\u043E\u0436\u0438\u043D\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u2014 \u0442\u0430\u043F \u043A\u0456\u043B\u044C\u043A\u0430 \u0440\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F522}</div>
+    <div class="ob-text">\u041C\u043D\u043E\u0436\u0438\u043D\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u2014 \u0442\u0430\u043F \u043A\u0456\u043B\u044C\u043A\u0430 \u0440\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F5C2}\uFE0F</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041D\u043E\u0442\u0430\u0442\u043A\u0438: \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F \u043C\u0456\u0436 \u043F\u0430\u043F\u043A\u0430\u043C\u0438 \u0447\u0435\u0440\u0435\u0437 OWL</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F5C2}\uFE0F</div>
+    <div class="ob-text">\u041D\u043E\u0442\u0430\u0442\u043A\u0438: \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F \u043C\u0456\u0436 \u043F\u0430\u043F\u043A\u0430\u043C\u0438 \u0447\u0435\u0440\u0435\u0437 OWL</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">\u{1F6E1}\uFE0F</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 OWL \u0437\u0430\u0445\u0438\u0449\u0435\u043D\u0456 \u0432\u0456\u0434 \u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F6E1}\uFE0F</div>
+    <div class="ob-text">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 OWL \u0437\u0430\u0445\u0438\u0449\u0435\u043D\u0456 \u0432\u0456\u0434 \u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#fed7aa,#c2620a)",
@@ -7856,19 +7856,19 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u0429\u043E \u0442\u0430\u043A\u0435 NeverMind",
       emoji: "\u{1F9E0}",
       title: "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E",
-      body: `<p style="font-size:14px;color:rgba(30,16,64,0.6);line-height:1.65;margin-bottom:12px">\u0414\u0443\u043C\u043A\u0438 \u0437\u043D\u0438\u043A\u0430\u044E\u0442\u044C. \u0417\u0430\u043F\u0438\u0441\u0438 \u0433\u0443\u0431\u043B\u044F\u0442\u044C\u0441\u044F \u043F\u043E \u0440\u0456\u0437\u043D\u0438\u0445 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0430\u0445. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u0441\u0442\u0435\u043C\u0438.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.6);line-height:1.65">NeverMind \u2014 \u043E\u0434\u0438\u043D \u0440\u044F\u0434\u043E\u043A \u043A\u0443\u0434\u0438 \u0441\u043A\u0438\u0434\u0430\u0454\u0448 \u0432\u0441\u0435 \u0449\u043E \u0432 \u0433\u043E\u043B\u043E\u0432\u0456. OWL \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F.</p>`,
+      body: `<p class="ob-desc" style="margin-bottom:12px">\u0414\u0443\u043C\u043A\u0438 \u0437\u043D\u0438\u043A\u0430\u044E\u0442\u044C. \u0417\u0430\u043F\u0438\u0441\u0438 \u0433\u0443\u0431\u043B\u044F\u0442\u044C\u0441\u044F \u043F\u043E \u0440\u0456\u0437\u043D\u0438\u0445 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0430\u0445. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u0441\u0442\u0435\u043C\u0438.</p>
+<p class="ob-desc">NeverMind \u2014 \u043E\u0434\u0438\u043D \u0440\u044F\u0434\u043E\u043A \u043A\u0443\u0434\u0438 \u0441\u043A\u0438\u0434\u0430\u0454\u0448 \u0432\u0441\u0435 \u0449\u043E \u0432 \u0433\u043E\u043B\u043E\u0432\u0456. OWL \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F.</p>`,
       color: "linear-gradient(135deg,#f2d978,#f97316)"
     },
     {
       tag: "Inbox",
       emoji: "\u{1F4E5}",
       title: "\u041F\u0438\u0448\u0438 \u2014 OWL \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431" \u2192 <b style="color:#1e1040">\u0437\u0430\u0434\u0430\u0447\u0430</b></div>
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0440\u0430\u043D\u043A\u0443" \u2192 <b style="color:#1e1040">\u0437\u0432\u0438\u0447\u043A\u0430</b></div>
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443" \u2192 <b style="color:#1e1040">\u0444\u0456\u043D\u0430\u043D\u0441\u0438</b></div>
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"\u043A\u043B\u0430\u0441\u043D\u0430 \u0456\u0434\u0435\u044F \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u0430\u043F" \u2192 <b style="color:#1e1040">\u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0432 \u0406\u0434\u0435\u044F\u0445</b></div>
+      body: `<div class="ob-list">
+  <div class="ob-example">"\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431" \u2192 <b>\u0437\u0430\u0434\u0430\u0447\u0430</b></div>
+  <div class="ob-example">"\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0440\u0430\u043D\u043A\u0443" \u2192 <b>\u0437\u0432\u0438\u0447\u043A\u0430</b></div>
+  <div class="ob-example">"\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443" \u2192 <b>\u0444\u0456\u043D\u0430\u043D\u0441\u0438</b></div>
+  <div class="ob-example">"\u043A\u043B\u0430\u0441\u043D\u0430 \u0456\u0434\u0435\u044F \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u0430\u043F" \u2192 <b>\u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0432 \u0406\u0434\u0435\u044F\u0445</b></div>
 </div>`,
       color: "linear-gradient(135deg,#f2d978,#f97316)"
     },
@@ -7876,18 +7876,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C",
       emoji: "\u26A1",
       title: "\u0417\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u2705</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0422\u0430\u043F \u043D\u0430 \u0447\u0435\u043A\u0431\u043E\u043A\u0441 \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0443</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">\u2705</div>
+    <div class="ob-text">\u0422\u0430\u043F \u043D\u0430 \u0447\u0435\u043A\u0431\u043E\u043A\u0441 \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0443</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1F448}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F448}</div>
+    <div class="ob-text">\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1F4AC}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0421\u043A\u0430\u0436\u0438 OWL "\u0434\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456 X"</div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F4AC}</div>
+    <div class="ob-text">\u0421\u043A\u0430\u0436\u0438 OWL "\u0434\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456 X"</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#fdb87a,#ea580c)"
@@ -7896,18 +7896,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u0412\u0435\u0447\u0456\u0440 \u0456 \u042F",
       emoji: "\u{1F319}",
       title: "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u0456 \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u043E",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1F319}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0412\u0435\u0447\u0456\u0440 \u2014 \u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438, \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0437\u0430 \u0434\u0435\u043D\u044C + \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F319}</div>
+    <div class="ob-text">\u0412\u0435\u0447\u0456\u0440 \u2014 \u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438, \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0437\u0430 \u0434\u0435\u043D\u044C + \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1FA9E}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u042F \u2014 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F</div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1FA9E}</div>
+    <div class="ob-text">\u042F \u2014 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1F91D}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043A\u0430\u0436\u0435 \u0449\u043E \u043D\u0430\u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F</div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F91D}</div>
+    <div class="ob-text">OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043A\u0430\u0436\u0435 \u0449\u043E \u043D\u0430\u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#1e3350,#3a5a80)"
@@ -7916,18 +7916,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       tag: "\u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
       emoji: "\u{1F195}",
       title: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0456 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1FAC0}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0445\u0432\u043E\u0440\u043E\u0431, \u0442\u0440\u0435\u043A\u0435\u0440 \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F, \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
+      body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">\u{1FAC0}</div>
+    <div class="ob-text">\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0445\u0432\u043E\u0440\u043E\u0431, \u0442\u0440\u0435\u043A\u0435\u0440 \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F, \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u{1F680}</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 \u0432\u0456\u0434 \u0456\u0434\u0435\u0457 \u0434\u043E \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0443 \u0437 OWL \u044F\u043A \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A\u043E\u043C</div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F680}</div>
+    <div class="ob-text">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 \u0432\u0456\u0434 \u0456\u0434\u0435\u0457 \u0434\u043E \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0443 \u0437 OWL \u044F\u043A \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A\u043E\u043C</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">\u2795</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">\u041A\u043D\u043E\u043F\u043A\u0430 + \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438</div>
+  <div class="ob-item">
+    <div class="ob-icon">\u2795</div>
+    <div class="ob-text">\u041A\u043D\u043E\u043F\u043A\u0430 + \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438</div>
   </div>
 </div>`,
       color: "linear-gradient(135deg,#d4e8d8,#16a34a)",
@@ -7996,8 +7996,8 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     const contentEl = document.getElementById("slides-content");
     contentEl.innerHTML = `
     ${slide.emoji ? `<div style="font-size:44px;margin-bottom:10px;line-height:1">${slide.emoji}</div>` : ""}
-    <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.4);margin-bottom:10px">${slide.tag}</div>
-    <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1.3;margin-bottom:14px">${slide.title}</div>
+    <div class="ob-tag">${slide.tag}</div>
+    <div class="ob-slide-title">${slide.title}</div>
     ${slide.body}
   `;
     const nextBtn = document.getElementById("slides-next-btn");
@@ -10188,7 +10188,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">\u0437\u0430\u0432\u0436\u0434\u0438</div>' : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
       return '<div id="tab-sel-card-' + t.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t.label + "</div>" + checkHtml + "</div>";
     }).join("");
-    overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div><div style="font-size:18px;font-weight:800;color:#1e1040">\u0412\u043A\u043B\u0430\u0434\u043A\u0438</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">\u0413\u043E\u0442\u043E\u0432\u043E</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">\u041F\u043E\u0440\u044F\u0434\u043E\u043A</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F</div></div></div>';
+    overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">\u0412\u043A\u043B\u0430\u0434\u043A\u0438</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">\u0413\u043E\u0442\u043E\u0432\u043E</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">\u041F\u043E\u0440\u044F\u0434\u043E\u043A</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F</div></div></div>';
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeTabSelector();
     });
