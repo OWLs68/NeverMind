@@ -1329,6 +1329,14 @@ body {
 .msg-bubble--agent { background: rgba(255,255,255,0.12); color: white; border-radius: 4px 12px 12px 12px; }
 .msg-bubble--user { background: rgba(255,255,255,0.88); color: #1e1040; border-radius: 12px 4px 12px 12px; }
 .icon-circle { border-radius: 9px; background: rgba(26,92,42,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.card-glass-blur { background: rgba(255,255,255,0.72); backdrop-filter: blur(16px); border: 1.5px solid rgba(255,255,255,0.75); border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; }
+.fin-section-label { font-size: 11px; font-weight: 800; color: rgba(30,16,64,0.4); text-transform: uppercase; letter-spacing: 0.07em; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(10,5,30,0.35); backdrop-filter: blur(2px); }
+.modal-handle { width: 36px; height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; margin: 0 auto 14px; }
+.modal-title { font-size: 17px; font-weight: 800; color: #1e1040; margin-bottom: 14px; }
+.btn-cancel { flex: 1; padding: 13px; border-radius: 12px; background: rgba(30,16,64,0.06); border: none; font-size: 15px; font-weight: 700; color: rgba(30,16,64,0.5); cursor: pointer; font-family: inherit; }
+.btn-save-primary { flex: 2; padding: 13px; border-radius: 12px; background: linear-gradient(135deg,#f97316,#c2410c); border: none; font-size: 15px; font-weight: 700; color: white; cursor: pointer; font-family: inherit; }
+.tx-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(30,16,64,0.05); cursor: pointer; }
 
 /* === JS-EXTRACTED: Onboarding === */
 .ob-list { display: flex; flex-direction: column; gap: 7px; }

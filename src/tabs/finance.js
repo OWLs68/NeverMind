@@ -272,7 +272,7 @@ function _finHeroCard(totalInc, totalExp, savedPct, savedAmt) {
 
   const savedCol = savedPct >= 20 ? '#16a34a' : savedPct >= 10 ? '#d97706' : '#c2410c';
   return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:24px;padding:18px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Фінансовий результат</div>
+    <div class="fin-section-label" style="margin-bottom:4px">Фінансовий результат</div>
     <div style="font-size:44px;font-weight:900;line-height:1;margin-bottom:4px;background:linear-gradient(135deg,#c2410c,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${savedPct}%</div>
     <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:500;margin-bottom:12px">доходу збережено ${periodLbl}</div>
     ${trendHtml}
@@ -356,7 +356,7 @@ function _finForecast(totalExp, totalInc) {
   // Немає ні доходу ні бюджету — показуємо підказку
   if (totalInc === 0 && budget.total === 0) {
     return `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:13px 16px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Прогноз</div>
+      <div class="fin-section-label" style="margin-bottom:8px">Прогноз</div>
       <div style="font-size:13px;color:rgba(30,16,64,0.5);font-weight:600">Додай дохід або встанови бюджет — OWL порахує скільки залишиться</div>
     </div>`;
   }
@@ -390,8 +390,8 @@ function _finForecast(totalExp, totalInc) {
     const v1 = formatMoney(Math.max(0, totalInc - proj));
     const v2 = formatMoney(Math.max(0, totalInc - proj2));
     const v3 = formatMoney(Math.max(0, totalInc - proj3));
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px">Прогноз · залишок до кінця місяця</div>
+    return `<div class="card-glass-blur">
+      <div class="fin-section-label" style="margin-bottom:12px">Прогноз · залишок до кінця місяця</div>
       <div style="display:flex;gap:6px">
         ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', 'rgba(30,16,64,0.06)', v1, '#1e1040', 'зараз')}
         ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="20" y1="4" x2="4" y2="20"/></svg>', 'rgba(30,16,64,0.06)', v2, '#d97706', '-25% витрат')}
@@ -405,8 +405,8 @@ function _finForecast(totalExp, totalInc) {
     const v1 = formatMoney(proj);
     const pctOfBudget = Math.round(proj / budgetTotal * 100);
     const overColor = proj > budgetTotal ? '#c2410c' : '#16a34a';
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Прогноз витрат на місяць</div>
+    return `<div class="card-glass-blur">
+      <div class="fin-section-label" style="margin-bottom:10px">Прогноз витрат на місяць</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div>
           <div style="font-size:22px;font-weight:900;color:${overColor}">${v1}</div>
@@ -512,9 +512,9 @@ function _finWeekChart() {
     </div>`;
   }).join('');
 
-  return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+  return `<div class="card-glass-blur">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">За тиждень</div>
+      <div class="fin-section-label">За тиждень</div>
       <div style="display:flex;gap:10px">
         <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Витрати</span></div>
         <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Доходи</span></div>
@@ -551,9 +551,9 @@ function _finCatsBlock(expenses, totalExp) {
     </div>`;
   }).join('');
 
-  return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+  return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">Категорії витрат</div>
+      <div class="fin-section-label">Категорії витрат</div>
       <button onclick="openFinBudgetModal()" style="font-size:12px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:inherit">Ліміти ✎</button>
     </div>
     ${rows}
@@ -566,7 +566,7 @@ function _finTxsBlock(allTxs) {
   const rows = sorted.map(t => {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05);cursor:pointer" onclick="openEditTransaction(${t.id})">
+    return `<div class="tx-row" onclick="openEditTransaction(${t.id})">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
@@ -582,9 +582,9 @@ function _finTxsBlock(allTxs) {
     ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">Всі транзакції (${allTxs.length}) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>`
     : '';
 
-  return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:14px 16px;margin-bottom:12px">
+  return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">Останні транзакції</div>
+      <div class="fin-section-label">Останні транзакції</div>
       <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">+ додати</button>
     </div>
     ${rows || '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Немає транзакцій за цей період</div>'}
@@ -603,7 +603,7 @@ function openAllTransactions() {
   const rows = allTxs.map(t => {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day:'numeric', month:'short' });
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.05);cursor:pointer" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
+    return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ''}
@@ -615,9 +615,9 @@ function openAllTransactions() {
     </div>`;
   }).join('');
   modal.innerHTML = `
-    <div onclick="document.getElementById('fin-all-txs-modal').remove()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom)+16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
+      <div class="modal-handle"></div>
       <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">Всі транзакції (${allTxs.length})</div>
       ${rows || '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">Немає транзакцій</div>'}
     </div>`;
@@ -654,10 +654,10 @@ function _showTransactionModal(data) {
   modal.id = 'fin-tx-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
-    <div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div onclick="closeFinTxModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);box-sizing:border-box">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
-      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">${_finEditId ? 'Редагувати' : 'Нова'} ${isExpense ? 'витрата' : 'дохід'}</div>
+      <div class="modal-handle"></div>
+      <div class="modal-title">${_finEditId ? 'Редагувати' : 'Нова'} ${isExpense ? 'витрата' : 'дохід'}</div>
 
       <!-- Тип -->
       <div style="display:flex;gap:6px;margin-bottom:12px">
@@ -688,8 +688,8 @@ function _showTransactionModal(data) {
 
       <div style="display:flex;gap:8px">
         ${_finEditId ? `<button onclick="deleteFinTransaction()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:15px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">🗑</button>` : ''}
-        <button onclick="closeFinTxModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
-        <button onclick="saveFinTransaction()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+        <button onclick="closeFinTxModal()" class="btn-cancel">Скасувати</button>
+        <button onclick="saveFinTransaction()" class="btn-save-primary">Зберегти</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -841,10 +841,10 @@ function openFinBudgetModal() {
   modal.id = 'fin-budget-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
-    <div onclick="closeFinBudgetModal()" style="position:absolute;inset:0;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px)"></div>
+    <div onclick="closeFinBudgetModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
-      <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:14px">Бюджет на місяць</div>
+      <div class="modal-handle"></div>
+      <div class="modal-title">Бюджет на місяць</div>
 
       <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Загальний ліміт</div>
       <input id="finbdg-total" type="number" placeholder="€ 0 — без ліміту" inputmode="decimal"
@@ -863,8 +863,8 @@ function openFinBudgetModal() {
       </div>
 
       <div style="display:flex;gap:8px">
-        <button onclick="closeFinBudgetModal()" style="flex:1;padding:13px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:15px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
-        <button onclick="saveFinBudgetFromModal()" style="flex:2;padding:13px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;font-size:15px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+        <button onclick="closeFinBudgetModal()" class="btn-cancel">Скасувати</button>
+        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">Зберегти</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
