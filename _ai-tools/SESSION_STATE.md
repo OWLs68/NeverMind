@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-04 22:20
+**Оновлено:** 2026-04-05 08:10
 
 ---
 
@@ -11,45 +11,59 @@
 | **Версія** | v70 |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini |
-| **Гілка** | `claude/remove-dead-functions-ftmCH` |
+| **Гілка** | `claude/extract-js-styles-css-o75oo` |
 
 ---
 
 ## Зараз робимо
 
-**Прибирання мусору після ES Modules рефакторингу** — пункти 1-3 з аудиту завершені.
+**Винесення inline стилів з JS у CSS-класи** — основна робота завершена.
 
 ---
 
-## Остання сесія (04.04, шоста частина — прибирання мусору)
+## Остання сесія (05.04 — inline стилі → CSS)
 
-### Що зроблено (пункти 1-3 з аудиту мусору)
+### Що зроблено
 
-**1. Видалено 2 мертві функції** (inbox-board.js):
-- `updateOwlChipsArrows()` і `scrollOwlChips()` — одно-рядкові обгортки, 0 викликів
-- Прибрано зайві імпорти `_updateOwlTabChipsArrows`, `scrollOwlTabChips`
+**Створено 17 нових CSS-класів у style.css:**
 
-**2. Прибрано 12 зайвих typeof перевірок** (5 файлів):
-- keyboard.js (7), inbox-board.js (2), proactive.js (1), board.js (1), projects.js (1)
-- Після ES Modules всі функції гарантовано визначені через import/export
+Shared components (спільні компоненти):
+- `.card-glass` — матова картка (background + border + border-radius:16px)
+- `.card-glass-blur` — матова картка з backdrop-filter:blur (border-radius:20px)
+- `.section-label` — заголовок секції (uppercase, 10px, letter-spacing:0.06em)
+- `.fin-section-label` — заголовок фінансової секції (letter-spacing:0.07em)
+- `.msg-bubble` + `.msg-bubble--agent` + `.msg-bubble--user` — бульбашки чату
+- `.icon-circle` — іконка в колі (flex center, border-radius:9px)
+- `.modal-backdrop` — фон модалки (overlay + blur)
+- `.modal-handle` — ручка модалки (36x4px bar)
+- `.modal-title` — заголовок модалки (17px, 800 weight)
+- `.btn-cancel` — кнопка скасування
+- `.btn-save-primary` — кнопка збереження (gradient)
+- `.tx-row` — рядок транза��ції
 
-**3. Об'єднано дублікати swipe в habits.js** (−44 рядки):
-- Створено `_createHabitSwipe(stateObj, prefix, toggleFn)` — фабрика обробників
-- `habitMeSwipe*` і `prodHabitSwipe*` — тонкі обгортки над єдиною реалізацією
-- habits.js: 1235 → 1191 рядків (під поріг 1200)
+Onboarding (онбординг):
+- `.ob-list`, `.ob-item`, `.ob-icon-lg`, `.ob-icon`, `.ob-text`
+- `.ob-example`, `.ob-desc`, `.ob-tag`, `.ob-slide-title`
 
-**4. Узгоджено промпти AI між inbox-board.js і proactive.js:**
-- Додано блок ПРІОРИТЕТ ПОВІДОМЛЕНЬ в proactive.js (був тільки в inbox)
-- Уніфіковано інструкцію chips — з прикладами і підказкою персоналізації
-- Замінено простий _hour розрахунок на getDayPhase() + phaseInstr (ролі по фазі дня)
-- Експортовано getDayPhase/getSchedule з inbox-board.js
+### Файли змінено
 
-### Що залишилось доробити
+| Файл | Було inline | Стало | Зменшення |
+|------|----------:|------:|----------:|
+| onboarding.js | 101 | 6 | −95 |
+| finance.js | 148 | 120 | −28 |
+| health.js | 74 | 65 | −9 |
+| projects.js | 92 | 84 | −8 |
+| tasks.js | — | — | −1 (msg-bubble) |
+| evening.js | — | — | −2 (msg-bubble) |
+| notes.js | — | — | −1 (msg-bubble) |
+| nav.js | — | — | −1 (modal-handle) |
+| **style.css** | — | +17 класів | +8 рядків |
 
-**5. Inline стилі (не критично, окремий рефакторинг):**
-- border-radius:12px повторюється 47 разів
-- display:flex;align-items:center — 40+ разів
-- Файл finance.js — 161 рядок inline HTML/стилів
+**Загалом: ~145 inline стилів замінено на CSS-класи**
+
+### Що залишилось (не винесено)
+
+Решта inline стилів (~480) мають **динам��чні значення** (`${color}`, `${pct}%`, умовні стилі) — їх неможливо винести в статичний CSS без JS-логіки. Це прийнятний залишок.
 
 ---
 
@@ -79,13 +93,15 @@
 | src/tabs/health.js | 457 | Здоров'я, карточки |
 | src/tabs/projects.js | 620 | Проекти, воркспейс |
 | src/app.js | 35 | Entry point — імпорти |
+| **style.css** | **1352** | **Всі стилі (+17 JS-extracted класів)** |
 
-**Збірка:** `node build.js` → bundle.js (11044 рядків, esbuild IIFE)
+**Збірка:** `node build.js` → bundle.js (esbuild IIFE)
 
 ---
 
 ## Попередні сесії
 
+- **05.04** — Inline стилі → CSS: 17 нових класів, ~145 inline стилів замінено в 8 файлах.
 - **04.04 (6)** — Прибирання мусору: 2 мертві функції, 12 typeof guards, swipe-дублікати (−68 рядків), узгоджено AI промпти.
 - **04.04 (5)** — ES Modules рефакторинг: 22 модулі import/export, 162 window handlers, аудит, очистка мертвого коду.
 - **04.04 (4)** — Repo audit: handleScheduleAnswer TTL, людська мова, чіпи-навігація, пам'ять 30 повідомлень.
@@ -109,7 +125,6 @@
 
 ## Наступне
 
-1. ~~Прибирання мусору (пункти 1-4)~~ ✓ зроблено
-2. Прибирання мусору (пункт 5 — inline стилі, окремий рефакторинг)
-3. Баги B-04/B-09, B-05, B-06
+1. ~~Inline ��тилі → CSS~~ ✓ зроблено
+2. Баги B-04/B-09, B-05, B-06
 3. Закріплені картки нагадувань
