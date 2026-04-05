@@ -3164,7 +3164,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
     setTimeout(() => {
       if (barTab === "inbox") {
-        sendToAI();
+        sendToAI(true);
       } else if (barTab === "tasks") {
         sendTasksBarMessage();
       } else if (barTab === "notes") {
@@ -8913,7 +8913,7 @@ ${userText}
   var inboxChatHistory = [];
   var _lastUserMsgTs = 0;
   var SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
-  async function sendToAI() {
+  async function sendToAI(fromChip = false) {
     if (aiLoading) return;
     const input = document.getElementById("inbox-input");
     const text = input.value.trim();
@@ -8967,7 +8967,11 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
             return;
           }
           if (action.action === "save") {
-            await processSaveAction(action, text);
+            if (fromChip) {
+              addInboxChatMsg("agent", "\u041E\u043A\u0435\u0439, \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 \u0447\u0430\u0442 \u044F\u043A \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.");
+            } else {
+              await processSaveAction(action, text);
+            }
           } else if (action.action === "save_finance") {
             processFinanceAction(action, text);
           } else if (action.action === "update_transaction") {
@@ -9002,7 +9006,7 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
             } else {
               addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0447\u0435\u0440\u0435\u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C.");
             }
-          } else if (action.action === "create_project") {
+          } else if (action.action === "create_project" && !fromChip) {
             const projects = getProjects();
             const newProject = {
               id: Date.now(),
