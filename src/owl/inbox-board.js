@@ -809,10 +809,18 @@ function renderOwlChips(boardMsg) {
     el.innerHTML = '';
     return;
   }
-  el.innerHTML = boardMsg.chips.map(c => {
-    const safe = escapeHtml(c).replace(/'/g, '&#39;');
-    return `<div class="owl-chip" onclick="sendOwlReply('${safe}')">${escapeHtml(c)}</div>`;
-  }).join('');
+  el.innerHTML = boardMsg.chips.map(c =>
+    `<div class="owl-chip" data-chip-text="${escapeHtml(c)}">${escapeHtml(c)}</div>`
+  ).join('');
+  // Делегований click-обробник — навішується один раз на контейнер
+  if (!el._chipClickReady) {
+    el.addEventListener('click', (e) => {
+      const chip = e.target.closest('.owl-chip');
+      if (!chip) return;
+      sendOwlReply(chip.dataset.chipText || '');
+    });
+    el._chipClickReady = true;
+  }
 }
 
 // Typing індикатор
