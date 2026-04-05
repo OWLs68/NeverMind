@@ -96,7 +96,7 @@ function buildServer() {
       if (name === "ask_gemini") {
         const prompt = `${SYSTEM_PROMPT}\n\nКонтекст:\n${args.context}\n\nПитання:\n${args.question}`;
         const result = await ai.models.generateContent({
-          model: "gemini-2.0-flash",
+          model: "gemini-2.5-flash",
           contents: prompt,
         });
         return {
@@ -110,7 +110,7 @@ function buildServer() {
           `${args.file_context ? `Файл: ${args.file_context}\n` : ""}` +
           `\nКод:\n\`\`\`javascript\n${args.code}\n\`\`\``;
         const result = await ai.models.generateContent({
-          model: "gemini-2.0-flash",
+          model: "gemini-2.5-flash",
           contents: prompt,
         });
         return {
