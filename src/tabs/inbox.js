@@ -273,7 +273,7 @@ function unifiedInputKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
 }
 
-export async function sendToAI() {
+export async function sendToAI(fromChip = false) {
   if (aiLoading) return;
   const input = document.getElementById('inbox-input');
   const text = input.value.trim();
@@ -338,7 +338,12 @@ export async function sendToAI() {
           return;
         }
         if (action.action === 'save') {
-          await processSaveAction(action, text);
+          if (fromChip) {
+            // Чіп-клік не створює нових записів у Inbox — це відповідь на табло, не нова задача
+            addInboxChatMsg('agent', 'Окей, записав у чат як відповідь.');
+          } else {
+            await processSaveAction(action, text);
+          }
         } else if (action.action === 'save_finance') {
           processFinanceAction(action, text);
         } else if (action.action === 'update_transaction') {
@@ -373,7 +378,7 @@ export async function sendToAI() {
           } else {
             addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
           }
-        } else if (action.action === 'create_project') {
+        } else if (action.action === 'create_project' && !fromChip) {
           const projects = getProjects();
           const newProject = {
             id: Date.now(),
