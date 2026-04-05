@@ -1113,9 +1113,11 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       el.scrollTop = el.scrollHeight;
       return;
     }
-    try {
-      openChatBar("notes");
-    } catch (e) {
+    if (!_noSave) {
+      try {
+        openChatBar("notes");
+      } catch (e) {
+      }
     }
     const isAgent = role === "agent";
     const div = document.createElement("div");
@@ -2582,9 +2584,11 @@ ${aiContext}` : "");
   function addMeChatMsg(role, text, _noSave = false, id = "") {
     const el = document.getElementById("me-chat-messages");
     if (!el) return;
-    try {
-      openChatBar("me");
-    } catch (e) {
+    if (!_noSave) {
+      try {
+        openChatBar("me");
+      } catch (e) {
+      }
     }
     const isAgent = role === "agent";
     const div = document.createElement("div");
@@ -2612,9 +2616,11 @@ ${aiContext}` : "");
       el.scrollTop = el.scrollHeight;
       return;
     }
-    try {
-      openChatBar("evening");
-    } catch (e) {
+    if (!_noSave) {
+      try {
+        openChatBar("evening");
+      } catch (e) {
+      }
     }
     const isAgent = role === "agent";
     const div = document.createElement("div");
@@ -5416,9 +5422,11 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       el.scrollTop = el.scrollHeight;
       return;
     }
-    try {
-      openChatBar("finance");
-    } catch (e) {
+    if (!_noSave) {
+      try {
+        openChatBar("finance");
+      } catch (e) {
+      }
     }
     const isAgent = role === "agent";
     const div = document.createElement("div");
@@ -7000,11 +7008,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
 ${context}
 
 \u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 (\u0437\u0430\u0432\u0436\u0434\u0438 JSON):
-{"text":"\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C","chips":["\u0432\u0430\u0440\u0456\u0430\u043D\u04421","\u0432\u0430\u0440\u0456\u0430\u043D\u04422"],"action":null}
+{"text":"\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"action":null}
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u0410:
 - \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438.
-- chips \u2014 0-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456. \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3 \u0441\u043B\u043E\u0432\u0430 \u043A\u043E\u0436\u0435\u043D.
+- chips \u2014 0-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456, \u043C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
+  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0414\u043B\u044F \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
+  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442. \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C.
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
 
 \u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435):
@@ -7659,9 +7669,11 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       el.scrollTop = el.scrollHeight;
       return;
     }
-    try {
-      openChatBar("tasks");
-    } catch (e) {
+    if (!_noSave) {
+      try {
+        openChatBar("tasks");
+      } catch (e) {
+      }
     }
     const isAgent = role === "agent";
     const div = document.createElement("div");
