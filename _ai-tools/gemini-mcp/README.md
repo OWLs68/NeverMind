@@ -34,60 +34,66 @@
 
 ### Крок 2 — Задеплой на Railway (безкоштовно)
 
-**Railway** — найпростіший хостинг для Node.js. Безкоштовний план дає $5/місяць кредитів, цього вистачить.
-
-1. Іди на https://railway.app і зареєструйся (можна через GitHub)
-
-2. Натисни **"New Project"** → **"Deploy from GitHub repo"**
-
+1. Іди на https://railway.app і зареєструйся
+2. **"New Project"** → **"Deploy from GitHub repo"**
 3. Вибери репозиторій `NeverMind`
-
-4. Railway запитає налаштування. Встанови **Root Directory**: `_ai-tools/gemini-mcp`
-
-5. Після деплою іди в **Variables** і додай:
+4. Встанови **Root Directory**: `_ai-tools/gemini-mcp`
+5. Додай змінні середовища в **Variables**:
    ```
    GEMINI_API_KEY   = твій-ключ-від-google
    AUTH_TOKEN       = miy-secret-123
-   PROJECT_CONTEXT  = див. нижче
    ```
-
-6. Railway дасть тобі URL типу: `https://gemini-mcp-production-xxxx.up.railway.app`
+6. Railway дасть URL типу: `https://nevermind-production.up.railway.app`
 
 ---
 
 ### Крок 3 — Підключи до claude.ai/code
 
 1. Відкрий https://claude.ai/code
-2. Іди в **Settings** → **MCP Servers** (або шукай "Integrations")
-3. Додай новий сервер:
-   - **URL**: `https://твій-url.railway.app/sse?token=miy-secret-123`
+2. **Settings** → **MCP Servers** → додай новий:
    - **Name**: `Gemini Advisor`
+   - **URL**: `https://ТВІЙ-URL.up.railway.app/sse?token=ТВІЙ-AUTH-TOKEN`
 
-4. Збережи — і готово! Працює на всіх пристроях.
+Наприклад:
+```
+https://nevermind-production.up.railway.app/sse?token=miy-secret-123
+```
+
+> **Важливо:** URL має закінчуватись на `/sse?token=...` — це SSE транспорт.
+> Альтернатива (Streamable HTTP): `/mcp` — але SSE надійніший для claude.ai.
 
 ---
 
-## Як користуватись
+## Транспорти
 
-Просто проси Claude звернутись до Gemini:
+Сервер підтримує **два** MCP транспорти:
 
-- _"Запитай Gemini як краще реалізувати цю функцію"_
-- _"Хочу другу думку від Gemini щодо цієї архітектури"_
-- _"Зроби Gemini рев'ю цього коду"_
+| Транспорт | Endpoint | Протокол |
+|-----------|----------|----------|
+| **SSE** (рекомендовано) | `GET /sse` + `POST /messages` | 2024-11-05 |
+| **Streamable HTTP** | `POST /mcp` | 2025-11-25 |
 
-Claude сам вирішує коли варто консультуватись з Gemini, або ти можеш попросити явно.
+Claude.ai/code використовує SSE. Новіші клієнти можуть використовувати `/mcp`.
+
+---
+
+## Перевірка здоров'я
+
+```
+GET /health
+→ {"status":"ok","name":"gemini-mcp","version":"2.0.0","transports":["sse","streamable-http"],"activeSessions":0}
+```
 
 ---
 
 ## Файли
 
 ```
-_ai-tools/
-└── gemini-mcp/
-    ├── server.js      ← HTTP/SSE MCP сервер
-    ├── package.json   ← залежності Node.js
-    ├── .gitignore     ← ігнорує node_modules
-    └── README.md      ← ця інструкція
+_ai-tools/gemini-mcp/
+├── server.js      ← Dual-transport MCP сервер (SSE + Streamable HTTP)
+├── package.json   ← залежності Node.js
+├── .gitignore     ← ігнорує node_modules
+└── README.md      ← ця інструкція
 ```
 
 ---
@@ -98,14 +104,5 @@ _ai-tools/
 |--------|-------------|------|
 | `GEMINI_API_KEY` | Так | Ключ від Google AI Studio |
 | `AUTH_TOKEN` | Рекомендовано | Захист сервера від чужого доступу |
-| `PROJECT_CONTEXT` | Рекомендовано | Контекст проекту для Gemini (див. нижче) |
+| `PROJECT_CONTEXT` | Ні | Контекст проекту для Gemini |
 | `PORT` | Ні | Порт (Railway встановлює автоматично) |
-
-### Що вставити в PROJECT_CONTEXT
-
-Це текст який Gemini отримує як постійний контекст — він завжди знатиме про що проект.
-Скопіюй це значення в Railway Variables:
-
-```
-NeverMind PWA. Ванільний JS, localStorage, GitHub Pages, без фреймворків і бекенду. 13 JS модулів: app-core-nav.js (стан, switchTab), app-core-system.js (boot, кошик), app-ai-core.js (callAI, getAIContext), app-inbox.js (sendToAI), app-tasks-core.js, app-habits.js, app-notes.js, app-finance.js, app-health.js, app-projects.js, app-evening-moments.js, app-evening-onboarding.js, app-ai-chat.js. Критично: не чіпати localStorage.setItem override в app-core-system.js, не додавати централізовану БД, не видаляти локальні getTasks/saveNotes функції, порядок скриптів в index.html важливий.
-```
