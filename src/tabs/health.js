@@ -59,7 +59,7 @@ function renderHealthList() {
     const nextStep = card.nextStep || '';
     const pills = (card.treatments || []).slice(0, 4);
     const isDone = card.status === 'done';
-    return `<div onclick="openHealthCard(${card.id})" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer;opacity:${st.opacity}">
+    return `<div onclick="openHealthCard(${card.id})" class="card-glass" style="cursor:pointer;opacity:${st.opacity}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -202,7 +202,7 @@ function renderHealthWorkspace(id) {
     </div>
 
     <!-- Прогрес + статус -->
-    <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    <div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1">
           <div style="font-size:18px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -222,8 +222,8 @@ function renderHealthWorkspace(id) {
     </div>
 
     <!-- Динаміка самопочуття сьогодні -->
-    <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Самопочуття сьогодні</div>
+    <div class="card-glass">
+      <div class="section-label">Самопочуття сьогодні</div>
       <div style="display:flex;gap:8px">
         ${[
           {k:'energy', l:'Енергія', c:'#16a34a'},
@@ -237,10 +237,10 @@ function renderHealthWorkspace(id) {
     </div>
 
     <!-- Препарати -->
-    ${meds.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Препарати</div>
+    ${meds.length > 0 ? `<div class="card-glass">
+      <div class="section-label">Препарати</div>
       ${meds.map((m,i) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.06)' : ''}">
-        <div style="width:28px;height:28px;border-radius:9px;background:rgba(26,92,42,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div class="icon-circle" style="width:28px;height:28px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
         </div>
         <div style="flex:1">
@@ -252,8 +252,8 @@ function renderHealthWorkspace(id) {
     </div>` : ''}
 
     <!-- Записи лікаря -->
-    ${doctorNotes.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Записи лікаря</div>
+    ${doctorNotes.length > 0 ? `<div class="card-glass">
+      <div class="section-label">Записи лікаря</div>
       ${doctorNotes.map(n => `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
         <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(n.date || '')} · ${escapeHtml(n.doctor || '')}</div>
         <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(n.text || '')}</div>
@@ -268,7 +268,7 @@ function renderHealthWorkspace(id) {
 
     <!-- Нотатки → папка -->
     <div onclick="openNotesFolder('${escapeHtml(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
-      <div style="width:30px;height:30px;border-radius:9px;background:rgba(26,92,42,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div style="flex:1">
@@ -355,7 +355,7 @@ function addHealthChatMsg(role, text, _noSave = false) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') healthBarHistory.push({ role: 'user', content: text });

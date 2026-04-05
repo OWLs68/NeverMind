@@ -1322,6 +1322,14 @@ body {
 @keyframes owlTypingDot { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.7); } 30% { opacity: 1; transform: scale(1.1); } }
 .owl-confirm-banner { background: rgba(34,197,94,0.12); color: rgba(34,197,94,0.9); font-size: 12px; font-weight: 600; text-align: center; padding: 8px; animation: fadeUp 0.2s ease; }
 
+/* === JS-EXTRACTED: Shared components === */
+.card-glass { background: rgba(255,255,255,0.72); border: 1.5px solid rgba(255,255,255,0.75); border-radius: 16px; padding: 13px 14px; margin-bottom: 10px; }
+.section-label { font-size: 10px; font-weight: 800; color: rgba(30,16,64,0.35); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.msg-bubble { max-width: 85%; padding: 8px 12px; font-size: 15px; line-height: 1.5; font-weight: 500; }
+.msg-bubble--agent { background: rgba(255,255,255,0.12); color: white; border-radius: 4px 12px 12px 12px; }
+.msg-bubble--user { background: rgba(255,255,255,0.88); color: #1e1040; border-radius: 12px 4px 12px 12px; }
+.icon-circle { border-radius: 9px; background: rgba(26,92,42,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
 /* === JS-EXTRACTED: Onboarding === */
 .ob-list { display: flex; flex-direction: column; gap: 7px; }
 .ob-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(30,16,64,0.04); border-radius: 12px; }
