@@ -58,7 +58,7 @@ function renderProjectsList() {
     // Перші 3 кроки для картки
     const visibleSteps = steps.slice(0, 4);
 
-    return `<div onclick="openProjectWorkspace(${p.id})" style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer">
+    return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -135,7 +135,7 @@ function renderProjectWorkspace(id) {
     </div>
 
     <!-- Назва + % + 3 сценарії темпу -->
-    <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    <div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:16px;font-weight:900;color:#1e1040">${escapeHtml(p.name)}</div>
@@ -164,8 +164,8 @@ function renderProjectWorkspace(id) {
     </div>
 
     <!-- Бюджет -->
-    ${budget.total > 0 || budget.items.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Бюджет проекту</div>
+    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
+      <div class="section-label" style="margin-bottom:8px">Бюджет проекту</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
         <span style="font-size:12px;font-weight:700;color:#1e1040">Витрачено</span>
         <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
@@ -188,8 +188,8 @@ function renderProjectWorkspace(id) {
     </div>` : ''}
 
     <!-- Ключові метрики -->
-    ${metrics.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Ключові метрики</div>
+    ${metrics.length > 0 ? `<div class="card-glass">
+      <div class="section-label">Ключові метрики</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${metrics.map(m => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
           <div style="font-size:18px;font-weight:900;color:${m.color || '#3d2e1e'}">${escapeHtml(String(m.value))}</div>
@@ -199,9 +199,9 @@ function renderProjectWorkspace(id) {
     </div>` : ''}
 
     <!-- Хронологія / план -->
-    ${steps.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px" id="proj-timeline-${p.id}">
+    ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Хронологія · план</div>
+        <div class="section-label" style="margin-bottom:0">Хронологія · план</div>
         <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">розгорнути ↓</span>
       </div>
       <!-- Згорнутий вигляд -->
@@ -225,9 +225,9 @@ function renderProjectWorkspace(id) {
     </div>` : ''}
 
     <!-- Лог рішень -->
-    ${decisions.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    ${decisions.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Лог рішень</div>
+        <div class="section-label" style="margin-bottom:0">Лог рішень</div>
         <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL · авто</span>
       </div>
       ${decisions.map((d,i) => `<div style="padding:5px 0;${i < decisions.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
@@ -255,9 +255,9 @@ function renderProjectWorkspace(id) {
     </div>` : ''}
 
     <!-- Корисна інфа -->
-    ${resources.length > 0 ? `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
+    ${resources.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Корисна інфа</div>
+        <div class="section-label" style="margin-bottom:0">Корисна інфа</div>
         <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">поточний етап</span>
       </div>
       ${resources.map((r,i) => {
@@ -454,7 +454,7 @@ function addProjectsChatMsg(role, text, _noSave = false) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:85%;background:${isAgent ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.88)'};color:${isAgent ? 'white' : '#1e1040'};border-radius:${isAgent ? '4px 12px 12px 12px' : '12px 4px 12px 12px'};padding:8px 12px;font-size:15px;line-height:1.5;font-weight:500">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') projectsBarHistory.push({ role: 'user', content: text });
