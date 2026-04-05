@@ -16,18 +16,18 @@ const UPDATE_SLIDES = [
     tag: '🥁 Новий барабан',
     emoji: '🥁',
     title: 'Навігація переписана з нуля',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">👆</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Тап на будь-яку вкладку — одразу переключає</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">👆</div>
+    <div class="ob-text">Тап на будь-яку вкладку — одразу переключає</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🔚</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Гумова межа — крайні вкладки не перелітають</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🔚</div>
+    <div class="ob-text">Гумова межа — крайні вкладки не перелітають</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">➕</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка + — увімкни або вимкни будь-яку вкладку</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">➕</div>
+    <div class="ob-text">Кнопка + — увімкни або вимкни будь-яку вкладку</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#e0e7ff,#6366f1)',
@@ -36,18 +36,18 @@ const UPDATE_SLIDES = [
     tag: '🦉 OWL Board',
     emoji: '🦉',
     title: 'OWL завжди поруч',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">📋</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">OWL табло — на кожній вкладці вгорі</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">📋</div>
+    <div class="ob-text">OWL табло — на кожній вкладці вгорі</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🌀</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Scroll-behind ефект — контент прокручується під табло</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🌀</div>
+    <div class="ob-text">Scroll-behind ефект — контент прокручується під табло</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🌙</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Тихі години 0–5 — OWL не турбує вночі</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🌙</div>
+    <div class="ob-text">Тихі години 0–5 — OWL не турбує вночі</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#fef9c3,#f59e0b)',
@@ -56,18 +56,18 @@ const UPDATE_SLIDES = [
     tag: '💬 Новий чат',
     emoji: '💬',
     title: '3 стани чату',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">⬇️</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Закритий → маленький → на весь екран</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">⬇️</div>
+    <div class="ob-text">Закритий → маленький → на весь екран</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">👈</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">iOS-like свайпи в Inbox — закрити клавіатуру</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">👈</div>
+    <div class="ob-text">iOS-like свайпи в Inbox — закрити клавіатуру</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🔁</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кожна вкладка памʼятає свій чат</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🔁</div>
+    <div class="ob-text">Кожна вкладка памʼятає свій чат</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#d1fae5,#16a34a)',
@@ -76,22 +76,22 @@ const UPDATE_SLIDES = [
     tag: '🆕 Нові вкладки',
     emoji: '🆕',
     title: 'Вечір · Я · Здоровʼя · Проекти',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🌙</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Вечір — підводь підсумок дня і настрій</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">🌙</div>
+    <div class="ob-text">Вечір — підводь підсумок дня і настрій</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🪞</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Я — твій профіль, цінності і памʼять OWL</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🪞</div>
+    <div class="ob-text">Я — твій профіль, цінності і памʼять OWL</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">❤️</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Здоровʼя — картки і щоденні шкали</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">❤️</div>
+    <div class="ob-text">Здоровʼя — картки і щоденні шкали</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🚀</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Проекти — OWL будує план після 3 питань</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🚀</div>
+    <div class="ob-text">Проекти — OWL будує план після 3 питань</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#fce7f3,#db2777)',
@@ -100,18 +100,18 @@ const UPDATE_SLIDES = [
     tag: '🔧 25+ фіксів',
     emoji: '🔧',
     title: 'Більше виправлень ніж будь-коли',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🔢</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Множинні звички — тап кілька разів на день</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">🔢</div>
+    <div class="ob-text">Множинні звички — тап кілька разів на день</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🗂️</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Нотатки: переміщення між папками через OWL</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🗂️</div>
+    <div class="ob-text">Нотатки: переміщення між папками через OWL</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:20px">🛡️</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Відповіді OWL захищені від дублювання</div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">🛡️</div>
+    <div class="ob-text">Відповіді OWL захищені від дублювання</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#fed7aa,#c2620a)',
@@ -124,19 +124,19 @@ const SLIDES = [
     tag: 'Що таке NeverMind',
     emoji: '🧠',
     title: 'Один потік для всього',
-    body: `<p style="font-size:14px;color:rgba(30,16,64,0.6);line-height:1.65;margin-bottom:12px">Думки зникають. Записи губляться по різних застосунках. Нічого не виконується бо немає системи.</p>
-<p style="font-size:14px;color:rgba(30,16,64,0.6);line-height:1.65">NeverMind — один рядок куди скидаєш все що в голові. OWL сам розбереться.</p>`,
+    body: `<p class="ob-desc" style="margin-bottom:12px">Думки зникають. Записи губляться по різних застосунках. Нічого не виконується бо немає системи.</p>
+<p class="ob-desc">NeverMind — один рядок куди скидаєш все що в голові. OWL сам розбереться.</p>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
     tag: 'Inbox',
     emoji: '📥',
     title: 'Пиши — OWL розбирає',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"купити хліб" → <b style="color:#1e1040">задача</b></div>
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"бігати щоранку" → <b style="color:#1e1040">звичка</b></div>
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"витратив 50 на їжу" → <b style="color:#1e1040">фінанси</b></div>
-  <div style="padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px;font-size:13px;color:rgba(30,16,64,0.65);line-height:1.5">"класна ідея про стартап" → <b style="color:#1e1040">нотатка в Ідеях</b></div>
+    body: `<div class="ob-list">
+  <div class="ob-example">"купити хліб" → <b>задача</b></div>
+  <div class="ob-example">"бігати щоранку" → <b>звичка</b></div>
+  <div class="ob-example">"витратив 50 на їжу" → <b>фінанси</b></div>
+  <div class="ob-example">"класна ідея про стартап" → <b>нотатка в Ідеях</b></div>
 </div>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
@@ -144,18 +144,18 @@ const SLIDES = [
     tag: 'Продуктивність',
     emoji: '⚡',
     title: 'Задачі і звички',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">✅</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Тап на чекбокс — виконати задачу або звичку</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">✅</div>
+    <div class="ob-text">Тап на чекбокс — виконати задачу або звичку</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">👈</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Свайп вліво — видалити</div>
+  <div class="ob-item">
+    <div class="ob-icon">👈</div>
+    <div class="ob-text">Свайп вліво — видалити</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">💬</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Скажи OWL "додай крок до задачі X"</div>
+  <div class="ob-item">
+    <div class="ob-icon">💬</div>
+    <div class="ob-text">Скажи OWL "додай крок до задачі X"</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
@@ -164,18 +164,18 @@ const SLIDES = [
     tag: 'Вечір і Я',
     emoji: '🌙',
     title: 'Закриття дня і дзеркало',
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">🌙</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Вечір — задачі, звички, витрати за день + настрій</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">🌙</div>
+    <div class="ob-text">Вечір — задачі, звички, витрати за день + настрій</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">🪞</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Я — тижневі кружечки, настрій, порівняння</div>
+  <div class="ob-item">
+    <div class="ob-icon">🪞</div>
+    <div class="ob-text">Я — тижневі кружечки, настрій, порівняння</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">🤝</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">OWL аналізує тиждень і каже що насправді відбувається</div>
+  <div class="ob-item">
+    <div class="ob-icon">🤝</div>
+    <div class="ob-text">OWL аналізує тиждень і каже що насправді відбувається</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#1e3350,#3a5a80)',
@@ -184,18 +184,18 @@ const SLIDES = [
     tag: 'Нові вкладки',
     emoji: '🆕',
     title: "Здоров'я і Проекти",
-    body: `<div style="display:flex;flex-direction:column;gap:7px">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">🫀</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Здоров'я — картки хвороб, трекер самопочуття, препарати</div>
+    body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">🫀</div>
+    <div class="ob-text">Здоров'я — картки хвороб, трекер самопочуття, препарати</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">🚀</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Проекти — від ідеї до результату з OWL як наставником</div>
+  <div class="ob-item">
+    <div class="ob-icon">🚀</div>
+    <div class="ob-text">Проекти — від ідеї до результату з OWL як наставником</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:12px">
-    <div style="font-size:18px">➕</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.7);font-weight:600">Кнопка + в барабані — увімкни потрібні вкладки</div>
+  <div class="ob-item">
+    <div class="ob-icon">➕</div>
+    <div class="ob-text">Кнопка + в барабані — увімкни потрібні вкладки</div>
   </div>
 </div>`,
     color: 'linear-gradient(135deg,#d4e8d8,#16a34a)',
@@ -276,8 +276,8 @@ function renderSlide() {
   const contentEl = document.getElementById('slides-content');
   contentEl.innerHTML = `
     ${slide.emoji ? `<div style="font-size:44px;margin-bottom:10px;line-height:1">${slide.emoji}</div>` : ''}
-    <div style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.4);margin-bottom:10px">${slide.tag}</div>
-    <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1.3;margin-bottom:14px">${slide.title}</div>
+    <div class="ob-tag">${slide.tag}</div>
+    <div class="ob-slide-title">${slide.title}</div>
     ${slide.body}
   `;
 

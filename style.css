@@ -1322,6 +1322,18 @@ body {
 @keyframes owlTypingDot { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.7); } 30% { opacity: 1; transform: scale(1.1); } }
 .owl-confirm-banner { background: rgba(34,197,94,0.12); color: rgba(34,197,94,0.9); font-size: 12px; font-weight: 600; text-align: center; padding: 8px; animation: fadeUp 0.2s ease; }
 
+/* === JS-EXTRACTED: Onboarding === */
+.ob-list { display: flex; flex-direction: column; gap: 7px; }
+.ob-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(30,16,64,0.04); border-radius: 12px; }
+.ob-icon-lg { font-size: 20px; }
+.ob-icon { font-size: 18px; }
+.ob-text { font-size: 13px; color: rgba(30,16,64,0.7); font-weight: 600; }
+.ob-example { padding: 10px 12px; background: rgba(30,16,64,0.04); border-radius: 12px; font-size: 13px; color: rgba(30,16,64,0.65); line-height: 1.5; }
+.ob-example b { color: #1e1040; }
+.ob-desc { font-size: 14px; color: rgba(30,16,64,0.6); line-height: 1.65; }
+.ob-tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; background: rgba(30,16,64,0.06); color: rgba(30,16,64,0.4); margin-bottom: 10px; }
+.ob-slide-title { font-size: 20px; font-weight: 900; color: #1e1040; line-height: 1.3; margin-bottom: 14px; }
+
 /* === ANIMATIONS === */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
