@@ -27,7 +27,7 @@ export function owlChipToChat(tab, text, action, target) {
     input.dispatchEvent(new Event('input'));
   }
   setTimeout(() => {
-    if (barTab === 'inbox') { sendToAI(); }
+    if (barTab === 'inbox') { sendToAI(true); } // fromChip=true — не створювати нові записи в Inbox
     else if (barTab === 'tasks') { sendTasksBarMessage(); }
     else if (barTab === 'notes') { sendNotesBarMessage(); }
     else if (barTab === 'finance') { sendFinanceBarMessage(); }
