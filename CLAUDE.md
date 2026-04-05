@@ -67,11 +67,11 @@
 - Прибирати gesture swipe
 - Копіювати дані між storage (тільки агрегація при рендері)
 - Розбивати на кілька HTML файлів
-- `localStorage.setItem` override в `app-core-system.js` (~207-212) — cross-tab sync
-- `app-db.js` або будь-яка централізована БД-абстракція — вже пробували, зламало все
+- `localStorage.setItem` override в `src/core/boot.js` — cross-tab sync (синхронізація між вкладками)
+- Централізовану БД-абстракцію (`app-db.js` або аналог) — вже пробували, зламало все
 - Локальні функції `getTasks()`, `saveNotes()` і т.д. — інші модулі їх кличуть напряму
 - Порядок імпортів в `src/app.js`
-- Логіку `setupSW()` в app-core-system.js — кожна частина вирішує конкретну iOS проблему
+- Логіку `setupSW()` в `src/core/boot.js` — кожна частина вирішує конкретну iOS проблему
 
 ### Чеклист аудиту (коли Роман каже "перевір роботу")
 1. Перечитати всі змінені ділянки
@@ -120,6 +120,49 @@
 
 **Збірка:** `node build.js` → `src/app.js` → `bundle.js` (esbuild, IIFE формат).
 **Порядок імпортів в `src/app.js`** — критичний, відповідає порядку оригінальних `<script>` тегів.
+
+---
+
+## Карта документації (куди що писати, де що шукати)
+
+> Єдине місце правди для структури проекту. Коли чогось шукаєш або хочеш щось записати — дивись сюди.
+
+### 📖 Читати коли…
+
+| Файл | Коли читати |
+|------|-------------|
+| `START_HERE.md` | **Перший файл у кожній новій сесії.** Карта проекту + обов'язкові файли |
+| `CLAUDE.md` *(цей файл)* | Правила процесу, файлова структура, AI-логіка, дані, міжмодульні залежності |
+| `РОМАН_ПРОФІЛЬ.md` | Хто такий Роман і як з ним працювати (перша сесія або давно не працювали) |
+| `NEVERMIND_BUGS.md` | Список відомих багів + `/fix B-XX` — виправлення конкретного |
+| `_ai-tools/SESSION_STATE.md` | Версія, гілка, що робили в останніх сесіях |
+| `NEVERMIND_LOGIC.md` | Базова концепція, OWL принципи (timeless) |
+| `CONCEPTS_ACTIVE.md` | Реалізовані концепції вкладок (Finance, Evening, Me, Projects, Gamification) |
+| `FEATURES_ROADMAP.md` | Заплановані але не активні фічі (Three agents, Calendar, Voice, Living OWL) |
+| `docs/ARCHITECTURE.md` | Діаграми потоків даних (Inbox flow, OWL тригери, пам'ять агента) |
+| `docs/DESIGN_SYSTEM.md` | Стилі, модалки, компоненти (кольори, CSS-спеки) |
+| `docs/CHANGES.md` | Історичний журнал (читати рідко, додавати записи в кінець сесії) |
+| `_ai-tools/REFACTORING_PLAN.md` | План ES-Modules рефакторингу (вже виконаний, історична довідка) |
+
+### ✍️ Писати/оновлювати коли…
+
+| Що сталось | Куди записати |
+|-----------|---------------|
+| **Знайдено новий баг** | `NEVERMIND_BUGS.md` → у відповідну секцію (🔴/🟡/🟢). Формат `B-XX`. Після фіксу — перенести у "✅ Закриті" |
+| **Виправлено баг** | 1) Перенести з відкритих у "Закриті" в `NEVERMIND_BUGS.md` з датою. 2) Оновити `_ai-tools/SESSION_STATE.md` |
+| **Зроблено значну роботу в сесії** | `_ai-tools/SESSION_STATE.md` — **після кожної зміни**, не чекати кінця сесії |
+| **Завершено сесію** | Додати запис у `docs/CHANGES.md` (формат: дата + що зроблено + змінені файли) |
+| **Структурна зміна (новий файл, новий ключ storage)** | 1) Файл у `src/` → імпорт у `src/app.js`. 2) Оновити таблицю файлів у `CLAUDE.md`. 3) Якщо storage — оновити таблицю даних у `CLAUDE.md` і діаграму в `docs/ARCHITECTURE.md` |
+| **Нова концепція вкладки (активна)** | `CONCEPTS_ACTIVE.md` |
+| **Нова ідея фічі (ще не робимо)** | `FEATURES_ROADMAP.md` |
+| **Затверджено нову дизайн-спеку (CSS, модалка, компонент)** | `docs/DESIGN_SYSTEM.md` |
+| **Архітектурна зміна (потік даних, граф залежностей)** | `docs/ARCHITECTURE.md` |
+| **Нове правило процесу** | **Тільки** якщо Роман явно попросив. `CLAUDE.md` → відповідна секція правил |
+| **Застарілий документ** | Перенести у `_archive/` (не видаляти — історична цінність) |
+
+### 🗂️ Архів
+
+`_archive/` — історичні документи які більше не актуальні, але зберігаються для контексту. **Не редагувати, не переносити звідти назад.**
 
 ---
 
@@ -208,27 +251,27 @@
 
 | Ключ | Тип | Модуль |
 |------|-----|--------|
-| `nm_inbox` | `[]` | app-inbox.js |
-| `nm_tasks` | `[]` | app-tasks-core.js |
-| `nm_notes` | `[]` | app-notes.js |
-| `nm_folders_meta` | `{}` | app-notes.js |
-| `nm_habits2` | `[]` | app-habits.js |
-| `nm_habit_log2` | `{date: {id: count}}` | app-habits.js |
-| `nm_quit_log` | `{id: {streak, relapses}}` | app-habits.js |
-| `nm_finance` | `[]` | app-finance.js |
-| `nm_finance_budget` | `{total, categories}` | app-finance.js |
-| `nm_finance_cats` | `{expense:[], income:[]}` | app-finance.js |
-| `nm_health_cards` | `[]` | app-health.js |
-| `nm_health_log` | `{date: {energy, sleep, pain}}` | app-health.js |
-| `nm_projects` | `[]` | app-projects.js |
-| `nm_moments` | `[]` | app-evening-moments.js |
-| `nm_evening_summary` | `{text, date}` | app-evening-moments.js |
-| `nm_trash` | `[]` max 200, 7 днів TTL | app-core-system.js |
-| `nm_settings` | `{}` | app-core-nav.js |
-| `nm_gemini_key` | string | app-core-nav.js |
-| `nm_memory` | string (300 слів) | app-core-nav.js |
+| `nm_inbox` | `[]` | `src/tabs/inbox.js` |
+| `nm_tasks` | `[]` | `src/tabs/tasks.js` |
+| `nm_notes` | `[]` | `src/tabs/notes.js` |
+| `nm_folders_meta` | `{}` | `src/tabs/notes.js` |
+| `nm_habits2` | `[]` | `src/tabs/habits.js` |
+| `nm_habit_log2` | `{date: {id: count}}` | `src/tabs/habits.js` |
+| `nm_quit_log` | `{id: {streak, relapses}}` | `src/tabs/habits.js` |
+| `nm_finance` | `[]` | `src/tabs/finance.js` |
+| `nm_finance_budget` | `{total, categories}` | `src/tabs/finance.js` |
+| `nm_finance_cats` | `{expense:[], income:[]}` | `src/tabs/finance.js` |
+| `nm_health_cards` | `[]` | `src/tabs/health.js` |
+| `nm_health_log` | `{date: {energy, sleep, pain}}` | `src/tabs/health.js` |
+| `nm_projects` | `[]` | `src/tabs/projects.js` |
+| `nm_moments` | `[]` | `src/tabs/evening.js` |
+| `nm_evening_summary` | `{text, date}` | `src/tabs/evening.js` |
+| `nm_trash` | `[]` max 200, 7 днів TTL | `src/core/trash.js` |
+| `nm_settings` | `{}` | `src/core/nav.js` |
+| `nm_gemini_key` | string (насправді OpenAI ключ — legacy-назва) | `src/core/nav.js` |
+| `nm_memory` | string (300 слів, AI-профіль) | `src/ai/core.js` |
 
-**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_fin_coach_{period}`
+**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`, `nm_fin_coach_{period}`
 
 ---
 
@@ -256,13 +299,18 @@
 ## Міжмодульні залежності
 
 ```
-app-core-nav ←─── всі модулі (switchTab, showToast, applyTheme)
-app-core-system ←── всі модулі (addToTrash, showUndoToast)
-app-ai-core ←──── всі AI-модулі (callAI, getAIContext, saveChatMsg)
-app-inbox ──→ processSaveAction ──→ notes / tasks-core / habits / evening
+src/core/nav.js      ←─── всі модулі (switchTab, showToast, applyTheme)
+src/core/boot.js     ←─── всі модулі (ініціалізація, PWA, cross-tab sync)
+src/core/trash.js    ←─── всі модулі (addToTrash, showUndoToast)
+src/ai/core.js       ←─── всі AI-модулі (callAI, getAIContext, chat storage)
+src/tabs/inbox.js    ──→ processSaveAction ──→ notes / tasks / habits / evening
+src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
+                     ──→ src/tabs/* (get{Tasks,Habits,Notes,Finance})
 ```
 
-⚠️ `app-ai-core.js` (позиція 3) викликає `getTasks()` з `app-tasks-core.js` (позиція 6) — безпечно в рантаймі, але fragile.
+**Збірка через esbuild:** `src/app.js` — точка входу, імпортує всі модулі у правильному порядку. Згенерований `bundle.js` підключається одним тегом у `index.html`. Порядок імпортів у `src/app.js` критичний.
+
+⚠️ `src/ai/core.js` викликає `getTasks()` з `src/tabs/tasks.js` — тепер через ES-import замість глобального виклику. Circular dependencies (циклічні залежності — коли модуль A імпортує B, а B імпортує A) уникнуто бо AI-модулі імпортуються раніше в `app.js`.
 
 ---
 
