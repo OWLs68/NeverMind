@@ -200,7 +200,7 @@ setupModalSwipeClose(
   document.querySelector('#xxx-modal > div:last-child'),
   closeXxxModal
 );
-// setupModalSwipeClose знаходиться в app-tasks-core.js
+// setupModalSwipeClose знаходиться в src/tabs/tasks.js
 ```
 
 ---

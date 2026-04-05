@@ -66,8 +66,8 @@
 
 ### Що змінюється в коді
 - `index.html`: OWL board HTML → компактний превью + розгорнутий міні-чат
-- `app-ai-chat.js`: `renderOwlBoard()` → `renderOwlBoardCompact()` + `renderOwlChatMessages()`; нові функції: `toggleOwlChat()`, `sendOwlReply(text)`, `showOwlTyping()`
-- `app-ai-core.js`: нова `callOwlChat(history)` — короткі відповіді, той самий action-формат
+- `src/owl/inbox-board.js` + `src/owl/board.js`: `renderOwlBoard()` → `renderOwlBoardCompact()` + `renderOwlChatMessages()`; нові функції: `toggleOwlChat()`, `sendOwlReply(text)`, `showOwlTyping()`
+- `src/ai/core.js`: нова `callOwlChat(history)` — короткі відповіді, той самий action-формат
 - `style.css`: стилі для міні-чату, чіпи-кнопки, "•••" анімація
 
 ### Ще не вирішено
@@ -98,7 +98,7 @@
 
 **Тап на запис:** текст в стрічці обрізається до 1 рядка з "..." в кінці. Тап → повний текст розгортається (в тій самій картці або превью-блоці — вирішити при реалізації).
 
-**Кольори категорій:** всі категорії мають свій колір. Вже визначено в `CAT_DOT_BG` (`app-inbox.js`):
+**Кольори категорій:** всі категорії мають свій колір. Вже визначено в `CAT_DOT_BG` (`src/tabs/inbox.js`):
 - 🔵 Задача · 🟢 Нотатка · 🟡 Ідея · 🟠 Фінанси · 🔵 Подія · 🟢 Звичка
 
 **Крапка = пілюль тегу:** крапка зліва і тег справа — один і той самий колір категорії. Окрема схема не потрібна.
