@@ -1,3 +1,4 @@
+import { switchTab, showToast } from '../core/nav.js';
 import { openChatBar } from '../ai/core.js';
 import { sendToAI } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
@@ -7,8 +8,16 @@ import { sendEveningBarMessage, sendMeChatMessage } from '../tabs/evening.js';
 import { sendHealthBarMessage } from '../tabs/health.js';
 import { sendProjectsBarMessage } from '../tabs/projects.js';
 
-// Chip (кнопка табло) → відкрити чат-бар і відправити текст як повідомлення
-export function owlChipToChat(tab, text) {
+const VALID_NAV_TARGETS = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
+
+// Chip (кнопка табло) → або перекинути на вкладку (action=nav), або відправити в чат (action=chat)
+// action/target приходять з об'єкта чіпа (новий формат). Старі string-чіпи = chat.
+export function owlChipToChat(tab, text, action, target) {
+  if (action === 'nav' && VALID_NAV_TARGETS.includes(target)) {
+    switchTab(target);
+    showToast('Переходжу до вкладки');
+    return;
+  }
   const barTab = tab === 'inbox' ? 'inbox' : (tab || 'inbox');
   openChatBar(barTab);
   const inputId = barTab === 'inbox' ? 'inbox-input' : barTab + '-chat-input';
