@@ -6,6 +6,61 @@
 
 ---
 
+## 2026-04-05 — Gemini workflow + глобальний клінап документації
+
+**Що зроблено:**
+
+**Частина 1 — Gemini інтеграція (попередні коміти цієї сесії):**
+- Видалено невдалий експеримент `_ai-tools/gemini-mcp/` (Railway MCP-сервер, 357 рядків Node.js, SSE transport) — причина згортання: засвітився `GEMINI_API_KEY` у чаті → secret scanner Anthropic заблокував сесію. Railway-проект видалений окремо Романом.
+- Створено скіл `/gemini` — ручний workflow: Claude збирає контекст (CLAUDE.md + SESSION_STATE + git diff + змінені файли + питання), виводить одним код-блоком з кнопкою Copy, Роман копіює в застосунок Gemini на iPhone (модель Pro), повертає відповідь у чат.
+- Оновлено модель у скілі з 2.5 Pro на 3 Pro (актуальна станом на 04.2026).
+- **Перший реальний тест скіла** на `src/owl/board.js` + `src/owl/chips.js` — workflow працює. Gemini знайшов 3 цінні моменти + 1 галюцинацію яку Claude заарбітрував.
+
+**Частина 2 — Клінап документації (основа цієї сесії):**
+
+Виявлено що документація застрягла між двома епохами: на етапі 01.04 була реструктуризація docs (CHANGES.md, SESSION_STATE.md, CONCEPTS_ACTIVE.md, FEATURES_ROADMAP.md), після цього — ES-modules рефакторинг коду (app-*.js → src/core/, src/ai/, src/owl/, src/ui/, src/tabs/). **Тільки таблиця файлів у CLAUDE.md оновилась, всі інші docs продовжували посилатись на app-*.js.**
+
+4 коміти клінапу:
+
+1. `docs(bugs): consolidate NEVERMIND_BUGS.md, migrate to src/ paths`
+   - Видалено дубль `_ai-tools/NEVERMIND_BUGS.md` (мій випадковий новий файл)
+   - `NEVERMIND_BUGS.md` (корінь) — source of truth. 7 старих багів (B-03..B-12) оновлено на `src/` шляхи, позначено "потрібна верифікація" (деякі могли виправитись під час рефакторингу — Роман перевірить у наступній сесії).
+   - Додано 3 нові баги знайдені через `/gemini`: **B-13** (🔴 апостроф у `onclick` чіпів, `src/owl/board.js`), **B-14** (🟡 `includes()` false positives, `src/owl/chips.js`), **B-15** (🟢 setTimeout magic number, `src/owl/chips.js`).
+   - Секція wontfix з галюцинацією Gemini про `<msg.id>` — урок на майбутнє.
+   - `/fix` скіл оновлено: правильний шлях (корінь), новий крок оновлення BUGS після фіксу.
+
+2. `docs(CLAUDE.md): migrate stale refs to src/ + add documentation map`
+   - Таблиця "Дані (localStorage)": 19 рядків оновлено (`app-inbox.js` → `src/tabs/inbox.js` тощо).
+   - Секція "Що не можна змінювати": `app-core-system.js` → `src/core/boot.js`.
+   - "Міжмодульні залежності": переписано діаграму під `src/` структуру з поясненням esbuild збірки.
+   - **Нова секція "Карта документації"** — таблиці "Читати коли..." (12 файлів) і "Писати/оновлювати коли..." (11 сценаріїв). Мета: новий чат знаходить потрібне одним лукапом, без запитів "куди писати?".
+
+3. `docs: rewrite START_HERE.md + docs/ARCHITECTURE.md for src/ structure`
+   - **`START_HERE.md`** — повністю переписано. Був найкритичнішим застарілим: містив карту з 13 `app-*.js` файлів. Тепер показує справжню `src/` ієрархію (core/ai/owl/ui/tabs). Додано посилання на `/gemini` скіл.
+   - **`docs/ARCHITECTURE.md`** — переписано діаграми (mermaid) під `src/` структуру: граф модулів з підгрупами, Inbox flow, storage map, OWL triggers, memory system, tabs integration. Уточнено legacy-назву `nm_gemini_key` (OpenAI ключ).
+   - **`NEVERMIND_ARCH.md` → `_archive/NEVERMIND_ARCH.md`** — повністю застарілий дубль `docs/ARCHITECTURE.md` (містив `index.html` з 2600 рядків замість реальних 1475). Перенесено в архів.
+
+4. `docs: update FEATURES_ROADMAP + DESIGN_SYSTEM + changelog entry` (цей коміт)
+   - `FEATURES_ROADMAP.md`: 3 посилання `app-ai-chat.js`/`app-ai-core.js`/`app-inbox.js` → `src/owl/*`/`src/ai/core.js`/`src/tabs/inbox.js`.
+   - `docs/DESIGN_SYSTEM.md`: `setupModalSwipeClose знаходиться в app-tasks-core.js` → `src/tabs/tasks.js`.
+   - Цей запис у `docs/CHANGES.md`.
+
+**Що НЕ чіпалось (свідомо):**
+- `src/`, `index.html`, `style.css`, `sw.js`, `bundle.js` — жодних змін у коді
+- `CACHE_NAME` — не оновлюємо, бо в PWA кеш не потрапляє нічого з цієї сесії
+- `NEVERMIND_LOGIC.md`, `CONCEPTS_ACTIVE.md`, `РОМАН_ПРОФІЛЬ.md` — timeless концептуальні документи, без посилань на код
+- `_archive/` — історія не редагується
+- Правила процесу, якість виконання, AI-логіка, деплой, OWL концепція у `CLAUDE.md`
+
+**Відкрите на майбутнє:**
+- Виправити 3 реальні баги знайдені через `/gemini`: B-13 (критичний, апостроф), B-14 (design smell), B-15 (low pri) — окрема сесія через `/fix B-13`
+- Верифікувати 7 старих багів B-03..B-12 проти `src/` — деякі могли бути виправлені під час рефакторингу
+- Допрацювати `/gemini` скіл: 5 покращень (import graph, анти-галюцинаційні правила, підключення BUGS.md, повний CLAUDE.md, самооцінка Gemini) — окрема сесія
+
+**Змінені файли:** `NEVERMIND_BUGS.md`, `CLAUDE.md`, `START_HERE.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/CHANGES.md`, `FEATURES_ROADMAP.md`, `.claude/commands/fix.md`, `.claude/commands/gemini.md` (новий), `_ai-tools/SESSION_STATE.md`, `_ai-tools/NEVERMIND_BUGS.md` (видалено), `_archive/NEVERMIND_ARCH.md` (перенесено з кореня), `_ai-tools/gemini-mcp/` (видалено — 5 файлів)
+
+---
+
 ## 2026-04-01 — Реструктуризація документації
 
 **Що зроблено:**
