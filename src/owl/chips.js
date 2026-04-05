@@ -1,4 +1,3 @@
-import { switchTab, showToast } from '../core/nav.js';
 import { openChatBar } from '../ai/core.js';
 import { sendToAI } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
@@ -10,28 +9,6 @@ import { sendProjectsBarMessage } from '../tabs/projects.js';
 
 // Chip (кнопка табло) → відкрити чат-бар і відправити текст як повідомлення
 export function owlChipToChat(tab, text) {
-  const lower = text.toLowerCase();
-
-  // Чіпи-навігація: переводять на потрібну вкладку замість відправки в AI
-  const navMap = [
-    { patterns: ['задач', 'закрити задач', 'завершити задач'], tab: 'tasks' },
-    { patterns: ['звичк', 'виконати звичк', 'відмітити звичк'], tab: 'tasks' },
-    { patterns: ['підсумк', 'підсумок дня', 'записати підсумк'], tab: 'evening' },
-    { patterns: ['нотатк', 'записати нотатк'], tab: 'notes' },
-    { patterns: ['фінанс', 'витрат', 'бюджет'], tab: 'finance' },
-    { patterns: ['здоров', 'самопочутт'], tab: 'health' },
-    { patterns: ['проект'], tab: 'projects' },
-  ];
-
-  for (const nav of navMap) {
-    if (nav.patterns.some(p => lower.includes(p))) {
-      switchTab(nav.tab);
-      showToast('Переходжу до вкладки');
-      return;
-    }
-  }
-
-  // Решта чіпів — відправляємо як повідомлення в чат-бар
   const barTab = tab === 'inbox' ? 'inbox' : (tab || 'inbox');
   openChatBar(barTab);
   const inputId = barTab === 'inbox' ? 'inbox-input' : barTab + '-chat-input';
