@@ -3,7 +3,7 @@
 // Залежності: app-core.js, app-ai-core.js
 // ============================================================
 
-import { currentTab } from '../core/nav.js';
+import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { activeChatBar, callOwlChat, closeChatBar, getOWLPersonality, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
@@ -659,8 +659,12 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 - Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
-- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":["чіп1","чіп2"]}
-- chips — кнопки швидких дій. ТІЛЬКИ дії що прямо стосуються твого повідомлення. Наприклад якщо пишеш "закрий задачі X і Y" → chips: ["закрити задачі"]. Якщо пишеш "запиши підсумки" → chips: ["записати підсумки"]. НЕ додавай випадкові дії які не згадуються в тексті. Максимум 3 слова кожен. Якщо нічого конкретного — []. Враховуй що знаєш про людину — пропонуй те що їй корисно.
+- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}]}
+- chips — кнопки швидких дій, масив об'єктів. Кожен має label (до 3 слів) і action:
+  • "nav" — перекидає на вкладку (вказуй target: tasks|notes|habits|finance|health|projects|evening|me). Використовуй коли юзер має САМ обрати/переглянути (закрити задачі, глянути звички, переглянути витрати).
+  • "chat" — відправляє label у чат як повідомлення. Для уточнень і діалогу ("нагадай завтра", "розкажи детальніше").
+- Приклад: "маєш 3 відкриті задачі" → chips: [{"label":"Відкрити задачі","action":"nav","target":"tasks"}]. НЕ генеруй чіп який каже агенту виконати дію яку має зробити сам юзер — агент не знає які задачі юзер реально закрив.
+- Якщо нічого конкретного — chips: []. Враховуй що знаєш про людину.
 - Відповідай українською.`;
 
   try {
@@ -809,14 +813,29 @@ function renderOwlChips(boardMsg) {
     el.innerHTML = '';
     return;
   }
-  el.innerHTML = boardMsg.chips.map(c =>
-    `<div class="owl-chip" data-chip-text="${escapeHtml(c)}">${escapeHtml(c)}</div>`
-  ).join('');
+  const VALID = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
+  // Нормалізація: старі рядки → {label, action:'chat'}
+  const normChips = boardMsg.chips.map(c =>
+    typeof c === 'string' ? { label: c, action: 'chat' } : c
+  );
+  el.innerHTML = normChips.map(c => {
+    const label = c.label || '';
+    const action = c.action === 'nav' ? 'nav' : 'chat';
+    const target = c.target || '';
+    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
+  }).join('');
   // Делегований click-обробник — навішується один раз на контейнер
   if (!el._chipClickReady) {
     el.addEventListener('click', (e) => {
       const chip = e.target.closest('.owl-chip');
       if (!chip) return;
+      const action = chip.dataset.chipAction;
+      const target = chip.dataset.chipTarget;
+      if (action === 'nav' && VALID.includes(target)) {
+        switchTab(target);
+        showToast('Переходжу до вкладки');
+        return;
+      }
       sendOwlReply(chip.dataset.chipText || '');
     });
     el._chipClickReady = true;
