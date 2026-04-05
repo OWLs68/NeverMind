@@ -1,72 +1,96 @@
 # NeverMind — Архітектура системи
 
-## 1. Граф модулів (хто від кого залежить)
+> **Де що шукати:** повна таблиця файлів з відповідальністю → `CLAUDE.md` секція "Файлова структура".
+> Цей файл містить **діаграми потоків** (data flow, triggers, memory) які доповнюють текстовий опис.
+
+---
+
+## 1. Граф модулів (збірка)
+
+Проект використовує **ES Modules** з бандлером `esbuild`. Вхідна точка `src/app.js` імпортує всі модулі у правильному порядку (критично для сумісності з iOS). Бандлер генерує `bundle.js` який підключається одним `<script>` тегом в `index.html`.
 
 ```mermaid
 graph TD
-    HTML["index.html\n(головна сторінка — весь UI)"]
-    NAV["app-core-nav.js\n(навігація — перемикання вкладок, теми, налаштування)"]
-    SYS["app-core-system.js\n(система — кошик, PWA, запуск застосунку)"]
-    AIC["app-ai-core.js\n(ядро ШІ — виклики API, контекст, чат-пам'ять)"]
-    CHAT["app-ai-chat.js\n(OWL Board — проактивні повідомлення агента)"]
-    INB["app-inbox.js\n(вхідні — головна вкладка, обробка повідомлень)"]
-    TSK["app-tasks-core.js\n(задачі — список, кроки, виконання)"]
-    HAB["app-habits.js\n(звички — трекер, стріки, лог виконання)"]
-    NOT["app-notes.js\n(нотатки — папки, перегляд, пошук)"]
-    FIN["app-finance.js\n(фінанси — витрати, доходи, бюджет)"]
-    EVE["app-evening-moments.js\n(вечір + Я — моменти дня, підсумок, скор)"]
-    ONB["app-evening-onboarding.js\n(онбординг — перший запуск, гайд, допомога)"]
-    HLT["app-health.js\n(здоров'я — карточки, щоденні шкали)"]
-    PRJ["app-projects.js\n(проекти — воркспейс, кроки, метрики)"]
+    HTML["index.html<br/>(UI + bundle.js script tag)"]
+    BUNDLE["bundle.js<br/>(згенерований esbuild)"]
+    APP["src/app.js<br/>(точка входу)"]
 
-    HTML --> NAV
-    HTML --> SYS
-    HTML --> AIC
-    HTML --> CHAT
-    HTML --> INB
-    HTML --> TSK
-    HTML --> HAB
-    HTML --> NOT
-    HTML --> FIN
-    HTML --> EVE
-    HTML --> ONB
-    HTML --> HLT
-    HTML --> PRJ
+    subgraph "Core (ядро)"
+        NAV["core/nav.js<br/>(switchTab, теми, settings)"]
+        BOOT["core/boot.js<br/>(ініціалізація, PWA, cross-tab sync)"]
+        TRASH["core/trash.js<br/>(кошик, 7 днів TTL)"]
+        UTILS["core/utils.js<br/>(escapeHtml, formatTime)"]
+        LOGGER["core/logger.js<br/>(error logging)"]
+    end
 
-    INB --> AIC
-    INB --> TSK
-    INB --> HAB
-    INB --> NOT
-    INB --> EVE
-    INB --> SYS
+    subgraph "AI"
+        AICORE["ai/core.js<br/>(getAIContext, callAI, chat storage)"]
+    end
 
-    CHAT --> AIC
-    CHAT --> NAV
+    subgraph "OWL (проактивний агент)"
+        OWLBOARD["owl/inbox-board.js<br/>(OWL Board Inbox)"]
+        OWLTABS["owl/board.js<br/>(OWL Tab Boards)"]
+        OWLPROACT["owl/proactive.js<br/>(генерація повідомлень)"]
+        OWLCHIPS["owl/chips.js<br/>(owlChipToChat)"]
+    end
 
-    TSK --> AIC
-    HAB --> AIC
-    NOT --> AIC
-    FIN --> AIC
-    EVE --> AIC
-    HLT --> AIC
-    PRJ --> AIC
+    subgraph "UI helpers"
+        KEYBOARD["ui/keyboard.js<br/>(iOS keyboard hack)"]
+        SWIPE["ui/swipe-delete.js<br/>(swipe trail)"]
+    end
 
-    EVE --> HAB
-    EVE --> TSK
-    EVE --> NOT
+    subgraph "Tabs (вкладки)"
+        INBOX["tabs/inbox.js"]
+        TASKS["tabs/tasks.js"]
+        HABITS["tabs/habits.js"]
+        NOTES["tabs/notes.js"]
+        FINANCE["tabs/finance.js"]
+        HEALTH["tabs/health.js"]
+        PROJECTS["tabs/projects.js"]
+        EVENING["tabs/evening.js"]
+        ONB["tabs/onboarding.js"]
+    end
 
-    HLT --> NOT
-    PRJ --> NOT
-    PRJ --> TSK
+    HTML --> BUNDLE
+    BUNDLE --> APP
+    APP --> NAV
+    APP --> BOOT
+    APP --> AICORE
+    APP --> OWLBOARD
+    APP --> OWLTABS
+    APP --> INBOX
+    APP -.->|"та інші<br/>у порядку"| TASKS
 
-    ONB --> AIC
-    ONB --> INB
+    INBOX --> AICORE
+    INBOX --> TASKS
+    INBOX --> NOTES
+    INBOX --> HABITS
+    INBOX --> EVENING
 
+    TASKS --> AICORE
+    HABITS --> AICORE
+    NOTES --> AICORE
+    FINANCE --> AICORE
+    EVENING --> AICORE
+    HEALTH --> AICORE
+    PROJECTS --> AICORE
+
+    OWLBOARD --> AICORE
+    OWLTABS --> AICORE
+    OWLTABS --> OWLCHIPS
+    OWLPROACT --> AICORE
+
+    EVENING --> HABITS
+    EVENING --> TASKS
+    EVENING --> NOTES
+
+    style AICORE fill:#d4e8d8
+    style INBOX fill:#fdb87a
     style NAV fill:#e8d5c4
-    style SYS fill:#e8d5c4
-    style AIC fill:#d4e8d8
-    style INB fill:#fdb87a
+    style BOOT fill:#e8d5c4
 ```
+
+**Ключове:** `src/ai/core.js` — єдиний мозок. Всі AI-виклики проходять через нього. Кожна вкладка має свій AI bar який викликає `callAI()` з відповідним контекстом з `getAIContext()`.
 
 ---
 
@@ -74,106 +98,102 @@ graph TD
 
 ```mermaid
 flowchart TD
-    A[Юзер пише повідомлення] --> B["sendToAI\n(відправити до ШІ)"]
-    B --> C["getAIContext\n(зібрати контекст — що знає агент)"]
-    C --> D["context = дата + профіль + пам'ять\n+ задачі + звички + inbox сьогодні\n+ фінанси + кошик"]
-    D --> E["callAIWithHistory\n(виклик GPT-4o-mini з histórico розмови)"]
-    E --> F{"Парсинг JSON\n(розбір відповіді ШІ)"}
-    F -->|"parse error\n(помилка розбору)"| G["saveOffline\n(зберегти без ШІ, просто в inbox)"]
-    F -->|ok| H{"action.action\n(яка дія?)"}
+    A[Юзер пише повідомлення] --> B["sendToAI<br/>(відправити до ШІ)"]
+    B --> C["getAIContext<br/>(зібрати контекст — що знає агент)"]
+    C --> D["context = дата + профіль + пам'ять<br/>+ задачі + звички + inbox сьогодні<br/>+ фінанси + кошик + OWL board msg"]
+    D --> E["callAIWithHistory<br/>(виклик GPT-4o-mini з історією розмови)"]
+    E --> F{"Парсинг JSON<br/>(розбір відповіді ШІ)"}
+    F -->|"parse error"| G["saveOffline<br/>(зберегти без ШІ, просто в inbox)"]
+    F -->|ok| H{"action.action<br/>(яка дія?)"}
 
-    H -->|"save\n(зберегти запис)"| I["processSaveAction\n(обробити збереження)"]
-    H -->|"save_finance\n(зберегти фінанси)"| J["processFinanceAction\n(обробити фінансову операцію)"]
-    H -->|"complete_habit\n(виконати звичку)"| K["processCompleteHabit\n(відмітити звичку виконаною)"]
-    H -->|"complete_task\n(виконати задачу)"| L["processCompleteTask\n(відмітити задачу виконаною)"]
-    H -->|"clarify\n(уточнити)"| M["showClarify modal\n(показати вибір варіантів)"]
-    H -->|"add_step\n(додати крок)"| N["додати кроки до задачі"]
-    H -->|"create_project\n(створити проект)"| O["новий проект"]
-    H -->|"restore_deleted\n(відновити видалене)"| P["searchTrash → restore\n(пошук в кошику → відновити)"]
-    H -->|"reply\n(просто відповідь)"| Q["addInboxChatMsg agent\n(показати відповідь агента)"]
+    H -->|"save"| I["processSaveAction<br/>(обробити збереження)"]
+    H -->|"save_finance"| J["processFinanceAction"]
+    H -->|"complete_habit"| K["processCompleteHabit"]
+    H -->|"complete_task"| L["processCompleteTask"]
+    H -->|"clarify"| M["showClarify modal<br/>(показати вибір варіантів)"]
+    H -->|"add_step"| N["додати кроки до задачі"]
+    H -->|"create_project"| O["новий проект"]
+    H -->|"restore_deleted"| P["searchTrash → restoreFromTrash"]
+    H -->|"reply"| Q["addInboxChatMsg agent<br/>(показати відповідь агента)"]
 
-    I --> I1{"category\n(категорія запису)"}
-    I1 -->|"task\n(задача)"| I2["getTasks → saveTasks\n(отримати → зберегти задачі)\nautoGenerateTaskSteps\n(автоматично згенерувати кроки)"]
-    I1 -->|"note/idea\n(нотатка або ідея)"| I3["addNoteFromInbox\n(додати нотатку з inbox в папку)"]
-    I1 -->|"habit\n(звичка)"| I4["getHabits → saveHabits\n(отримати → зберегти звички)"]
-    I1 -->|"event\n(подія/момент)"| I5["getMoments → saveMoments\n(отримати → зберегти моменти)\ngenerateMomentSummary\n(згенерувати AI-підсумок моменту)"]
-    I1 -->|all| I6["saveInbox → renderInbox\n(зберегти → перемалювати inbox)"]
-
-    K --> K1["getHabitLog\n(отримати лог звичок)\nоновити count\n(збільшити лічильник)\nsaveHabitLog\n(зберегти лог)\nrenderProdHabits\n(перемалювати звички)"]
-    L --> L1["getTasks\n(отримати задачі)\nstatus=done\n(статус = виконано)\nsaveTasks\n(зберегти)\nrenderTasks\n(перемалювати список)"]
+    I --> I1{"category<br/>(категорія запису)"}
+    I1 -->|"task"| I2["getTasks → saveTasks"]
+    I1 -->|"note/idea"| I3["addNoteFromInbox"]
+    I1 -->|"habit"| I4["getHabits → saveHabits"]
+    I1 -->|"event"| I5["getMoments → saveMoments"]
+    I1 -->|all| I6["saveInbox → renderInbox"]
 ```
 
 ---
 
 ## 3. Карта даних (localStorage)
 
-> **localStorage** — це вбудоване сховище браузера. Як таблиця: ключ → значення. Всі дані застосунку тут.
+> **localStorage** — вбудоване сховище браузера. Ключ → значення. Всі дані застосунку тут.
 
 ```mermaid
 graph LR
-    subgraph "Inbox (вхідні)"
-        NI["nm_inbox\n(масив записів inbox)"]
-        NCI["nm_chat_inbox\n(история чату, макс 30 повід.)"]
+    subgraph "Inbox"
+        NI["nm_inbox<br/>(масив записів)"]
+        NCI["nm_chat_inbox<br/>(чат макс 30 повід.)"]
     end
 
-    subgraph "Tasks (задачі)"
-        NT["nm_tasks\n(масив задач)"]
-        NCT["nm_chat_tasks\n(чат у вкладці Задачі)"]
-        NTC["nm_task_chat_ID\n(чат для конкретної задачі)"]
+    subgraph "Tasks"
+        NT["nm_tasks"]
+        NCT["nm_chat_tasks"]
+        NTC["nm_task_chat_ID<br/>(чат конкретної задачі)"]
     end
 
-    subgraph "Notes (нотатки)"
-        NN["nm_notes\n(масив нотаток)"]
-        NF["nm_folders_meta\n(метадані папок — колір, іконка)"]
-        NNT["nm_notes_folders_ts\n(коли востаннє AI пропонував папки)"]
+    subgraph "Notes"
+        NN["nm_notes"]
+        NF["nm_folders_meta"]
     end
 
-    subgraph "Habits (звички)"
-        NH["nm_habits2\n(масив звичок)"]
-        NHL["nm_habit_log2\n(лог: дата → id → кількість)"]
-        NQL["nm_quit_log\n(quit-звички: стрік + зриви)"]
+    subgraph "Habits"
+        NH["nm_habits2"]
+        NHL["nm_habit_log2"]
+        NQL["nm_quit_log<br/>(quit-звички)"]
     end
 
-    subgraph "Finance (фінанси)"
-        NFI["nm_finance\n(масив транзакцій)"]
-        NFB["nm_finance_budget\n(бюджет: ліміт + по категоріях)"]
-        NFC["nm_finance_cats\n(категорії витрат і доходів)"]
-        NFCO["nm_fin_coach_PERIOD\n(кеш AI-аналізу за період)"]
+    subgraph "Finance"
+        NFI["nm_finance"]
+        NFB["nm_finance_budget"]
+        NFC["nm_finance_cats"]
+        NFCO["nm_fin_coach_PERIOD<br/>(кеш AI, TTL 24h)"]
     end
 
-    subgraph "Health (здоров'я)"
-        NHC["nm_health_cards\n(карточки захворювань/станів)"]
-        NHL2["nm_health_log\n(дата → енергія + сон + біль)"]
+    subgraph "Health"
+        NHC["nm_health_cards"]
+        NHL2["nm_health_log"]
     end
 
-    subgraph "Projects (проекти)"
-        NP["nm_projects\n(масив проектів з кроками і метриками)"]
+    subgraph "Projects"
+        NP["nm_projects"]
     end
 
-    subgraph "Evening (вечір)"
-        NM["nm_moments\n(моменти дня)"]
-        NES["nm_evening_summary\n(AI-підсумок дня)"]
-        NEM["nm_evening_mood\n(настрій + дата)"]
+    subgraph "Evening / Me"
+        NM["nm_moments"]
+        NES["nm_evening_summary"]
+        NEM["nm_evening_mood"]
     end
 
-    subgraph "System (система)"
-        NS["nm_settings\n(налаштування: ім'я, вік, мова)"]
-        NGK["nm_gemini_key\n(API ключ OpenAI)"]
-        NME["nm_memory\n(AI-профіль користувача, 300 слів)"]
-        NMET["nm_memory_ts\n(коли оновлено пам'ять)"]
-        NAT["nm_active_tabs\n(які вкладки активні)"]
-        NTR["nm_trash\n(кошик: макс 200, живе 7 днів)"]
+    subgraph "System"
+        NS["nm_settings"]
+        NGK["nm_gemini_key<br/>(насправді OpenAI, legacy-назва)"]
+        NME["nm_memory<br/>(AI-профіль, 300 слів)"]
+        NAT["nm_active_tabs"]
+        NTR["nm_trash<br/>(макс 200, TTL 7 днів)"]
     end
 
-    subgraph "OWL (проактивний агент)"
-        NOB["nm_owl_board\n(повідомлення на головній, макс 3)"]
-        NOBT["nm_owl_board_ts\n(коли востаннє згенеровано)"]
-        NOBS["nm_owl_board_said\n(теми що вже сказав сьогодні)"]
-        NOTB["nm_owl_tab_TAB\n(повідомлення по кожній вкладці)"]
-        NOTBT["nm_owl_tab_ts_TAB\n(timestamp генерації по вкладці)"]
-        NOTBS["nm_owl_tab_said_TAB\n(теми по вкладці що вже сказав)"]
+    subgraph "OWL"
+        NOB["nm_owl_board<br/>(Inbox табло)"]
+        NOBT["nm_owl_board_ts"]
+        NOBS["nm_owl_board_said<br/>(антиповтор)"]
+        NOTB["nm_owl_tab_TAB<br/>(по вкладках)"]
+        NOTBT["nm_owl_tab_ts_TAB"]
     end
 ```
+
+**Повна таблиця ключів з модулями** → `CLAUDE.md` секція "Дані (localStorage)".
 
 ---
 
@@ -181,9 +201,9 @@ graph LR
 
 ```mermaid
 flowchart TD
-    T["tryOwlBoardUpdate\n(перевірити чи потрібно генерувати)\nкожні 3 хв"] --> CH{"Тихий режим?\n23:00-7:00\n(ніч — мовчати)"}
+    T["tryOwlBoardUpdate<br/>(кожні 3 хв)"] --> CH{"Тихий режим?<br/>23:00-7:00<br/>(ніч — мовчати)"}
     CH -->|так| SKIP[пропустити]
-    CH -->|ні| TRG{"Тригер активний?\n(яка подія спрацювала)"}
+    CH -->|ні| TRG{"Тригер активний?"}
 
     TRG --> T1[🌅 7-9 ранок → ранковий бриф]
     TRG --> T2[☀️ 13:00 → обідня перевірка]
@@ -194,15 +214,17 @@ flowchart TD
     TRG --> T7[😴 Задача не рухається 3+ дні]
     TRG --> T8[⚡ Звички не виконані після 10:00]
     TRG --> T9[🔥 Стрік під загрозою після 20:00]
-    TRG --> T10[🎉 Всі звички виконані сьогодні]
+    TRG --> T10[🎉 Всі звички виконані]
     TRG --> T11[💰 Бюджет 80%+ витрачено]
-    TRG --> T12[💸 Транзакція в 2.5x більша за звичну]
+    TRG --> T12[💸 Транзакція 2.5x від звичної]
 
-    T1 & T2 & T3 & T4 & T5 & T6 & T7 & T8 & T9 & T10 & T11 & T12 --> GEN["getOwlBoardContext\n(зібрати контекст + пріоритизувати:\ncritical → important → normal)"]
-    GEN --> AI["GPT-4o-mini\n(генерує JSON: текст + пріоритет + кнопки)"]
-    AI --> SAVE["saveOwlBoardMessages\n(зберегти, макс 3 повідомлення,\nстарі витісняються новими)"]
-    SAVE --> RENDER["renderOwlBoard\n(відмалювати карусель на екрані)"]
+    T1 & T2 & T3 & T4 & T5 & T6 & T7 & T8 & T9 & T10 & T11 & T12 --> GEN["getOwlBoardContext<br/>(пріоритет: critical → important → normal)"]
+    GEN --> AI["GPT-4o-mini<br/>(JSON: текст + пріоритет + чіпи)"]
+    AI --> SAVE["saveOwlBoardMessages<br/>(макс 3 повідомлення,<br/>старі витісняються)"]
+    SAVE --> RENDER["renderOwlBoard<br/>(відмалювати на екрані)"]
 ```
+
+**Релевантні файли:** `src/owl/proactive.js` (тригери і генерація), `src/owl/inbox-board.js` (Inbox табло), `src/owl/board.js` (Tab boards).
 
 ---
 
@@ -210,41 +232,59 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    TRIG["shouldRefreshMemory\n(перевірити чи потрібно оновити)\n1 раз на день"] --> COL["Збір даних\n(зібрати інформацію про юзера)"]
-    COL --> I50["50 останніх\ninbox записів\n(що писав сьогодні і раніше)"]
-    COL --> T8["8 активних\nзадач\n(що робить зараз)"]
-    COL --> N20["20 останніх\nнотаток\n(що думає і планує)"]
-    COL --> PR["Профіль\nкористувача\n(ім'я, вік — з налаштувань)"]
+    TRIG["shouldRefreshMemory<br/>(1 раз на день)"] --> COL["Збір даних"]
+    COL --> I50["50 останніх<br/>inbox записів"]
+    COL --> T8["8 активних задач"]
+    COL --> N20["20 останніх нотаток"]
+    COL --> PR["Профіль<br/>(ім'я, вік з settings)"]
 
-    I50 & T8 & N20 & PR --> AI["GPT-4o-mini\n(прохання: 'Сформуй профіль людини,\nmax 300 слів, виявити патерни')"]
-    AI --> MEM["nm_memory\n(текстовий профіль — хто ця людина,\nщо їй важливо, які звички)"]
-    MEM --> CTX["getAIContext\n(збірник контексту для ШІ —\nвставляє пам'ять як 3-й блок)"]
-    CTX --> ALL["всі AI-виклики\nInbox агент + OWL Board\n+ AI бари у вкладках"]
+    I50 & T8 & N20 & PR --> AI["GPT-4o-mini<br/>(Сформуй профіль людини,<br/>max 300 слів, патерни)"]
+    AI --> MEM["nm_memory<br/>(текстовий профіль)"]
+    MEM --> CTX["getAIContext<br/>(3-й блок контексту)"]
+    CTX --> ALL["всі AI-виклики<br/>Inbox + OWL Board<br/>+ AI бари вкладок"]
 ```
+
+**Модуль:** `src/ai/core.js` — функції `getAIContext()`, `shouldRefreshMemory()`, `buildMemoryProfile()`.
 
 ---
 
-## 6. Вкладки та їх можливості
+## 6. Вкладки та AI-інтеграція
 
 ```mermaid
 graph TD
-    APP[NeverMind] --> INB_T["📥 Inbox\n(вхідні — головна вкладка)\nзавжди активна"]
-    APP --> NOT_T["📝 Нотатки\n(notes — записи по папках)\nзавжди активна"]
-    APP --> TSK_T["✅ Задачі\n(tasks — список справ)\nвибіркова"]
-    APP --> HAB_T["🔥 Звички\n(habits — щоденний трекер)\nвибіркова"]
-    APP --> FIN_T["💰 Фінанси\n(finance — витрати і доходи)\nвибіркова"]
-    APP --> HLT_T["❤️ Здоров'я\n(health — стани і шкали)\nвибіркова"]
-    APP --> PRJ_T["🚀 Проекти\n(projects — планування)\nвибіркова"]
-    APP --> EVE_T["🌙 Вечір + Я\n(evening + me — підсумок і статистика)\nвибіркова"]
+    APP[NeverMind] --> INB_T["📥 Inbox<br/>(головна, завжди активна)"]
+    APP --> NOT_T["📝 Нотатки<br/>(завжди активна)"]
+    APP --> TSK_T["✅ Задачі<br/>(вибіркова)"]
+    APP --> HAB_T["🔥 Звички<br/>(вибіркова)"]
+    APP --> FIN_T["💰 Фінанси<br/>(вибіркова)"]
+    APP --> HLT_T["❤️ Здоров'я<br/>(вибіркова)"]
+    APP --> PRJ_T["🚀 Проекти<br/>(вибіркова)"]
+    APP --> EVE_T["🌙 Вечір + Я<br/>(вибіркова)"]
 
-    INB_T --> |"AI агент\n(12 типів дій)"| AICORE["GPT-4o-mini\n(єдиний мозок)"]
-    NOT_T --> |"Chat в нотатці\n(розмова про конкретну нотатку)"| AICORE
-    TSK_T --> |"AI bar\n(панель чату у вкладці)"| AICORE
+    INB_T --> |"AI агент<br/>(12 типів дій)"| AICORE["src/ai/core.js<br/>GPT-4o-mini"]
+    NOT_T --> |"Chat в нотатці"| AICORE
+    TSK_T --> |"AI bar"| AICORE
     HAB_T --> |"AI bar"| AICORE
-    FIN_T --> |"AI коуч\n(аналіз витрат, поради)"| AICORE
+    FIN_T --> |"AI коуч (кешований)"| AICORE
     HLT_T --> |"AI bar"| AICORE
     PRJ_T --> |"AI bar"| AICORE
-    EVE_T --> |"AI рефлексія\n(аналіз дня, підсумок)"| AICORE
+    EVE_T --> |"AI рефлексія"| AICORE
 
-    AICORE --> MEM_T["nm_memory\n(спільна пам'ять —\nагент знає контекст у всіх вкладках)"]
+    AICORE --> MEM_T["nm_memory<br/>(спільна пам'ять усіх вкладок)"]
 ```
+
+**Ключовий принцип:** єдиний мозок. Кожна вкладка бачить той самий контекст через `getAIContext()`. Агент не плутається між вкладками — пам'ятає що користувач робив у Фінансах коли пише у Задачі.
+
+---
+
+## Важливі технічні нюанси (чому так зроблено)
+
+- **AI бари поза `.page` div** — `position:fixed` всередині `transform` не працює на iOS Safari
+- **`safeAgentReply`** — завжди замість прямого `addMsg('agent', reply)` — перевіряє чи не сирий JSON
+- **Вечір не копіює дані** — читає напряму з `nm_notes` і `nm_moments` при рендері (правило: "Копіювати дані між storage — заборонено")
+- **SW кеш (`CACHE_NAME`)** — ім'я `nm-YYYYMMDD-HHMM` оновлюється вручну перед пушем. CI **не** чіпає `sw.js`. Правило з `CLAUDE.md`.
+- **Порядок імпортів у `src/app.js`** — критичний, повторює порядок старих `<script>` тегів для уникнення циклічних залежностей
+
+---
+
+> Архів старої версії цього файлу (з описом флат-структури `app-*.js` до ES-modules рефакторингу) → `_archive/NEVERMIND_ARCH.md`.
