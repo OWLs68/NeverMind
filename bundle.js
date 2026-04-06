@@ -2158,48 +2158,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
         projBlock.style.display = "none";
       }
     }
-    const deadlineBlock = document.getElementById("me-deadline-block");
-    const deadlineContent = document.getElementById("me-deadline-content");
-    const calGrid = document.getElementById("me-cal-grid");
-    const calLabel = document.getElementById("me-cal-label");
-    if (deadlineBlock && deadlineContent) {
-      const activeTasks = getTasks().filter((t) => t.status === "active");
-      if (activeTasks.length > 0) {
-        deadlineBlock.style.display = "block";
-        const t = activeTasks[0];
-        deadlineContent.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;border-radius:10px;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.title)}</div>
-          <div style="font-size:10px;font-weight:800;color:#ea580c;margin-top:1px">\u0410\u043A\u0442\u0438\u0432\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430</div>
-        </div>
-      </div>`;
-        if (calGrid && calLabel) {
-          const monthNames = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
-          calLabel.textContent = monthNames[now.getMonth()] + " \xB7 \u0437\u0430\u0434\u0430\u0447\u0456";
-          const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-          const firstDow = (firstDay.getDay() + 6) % 7;
-          const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-          const taskDays = new Set(getTasks().filter((t2) => t2.createdAt).map((t2) => new Date(t2.createdAt).getDate()));
-          let cells = "";
-          for (let i = 0; i < firstDow; i++) cells += "<div></div>";
-          for (let d = 1; d <= daysInMonth; d++) {
-            const isToday = d === now.getDate();
-            const hasTask = taskDays.has(d);
-            let style = "aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;";
-            if (isToday) style += "background:rgba(234,88,12,0.15);color:#ea580c;";
-            else if (hasTask) style += "background:#7c4a2a;color:white;";
-            else style += "background:rgba(30,16,64,0.04);color:rgba(30,16,64,0.3);";
-            cells += `<div style="${style}">${d}</div>`;
-          }
-          calGrid.innerHTML = cells;
-        }
-      } else {
-        deadlineBlock.style.display = "none";
-      }
-    }
     renderMeHabitsStats();
     renderMeActivityChart();
   }
@@ -7061,7 +7019,9 @@ ${memory}`);
         const steps = t.steps || [];
         const doneSteps = steps.filter((s) => s.done).length;
         const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} \u043A\u0440\u043E\u043A\u0456\u0432)` : "";
-        return `- [ID:${t.id}] ${t.title}${stepInfo}`;
+        const dueInfo = t.dueDate ? ` \u{1F4C5}${t.dueDate}` : "";
+        const prioInfo = t.priority === "critical" ? " \u{1F534}" : t.priority === "important" ? " \u{1F7E0}" : "";
+        return `- [ID:${t.id}] ${t.title}${stepInfo}${dueInfo}${prioInfo}`;
       }).join("\n");
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_task):
 ${taskList}`);
@@ -7496,6 +7456,8 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
   - "text" \u2014 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 (\u0432\u0438\u043F\u0440\u0430\u0432 \u0442\u0456\u043B\u044C\u043A\u0438 \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u0443)
   - "task_title" \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432. \u042F\u041A\u0429\u041E \u0454 \u0447\u0430\u0441/\u0434\u0430\u0442\u0430 \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u0443 task_title (\u0444\u043E\u0440\u043C\u0430\u0442 24\u0433)
   - "task_steps" \u2014 \u043C\u0430\u0441\u0438\u0432 \u043A\u0440\u043E\u043A\u0456\u0432 \u044F\u043A\u0449\u043E \u0454 \u0441\u043F\u0438\u0441\u043E\u043A \u0434\u0456\u0439. \u0406\u043D\u0430\u043A\u0448\u0435 []
+  - "dueDate" \u2014 ISO \u0434\u0430\u0442\u0430 (YYYY-MM-DD) \u042F\u041A\u0429\u041E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u043A\u043E\u043B\u0438 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 ("\u0437\u0430\u0432\u0442\u0440\u0430", "\u0432 \u043F'\u044F\u0442\u043D\u0438\u0446\u044E", "15 \u043A\u0432\u0456\u0442\u043D\u044F"). \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u0430
+  - "priority" \u2014 "critical"|"important"|"normal". \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u043D\u0435 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 (\u0431\u0443\u0434\u0435 normal). \u0414\u043E\u0434\u0430\u0432\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u044F\u0432\u043D\u043E \u043A\u0430\u0436\u0435 "\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u043E"/"\u0432\u0430\u0436\u043B\u0438\u0432\u043E"/"\u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E"
   \u0412\u0410\u0416\u041B\u0418\u0412\u041E \u2014 \u0441\u043F\u0438\u0441\u043E\u043A \u0447\u0438 \u043E\u043A\u0440\u0435\u043C\u0456 \u0437\u0430\u0434\u0430\u0447\u0456:
   - \u042F\u043A\u0449\u043E \u0454 \u043D\u0430\u0437\u0432\u0430 \u0441\u043F\u0438\u0441\u043A\u0443 + \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0438 ("\u0441\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A: \u0445\u043B\u0456\u0431, \u043C\u043E\u043B\u043E\u043A\u043E, \u044F\u0439\u0446\u044F" \u0430\u0431\u043E "\u043F\u0456\u0434\u0433\u043E\u0442\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0456\u0442: \u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u0434\u0430\u043D\u0456, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0438") \u2014 \u041E\u0414\u041D\u0410 \u0437\u0430\u0434\u0430\u0447\u0430 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438
   - \u042F\u043A\u0449\u043E \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0438 \u044F\u0432\u043D\u043E \u0440\u0456\u0437\u043D\u0456 \u0456 \u043D\u0435\u0437\u0430\u043B\u0435\u0436\u043D\u0456 ("\u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0412\u043E\u0432\u0456, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438\u0441\u044F \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F") \u2014 \u043E\u043A\u0440\u0435\u043C\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u043C\u0430\u0441\u0438\u0432)
@@ -8069,7 +8031,131 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     else taskBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("tasks", role, text);
   }
-  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskSwipeState, taskBarLoading, taskBarHistory, _taskTypingEl;
+  function openCalendarModal() {
+    const now = /* @__PURE__ */ new Date();
+    _calYear = now.getFullYear();
+    _calMonth = now.getMonth();
+    renderCalendar();
+    const modal = document.getElementById("calendar-modal");
+    if (modal) {
+      modal.style.display = "flex";
+      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeCalendarModal);
+    }
+  }
+  function closeCalendarModal() {
+    const modal = document.getElementById("calendar-modal");
+    if (modal) modal.style.display = "none";
+  }
+  function calendarPrevMonth() {
+    _calMonth--;
+    if (_calMonth < 0) {
+      _calMonth = 11;
+      _calYear--;
+    }
+    renderCalendar();
+  }
+  function calendarNextMonth() {
+    _calMonth++;
+    if (_calMonth > 11) {
+      _calMonth = 0;
+      _calYear++;
+    }
+    renderCalendar();
+  }
+  function renderCalendar() {
+    const monthNames = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
+    const label = document.getElementById("calendar-month-label");
+    const grid = document.getElementById("calendar-grid");
+    const dayTasks = document.getElementById("calendar-day-tasks");
+    if (!label || !grid) return;
+    label.textContent = `${monthNames[_calMonth]} ${_calYear}`;
+    if (dayTasks) dayTasks.style.display = "none";
+    const firstDay = new Date(_calYear, _calMonth, 1);
+    const firstDow = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+    const today = /* @__PURE__ */ new Date();
+    const isCurrentMonth = _calYear === today.getFullYear() && _calMonth === today.getMonth();
+    const tasks = getTasks();
+    const tasksByDay = {};
+    tasks.forEach((t) => {
+      if (t.dueDate) {
+        const d = new Date(t.dueDate);
+        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
+          const day = d.getDate();
+          if (!tasksByDay[day]) tasksByDay[day] = [];
+          tasksByDay[day].push(t);
+        }
+      }
+      if (t.createdAt) {
+        const d = new Date(t.createdAt);
+        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
+          const day = d.getDate();
+          if (!tasksByDay[day]) tasksByDay[day] = [];
+          if (!tasksByDay[day].some((x) => x.id === t.id)) tasksByDay[day].push(t);
+        }
+      }
+    });
+    let cells = "";
+    for (let i = 0; i < firstDow; i++) cells += "<div></div>";
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = isCurrentMonth && d === today.getDate();
+      const hasTasks = !!tasksByDay[d];
+      const hasDeadline = tasksByDay[d]?.some((t) => t.dueDate && new Date(t.dueDate).getDate() === d);
+      const hasCritical = tasksByDay[d]?.some((t) => t.priority === "critical");
+      const hasImportant = tasksByDay[d]?.some((t) => t.priority === "important");
+      let bg = "rgba(30,16,64,0.04)";
+      let color = "rgba(30,16,64,0.35)";
+      let border = "transparent";
+      let dot = "";
+      if (isToday) {
+        bg = "#ea580c";
+        color = "white";
+        border = "#ea580c";
+      } else if (hasCritical) {
+        bg = "rgba(239,68,68,0.15)";
+        color = "#ef4444";
+        border = "rgba(239,68,68,0.3)";
+      } else if (hasImportant) {
+        bg = "rgba(234,88,12,0.12)";
+        color = "#ea580c";
+        border = "rgba(234,88,12,0.25)";
+      } else if (hasTasks) {
+        bg = "rgba(30,16,64,0.1)";
+        color = "#1e1040";
+      }
+      if (hasTasks && !isToday) dot = '<div style="width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:1px"></div>';
+      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s">${d}${dot}</div>`;
+    }
+    grid.innerHTML = cells;
+  }
+  function calendarDayTap(day) {
+    const dayTasks = document.getElementById("calendar-day-tasks");
+    if (!dayTasks) return;
+    const tasks = getTasks();
+    const dateStr = new Date(_calYear, _calMonth, day).toDateString();
+    const matching = tasks.filter((t) => {
+      if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
+      if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
+      return false;
+    });
+    if (matching.length === 0) {
+      dayTasks.style.display = "block";
+      dayTasks.innerHTML = `<div style="text-align:center;font-size:13px;color:rgba(30,16,64,0.35);padding:12px 0">\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u0434\u0430\u0447 \u043D\u0430 ${day} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][_calMonth]}</div>`;
+      return;
+    }
+    const prioColors = { critical: "#ef4444", important: "#ea580c" };
+    dayTasks.style.display = "block";
+    dayTasks.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${day} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][_calMonth]}</div>` + matching.map((t) => {
+      const isDone = t.status === "done";
+      const prioColor = prioColors[t.priority] || "";
+      const dueLabel = t.dueDate ? " \u{1F4C5}" : "";
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+        <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${isDone ? "#16a34a" : prioColor || "rgba(30,16,64,0.2)"};background:${isDone ? "#16a34a" : "transparent"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">${isDone ? "\u2713" : ""}</div>
+        <div style="flex:1;font-size:14px;font-weight:600;color:${isDone ? "rgba(30,16,64,0.3)" : "#1e1040"};${isDone ? "text-decoration:line-through" : ""}">${escapeHtml(t.title)}${dueLabel}</div>
+      </div>`;
+    }).join("");
+  }
+  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskSwipeState, taskBarLoading, taskBarHistory, _taskTypingEl, _calYear, _calMonth;
   var init_tasks = __esm({
     "src/tabs/tasks.js"() {
       init_nav();
@@ -8117,7 +8203,12 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
         closeTaskChat,
         sendTaskChatMessage,
         toggleTaskStatus,
-        toggleTaskStep
+        toggleTaskStep,
+        openCalendarModal,
+        closeCalendarModal,
+        calendarPrevMonth,
+        calendarNextMonth,
+        calendarDayTap
       });
     }
   });
@@ -9599,7 +9690,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const tasks = getTasks();
       const taskTitle = parsed.task_title || savedText;
       const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0 ? parsed.task_steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-      tasks.unshift({ id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: taskId });
+      const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: taskId };
+      if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
+      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
+      tasks.unshift(newTask);
       saveTasks(tasks);
       if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
     }
