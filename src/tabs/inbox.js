@@ -578,7 +578,10 @@ async function processSaveAction(parsed, originalText) {
     const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
       ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
       : [];
-    tasks.unshift({ id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId });
+    const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId };
+    if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
+    if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
+    tasks.unshift(newTask);
     saveTasks(tasks);
     if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
   }

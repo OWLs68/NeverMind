@@ -559,9 +559,129 @@ export function addTaskBarMsg(role, text, _noSave = false) {
 }
 
 
+// === CALENDAR MODAL ===
+let _calYear, _calMonth;
+
+function openCalendarModal() {
+  const now = new Date();
+  _calYear = now.getFullYear();
+  _calMonth = now.getMonth();
+  renderCalendar();
+  const modal = document.getElementById('calendar-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeCalendarModal);
+  }
+}
+
+function closeCalendarModal() {
+  const modal = document.getElementById('calendar-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function calendarPrevMonth() { _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; } renderCalendar(); }
+function calendarNextMonth() { _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; } renderCalendar(); }
+
+function renderCalendar() {
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const label = document.getElementById('calendar-month-label');
+  const grid = document.getElementById('calendar-grid');
+  const dayTasks = document.getElementById('calendar-day-tasks');
+  if (!label || !grid) return;
+
+  label.textContent = `${monthNames[_calMonth]} ${_calYear}`;
+  if (dayTasks) dayTasks.style.display = 'none';
+
+  const firstDay = new Date(_calYear, _calMonth, 1);
+  const firstDow = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = _calYear === today.getFullYear() && _calMonth === today.getMonth();
+
+  const tasks = getTasks();
+  const tasksByDay = {};
+  tasks.forEach(t => {
+    if (t.dueDate) {
+      const d = new Date(t.dueDate);
+      if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
+        const day = d.getDate();
+        if (!tasksByDay[day]) tasksByDay[day] = [];
+        tasksByDay[day].push(t);
+      }
+    }
+    if (t.createdAt) {
+      const d = new Date(t.createdAt);
+      if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
+        const day = d.getDate();
+        if (!tasksByDay[day]) tasksByDay[day] = [];
+        if (!tasksByDay[day].some(x => x.id === t.id)) tasksByDay[day].push(t);
+      }
+    }
+  });
+
+  let cells = '';
+  for (let i = 0; i < firstDow; i++) cells += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = isCurrentMonth && d === today.getDate();
+    const hasTasks = !!tasksByDay[d];
+    const hasDeadline = tasksByDay[d]?.some(t => t.dueDate && new Date(t.dueDate).getDate() === d);
+    const hasCritical = tasksByDay[d]?.some(t => t.priority === 'critical');
+    const hasImportant = tasksByDay[d]?.some(t => t.priority === 'important');
+
+    let bg = 'rgba(30,16,64,0.04)';
+    let color = 'rgba(30,16,64,0.35)';
+    let border = 'transparent';
+    let dot = '';
+
+    if (isToday) { bg = '#ea580c'; color = 'white'; border = '#ea580c'; }
+    else if (hasCritical) { bg = 'rgba(239,68,68,0.15)'; color = '#ef4444'; border = 'rgba(239,68,68,0.3)'; }
+    else if (hasImportant) { bg = 'rgba(234,88,12,0.12)'; color = '#ea580c'; border = 'rgba(234,88,12,0.25)'; }
+    else if (hasTasks) { bg = 'rgba(30,16,64,0.1)'; color = '#1e1040'; }
+
+    if (hasTasks && !isToday) dot = '<div style="width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:1px"></div>';
+
+    cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s">${d}${dot}</div>`;
+  }
+  grid.innerHTML = cells;
+}
+
+function calendarDayTap(day) {
+  const dayTasks = document.getElementById('calendar-day-tasks');
+  if (!dayTasks) return;
+
+  const tasks = getTasks();
+  const dateStr = new Date(_calYear, _calMonth, day).toDateString();
+
+  const matching = tasks.filter(t => {
+    if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
+    if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
+    return false;
+  });
+
+  if (matching.length === 0) {
+    dayTasks.style.display = 'block';
+    dayTasks.innerHTML = `<div style="text-align:center;font-size:13px;color:rgba(30,16,64,0.35);padding:12px 0">Немає задач на ${day} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][_calMonth]}</div>`;
+    return;
+  }
+
+  const prioColors = { critical: '#ef4444', important: '#ea580c' };
+  dayTasks.style.display = 'block';
+  dayTasks.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${day} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][_calMonth]}</div>` +
+    matching.map(t => {
+      const isDone = t.status === 'done';
+      const prioColor = prioColors[t.priority] || '';
+      const dueLabel = t.dueDate ? ' 📅' : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+        <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${isDone ? '#16a34a' : (prioColor || 'rgba(30,16,64,0.2)')};background:${isDone ? '#16a34a' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">${isDone ? '✓' : ''}</div>
+        <div style="flex:1;font-size:14px;font-weight:600;color:${isDone ? 'rgba(30,16,64,0.3)' : '#1e1040'};${isDone ? 'text-decoration:line-through' : ''}">${escapeHtml(t.title)}${dueLabel}</div>
+      </div>`;
+    }).join('');
+}
+
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddTask, saveTask, closeTaskModal, deleteTaskFromModal,
   addTaskStep, toggleTempStep, removeTempStep, closeTaskChat,
   sendTaskChatMessage, toggleTaskStatus, toggleTaskStep,
+  openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
 });
