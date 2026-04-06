@@ -11,6 +11,7 @@ import { INBOX_SYSTEM_PROMPT, callAI, callAIWithHistory, getAIContext, saveChatM
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
+import { getEvents, saveEvents } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
 import { addNoteFromInbox } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction } from './finance.js';
@@ -402,6 +403,14 @@ export async function sendToAI(fromChip = false) {
           saveProjects(projects);
           addInboxChatMsg('agent', `✅ Проект "${newProject.name}" створено`);
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
+        } else if (action.action === 'create_event') {
+          const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, priority: action.priority || 'normal', createdAt: Date.now() };
+          const events = getEvents();
+          events.unshift(ev);
+          saveEvents(events);
+          const dateObj = new Date(action.date);
+          const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${action.time ? ' о ' + action.time : ''}`);
         } else if (action.action === 'restore_deleted') {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;

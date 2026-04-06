@@ -144,6 +144,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/tabs/finance.js` | Фінанси, бюджет, категорії, AI-коуч (кешований) |
 | `src/tabs/health.js` | Карточки здоров'я, денні шкали (енергія/сон/біль) |
 | `src/tabs/projects.js` | Проекти, воркспейс, кроки, метрики, темп |
+| `src/tabs/calendar.js` | Календар, події (nm_events), блок "Найближче", модалка календаря |
 | `src/tabs/evening.js` | Моменти дня, вечірній підсумок, "Я" вкладка, денний скор |
 | `src/tabs/onboarding.js` | Онбординг, слайди, опитування, OWL Guide, help |
 
@@ -293,6 +294,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `nm_health_cards` | `[]` | `src/tabs/health.js` |
 | `nm_health_log` | `{date: {energy, sleep, pain}}` | `src/tabs/health.js` |
 | `nm_projects` | `[]` | `src/tabs/projects.js` |
+| `nm_events` | `[]` | `src/tabs/calendar.js` |
 | `nm_moments` | `[]` | `src/tabs/evening.js` |
 | `nm_evening_summary` | `{text, date}` | `src/tabs/evening.js` |
 | `nm_trash` | `[]` max 200, 7 днів TTL | `src/core/trash.js` |
@@ -317,6 +319,8 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 { id, type:'expense'|'income', amount, category, comment, ts }
 // Project
 { id, name, subtitle, status:'idea'|'active'|'paused'|'done', progress, steps, decisions, metrics, tempoNow, tempoMore, tempoIdeal }
+// Event (календарна подія)
+{ id, title, date:'YYYY-MM-DD', time?:'HH:MM', priority?:'normal'|'important'|'critical', createdAt }
 // Moment
 { id, text, mood:'positive'|'neutral'|'negative', ts, summary? }
 // TrashItem
