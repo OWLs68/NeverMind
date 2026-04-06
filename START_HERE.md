@@ -41,7 +41,7 @@ src/                    — Вихідний код (модулі)
 │   ├── inbox-board.js  — OWL Board Inbox, проактивні повідомлення
 │   ├── board.js        — OWL Tab Boards (рендер + свайпи для всіх вкладок)
 │   ├── proactive.js    — Генерація проактивних повідомлень
-│   └── chips.js        — owlChipToChat (навігаційні та текстові чіпи)
+│   └── chips.js        — Центральний модуль чіпів (рендер, клік, fuzzy match, промпт-правила)
 ├── ui/
 │   ├── keyboard.js     — setupKeyboardAvoiding (iOS hack)
 │   └── swipe-delete.js — Swipe trail для видалення
