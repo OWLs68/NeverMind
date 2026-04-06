@@ -308,7 +308,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 ```javascript
 // Task
-{ id, title, status:'active'|'done', steps:[{id,text,done}], createdAt, completedAt? }
+{ id, title, status:'active'|'done', steps:[{id,text,done,doneAt?}], createdAt, completedAt?, dueDate?, priority?:'normal'|'important'|'critical' }
 // Note
 { id, text, folder, source:'inbox'|'manual'|'ai', ts, lastViewed, updatedAt? }
 // Habit
