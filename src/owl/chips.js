@@ -4,7 +4,7 @@
 // ============================================================
 
 import { switchTab, showToast } from '../core/nav.js';
-import { openChatBar } from '../ai/core.js';
+import { openChatBar, saveChatMsg } from '../ai/core.js';
 import { escapeHtml } from '../core/utils.js';
 import { sendToAI } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
@@ -173,7 +173,7 @@ export function handleChipClick(tab, text, action, target) {
 
   // 2. Чіп-звіт з ✔️ — обробити ЛОКАЛЬНО без AI
   if (text.includes('✔️')) {
-    const handled = handleCompletionChip(text);
+    const handled = handleCompletionChip(text, tab);
     if (handled) return;
     // Якщо fuzzy match не знайшов нічого — відправити в чат як звичайний текст
   }
@@ -187,7 +187,7 @@ export function handleChipClick(tab, text, action, target) {
 // Без виклику AI! Fuzzy match по перших 4 літерах кожного слова.
 // Повертає true якщо знайшов і закрив.
 // ============================================================
-function handleCompletionChip(text) {
+function handleCompletionChip(text, tab) {
   // Прибираємо ✔️ і зайві символи
   const cleanText = text.replace(/✔️/g, '').trim().toLowerCase();
   if (!cleanText) return false;
@@ -216,7 +216,9 @@ function handleCompletionChip(text) {
         tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now(), updatedAt: Date.now() };
         saveTasks(tasks);
         renderTasks();
-        showToast(`✓ "${task.title}" — виконано`);
+        const msg = `✓ "${task.title}" — виконано`;
+        showToast(msg);
+        saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
         return true;
       }
     }
@@ -243,7 +245,9 @@ function handleCompletionChip(text) {
         localStorage.setItem('nm_quit_log', JSON.stringify(quitLog));
         renderHabits();
         renderProdHabits();
-        showToast(`✓ "${habit.name}" — тримаєшся!`);
+        const msg = `✓ "${habit.name}" — тримаєшся!`;
+        showToast(msg);
+        saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
         return true;
       } else {
         // Build-звичка — відмітити виконання
@@ -252,7 +256,9 @@ function handleCompletionChip(text) {
         saveHabitLog(log);
         renderHabits();
         renderProdHabits();
-        showToast(`✓ "${habit.name}" — зараховано`);
+        const msg = `✓ "${habit.name}" — зараховано`;
+        showToast(msg);
+        saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
         return true;
       }
     }
