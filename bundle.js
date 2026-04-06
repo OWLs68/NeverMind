@@ -11659,9 +11659,9 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
       init_tasks();
       TAB_THEMES = {
         inbox: {
-          bg: "linear-gradient(160deg, #f5f0e8, #ffffff)",
-          orb: "rgba(220,200,170,0.25)",
-          tabBg: "rgb(220,200,170)",
+          bg: "linear-gradient(160deg, #fed7aa, #ffedd5)",
+          orb: "rgba(234,88,12,0.10)",
+          tabBg: "rgb(254,215,170)",
           accent: "#5c4a2a",
           accent2: "#8b6914"
         },
@@ -11673,9 +11673,9 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
           accent2: "#f97316"
         },
         notes: {
-          bg: "linear-gradient(160deg, #fed7aa, #ffedd5)",
-          orb: "rgba(234,88,12,0.10)",
-          tabBg: "rgb(254,215,170)",
+          bg: "linear-gradient(160deg, #f5f0e8, #ffffff)",
+          orb: "rgba(220,200,170,0.25)",
+          tabBg: "rgb(220,200,170)",
           accent: "#c2620a",
           accent2: "#f97316"
         },
