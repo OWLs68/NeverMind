@@ -121,16 +121,13 @@ export function renderTabBoard(tab) {
   }
 
   const msg = msgs[0];
-  const ago = Date.now() - (msg.ts || msg.id || Date.now());
-  const mins = Math.floor(ago / 60000);
-  const timeStr = mins < 1 ? 'щойно' : mins < 60 ? mins + ' хв' : Math.floor(mins / 60) + ' год';
 
   const tEl = document.getElementById('owl-tab-text-' + tab);
   const cEl = document.getElementById('owl-tab-ctext-' + tab);
   const tmEl = document.getElementById('owl-tab-time-' + tab);
   if (tEl) tEl.textContent = msg.text;
   if (cEl) cEl.textContent = msg.text;
-  if (tmEl) tmEl.textContent = timeStr;
+  if (tmEl) tmEl.textContent = '';
 
   const chipsEl = document.getElementById('owl-tab-chips-' + tab);
   if (chipsEl) {

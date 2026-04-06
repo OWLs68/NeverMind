@@ -244,15 +244,6 @@ ${CHIP_PROMPT_RULES}
       localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
     }
 
-    // Дублюємо проактивне повідомлення в чат-бар
-    try {
-      const chatKey = 'nm_chat_' + tab;
-      const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
-      chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
-      localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-      restoreChatUI(tab);
-    } catch(e) {}
-
     // Рендер
     if (isInbox) renderOwlBoard();
     else renderTabBoard(tab);
