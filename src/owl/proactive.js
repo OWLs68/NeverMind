@@ -3,7 +3,7 @@ import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard } from './inbox-board.js';
-import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT } from './chips.js';
+import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, getChipStatsForPrompt } from './chips.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
 import { getNotes } from '../tabs/notes.js';
@@ -222,6 +222,7 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
 ${CHIP_PROMPT_RULES}
+${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
 - Відповідай українською.`;
 
   try {
