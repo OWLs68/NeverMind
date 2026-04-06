@@ -13,6 +13,7 @@ import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getQuitStatus, renderHabits, renderProdHabits, saveHabitLog } from '../tabs/habits.js';
 import { getNotes, renderNotes, addNoteFromInbox } from '../tabs/notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinBudget, getFinCats, getFinPeriodRange, saveFinCats } from '../tabs/finance.js';
+import { getEveningMood } from '../tabs/evening.js';
 
 // === 3-СТЕЙТНА СИСТЕМА ЧАТУ ДЛЯ НЕ-INBOX ВКЛАДОК ===
 // Стани: undefined/відсутній = closed | 'a' = compact open | 'b' = full expand
@@ -495,7 +496,12 @@ export function getOwlBoardContext() {
     pulseParts.push(`Звичок: ${doneH}/${todayHabitsAll.length}`);
     if (todayMoments.length > 0) pulseParts.push(`Моментів записано: ${todayMoments.length}`);
     if (!hasSummary) pulseParts.push('Підсумок дня ще не записано');
-    important.push(`[ВЕЧІРНІЙ ПУЛЬС] Як пройшов день:\n${pulseParts.join('\n')}\nЗапитай юзера як день або підведи підсумок.`);
+    const eMood = getEveningMood();
+    if (eMood) {
+      const ml = { bad:'😔 погано', meh:'😐 так собі', ok:'🙂 нормально', good:'😄 добре', fire:'🔥 чудово' };
+      pulseParts.push(`Настрій дня (обрав юзер): ${ml[eMood] || eMood}`);
+    }
+    important.push(`[ВЕЧІРНІЙ ПУЛЬС] Як пройшов день:\n${pulseParts.join('\n')}\nАдаптуй тон під настрій. Запитай юзера як день або підведи підсумок.`);
   }
 
   // Дедлайн через ~годину
