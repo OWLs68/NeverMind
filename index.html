@@ -986,19 +986,19 @@
 <!-- MOMENT VIEW MODAL -->
 <div id="moment-view-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div onclick="closeMomentView()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(30,51,80,0.55);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.2);padding:0 20px;">
     <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
-      <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="width:36px;height:4px;background:rgba(255,255,255,0.25);border-radius:2px;margin:0 auto 20px"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div id="moment-view-header" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Момент дня</div>
-        <div id="moment-view-time" style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.4)"></div>
+        <div id="moment-view-header" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:white">Момент дня</div>
+        <div id="moment-view-time" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.5)"></div>
       </div>
-      <div id="moment-view-text" style="font-size:15px;color:#1e1040;line-height:1.55;font-weight:500;white-space:pre-wrap;word-break:break-word"></div>
-      <div id="moment-view-summary-block" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid rgba(30,16,64,0.08)">
-        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Короткий зміст</div>
-        <div id="moment-view-summary" style="font-size:13px;color:rgba(30,16,64,0.6);line-height:1.45;font-weight:500"></div>
+      <div id="moment-view-text" style="font-size:15px;color:white;line-height:1.55;font-weight:500;white-space:pre-wrap;word-break:break-word"></div>
+      <div id="moment-view-summary-block" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.15)">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Короткий зміст</div>
+        <div id="moment-view-summary" style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.45;font-weight:500"></div>
       </div>
-      <button onclick="closeMomentView()" style="width:100%;margin-top:20px;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Закрити</button>
+      <button onclick="closeMomentView()" style="width:100%;margin-top:20px;background:linear-gradient(135deg,#3a5a80,#1e3350);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Закрити</button>
     </div>
   </div>
 </div>
@@ -1006,19 +1006,19 @@
 <!-- MOMENT MODAL -->
 <div id="moment-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div onclick="closeMomentModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(30,51,80,0.55);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.2);padding:0 20px;">
     <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
-    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
-    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">Момент дня</div>
+    <div style="width:36px;height:4px;background:rgba(255,255,255,0.25);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:white;margin-bottom:14px">Момент дня</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button onclick="setMomentMood('positive')" id="mood-positive" style="flex:1;border:2px solid rgba(22,163,74,0.3);background:rgba(22,163,74,0.06);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#16a34a;cursor:pointer">😊 Добре</button>
-      <button onclick="setMomentMood('neutral')" id="mood-neutral" style="flex:1;border:2px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#d97706;cursor:pointer">😐 Нейтрально</button>
-      <button onclick="setMomentMood('negative')" id="mood-negative" style="flex:1;border:2px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#ef4444;cursor:pointer">😞 Погано</button>
+      <button onclick="setMomentMood('positive')" id="mood-positive" style="flex:1;border:1.5px solid rgba(22,163,74,0.4);background:rgba(22,163,74,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#4ade80;cursor:pointer">😊 Добре</button>
+      <button onclick="setMomentMood('neutral')" id="mood-neutral" style="flex:1;border:1.5px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#fbbf24;cursor:pointer">😐 Нейтрально</button>
+      <button onclick="setMomentMood('negative')" id="mood-negative" style="flex:1;border:1.5px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#f87171;cursor:pointer">😞 Погано</button>
     </div>
-    <textarea id="moment-input-text" rows="3" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Що сталося? Що відчував?"></textarea>
+    <textarea id="moment-input-text" rows="3" style="width:100%;border:1.5px solid rgba(255,255,255,0.2);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:white;outline:none;resize:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.12)" placeholder="Що сталося? Що відчував?"></textarea>
     <div style="display:flex;gap:10px">
-      <button onclick="closeMomentModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveMoment()" style="flex:2;background:linear-gradient(135deg,#9b7de0,#7c3aed);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button onclick="closeMomentModal()" style="flex:1;background:rgba(255,255,255,0.1);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(255,255,255,0.6);cursor:pointer">Скасувати</button>
+      <button onclick="saveMoment()" style="flex:2;background:linear-gradient(135deg,#3a5a80,#1e3350);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
     </div>
   </div>
