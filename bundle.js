@@ -5895,6 +5895,214 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
   });
 
+  // src/tabs/calendar.js
+  function getEvents() {
+    return JSON.parse(localStorage.getItem("nm_events") || "[]");
+  }
+  function saveEvents(arr) {
+    localStorage.setItem("nm_events", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "events" }));
+  }
+  function openCalendarModal() {
+    const now = /* @__PURE__ */ new Date();
+    _calYear = now.getFullYear();
+    _calMonth = now.getMonth();
+    renderCalendar();
+    renderUpcoming();
+    const modal = document.getElementById("calendar-modal");
+    if (modal) {
+      modal.style.display = "flex";
+      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeCalendarModal);
+    }
+  }
+  function closeCalendarModal() {
+    const modal = document.getElementById("calendar-modal");
+    if (modal) modal.style.display = "none";
+  }
+  function calendarPrevMonth() {
+    _calMonth--;
+    if (_calMonth < 0) {
+      _calMonth = 11;
+      _calYear--;
+    }
+    renderCalendar();
+  }
+  function calendarNextMonth() {
+    _calMonth++;
+    if (_calMonth > 11) {
+      _calMonth = 0;
+      _calYear++;
+    }
+    renderCalendar();
+  }
+  function renderUpcoming() {
+    const el = document.getElementById("calendar-upcoming");
+    if (!el) return;
+    const now = /* @__PURE__ */ new Date();
+    const todayStr = now.toDateString();
+    const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3);
+    const items = [];
+    getEvents().forEach((ev) => {
+      const d = new Date(ev.date);
+      if (d >= new Date(now.toDateString()) && d <= in7days) {
+        items.push({ title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null });
+      }
+    });
+    getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
+      const d = new Date(t.dueDate);
+      if (d >= new Date(now.toDateString()) && d <= in7days) {
+        items.push({ title: t.title, date: d, type: "task", priority: t.priority || "normal" });
+      }
+    });
+    items.sort((a, b) => a.date - b.date);
+    if (items.length === 0) {
+      el.style.display = "none";
+      return;
+    }
+    const prioColors = { critical: "#ef4444", important: "#ea580c", normal: "rgba(30,16,64,0.4)" };
+    const prioIcons = { critical: "\u{1F534}", important: "\u{1F7E0}", normal: "" };
+    el.style.display = "block";
+    el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0435</div>` + items.map((item) => {
+      const isToday = item.date.toDateString() === todayStr;
+      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${item.date.getDate()} ${MONTHS_OF[item.date.getMonth()]}`;
+      const icon = item.type === "event" ? "\u{1F4C5}" : "\u2611\uFE0F";
+      const prio = prioIcons[item.priority] || "";
+      const timeStr = item.time ? ` \xB7 ${item.time}` : "";
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+        <div style="font-size:16px;flex-shrink:0">${icon}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;color:#1e1040">${prio} ${escapeHtml(item.title)}</div>
+          <div style="font-size:11px;font-weight:600;color:${prioColors[item.priority]};margin-top:1px">${dayLabel}${timeStr}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  function renderCalendar() {
+    const label = document.getElementById("calendar-month-label");
+    const grid = document.getElementById("calendar-grid");
+    const dayDetails = document.getElementById("calendar-day-tasks");
+    if (!label || !grid) return;
+    label.textContent = `${MONTHS_UA[_calMonth]} ${_calYear}`;
+    if (dayDetails) dayDetails.style.display = "none";
+    const firstDay = new Date(_calYear, _calMonth, 1);
+    const firstDow = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+    const today = /* @__PURE__ */ new Date();
+    const isCurrentMonth = _calYear === today.getFullYear() && _calMonth === today.getMonth();
+    const itemsByDay = {};
+    const addItem = (day, item) => {
+      if (!itemsByDay[day]) itemsByDay[day] = [];
+      itemsByDay[day].push(item);
+    };
+    getTasks().forEach((t) => {
+      if (t.dueDate) {
+        const d = new Date(t.dueDate);
+        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) addItem(d.getDate(), { ...t, _type: "task" });
+      }
+      if (t.createdAt) {
+        const d = new Date(t.createdAt);
+        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
+          const day = d.getDate();
+          if (!itemsByDay[day]?.some((x) => x.id === t.id)) addItem(day, { ...t, _type: "task" });
+        }
+      }
+    });
+    getEvents().forEach((ev) => {
+      const d = new Date(ev.date);
+      if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) addItem(d.getDate(), { ...ev, _type: "event" });
+    });
+    let cells = "";
+    for (let i = 0; i < firstDow; i++) cells += "<div></div>";
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = isCurrentMonth && d === today.getDate();
+      const dayItems = itemsByDay[d] || [];
+      const hasItems = dayItems.length > 0;
+      const hasEvent = dayItems.some((x) => x._type === "event");
+      const hasCritical = dayItems.some((x) => x.priority === "critical");
+      const hasImportant = dayItems.some((x) => x.priority === "important");
+      let bg = "rgba(30,16,64,0.04)";
+      let color = "rgba(30,16,64,0.35)";
+      let border = "transparent";
+      let dot = "";
+      if (isToday) {
+        bg = "#ea580c";
+        color = "white";
+        border = "#ea580c";
+      } else if (hasCritical) {
+        bg = "rgba(239,68,68,0.15)";
+        color = "#ef4444";
+        border = "rgba(239,68,68,0.3)";
+      } else if (hasImportant) {
+        bg = "rgba(234,88,12,0.12)";
+        color = "#ea580c";
+        border = "rgba(234,88,12,0.25)";
+      } else if (hasEvent) {
+        bg = "rgba(99,102,241,0.12)";
+        color = "#6366f1";
+        border = "rgba(99,102,241,0.25)";
+      } else if (hasItems) {
+        bg = "rgba(30,16,64,0.1)";
+        color = "#1e1040";
+      }
+      if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#6366f1" : "currentColor"};margin-top:1px"></div>`;
+      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s">${d}${dot}</div>`;
+    }
+    grid.innerHTML = cells;
+  }
+  function calendarDayTap(day) {
+    const el = document.getElementById("calendar-day-tasks");
+    if (!el) return;
+    const dateStr = new Date(_calYear, _calMonth, day).toDateString();
+    const tasks = getTasks().filter((t) => {
+      if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
+      if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
+      return false;
+    });
+    const events = getEvents().filter((ev) => new Date(ev.date).toDateString() === dateStr);
+    if (tasks.length === 0 && events.length === 0) {
+      el.style.display = "block";
+      el.innerHTML = `<div style="text-align:center;font-size:13px;color:rgba(30,16,64,0.35);padding:12px 0">\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u043D\u0430 ${day} ${MONTHS_OF[_calMonth]}</div>`;
+      return;
+    }
+    const prioColors = { critical: "#ef4444", important: "#ea580c" };
+    let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${day} ${MONTHS_OF[_calMonth]}</div>`;
+    events.forEach((ev) => {
+      const timeStr = ev.time ? `${ev.time} \xB7 ` : "";
+      const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      <div style="font-size:16px;flex-shrink:0">\u{1F4C5}</div>
+      <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${timeStr}${escapeHtml(ev.title)}</div>
+    </div>`;
+    });
+    tasks.forEach((t) => {
+      const isDone = t.status === "done";
+      const prioColor = prioColors[t.priority] || "";
+      const dueLabel = t.dueDate ? " \u{1F4C5}" : "";
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${isDone ? "#16a34a" : prioColor || "rgba(30,16,64,0.2)"};background:${isDone ? "#16a34a" : "transparent"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">${isDone ? "\u2713" : ""}</div>
+      <div style="flex:1;font-size:14px;font-weight:600;color:${isDone ? "rgba(30,16,64,0.3)" : "#1e1040"};${isDone ? "text-decoration:line-through" : ""}">${escapeHtml(t.title)}${dueLabel}</div>
+    </div>`;
+    });
+    el.style.display = "block";
+    el.innerHTML = html;
+  }
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth;
+  var init_calendar = __esm({
+    "src/tabs/calendar.js"() {
+      init_utils();
+      init_tasks();
+      MONTHS_UA = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
+      MONTHS_OF = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      Object.assign(window, {
+        openCalendarModal,
+        closeCalendarModal,
+        calendarPrevMonth,
+        calendarNextMonth,
+        calendarDayTap
+      });
+    }
+  });
+
   // src/tabs/habits.js
   function getHabits() {
     return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
@@ -6682,6 +6890,18 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (parsed.ask_after) setTimeout(() => addMsg("agent", parsed.ask_after), 600);
       return true;
     }
+    if (action === "create_event") {
+      const title = (parsed.title || "").trim();
+      if (!title || !parsed.date) return false;
+      const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, priority: parsed.priority || "normal", createdAt: Date.now() };
+      const events = getEvents();
+      events.unshift(ev);
+      saveEvents(events);
+      const dateObj = new Date(parsed.date);
+      const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+      addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}${parsed.time ? " \u043E " + parsed.time : ""}`);
+      return true;
+    }
     if (action === "create_folder") {
       const folderName = (parsed.folder || "").trim();
       if (!folderName) return false;
@@ -6919,6 +7139,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_notes();
       init_finance();
       init_evening();
+      init_calendar();
       editingHabitId = null;
       _habitModalType = "build";
       document.addEventListener("click", (e) => {
@@ -7463,10 +7684,18 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
   - \u042F\u043A\u0449\u043E \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0438 \u044F\u0432\u043D\u043E \u0440\u0456\u0437\u043D\u0456 \u0456 \u043D\u0435\u0437\u0430\u043B\u0435\u0436\u043D\u0456 ("\u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0412\u043E\u0432\u0456, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438\u0441\u044F \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F") \u2014 \u043E\u043A\u0440\u0435\u043C\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u043C\u0430\u0441\u0438\u0432)
   - \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 action: "clarify" \u0437 \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C "\u0426\u0435 \u043E\u0434\u0438\u043D \u0441\u043F\u0438\u0441\u043E\u043A \u0447\u0438 \u043E\u043A\u0440\u0435\u043C\u0456 \u0437\u0430\u0434\u0430\u0447\u0456?"
 - habit: \u041D\u041E\u0412\u0410 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0430 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0430 \u0434\u0456\u044F ("\u0449\u043E\u0434\u043D\u044F", "\u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A", "\u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). "text" \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430. \u042F\u041A\u0429\u041E \u0432\u043A\u0430\u0437\u0430\u043D\u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0434\u043D\u0456 \u2014 \u0434\u043E\u0434\u0430\u0439 "days" \u043C\u0430\u0441\u0438\u0432 (0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434). \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u043F\u043E \u0441\u0435\u0440\u0435\u0434\u0430\u0445 \u0456 \u0432\u0456\u0432\u0442\u043E\u0440\u043A\u0430\u0445" \u2192 "days":[1,2]. \u042F\u041A\u0429\u041E \u0432\u043A\u0430\u0437\u0430\u043D\u0430 \u043A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0440\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C ("8 \u0440\u0430\u0437\u0456\u0432", "5 \u0441\u043A\u043B\u044F\u043D\u043E\u043A") \u2014 \u0434\u043E\u0434\u0430\u0439 "targetCount":8
-- event: \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u043F\u043E\u0434\u0456\u0457 \u0431\u0435\u0437 \u0435\u043C\u043E\u0446\u0456\u0439 ("\u043F\u043E\u0457\u0445\u0430\u0432 \u043D\u0430 \u0440\u0438\u0431\u0430\u043B\u043A\u0443", "\u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F \u0437 \u0412\u043E\u0432\u043E\u044E"). \u042F\u043A\u0449\u043E \u0454 \u0435\u043C\u043E\u0446\u0456\u0457/\u0440\u043E\u0437\u0434\u0443\u043C\u0438 \u2014 \u0446\u0435 note
+- event: \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0442\u043E\u0433\u043E \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443 ("\u043F\u043E\u0457\u0445\u0430\u0432 \u043D\u0430 \u0440\u0438\u0431\u0430\u043B\u043A\u0443", "\u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F \u0437 \u0412\u043E\u0432\u043E\u044E"). \u0426\u0435 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F. \u042F\u043A\u0449\u043E \u0454 \u0435\u043C\u043E\u0446\u0456\u0457/\u0440\u043E\u0437\u0434\u0443\u043C\u0438 \u2014 \u0446\u0435 note
 - idea: \u0442\u0432\u043E\u0440\u0447\u0430 \u0434\u0443\u043C\u043A\u0430, \u0456\u0434\u0435\u044F, \u043F\u043B\u0430\u043D, \u043D\u0430\u0442\u0445\u043D\u0435\u043D\u043D\u044F
 - note: \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0434\u0443\u043C\u043A\u0438, \u0435\u043C\u043E\u0446\u0456\u0457, \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0438, \u0441\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F, \u0444\u0430\u043A\u0442\u0438, \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u0456 \u0437\u0430\u043F\u0438\u0441\u0438, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F, \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0436\u0438\u0442\u0442\u0456. \u042F\u041A\u0429\u041E \u043B\u044E\u0434\u0438\u043D\u0430 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C, \u0441\u0442\u0430\u043D, \u0441\u0438\u0442\u0443\u0430\u0446\u0456\u044E \u2014 \u0446\u0435 note, \u041D\u0415 reply.
 - finance: \u0432\u0438\u0442\u0440\u0430\u0442\u0430 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 (\u0431\u0443\u0434\u044C-\u044F\u043A\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439). \u042F\u043A\u0449\u043E \u0454 \u0441\u0443\u043C\u0430 \u0456 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0432\u0438\u0442\u0440\u0430\u0442/\u0434\u043E\u0445\u043E\u0434\u0443 \u2014 \u0446\u0435 finance
+
+\u042F\u041A\u0429\u041E \u0446\u0435 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u0410 \u041F\u041E\u0414\u0406\u042F \u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423 ("\u043F\u0440\u0438\u0457\u0437\u0434 \u043C\u0430\u043C\u0438 20 \u0447\u0438\u0441\u043B\u0430", "\u0437\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u041E\u043B\u0435\u0433\u043E\u043C \u0432 \u0441\u0435\u0440\u0435\u0434\u0443", "\u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F 15 \u0442\u0440\u0430\u0432\u043D\u044F") \u2014 \u0446\u0435 \u041D\u0415 task \u0456 \u041D\u0415 save/event. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
+{"action":"create_event","title":"\u041F\u0440\u0438\u0457\u0437\u0434 \u043C\u0430\u043C\u0438","date":"2026-04-20","time":null,"priority":"normal"}
+- "title" \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 2-5 \u0441\u043B\u0456\u0432
+- "date" \u2014 ISO \u0434\u0430\u0442\u0430 (YYYY-MM-DD), \u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E
+- "time" \u2014 "HH:MM" \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u0438\u0439 \u0447\u0430\u0441, \u0456\u043D\u0430\u043A\u0448\u0435 null
+- "priority" \u2014 "critical"|"important"|"normal"
+\u0420\u043E\u0437\u0440\u0456\u0437\u043D\u044F\u0439: "\u043A\u0443\u043F\u0438\u0442\u0438 \u043C\u043E\u043B\u043E\u043A\u043E \u0417\u0410\u0412\u0422\u0420\u0410" = task \u0437 dueDate. "\u041F\u0440\u0438\u0457\u0437\u0434 \u043C\u0430\u043C\u0438 20 \u0447\u0438\u0441\u043B\u0430" = create_event (\u0446\u0435 \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438, \u0430 \u043F\u043E\u0434\u0456\u044F \u0449\u043E \u0441\u0442\u0430\u043D\u0435\u0442\u044C\u0441\u044F)
 
 \u042F\u041A\u0429\u041E \u0446\u0435 \u0432\u0438\u0442\u0440\u0430\u0442\u0430 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 (\u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON:
 {
@@ -8031,131 +8260,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     else taskBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("tasks", role, text);
   }
-  function openCalendarModal() {
-    const now = /* @__PURE__ */ new Date();
-    _calYear = now.getFullYear();
-    _calMonth = now.getMonth();
-    renderCalendar();
-    const modal = document.getElementById("calendar-modal");
-    if (modal) {
-      modal.style.display = "flex";
-      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeCalendarModal);
-    }
-  }
-  function closeCalendarModal() {
-    const modal = document.getElementById("calendar-modal");
-    if (modal) modal.style.display = "none";
-  }
-  function calendarPrevMonth() {
-    _calMonth--;
-    if (_calMonth < 0) {
-      _calMonth = 11;
-      _calYear--;
-    }
-    renderCalendar();
-  }
-  function calendarNextMonth() {
-    _calMonth++;
-    if (_calMonth > 11) {
-      _calMonth = 0;
-      _calYear++;
-    }
-    renderCalendar();
-  }
-  function renderCalendar() {
-    const monthNames = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
-    const label = document.getElementById("calendar-month-label");
-    const grid = document.getElementById("calendar-grid");
-    const dayTasks = document.getElementById("calendar-day-tasks");
-    if (!label || !grid) return;
-    label.textContent = `${monthNames[_calMonth]} ${_calYear}`;
-    if (dayTasks) dayTasks.style.display = "none";
-    const firstDay = new Date(_calYear, _calMonth, 1);
-    const firstDow = (firstDay.getDay() + 6) % 7;
-    const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
-    const today = /* @__PURE__ */ new Date();
-    const isCurrentMonth = _calYear === today.getFullYear() && _calMonth === today.getMonth();
-    const tasks = getTasks();
-    const tasksByDay = {};
-    tasks.forEach((t) => {
-      if (t.dueDate) {
-        const d = new Date(t.dueDate);
-        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
-          const day = d.getDate();
-          if (!tasksByDay[day]) tasksByDay[day] = [];
-          tasksByDay[day].push(t);
-        }
-      }
-      if (t.createdAt) {
-        const d = new Date(t.createdAt);
-        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
-          const day = d.getDate();
-          if (!tasksByDay[day]) tasksByDay[day] = [];
-          if (!tasksByDay[day].some((x) => x.id === t.id)) tasksByDay[day].push(t);
-        }
-      }
-    });
-    let cells = "";
-    for (let i = 0; i < firstDow; i++) cells += "<div></div>";
-    for (let d = 1; d <= daysInMonth; d++) {
-      const isToday = isCurrentMonth && d === today.getDate();
-      const hasTasks = !!tasksByDay[d];
-      const hasDeadline = tasksByDay[d]?.some((t) => t.dueDate && new Date(t.dueDate).getDate() === d);
-      const hasCritical = tasksByDay[d]?.some((t) => t.priority === "critical");
-      const hasImportant = tasksByDay[d]?.some((t) => t.priority === "important");
-      let bg = "rgba(30,16,64,0.04)";
-      let color = "rgba(30,16,64,0.35)";
-      let border = "transparent";
-      let dot = "";
-      if (isToday) {
-        bg = "#ea580c";
-        color = "white";
-        border = "#ea580c";
-      } else if (hasCritical) {
-        bg = "rgba(239,68,68,0.15)";
-        color = "#ef4444";
-        border = "rgba(239,68,68,0.3)";
-      } else if (hasImportant) {
-        bg = "rgba(234,88,12,0.12)";
-        color = "#ea580c";
-        border = "rgba(234,88,12,0.25)";
-      } else if (hasTasks) {
-        bg = "rgba(30,16,64,0.1)";
-        color = "#1e1040";
-      }
-      if (hasTasks && !isToday) dot = '<div style="width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:1px"></div>';
-      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s">${d}${dot}</div>`;
-    }
-    grid.innerHTML = cells;
-  }
-  function calendarDayTap(day) {
-    const dayTasks = document.getElementById("calendar-day-tasks");
-    if (!dayTasks) return;
-    const tasks = getTasks();
-    const dateStr = new Date(_calYear, _calMonth, day).toDateString();
-    const matching = tasks.filter((t) => {
-      if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
-      if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
-      return false;
-    });
-    if (matching.length === 0) {
-      dayTasks.style.display = "block";
-      dayTasks.innerHTML = `<div style="text-align:center;font-size:13px;color:rgba(30,16,64,0.35);padding:12px 0">\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u0434\u0430\u0447 \u043D\u0430 ${day} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][_calMonth]}</div>`;
-      return;
-    }
-    const prioColors = { critical: "#ef4444", important: "#ea580c" };
-    dayTasks.style.display = "block";
-    dayTasks.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${day} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][_calMonth]}</div>` + matching.map((t) => {
-      const isDone = t.status === "done";
-      const prioColor = prioColors[t.priority] || "";
-      const dueLabel = t.dueDate ? " \u{1F4C5}" : "";
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-        <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${isDone ? "#16a34a" : prioColor || "rgba(30,16,64,0.2)"};background:${isDone ? "#16a34a" : "transparent"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">${isDone ? "\u2713" : ""}</div>
-        <div style="flex:1;font-size:14px;font-weight:600;color:${isDone ? "rgba(30,16,64,0.3)" : "#1e1040"};${isDone ? "text-decoration:line-through" : ""}">${escapeHtml(t.title)}${dueLabel}</div>
-      </div>`;
-    }).join("");
-  }
-  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskSwipeState, taskBarLoading, taskBarHistory, _taskTypingEl, _calYear, _calMonth;
+  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskSwipeState, taskBarLoading, taskBarHistory, _taskTypingEl;
   var init_tasks = __esm({
     "src/tabs/tasks.js"() {
       init_nav();
@@ -8203,12 +8308,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
         closeTaskChat,
         sendTaskChatMessage,
         toggleTaskStatus,
-        toggleTaskStep,
-        openCalendarModal,
-        closeCalendarModal,
-        calendarPrevMonth,
-        calendarNextMonth,
-        calendarDayTap
+        toggleTaskStep
       });
     }
   });
@@ -9532,6 +9632,14 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
             saveProjects(projects);
             addInboxChatMsg("agent", `\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "${newProject.name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E`);
             setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
+          } else if (action.action === "create_event") {
+            const ev = { id: Date.now(), title: action.title || "\u041F\u043E\u0434\u0456\u044F", date: action.date, time: action.time || null, priority: action.priority || "normal", createdAt: Date.now() };
+            const events = getEvents();
+            events.unshift(ev);
+            saveEvents(events);
+            const dateObj = new Date(action.date);
+            const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+            addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}${action.time ? " \u043E " + action.time : ""}`);
           } else if (action.action === "restore_deleted") {
             const q = (action.query || "").trim();
             const typeFilter = action.type || null;
@@ -9837,6 +9945,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_inbox_board();
       init_swipe_delete();
       init_tasks();
+      init_calendar();
       init_habits();
       init_notes();
       init_finance();
@@ -11717,6 +11826,7 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
   init_onboarding();
   init_health();
   init_projects();
+  init_calendar();
   init_boot();
 })();
 //# sourceMappingURL=bundle.js.map
