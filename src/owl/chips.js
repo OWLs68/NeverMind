@@ -45,6 +45,54 @@ export function normalizeChips(chips) {
 }
 
 // ============================================================
+// filterStaleChips — прибирає ✔️-чіпи для вже виконаних задач/звичок
+// Викликається при кожному рендері щоб "привиди" не залишались
+// ============================================================
+function filterStaleChips(chips) {
+  return chips.filter(c => {
+    const label = (c.label || '').trim();
+    if (!label.includes('✔️')) return true; // не completion-чіп — залишаємо
+
+    const cleanText = label.replace(/✔️/g, '').trim().toLowerCase();
+    if (!cleanText) return false;
+    const words = cleanText.split(/\s+/).filter(w => w.length >= 3);
+    if (words.length === 0) return true; // не зрозумілий текст — залишаємо
+    const stems = words.map(w => w.slice(0, 4));
+
+    // Перевіряємо задачі — якщо знайшли done-збіг, чіп застарів
+    const tasks = getTasks();
+    for (const t of tasks) {
+      if (t.status !== 'done') continue;
+      const tWords = t.title.toLowerCase().split(/\s+/).filter(w => w.length >= 3);
+      const tStems = tWords.map(w => w.slice(0, 4));
+      const matches = stems.filter(s => tStems.some(ts => ts === s));
+      if (matches.length >= 1 && matches.length >= stems.length * 0.5) return false;
+    }
+
+    // Перевіряємо звички — якщо вже виконана сьогодні, чіп застарів
+    const habits = getHabits();
+    const today = new Date().toDateString();
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const log = getHabitLog();
+    for (const h of habits) {
+      const hWords = h.name.toLowerCase().split(/\s+/).filter(w => w.length >= 3);
+      const hStems = hWords.map(w => w.slice(0, 4));
+      const matches = stems.filter(s => hStems.some(hs => hs === s));
+      if (matches.length >= 1 && matches.length >= stems.length * 0.5) {
+        if (h.type === 'quit') {
+          const quitLog = JSON.parse(localStorage.getItem('nm_quit_log') || '{}');
+          if (quitLog[h.id]?.lastHeld === todayISO) return false;
+        } else {
+          if (log[today]?.[h.id]) return false;
+        }
+      }
+    }
+
+    return true; // не знайшли збігу з виконаним — залишаємо
+  });
+}
+
+// ============================================================
 // renderChips — малює чіпи в контейнер
 // containerEl: DOM-елемент куди вставляти
 // chips: масив (сирий, до нормалізації)
@@ -56,7 +104,7 @@ export function normalizeChips(chips) {
 export function renderChips(containerEl, chips, tab, options = {}) {
   if (!containerEl) return;
 
-  const normChips = normalizeChips(chips);
+  const normChips = filterStaleChips(normalizeChips(chips));
   if (normChips.length === 0 && !options.showSpeak) {
     containerEl.innerHTML = '';
     return;
