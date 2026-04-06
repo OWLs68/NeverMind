@@ -15,7 +15,7 @@ import { getCurrency } from './finance.js';
 
 // === STORAGE ===
 export function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
-export function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); }
+export function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'projects' })); }
 
 // State
 let activeProjectId = null;

@@ -19,7 +19,7 @@ let _financeTypingEl = null;
 
 // Storage
 export function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
-export function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); }
+export function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'finance' })); }
 export function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
 export function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
 export function getFinCats() {

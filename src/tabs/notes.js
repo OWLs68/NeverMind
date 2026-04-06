@@ -16,7 +16,7 @@ let editingNoteId = null;
 let pendingFolderSuggestion = null;
 
 export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
-export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); }
+export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
 
 function getFolders() {
   const notes = getNotes();

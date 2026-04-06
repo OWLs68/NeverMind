@@ -12,9 +12,9 @@ import { openNotesFolder } from './notes.js';
 
 // === STORAGE ===
 export function getHealthCards() { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
-function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); }
+function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
 export function getHealthLog() { return JSON.parse(localStorage.getItem('nm_health_log') || '{}'); }
-function saveHealthLog(obj) { localStorage.setItem('nm_health_log', JSON.stringify(obj)); }
+function saveHealthLog(obj) { localStorage.setItem('nm_health_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
 
 // State
 let activeHealthCardId = null; // null = список, id = воркспейс
