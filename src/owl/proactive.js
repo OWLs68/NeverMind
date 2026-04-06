@@ -1,4 +1,4 @@
-import { getAIContext, getOWLPersonality, restoreChatUI } from '../ai/core.js';
+import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs } from '../ai/core.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard } from './inbox-board.js';
@@ -160,6 +160,16 @@ export async function generateBoardMessage(tab) {
     return `[${when}] ${m.text}`;
   }).join('\n');
 
+  // Останні повідомлення з чату — щоб табло знало що обговорювалось
+  const chatMsgs = loadChatMsgs(tab);
+  const recentChat = chatMsgs.slice(-3).map(m => {
+    const ago = Date.now() - (m.ts || 0);
+    const mins = Math.floor(ago / 60000);
+    const when = mins < 1 ? 'щойно' : mins < 60 ? mins + ' хв тому' : Math.floor(mins / 60) + ' год тому';
+    const who = m.role === 'agent' ? 'агент' : 'юзер';
+    return `[${when}] ${who}: ${m.text}`;
+  }).join('\n');
+
   const tabLabels = { inbox: 'Inbox', tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
   const phase = getDayPhase();
   const timeStr = new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
@@ -178,6 +188,9 @@ export async function generateBoardMessage(tab) {
 
 ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
 ${boardHistory || '(ще нічого не казав)'}
+
+ОСТАННІ ПОВІДОМЛЕННЯ З ЧАТУ (враховуй що вже обговорювали, не повторюй і не суперечь):
+${recentChat || '(чат порожній)'}
 
 ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
 ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
