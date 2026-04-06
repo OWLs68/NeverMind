@@ -31,7 +31,7 @@ graph TD
         OWLBOARD["owl/inbox-board.js<br/>(OWL Board Inbox)"]
         OWLTABS["owl/board.js<br/>(OWL Tab Boards)"]
         OWLPROACT["owl/proactive.js<br/>(генерація повідомлень)"]
-        OWLCHIPS["owl/chips.js<br/>(owlChipToChat)"]
+        OWLCHIPS["owl/chips.js<br/>(renderChips, CHIP_PROMPT_RULES,<br/>fuzzy match, handleChipClick)"]
     end
 
     subgraph "UI helpers"
@@ -76,9 +76,13 @@ graph TD
     PROJECTS --> AICORE
 
     OWLBOARD --> AICORE
-    OWLTABS --> AICORE
+    OWLBOARD --> OWLCHIPS
     OWLTABS --> OWLCHIPS
     OWLPROACT --> AICORE
+    OWLPROACT --> OWLCHIPS
+    AICORE --> OWLCHIPS
+    OWLCHIPS --> TASKS
+    OWLCHIPS --> HABITS
 
     EVENING --> HABITS
     EVENING --> TASKS

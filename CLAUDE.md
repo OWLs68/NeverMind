@@ -313,6 +313,10 @@ src/core/nav.js      ←─── всі модулі (switchTab, showToast, app
 src/core/boot.js     ←─── всі модулі (ініціалізація, PWA, cross-tab sync)
 src/core/trash.js    ←─── всі модулі (addToTrash, showUndoToast)
 src/ai/core.js       ←─── всі AI-модулі (callAI, getAIContext, chat storage)
+src/owl/chips.js     ←─── board.js, inbox-board.js, proactive.js, ai/core.js
+                          (renderChips, CHIP_PROMPT_RULES, handleChipClick)
+                     ──→ src/tabs/tasks.js (getTasks, saveTasks, renderTasks)
+                     ──→ src/tabs/habits.js (getHabits, getHabitLog, saveHabitLog)
 src/tabs/inbox.js    ──→ processSaveAction ──→ notes / tasks / habits / evening
 src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
                      ──→ src/tabs/* (get{Tasks,Habits,Notes,Finance})
