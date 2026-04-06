@@ -2464,6 +2464,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
     moments.push(newMoment);
     saveMoments(moments);
+    logRecentAction("add_moment", text.substring(0, 40), "evening");
     closeMomentModal();
     renderEvening();
     showToast("\u2713 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
@@ -3348,6 +3349,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
           const msg = `\u2713 "${task.title}" \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`;
           showToast(msg);
           saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
+          logRecentAction("complete_task", task.title, tab || "inbox");
           return true;
         }
       }
@@ -3372,6 +3374,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
           const msg = `\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`;
           showToast(msg);
           saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
+          logRecentAction("hold_quit_habit", habit.name, tab || "inbox");
           return true;
         } else {
           if (!log[today]) log[today] = {};
@@ -3382,6 +3385,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
           const msg = `\u2713 "${habit.name}" \u2014 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E`;
           showToast(msg);
           saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
+          logRecentAction("complete_habit", habit.name, tab || "inbox");
           return true;
         }
       }
@@ -4589,6 +4593,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
       const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
       return `[${when}] ${who}: ${m.text}`;
     }).join("\n");
+    const crossActions = getRecentActions().filter((a) => a.tab !== tab && Date.now() - a.ts < 30 * 60 * 1e3).slice(-5).map((a) => {
+      const mins = Math.floor((Date.now() - a.ts) / 6e4);
+      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+      return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
+    }).join("\n");
     const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
     const phase = getDayPhase();
     const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
@@ -4609,6 +4618,9 @@ ${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u04
 
 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F \u0417 \u0427\u0410\u0422\u0423 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0432\u0430\u043B\u0438, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0456 \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u044C):
 ${recentChat || "(\u0447\u0430\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439)"}
+${crossActions ? `
+\u041D\u0415\u0429\u041E\u0414\u0410\u0412\u041D\u0406 \u0414\u0406\u0407 \u041D\u0410 \u0406\u041D\u0428\u0418\u0425 \u0412\u041A\u041B\u0410\u0414\u041A\u0410\u0425 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2014 \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0436\u0438\u0442\u0442\u0456 \u044E\u0437\u0435\u0440\u0430):
+${crossActions}` : ""}
 
 \u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430):
 ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
@@ -4692,6 +4704,7 @@ ${CHIP_PROMPT_RULES}
   var init_proactive = __esm({
     "src/owl/proactive.js"() {
       init_core();
+      init_utils();
       init_nav();
       init_board();
       init_inbox_board();
@@ -6050,6 +6063,7 @@ ${CHIP_PROMPT_RULES}
     const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
     log[today][id] = cur + 1;
     saveHabitLog(log);
+    if (h) logRecentAction("complete_habit", h.name, "habits");
     renderHabits();
     renderMeHabitsStats();
   }
@@ -7624,6 +7638,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     if (!t) return;
     t.status = t.status === "done" ? "active" : "done";
     saveTasks(tasks);
+    logRecentAction(t.status === "done" ? "complete_task" : "reopen_task", t.title, "tasks");
     renderTasks();
   }
   function renderTasks() {
@@ -9687,9 +9702,28 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function escapeHtml(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
+  function logRecentAction(action, title, tab) {
+    try {
+      const actions = JSON.parse(localStorage.getItem(NM_RECENT_ACTIONS_KEY) || "[]");
+      actions.push({ action, title, tab, ts: Date.now() });
+      if (actions.length > NM_RECENT_ACTIONS_MAX) actions.splice(0, actions.length - NM_RECENT_ACTIONS_MAX);
+      localStorage.setItem(NM_RECENT_ACTIONS_KEY, JSON.stringify(actions));
+    } catch (e) {
+    }
+  }
+  function getRecentActions() {
+    try {
+      return JSON.parse(localStorage.getItem(NM_RECENT_ACTIONS_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  var NM_RECENT_ACTIONS_KEY, NM_RECENT_ACTIONS_MAX;
   var init_utils = __esm({
     "src/core/utils.js"() {
       init_inbox();
+      NM_RECENT_ACTIONS_KEY = "nm_recent_actions";
+      NM_RECENT_ACTIONS_MAX = 20;
       window.autoResizeTextarea = autoResizeTextarea;
     }
   });
