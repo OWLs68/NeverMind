@@ -463,6 +463,41 @@ export function getOwlBoardContext() {
   const tasks = getTasks();
   const activeTasks = tasks.filter(t => t.status !== 'done');
 
+  // === РАНКОВИЙ БРИФ ===
+  if (phase === 'morning' && owlCdExpired('morning_brief_ctx', 3 * 60 * 60 * 1000)) {
+    const todayDow = now.getDay();
+    const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && (h.days || [0,1,2,3,4]).includes(todayDow));
+    const briefParts = [];
+    if (activeTasks.length > 0) briefParts.push(`Задачі на сьогодні: ${activeTasks.slice(0, 5).map(t => '"' + t.title + '"').join(', ')}`);
+    if (todayHabitsAll.length > 0) briefParts.push(`Звички: ${todayHabitsAll.map(h => h.name).join(', ')}`);
+    const quitHabitsAll = getHabits().filter(h => h.type === 'quit');
+    if (quitHabitsAll.length > 0) {
+      const todayIso = now.toISOString().slice(0, 10);
+      const quitInfo = quitHabitsAll.map(h => { const s = getQuitStatus(h.id); return `"${h.name}": ${s.streak || 0} дн`; });
+      briefParts.push(`Челенджі: ${quitInfo.join(', ')}`);
+    }
+    if (briefParts.length > 0) important.push(`[РАНКОВИЙ БРИФ] Зведення на день:\n${briefParts.join('\n')}\nЗгадай що головне сьогодні і мотивуй коротко.`);
+  }
+
+  // === ВЕЧІРНІЙ ПУЛЬС ===
+  if ((phase === 'evening' || phase === 'night') && owlCdExpired('evening_pulse_ctx', 4 * 60 * 60 * 1000)) {
+    const doneTasks = tasks.filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 24*60*60*1000);
+    const todayDow = now.getDay();
+    const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && (h.days || [0,1,2,3,4]).includes(todayDow));
+    const todayLogAll = getHabitLog()[todayStr] || {};
+    const doneH = todayHabitsAll.filter(h => todayLogAll[h.id]).length;
+    const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+    const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === todayStr);
+    const summary = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
+    const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+    const pulseParts = [];
+    pulseParts.push(`Задач закрито сьогодні: ${doneTasks.length}`);
+    pulseParts.push(`Звичок: ${doneH}/${todayHabitsAll.length}`);
+    if (todayMoments.length > 0) pulseParts.push(`Моментів записано: ${todayMoments.length}`);
+    if (!hasSummary) pulseParts.push('Підсумок дня ще не записано');
+    important.push(`[ВЕЧІРНІЙ ПУЛЬС] Як пройшов день:\n${pulseParts.join('\n')}\nЗапитай юзера як день або підведи підсумок.`);
+  }
+
   // Дедлайн через ~годину
   const urgent = activeTasks.filter(t => {
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
