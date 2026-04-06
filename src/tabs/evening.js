@@ -264,54 +264,6 @@ export function renderMe() {
     }
   }
 
-  // === НАЙБЛИЖЧИЙ ДЕДЛАЙН + КАЛЕНДАР ===
-  const deadlineBlock = document.getElementById('me-deadline-block');
-  const deadlineContent = document.getElementById('me-deadline-content');
-  const calGrid = document.getElementById('me-cal-grid');
-  const calLabel = document.getElementById('me-cal-label');
-  if (deadlineBlock && deadlineContent) {
-    // Задачі з дедлайном (поки шукаємо по тексту "завтра", "deadline" — справжні дедлайни будуть після Supabase)
-    const activeTasks = getTasks().filter(t => t.status === 'active');
-    if (activeTasks.length > 0) {
-      deadlineBlock.style.display = 'block';
-      // Перша активна задача як "найближчий"
-      const t = activeTasks[0];
-      deadlineContent.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;border-radius:10px;background:rgba(234,88,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.title)}</div>
-          <div style="font-size:10px;font-weight:800;color:#ea580c;margin-top:1px">Активна задача</div>
-        </div>
-      </div>`;
-
-      // Міні-календар поточного місяця
-      if (calGrid && calLabel) {
-        const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
-        calLabel.textContent = monthNames[now.getMonth()] + ' · задачі';
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const firstDow = (firstDay.getDay() + 6) % 7; // 0=Пн
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        // Дні з задачами (createdAt)
-        const taskDays = new Set(getTasks().filter(t => t.createdAt).map(t => new Date(t.createdAt).getDate()));
-        let cells = '';
-        for (let i = 0; i < firstDow; i++) cells += '<div></div>';
-        for (let d = 1; d <= daysInMonth; d++) {
-          const isToday = d === now.getDate();
-          const hasTask = taskDays.has(d);
-          let style = 'aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;';
-          if (isToday) style += 'background:rgba(234,88,12,0.15);color:#ea580c;';
-          else if (hasTask) style += 'background:#7c4a2a;color:white;';
-          else style += 'background:rgba(30,16,64,0.04);color:rgba(30,16,64,0.3);';
-          cells += `<div style="${style}">${d}</div>`;
-        }
-        calGrid.innerHTML = cells;
-      }
-    } else {
-      deadlineBlock.style.display = 'none';
-    }
-  }
 
   // === ЗВИЧКИ СТАТИСТИКА ===
   renderMeHabitsStats();

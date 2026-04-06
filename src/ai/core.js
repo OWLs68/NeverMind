@@ -89,7 +89,9 @@ export function getAIContext() {
       const steps = (t.steps || []);
       const doneSteps = steps.filter(s => s.done).length;
       const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} кроків)` : '';
-      return `- [ID:${t.id}] ${t.title}${stepInfo}`;
+      const dueInfo = t.dueDate ? ` 📅${t.dueDate}` : '';
+      const prioInfo = t.priority === 'critical' ? ' 🔴' : t.priority === 'important' ? ' 🟠' : '';
+      return `- [ID:${t.id}] ${t.title}${stepInfo}${dueInfo}${prioInfo}`;
     }).join('\n');
     parts.push(`Активні задачі (використовуй ID для complete_task):\n${taskList}`);
   }
@@ -278,6 +280,8 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
   - "text" — оригінальний текст (виправ тільки граматику)
   - "task_title" — коротка назва 2-5 слів. ЯКЩО є час/дата — включи у task_title (формат 24г)
   - "task_steps" — масив кроків якщо є список дій. Інакше []
+  - "dueDate" — ISO дата (YYYY-MM-DD) ЯКЩО юзер вказав коли зробити ("завтра", "в п'ятницю", "15 квітня"). Не вигадуй дату якщо не вказана
+  - "priority" — "critical"|"important"|"normal". За замовчуванням не додавай (буде normal). Додавай тільки якщо юзер явно каже "терміново"/"важливо"/"критично"
   ВАЖЛИВО — список чи окремі задачі:
   - Якщо є назва списку + елементи ("список покупок: хліб, молоко, яйця" або "підготувати звіт: зібрати дані, написати висновки") — ОДНА задача з кроками
   - Якщо елементи явно різні і незалежні ("зателефонувати Вові, записатися до лікаря") — окремі задачі (масив)
