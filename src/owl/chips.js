@@ -5,7 +5,7 @@
 
 import { switchTab, showToast } from '../core/nav.js';
 import { openChatBar, saveChatMsg } from '../ai/core.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { sendToAI } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
 import { sendNotesBarMessage } from '../tabs/notes.js';
@@ -225,6 +225,7 @@ function handleCompletionChip(text, tab) {
         const msg = `✓ "${task.title}" — виконано`;
         showToast(msg);
         saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
+        logRecentAction('complete_task', task.title, tab || 'inbox');
         return true;
       }
     }
@@ -254,6 +255,7 @@ function handleCompletionChip(text, tab) {
         const msg = `✓ "${habit.name}" — тримаєшся!`;
         showToast(msg);
         saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
+        logRecentAction('hold_quit_habit', habit.name, tab || 'inbox');
         return true;
       } else {
         // Build-звичка — відмітити виконання
@@ -265,6 +267,7 @@ function handleCompletionChip(text, tab) {
         const msg = `✓ "${habit.name}" — зараховано`;
         showToast(msg);
         saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
+        logRecentAction('complete_habit', habit.name, tab || 'inbox');
         return true;
       }
     }

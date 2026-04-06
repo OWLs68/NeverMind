@@ -1,4 +1,5 @@
 import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs } from '../ai/core.js';
+import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard } from './inbox-board.js';
@@ -170,6 +171,16 @@ export async function generateBoardMessage(tab) {
     return `[${when}] ${who}: ${m.text}`;
   }).join('\n');
 
+  // Крос-контекст: останні дії з ІНШИХ вкладок
+  const crossActions = getRecentActions()
+    .filter(a => a.tab !== tab && (Date.now() - a.ts) < 30 * 60 * 1000) // тільки за останні 30 хв, з інших вкладок
+    .slice(-5)
+    .map(a => {
+      const mins = Math.floor((Date.now() - a.ts) / 60000);
+      const when = mins < 1 ? 'щойно' : mins + ' хв тому';
+      return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
+    }).join('\n');
+
   const tabLabels = { inbox: 'Inbox', tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
   const phase = getDayPhase();
   const timeStr = new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
@@ -191,6 +202,9 @@ ${boardHistory || '(ще нічого не казав)'}
 
 ОСТАННІ ПОВІДОМЛЕННЯ З ЧАТУ (враховуй що вже обговорювали, не повторюй і не суперечь):
 ${recentChat || '(чат порожній)'}
+${crossActions ? `
+НЕЩОДАВНІ ДІЇ НА ІНШИХ ВКЛАДКАХ (враховуй загальний контекст — що відбувається в житті юзера):
+${crossActions}` : ''}
 
 ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
 ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
