@@ -286,4 +286,26 @@ window.addEventListener('nm-data-changed', () => {
   }, BOARD_UPDATE_DELAY);
 });
 
+// === Welcome Back — привітання при поверненні в додаток ===
+const NM_LAST_ACTIVE_KEY = 'nm_last_active';
+const WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1000; // 2 години
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    // Зберігаємо час коли юзер пішов
+    localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
+  } else if (document.visibilityState === 'visible') {
+    // Юзер повернувся — перевіряємо скільки був відсутній
+    const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || '0');
+    if (!lastActive) return;
+    const away = Date.now() - lastActive;
+    const phase = getDayPhase();
+    if (away > WELCOME_BACK_THRESHOLD && phase !== 'silent') {
+      // Був більше 2 годин — генеруємо нове повідомлення для поточної вкладки
+      const tab = currentTab || 'inbox';
+      generateBoardMessage(tab);
+    }
+  }
+});
+
 // No window globals needed — all consumed via imports
