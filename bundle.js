@@ -4570,7 +4570,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       return `[${when}] ${m.text}`;
     }).join("\n");
     const chatMsgs = loadChatMsgs(tab);
-    const recentChat = chatMsgs.slice(-3).map((m) => {
+    const recentChat = chatMsgs.slice(-30).map((m) => {
       const ago = Date.now() - (m.ts || 0);
       const mins = Math.floor(ago / 6e4);
       const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
