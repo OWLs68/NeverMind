@@ -2241,6 +2241,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
   }
   function saveMoments(arr) {
     localStorage.setItem("nm_moments", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "moments" }));
   }
   function renderEvening() {
     const today = (/* @__PURE__ */ new Date()).toDateString();
@@ -4231,6 +4232,15 @@ ${CHIP_PROMPT_RULES}
     }
     return true;
   }
+  var _inboxBoardUpdateTimer = null;
+  window.addEventListener("nm-data-changed", () => {
+    if (_inboxBoardUpdateTimer) clearTimeout(_inboxBoardUpdateTimer);
+    _inboxBoardUpdateTimer = setTimeout(() => {
+      _inboxBoardUpdateTimer = null;
+      const phase = getDayPhase();
+      if (phase !== "silent") generateOwlBoardMessage();
+    }, 3e3);
+  });
   window.sendOwlReply = sendOwlReply;
 
   // src/owl/board.js
@@ -4629,6 +4639,18 @@ ${CHIP_PROMPT_RULES}
       generateTabBoardMessage(tab);
     }
   }
+  var _boardUpdateTimer = null;
+  var BOARD_UPDATE_DELAY = 3e3;
+  window.addEventListener("nm-data-changed", () => {
+    if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
+    _boardUpdateTimer = setTimeout(() => {
+      _boardUpdateTimer = null;
+      const tab = currentTab;
+      if (tab && tab !== "inbox") {
+        generateTabBoardMessage(tab);
+      }
+    }, BOARD_UPDATE_DELAY);
+  });
 
   // src/tabs/finance.js
   var _financeTypingEl = null;
@@ -5696,6 +5718,7 @@ ${CHIP_PROMPT_RULES}
   }
   function saveHabitLog(obj) {
     localStorage.setItem("nm_habit_log2", JSON.stringify(obj));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
   }
   function getQuitLog() {
     return JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
@@ -7319,6 +7342,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
   }
   function saveTasks(arr) {
     localStorage.setItem("nm_tasks", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "tasks" }));
   }
   function openAddTask() {
     editingTaskId = null;
