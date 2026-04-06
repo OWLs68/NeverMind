@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
@@ -290,6 +290,7 @@ function toggleHabitToday(id) {
   const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
   log[today][id] = cur + 1;
   saveHabitLog(log);
+  if (h) logRecentAction('complete_habit', h.name, 'habits');
   renderHabits();
   renderMeHabitsStats();
 }

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { callAI, callAIWithHistory, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { getTasks } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus, processUniversalAction } from './habits.js';
@@ -660,6 +660,7 @@ function saveMoment() {
   const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
   moments.push(newMoment);
   saveMoments(moments);
+  logRecentAction('add_moment', text.substring(0, 40), 'evening');
   closeMomentModal();
   renderEvening();
   showToast('✓ Момент збережено');

@@ -57,5 +57,22 @@ export function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// === Міні-лог останніх дій для крос-контексту OWL ===
+const NM_RECENT_ACTIONS_KEY = 'nm_recent_actions';
+const NM_RECENT_ACTIONS_MAX = 20;
+
+export function logRecentAction(action, title, tab) {
+  try {
+    const actions = JSON.parse(localStorage.getItem(NM_RECENT_ACTIONS_KEY) || '[]');
+    actions.push({ action, title, tab, ts: Date.now() });
+    if (actions.length > NM_RECENT_ACTIONS_MAX) actions.splice(0, actions.length - NM_RECENT_ACTIONS_MAX);
+    localStorage.setItem(NM_RECENT_ACTIONS_KEY, JSON.stringify(actions));
+  } catch(e) {}
+}
+
+export function getRecentActions() {
+  try { return JSON.parse(localStorage.getItem(NM_RECENT_ACTIONS_KEY) || '[]'); } catch { return []; }
+}
+
 // Functions called from HTML event handlers
 window.autoResizeTextarea = autoResizeTextarea;

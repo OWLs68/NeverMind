@@ -4,7 +4,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
@@ -185,6 +185,7 @@ function toggleTaskStatus(id) {
   if (!t) return;
   t.status = t.status === 'done' ? 'active' : 'done';
   saveTasks(tasks);
+  logRecentAction(t.status === 'done' ? 'complete_task' : 'reopen_task', t.title, 'tasks');
   renderTasks();
 }
 
