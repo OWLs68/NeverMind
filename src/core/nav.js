@@ -969,9 +969,8 @@ export function getProfile() {
 export function shouldRefreshMemory() {
   const lastTs = localStorage.getItem('nm_memory_ts');
   if (!lastTs) return true;
-  const last = new Date(parseInt(lastTs));
-  const now = new Date();
-  return last.toDateString() !== now.toDateString();
+  const elapsed = Date.now() - parseInt(lastTs);
+  return elapsed > 2 * 24 * 60 * 60 * 1000; // кожні 2 дні
 }
 
 export async function autoRefreshMemory() {
@@ -999,31 +998,63 @@ async function doRefreshMemory(showResult) {
   const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
   const notes = getNotes();
   const profile = getProfile();
+  const existingMemory = localStorage.getItem('nm_memory') || '';
 
   const recentInbox = inbox.slice(-50).map(i => `[${i.category}] ${i.text}`).join('\n');
   const tasksList = tasks.map(t => `${t.title} (${t.status})`).join('\n');
-  // Передаємо нотатки — помічаємо оновлені
   const notesList = notes.slice(-20).map(n => `[${n.folder||'Загальне'}]${n.updatedAt ? ' (оновлено)' : ''} ${n.text.substring(0,80)}`).join('\n');
 
-  const systemPrompt = `Ти — OWL, агент NeverMind. Сформуй короткий профіль людини на основі її записів. ОБОВЯЗКОВО звертайся до неї на "ти" в тексті профілю. Визнач патерни поведінки, звички, цілі. Чесно але з повагою — без зайвого негативу. Відповідай ТІЛЬКИ текстом профілю, без вступів. Максимум 300 слів.`;
+  // Збираємо чати для витягування фактів
+  const chatTabs = ['inbox','tasks','notes','me','evening','finance','health','projects'];
+  const recentChats = chatTabs.map(t => {
+    try {
+      const msgs = JSON.parse(localStorage.getItem('nm_chat_' + t) || '[]');
+      return msgs.slice(-10).map(m => `[${t}/${m.role}] ${m.text}`).join('\n');
+    } catch { return ''; }
+  }).filter(Boolean).join('\n');
 
-  const userMsg = `Профіль користувача: ${profile || 'не заповнено'}
+  const systemPrompt = `Ти — OWL, агент NeverMind. Проаналізуй записи і чати користувача і витягни КОНКРЕТНІ ФАКТИ про людину.
 
-Останні записи в Inbox:
+ПОТОЧНА ПАМ'ЯТЬ (що ми вже знаємо):
+${existingMemory || '(порожньо)'}
+
+ПРАВИЛА:
+- Поверни ТІЛЬКИ НОВІ факти яких ще НЕМАЄ у поточній пам'яті
+- Кожен факт — окремий рядок, коротко і конкретно (5-15 слів)
+- Факти: звички, цілі, вподобання, розпорядок, що не любить, робота, здоров'я, фінанси
+- Пиши як коротку замітку: "Прокидається о 7:00", "Збирає на авто", "Не любить бігати зранку"
+- Максимум 5 нових фактів за раз (тільки найважливіші)
+- Якщо нових фактів немає — поверни ПУСТО
+- НЕ повторюй те що вже в пам'яті. НЕ вигадуй. Тільки з реальних записів.
+- Відповідай українською.`;
+
+  const userMsg = `Профіль: ${profile || 'не заповнено'}
+
+Останні записи Inbox:
 ${recentInbox || 'порожньо'}
 
-Активні задачі:
+Задачі:
 ${tasksList || 'немає'}
 
 Нотатки:
 ${notesList || 'немає'}
 
-Сформуй актуальний профіль користувача.`;
+Останні чати:
+${recentChats || 'немає'}`;
 
   const result = await callAI(systemPrompt, userMsg, {});
-  if (!result) return;
+  if (!result || result.trim() === 'ПУСТО' || result.trim().length < 5) {
+    localStorage.setItem('nm_memory_ts', Date.now().toString());
+    return;
+  }
 
-  localStorage.setItem('nm_memory', result);
+  // Додаємо нові факти до існуючих (не перезаписуємо)
+  const existingEntries = existingMemory.split('\n').map(s => s.trim()).filter(Boolean);
+  const newEntries = result.split('\n').map(s => s.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+  const combined = [...existingEntries, ...newEntries];
+  // Ліміт 50 записів — прибираємо найстаріші
+  if (combined.length > 50) combined.splice(0, combined.length - 50);
+  localStorage.setItem('nm_memory', combined.join('\n'));
   localStorage.setItem('nm_memory_ts', Date.now().toString());
 
   // Оновити поле якщо відкрите
