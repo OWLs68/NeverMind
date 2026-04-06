@@ -4688,7 +4688,7 @@ ${CHIP_PROMPT_RULES}
       generateBoardMessage(tab);
     }
   }
-  var _boardGenerating, _boardUpdateTimer, BOARD_UPDATE_DELAY;
+  var _boardGenerating, _boardUpdateTimer, BOARD_UPDATE_DELAY, NM_LAST_ACTIVE_KEY, WELCOME_BACK_THRESHOLD;
   var init_proactive = __esm({
     "src/owl/proactive.js"() {
       init_core();
@@ -4711,6 +4711,22 @@ ${CHIP_PROMPT_RULES}
           const phase = getDayPhase();
           if (phase !== "silent") generateBoardMessage(tab);
         }, BOARD_UPDATE_DELAY);
+      });
+      NM_LAST_ACTIVE_KEY = "nm_last_active";
+      WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1e3;
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+          localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
+        } else if (document.visibilityState === "visible") {
+          const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || "0");
+          if (!lastActive) return;
+          const away = Date.now() - lastActive;
+          const phase = getDayPhase();
+          if (away > WELCOME_BACK_THRESHOLD && phase !== "silent") {
+            const tab = currentTab || "inbox";
+            generateBoardMessage(tab);
+          }
+        }
       });
     }
   });
