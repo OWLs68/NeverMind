@@ -3148,12 +3148,131 @@ ${aiContext ? "\n\n" + aiContext : ""}
 
   // src/owl/chips.js
   var VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
-  function owlChipToChat(tab, text, action, target) {
+  var CHIP_PROMPT_RULES = `- chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
+  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
+  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438:
+    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435", "\u041D\u0456, \u0434\u044F\u043A\u0443\u044E".
+    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0441\u0443\u0432\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u0456 \u041D\u0415 \u043F\u0438\u0448\u0438 \u043D\u0430\u043A\u0430\u0437\u043E\u0432\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C ("\u043F\u043E\u0434\u0430\u0439", "\u043A\u0443\u043F\u0438") \u2014 \u0447\u0456\u043F \u0446\u0435 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u042C \u044E\u0437\u0435\u0440\u0430, \u0430 \u043D\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0430.
+- \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0445\u043E\u0440\u043E\u0448\u043E\u0433\u043E JSON: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
+- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 chips: [].`;
+  var CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}`;
+  function normalizeChips(chips) {
+    if (!Array.isArray(chips)) return [];
+    return chips.map(
+      (c) => typeof c === "string" ? { label: c, action: "chat" } : c
+    );
+  }
+  function renderChips(containerEl, chips, tab, options = {}) {
+    if (!containerEl) return;
+    const normChips = normalizeChips(chips);
+    if (normChips.length === 0 && !options.showSpeak) {
+      containerEl.innerHTML = "";
+      return;
+    }
+    const chipsHTML = normChips.map((c) => {
+      const label = c.label || "";
+      const action = c.action === "nav" ? "nav" : "chat";
+      const target = c.target || "";
+      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
+    });
+    if (options.showSpeak) {
+      chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
+    }
+    containerEl.innerHTML = chipsHTML.join("");
+    containerEl.scrollLeft = 0;
+    if (containerEl._chipClickHandler) {
+      containerEl.removeEventListener("click", containerEl._chipClickHandler);
+    }
+    containerEl._chipClickHandler = (e) => {
+      const chipEl = e.target.closest(".owl-chip");
+      if (!chipEl) return;
+      if (chipEl.classList.contains("owl-chip-speak")) {
+        openChatBar(tab === "me" ? "me" : tab);
+        return;
+      }
+      const text = chipEl.dataset.chipText || "";
+      const action = chipEl.dataset.chipAction;
+      const target = chipEl.dataset.chipTarget;
+      chipEl.style.transition = "opacity 0.2s, transform 0.2s";
+      chipEl.style.opacity = "0";
+      chipEl.style.transform = "scale(0.8)";
+      setTimeout(() => chipEl.remove(), 200);
+      if (options.onChipClick) {
+        options.onChipClick(text, action, target, chipEl);
+        return;
+      }
+      handleChipClick(tab, text, action, target);
+    };
+    containerEl.addEventListener("click", containerEl._chipClickHandler);
+  }
+  function handleChipClick(tab, text, action, target) {
     if (action === "nav" && VALID_NAV_TARGETS.includes(target)) {
       switchTab(target);
       showToast("\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0436\u0443 \u0434\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0438");
       return;
     }
+    if (text.includes("\u2714\uFE0F")) {
+      const handled = handleCompletionChip(text);
+      if (handled) return;
+    }
+    sendChipToChat(tab, text);
+  }
+  function handleCompletionChip(text) {
+    const cleanText = text.replace(/✔️/g, "").trim().toLowerCase();
+    if (!cleanText) return false;
+    const chipWords = cleanText.split(/\s+/).filter((w) => w.length >= 3);
+    if (chipWords.length === 0) return false;
+    const chipStems = chipWords.map((w) => w.slice(0, 4));
+    const tasks = getTasks();
+    const activeTasks = tasks.filter((t) => t.status === "active");
+    for (const task of activeTasks) {
+      const taskWords = task.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+      const taskStems = taskWords.map((w) => w.slice(0, 4));
+      const matches = chipStems.filter((cs) => taskStems.some((ts) => ts === cs));
+      if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
+        const idx = tasks.findIndex((t) => t.id === task.id);
+        if (idx !== -1) {
+          tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
+          saveTasks(tasks);
+          renderTasks();
+          showToast(`\u2713 "${task.title}" \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`);
+          return true;
+        }
+      }
+    }
+    const habits = getHabits();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const log = getHabitLog();
+    for (const habit of habits) {
+      const habitWords = habit.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+      const habitStems = habitWords.map((w) => w.slice(0, 4));
+      const matches = chipStems.filter((cs) => habitStems.some((hs) => hs === cs));
+      if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
+        if (habit.type === "quit") {
+          const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+          if (!quitLog[habit.id]) quitLog[habit.id] = { streak: 0, relapses: [] };
+          quitLog[habit.id].lastHeld = todayISO;
+          if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO;
+          localStorage.setItem("nm_quit_log", JSON.stringify(quitLog));
+          renderHabits();
+          renderProdHabits();
+          showToast(`\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`);
+          return true;
+        } else {
+          if (!log[today]) log[today] = {};
+          log[today][habit.id] = (log[today][habit.id] || 0) + 1;
+          saveHabitLog(log);
+          renderHabits();
+          renderProdHabits();
+          showToast(`\u2713 "${habit.name}" \u2014 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E`);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  function sendChipToChat(tab, text) {
     const barTab = tab === "inbox" ? "inbox" : tab || "inbox";
     openChatBar(barTab);
     const inputId = barTab === "inbox" ? "inbox-input" : barTab + "-chat-input";
@@ -3182,7 +3301,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       }
     }, 100);
   }
-  window.owlChipToChat = owlChipToChat;
+  window.owlChipToChat = handleChipClick;
 
   // src/owl/inbox-board.js
   var _tabChatState = {};
@@ -3733,14 +3852,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
 - \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u0441\u0442\u0440\u0456\u043A \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E" \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0432\u0436\u0435 5 \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434 \u0431\u0456\u0433\u0430\u0432 \u2014 \u043D\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0439\u0441\u044F, \u0431\u0456\u0436\u0438 \u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456" \u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0449\u043E \u0446\u0435 \u0437\u0430 \u0437\u0430\u0434\u0430\u0447\u0456.
 - \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0441\u0443\u043C\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
 - \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432: "${recentTexts || "\u043D\u0456\u0447\u043E\u0433\u043E"}"
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: {"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}
-- chips \u2014 \u043A\u043D\u043E\u043F\u043A\u0438 \u0448\u0432\u0438\u0434\u043A\u0438\u0445 \u0434\u0456\u0439, \u043C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
-  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
-  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F:
-    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0437\u0430\u0432\u0442\u0440\u0430", "\u0440\u043E\u0437\u043A\u0430\u0436\u0438 \u0434\u0435\u0442\u0430\u043B\u044C\u043D\u0456\u0448\u0435", "\u043F\u0456\u0437\u043D\u0456\u0448\u0435".
-    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u2014 \u0446\u0435 \u043F\u043B\u0443\u0442\u0430\u0454 \u044E\u0437\u0435\u0440\u0430 \u0431\u043E \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u044F\u043A \u043E\u043F\u0438\u0441 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u0457 \u0434\u0456\u0457, \u0430 \u0430\u0433\u0435\u043D\u0442 \u043F\u0456\u0441\u043B\u044F \u043A\u043B\u0456\u043A\u0443 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454 \u0437\u0430\u0434\u0430\u0447\u0443.
-- \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0445\u043E\u0440\u043E\u0448\u043E\u0433\u043E JSON: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
-- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 chips: []. \u0412\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0437\u043D\u0430\u0454\u0448 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443.
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
+${CHIP_PROMPT_RULES}
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -3857,30 +3970,16 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
       return;
     }
     const VALID = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
-    const normChips = boardMsg.chips.map(
-      (c) => typeof c === "string" ? { label: c, action: "chat" } : c
-    );
-    el.innerHTML = normChips.map((c) => {
-      const label = c.label || "";
-      const action = c.action === "nav" ? "nav" : "chat";
-      const target = c.target || "";
-      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
-    }).join("");
-    if (!el._chipClickReady) {
-      el.addEventListener("click", (e) => {
-        const chip = e.target.closest(".owl-chip");
-        if (!chip) return;
-        const action = chip.dataset.chipAction;
-        const target = chip.dataset.chipTarget;
+    renderChips(el, boardMsg.chips, "inbox", {
+      onChipClick: (text, action, target) => {
         if (action === "nav" && VALID.includes(target)) {
           switchTab(target);
           showToast("\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0436\u0443 \u0434\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0438");
           return;
         }
-        sendOwlReply(chip.dataset.chipText || "");
-      });
-      el._chipClickReady = true;
-    }
+        sendOwlReply(text);
+      }
+    });
   }
   function showOwlTyping(show) {
     const el = document.getElementById("owl-tab-msgs-inbox");
@@ -4228,28 +4327,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     if (cEl) cEl.textContent = msg.text;
     if (tmEl) tmEl.textContent = timeStr;
     const chipsEl = document.getElementById("owl-tab-chips-" + tab);
-    const normChips = (msg.chips || []).map(
-      (c) => typeof c === "string" ? { label: c, action: "chat" } : c
-    );
-    const chipsHTML = normChips.map((c) => {
-      const label = c.label || "";
-      const action = c.action === "nav" ? "nav" : "chat";
-      const target = c.target || "";
-      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
-    });
     if (chipsEl) {
-      const barTab = tab === "me" ? "me" : tab;
-      const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`];
-      chipsEl.innerHTML = speechChips.join("");
-      chipsEl.scrollLeft = 0;
-      if (chipsEl._chipClickHandler) chipsEl.removeEventListener("click", chipsEl._chipClickHandler);
-      chipsEl._chipClickHandler = (e) => {
-        const chip = e.target.closest(".owl-chip");
-        if (!chip) return;
-        if (chip.classList.contains("owl-chip-speak")) openChatBar(barTab);
-        else owlChipToChat(tab, chip.dataset.chipText || "", chip.dataset.chipAction, chip.dataset.chipTarget);
-      };
-      chipsEl.addEventListener("click", chipsEl._chipClickHandler);
+      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
       chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
       chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
       chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
@@ -4262,7 +4341,6 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
     owlTabSwipeMove,
     owlTabSwipeEnd,
     scrollOwlTabChips,
-    owlChipToChat,
     openChatBar
   });
 
@@ -4452,14 +4530,8 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
 - \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441". \u041A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u044F\u043A \u0434\u0440\u0443\u0433, \u043D\u0435 \u044F\u043A \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430.
 - \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438 \u0456 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.
 - \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u043D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u0454: "${recentText || "\u043D\u0456\u0447\u043E\u0433\u043E"}"
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: {"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}
-- chips \u2014 \u043A\u043D\u043E\u043F\u043A\u0438 \u0448\u0432\u0438\u0434\u043A\u0438\u0445 \u0434\u0456\u0439, \u043C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
-  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
-  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F:
-    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0437\u0430\u0432\u0442\u0440\u0430", "\u0440\u043E\u0437\u043A\u0430\u0436\u0438 \u0434\u0435\u0442\u0430\u043B\u044C\u043D\u0456\u0448\u0435", "\u043F\u0456\u0437\u043D\u0456\u0448\u0435".
-    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0441 \u043E\u0434\u044F\u0433 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u2014 \u0446\u0435 \u043F\u043B\u0443\u0442\u0430\u0454 \u044E\u0437\u0435\u0440\u0430 \u0431\u043E \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u044F\u043A \u043E\u043F\u0438\u0441 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u0457 \u0434\u0456\u0457, \u0430 \u0430\u0433\u0435\u043D\u0442 \u043F\u0456\u0441\u043B\u044F \u043A\u043B\u0456\u043A\u0443 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454 \u0437\u0430\u0434\u0430\u0447\u0443.
-- \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0445\u043E\u0440\u043E\u0448\u043E\u0433\u043E JSON: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
-- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 chips: []. \u0412\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0437\u043D\u0430\u0454\u0448 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443.
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
+${CHIP_PROMPT_RULES}
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -7012,9 +7084,7 @@ ${context}
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u0410:
 - \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438.
-- chips \u2014 0-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456, \u043C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
-  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0414\u043B\u044F \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
-  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442. \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C.
+- chips \u2014 0-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438. ${CHIP_PROMPT_RULES}
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
 
 \u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435):
