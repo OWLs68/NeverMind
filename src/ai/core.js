@@ -13,6 +13,7 @@ import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
 import { addEveningBarMsg, addMeChatMsg } from '../tabs/evening.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
+import { CHIP_PROMPT_RULES } from '../owl/chips.js';
 
 export let activeChatBar = null;
 export function setActiveChatBar(v) { activeChatBar = v; }
@@ -436,9 +437,7 @@ ${context}
 
 ПРАВИЛА:
 - Максимум 1-2 речення. Коротко і по-людськи.
-- chips — 0-3 варіанти швидкої відповіді, масив об'єктів. Кожен має label (до 3 слів) і action:
-  • "nav" — перекидає на вкладку (target: tasks|notes|habits|finance|health|projects|evening|me). Для моментів коли юзер має САМ переглянути/обрати.
-  • "chat" — відправляє label у чат. ЗВІТ про виконану задачу — ОБОВ'ЯЗКОВО в МИНУЛОМУ ЧАСІ + галочка ✔️: "Подав декларацію ✔️", "Купив продукти ✔️". НЕ пиши інфінітивом.
+- chips — 0-3 варіанти. ${CHIP_PROMPT_RULES}
 - Відповідай українською.
 
 ДОСТУПНІ ДІЇ (action поле):
