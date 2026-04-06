@@ -184,6 +184,7 @@ ${lines}
   }
   function saveNotes(arr) {
     localStorage.setItem("nm_notes", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "notes" }));
   }
   function getFolders() {
     const notes = getNotes();
@@ -1281,6 +1282,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
   }
   function saveProjects(arr) {
     localStorage.setItem("nm_projects", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
   }
   var activeProjectId = null;
   var projectsBarLoading = false;
@@ -2714,12 +2716,14 @@ ${aiContext}` : "");
   }
   function saveHealthCards(arr) {
     localStorage.setItem("nm_health_cards", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "health" }));
   }
   function getHealthLog() {
     return JSON.parse(localStorage.getItem("nm_health_log") || "{}");
   }
   function saveHealthLog(obj) {
     localStorage.setItem("nm_health_log", JSON.stringify(obj));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "health" }));
   }
   var activeHealthCardId = null;
   var healthBarLoading = false;
@@ -4659,6 +4663,7 @@ ${CHIP_PROMPT_RULES}
   }
   function saveFinance(arr) {
     localStorage.setItem("nm_finance", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "finance" }));
   }
   function getFinBudget() {
     return JSON.parse(localStorage.getItem("nm_finance_budget") || '{"total":0,"categories":{}}');
@@ -5712,6 +5717,7 @@ ${CHIP_PROMPT_RULES}
   }
   function saveHabits(arr) {
     localStorage.setItem("nm_habits2", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
   }
   function getHabitLog() {
     return JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
