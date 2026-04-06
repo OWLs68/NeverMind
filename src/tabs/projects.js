@@ -500,6 +500,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Нотатку: {"action":"create_note","text":"текст","folder":"${activeProject ? activeProject.name : 'Проекти'}"}
 - Створити папку нотаток: {"action":"create_folder","folder":"назва папки"}
 - Задачу: {"action":"create_task","title":"назва","steps":[]}
+- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
+- Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
 Інакше — відповідай текстом 1-3 речення. Якщо незрозуміло — перепитуй. НЕ вигадуй дані яких немає.`;
 
   try {
