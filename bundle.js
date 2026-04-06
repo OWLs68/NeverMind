@@ -1576,6 +1576,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const step = (p.steps || []).find((s) => s.id === stepId);
     if (step) {
       step.done = !step.done;
+      step.doneAt = step.done ? Date.now() : null;
       p.lastActivity = Date.now();
       const done = p.steps.filter((s) => s.done).length;
       p.progress = p.steps.length > 0 ? Math.round(done / p.steps.length * 100) : 0;
@@ -1794,6 +1795,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
             const step = (p.steps || []).find((s) => s.id === parsed.step_id);
             if (step) {
               step.done = true;
+              step.doneAt = Date.now();
               p.progress = Math.round(p.steps.filter((s) => s.done).length / p.steps.length * 100);
               p.lastActivity = Date.now();
               saveProjects(projs);
@@ -2321,17 +2323,23 @@ ${aiContext ? "\n\n" + aiContext : ""}
         <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0432\u0438\u0442\u0440\u0430\u0442\u0438</div>
       </div>`;
     }
-    const doneTasks2 = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
+    const sources = [];
     const habits2 = getHabits().filter((h) => h.type !== "quit");
     const log2 = getHabitLog();
     const todayDow2 = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
     const todayH2 = habits2.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow2));
     const doneH2 = todayH2.filter((h) => !!log2[today]?.[h.id]).length;
-    const habitPct = todayH2.length > 0 ? doneH2 / todayH2.length : 0;
-    const pos = todayMoments.filter((m) => m.mood === "positive").length;
-    const moodBonus = todayMoments.length > 0 ? pos / todayMoments.length * 0.3 : 0;
-    const taskBonus = doneTasks2 > 0 ? Math.min(doneTasks2 / 5, 1) * 0.4 : 0;
-    const score = Math.round((habitPct * 0.3 + moodBonus + taskBonus) * 100);
+    if (todayH2.length > 0) sources.push(doneH2 / todayH2.length);
+    const allTasks = getTasks();
+    const doneTasks2 = allTasks.filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
+    const activeTasks = allTasks.filter((t) => t.status === "active").length;
+    if (doneTasks2 > 0 || activeTasks > 0) sources.push(Math.min(doneTasks2 / Math.max(activeTasks * 0.2, 1), 1));
+    const activeProjs = getProjects().filter((p) => p.status === "active");
+    const allSteps = activeProjs.flatMap((p) => p.steps || []);
+    const stepsToday = allSteps.filter((s) => s.done && s.doneAt && new Date(s.doneAt).toDateString() === today).length;
+    const openSteps = allSteps.filter((s) => !s.done).length;
+    if (stepsToday > 0 || openSteps > 0) sources.push(Math.min(stepsToday / Math.max((openSteps + stepsToday) * 0.2, 1), 1));
+    const score = sources.length > 0 ? Math.round(sources.reduce((a, b) => a + b, 0) / sources.length * 100) : 0;
     const arc = document.getElementById("evening-ring-arc");
     const pctEl = document.getElementById("evening-ring-pct");
     const descEl = document.getElementById("evening-score-desc");
@@ -2342,7 +2350,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       }, 100);
     }
     if (pctEl) pctEl.textContent = score + "%";
-    if (descEl) descEl.textContent = score === 0 ? "\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F" : score >= 70 ? "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA}" : score >= 40 ? "\u0421\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C";
+    if (descEl) descEl.textContent = sources.length === 0 ? "\u0414\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438" : score >= 70 ? "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA}" : score >= 40 ? "\u0421\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C";
     const savedMood = getEveningMood();
     if (savedMood) renderEveningMoodButtons(savedMood);
     const momEl = document.getElementById("evening-moments");
@@ -2417,6 +2425,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const today = (/* @__PURE__ */ new Date()).toDateString();
     localStorage.setItem("nm_evening_mood", JSON.stringify({ mood: level, date: today }));
     renderEveningMoodButtons(level);
+    renderEvening();
   }
   function renderEveningMoodButtons(active) {
     ["bad", "meh", "ok", "good", "fire"].forEach((m) => {
@@ -3914,9 +3923,14 @@ ${briefParts.join("\n")}
       pulseParts.push(`\u0417\u0432\u0438\u0447\u043E\u043A: ${doneH}/${todayHabitsAll.length}`);
       if (todayMoments.length > 0) pulseParts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: ${todayMoments.length}`);
       if (!hasSummary) pulseParts.push("\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
+      const eMood = getEveningMood();
+      if (eMood) {
+        const ml = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
+        pulseParts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u044E\u0437\u0435\u0440): ${ml[eMood] || eMood}`);
+      }
       important.push(`[\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u041F\u0423\u041B\u042C\u0421] \u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C:
 ${pulseParts.join("\n")}
-\u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
+\u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
     }
     const urgent = activeTasks.filter((t) => {
       const m = t.title.match(/(\d{1,2}):(\d{2})/);
@@ -4364,6 +4378,7 @@ ${pulseParts.join("\n")}
       init_habits();
       init_notes();
       init_finance();
+      init_evening();
       _tabChatState = {};
       OWL_BOARD_KEY = "nm_owl_board";
       OWL_BOARD_TS_KEY = "nm_owl_board_ts";
@@ -7103,6 +7118,11 @@ ${inboxList}`);
         parts.push(`OWL \u0449\u043E\u0439\u043D\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u043D\u0430 \u0442\u0430\u0431\u043B\u043E (\u0432\u043A\u043B\u0430\u0434\u043A\u0430 "${tab}"): "${boardText}". \u042F\u043A\u0449\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0446\u0435 \u2014 \u0446\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F OWL, \u041D\u0415 \u043D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430/\u043D\u043E\u0442\u0430\u0442\u043A\u0430.`);
       }
     } catch (e) {
+    }
+    const eveningMood = getEveningMood();
+    if (eveningMood) {
+      const moodLabels = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
+      parts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447): ${moodLabels[eveningMood] || eveningMood}. \u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D: \u044F\u043A\u0449\u043E \u043F\u043E\u0433\u0430\u043D\u043E \u2014 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0439, \u044F\u043A\u0449\u043E \u0434\u043E\u0431\u0440\u0435 \u2014 \u043F\u0456\u0434\u0431\u0430\u0434\u044C\u043E\u0440.`);
     }
     return parts.join("\n\n");
   }
