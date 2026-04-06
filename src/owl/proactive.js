@@ -1,4 +1,5 @@
 import { getAIContext, getOWLPersonality, restoreChatUI } from '../ai/core.js';
+import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase } from './inbox-board.js';
 import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT } from './chips.js';
@@ -242,5 +243,22 @@ export function tryTabBoardUpdate(tab) {
     generateTabBoardMessage(tab);
   }
 }
+
+// === Реактивне оновлення табло при зміні даних ===
+// Debounce 3 сек — кілька подій за 3 сек = один виклик AI
+let _boardUpdateTimer = null;
+const BOARD_UPDATE_DELAY = 3000;
+
+window.addEventListener('nm-data-changed', () => {
+  if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
+  _boardUpdateTimer = setTimeout(() => {
+    _boardUpdateTimer = null;
+    // Оновлюємо табло поточної вкладки (якщо не inbox — inbox має свій listener)
+    const tab = currentTab;
+    if (tab && tab !== 'inbox') {
+      generateTabBoardMessage(tab);
+    }
+  }, BOARD_UPDATE_DELAY);
+});
 
 // No window globals needed — all consumed via imports

@@ -20,7 +20,7 @@ let editingHabitId = null;
 export function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
 export function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); }
 export function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
-export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); }
+export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // === QUIT HABITS — челендж "Кинути" ===
 function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }

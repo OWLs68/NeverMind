@@ -16,7 +16,7 @@ let editingTaskId = null;
 let tempSteps = [];
 
 export function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
-export function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); }
+export function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' })); }
 
 export function openAddTask() {
   editingTaskId = null;

@@ -483,7 +483,7 @@ let dialogHistory = [];
 let dialogLoading = false;
 
 export function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
-export function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); }
+export function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'moments' })); }
 
 export function renderEvening() {
   const today = new Date().toDateString();
