@@ -1108,5 +1108,17 @@ export function handleScheduleAnswer(text) {
   return true;
 }
 
+// === Реактивне оновлення Inbox табло при зміні даних ===
+let _inboxBoardUpdateTimer = null;
+
+window.addEventListener('nm-data-changed', () => {
+  if (_inboxBoardUpdateTimer) clearTimeout(_inboxBoardUpdateTimer);
+  _inboxBoardUpdateTimer = setTimeout(() => {
+    _inboxBoardUpdateTimer = null;
+    const phase = getDayPhase();
+    if (phase !== 'silent') generateOwlBoardMessage();
+  }, 3000);
+});
+
 // === WINDOW GLOBALS (HTML handlers only) ===
 window.sendOwlReply = sendOwlReply;
