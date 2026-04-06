@@ -1,7 +1,7 @@
 import { getAIContext, getOWLPersonality, restoreChatUI } from '../ai/core.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
-import { getDayPhase } from './inbox-board.js';
+import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard } from './inbox-board.js';
 import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT } from './chips.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
@@ -131,29 +131,38 @@ function checkTabBoardTrigger(tab) {
   return true;
 }
 
-let _tabBoardGenerating = {};
+let _boardGenerating = {};
 
-async function generateTabBoardMessage(tab) {
-  if (_tabBoardGenerating[tab]) return;
+// ============================================================
+// generateBoardMessage — ЄДИНА функція генерації повідомлення табло
+// Працює для БУДЬ-якої вкладки включно з inbox
+// ============================================================
+export async function generateBoardMessage(tab) {
+  if (_boardGenerating[tab]) return;
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
-  _tabBoardGenerating[tab] = true;
+  _boardGenerating[tab] = true;
 
-  const context = getTabBoardContext(tab);
-  const tabLabels = { tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
-  const allMsgs = getTabBoardMsgs(tab);
+  const isInbox = tab === 'inbox';
+
+  // Контекст: inbox має свій збирач, решта — спільний
+  const context = isInbox ? getOwlBoardContext() : getTabBoardContext(tab);
+
+  // Історія повідомлень: inbox і вкладки мають різні сховища
+  const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
   const existing = allMsgs[0] || null;
   const recentText = existing ? existing.text : '';
-  // Історія повідомлень для контексту (до 20 останніх)
-  const tabHistory = allMsgs.slice(0, 20).map(m => {
-    const ago = Date.now() - (m.ts || 0);
+  const recentTexts = allMsgs.slice(0, 5).map(m => m.text).join(' | ');
+  const boardHistory = allMsgs.slice(0, 20).map(m => {
+    const ago = Date.now() - (m.ts || m.id || 0);
     const hours = Math.floor(ago / 3600000);
     const when = hours < 1 ? 'щойно' : hours < 24 ? hours + ' год тому' : Math.floor(hours / 24) + ' дн тому';
     return `[${when}] ${m.text}`;
   }).join('\n');
 
+  const tabLabels = { inbox: 'Inbox', tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
   const phase = getDayPhase();
-  const _timeStr = new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
+  const timeStr = new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
   const phaseInstr = {
     morning: 'Ранок — твоя роль: надихнути і допомогти сфокусуватись на головному.',
     work:    'Робочий час — твоя роль: тримати в курсі прогресу, м\'яко нагадувати про незавершене.',
@@ -163,12 +172,12 @@ async function generateTabBoardMessage(tab) {
 
   const systemPrompt = getOWLPersonality() + `
 
-Зараз: ${_timeStr}. ${phaseInstr[phase] || ''}
+Зараз: ${timeStr}. ${phaseInstr[phase] || ''}
 
-Ти пишеш КОРОТКЕ проактивне повідомлення для табло у вкладці "${tabLabels[tab] || tab}". Це НЕ відповідь на запит — це твоя ініціатива.
+Ти пишеш КОРОТКЕ проактивне повідомлення для табло${isInbox ? ' в Inbox' : ' у вкладці "' + (tabLabels[tab] || tab) + '"'}. Це НЕ відповідь на запит — це твоя ініціатива.
 
 ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
-${tabHistory || '(ще нічого не казав)'}
+${boardHistory || '(ще нічого не казав)'}
 
 ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
 ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
@@ -180,10 +189,10 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 4. Інакше — обери найцікавіше зі звичайних даних.
 
 ПРАВИЛА:
-- Максимум 2 речення. Коротко і конкретно про цю вкладку.
-- Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес". Кажи конкретно і зрозуміло що відбувається — як друг, не як програма.
-- Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти і дані яких немає.
-- НЕ повторюй нещодавнє: "${recentText || 'нічого'}"
+- Максимум 2 речення. Коротко і конкретно.
+- Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". ${isInbox ? 'Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.' : 'Кажи конкретно і зрозуміло що відбувається — як друг, не як програма.'}
+- Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
+- НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
 - Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
 ${CHIP_PROMPT_RULES}
 - Відповідай українською.`;
@@ -204,23 +213,38 @@ ${CHIP_PROMPT_RULES}
     });
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content?.trim();
-    if (!reply) { _tabBoardGenerating[tab] = false; return; }
+    if (!reply) { _boardGenerating[tab] = false; return; }
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
-    if (!parsed.text) { _tabBoardGenerating[tab] = false; return; }
-    saveTabBoardMsg(tab, { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() });
-    localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
-    // Дублюємо проактивне повідомлення в чат-бар поточної вкладки
+    if (!parsed.text) { _boardGenerating[tab] = false; return; }
+
+    // Збереження: inbox і вкладки мають різні сховища
+    const newMsg = { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
+    if (isInbox) {
+      newMsg.id = Date.now();
+      const msgs = getOwlBoardMessages();
+      msgs.unshift(newMsg);
+      saveOwlBoardMessages(msgs.slice(0, 3));
+      localStorage.setItem('nm_owl_board_ts', Date.now().toString());
+      setOwlCd('phase_pulse');
+    } else {
+      saveTabBoardMsg(tab, newMsg);
+      localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+    }
+
+    // Дублюємо проактивне повідомлення в чат-бар
     try {
-      const chatTab = tab;
-      const chatKey = 'nm_chat_' + chatTab;
+      const chatKey = 'nm_chat_' + tab;
       const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
       chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
       localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-      restoreChatUI(chatTab);
+      restoreChatUI(tab);
     } catch(e) {}
-    renderTabBoard(tab);
+
+    // Рендер
+    if (isInbox) renderOwlBoard();
+    else renderTabBoard(tab);
   } catch(e) {}
-  _tabBoardGenerating[tab] = false;
+  _boardGenerating[tab] = false;
 }
 
 export function tryTabBoardUpdate(tab) {
@@ -240,12 +264,11 @@ export function tryTabBoardUpdate(tab) {
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
   const firstTime = lastTs === 0;
   if (firstTime || isNewDay || (elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab))) {
-    generateTabBoardMessage(tab);
+    generateBoardMessage(tab);
   }
 }
 
-// === Реактивне оновлення табло при зміні даних ===
-// Debounce 3 сек — кілька подій за 3 сек = один виклик AI
+// === Єдиний реактивний listener для ВСІХ вкладок (включно з inbox) ===
 let _boardUpdateTimer = null;
 const BOARD_UPDATE_DELAY = 3000;
 
@@ -253,11 +276,9 @@ window.addEventListener('nm-data-changed', () => {
   if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
   _boardUpdateTimer = setTimeout(() => {
     _boardUpdateTimer = null;
-    // Оновлюємо табло поточної вкладки (якщо не inbox — inbox має свій listener)
-    const tab = currentTab;
-    if (tab && tab !== 'inbox') {
-      generateTabBoardMessage(tab);
-    }
+    const tab = currentTab || 'inbox';
+    const phase = getDayPhase();
+    if (phase !== 'silent') generateBoardMessage(tab);
   }, BOARD_UPDATE_DELAY);
 });
 

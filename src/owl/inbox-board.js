@@ -5,9 +5,9 @@
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
-import { activeChatBar, callOwlChat, closeChatBar, getOWLPersonality, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
+import { activeChatBar, callOwlChat, closeChatBar, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
-import { renderChips, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT } from './chips.js';
+import { renderChips } from './chips.js';
 import { addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getQuitStatus, renderHabits, renderProdHabits, saveHabitLog } from '../tabs/habits.js';
@@ -284,13 +284,13 @@ const OWL_BOARD_TS_KEY = 'nm_owl_board_ts'; // timestamp останньої ге
 const OWL_BOARD_INTERVAL = 3 * 60 * 1000;  // 3 хвилини
 
 let _owlBoardMessages = [];
-let _owlBoardGenerating = false;
+// _owlBoardGenerating видалено — guard тепер у generateBoardMessage (proactive.js)
 let _owlBoardTimer = null;
 
 export function getOwlBoardMessages() {
   try { return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]'); } catch { return []; }
 }
-function saveOwlBoardMessages(arr) {
+export function saveOwlBoardMessages(arr) {
   localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
 }
 
@@ -336,7 +336,7 @@ function owlCdExpired(topic, ms) {
   const cd = _getOwlCooldowns();
   return !cd[topic] || (Date.now() - cd[topic]) > ms;
 }
-function setOwlCd(topic) {
+export function setOwlCd(topic) {
   const cd = _getOwlCooldowns();
   cd[topic] = Date.now();
   // Чистимо записи старші 48 год
@@ -607,108 +607,7 @@ export function getOwlBoardContext() {
   return [...critical, ...important, ...normal].join(' ');
 }
 
-async function generateOwlBoardMessage() {
-  if (_owlBoardGenerating) return;
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return;
-
-  _owlBoardGenerating = true;
-
-  const context = getOwlBoardContext();
-  const existing = getOwlBoardMessages();
-
-  // Історія повідомлень — агент пам'ятає що казав раніше
-  const recentTexts = existing.slice(0, 5).map(m => m.text).join(' | ');
-  // Повна історія для контексту (до 20 повідомлень з часом)
-  const boardHistory = existing.slice(0, 20).map(m => {
-    const ago = Date.now() - (m.id || 0);
-    const hours = Math.floor(ago / 3600000);
-    const when = hours < 1 ? 'щойно' : hours < 24 ? hours + ' год тому' : Math.floor(hours / 24) + ' дн тому';
-    return `[${when}] ${m.text}`;
-  }).join('\n');
-
-  const now = new Date();
-  const phase = getDayPhase();
-  const timeStr = now.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
-  const phaseInstr = {
-    morning: 'Ранок — твоя роль: надихнути і допомогти сфокусуватись на головному.',
-    work:    'Робочий час — твоя роль: тримати в курсі прогресу, м\'яко нагадувати про незавершене.',
-    evening: 'Вечір — твоя роль: допомогти підбити підсумок дня, не пропустити стріки.',
-    night:   'Ніч — говори тільки про критичне. Дуже коротко.',
-  };
-
-  const systemPrompt = getOWLPersonality() + `
-
-Зараз: ${timeStr}. ${phaseInstr[phase] || ''}
-
-Ти пишеш КОРОТКЕ проактивне повідомлення для табло в Inbox. Це НЕ відповідь на запит — це твоя ініціатива.
-
-ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
-${boardHistory || '(ще нічого не казав)'}
-
-ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
-${localStorage.getItem('nm_memory') || '(ще не знаю)'}
-
-ПРІОРИТЕТ ПОВІДОМЛЕНЬ:
-1. Якщо є [КРИТИЧНО] — пиши ТІЛЬКИ про це. Нічого іншого.
-2. Якщо є [ВАЖЛИВО] і немає [КРИТИЧНО] — пиши про перше [ВАЖЛИВО].
-3. Якщо є [ФАЗА] але немає критичного/важливого — коротке повідомлення відповідно до фази дня.
-4. Інакше — обери найцікавіше зі звичайних даних.
-
-ПРАВИЛА:
-- Максимум 2 речення. Коротко і конкретно.
-- Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.
-- Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
-- НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
-- Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
-${CHIP_PROMPT_RULES}
-- Відповідай українською.`;
-
-  try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Дані: ${context}` }
-        ],
-        max_tokens: 150,
-        temperature: 0.8
-      })
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim();
-    if (!reply) { _owlBoardGenerating = false; return; }
-
-    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
-    if (!parsed.text) { _owlBoardGenerating = false; return; }
-
-    // Додаємо нове повідомлення, зберігаємо 3 останніх
-    const msgs = getOwlBoardMessages();
-    msgs.unshift({ id: Date.now(), text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [] });
-    saveOwlBoardMessages(msgs.slice(0, 3));
-    localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
-
-    // Скидаємо регулярний cooldown після успішної генерації
-    setOwlCd('phase_pulse');
-
-    // Дублюємо проактивне повідомлення в чат-бар inbox
-    try {
-      const chatKey = 'nm_chat_inbox';
-      const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || '[]');
-      chatMsgs.push({ role: 'agent', text: '🦉 ' + parsed.text, ts: Date.now() });
-      localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-      restoreChatUI('inbox');
-    } catch(e) {}
-
-    // Нове повідомлення — повернути на speech
-    if (_getOwlState() === 'collapsed') _owlSetState('speech');
-    renderOwlBoard();
-  } catch(e) {}
-  _owlBoardGenerating = false;
-}
+// generateOwlBoardMessage видалено — замінено на єдину generateBoardMessage('inbox') у proactive.js
 
 // === OWL MINI-CHAT STATE ===
 const OWL_CHAT_KEY = 'nm_owl_chat'; // [{role,text,ts}]
@@ -1054,7 +953,10 @@ function tryOwlBoardUpdate() {
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
 
   const shouldGenerate = isFirstTime || isNewDay || checkOwlBoardTrigger();
-  if (shouldGenerate) generateOwlBoardMessage();
+  if (shouldGenerate) {
+    // Викликаємо єдину генерацію через lazy import щоб уникнути circular dependency
+    import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
+  }
 }
 
 // Одноразово запитує розклад якщо не заповнено
@@ -1108,17 +1010,7 @@ export function handleScheduleAnswer(text) {
   return true;
 }
 
-// === Реактивне оновлення Inbox табло при зміні даних ===
-let _inboxBoardUpdateTimer = null;
-
-window.addEventListener('nm-data-changed', () => {
-  if (_inboxBoardUpdateTimer) clearTimeout(_inboxBoardUpdateTimer);
-  _inboxBoardUpdateTimer = setTimeout(() => {
-    _inboxBoardUpdateTimer = null;
-    const phase = getDayPhase();
-    if (phase !== 'silent') generateOwlBoardMessage();
-  }, 3000);
-});
+// Debounce listener видалено — єдиний listener тепер у proactive.js
 
 // === WINDOW GLOBALS (HTML handlers only) ===
 window.sendOwlReply = sendOwlReply;
