@@ -11218,8 +11218,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function shouldRefreshMemory() {
     const lastTs = localStorage.getItem("nm_memory_ts");
     if (!lastTs) return true;
-    const elapsed = Date.now() - parseInt(lastTs);
-    return elapsed > 2 * 24 * 60 * 60 * 1e3;
+    const last = new Date(parseInt(lastTs));
+    const now = /* @__PURE__ */ new Date();
+    return last.toDateString() !== now.toDateString();
   }
   async function autoRefreshMemory() {
     const key = localStorage.getItem("nm_gemini_key");
