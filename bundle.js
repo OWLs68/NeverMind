@@ -1,7 +1,15 @@
 (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
   // src/core/logger.js
-  var NM_LOG_KEY = "nm_error_log";
-  var NM_LOG_MAX = 200;
   function getErrorLog() {
     try {
       return JSON.parse(localStorage.getItem(NM_LOG_KEY) || "[]");
@@ -27,29 +35,6 @@
     saveErrorLog(log);
     updateErrorLogBtn();
   }
-  window.addEventListener("error", (e) => {
-    logError("error", e.message, (e.filename || "").replace(/.*\//, "") + ":" + e.lineno);
-  });
-  window.addEventListener("unhandledrejection", (e) => {
-    logError("promise", e.reason ? e.reason.message || String(e.reason) : "Promise rejected", "");
-  });
-  (function() {
-    const _log = console.log.bind(console);
-    const _warn = console.warn.bind(console);
-    const _err = console.error.bind(console);
-    console.log = (...a) => {
-      _log(...a);
-      logError("log", a.map(String).join(" "), "");
-    };
-    console.warn = (...a) => {
-      _warn(...a);
-      logError("warn", a.map(String).join(" "), "");
-    };
-    console.error = (...a) => {
-      _err(...a);
-      logError("err", a.map(String).join(" "), "");
-    };
-  })();
   function showErrorLog() {
     const log = getErrorLog();
     const panel = document.getElementById("log-panel");
@@ -125,10 +110,40 @@ ${lines}
     btn.style.background = count > 0 ? "rgba(234,88,12,0.12)" : "";
     btn.style.color = count > 0 ? "#ea580c" : "";
   }
-  Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog });
+  var NM_LOG_KEY, NM_LOG_MAX;
+  var init_logger = __esm({
+    "src/core/logger.js"() {
+      init_nav();
+      NM_LOG_KEY = "nm_error_log";
+      NM_LOG_MAX = 200;
+      window.addEventListener("error", (e) => {
+        logError("error", e.message, (e.filename || "").replace(/.*\//, "") + ":" + e.lineno);
+      });
+      window.addEventListener("unhandledrejection", (e) => {
+        logError("promise", e.reason ? e.reason.message || String(e.reason) : "Promise rejected", "");
+      });
+      (function() {
+        const _log = console.log.bind(console);
+        const _warn = console.warn.bind(console);
+        const _err = console.error.bind(console);
+        console.log = (...a) => {
+          _log(...a);
+          logError("log", a.map(String).join(" "), "");
+        };
+        console.warn = (...a) => {
+          _warn(...a);
+          logError("warn", a.map(String).join(" "), "");
+        };
+        console.error = (...a) => {
+          _err(...a);
+          logError("err", a.map(String).join(" "), "");
+        };
+      })();
+      Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog });
+    }
+  });
 
   // src/ui/swipe-delete.js
-  var SWIPE_DELETE_THRESHOLD = 90;
   function applySwipeTrail(cardEl, wrapEl, dx) {
     if (!cardEl) return;
     cardEl.style.transform = `translateX(${dx}px)`;
@@ -175,10 +190,14 @@ ${lines}
       }
     }
   }
+  var SWIPE_DELETE_THRESHOLD;
+  var init_swipe_delete = __esm({
+    "src/ui/swipe-delete.js"() {
+      SWIPE_DELETE_THRESHOLD = 90;
+    }
+  });
 
   // src/tabs/notes.js
-  var editingNoteId = null;
-  var pendingFolderSuggestion = null;
   function getNotes() {
     return JSON.parse(localStorage.getItem("nm_notes") || "[]");
   }
@@ -258,7 +277,6 @@ ${lines}
       renderNotes();
     });
   }
-  var currentNotesFolder = null;
   function setCurrentNotesFolder(v) {
     currentNotesFolder = v;
   }
@@ -273,66 +291,6 @@ ${lines}
   function _ico(path) {
     return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   }
-  var ICON_SVG = {
-    folder: _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
-    note: _ico('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
-    food: _ico('<path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2"/><line x1="6" y1="2" x2="6" y2="12"/><path d="M21 2s-2 2-2 7 2 5 2 5"/><path d="M19 14v8"/>'),
-    money: _ico('<circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/>'),
-    heart: _ico('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/>'),
-    work: _ico('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/>'),
-    book: _ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
-    bulb: _ico('<circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/>'),
-    person: _ico('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
-    plane: _ico('<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>'),
-    star: _ico('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
-    home: _ico('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
-    car: _ico('<path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-4h10l2 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="16.5" cy="17" r="2.5"/>'),
-    music: _ico('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
-    camera: _ico('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
-    gift: _ico('<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'),
-    sport: _ico('<circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l4.24 4.24"/><path d="M14.83 9.17l4.24-4.24"/><path d="M14.83 14.83l4.24 4.24"/><path d="M9.17 14.83l-4.24 4.24"/><circle cx="12" cy="12" r="4"/>'),
-    phone: _ico('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.4 2 2 0 0 1 3.6 2.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17z"/>'),
-    lock: _ico('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
-    globe: _ico('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
-    map: _ico('<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>'),
-    chart: _ico('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'),
-    smile: _ico('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
-    coffee: _ico('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'),
-    leaf: _ico('<path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 3-8 3"/>'),
-    zap: _ico('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
-    target: _ico('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
-    tool: _ico('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'),
-    users: _ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
-    sun: _ico('<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'),
-    shopping: _ico('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>')
-  };
-  var FOLDER_ICON_MAP = {
-    "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F": "food",
-    "\u0424\u0456\u043D\u0430\u043D\u0441\u0438": "money",
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "heart",
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u044F": "heart",
-    "\u0420\u043E\u0431\u043E\u0442\u0430": "work",
-    "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F": "book",
-    "\u0406\u0434\u0435\u0457": "bulb",
-    "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435": "person",
-    "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456": "plane",
-    "\u0426\u0456\u043B\u0456": "target",
-    "\u0421\u043F\u043E\u0440\u0442": "sport",
-    "\u041C\u0443\u0437\u0438\u043A\u0430": "music",
-    "\u0414\u0456\u043C": "home",
-    "\u0410\u0432\u0442\u043E": "car",
-    "\u041F\u043E\u043A\u0443\u043F\u043A\u0438": "shopping",
-    "\u041B\u044E\u0434\u0438": "users",
-    "\u041F\u0440\u043E\u0435\u043A\u0442\u0438": "zap",
-    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "leaf",
-    "\u041A\u0430\u0432\u0430": "coffee",
-    "\u0424\u043E\u0442\u043E": "camera"
-  };
-  var FOLDER_ICONS = Object.fromEntries(
-    Object.entries(FOLDER_ICON_MAP).map(([name, key]) => [name, ICON_SVG[key]])
-  );
-  var FOLDER_ICON_DEFAULT = ICON_SVG.note;
-  var ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
   function getFolderIcon(folder) {
     if (!folder) return FOLDER_ICON_DEFAULT;
     const meta = getFolderMeta(folder);
@@ -363,18 +321,6 @@ ${lines}
     all[folder] = { ...all[folder] || {}, ...data };
     saveFoldersMeta(all);
   }
-  var FOLDER_COLORS = {
-    "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F951}" },
-    "\u0424\u0456\u043D\u0430\u043D\u0441\u0438": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4B8}" },
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4AA}" },
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4AA}" },
-    "\u0420\u043E\u0431\u043E\u0442\u0430": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F3AF}" },
-    "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F9E0}" },
-    "\u0406\u0434\u0435\u0457": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4A1}" },
-    "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u26A1" },
-    "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u2708\uFE0F" }
-  };
-  var DEFAULT_NOTE_FOLDER = { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4DD}" };
   function renderNotes(searchQuery = "") {
     let notes = getNotes();
     const content = document.getElementById("notes-content");
@@ -484,7 +430,6 @@ ${lines}
     `;
     }).join("");
   }
-  var noteSwipeState = {};
   function noteSwipeStart(e, id) {
     const t = e.touches[0];
     noteSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
@@ -541,7 +486,6 @@ ${lines}
     }
     delete noteSwipeState[id];
   }
-  var activeNoteMenuId = null;
   function openNoteMenu(id) {
     activeNoteMenuId = id;
     document.getElementById("note-menu").style.display = "flex";
@@ -670,9 +614,6 @@ ${names}`;
     document.getElementById("notes-ai-banner").style.display = "none";
     showToast(changed > 0 ? `\u2713 \u0420\u043E\u0437\u043A\u043B\u0430\u0434\u0435\u043D\u043E ${changed} \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445` : "\u2713 \u041F\u0430\u043F\u043A\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u044F\u043A \u043E\u0440\u0456\u0454\u043D\u0442\u0438\u0440");
   }
-  var activeNoteViewId = null;
-  var noteChatHistory = [];
-  var noteChatLoading = false;
   function getFolderColor(folder) {
     if (!folder) return DEFAULT_NOTE_FOLDER;
     if (FOLDER_COLORS[folder]) return FOLDER_COLORS[folder];
@@ -729,7 +670,6 @@ ${names}`;
     activeNoteViewId = null;
     noteChatHistory = [];
   }
-  var _autoSaveNoteTimer = null;
   function autoSaveNoteView() {
     if (!activeNoteViewId) return;
     if (_autoSaveNoteTimer) clearTimeout(_autoSaveNoteTimer);
@@ -898,7 +838,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     noteChatLoading = false;
     btn.disabled = false;
   }
-  var _pendingAgentNote = "";
   function showSaveAsNoteBtn(replyText) {
     const el = document.getElementById("note-chat-messages");
     const old = document.getElementById("note-chat-save-btn");
@@ -926,7 +865,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     document.getElementById("note-chat-save-btn")?.remove();
     _pendingAgentNote = "";
   }
-  var folderSwipeState = {};
   function _folderKey(folder) {
     return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, "_");
   }
@@ -985,7 +923,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
     delete folderSwipeState[key];
   }
-  var _editingFolder = null;
   function openFolderEditModal(folder) {
     _editingFolder = folder;
     const meta = getFolderMeta(folder);
@@ -1012,8 +949,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     );
     return match ? match[1] : "folder";
   }
-  var _selectedIconKey = "folder";
-  var _selectedColorKey = "default";
   function renderFolderIconGrid(activeKey) {
     _selectedIconKey = activeKey;
     const grid = document.getElementById("folder-icon-grid");
@@ -1034,16 +969,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       el.style.border = `1.5px solid ${isActive ? "rgba(30,16,64,0.25)" : "transparent"}`;
     });
   }
-  var FOLDER_COLOR_PALETTE = {
-    default: { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", label: "\u041F\u0456\u0441\u043E\u043A" },
-    blue: { bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)", label: "\u0411\u043B\u0430\u043A\u0438\u0442\u043D\u0438\u0439" },
-    green: { bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)", label: "\u0417\u0435\u043B\u0435\u043D\u0438\u0439" },
-    yellow: { bg: "linear-gradient(135deg,#fef9c3,#fef08a)", label: "\u0416\u043E\u0432\u0442\u0438\u0439" },
-    pink: { bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)", label: "\u0420\u043E\u0436\u0435\u0432\u0438\u0439" },
-    purple: { bg: "linear-gradient(135deg,#ede9fe,#ddd6fe)", label: "\u0424\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439" },
-    orange: { bg: "linear-gradient(135deg,#ffedd5,#fed7aa)", label: "\u041E\u0440\u0430\u043D\u0436\u0435\u0432\u0438\u0439" },
-    gray: { bg: "linear-gradient(135deg,#f3f4f6,#e5e7eb)", label: "\u0421\u0456\u0440\u0438\u0439" }
-  };
   function renderFolderColorGrid(activeKey) {
     _selectedColorKey = activeKey;
     const grid = document.getElementById("folder-color-grid");
@@ -1095,9 +1020,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     renderNotes();
     showToast("\u2713 \u041F\u0430\u043F\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
   }
-  var _notesTypingEl = null;
-  var notesBarHistory = [];
-  var notesBarLoading = false;
   function addNotesChatMsg(role, text, _noSave = false) {
     const el = document.getElementById("notes-chat-messages");
     if (!el) return;
@@ -1242,38 +1164,148 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
     notesBarLoading = false;
   }
-  Object.assign(window, {
-    openAddNote,
-    saveNote,
-    closeNoteModal,
-    openNoteView,
-    closeNoteView,
-    switchNoteViewTab,
-    openNoteViewMenu,
-    closeNoteMenu,
-    noteMenuCopy,
-    noteMenuEdit,
-    noteMenuDelete,
-    noteMenuMove,
-    saveFolderEdit,
-    closeFolderEditModal,
-    applyFolderSuggestion,
-    sendNoteChatMessage,
-    sendNotesBarMessage,
-    openNotesFolder,
-    closeNotesFolder,
-    openFolderEditModal,
-    selectFolderIcon,
-    selectFolderColor,
-    folderSwipeStart,
-    folderSwipeMove,
-    folderSwipeEnd,
-    noteSwipeStart,
-    noteSwipeMove,
-    noteSwipeEnd,
-    addNotesChatMsg,
-    autoSaveNoteView,
-    openNoteMenu
+  var editingNoteId, pendingFolderSuggestion, currentNotesFolder, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_COLORS, DEFAULT_NOTE_FOLDER, noteSwipeState, activeNoteMenuId, activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote, folderSwipeState, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
+  var init_notes = __esm({
+    "src/tabs/notes.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_core();
+      init_swipe_delete();
+      init_habits();
+      editingNoteId = null;
+      pendingFolderSuggestion = null;
+      currentNotesFolder = null;
+      ICON_SVG = {
+        folder: _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+        note: _ico('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+        food: _ico('<path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2"/><line x1="6" y1="2" x2="6" y2="12"/><path d="M21 2s-2 2-2 7 2 5 2 5"/><path d="M19 14v8"/>'),
+        money: _ico('<circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/>'),
+        heart: _ico('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/>'),
+        work: _ico('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/>'),
+        book: _ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
+        bulb: _ico('<circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/>'),
+        person: _ico('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+        plane: _ico('<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>'),
+        star: _ico('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+        home: _ico('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+        car: _ico('<path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-4h10l2 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="16.5" cy="17" r="2.5"/>'),
+        music: _ico('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+        camera: _ico('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
+        gift: _ico('<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'),
+        sport: _ico('<circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l4.24 4.24"/><path d="M14.83 9.17l4.24-4.24"/><path d="M14.83 14.83l4.24 4.24"/><path d="M9.17 14.83l-4.24 4.24"/><circle cx="12" cy="12" r="4"/>'),
+        phone: _ico('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.4 2 2 0 0 1 3.6 2.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17z"/>'),
+        lock: _ico('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+        globe: _ico('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
+        map: _ico('<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>'),
+        chart: _ico('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'),
+        smile: _ico('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
+        coffee: _ico('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'),
+        leaf: _ico('<path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 3-8 3"/>'),
+        zap: _ico('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+        target: _ico('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+        tool: _ico('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'),
+        users: _ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+        sun: _ico('<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'),
+        shopping: _ico('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>')
+      };
+      FOLDER_ICON_MAP = {
+        "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F": "food",
+        "\u0424\u0456\u043D\u0430\u043D\u0441\u0438": "money",
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "heart",
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u044F": "heart",
+        "\u0420\u043E\u0431\u043E\u0442\u0430": "work",
+        "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F": "book",
+        "\u0406\u0434\u0435\u0457": "bulb",
+        "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435": "person",
+        "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456": "plane",
+        "\u0426\u0456\u043B\u0456": "target",
+        "\u0421\u043F\u043E\u0440\u0442": "sport",
+        "\u041C\u0443\u0437\u0438\u043A\u0430": "music",
+        "\u0414\u0456\u043C": "home",
+        "\u0410\u0432\u0442\u043E": "car",
+        "\u041F\u043E\u043A\u0443\u043F\u043A\u0438": "shopping",
+        "\u041B\u044E\u0434\u0438": "users",
+        "\u041F\u0440\u043E\u0435\u043A\u0442\u0438": "zap",
+        "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "leaf",
+        "\u041A\u0430\u0432\u0430": "coffee",
+        "\u0424\u043E\u0442\u043E": "camera"
+      };
+      FOLDER_ICONS = Object.fromEntries(
+        Object.entries(FOLDER_ICON_MAP).map(([name, key]) => [name, ICON_SVG[key]])
+      );
+      FOLDER_ICON_DEFAULT = ICON_SVG.note;
+      ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
+      FOLDER_COLORS = {
+        "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F951}" },
+        "\u0424\u0456\u043D\u0430\u043D\u0441\u0438": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4B8}" },
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4AA}" },
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4AA}" },
+        "\u0420\u043E\u0431\u043E\u0442\u0430": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F3AF}" },
+        "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F9E0}" },
+        "\u0406\u0434\u0435\u0457": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4A1}" },
+        "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u26A1" },
+        "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u2708\uFE0F" }
+      };
+      DEFAULT_NOTE_FOLDER = { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4DD}" };
+      noteSwipeState = {};
+      activeNoteMenuId = null;
+      activeNoteViewId = null;
+      noteChatHistory = [];
+      noteChatLoading = false;
+      _autoSaveNoteTimer = null;
+      _pendingAgentNote = "";
+      folderSwipeState = {};
+      _editingFolder = null;
+      _selectedIconKey = "folder";
+      _selectedColorKey = "default";
+      FOLDER_COLOR_PALETTE = {
+        default: { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", label: "\u041F\u0456\u0441\u043E\u043A" },
+        blue: { bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)", label: "\u0411\u043B\u0430\u043A\u0438\u0442\u043D\u0438\u0439" },
+        green: { bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)", label: "\u0417\u0435\u043B\u0435\u043D\u0438\u0439" },
+        yellow: { bg: "linear-gradient(135deg,#fef9c3,#fef08a)", label: "\u0416\u043E\u0432\u0442\u0438\u0439" },
+        pink: { bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)", label: "\u0420\u043E\u0436\u0435\u0432\u0438\u0439" },
+        purple: { bg: "linear-gradient(135deg,#ede9fe,#ddd6fe)", label: "\u0424\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439" },
+        orange: { bg: "linear-gradient(135deg,#ffedd5,#fed7aa)", label: "\u041E\u0440\u0430\u043D\u0436\u0435\u0432\u0438\u0439" },
+        gray: { bg: "linear-gradient(135deg,#f3f4f6,#e5e7eb)", label: "\u0421\u0456\u0440\u0438\u0439" }
+      };
+      _notesTypingEl = null;
+      notesBarHistory = [];
+      notesBarLoading = false;
+      Object.assign(window, {
+        openAddNote,
+        saveNote,
+        closeNoteModal,
+        openNoteView,
+        closeNoteView,
+        switchNoteViewTab,
+        openNoteViewMenu,
+        closeNoteMenu,
+        noteMenuCopy,
+        noteMenuEdit,
+        noteMenuDelete,
+        noteMenuMove,
+        saveFolderEdit,
+        closeFolderEditModal,
+        applyFolderSuggestion,
+        sendNoteChatMessage,
+        sendNotesBarMessage,
+        openNotesFolder,
+        closeNotesFolder,
+        openFolderEditModal,
+        selectFolderIcon,
+        selectFolderColor,
+        folderSwipeStart,
+        folderSwipeMove,
+        folderSwipeEnd,
+        noteSwipeStart,
+        noteSwipeMove,
+        noteSwipeEnd,
+        addNotesChatMsg,
+        autoSaveNoteView,
+        openNoteMenu
+      });
+    }
   });
 
   // src/tabs/projects.js
@@ -1284,10 +1316,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     localStorage.setItem("nm_projects", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
   }
-  var activeProjectId = null;
-  var projectsBarLoading = false;
-  var projectsBarHistory = [];
-  var _projectsTypingEl = null;
   function renderProjects() {
     if (activeProjectId !== null) {
       renderProjectWorkspace(activeProjectId);
@@ -1858,21 +1886,36 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
     projectsBarLoading = false;
   }
-  Object.assign(window, {
-    openAddProject,
-    saveNewProject,
-    closeProjectModal,
-    sendProjectsBarMessage,
-    openProjectWorkspace,
-    closeProjectWorkspace,
-    toggleProjectTimeline,
-    toggleProjectStep,
-    switchTab
+  var activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl;
+  var init_projects = __esm({
+    "src/tabs/projects.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      activeProjectId = null;
+      projectsBarLoading = false;
+      projectsBarHistory = [];
+      _projectsTypingEl = null;
+      Object.assign(window, {
+        openAddProject,
+        saveNewProject,
+        closeProjectModal,
+        sendProjectsBarMessage,
+        openProjectWorkspace,
+        closeProjectWorkspace,
+        toggleProjectTimeline,
+        toggleProjectStep,
+        switchTab
+      });
+    }
   });
 
   // src/tabs/evening.js
-  var _eveningTypingEl = null;
-  var meChatHistory = [];
   function renderMeHabitsStats() {
     const habits = getHabits();
     const el = document.getElementById("me-habits-stats-list");
@@ -2235,9 +2278,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
       }).join("");
     }
   }
-  var currentMomentMood = "positive";
-  var dialogHistory = [];
-  var dialogLoading = false;
   function getMoments() {
     return JSON.parse(localStorage.getItem("nm_moments") || "[]");
   }
@@ -2457,7 +2497,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     saveMoments(getMoments().filter((m) => m.id !== id));
     renderEvening();
   }
-  var EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} \u0417\u0440\u043E\u0431\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F (3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0417\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u043D\u0430 "\u0442\u0438". \u0412\u0456\u0434\u0437\u043D\u0430\u0447 \u0449\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0434\u0430\u043B\u043E\u0441\u044C. \u042F\u043A\u0449\u043E \u0454 \u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
   async function generateEveningSummary() {
     const btn = document.getElementById("evening-summary-btn");
     const el = document.getElementById("evening-summary");
@@ -2601,8 +2640,6 @@ ${aiContext}` : "");
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
   }
-  var eveningBarHistory = [];
-  var eveningBarLoading = false;
   function addEveningBarMsg(role, text, _noSave = false) {
     const el = document.getElementById("evening-bar-messages");
     if (!el) return;
@@ -2695,19 +2732,40 @@ ${aiContext}` : "");
     }
     eveningBarLoading = false;
   }
-  Object.assign(window, {
-    openAddMoment,
-    saveMoment,
-    closeMomentModal,
-    setMomentMood,
-    generateEveningSummary,
-    closeEveningDialog,
-    setEveningMood,
-    sendDialogMessage,
-    sendEveningBarMessage,
-    sendMeChatMessage,
-    switchTab,
-    deleteMoment
+  var _eveningTypingEl, meChatHistory, currentMomentMood, dialogHistory, dialogLoading, EVENING_SUMMARY_PROMPT, eveningBarHistory, eveningBarLoading;
+  var init_evening = __esm({
+    "src/tabs/evening.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_projects();
+      _eveningTypingEl = null;
+      meChatHistory = [];
+      currentMomentMood = "positive";
+      dialogHistory = [];
+      dialogLoading = false;
+      EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} \u0417\u0440\u043E\u0431\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F (3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0417\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u043D\u0430 "\u0442\u0438". \u0412\u0456\u0434\u0437\u043D\u0430\u0447 \u0449\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0434\u0430\u043B\u043E\u0441\u044C. \u042F\u043A\u0449\u043E \u0454 \u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
+      eveningBarHistory = [];
+      eveningBarLoading = false;
+      Object.assign(window, {
+        openAddMoment,
+        saveMoment,
+        closeMomentModal,
+        setMomentMood,
+        generateEveningSummary,
+        closeEveningDialog,
+        setEveningMood,
+        sendDialogMessage,
+        sendEveningBarMessage,
+        sendMeChatMessage,
+        switchTab,
+        deleteMoment
+      });
+    }
   });
 
   // src/tabs/health.js
@@ -2725,10 +2783,6 @@ ${aiContext}` : "");
     localStorage.setItem("nm_health_log", JSON.stringify(obj));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "health" }));
   }
-  var activeHealthCardId = null;
-  var healthBarLoading = false;
-  var healthBarHistory = [];
-  var _healthTypingEl = null;
   function renderHealth() {
     if (activeHealthCardId !== null) {
       renderHealthWorkspace(activeHealthCardId);
@@ -3142,25 +3196,30 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
     healthBarLoading = false;
   }
-  Object.assign(window, {
-    openAddHealthCard,
-    sendHealthBarMessage,
-    openHealthCard,
-    closeHealthCard,
-    setHealthScale,
-    setHealthCardStatus
+  var activeHealthCardId, healthBarLoading, healthBarHistory, _healthTypingEl;
+  var init_health = __esm({
+    "src/tabs/health.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_habits();
+      init_notes();
+      activeHealthCardId = null;
+      healthBarLoading = false;
+      healthBarHistory = [];
+      _healthTypingEl = null;
+      Object.assign(window, {
+        openAddHealthCard,
+        sendHealthBarMessage,
+        openHealthCard,
+        closeHealthCard,
+        setHealthScale,
+        setHealthCardStatus
+      });
+    }
   });
 
   // src/owl/chips.js
-  var VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
-  var CHIP_PROMPT_RULES = `- chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
-  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
-  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438:
-    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435", "\u041D\u0456, \u0434\u044F\u043A\u0443\u044E".
-    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0441\u0443\u0432\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u0456 \u041D\u0415 \u043F\u0438\u0448\u0438 \u043D\u0430\u043A\u0430\u0437\u043E\u0432\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C ("\u043F\u043E\u0434\u0430\u0439", "\u043A\u0443\u043F\u0438") \u2014 \u0447\u0456\u043F \u0446\u0435 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u042C \u044E\u0437\u0435\u0440\u0430, \u0430 \u043D\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0430.
-- \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0445\u043E\u0440\u043E\u0448\u043E\u0433\u043E JSON: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
-- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 chips: [].`;
-  var CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}`;
   function normalizeChips(chips) {
     if (!Array.isArray(chips)) return [];
     return chips.map(
@@ -3343,10 +3402,35 @@ ${aiContext ? "\n\n" + aiContext : ""}
       }
     }, 100);
   }
-  window.owlChipToChat = handleChipClick;
+  var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT;
+  var init_chips = __esm({
+    "src/owl/chips.js"() {
+      init_nav();
+      init_core();
+      init_utils();
+      init_inbox();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_evening();
+      init_health();
+      init_projects();
+      init_tasks();
+      init_habits();
+      VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
+      CHIP_PROMPT_RULES = `- chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
+  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438.
+  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438:
+    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435", "\u041D\u0456, \u0434\u044F\u043A\u0443\u044E".
+    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0432 \u041C\u0418\u041D\u0423\u041B\u041E\u041C\u0423 \u0427\u0410\u0421\u0406 + \u0433\u0430\u043B\u043E\u0447\u043A\u0430 \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0441\u0443\u0432\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F". \u041D\u0415 \u043F\u0438\u0448\u0438 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u043E\u043C ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u0456 \u041D\u0415 \u043F\u0438\u0448\u0438 \u043D\u0430\u043A\u0430\u0437\u043E\u0432\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C ("\u043F\u043E\u0434\u0430\u0439", "\u043A\u0443\u043F\u0438") \u2014 \u0447\u0456\u043F \u0446\u0435 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u042C \u044E\u0437\u0435\u0440\u0430, \u0430 \u043D\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0430.
+- \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0445\u043E\u0440\u043E\u0448\u043E\u0433\u043E JSON: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
+- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 chips: [].`;
+      CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}`;
+      window.owlChipToChat = handleChipClick;
+    }
+  });
 
   // src/owl/inbox-board.js
-  var _tabChatState = {};
   function _getTabChatAHeight(tab) {
     const bar = document.getElementById(tab + "-ai-bar");
     if (!bar) return 220;
@@ -3569,12 +3653,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
       closeChatBar(activeChatBar);
     }, { passive: true });
   }
-  var OWL_BOARD_KEY = "nm_owl_board";
-  var OWL_BOARD_TS_KEY = "nm_owl_board_ts";
-  var OWL_BOARD_INTERVAL = 3 * 60 * 1e3;
-  var _owlBoardMessages = [];
-  var _owlBoardGenerating = false;
-  var _owlBoardTimer = null;
   function getOwlBoardMessages() {
     try {
       return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
@@ -3610,7 +3688,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (h < sc.bedTime - 1) return "evening";
     return "night";
   }
-  var OWL_CD_KEY = "nm_owl_cooldowns";
   function _getOwlCooldowns() {
     try {
       return JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
@@ -3848,103 +3925,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
     return [...critical, ...important, ...normal].join(" ");
   }
-  async function generateOwlBoardMessage() {
-    if (_owlBoardGenerating) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return;
-    _owlBoardGenerating = true;
-    const context = getOwlBoardContext();
-    const existing = getOwlBoardMessages();
-    const recentTexts = existing.slice(0, 5).map((m) => m.text).join(" | ");
-    const boardHistory = existing.slice(0, 20).map((m) => {
-      const ago = Date.now() - (m.id || 0);
-      const hours = Math.floor(ago / 36e5);
-      const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
-      return `[${when}] ${m.text}`;
-    }).join("\n");
-    const now = /* @__PURE__ */ new Date();
-    const phase = getDayPhase();
-    const timeStr = now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-    const phaseInstr = {
-      morning: "\u0420\u0430\u043D\u043E\u043A \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u043D\u0430\u0434\u0438\u0445\u043D\u0443\u0442\u0438 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0441\u0444\u043E\u043A\u0443\u0441\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u043C\u0443.",
-      work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432 \u043A\u0443\u0440\u0441\u0456 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443, \u043C'\u044F\u043A\u043E \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0435.",
-      evening: "\u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u043F\u0456\u0434\u0431\u0438\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F, \u043D\u0435 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438 \u0441\u0442\u0440\u0456\u043A\u0438.",
-      night: "\u041D\u0456\u0447 \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u0440\u043E \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435. \u0414\u0443\u0436\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E."
-    };
-    const systemPrompt = getOWLPersonality() + `
-
-\u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase] || ""}
-
-\u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E \u0432 Inbox. \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
-
-\u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F (\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F):
-${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
-
-\u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430):
-${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
-
-\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u042C:
-1. \u042F\u043A\u0449\u043E \u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u043F\u0440\u043E \u0446\u0435. \u041D\u0456\u0447\u043E\u0433\u043E \u0456\u043D\u0448\u043E\u0433\u043E.
-2. \u042F\u043A\u0449\u043E \u0454 [\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0456 \u043D\u0435\u043C\u0430\u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u043F\u0440\u043E \u043F\u0435\u0440\u0448\u0435 [\u0412\u0410\u0416\u041B\u0418\u0412\u041E].
-3. \u042F\u043A\u0449\u043E \u0454 [\u0424\u0410\u0417\u0410] \u0430\u043B\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E\u0433\u043E/\u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0433\u043E \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E \u0434\u043E \u0444\u0430\u0437\u0438 \u0434\u043D\u044F.
-4. \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u043E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0446\u0456\u043A\u0430\u0432\u0456\u0448\u0435 \u0437\u0456 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445.
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E.
-- \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u0441\u0442\u0440\u0456\u043A \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E" \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0432\u0436\u0435 5 \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434 \u0431\u0456\u0433\u0430\u0432 \u2014 \u043D\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0439\u0441\u044F, \u0431\u0456\u0436\u0438 \u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456" \u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0449\u043E \u0446\u0435 \u0437\u0430 \u0437\u0430\u0434\u0430\u0447\u0456.
-- \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0441\u0443\u043C\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
-- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432: "${recentTexts || "\u043D\u0456\u0447\u043E\u0433\u043E"}"
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
-${CHIP_PROMPT_RULES}
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
-          ],
-          max_tokens: 150,
-          temperature: 0.8
-        })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        _owlBoardGenerating = false;
-        return;
-      }
-      const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
-      if (!parsed.text) {
-        _owlBoardGenerating = false;
-        return;
-      }
-      const msgs = getOwlBoardMessages();
-      msgs.unshift({ id: Date.now(), text: parsed.text, priority: parsed.priority || "normal", chips: parsed.chips || [] });
-      saveOwlBoardMessages(msgs.slice(0, 3));
-      localStorage.setItem(OWL_BOARD_TS_KEY, Date.now().toString());
-      setOwlCd("phase_pulse");
-      try {
-        const chatKey = "nm_chat_inbox";
-        const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || "[]");
-        chatMsgs.push({ role: "agent", text: "\u{1F989} " + parsed.text, ts: Date.now() });
-        localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-        restoreChatUI("inbox");
-      } catch (e) {
-      }
-      if (_getOwlState() === "collapsed") _owlSetState("speech");
-      renderOwlBoard();
-    } catch (e) {
-    }
-    _owlBoardGenerating = false;
-  }
-  var OWL_CHAT_KEY = "nm_owl_chat";
-  var OWL_CHAT_MAX = 20;
-  var _owlChatOpen = false;
-  var _owlChatSending = false;
   function getOwlChatHistory() {
     try {
       return JSON.parse(localStorage.getItem(OWL_CHAT_KEY) || "[]");
@@ -3958,7 +3938,6 @@ ${CHIP_PROMPT_RULES}
     if (msgs.length > OWL_CHAT_MAX) msgs.splice(0, msgs.length - OWL_CHAT_MAX);
     localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
   }
-  var _owlState = "speech";
   function _getOwlState() {
     return _owlTabStates["inbox"] || _owlState || "speech";
   }
@@ -4182,7 +4161,9 @@ ${CHIP_PROMPT_RULES}
     const isFirstTime = msgs.length === 0 && lastTs === 0;
     const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
     const shouldGenerate = isFirstTime || isNewDay || checkOwlBoardTrigger();
-    if (shouldGenerate) generateOwlBoardMessage();
+    if (shouldGenerate) {
+      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+    }
   }
   function _owlAskScheduleIfNeeded() {
     if (localStorage.getItem("nm_owl_schedule_asked")) return;
@@ -4236,19 +4217,36 @@ ${CHIP_PROMPT_RULES}
     }
     return true;
   }
-  var _inboxBoardUpdateTimer = null;
-  window.addEventListener("nm-data-changed", () => {
-    if (_inboxBoardUpdateTimer) clearTimeout(_inboxBoardUpdateTimer);
-    _inboxBoardUpdateTimer = setTimeout(() => {
-      _inboxBoardUpdateTimer = null;
-      const phase = getDayPhase();
-      if (phase !== "silent") generateOwlBoardMessage();
-    }, 3e3);
+  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var init_inbox_board = __esm({
+    "src/owl/inbox-board.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_board();
+      init_chips();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      _tabChatState = {};
+      OWL_BOARD_KEY = "nm_owl_board";
+      OWL_BOARD_TS_KEY = "nm_owl_board_ts";
+      OWL_BOARD_INTERVAL = 3 * 60 * 1e3;
+      _owlBoardMessages = [];
+      _owlBoardTimer = null;
+      OWL_CD_KEY = "nm_owl_cooldowns";
+      OWL_CHAT_KEY = "nm_owl_chat";
+      OWL_CHAT_MAX = 20;
+      _owlChatOpen = false;
+      _owlChatSending = false;
+      _owlState = "speech";
+      window.sendOwlReply = sendOwlReply;
+    }
   });
-  window.sendOwlReply = sendOwlReply;
 
   // src/owl/board.js
-  var OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
   function getOwlTabBoardKey(tab) {
     return "nm_owl_tab_" + tab;
   }
@@ -4274,8 +4272,6 @@ ${CHIP_PROMPT_RULES}
     } catch {
     }
   }
-  var _owlTabStates = {};
-  var _owlTabSwipes = {};
   function _owlTabHTML(tab) {
     const t = tab;
     return `
@@ -4386,16 +4382,33 @@ ${CHIP_PROMPT_RULES}
       setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
     }
   }
-  Object.assign(window, {
-    toggleOwlTabChat,
-    owlTabSwipeStart,
-    owlTabSwipeMove,
-    owlTabSwipeEnd,
-    scrollOwlTabChips,
-    openChatBar
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
+  var init_board = __esm({
+    "src/owl/board.js"() {
+      init_core();
+      init_chips();
+      init_inbox_board();
+      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
+      _owlTabStates = {};
+      _owlTabSwipes = {};
+      Object.assign(window, {
+        toggleOwlTabChat,
+        owlTabSwipeStart,
+        owlTabSwipeMove,
+        owlTabSwipeEnd,
+        scrollOwlTabChips,
+        openChatBar
+      });
+    }
   });
 
   // src/owl/proactive.js
+  var proactive_exports = {};
+  __export(proactive_exports, {
+    generateBoardMessage: () => generateBoardMessage,
+    getTabBoardContext: () => getTabBoardContext,
+    tryTabBoardUpdate: () => tryTabBoardUpdate
+  });
   function getTabBoardContext(tab) {
     const parts = [];
     try {
@@ -4533,25 +4546,26 @@ ${CHIP_PROMPT_RULES}
     }
     return true;
   }
-  var _tabBoardGenerating = {};
-  async function generateTabBoardMessage(tab) {
-    if (_tabBoardGenerating[tab]) return;
+  async function generateBoardMessage(tab) {
+    if (_boardGenerating[tab]) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
-    _tabBoardGenerating[tab] = true;
-    const context = getTabBoardContext(tab);
-    const tabLabels = { tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
-    const allMsgs = getTabBoardMsgs(tab);
+    _boardGenerating[tab] = true;
+    const isInbox = tab === "inbox";
+    const context = isInbox ? getOwlBoardContext() : getTabBoardContext(tab);
+    const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const existing = allMsgs[0] || null;
     const recentText = existing ? existing.text : "";
-    const tabHistory = allMsgs.slice(0, 20).map((m) => {
-      const ago = Date.now() - (m.ts || 0);
+    const recentTexts = allMsgs.slice(0, 5).map((m) => m.text).join(" | ");
+    const boardHistory = allMsgs.slice(0, 20).map((m) => {
+      const ago = Date.now() - (m.ts || m.id || 0);
       const hours = Math.floor(ago / 36e5);
       const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
       return `[${when}] ${m.text}`;
     }).join("\n");
+    const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
     const phase = getDayPhase();
-    const _timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+    const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
     const phaseInstr = {
       morning: "\u0420\u0430\u043D\u043E\u043A \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u043D\u0430\u0434\u0438\u0445\u043D\u0443\u0442\u0438 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0441\u0444\u043E\u043A\u0443\u0441\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u043C\u0443.",
       work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432 \u043A\u0443\u0440\u0441\u0456 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443, \u043C'\u044F\u043A\u043E \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0435.",
@@ -4560,12 +4574,12 @@ ${CHIP_PROMPT_RULES}
     };
     const systemPrompt = getOWLPersonality() + `
 
-\u0417\u0430\u0440\u0430\u0437: ${_timeStr}. ${phaseInstr[phase] || ""}
+\u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase] || ""}
 
-\u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 "${tabLabels[tab] || tab}". \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
+\u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E${isInbox ? " \u0432 Inbox" : ' \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 "' + (tabLabels[tab] || tab) + '"'}. \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
 
 \u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F (\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F):
-${tabHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
+${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
 
 \u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430):
 ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
@@ -4577,10 +4591,10 @@ ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\
 4. \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u043E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0446\u0456\u043A\u0430\u0432\u0456\u0448\u0435 \u0437\u0456 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445.
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u043F\u0440\u043E \u0446\u044E \u0432\u043A\u043B\u0430\u0434\u043A\u0443.
-- \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441". \u041A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u044F\u043A \u0434\u0440\u0443\u0433, \u043D\u0435 \u044F\u043A \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430.
-- \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438 \u0456 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.
-- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u043D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u0454: "${recentText || "\u043D\u0456\u0447\u043E\u0433\u043E"}"
+- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E.
+- \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447". ${isInbox ? '\u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u0441\u0442\u0440\u0456\u043A \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E" \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0432\u0436\u0435 5 \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434 \u0431\u0456\u0433\u0430\u0432 \u2014 \u043D\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0439\u0441\u044F, \u0431\u0456\u0436\u0438 \u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456" \u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0449\u043E \u0446\u0435 \u0437\u0430 \u0437\u0430\u0434\u0430\u0447\u0456.' : "\u041A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u044F\u043A \u0434\u0440\u0443\u0433, \u043D\u0435 \u044F\u043A \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430."}
+- \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0441\u0443\u043C\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
+- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432: "${recentTexts || "\u043D\u0456\u0447\u043E\u0433\u043E"}"
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
 ${CHIP_PROMPT_RULES}
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
@@ -4601,29 +4615,39 @@ ${CHIP_PROMPT_RULES}
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) {
-        _tabBoardGenerating[tab] = false;
+        _boardGenerating[tab] = false;
         return;
       }
       const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
       if (!parsed.text) {
-        _tabBoardGenerating[tab] = false;
+        _boardGenerating[tab] = false;
         return;
       }
-      saveTabBoardMsg(tab, { text: parsed.text, priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() });
-      localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+      const newMsg = { text: parsed.text, priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
+      if (isInbox) {
+        newMsg.id = Date.now();
+        const msgs = getOwlBoardMessages();
+        msgs.unshift(newMsg);
+        saveOwlBoardMessages(msgs.slice(0, 3));
+        localStorage.setItem("nm_owl_board_ts", Date.now().toString());
+        setOwlCd("phase_pulse");
+      } else {
+        saveTabBoardMsg(tab, newMsg);
+        localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+      }
       try {
-        const chatTab = tab;
-        const chatKey = "nm_chat_" + chatTab;
+        const chatKey = "nm_chat_" + tab;
         const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || "[]");
         chatMsgs.push({ role: "agent", text: "\u{1F989} " + parsed.text, ts: Date.now() });
         localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
-        restoreChatUI(chatTab);
+        restoreChatUI(tab);
       } catch (e) {
       }
-      renderTabBoard(tab);
+      if (isInbox) renderOwlBoard();
+      else renderTabBoard(tab);
     } catch (e) {
     }
-    _tabBoardGenerating[tab] = false;
+    _boardGenerating[tab] = false;
   }
   function tryTabBoardUpdate(tab) {
     if (tab === "inbox") return;
@@ -4640,24 +4664,37 @@ ${CHIP_PROMPT_RULES}
     const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
     const firstTime = lastTs === 0;
     if (firstTime || isNewDay || elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab)) {
-      generateTabBoardMessage(tab);
+      generateBoardMessage(tab);
     }
   }
-  var _boardUpdateTimer = null;
-  var BOARD_UPDATE_DELAY = 3e3;
-  window.addEventListener("nm-data-changed", () => {
-    if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
-    _boardUpdateTimer = setTimeout(() => {
+  var _boardGenerating, _boardUpdateTimer, BOARD_UPDATE_DELAY;
+  var init_proactive = __esm({
+    "src/owl/proactive.js"() {
+      init_core();
+      init_nav();
+      init_board();
+      init_inbox_board();
+      init_chips();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      _boardGenerating = {};
       _boardUpdateTimer = null;
-      const tab = currentTab;
-      if (tab && tab !== "inbox") {
-        generateTabBoardMessage(tab);
-      }
-    }, BOARD_UPDATE_DELAY);
+      BOARD_UPDATE_DELAY = 3e3;
+      window.addEventListener("nm-data-changed", () => {
+        if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
+        _boardUpdateTimer = setTimeout(() => {
+          _boardUpdateTimer = null;
+          const tab = currentTab || "inbox";
+          const phase = getDayPhase();
+          if (phase !== "silent") generateBoardMessage(tab);
+        }, BOARD_UPDATE_DELAY);
+      });
+    }
   });
 
   // src/tabs/finance.js
-  var _financeTypingEl = null;
   function getFinance() {
     return JSON.parse(localStorage.getItem("nm_finance") || "[]");
   }
@@ -4682,16 +4719,6 @@ ${CHIP_PROMPT_RULES}
   function saveFinCats(obj) {
     localStorage.setItem("nm_finance_cats", JSON.stringify(obj));
   }
-  var FIN_SUBCATS = {
-    "\u0407\u0436\u0430": ["\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438", "\u0420\u0435\u0441\u0442\u043E\u0440\u0430\u043D", "\u041A\u0430\u0444\u0435", "\u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430", "\u0424\u0430\u0441\u0442\u0444\u0443\u0434"],
-    "\u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442": ["\u041F\u0430\u043B\u0438\u0432\u043E", "\u0422\u0430\u043A\u0441\u0456", "\u041F\u0430\u0440\u043A\u043E\u0432\u043A\u0430", "\u0413\u0440\u043E\u043C\u0430\u0434\u0441\u044C\u043A\u0438\u0439", "\u0420\u0435\u043C\u043E\u043D\u0442 \u0430\u0432\u0442\u043E"],
-    "\u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438": ["\u0421\u0442\u0440\u0456\u043C\u0456\u043D\u0433", "\u041C\u0443\u0437\u0438\u043A\u0430", "\u0425\u043C\u0430\u0440\u0430", "\u0414\u043E\u0434\u0430\u0442\u043A\u0438", "\u0406\u0433\u0440\u0438"],
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": ["\u0410\u043F\u0442\u0435\u043A\u0430", "\u041B\u0456\u043A\u0430\u0440", "\u0421\u043F\u043E\u0440\u0442\u0437\u0430\u043B", "\u0410\u043D\u0430\u043B\u0456\u0437\u0438", "\u041A\u043E\u0441\u043C\u0435\u0442\u0438\u043A\u0430"],
-    "\u0416\u0438\u0442\u043B\u043E": ["\u041E\u0440\u0435\u043D\u0434\u0430", "\u041A\u043E\u043C\u0443\u043D\u0430\u043B\u044C\u043D\u0456", "\u0406\u043D\u0442\u0435\u0440\u043D\u0435\u0442", "\u0420\u0435\u043C\u043E\u043D\u0442", "\u041C\u0435\u0431\u043B\u0456"],
-    "\u041F\u043E\u043A\u0443\u043F\u043A\u0438": ["\u041E\u0434\u044F\u0433", "\u0422\u0435\u0445\u043D\u0456\u043A\u0430", "\u041A\u043D\u0438\u0433\u0438", "\u041F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438", "\u0414\u0456\u043C"]
-  };
-  var currentFinTab = "expense";
-  var currentFinPeriod = "month";
   function getCurrency() {
     const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
     return s.currency || "\u20B4";
@@ -5204,7 +5231,6 @@ ${CHIP_PROMPT_RULES}
     </div>`;
     document.body.appendChild(modal);
   }
-  var _finEditId = null;
   function openAddTransaction(prefill = {}) {
     _finEditId = null;
     const cats = getFinCats();
@@ -5277,8 +5303,6 @@ ${CHIP_PROMPT_RULES}
     _finTxCurrentType = isExpense ? "expense" : "income";
     _finTxSelectedCat = data.category || "";
   }
-  var _finTxCurrentType = "expense";
-  var _finTxSelectedCat = "";
   function toggleFinTxType(type) {
     _finTxCurrentType = type;
     const isExpense = type === "expense";
@@ -5540,8 +5564,6 @@ ${CHIP_PROMPT_RULES}
     if (recentTxs) parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F update_transaction): ${recentTxs}`);
     return parts.join("\n");
   }
-  var financeBarHistory = [];
-  var financeBarLoading = false;
   function addFinanceChatMsg(role, text, _noSave = false) {
     const el = document.getElementById("finance-chat-messages");
     if (!el) return;
@@ -5692,26 +5714,54 @@ ${CHIP_PROMPT_RULES}
     }
     financeBarLoading = false;
   }
-  Object.assign(window, {
-    openAddTransaction,
-    setCurrency,
-    setFinPeriod,
-    switchFinTab,
-    sendFinanceBarMessage,
-    openFinBudgetModal,
-    openEditTransaction,
-    closeFinTxModal,
-    toggleFinTxType,
-    selectFinTxCat,
-    saveFinTransaction,
-    deleteFinTransaction,
-    closeFinBudgetModal,
-    saveFinBudgetFromModal,
-    openAllTransactions
+  var _financeTypingEl, FIN_SUBCATS, currentFinTab, currentFinPeriod, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading;
+  var init_finance = __esm({
+    "src/tabs/finance.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_core();
+      init_proactive();
+      init_inbox();
+      init_habits();
+      init_tasks();
+      _financeTypingEl = null;
+      FIN_SUBCATS = {
+        "\u0407\u0436\u0430": ["\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438", "\u0420\u0435\u0441\u0442\u043E\u0440\u0430\u043D", "\u041A\u0430\u0444\u0435", "\u0414\u043E\u0441\u0442\u0430\u0432\u043A\u0430", "\u0424\u0430\u0441\u0442\u0444\u0443\u0434"],
+        "\u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442": ["\u041F\u0430\u043B\u0438\u0432\u043E", "\u0422\u0430\u043A\u0441\u0456", "\u041F\u0430\u0440\u043A\u043E\u0432\u043A\u0430", "\u0413\u0440\u043E\u043C\u0430\u0434\u0441\u044C\u043A\u0438\u0439", "\u0420\u0435\u043C\u043E\u043D\u0442 \u0430\u0432\u0442\u043E"],
+        "\u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438": ["\u0421\u0442\u0440\u0456\u043C\u0456\u043D\u0433", "\u041C\u0443\u0437\u0438\u043A\u0430", "\u0425\u043C\u0430\u0440\u0430", "\u0414\u043E\u0434\u0430\u0442\u043A\u0438", "\u0406\u0433\u0440\u0438"],
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": ["\u0410\u043F\u0442\u0435\u043A\u0430", "\u041B\u0456\u043A\u0430\u0440", "\u0421\u043F\u043E\u0440\u0442\u0437\u0430\u043B", "\u0410\u043D\u0430\u043B\u0456\u0437\u0438", "\u041A\u043E\u0441\u043C\u0435\u0442\u0438\u043A\u0430"],
+        "\u0416\u0438\u0442\u043B\u043E": ["\u041E\u0440\u0435\u043D\u0434\u0430", "\u041A\u043E\u043C\u0443\u043D\u0430\u043B\u044C\u043D\u0456", "\u0406\u043D\u0442\u0435\u0440\u043D\u0435\u0442", "\u0420\u0435\u043C\u043E\u043D\u0442", "\u041C\u0435\u0431\u043B\u0456"],
+        "\u041F\u043E\u043A\u0443\u043F\u043A\u0438": ["\u041E\u0434\u044F\u0433", "\u0422\u0435\u0445\u043D\u0456\u043A\u0430", "\u041A\u043D\u0438\u0433\u0438", "\u041F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438", "\u0414\u0456\u043C"]
+      };
+      currentFinTab = "expense";
+      currentFinPeriod = "month";
+      _finEditId = null;
+      _finTxCurrentType = "expense";
+      _finTxSelectedCat = "";
+      financeBarHistory = [];
+      financeBarLoading = false;
+      Object.assign(window, {
+        openAddTransaction,
+        setCurrency,
+        setFinPeriod,
+        switchFinTab,
+        sendFinanceBarMessage,
+        openFinBudgetModal,
+        openEditTransaction,
+        closeFinTxModal,
+        toggleFinTxType,
+        selectFinTxCat,
+        saveFinTransaction,
+        deleteFinTransaction,
+        closeFinBudgetModal,
+        saveFinBudgetFromModal,
+        openAllTransactions
+      });
+    }
   });
 
   // src/tabs/habits.js
-  var editingHabitId = null;
   function getHabits() {
     return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
   }
@@ -5817,7 +5867,6 @@ ${CHIP_PROMPT_RULES}
       addInboxChatMsg("agent", `\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "${name}".${fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.`);
     });
   }
-  var _habitModalType = "build";
   function setHabitModalType(type) {
     _habitModalType = type;
     const buildBtn = document.getElementById("habit-type-build");
@@ -5907,11 +5956,6 @@ ${CHIP_PROMPT_RULES}
   function closeHabitModal() {
     document.getElementById("habit-modal").style.display = "none";
   }
-  document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("habit-day-btn")) {
-      e.target.classList.toggle("active");
-    }
-  });
   function saveHabit() {
     const name = document.getElementById("habit-input-name").value.trim();
     if (!name) {
@@ -6113,7 +6157,6 @@ ${CHIP_PROMPT_RULES}
       return '<div style="position:relative;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')" ontouchstart="habitMeSwipeStart(event,' + h.id + ')" ontouchmove="habitMeSwipeMove(event,' + h.id + ')" ontouchend="habitMeSwipeEnd(event,' + h.id + ')"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
     }).join("");
   }
-  var currentProdTab = "tasks";
   function updateProdTabCounters() {
     const taskCount = getTasks().filter((t) => t.status !== "done").length;
     const taskCountEl = document.getElementById("prod-tab-tasks-count");
@@ -6428,7 +6471,6 @@ ${CHIP_PROMPT_RULES}
     }
     return { start, move, end };
   }
-  var _habitMeSwipe = _createHabitSwipe({}, "habit-me-item-", toggleHabitToday);
   function habitMeSwipeStart(e, id) {
     _habitMeSwipe.start(e, id);
   }
@@ -6438,7 +6480,6 @@ ${CHIP_PROMPT_RULES}
   function habitMeSwipeEnd(e, id) {
     _habitMeSwipe.end(e, id);
   }
-  var _prodHabitSwipe = _createHabitSwipe({}, "prod-habit-item-", toggleProdHabitToday);
   function prodHabitSwipeStart(e, id) {
     _prodHabitSwipe.start(e, id);
   }
@@ -6730,31 +6771,55 @@ ${CHIP_PROMPT_RULES}
     }
     setTaskBarLoading(false);
   }
-  Object.assign(window, {
-    switchProdTab,
-    saveHabit,
-    closeHabitModal,
-    setHabitModalType,
-    deleteHabitFromModal,
-    adjustHabitCount,
-    sendTasksBarMessage,
-    openEditHabit,
-    toggleHabitToday,
-    toggleProdHabitToday,
-    tapHabitSquare,
-    tapHabitSquareMe,
-    habitMeSwipeStart,
-    habitMeSwipeMove,
-    habitMeSwipeEnd,
-    prodHabitSwipeStart,
-    prodHabitSwipeMove,
-    prodHabitSwipeEnd,
-    holdQuitHabit,
-    confirmQuitRelapse
+  var editingHabitId, _habitModalType, currentProdTab, _habitMeSwipe, _prodHabitSwipe;
+  var init_habits = __esm({
+    "src/tabs/habits.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_core();
+      init_swipe_delete();
+      init_inbox();
+      init_tasks();
+      init_notes();
+      init_finance();
+      init_evening();
+      editingHabitId = null;
+      _habitModalType = "build";
+      document.addEventListener("click", (e) => {
+        if (e.target.classList.contains("habit-day-btn")) {
+          e.target.classList.toggle("active");
+        }
+      });
+      currentProdTab = "tasks";
+      _habitMeSwipe = _createHabitSwipe({}, "habit-me-item-", toggleHabitToday);
+      _prodHabitSwipe = _createHabitSwipe({}, "prod-habit-item-", toggleProdHabitToday);
+      Object.assign(window, {
+        switchProdTab,
+        saveHabit,
+        closeHabitModal,
+        setHabitModalType,
+        deleteHabitFromModal,
+        adjustHabitCount,
+        sendTasksBarMessage,
+        openEditHabit,
+        toggleHabitToday,
+        toggleProdHabitToday,
+        tapHabitSquare,
+        tapHabitSquareMe,
+        habitMeSwipeStart,
+        habitMeSwipeMove,
+        habitMeSwipeEnd,
+        prodHabitSwipeStart,
+        prodHabitSwipeMove,
+        prodHabitSwipeEnd,
+        holdQuitHabit,
+        confirmQuitRelapse
+      });
+    }
   });
 
   // src/ai/core.js
-  var activeChatBar = null;
   function setActiveChatBar(v) {
     activeChatBar = v;
   }
@@ -6900,7 +6965,272 @@ ${inboxList}`);
     }
     addMsg("agent", reply);
   }
-  var INBOX_SYSTEM_PROMPT = `\u0422\u0438 \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind. 
+  async function _fetchAI(messages, signal) {
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      showToast("\u2699\uFE0F \u0412\u0432\u0435\u0434\u0456\u0442\u044C OpenAI API \u043A\u043B\u044E\u0447 \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445", 3e3);
+      return null;
+    }
+    if (location.protocol === "file:") {
+      showToast("\u26A0\uFE0F \u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u0444\u0430\u0439\u043B \u0447\u0435\u0440\u0435\u0437 \u0441\u0435\u0440\u0432\u0435\u0440, \u043D\u0435 file://", 5e3);
+      return null;
+    }
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify({ model: "gpt-4o-mini", messages, max_tokens: 300, temperature: 0.7 })
+    });
+    if (!res.ok) {
+      const data2 = await res.json().catch(() => ({}));
+      showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
+      return null;
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  }
+  async function callAI(systemPrompt, userMessage, contextData = {}) {
+    const context = Object.keys(contextData).length > 0 ? `
+
+\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442:
+${JSON.stringify(contextData, null, 2)}` : "";
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage + context }
+    ];
+    try {
+      const text = await _fetchAI(messages, void 0);
+      if (text === null) return null;
+      if (!text) {
+        showToast("\u274C \u041F\u043E\u0440\u043E\u0436\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430", 3e3);
+        return null;
+      }
+      return text;
+    } catch (e) {
+      if (e.message === "Load failed" || e.message.includes("Failed to fetch")) {
+        showToast("\u274C \u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442", 4e3);
+      } else {
+        showToast("\u274C " + e.message, 4e3);
+      }
+      return null;
+    }
+  }
+  async function callOwlChat(userText) {
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) return null;
+    const context = getOwlBoardContext();
+    const chatHistory = JSON.parse(localStorage.getItem("nm_owl_chat") || "[]");
+    const recentChat = chatHistory.slice(-12).map((m) => ({
+      role: m.role === "user" ? "user" : "assistant",
+      content: m.text
+    }));
+    const systemPrompt = getOWLPersonality() + `
+
+\u0426\u0435 \u043C\u0456\u043D\u0456-\u0447\u0430\u0442. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0442\u0432\u043E\u0454 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F.
+
+\u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425:
+${context}
+
+\u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 (\u0437\u0430\u0432\u0436\u0434\u0438 JSON):
+{"text":"\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"action":null}
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438.
+- chips \u2014 0-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438. ${CHIP_PROMPT_RULES}
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435):
+\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0434\u0456\u044E \u2014 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u043E\u0431'\u0454\u043A\u0442 \u0432 "action". \u042F\u043A\u0449\u043E \u0434\u0456\u044F \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u2014 action:null.
+
+\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_id":ID_\u0417\u0412\u0418\u0427\u041A\u0418}
+\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID_\u0417\u0410\u0414\u0410\u0427\u0406}
+\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430"}
+\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
+\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
+\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
+
+ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.`;
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...recentChat,
+      { role: "user", content: userText }
+    ];
+    try {
+      const reply = await _fetchAI(messages, void 0);
+      return reply;
+    } catch (e) {
+      return null;
+    }
+  }
+  async function callAIWithHistory(systemPrompt, history) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25e3);
+    try {
+      const messages = [{ role: "system", content: systemPrompt }, ...history];
+      const reply = await _fetchAI(messages, controller.signal);
+      clearTimeout(timeout);
+      return reply;
+    } catch (e) {
+      clearTimeout(timeout);
+      console.error("callAIWithHistory error:", e);
+      return null;
+    }
+  }
+  function saveChatMsg(tab, role, text) {
+    if (role === "typing") return;
+    const key = CHAT_STORE_KEYS[tab];
+    if (!key) return;
+    try {
+      const msgs = JSON.parse(localStorage.getItem(key) || "[]");
+      msgs.push({ role, text, ts: Date.now() });
+      if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
+      localStorage.setItem(key, JSON.stringify(msgs));
+    } catch (e) {
+    }
+  }
+  function loadChatMsgs(tab) {
+    const key = CHAT_STORE_KEYS[tab];
+    if (!key) return [];
+    try {
+      return JSON.parse(localStorage.getItem(key) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function restoreChatUI(tab) {
+    const containerMap = {
+      inbox: "inbox-chat-messages",
+      tasks: "tasks-chat-messages",
+      notes: "notes-chat-messages",
+      me: "me-chat-messages",
+      evening: "evening-bar-messages",
+      finance: "finance-chat-messages"
+    };
+    const addMsgMap = {
+      tasks: (r, t) => addTaskBarMsg(r, t, true),
+      notes: (r, t) => addNotesChatMsg(r, t, true),
+      me: (r, t) => addMeChatMsg(r, t, true),
+      evening: (r, t) => addEveningBarMsg(r, t, true),
+      finance: (r, t) => addFinanceChatMsg(r, t, true)
+    };
+    const containerId = containerMap[tab];
+    if (!containerId) return;
+    const el = document.getElementById(containerId);
+    if (!el || el.dataset.restored) return;
+    el.dataset.restored = "1";
+    const msgs = loadChatMsgs(tab);
+    if (msgs.length === 0) {
+      if (tab === "inbox") {
+        const div = document.createElement("div");
+        div.style.cssText = "display:flex";
+        div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0440\u043E\u0437\u0431\u0435\u0440\u0443\u0441\u044C \u{1F44B}</div>`;
+        el.appendChild(div);
+      }
+      return;
+    }
+    const sep = document.createElement("div");
+    sep.style.cssText = "display:flex;align-items:center;gap:8px;margin:4px 0 8px;opacity:0.4";
+    sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F \u0440\u043E\u0437\u043C\u043E\u0432\u0430</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
+    el.appendChild(sep);
+    if (tab === "inbox") {
+      msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
+    } else if (addMsgMap[tab]) {
+      msgs.forEach((m) => addMsgMap[tab](m.role, m.text));
+    }
+  }
+  function _renderInboxChatMsg(role, text, el) {
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "gap:8px;align-items:flex-start" : "justify-content:flex-end"}`;
+    if (isAgent) {
+      div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    } else {
+      div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+    }
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  }
+  function openChatBar(tab) {
+    if (activeChatBar === tab) return;
+    try {
+      closeOwlChat();
+    } catch (e) {
+    }
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
+      if (t === tab) return;
+      const b = document.getElementById(t + "-ai-bar");
+      if (!b) return;
+      const cw = b.querySelector(".ai-bar-chat-window");
+      if (cw) {
+        cw.classList.remove("open");
+        _tabChatState[t] = void 0;
+      }
+      const inputs = b.querySelectorAll("input, textarea");
+      inputs.forEach((i) => i.blur());
+    });
+    activeChatBar = tab;
+    if (tab === "inbox") {
+      try {
+        _clearInboxUnreadBadge();
+      } catch (e) {
+      }
+    }
+    const bar = document.getElementById(tab + "-ai-bar");
+    if (!bar) return;
+    restoreChatUI(tab);
+    const chatWin = bar.querySelector(".ai-bar-chat-window");
+    if (chatWin) requestAnimationFrame(() => {
+      const h = _getTabChatAHeight(tab);
+      chatWin.style.height = h + "px";
+      chatWin.style.maxHeight = h + "px";
+      chatWin.classList.add("open");
+      _tabChatState[tab] = "a";
+      const msgs = chatWin.querySelector(".ai-bar-messages");
+      if (msgs) setTimeout(() => {
+        msgs.scrollTop = msgs.scrollHeight;
+      }, 50);
+    });
+  }
+  function closeChatBar(tab) {
+    const bar = document.getElementById(tab + "-ai-bar");
+    if (!bar) return;
+    const chatWin = bar.querySelector(".ai-bar-chat-window");
+    if (chatWin) chatWin.classList.remove("open");
+    _tabChatState[tab] = void 0;
+    const inputs = bar.querySelectorAll("input, textarea");
+    inputs.forEach((i) => i.blur());
+    activeChatBar = null;
+  }
+  function closeAllChatBars(resetActive = true) {
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
+      const bar = document.getElementById(t + "-ai-bar");
+      if (!bar) return;
+      const chatWin = bar.querySelector(".ai-bar-chat-window");
+      if (chatWin) {
+        chatWin.classList.remove("open");
+        _tabChatState[t] = void 0;
+      }
+      const inputs = bar.querySelectorAll("input, textarea");
+      inputs.forEach((i) => i.blur());
+    });
+    if (resetActive) activeChatBar = null;
+  }
+  var activeChatBar, INBOX_SYSTEM_PROMPT, CHAT_STORE_MAX, CHAT_STORE_KEYS;
+  var init_core = __esm({
+    "src/ai/core.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_evening();
+      init_inbox_board();
+      init_chips();
+      activeChatBar = null;
+      INBOX_SYSTEM_PROMPT = `\u0422\u0438 \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind. 
 \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454 \u0442\u043E\u0431\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0446\u0435 \u043C\u043E\u0436\u0435 \u0431\u0443\u0442\u0438 \u0434\u0443\u043C\u043A\u0430, \u0437\u0430\u0434\u0430\u0447\u0430, \u0456\u0434\u0435\u044F, \u0437\u0432\u0438\u0447\u043A\u0430, \u043F\u043E\u0434\u0456\u044F, \u0430\u0431\u043E \u0437\u0432\u0456\u0442 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435.
 
 \u0413\u0420\u0410\u041C\u0410\u0422\u0418\u041A\u0410: \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u043E\u0447\u0435\u0432\u0438\u0434\u043D\u0443 \u043F\u043E\u043C\u0438\u043B\u043A\u0443 \u0430\u0431\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0443 \u2014 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0439 \u0432 \u043F\u043E\u043B\u0456 "text" \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C. \u041D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0433\u043E\u043B\u0438\u0442\u0438 \u0432 \u0437\u0430\u043B" \u2192 "\u0445\u043E\u0434\u0438\u0442\u0438 \u0432 \u0437\u0430\u043B", "\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u0456\u0431" \u2192 "\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431".
@@ -7079,270 +7409,20 @@ ${inboxList}`);
 
 \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u043C JSON, \u0431\u0435\u0437 markdown, \u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443 \u043F\u043E\u0437\u0430 JSON.
 \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0431\u044E\u0434\u0436\u0435\u0442\u0438 \u0430\u0431\u043E \u043F\u043B\u0430\u043D\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456 \u2014 \u043D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 \u0457\u0445.`;
-  async function _fetchAI(messages, signal) {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      showToast("\u2699\uFE0F \u0412\u0432\u0435\u0434\u0456\u0442\u044C OpenAI API \u043A\u043B\u044E\u0447 \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445", 3e3);
-      return null;
+      CHAT_STORE_MAX = 30;
+      CHAT_STORE_KEYS = {
+        inbox: "nm_chat_inbox",
+        tasks: "nm_chat_tasks",
+        notes: "nm_chat_notes",
+        me: "nm_chat_me",
+        evening: "nm_chat_evening",
+        finance: "nm_chat_finance"
+      };
+      Object.assign(window, { openChatBar, closeChatBar });
     }
-    if (location.protocol === "file:") {
-      showToast("\u26A0\uFE0F \u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u0444\u0430\u0439\u043B \u0447\u0435\u0440\u0435\u0437 \u0441\u0435\u0440\u0432\u0435\u0440, \u043D\u0435 file://", 5e3);
-      return null;
-    }
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      signal,
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({ model: "gpt-4o-mini", messages, max_tokens: 300, temperature: 0.7 })
-    });
-    if (!res.ok) {
-      const data2 = await res.json().catch(() => ({}));
-      showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
-      return null;
-    }
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || null;
-  }
-  async function callAI(systemPrompt, userMessage, contextData = {}) {
-    const context = Object.keys(contextData).length > 0 ? `
-
-\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442:
-${JSON.stringify(contextData, null, 2)}` : "";
-    const messages = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage + context }
-    ];
-    try {
-      const text = await _fetchAI(messages, void 0);
-      if (text === null) return null;
-      if (!text) {
-        showToast("\u274C \u041F\u043E\u0440\u043E\u0436\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430", 3e3);
-        return null;
-      }
-      return text;
-    } catch (e) {
-      if (e.message === "Load failed" || e.message.includes("Failed to fetch")) {
-        showToast("\u274C \u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442", 4e3);
-      } else {
-        showToast("\u274C " + e.message, 4e3);
-      }
-      return null;
-    }
-  }
-  async function callOwlChat(userText) {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return null;
-    const context = getOwlBoardContext();
-    const chatHistory = JSON.parse(localStorage.getItem("nm_owl_chat") || "[]");
-    const recentChat = chatHistory.slice(-12).map((m) => ({
-      role: m.role === "user" ? "user" : "assistant",
-      content: m.text
-    }));
-    const systemPrompt = getOWLPersonality() + `
-
-\u0426\u0435 \u043C\u0456\u043D\u0456-\u0447\u0430\u0442. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0442\u0432\u043E\u0454 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F.
-
-\u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425:
-${context}
-
-\u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 (\u0437\u0430\u0432\u0436\u0434\u0438 JSON):
-{"text":"\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"action":null}
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438.
-- chips \u2014 0-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438. ${CHIP_PROMPT_RULES}
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435):
-\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0434\u0456\u044E \u2014 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u043E\u0431'\u0454\u043A\u0442 \u0432 "action". \u042F\u043A\u0449\u043E \u0434\u0456\u044F \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u2014 action:null.
-
-\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_id":ID_\u0417\u0412\u0418\u0427\u041A\u0418}
-\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID_\u0417\u0410\u0414\u0410\u0427\u0406}
-\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430"}
-\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
-\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
-\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
-
-ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.`;
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...recentChat,
-      { role: "user", content: userText }
-    ];
-    try {
-      const reply = await _fetchAI(messages, void 0);
-      return reply;
-    } catch (e) {
-      return null;
-    }
-  }
-  async function callAIWithHistory(systemPrompt, history) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25e3);
-    try {
-      const messages = [{ role: "system", content: systemPrompt }, ...history];
-      const reply = await _fetchAI(messages, controller.signal);
-      clearTimeout(timeout);
-      return reply;
-    } catch (e) {
-      clearTimeout(timeout);
-      console.error("callAIWithHistory error:", e);
-      return null;
-    }
-  }
-  var CHAT_STORE_MAX = 30;
-  var CHAT_STORE_KEYS = {
-    inbox: "nm_chat_inbox",
-    tasks: "nm_chat_tasks",
-    notes: "nm_chat_notes",
-    me: "nm_chat_me",
-    evening: "nm_chat_evening",
-    finance: "nm_chat_finance"
-  };
-  function saveChatMsg(tab, role, text) {
-    if (role === "typing") return;
-    const key = CHAT_STORE_KEYS[tab];
-    if (!key) return;
-    try {
-      const msgs = JSON.parse(localStorage.getItem(key) || "[]");
-      msgs.push({ role, text, ts: Date.now() });
-      if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
-      localStorage.setItem(key, JSON.stringify(msgs));
-    } catch (e) {
-    }
-  }
-  function loadChatMsgs(tab) {
-    const key = CHAT_STORE_KEYS[tab];
-    if (!key) return [];
-    try {
-      return JSON.parse(localStorage.getItem(key) || "[]");
-    } catch {
-      return [];
-    }
-  }
-  function restoreChatUI(tab) {
-    const containerMap = {
-      inbox: "inbox-chat-messages",
-      tasks: "tasks-chat-messages",
-      notes: "notes-chat-messages",
-      me: "me-chat-messages",
-      evening: "evening-bar-messages",
-      finance: "finance-chat-messages"
-    };
-    const addMsgMap = {
-      tasks: (r, t) => addTaskBarMsg(r, t, true),
-      notes: (r, t) => addNotesChatMsg(r, t, true),
-      me: (r, t) => addMeChatMsg(r, t, true),
-      evening: (r, t) => addEveningBarMsg(r, t, true),
-      finance: (r, t) => addFinanceChatMsg(r, t, true)
-    };
-    const containerId = containerMap[tab];
-    if (!containerId) return;
-    const el = document.getElementById(containerId);
-    if (!el || el.dataset.restored) return;
-    el.dataset.restored = "1";
-    const msgs = loadChatMsgs(tab);
-    if (msgs.length === 0) {
-      if (tab === "inbox") {
-        const div = document.createElement("div");
-        div.style.cssText = "display:flex";
-        div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:5px 10px;font-size:13px;font-weight:500;line-height:1.5;max-width:85%">\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0440\u043E\u0437\u0431\u0435\u0440\u0443\u0441\u044C \u{1F44B}</div>`;
-        el.appendChild(div);
-      }
-      return;
-    }
-    const sep = document.createElement("div");
-    sep.style.cssText = "display:flex;align-items:center;gap:8px;margin:4px 0 8px;opacity:0.4";
-    sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F \u0440\u043E\u0437\u043C\u043E\u0432\u0430</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
-    el.appendChild(sep);
-    if (tab === "inbox") {
-      msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
-    } else if (addMsgMap[tab]) {
-      msgs.forEach((m) => addMsgMap[tab](m.role, m.text));
-    }
-  }
-  function _renderInboxChatMsg(role, text, el) {
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "gap:8px;align-items:flex-start" : "justify-content:flex-end"}`;
-    if (isAgent) {
-      div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    } else {
-      div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
-    }
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-  }
-  function openChatBar(tab) {
-    if (activeChatBar === tab) return;
-    try {
-      closeOwlChat();
-    } catch (e) {
-    }
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      if (t === tab) return;
-      const b = document.getElementById(t + "-ai-bar");
-      if (!b) return;
-      const cw = b.querySelector(".ai-bar-chat-window");
-      if (cw) {
-        cw.classList.remove("open");
-        _tabChatState[t] = void 0;
-      }
-      const inputs = b.querySelectorAll("input, textarea");
-      inputs.forEach((i) => i.blur());
-    });
-    activeChatBar = tab;
-    if (tab === "inbox") {
-      try {
-        _clearInboxUnreadBadge();
-      } catch (e) {
-      }
-    }
-    const bar = document.getElementById(tab + "-ai-bar");
-    if (!bar) return;
-    restoreChatUI(tab);
-    const chatWin = bar.querySelector(".ai-bar-chat-window");
-    if (chatWin) requestAnimationFrame(() => {
-      const h = _getTabChatAHeight(tab);
-      chatWin.style.height = h + "px";
-      chatWin.style.maxHeight = h + "px";
-      chatWin.classList.add("open");
-      _tabChatState[tab] = "a";
-      const msgs = chatWin.querySelector(".ai-bar-messages");
-      if (msgs) setTimeout(() => {
-        msgs.scrollTop = msgs.scrollHeight;
-      }, 50);
-    });
-  }
-  function closeChatBar(tab) {
-    const bar = document.getElementById(tab + "-ai-bar");
-    if (!bar) return;
-    const chatWin = bar.querySelector(".ai-bar-chat-window");
-    if (chatWin) chatWin.classList.remove("open");
-    _tabChatState[tab] = void 0;
-    const inputs = bar.querySelectorAll("input, textarea");
-    inputs.forEach((i) => i.blur());
-    activeChatBar = null;
-  }
-  function closeAllChatBars(resetActive = true) {
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      const bar = document.getElementById(t + "-ai-bar");
-      if (!bar) return;
-      const chatWin = bar.querySelector(".ai-bar-chat-window");
-      if (chatWin) {
-        chatWin.classList.remove("open");
-        _tabChatState[t] = void 0;
-      }
-      const inputs = bar.querySelectorAll("input, textarea");
-      inputs.forEach((i) => i.blur());
-    });
-    if (resetActive) activeChatBar = null;
-  }
-  Object.assign(window, { openChatBar, closeChatBar });
+  });
 
   // src/tabs/tasks.js
-  var editingTaskId = null;
-  var tempSteps = [];
   function getTasks() {
     return JSON.parse(localStorage.getItem("nm_tasks") || "[]");
   }
@@ -7581,9 +7661,6 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       commentEl.style.display = "block";
     }
   }
-  var taskChatId = null;
-  var taskChatHistory = [];
-  var taskChatLoading = false;
   function saveTaskChatHistory() {
     if (!taskChatId) return;
     const messages = Array.from(document.getElementById("task-chat-messages").children).map((div) => {
@@ -7678,25 +7755,6 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     btn.disabled = false;
     saveTaskChatHistory();
   }
-  (function() {
-    let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
-    document.addEventListener("touchstart", (e) => {
-      swipeStartX = e.touches[0].clientX;
-      swipeStartY = e.touches[0].clientY;
-      swipeStartTime = Date.now();
-    }, { passive: true });
-    document.addEventListener("touchend", (e) => {
-      const noteView = document.getElementById("note-view-modal");
-      if (!noteView || noteView.style.display !== "flex") return;
-      const dx = e.changedTouches[0].clientX - swipeStartX;
-      const dy = e.changedTouches[0].clientY - swipeStartY;
-      const dt = Date.now() - swipeStartTime;
-      if (dt > 400) return;
-      if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
-      if (dx > 60) closeNoteView();
-    }, { passive: true });
-  })();
-  var taskSwipeState = {};
   function taskSwipeStart(e, id) {
     const t = e.touches[0];
     taskSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
@@ -7784,12 +7842,9 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       clearTimeout(timeout);
     }
   }
-  var taskBarLoading = false;
   function setTaskBarLoading(v) {
     taskBarLoading = v;
   }
-  var taskBarHistory = [];
-  var _taskTypingEl = null;
   function addTaskBarMsg(role, text, _noSave = false) {
     const el = document.getElementById("tasks-chat-messages");
     if (!el) return;
@@ -7822,23 +7877,60 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     else taskBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("tasks", role, text);
   }
-  Object.assign(window, {
-    openAddTask,
-    saveTask,
-    closeTaskModal,
-    deleteTaskFromModal,
-    addTaskStep,
-    toggleTempStep,
-    removeTempStep,
-    closeTaskChat,
-    sendTaskChatMessage,
-    toggleTaskStatus,
-    toggleTaskStep
+  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskSwipeState, taskBarLoading, taskBarHistory, _taskTypingEl;
+  var init_tasks = __esm({
+    "src/tabs/tasks.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_core();
+      init_swipe_delete();
+      init_habits();
+      init_notes();
+      editingTaskId = null;
+      tempSteps = [];
+      taskChatId = null;
+      taskChatHistory = [];
+      taskChatLoading = false;
+      (function() {
+        let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
+        document.addEventListener("touchstart", (e) => {
+          swipeStartX = e.touches[0].clientX;
+          swipeStartY = e.touches[0].clientY;
+          swipeStartTime = Date.now();
+        }, { passive: true });
+        document.addEventListener("touchend", (e) => {
+          const noteView = document.getElementById("note-view-modal");
+          if (!noteView || noteView.style.display !== "flex") return;
+          const dx = e.changedTouches[0].clientX - swipeStartX;
+          const dy = e.changedTouches[0].clientY - swipeStartY;
+          const dt = Date.now() - swipeStartTime;
+          if (dt > 400) return;
+          if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
+          if (dx > 60) closeNoteView();
+        }, { passive: true });
+      })();
+      taskSwipeState = {};
+      taskBarLoading = false;
+      taskBarHistory = [];
+      _taskTypingEl = null;
+      Object.assign(window, {
+        openAddTask,
+        saveTask,
+        closeTaskModal,
+        deleteTaskFromModal,
+        addTaskStep,
+        toggleTempStep,
+        removeTempStep,
+        closeTaskChat,
+        sendTaskChatMessage,
+        toggleTaskStatus,
+        toggleTaskStep
+      });
+    }
   });
 
   // src/core/trash.js
-  var NM_TRASH_KEY = "nm_trash";
-  var TRASH_TTL = 7 * 24 * 60 * 60 * 1e3;
   function getTrash() {
     try {
       return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || "[]");
@@ -7924,203 +8016,22 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     if (_undoToastTimer) clearTimeout(_undoToastTimer);
     document.getElementById("toast").classList.remove("show");
   }
-  window.undoDelete = undoDelete;
+  var NM_TRASH_KEY, TRASH_TTL;
+  var init_trash = __esm({
+    "src/core/trash.js"() {
+      init_nav();
+      init_inbox();
+      init_tasks();
+      init_notes();
+      init_habits();
+      init_finance();
+      NM_TRASH_KEY = "nm_trash";
+      TRASH_TTL = 7 * 24 * 60 * 60 * 1e3;
+      window.undoDelete = undoDelete;
+    }
+  });
 
   // src/tabs/onboarding.js
-  var UPDATE_VERSION = "v065";
-  var UPDATE_SLIDES = [
-    {
-      tag: "\u{1F941} \u041D\u043E\u0432\u0438\u0439 \u0431\u0430\u0440\u0430\u0431\u0430\u043D",
-      emoji: "\u{1F941}",
-      title: "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u0430\u043D\u0430 \u0437 \u043D\u0443\u043B\u044F",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F446}</div>
-    <div class="ob-text">\u0422\u0430\u043F \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2014 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0454</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F51A}</div>
-    <div class="ob-text">\u0413\u0443\u043C\u043E\u0432\u0430 \u043C\u0435\u0436\u0430 \u2014 \u043A\u0440\u0430\u0439\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u043B\u0456\u0442\u0430\u044E\u0442\u044C</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u2795</div>
-    <div class="ob-text">\u041A\u043D\u043E\u043F\u043A\u0430 + \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0430\u0431\u043E \u0432\u0438\u043C\u043A\u043D\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#e0e7ff,#6366f1)"
-    },
-    {
-      tag: "\u{1F989} OWL Board",
-      emoji: "\u{1F989}",
-      title: "OWL \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F4CB}</div>
-    <div class="ob-text">OWL \u0442\u0430\u0431\u043B\u043E \u2014 \u043D\u0430 \u043A\u043E\u0436\u043D\u0456\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0432\u0433\u043E\u0440\u0456</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F300}</div>
-    <div class="ob-text">Scroll-behind \u0435\u0444\u0435\u043A\u0442 \u2014 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u043F\u0440\u043E\u043A\u0440\u0443\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0430\u0431\u043B\u043E</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F319}</div>
-    <div class="ob-text">\u0422\u0438\u0445\u0456 \u0433\u043E\u0434\u0438\u043D\u0438 0\u20135 \u2014 OWL \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u0454 \u0432\u043D\u043E\u0447\u0456</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#fef9c3,#f59e0b)"
-    },
-    {
-      tag: "\u{1F4AC} \u041D\u043E\u0432\u0438\u0439 \u0447\u0430\u0442",
-      emoji: "\u{1F4AC}",
-      title: "3 \u0441\u0442\u0430\u043D\u0438 \u0447\u0430\u0442\u0443",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u2B07\uFE0F</div>
-    <div class="ob-text">\u0417\u0430\u043A\u0440\u0438\u0442\u0438\u0439 \u2192 \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u2192 \u043D\u0430 \u0432\u0435\u0441\u044C \u0435\u043A\u0440\u0430\u043D</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F448}</div>
-    <div class="ob-text">iOS-like \u0441\u0432\u0430\u0439\u043F\u0438 \u0432 Inbox \u2014 \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0443</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F501}</div>
-    <div class="ob-text">\u041A\u043E\u0436\u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0454 \u0441\u0432\u0456\u0439 \u0447\u0430\u0442</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#d1fae5,#16a34a)"
-    },
-    {
-      tag: "\u{1F195} \u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
-      emoji: "\u{1F195}",
-      title: "\u0412\u0435\u0447\u0456\u0440 \xB7 \u042F \xB7 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \xB7 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F319}</div>
-    <div class="ob-text">\u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0432\u043E\u0434\u044C \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0456 \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1FA9E}</div>
-    <div class="ob-text">\u042F \u2014 \u0442\u0432\u0456\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C, \u0446\u0456\u043D\u043D\u043E\u0441\u0442\u0456 \u0456 \u043F\u0430\u043C\u02BC\u044F\u0442\u044C OWL</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u2764\uFE0F</div>
-    <div class="ob-text">\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F680}</div>
-    <div class="ob-text">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 OWL \u0431\u0443\u0434\u0443\u0454 \u043F\u043B\u0430\u043D \u043F\u0456\u0441\u043B\u044F 3 \u043F\u0438\u0442\u0430\u043D\u044C</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#fce7f3,#db2777)"
-    },
-    {
-      tag: "\u{1F527} 25+ \u0444\u0456\u043A\u0441\u0456\u0432",
-      emoji: "\u{1F527}",
-      title: "\u0411\u0456\u043B\u044C\u0448\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044C \u043D\u0456\u0436 \u0431\u0443\u0434\u044C-\u043A\u043E\u043B\u0438",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F522}</div>
-    <div class="ob-text">\u041C\u043D\u043E\u0436\u0438\u043D\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u2014 \u0442\u0430\u043F \u043A\u0456\u043B\u044C\u043A\u0430 \u0440\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F5C2}\uFE0F</div>
-    <div class="ob-text">\u041D\u043E\u0442\u0430\u0442\u043A\u0438: \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F \u043C\u0456\u0436 \u043F\u0430\u043F\u043A\u0430\u043C\u0438 \u0447\u0435\u0440\u0435\u0437 OWL</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon-lg">\u{1F6E1}\uFE0F</div>
-    <div class="ob-text">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 OWL \u0437\u0430\u0445\u0438\u0449\u0435\u043D\u0456 \u0432\u0456\u0434 \u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#fed7aa,#c2620a)",
-      isLast: true
-    }
-  ];
-  var SLIDES = [
-    {
-      tag: "\u0429\u043E \u0442\u0430\u043A\u0435 NeverMind",
-      emoji: "\u{1F9E0}",
-      title: "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E",
-      body: `<p class="ob-desc" style="margin-bottom:12px">\u0414\u0443\u043C\u043A\u0438 \u0437\u043D\u0438\u043A\u0430\u044E\u0442\u044C. \u0417\u0430\u043F\u0438\u0441\u0438 \u0433\u0443\u0431\u043B\u044F\u0442\u044C\u0441\u044F \u043F\u043E \u0440\u0456\u0437\u043D\u0438\u0445 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0430\u0445. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u0441\u0442\u0435\u043C\u0438.</p>
-<p class="ob-desc">NeverMind \u2014 \u043E\u0434\u0438\u043D \u0440\u044F\u0434\u043E\u043A \u043A\u0443\u0434\u0438 \u0441\u043A\u0438\u0434\u0430\u0454\u0448 \u0432\u0441\u0435 \u0449\u043E \u0432 \u0433\u043E\u043B\u043E\u0432\u0456. OWL \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F.</p>`,
-      color: "linear-gradient(135deg,#f2d978,#f97316)"
-    },
-    {
-      tag: "Inbox",
-      emoji: "\u{1F4E5}",
-      title: "\u041F\u0438\u0448\u0438 \u2014 OWL \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454",
-      body: `<div class="ob-list">
-  <div class="ob-example">"\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431" \u2192 <b>\u0437\u0430\u0434\u0430\u0447\u0430</b></div>
-  <div class="ob-example">"\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0440\u0430\u043D\u043A\u0443" \u2192 <b>\u0437\u0432\u0438\u0447\u043A\u0430</b></div>
-  <div class="ob-example">"\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443" \u2192 <b>\u0444\u0456\u043D\u0430\u043D\u0441\u0438</b></div>
-  <div class="ob-example">"\u043A\u043B\u0430\u0441\u043D\u0430 \u0456\u0434\u0435\u044F \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u0430\u043F" \u2192 <b>\u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0432 \u0406\u0434\u0435\u044F\u0445</b></div>
-</div>`,
-      color: "linear-gradient(135deg,#f2d978,#f97316)"
-    },
-    {
-      tag: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C",
-      emoji: "\u26A1",
-      title: "\u0417\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon">\u2705</div>
-    <div class="ob-text">\u0422\u0430\u043F \u043D\u0430 \u0447\u0435\u043A\u0431\u043E\u043A\u0441 \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0443</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon">\u{1F448}</div>
-    <div class="ob-text">\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon">\u{1F4AC}</div>
-    <div class="ob-text">\u0421\u043A\u0430\u0436\u0438 OWL "\u0434\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456 X"</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#fdb87a,#ea580c)"
-    },
-    {
-      tag: "\u0412\u0435\u0447\u0456\u0440 \u0456 \u042F",
-      emoji: "\u{1F319}",
-      title: "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u0456 \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u043E",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon">\u{1F319}</div>
-    <div class="ob-text">\u0412\u0435\u0447\u0456\u0440 \u2014 \u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438, \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0437\u0430 \u0434\u0435\u043D\u044C + \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon">\u{1FA9E}</div>
-    <div class="ob-text">\u042F \u2014 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon">\u{1F91D}</div>
-    <div class="ob-text">OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043A\u0430\u0436\u0435 \u0449\u043E \u043D\u0430\u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#1e3350,#3a5a80)"
-    },
-    {
-      tag: "\u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
-      emoji: "\u{1F195}",
-      title: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0456 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      body: `<div class="ob-list">
-  <div class="ob-item">
-    <div class="ob-icon">\u{1FAC0}</div>
-    <div class="ob-text">\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0445\u0432\u043E\u0440\u043E\u0431, \u0442\u0440\u0435\u043A\u0435\u0440 \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F, \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon">\u{1F680}</div>
-    <div class="ob-text">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 \u0432\u0456\u0434 \u0456\u0434\u0435\u0457 \u0434\u043E \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0443 \u0437 OWL \u044F\u043A \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A\u043E\u043C</div>
-  </div>
-  <div class="ob-item">
-    <div class="ob-icon">\u2795</div>
-    <div class="ob-text">\u041A\u043D\u043E\u043F\u043A\u0430 + \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438</div>
-  </div>
-</div>`,
-      color: "linear-gradient(135deg,#d4e8d8,#16a34a)",
-      isLast: true
-    }
-  ];
-  var currentSlide = 0;
-  var _slidesIsUpdate = false;
-  var _slidesFromOnboarding = false;
   function openSlidesTour(fromOnboarding = false) {
     _slidesFromOnboarding = fromOnboarding;
     _slidesIsUpdate = false;
@@ -8191,173 +8102,6 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     skipBtn.textContent = slide.isLast ? "" : "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438";
     skipBtn.style.display = slide.isLast ? "none" : "block";
   }
-  var HELP_CONTENT = {
-    inbox: {
-      title: "Inbox",
-      subtitle: "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u0434\u0443\u043C\u043E\u043A.",
-      color: "linear-gradient(135deg, #f2d978, #f97316)",
-      accent: "#8b6914",
-      sections: [
-        { title: "\u042F\u043A \u043F\u0438\u0441\u0430\u0442\u0438", items: [
-          { icon: "edit", title: "\u0411\u0443\u0434\u044C-\u044F\u043A\u0438\u0439 \u0442\u0435\u043A\u0441\u0442", desc: "\u041F\u0438\u0448\u0438 \u044F\u043A \u0434\u0443\u043C\u0430\u0454\u0448. \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0432\u0438\u0437\u043D\u0430\u0447\u0438\u0442\u044C \u2014 \u0446\u0435 \u0437\u0430\u0434\u0430\u0447\u0430, \u043D\u043E\u0442\u0430\u0442\u043A\u0430, \u0437\u0432\u0438\u0447\u043A\u0430 \u0447\u0438 \u0456\u0434\u0435\u044F." },
-          { icon: "clock", title: "\u0417 \u0447\u0430\u0441\u043E\u043C", desc: "\xAB\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0432\u0442\u0440\u0430 \u043E 9\xBB \u2014 \u0447\u0430\u0441 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u043F\u043E\u0442\u0440\u0430\u043F\u0438\u0442\u044C \u0443 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0437\u0430\u0434\u0430\u0447\u0456." },
-          { icon: "list", title: "\u0421\u043F\u0438\u0441\u043E\u043A \u043E\u0434\u043D\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C", desc: "\xAB\u0420\u0435\u043C\u043E\u043D\u0442: \u043A\u0443\u043F\u0438\u0442\u0438 \u0444\u0430\u0440\u0431\u0443, \u043D\u0430\u0439\u043D\u044F\u0442\u0438 \u043C\u0430\u0439\u0441\u0442\u0440\u0430\xBB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0440\u043E\u0437\u0431\u02BC\u0454 \u043D\u0430 \u043E\u043A\u0440\u0435\u043C\u0456 \u043A\u0440\u043E\u043A\u0438." }
-        ] },
-        { title: "\u0416\u0435\u0441\u0442\u0438", items: [
-          { icon: "swipe", title: "\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438", desc: "\u0414\u043E\u0432\u0433\u0438\u0439 \u0441\u0432\u0430\u0439\u043F (200px) \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u0437\u0430\u043F\u0438\u0441. \u041C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \xAB\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438\xBB." },
-          { icon: "help", title: "\u0410\u0433\u0435\u043D\u0442 \u0443\u0442\u043E\u0447\u043D\u0438\u0442\u044C", desc: "\u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456. \u041F\u0440\u043E\u0441\u0442\u043E \u0432\u0438\u0431\u0435\u0440\u0438." }
-        ] },
-        { title: "\u0410\u0433\u0435\u043D\u0442", items: [
-          { icon: "chat", title: "\u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0432\u043E\u0457 \u0437\u0430\u043F\u0438\u0441\u0438", desc: "\xAB\u042F\u043A\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456\xBB, \xAB\u0449\u043E \u044F \u0437\u0430\u043F\u0438\u0441\u0443\u0432\u0430\u0432 \u0432\u0447\u043E\u0440\u0430\xBB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u0432\u0435\u0441\u044C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442." },
-          { icon: "idea", title: "\u0420\u043E\u0437\u0432\u0438\u043D\u044C \u0456\u0434\u0435\u044E", desc: "\u041F\u043E\u043F\u0440\u043E\u0441\u0438 \u0410\u0433\u0435\u043D\u0442\u0430 \u0437\u043D\u0430\u0439\u0442\u0438 \u043F\u0456\u0434\u0432\u043E\u0434\u043D\u0456 \u043A\u0430\u043C\u0435\u043D\u0456 \u0430\u0431\u043E \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u0434\u0443\u043C\u043A\u0443." }
-        ] }
-      ]
-    },
-    tasks: {
-      title: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C",
-      subtitle: "\u0417\u0430\u0434\u0430\u0447\u0456 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438.",
-      color: "linear-gradient(135deg, #fdb87a, #f97316)",
-      accent: "#ea580c",
-      sections: [
-        { title: "\u0417\u0430\u0434\u0430\u0447\u0456", items: [
-          { icon: "check", title: "\u0412\u0456\u0434\u043C\u0456\u0447\u0430\u0439 \u043A\u0440\u043E\u043A\u0438", desc: "\u0422\u0430\u043F \u043D\u0430 \u0447\u0435\u043A\u0431\u043E\u043A\u0441 \u2014 \u0432\u0456\u0434\u043C\u0456\u0447\u0430\u0454 \u043A\u0440\u043E\u043A. \u0412\u0441\u0456 \u043A\u0440\u043E\u043A\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u2192 \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454\u0442\u044C\u0441\u044F." },
-          { icon: "list", title: "\u041A\u0440\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 \u0410\u0433\u0435\u043D\u0442\u0430", desc: "\xAB\u0414\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456 \u0420\u0435\u043C\u043E\u043D\u0442: \u043A\u0443\u043F\u0438\u0442\u0438 \u0444\u0430\u0440\u0431\u0443, \u043D\u0430\u0439\u043D\u044F\u0442\u0438 \u043C\u0430\u0439\u0441\u0442\u0440\u0430\xBB." },
-          { icon: "edit", title: "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438", desc: "\u0422\u0430\u043F \u043D\u0430 \u043D\u0430\u0437\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F." }
-        ] },
-        { title: "\u0417\u0432\u0438\u0447\u043A\u0438", items: [
-          { icon: "habit", title: "\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u0439 \u0442\u0440\u0435\u043A\u0435\u0440", desc: "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430 \u0437 Inbox \u043E\u0434\u0440\u0430\u0437\u0443 \u0437\u02BC\u044F\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0442\u0443\u0442. \u0412\u0456\u0434\u043C\u0456\u0447\u0430\u0439 \u043A\u043E\u0436\u0435\u043D \u0434\u0435\u043D\u044C \u2014 \u0431\u0443\u0434\u0443\u0454\u0442\u044C\u0441\u044F \u0441\u0442\u0440\u0456\u043A." },
-          { icon: "calendar", title: "\u0412\u0438\u0431\u0456\u0440 \u0434\u043D\u0456\u0432", desc: "\u041F\u0440\u0438 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u0456 \u0432\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0434\u043D\u0456 \u0442\u0438\u0436\u043D\u044F \u2014 \u0410\u0433\u0435\u043D\u0442 \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0454 \u0440\u043E\u0437\u043A\u043B\u0430\u0434." },
-          { icon: "swipe", title: "\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438", desc: "\u0414\u043E\u0432\u0433\u0438\u0439 \u0441\u0432\u0430\u0439\u043F \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u0437\u0432\u0438\u0447\u043A\u0443." }
-        ] },
-        { title: "\u0410\u0433\u0435\u043D\u0442", items: [
-          {
-            icon: "chat",
-            title: "\u041A\u0435\u0440\u0443\u0439 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
-            desc: null,
-            cmds: ["\u0432\u0438\u043A\u043E\u043D\u0430\u0432 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0430", "\u0434\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A: \u043D\u0430\u0437\u0432\u0430", "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043A\u0440\u043E\u043A", "\u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443"]
-          }
-        ] }
-      ]
-    },
-    notes: {
-      title: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      subtitle: "\u0417\u0430\u043F\u0438\u0441\u0438 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0441\u043E\u0440\u0442\u0443\u044E\u0442\u044C\u0441\u044F \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445.",
-      color: "linear-gradient(135deg, #fed7aa, #f97316)",
-      accent: "#c2620a",
-      sections: [
-        { title: "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F", items: [
-          { icon: "folder", title: "\u041F\u0430\u043F\u043A\u0438", desc: "\u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0432\u0438\u0437\u043D\u0430\u0447\u0430\u0454 \u043F\u0430\u043F\u043A\u0443 \u043F\u0440\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u0456. \u0422\u0430\u043F\u043D\u0438 \u043D\u0430 \u043F\u0430\u043F\u043A\u0443 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0438 \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456." },
-          { icon: "search", title: "\u041F\u043E\u0448\u0443\u043A", desc: "\u0428\u0443\u043A\u0430\u0454 \u043F\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0441\u0456\u0445 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u043E\u0434\u0440\u0430\u0437\u0443, \u043D\u0435\u0437\u0430\u043B\u0435\u0436\u043D\u043E \u0432\u0456\u0434 \u043F\u0430\u043F\u043A\u0438." }
-        ] },
-        { title: "\u0420\u043E\u0431\u043E\u0442\u0430 \u0437 \u043D\u043E\u0442\u0430\u0442\u043A\u043E\u044E", items: [
-          { icon: "chat", title: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0438 \u0437 \u0410\u0433\u0435\u043D\u0442\u043E\u043C", desc: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0437\u043D\u0438\u0437\u0443 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0447\u0430\u0442. \u0410\u0433\u0435\u043D\u0442 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0435 \u0440\u043E\u0437\u0432\u0438\u043D\u0443\u0442\u0438 \u0434\u0443\u043C\u043A\u0443." },
-          { icon: "swipe", title: "\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438", desc: "\u0414\u043E\u0432\u0433\u0438\u0439 \u0441\u0432\u0430\u0439\u043F \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u043D\u043E\u0442\u0430\u0442\u043A\u0443. \u041C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438." },
-          { icon: "menu", title: "\u041C\u0435\u043D\u044E \xB7\xB7\xB7", desc: "\u0422\u0440\u0438 \u043A\u0440\u0430\u043F\u043A\u0438 \u043D\u0430 \u043D\u043E\u0442\u0430\u0442\u0446\u0456 \u2014 \u043F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443, \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438." }
-        ] }
-      ]
-    },
-    me: {
-      title: "\u042F",
-      subtitle: "\u0422\u0432\u043E\u044F \u0430\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u0456 \u0447\u0435\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430.",
-      color: "linear-gradient(135deg, #a7f3d0, #22c55e)",
-      accent: "#16a34a",
-      sections: [
-        { title: "\u0429\u043E \u0442\u0443\u0442 \u0454", items: [
-          { icon: "grid", title: "\u0410\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u0442\u0438\u0436\u043D\u044F", desc: "\u041A\u043E\u0436\u043D\u0430 \u043A\u043B\u0456\u0442\u0438\u043D\u043A\u0430 \u2014 \u043E\u0434\u0438\u043D \u0434\u0435\u043D\u044C. \u0427\u0438\u043C \u0442\u0435\u043C\u043D\u0456\u0448\u0435 \u2014 \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0430\u043F\u0438\u0441\u0456\u0432." },
-          { icon: "stats", title: "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430", desc: "\u041A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0437\u0430\u043F\u0438\u0441\u0456\u0432, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447 \u0456 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u043E\u0434\u043D\u0438\u043C \u043F\u043E\u0433\u043B\u044F\u0434\u043E\u043C." },
-          { icon: "habit", title: "\u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0432\u0438\u0447\u043E\u043A", desc: "\u0412\u0456\u0434\u0441\u043E\u0442\u043E\u043A \u0437\u0430 30 \u0434\u043D\u0456\u0432 \u0456 \u043A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0434\u043D\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u043E \u043A\u043E\u0436\u043D\u0456\u0439 \u0437\u0432\u0438\u0447\u0446\u0456." }
-        ] },
-        { title: "\u0410\u0433\u0435\u043D\u0442-\u043A\u043E\u0443\u0447", items: [
-          { icon: "refresh", title: "\u0410\u043D\u0430\u043B\u0456\u0437", desc: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0441\u043A\u0430\u0436\u0435 \u0434\u0435 \u0442\u0438 \u043F\u0440\u043E\u0432\u0438\u0441\u0430\u0454\u0448 \u0456 \u0449\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435." },
-          { icon: "star", title: "3 \u043F\u043E\u0440\u0430\u0434\u0438", desc: "\u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0442\u0432\u043E\u0457\u0445 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445." },
-          { icon: "chat", title: "\u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u0441\u0430\u043C", desc: "\u0427\u0430\u0442 \u0432\u043D\u0438\u0437\u0443 \u2014 \u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0432\u043E\u044E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C, \u0437\u0432\u0438\u0447\u043A\u0438, \u043F\u0440\u043E\u0433\u0440\u0435\u0441." }
-        ] }
-      ]
-    },
-    evening: {
-      title: "\u0412\u0435\u0447\u0456\u0440",
-      subtitle: "\u0420\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F \u0434\u043D\u044F \u0456 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430.",
-      color: "linear-gradient(135deg, #818cf8, #4f46e5)",
-      accent: "#4f46e5",
-      sections: [
-        { title: "\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F", items: [
-          { icon: "plus", title: "\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442", desc: "\u0429\u043E \u0442\u0440\u0430\u043F\u0438\u043B\u043E\u0441\u044C, \u0449\u043E \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0432, \u0449\u043E \u0434\u0443\u043C\u0430\u0432 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438\xBB \u0430\u0431\u043E \u0447\u0435\u0440\u0435\u0437 \u0410\u0433\u0435\u043D\u0442\u0430." },
-          { icon: "mood", title: "\u041D\u0430\u0441\u0442\u0440\u0456\u0439", desc: "\u041F\u043E\u0437\u043D\u0430\u0447\u0430\u0439 \u043A\u043E\u0436\u0435\u043D \u043C\u043E\u043C\u0435\u043D\u0442 \u2014 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0439, \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u044C\u043D\u0438\u0439 \u0447\u0438 \u043D\u0435\u0433\u0430\u0442\u0438\u0432\u043D\u0438\u0439." },
-          { icon: "ring", title: "\u041A\u0456\u043B\u044C\u0446\u0435 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456", desc: "\u0412\u0456\u0434\u0441\u043E\u0442\u043E\u043A \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0445 \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430 \u0434\u0435\u043D\u044C. \u0427\u0435\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u0438\u043D\u0430 \u0442\u0432\u043E\u0433\u043E \u0434\u043D\u044F." }
-        ] },
-        { title: "\u0410\u0433\u0435\u043D\u0442-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A", items: [
-          { icon: "refresh", title: "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F", desc: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0431\u0430\u0447\u0438\u0442\u044C \u0432\u0441\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 \u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u0434\u0430\u0454 \u043F\u043E\u0440\u0430\u0434\u0443 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430." },
-          { icon: "chat", title: "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438", desc: "\u0427\u0430\u0442 \u0432\u043D\u0438\u0437\u0443 \u2014 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0438 \u0434\u0435\u043D\u044C, \u043F\u043E\u0434\u0456\u043B\u0438\u0441\u044C \u0434\u0443\u043C\u043A\u0430\u043C\u0438, \u043E\u0442\u0440\u0438\u043C\u0430\u0439 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0443." }
-        ] },
-        { title: "\u0410\u0433\u0435\u043D\u0442", items: [
-          {
-            icon: "chat",
-            title: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F",
-            desc: null,
-            cmds: ["\u0449\u043E \u044F \u0437\u0440\u043E\u0431\u0438\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456", "\u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", "\u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u0437\u0430\u0432\u0442\u0440\u0430"]
-          }
-        ] }
-      ]
-    },
-    finance: {
-      title: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      subtitle: "\u041E\u0431\u043B\u0456\u043A \u0432\u0438\u0442\u0440\u0430\u0442 \u0456 \u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u0431\u0435\u0437 \u0442\u0430\u0431\u043B\u0438\u0446\u044C.",
-      color: "linear-gradient(135deg, #fcd9bd, #f97316)",
-      accent: "#c2410c",
-      sections: [
-        { title: "\u042F\u043A \u0434\u043E\u0434\u0430\u0432\u0430\u0442\u0438", items: [
-          { icon: "chat", title: "\u0427\u0435\u0440\u0435\u0437 Inbox \u0430\u0431\u043E \u0447\u0430\u0442", desc: "\xAB\u0412\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443\xBB \u0430\u0431\u043E \xAB\u043E\u0442\u0440\u0438\u043C\u0430\u0432 \u0437\u0430\u0440\u043F\u043B\u0430\u0442\u0443 3000\xBB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0437\u0431\u0435\u0440\u0435\u0436\u0435." },
-          { icon: "plus", title: "\u0412\u0440\u0443\u0447\u043D\u0443", desc: "\u041A\u043D\u043E\u043F\u043A\u0430 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438\xBB \u2014 \u0432\u0438\u0431\u0435\u0440\u0438 \u0442\u0438\u043F, \u0441\u0443\u043C\u0443 \u0456 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E." }
-        ] },
-        { title: "\u0411\u044E\u0434\u0436\u0435\u0442", items: [
-          { icon: "limit", title: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442", desc: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u270E \u0432 \u0431\u043B\u043E\u0446\u0456 \xAB\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445\xBB \u0449\u043E\u0431 \u0437\u0430\u0434\u0430\u0442\u0438 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442." },
-          { icon: "cat", title: "\u041B\u0456\u043C\u0456\u0442\u0438 \u043F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445", desc: "\u0410\u0433\u0435\u043D\u0442 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0438\u0442\u044C \u043A\u043E\u043B\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043D\u0430\u0431\u043B\u0438\u0436\u0430\u044E\u0442\u044C\u0441\u044F \u0434\u043E \u043B\u0456\u043C\u0456\u0442\u0443." }
-        ] },
-        { title: "\u0410\u0433\u0435\u043D\u0442", items: [
-          {
-            icon: "wallet",
-            title: "\u0417\u0430\u043F\u0438\u0442\u0438",
-            desc: null,
-            cmds: ["\u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u0446\u044C\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F", "\u0434\u0435 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0442\u0440\u0430\u0447\u0443", "\u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 2000 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C", "\u0432\u0438\u0434\u0430\u043B\u0438 \u043E\u0441\u0442\u0430\u043D\u043D\u044E \u0432\u0438\u0442\u0440\u0430\u0442\u0443"]
-          }
-        ] }
-      ]
-    }
-  };
-  var FIRST_VISIT_TIPS = {
-    inbox: { icon: "\u{1F4A1}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041F\u0438\u0448\u0438 \u0431\u0443\u0434\u044C-\u0449\u043E \u2014 \u0437\u0430\u0434\u0430\u0447\u0443, \u0456\u0434\u0435\u044E, \u0437\u0432\u0438\u0447\u043A\u0443. \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435. \u0421\u043F\u0440\u043E\u0431\u0443\u0439: "\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431 \u043E 18:00"' },
-    tasks: { icon: "\u26A1", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041F\u0438\u0448\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u043E\u0434\u043D\u0438\u043C \u0437\u0430\u043F\u0438\u0441\u043E\u043C: "\u0420\u0435\u043C\u043E\u043D\u0442: \u043A\u0443\u043F\u0438\u0442\u0438 \u0444\u0430\u0440\u0431\u0443, \u0437\u043D\u0430\u0439\u0442\u0438 \u043C\u0430\u0439\u0441\u0442\u0440\u0430" \u2014 \u0410\u0433\u0435\u043D\u0442 \u0440\u043E\u0437\u0456\u0431\u02BC\u0454 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438' },
-    notes: { icon: "\u{1F4C1}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0441\u043E\u0440\u0442\u0443\u044E\u0442\u044C\u0441\u044F \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445. \u0422\u0430\u043F\u043D\u0438 \u043D\u0430 \u043F\u0430\u043F\u043A\u0443 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0438 \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456" },
-    me: { icon: "\u{1F4CA}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u0432 \u0431\u043B\u043E\u0446\u0456 "\u0410\u043D\u0430\u043B\u0456\u0437 \u0430\u0433\u0435\u043D\u0442\u0430" \u2014 \u043E\u0442\u0440\u0438\u043C\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439 \u043E\u0433\u043B\u044F\u0434 \u0441\u0432\u043E\u0454\u0457 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456' },
-    evening: { icon: "\u{1F319}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u0432 "\u0410\u0433\u0435\u043D\u0442 \u043D\u0430 \u0432\u0435\u0447\u0456\u0440" \u2014 \u0410\u0433\u0435\u043D\u0442 \u043F\u0456\u0434\u0441\u0443\u043C\u0443\u0454 \u0442\u0432\u0456\u0439 \u0434\u0435\u043D\u044C \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0432\u0441\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432' },
-    finance: { icon: "\u25C8", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041F\u0438\u0448\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043F\u0440\u044F\u043C\u043E \u0432 Inbox: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443" \u2014 \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0437\u0431\u0435\u0440\u0435\u0436\u0435 \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0438' }
-  };
-  var _helpOpen = false;
-  var HELP_ICONS = {
-    edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-    clock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    list: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-    swipe: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
-    help: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    chat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-    idea: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="4"/></svg>',
-    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    habit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 8v4l3 3"/></svg>',
-    calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    folder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
-    search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-    menu: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
-    grid: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
-    stats: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
-    refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
-    star: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-    plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    mood: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
-    ring: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    wallet: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>',
-    limit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    cat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
-  };
   function openHelp(tab) {
     const data = HELP_CONTENT[tab];
     if (!data) return;
@@ -8468,21 +8212,6 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       if (document.getElementById("fv-tip") === tipEl) tipEl.remove();
     }, 6e3);
   }
-  var SURVEY_QUESTIONS = [
-    "\u0427\u0438\u043C \u0437\u0430\u0439\u043C\u0430\u0454\u0448\u0441\u044F? (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u043F\u0456\u0434\u043F\u0440\u0438\u0454\u043C\u0435\u0446\u044C, \u0441\u0442\u0443\u0434\u0435\u043D\u0442, \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0456\u0441\u0442, \u0444\u0440\u0456\u043B\u0430\u043D\u0441\u0435\u0440\u2026)",
-    "\u042F\u043A\u0456 \u0442\u0432\u043E\u0457 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0446\u0456\u043B\u0456 \u0437\u0430\u0440\u0430\u0437? (\u043A\u043E\u0440\u043E\u0442\u043A\u043E, 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)",
-    "\u0429\u043E \u0445\u043E\u0447\u0435\u0448 \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043F\u0456\u0434 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0435\u043C \u2014 \u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438, \u0456\u0434\u0435\u0457, \u0430\u0431\u043E \u0432\u0441\u0435 \u0440\u0430\u0437\u043E\u043C?",
-    "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0430\u0440\u0430\u0437 \u0437 \u0444\u0456\u043D\u0430\u043D\u0441\u0430\u043C\u0438 \u2014 \u0432\u0435\u0434\u0435\u0448 \u043E\u0431\u043B\u0456\u043A \u0447\u0438 \u043F\u043E\u043A\u0438 \u0445\u0430\u043E\u0441?",
-    "\u0404 \u044F\u043A\u0438\u0439\u0441\u044C \u043F\u0440\u043E\u0435\u043A\u0442 \u0430\u0431\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0446\u0456\u043B\u044C \u043D\u0430\u0434 \u044F\u043A\u043E\u044E \u0437\u0430\u0440\u0430\u0437 \u043F\u0440\u0430\u0446\u044E\u0454\u0448?",
-    "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u043F\u0440\u043E \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C: \u043E \u043A\u043E\u0442\u0440\u0456\u0439 \u0437\u0430\u0437\u0432\u0438\u0447\u0430\u0439 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0448\u0441\u044F, \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0448 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0440\u043E\u0431\u043E\u0442\u0443 \u0456 \u043B\u044F\u0433\u0430\u0454\u0448 \u0441\u043F\u0430\u0442\u0438? (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0432\u0441\u0442\u0430\u044E \u043E 7, \u043F\u0440\u0430\u0446\u044E\u044E \u0437 9 \u0434\u043E 18, \u0441\u043F\u043B\u044E \u043E 23)",
-    "\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0430\u0432\u0430\u0436\u0430\u0454 \u0442\u043E\u0431\u0456 \u0431\u0443\u0442\u0438 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0438\u043C \u0437\u0430\u0440\u0430\u0437?",
-    "\u042F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0445\u043E\u0447\u0435\u0448 \u0441\u0444\u043E\u0440\u043C\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043E \u0432\u0436\u0435 \u043D\u0430\u043C\u0430\u0433\u0430\u0454\u0448\u0441\u044F \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0442\u0438?",
-    "\u042F\u043A \u0442\u0438 \u0437\u0430\u0437\u0432\u0438\u0447\u0430\u0439 \u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u043E\u0432\u0443\u0454\u0448 \u0456\u0434\u0435\u0457 \u2014 \u0442\u0435\u043B\u0435\u0444\u043E\u043D, \u0431\u043B\u043E\u043A\u043D\u043E\u0442, \u0433\u043E\u043B\u043E\u0432\u0430?",
-    "\u0429\u043E \u0445\u043E\u0447\u0435\u0448 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0436\u0438\u0442\u0442\u0456 \u0447\u0435\u0440\u0435\u0437 3 \u043C\u0456\u0441\u044F\u0446\u0456?"
-  ];
-  var surveyAnswers = [];
-  var surveyStep = 0;
-  var surveyWaiting = false;
   function startSurvey() {
     surveyAnswers = [];
     surveyStep = 0;
@@ -8585,26 +8314,6 @@ ${answersText}
     localStorage.setItem("nm_guide_step", SURVEY_QUESTIONS.length.toString());
     setTimeout(() => owlGuideNextTip(), 3e4);
   }
-  var OWL_GUIDE_TOPICS = [
-    { key: "health", q: "\u042F\u043A \u0442\u0438 \u0437\u0430\u0440\u0430\u0437 \u0437 \u0435\u043D\u0435\u0440\u0433\u0456\u0454\u044E \u0456 \u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F\u043C \u2014 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0448 \u0447\u0438 \u043F\u0443\u0441\u043A\u0430\u0454\u0448 \u043D\u0430 \u0441\u0430\u043C\u043E\u043F\u043B\u0438\u0432?" },
-    { key: "relations", q: "\u0404 \u0432\u0430\u0436\u043B\u0438\u0432\u0456 \u043B\u044E\u0434\u0438 \u0432 \u0436\u0438\u0442\u0442\u0456 \u044F\u043A\u0438\u043C \u0445\u043E\u0447\u0435\u0448 \u043F\u0440\u0438\u0434\u0456\u043B\u044F\u0442\u0438 \u0431\u0456\u043B\u044C\u0448\u0435 \u0443\u0432\u0430\u0433\u0438?" },
-    { key: "learning", q: "\u0417\u0430\u0440\u0430\u0437 \u0449\u043E\u0441\u044C \u0430\u043A\u0442\u0438\u0432\u043D\u043E \u0432\u0438\u0432\u0447\u0430\u0454\u0448 \u2014 \u043A\u043D\u0438\u0433\u0438, \u043A\u0443\u0440\u0441\u0438, \u043D\u043E\u0432\u0456 \u043D\u0430\u0432\u0438\u0447\u043A\u0438?" },
-    { key: "stress", q: "\u0429\u043E \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0442\u0438\u0441\u043D\u0435 \u0430\u0431\u043E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0454 \u0442\u0440\u0438\u0432\u043E\u0433\u0443?" },
-    { key: "money_goal", q: "\u0404 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u2014 \u043D\u0430\u043A\u043E\u043F\u0438\u0447\u0438\u0442\u0438, \u043A\u0443\u043F\u0438\u0442\u0438, \u0456\u043D\u0432\u0435\u0441\u0442\u0443\u0432\u0430\u0442\u0438?" },
-    { key: "daily_routine", q: "\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u0442\u0432\u0456\u0439 \u0456\u0434\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u2014 \u0454 \u044F\u043A\u0438\u0439\u0441\u044C \u0440\u0438\u0442\u043C \u0430\u0431\u043E \u0432\u0441\u0435 \u0445\u0430\u043E\u0442\u0438\u0447\u043D\u043E?" },
-    { key: "motivation", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442, \u0432\u0438\u0437\u043D\u0430\u043D\u043D\u044F, \u0440\u043E\u0437\u0432\u0438\u0442\u043E\u043A, \u0430\u0431\u043E \u0449\u043E\u0441\u044C \u0456\u043D\u0448\u0435?" },
-    { key: "obstacles", q: "\u0429\u043E \u043D\u0430\u0439\u0447\u0430\u0441\u0442\u0456\u0448\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0454 \u043A\u043E\u043B\u0438 \u0431\u0435\u0440\u0435\u0448\u0441\u044F \u0437\u0430 \u0449\u043E\u0441\u044C \u043D\u043E\u0432\u0435?" }
-  ];
-  var OWL_APP_TIPS = [
-    { key: "tip_inbox", msg: '\u0414\u043E \u0440\u0435\u0447\u0456 \u2014 \u0432 Inbox \u043C\u043E\u0436\u043D\u0430 \u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0441e \u043F\u0456\u0434\u0440\u044F\u0434 \u043E\u0434\u043D\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C, \u043D\u0430\u0432\u0456\u0442\u044C "\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431 \u0456 \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u043C\u0430\u043C\u0456". \u042F \u0440\u043E\u0437\u0431\u0435\u0440\u0443\u0441\u044F \u0441\u0430\u043C.' },
-    { key: "tip_habits", msg: '\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u2192 \u0417\u0432\u0438\u0447\u043A\u0438 \u2014 \u043C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0456 \u0434\u0456\u0457 \u0437 \u043F\u0456\u0434\u0440\u0430\u0445\u0443\u043D\u043A\u043E\u043C \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456. \u041D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A \u0432\u043E\u0434\u0438".' },
-    { key: "tip_notes", msg: "\u0423 \u041D\u043E\u0442\u0430\u0442\u043A\u0430\u0445 \u043F\u0430\u043F\u043A\u0438 \u0441\u0442\u0432\u043E\u0440\u044E\u044E\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0438\u0448\u0438 \u0432 Inbox \u0456 \u044F \u043A\u043B\u0430\u0434\u0443 \u0432 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0435 \u043C\u0456\u0441\u0446\u0435. \u0410\u0431\u043E \u0441\u0430\u043C \u043C\u043E\u0436\u0435\u0448 \u0441\u043A\u0430\u0437\u0430\u0442\u0438 \u043A\u0443\u0434\u0438." },
-    { key: "tip_finance", msg: '\u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0432\u0435\u0434\u0443\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 Inbox \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043D\u0430\u043F\u0438\u0448\u0438 "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 200 \u043D\u0430 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438" \u0456 \u044F \u0437\u0430\u043F\u0438\u0448\u0443. \u0411\u0435\u0437 \u0444\u043E\u0440\u043C \u0456 \u043F\u043E\u043B\u0456\u0432.' },
-    { key: "tip_evening", msg: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0430\u043C \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0456 \u043D\u0430\u0441\u0442\u0440\u0456\u0439 \u043E\u0434\u043D\u0438\u043C \u0442\u0430\u043F\u043E\u043C. \u0414\u043E\u0431\u0440\u0435 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0442\u0438 \u0432\u0432\u0435\u0447\u0435\u0440\u0456 \u0449\u043E\u0431 \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u0434\u0435\u043D\u044C." },
-    { key: "tip_projects", msg: "\u042F\u043A\u0449\u043E \u0454 \u0432\u0435\u043B\u0438\u043A\u0430 \u0446\u0456\u043B\u044C \u0430\u0431\u043E \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0435 \u0437 \u043F\u043B\u0430\u043D\u043E\u043C \u0456 \u0442\u0435\u043C\u043F\u043E\u043C. \u041F\u0440\u043E\u0441\u0442\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u043F\u0440\u043E \u043D\u0435\u0457 \u0456 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438." },
-    { key: "tip_owl_mode", msg: "\u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439), \u0430\u0431\u043E \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439). \u042F\u043A\u0438\u0439 \u0442\u043E\u0431\u0456 \u0431\u043B\u0438\u0436\u0447\u0435?" },
-    { key: "tip_memory", msg: "\u0412\u0441\u0435 \u0449\u043E \u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u0448 \u2014 \u044F \u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u043E\u0432\u0443\u044E. \u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0454 \u0440\u043E\u0437\u0434\u0456\u043B \u041F\u0430\u043C\u02BC\u044F\u0442\u044C \u0434\u0435 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0434\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0456 \u0432\u0456\u0434\u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0449\u043E \u044F \u0437\u043D\u0430\u044E \u043F\u0440\u043E \u0442\u0435\u0431\u0435." }
-  ];
   function owlGuideNextTip() {
     if (surveyWaiting) return;
     const hour = (/* @__PURE__ */ new Date()).getHours();
@@ -8807,21 +8516,425 @@ ${userText}
     }, 400);
     updateKeyStatus(!!localStorage.getItem("nm_gemini_key"));
   }
-  Object.assign(window, {
-    openHelp,
-    closeHelp,
-    openSlidesTour,
-    closeSlidesTour,
-    slidesNext,
-    obNext,
-    obSkipKey,
-    obFinish,
-    selectOwlMode,
-    openUpdateSlides
+  var UPDATE_VERSION, UPDATE_SLIDES, SLIDES, currentSlide, _slidesIsUpdate, _slidesFromOnboarding, HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS, SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting, OWL_GUIDE_TOPICS, OWL_APP_TIPS;
+  var init_onboarding = __esm({
+    "src/tabs/onboarding.js"() {
+      init_nav();
+      init_core();
+      init_inbox();
+      init_projects();
+      UPDATE_VERSION = "v065";
+      UPDATE_SLIDES = [
+        {
+          tag: "\u{1F941} \u041D\u043E\u0432\u0438\u0439 \u0431\u0430\u0440\u0430\u0431\u0430\u043D",
+          emoji: "\u{1F941}",
+          title: "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u0430\u043D\u0430 \u0437 \u043D\u0443\u043B\u044F",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F446}</div>
+    <div class="ob-text">\u0422\u0430\u043F \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2014 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0454</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F51A}</div>
+    <div class="ob-text">\u0413\u0443\u043C\u043E\u0432\u0430 \u043C\u0435\u0436\u0430 \u2014 \u043A\u0440\u0430\u0439\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u043B\u0456\u0442\u0430\u044E\u0442\u044C</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u2795</div>
+    <div class="ob-text">\u041A\u043D\u043E\u043F\u043A\u0430 + \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0430\u0431\u043E \u0432\u0438\u043C\u043A\u043D\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#e0e7ff,#6366f1)"
+        },
+        {
+          tag: "\u{1F989} OWL Board",
+          emoji: "\u{1F989}",
+          title: "OWL \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F4CB}</div>
+    <div class="ob-text">OWL \u0442\u0430\u0431\u043B\u043E \u2014 \u043D\u0430 \u043A\u043E\u0436\u043D\u0456\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0432\u0433\u043E\u0440\u0456</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F300}</div>
+    <div class="ob-text">Scroll-behind \u0435\u0444\u0435\u043A\u0442 \u2014 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u043F\u0440\u043E\u043A\u0440\u0443\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0430\u0431\u043B\u043E</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F319}</div>
+    <div class="ob-text">\u0422\u0438\u0445\u0456 \u0433\u043E\u0434\u0438\u043D\u0438 0\u20135 \u2014 OWL \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u0454 \u0432\u043D\u043E\u0447\u0456</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#fef9c3,#f59e0b)"
+        },
+        {
+          tag: "\u{1F4AC} \u041D\u043E\u0432\u0438\u0439 \u0447\u0430\u0442",
+          emoji: "\u{1F4AC}",
+          title: "3 \u0441\u0442\u0430\u043D\u0438 \u0447\u0430\u0442\u0443",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u2B07\uFE0F</div>
+    <div class="ob-text">\u0417\u0430\u043A\u0440\u0438\u0442\u0438\u0439 \u2192 \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u2192 \u043D\u0430 \u0432\u0435\u0441\u044C \u0435\u043A\u0440\u0430\u043D</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F448}</div>
+    <div class="ob-text">iOS-like \u0441\u0432\u0430\u0439\u043F\u0438 \u0432 Inbox \u2014 \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0443</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F501}</div>
+    <div class="ob-text">\u041A\u043E\u0436\u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0454 \u0441\u0432\u0456\u0439 \u0447\u0430\u0442</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#d1fae5,#16a34a)"
+        },
+        {
+          tag: "\u{1F195} \u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
+          emoji: "\u{1F195}",
+          title: "\u0412\u0435\u0447\u0456\u0440 \xB7 \u042F \xB7 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \xB7 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F319}</div>
+    <div class="ob-text">\u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0432\u043E\u0434\u044C \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0456 \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1FA9E}</div>
+    <div class="ob-text">\u042F \u2014 \u0442\u0432\u0456\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C, \u0446\u0456\u043D\u043D\u043E\u0441\u0442\u0456 \u0456 \u043F\u0430\u043C\u02BC\u044F\u0442\u044C OWL</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u2764\uFE0F</div>
+    <div class="ob-text">\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F680}</div>
+    <div class="ob-text">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 OWL \u0431\u0443\u0434\u0443\u0454 \u043F\u043B\u0430\u043D \u043F\u0456\u0441\u043B\u044F 3 \u043F\u0438\u0442\u0430\u043D\u044C</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#fce7f3,#db2777)"
+        },
+        {
+          tag: "\u{1F527} 25+ \u0444\u0456\u043A\u0441\u0456\u0432",
+          emoji: "\u{1F527}",
+          title: "\u0411\u0456\u043B\u044C\u0448\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044C \u043D\u0456\u0436 \u0431\u0443\u0434\u044C-\u043A\u043E\u043B\u0438",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F522}</div>
+    <div class="ob-text">\u041C\u043D\u043E\u0436\u0438\u043D\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u2014 \u0442\u0430\u043F \u043A\u0456\u043B\u044C\u043A\u0430 \u0440\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F5C2}\uFE0F</div>
+    <div class="ob-text">\u041D\u043E\u0442\u0430\u0442\u043A\u0438: \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F \u043C\u0456\u0436 \u043F\u0430\u043F\u043A\u0430\u043C\u0438 \u0447\u0435\u0440\u0435\u0437 OWL</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon-lg">\u{1F6E1}\uFE0F</div>
+    <div class="ob-text">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 OWL \u0437\u0430\u0445\u0438\u0449\u0435\u043D\u0456 \u0432\u0456\u0434 \u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#fed7aa,#c2620a)",
+          isLast: true
+        }
+      ];
+      SLIDES = [
+        {
+          tag: "\u0429\u043E \u0442\u0430\u043A\u0435 NeverMind",
+          emoji: "\u{1F9E0}",
+          title: "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E",
+          body: `<p class="ob-desc" style="margin-bottom:12px">\u0414\u0443\u043C\u043A\u0438 \u0437\u043D\u0438\u043A\u0430\u044E\u0442\u044C. \u0417\u0430\u043F\u0438\u0441\u0438 \u0433\u0443\u0431\u043B\u044F\u0442\u044C\u0441\u044F \u043F\u043E \u0440\u0456\u0437\u043D\u0438\u0445 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0430\u0445. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u0441\u0442\u0435\u043C\u0438.</p>
+<p class="ob-desc">NeverMind \u2014 \u043E\u0434\u0438\u043D \u0440\u044F\u0434\u043E\u043A \u043A\u0443\u0434\u0438 \u0441\u043A\u0438\u0434\u0430\u0454\u0448 \u0432\u0441\u0435 \u0449\u043E \u0432 \u0433\u043E\u043B\u043E\u0432\u0456. OWL \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F.</p>`,
+          color: "linear-gradient(135deg,#f2d978,#f97316)"
+        },
+        {
+          tag: "Inbox",
+          emoji: "\u{1F4E5}",
+          title: "\u041F\u0438\u0448\u0438 \u2014 OWL \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454",
+          body: `<div class="ob-list">
+  <div class="ob-example">"\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431" \u2192 <b>\u0437\u0430\u0434\u0430\u0447\u0430</b></div>
+  <div class="ob-example">"\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0440\u0430\u043D\u043A\u0443" \u2192 <b>\u0437\u0432\u0438\u0447\u043A\u0430</b></div>
+  <div class="ob-example">"\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443" \u2192 <b>\u0444\u0456\u043D\u0430\u043D\u0441\u0438</b></div>
+  <div class="ob-example">"\u043A\u043B\u0430\u0441\u043D\u0430 \u0456\u0434\u0435\u044F \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u0430\u043F" \u2192 <b>\u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0432 \u0406\u0434\u0435\u044F\u0445</b></div>
+</div>`,
+          color: "linear-gradient(135deg,#f2d978,#f97316)"
+        },
+        {
+          tag: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C",
+          emoji: "\u26A1",
+          title: "\u0417\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">\u2705</div>
+    <div class="ob-text">\u0422\u0430\u043F \u043D\u0430 \u0447\u0435\u043A\u0431\u043E\u043A\u0441 \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0443</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F448}</div>
+    <div class="ob-text">\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F4AC}</div>
+    <div class="ob-text">\u0421\u043A\u0430\u0436\u0438 OWL "\u0434\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456 X"</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#fdb87a,#ea580c)"
+        },
+        {
+          tag: "\u0412\u0435\u0447\u0456\u0440 \u0456 \u042F",
+          emoji: "\u{1F319}",
+          title: "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u0456 \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u043E",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F319}</div>
+    <div class="ob-text">\u0412\u0435\u0447\u0456\u0440 \u2014 \u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438, \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0437\u0430 \u0434\u0435\u043D\u044C + \u043D\u0430\u0441\u0442\u0440\u0456\u0439</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1FA9E}</div>
+    <div class="ob-text">\u042F \u2014 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F91D}</div>
+    <div class="ob-text">OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043A\u0430\u0436\u0435 \u0449\u043E \u043D\u0430\u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#1e3350,#3a5a80)"
+        },
+        {
+          tag: "\u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
+          emoji: "\u{1F195}",
+          title: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0456 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+          body: `<div class="ob-list">
+  <div class="ob-item">
+    <div class="ob-icon">\u{1FAC0}</div>
+    <div class="ob-text">\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u043A\u0430\u0440\u0442\u043A\u0438 \u0445\u0432\u043E\u0440\u043E\u0431, \u0442\u0440\u0435\u043A\u0435\u0440 \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F, \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon">\u{1F680}</div>
+    <div class="ob-text">\u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u2014 \u0432\u0456\u0434 \u0456\u0434\u0435\u0457 \u0434\u043E \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0443 \u0437 OWL \u044F\u043A \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A\u043E\u043C</div>
+  </div>
+  <div class="ob-item">
+    <div class="ob-icon">\u2795</div>
+    <div class="ob-text">\u041A\u043D\u043E\u043F\u043A\u0430 + \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438</div>
+  </div>
+</div>`,
+          color: "linear-gradient(135deg,#d4e8d8,#16a34a)",
+          isLast: true
+        }
+      ];
+      currentSlide = 0;
+      _slidesIsUpdate = false;
+      _slidesFromOnboarding = false;
+      HELP_CONTENT = {
+        inbox: {
+          title: "Inbox",
+          subtitle: "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u0434\u0443\u043C\u043E\u043A.",
+          color: "linear-gradient(135deg, #f2d978, #f97316)",
+          accent: "#8b6914",
+          sections: [
+            { title: "\u042F\u043A \u043F\u0438\u0441\u0430\u0442\u0438", items: [
+              { icon: "edit", title: "\u0411\u0443\u0434\u044C-\u044F\u043A\u0438\u0439 \u0442\u0435\u043A\u0441\u0442", desc: "\u041F\u0438\u0448\u0438 \u044F\u043A \u0434\u0443\u043C\u0430\u0454\u0448. \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0432\u0438\u0437\u043D\u0430\u0447\u0438\u0442\u044C \u2014 \u0446\u0435 \u0437\u0430\u0434\u0430\u0447\u0430, \u043D\u043E\u0442\u0430\u0442\u043A\u0430, \u0437\u0432\u0438\u0447\u043A\u0430 \u0447\u0438 \u0456\u0434\u0435\u044F." },
+              { icon: "clock", title: "\u0417 \u0447\u0430\u0441\u043E\u043C", desc: "\xAB\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0432\u0442\u0440\u0430 \u043E 9\xBB \u2014 \u0447\u0430\u0441 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u043F\u043E\u0442\u0440\u0430\u043F\u0438\u0442\u044C \u0443 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0437\u0430\u0434\u0430\u0447\u0456." },
+              { icon: "list", title: "\u0421\u043F\u0438\u0441\u043E\u043A \u043E\u0434\u043D\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C", desc: "\xAB\u0420\u0435\u043C\u043E\u043D\u0442: \u043A\u0443\u043F\u0438\u0442\u0438 \u0444\u0430\u0440\u0431\u0443, \u043D\u0430\u0439\u043D\u044F\u0442\u0438 \u043C\u0430\u0439\u0441\u0442\u0440\u0430\xBB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0440\u043E\u0437\u0431\u02BC\u0454 \u043D\u0430 \u043E\u043A\u0440\u0435\u043C\u0456 \u043A\u0440\u043E\u043A\u0438." }
+            ] },
+            { title: "\u0416\u0435\u0441\u0442\u0438", items: [
+              { icon: "swipe", title: "\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438", desc: "\u0414\u043E\u0432\u0433\u0438\u0439 \u0441\u0432\u0430\u0439\u043F (200px) \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u0437\u0430\u043F\u0438\u0441. \u041C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \xAB\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438\xBB." },
+              { icon: "help", title: "\u0410\u0433\u0435\u043D\u0442 \u0443\u0442\u043E\u0447\u043D\u0438\u0442\u044C", desc: "\u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456. \u041F\u0440\u043E\u0441\u0442\u043E \u0432\u0438\u0431\u0435\u0440\u0438." }
+            ] },
+            { title: "\u0410\u0433\u0435\u043D\u0442", items: [
+              { icon: "chat", title: "\u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0432\u043E\u0457 \u0437\u0430\u043F\u0438\u0441\u0438", desc: "\xAB\u042F\u043A\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456\xBB, \xAB\u0449\u043E \u044F \u0437\u0430\u043F\u0438\u0441\u0443\u0432\u0430\u0432 \u0432\u0447\u043E\u0440\u0430\xBB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u0432\u0435\u0441\u044C \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442." },
+              { icon: "idea", title: "\u0420\u043E\u0437\u0432\u0438\u043D\u044C \u0456\u0434\u0435\u044E", desc: "\u041F\u043E\u043F\u0440\u043E\u0441\u0438 \u0410\u0433\u0435\u043D\u0442\u0430 \u0437\u043D\u0430\u0439\u0442\u0438 \u043F\u0456\u0434\u0432\u043E\u0434\u043D\u0456 \u043A\u0430\u043C\u0435\u043D\u0456 \u0430\u0431\u043E \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u0434\u0443\u043C\u043A\u0443." }
+            ] }
+          ]
+        },
+        tasks: {
+          title: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C",
+          subtitle: "\u0417\u0430\u0434\u0430\u0447\u0456 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438.",
+          color: "linear-gradient(135deg, #fdb87a, #f97316)",
+          accent: "#ea580c",
+          sections: [
+            { title: "\u0417\u0430\u0434\u0430\u0447\u0456", items: [
+              { icon: "check", title: "\u0412\u0456\u0434\u043C\u0456\u0447\u0430\u0439 \u043A\u0440\u043E\u043A\u0438", desc: "\u0422\u0430\u043F \u043D\u0430 \u0447\u0435\u043A\u0431\u043E\u043A\u0441 \u2014 \u0432\u0456\u0434\u043C\u0456\u0447\u0430\u0454 \u043A\u0440\u043E\u043A. \u0412\u0441\u0456 \u043A\u0440\u043E\u043A\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u2192 \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454\u0442\u044C\u0441\u044F." },
+              { icon: "list", title: "\u041A\u0440\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 \u0410\u0433\u0435\u043D\u0442\u0430", desc: "\xAB\u0414\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456 \u0420\u0435\u043C\u043E\u043D\u0442: \u043A\u0443\u043F\u0438\u0442\u0438 \u0444\u0430\u0440\u0431\u0443, \u043D\u0430\u0439\u043D\u044F\u0442\u0438 \u043C\u0430\u0439\u0441\u0442\u0440\u0430\xBB." },
+              { icon: "edit", title: "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438", desc: "\u0422\u0430\u043F \u043D\u0430 \u043D\u0430\u0437\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F." }
+            ] },
+            { title: "\u0417\u0432\u0438\u0447\u043A\u0438", items: [
+              { icon: "habit", title: "\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u0439 \u0442\u0440\u0435\u043A\u0435\u0440", desc: "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430 \u0437 Inbox \u043E\u0434\u0440\u0430\u0437\u0443 \u0437\u02BC\u044F\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0442\u0443\u0442. \u0412\u0456\u0434\u043C\u0456\u0447\u0430\u0439 \u043A\u043E\u0436\u0435\u043D \u0434\u0435\u043D\u044C \u2014 \u0431\u0443\u0434\u0443\u0454\u0442\u044C\u0441\u044F \u0441\u0442\u0440\u0456\u043A." },
+              { icon: "calendar", title: "\u0412\u0438\u0431\u0456\u0440 \u0434\u043D\u0456\u0432", desc: "\u041F\u0440\u0438 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u0456 \u0432\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0434\u043D\u0456 \u0442\u0438\u0436\u043D\u044F \u2014 \u0410\u0433\u0435\u043D\u0442 \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0454 \u0440\u043E\u0437\u043A\u043B\u0430\u0434." },
+              { icon: "swipe", title: "\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438", desc: "\u0414\u043E\u0432\u0433\u0438\u0439 \u0441\u0432\u0430\u0439\u043F \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u0437\u0432\u0438\u0447\u043A\u0443." }
+            ] },
+            { title: "\u0410\u0433\u0435\u043D\u0442", items: [
+              {
+                icon: "chat",
+                title: "\u041A\u0435\u0440\u0443\u0439 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
+                desc: null,
+                cmds: ["\u0432\u0438\u043A\u043E\u043D\u0430\u0432 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0430", "\u0434\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A: \u043D\u0430\u0437\u0432\u0430", "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043A\u0440\u043E\u043A", "\u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443"]
+              }
+            ] }
+          ]
+        },
+        notes: {
+          title: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
+          subtitle: "\u0417\u0430\u043F\u0438\u0441\u0438 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0441\u043E\u0440\u0442\u0443\u044E\u0442\u044C\u0441\u044F \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445.",
+          color: "linear-gradient(135deg, #fed7aa, #f97316)",
+          accent: "#c2620a",
+          sections: [
+            { title: "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F", items: [
+              { icon: "folder", title: "\u041F\u0430\u043F\u043A\u0438", desc: "\u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0432\u0438\u0437\u043D\u0430\u0447\u0430\u0454 \u043F\u0430\u043F\u043A\u0443 \u043F\u0440\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u0456. \u0422\u0430\u043F\u043D\u0438 \u043D\u0430 \u043F\u0430\u043F\u043A\u0443 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0438 \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456." },
+              { icon: "search", title: "\u041F\u043E\u0448\u0443\u043A", desc: "\u0428\u0443\u043A\u0430\u0454 \u043F\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0441\u0456\u0445 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u043E\u0434\u0440\u0430\u0437\u0443, \u043D\u0435\u0437\u0430\u043B\u0435\u0436\u043D\u043E \u0432\u0456\u0434 \u043F\u0430\u043F\u043A\u0438." }
+            ] },
+            { title: "\u0420\u043E\u0431\u043E\u0442\u0430 \u0437 \u043D\u043E\u0442\u0430\u0442\u043A\u043E\u044E", items: [
+              { icon: "chat", title: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0438 \u0437 \u0410\u0433\u0435\u043D\u0442\u043E\u043C", desc: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0437\u043D\u0438\u0437\u0443 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0447\u0430\u0442. \u0410\u0433\u0435\u043D\u0442 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0435 \u0440\u043E\u0437\u0432\u0438\u043D\u0443\u0442\u0438 \u0434\u0443\u043C\u043A\u0443." },
+              { icon: "swipe", title: "\u0421\u0432\u0430\u0439\u043F \u0432\u043B\u0456\u0432\u043E \u2014 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438", desc: "\u0414\u043E\u0432\u0433\u0438\u0439 \u0441\u0432\u0430\u0439\u043F \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u043D\u043E\u0442\u0430\u0442\u043A\u0443. \u041C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438." },
+              { icon: "menu", title: "\u041C\u0435\u043D\u044E \xB7\xB7\xB7", desc: "\u0422\u0440\u0438 \u043A\u0440\u0430\u043F\u043A\u0438 \u043D\u0430 \u043D\u043E\u0442\u0430\u0442\u0446\u0456 \u2014 \u043F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443, \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438." }
+            ] }
+          ]
+        },
+        me: {
+          title: "\u042F",
+          subtitle: "\u0422\u0432\u043E\u044F \u0430\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u0456 \u0447\u0435\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430.",
+          color: "linear-gradient(135deg, #a7f3d0, #22c55e)",
+          accent: "#16a34a",
+          sections: [
+            { title: "\u0429\u043E \u0442\u0443\u0442 \u0454", items: [
+              { icon: "grid", title: "\u0410\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u0442\u0438\u0436\u043D\u044F", desc: "\u041A\u043E\u0436\u043D\u0430 \u043A\u043B\u0456\u0442\u0438\u043D\u043A\u0430 \u2014 \u043E\u0434\u0438\u043D \u0434\u0435\u043D\u044C. \u0427\u0438\u043C \u0442\u0435\u043C\u043D\u0456\u0448\u0435 \u2014 \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0430\u043F\u0438\u0441\u0456\u0432." },
+              { icon: "stats", title: "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430", desc: "\u041A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0437\u0430\u043F\u0438\u0441\u0456\u0432, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447 \u0456 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u043E\u0434\u043D\u0438\u043C \u043F\u043E\u0433\u043B\u044F\u0434\u043E\u043C." },
+              { icon: "habit", title: "\u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0432\u0438\u0447\u043E\u043A", desc: "\u0412\u0456\u0434\u0441\u043E\u0442\u043E\u043A \u0437\u0430 30 \u0434\u043D\u0456\u0432 \u0456 \u043A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0434\u043D\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u043E \u043A\u043E\u0436\u043D\u0456\u0439 \u0437\u0432\u0438\u0447\u0446\u0456." }
+            ] },
+            { title: "\u0410\u0433\u0435\u043D\u0442-\u043A\u043E\u0443\u0447", items: [
+              { icon: "refresh", title: "\u0410\u043D\u0430\u043B\u0456\u0437", desc: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0441\u043A\u0430\u0436\u0435 \u0434\u0435 \u0442\u0438 \u043F\u0440\u043E\u0432\u0438\u0441\u0430\u0454\u0448 \u0456 \u0449\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435." },
+              { icon: "star", title: "3 \u043F\u043E\u0440\u0430\u0434\u0438", desc: "\u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0442\u0432\u043E\u0457\u0445 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445." },
+              { icon: "chat", title: "\u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u0441\u0430\u043C", desc: "\u0427\u0430\u0442 \u0432\u043D\u0438\u0437\u0443 \u2014 \u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0432\u043E\u044E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C, \u0437\u0432\u0438\u0447\u043A\u0438, \u043F\u0440\u043E\u0433\u0440\u0435\u0441." }
+            ] }
+          ]
+        },
+        evening: {
+          title: "\u0412\u0435\u0447\u0456\u0440",
+          subtitle: "\u0420\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F \u0434\u043D\u044F \u0456 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430.",
+          color: "linear-gradient(135deg, #818cf8, #4f46e5)",
+          accent: "#4f46e5",
+          sections: [
+            { title: "\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F", items: [
+              { icon: "plus", title: "\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442", desc: "\u0429\u043E \u0442\u0440\u0430\u043F\u0438\u043B\u043E\u0441\u044C, \u0449\u043E \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0432, \u0449\u043E \u0434\u0443\u043C\u0430\u0432 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438\xBB \u0430\u0431\u043E \u0447\u0435\u0440\u0435\u0437 \u0410\u0433\u0435\u043D\u0442\u0430." },
+              { icon: "mood", title: "\u041D\u0430\u0441\u0442\u0440\u0456\u0439", desc: "\u041F\u043E\u0437\u043D\u0430\u0447\u0430\u0439 \u043A\u043E\u0436\u0435\u043D \u043C\u043E\u043C\u0435\u043D\u0442 \u2014 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0439, \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u044C\u043D\u0438\u0439 \u0447\u0438 \u043D\u0435\u0433\u0430\u0442\u0438\u0432\u043D\u0438\u0439." },
+              { icon: "ring", title: "\u041A\u0456\u043B\u044C\u0446\u0435 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456", desc: "\u0412\u0456\u0434\u0441\u043E\u0442\u043E\u043A \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0445 \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430 \u0434\u0435\u043D\u044C. \u0427\u0435\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u0438\u043D\u0430 \u0442\u0432\u043E\u0433\u043E \u0434\u043D\u044F." }
+            ] },
+            { title: "\u0410\u0433\u0435\u043D\u0442-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A", items: [
+              { icon: "refresh", title: "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F", desc: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0431\u0430\u0447\u0438\u0442\u044C \u0432\u0441\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 \u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u0434\u0430\u0454 \u043F\u043E\u0440\u0430\u0434\u0443 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430." },
+              { icon: "chat", title: "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438", desc: "\u0427\u0430\u0442 \u0432\u043D\u0438\u0437\u0443 \u2014 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0438 \u0434\u0435\u043D\u044C, \u043F\u043E\u0434\u0456\u043B\u0438\u0441\u044C \u0434\u0443\u043C\u043A\u0430\u043C\u0438, \u043E\u0442\u0440\u0438\u043C\u0430\u0439 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0443." }
+            ] },
+            { title: "\u0410\u0433\u0435\u043D\u0442", items: [
+              {
+                icon: "chat",
+                title: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F",
+                desc: null,
+                cmds: ["\u0449\u043E \u044F \u0437\u0440\u043E\u0431\u0438\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456", "\u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", "\u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u0437\u0430\u0432\u0442\u0440\u0430"]
+              }
+            ] }
+          ]
+        },
+        finance: {
+          title: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
+          subtitle: "\u041E\u0431\u043B\u0456\u043A \u0432\u0438\u0442\u0440\u0430\u0442 \u0456 \u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u0431\u0435\u0437 \u0442\u0430\u0431\u043B\u0438\u0446\u044C.",
+          color: "linear-gradient(135deg, #fcd9bd, #f97316)",
+          accent: "#c2410c",
+          sections: [
+            { title: "\u042F\u043A \u0434\u043E\u0434\u0430\u0432\u0430\u0442\u0438", items: [
+              { icon: "chat", title: "\u0427\u0435\u0440\u0435\u0437 Inbox \u0430\u0431\u043E \u0447\u0430\u0442", desc: "\xAB\u0412\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443\xBB \u0430\u0431\u043E \xAB\u043E\u0442\u0440\u0438\u043C\u0430\u0432 \u0437\u0430\u0440\u043F\u043B\u0430\u0442\u0443 3000\xBB \u2014 \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0437\u0431\u0435\u0440\u0435\u0436\u0435." },
+              { icon: "plus", title: "\u0412\u0440\u0443\u0447\u043D\u0443", desc: "\u041A\u043D\u043E\u043F\u043A\u0430 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438\xBB \u2014 \u0432\u0438\u0431\u0435\u0440\u0438 \u0442\u0438\u043F, \u0441\u0443\u043C\u0443 \u0456 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E." }
+            ] },
+            { title: "\u0411\u044E\u0434\u0436\u0435\u0442", items: [
+              { icon: "limit", title: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442", desc: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u270E \u0432 \u0431\u043B\u043E\u0446\u0456 \xAB\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445\xBB \u0449\u043E\u0431 \u0437\u0430\u0434\u0430\u0442\u0438 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442." },
+              { icon: "cat", title: "\u041B\u0456\u043C\u0456\u0442\u0438 \u043F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445", desc: "\u0410\u0433\u0435\u043D\u0442 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0438\u0442\u044C \u043A\u043E\u043B\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043D\u0430\u0431\u043B\u0438\u0436\u0430\u044E\u0442\u044C\u0441\u044F \u0434\u043E \u043B\u0456\u043C\u0456\u0442\u0443." }
+            ] },
+            { title: "\u0410\u0433\u0435\u043D\u0442", items: [
+              {
+                icon: "wallet",
+                title: "\u0417\u0430\u043F\u0438\u0442\u0438",
+                desc: null,
+                cmds: ["\u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u0446\u044C\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F", "\u0434\u0435 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0442\u0440\u0430\u0447\u0443", "\u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 2000 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C", "\u0432\u0438\u0434\u0430\u043B\u0438 \u043E\u0441\u0442\u0430\u043D\u043D\u044E \u0432\u0438\u0442\u0440\u0430\u0442\u0443"]
+              }
+            ] }
+          ]
+        }
+      };
+      FIRST_VISIT_TIPS = {
+        inbox: { icon: "\u{1F4A1}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041F\u0438\u0448\u0438 \u0431\u0443\u0434\u044C-\u0449\u043E \u2014 \u0437\u0430\u0434\u0430\u0447\u0443, \u0456\u0434\u0435\u044E, \u0437\u0432\u0438\u0447\u043A\u0443. \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435. \u0421\u043F\u0440\u043E\u0431\u0443\u0439: "\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431 \u043E 18:00"' },
+        tasks: { icon: "\u26A1", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041F\u0438\u0448\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u043E\u0434\u043D\u0438\u043C \u0437\u0430\u043F\u0438\u0441\u043E\u043C: "\u0420\u0435\u043C\u043E\u043D\u0442: \u043A\u0443\u043F\u0438\u0442\u0438 \u0444\u0430\u0440\u0431\u0443, \u0437\u043D\u0430\u0439\u0442\u0438 \u043C\u0430\u0439\u0441\u0442\u0440\u0430" \u2014 \u0410\u0433\u0435\u043D\u0442 \u0440\u043E\u0437\u0456\u0431\u02BC\u0454 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438' },
+        notes: { icon: "\u{1F4C1}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0441\u043E\u0440\u0442\u0443\u044E\u0442\u044C\u0441\u044F \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445. \u0422\u0430\u043F\u043D\u0438 \u043D\u0430 \u043F\u0430\u043F\u043A\u0443 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0438 \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456" },
+        me: { icon: "\u{1F4CA}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u0432 \u0431\u043B\u043E\u0446\u0456 "\u0410\u043D\u0430\u043B\u0456\u0437 \u0430\u0433\u0435\u043D\u0442\u0430" \u2014 \u043E\u0442\u0440\u0438\u043C\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439 \u043E\u0433\u043B\u044F\u0434 \u0441\u0432\u043E\u0454\u0457 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456' },
+        evening: { icon: "\u{1F319}", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u21BB \u0432 "\u0410\u0433\u0435\u043D\u0442 \u043D\u0430 \u0432\u0435\u0447\u0456\u0440" \u2014 \u0410\u0433\u0435\u043D\u0442 \u043F\u0456\u0434\u0441\u0443\u043C\u0443\u0454 \u0442\u0432\u0456\u0439 \u0434\u0435\u043D\u044C \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0432\u0441\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432' },
+        finance: { icon: "\u25C8", title: "\u041F\u0456\u0434\u043A\u0430\u0437\u043A\u0430", text: '\u041F\u0438\u0448\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043F\u0440\u044F\u043C\u043E \u0432 Inbox: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443" \u2014 \u0410\u0433\u0435\u043D\u0442 \u0441\u0430\u043C \u0437\u0431\u0435\u0440\u0435\u0436\u0435 \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0438' }
+      };
+      _helpOpen = false;
+      HELP_ICONS = {
+        edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+        clock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+        list: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+        swipe: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+        help: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        chat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+        idea: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="4"/></svg>',
+        check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+        habit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 8v4l3 3"/></svg>',
+        calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+        folder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+        search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+        menu: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+        grid: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+        stats: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+        refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+        star: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+        mood: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+        ring: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+        wallet: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>',
+        limit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        cat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
+      };
+      SURVEY_QUESTIONS = [
+        "\u0427\u0438\u043C \u0437\u0430\u0439\u043C\u0430\u0454\u0448\u0441\u044F? (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u043F\u0456\u0434\u043F\u0440\u0438\u0454\u043C\u0435\u0446\u044C, \u0441\u0442\u0443\u0434\u0435\u043D\u0442, \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0456\u0441\u0442, \u0444\u0440\u0456\u043B\u0430\u043D\u0441\u0435\u0440\u2026)",
+        "\u042F\u043A\u0456 \u0442\u0432\u043E\u0457 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0446\u0456\u043B\u0456 \u0437\u0430\u0440\u0430\u0437? (\u043A\u043E\u0440\u043E\u0442\u043A\u043E, 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)",
+        "\u0429\u043E \u0445\u043E\u0447\u0435\u0448 \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043F\u0456\u0434 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0435\u043C \u2014 \u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438, \u0456\u0434\u0435\u0457, \u0430\u0431\u043E \u0432\u0441\u0435 \u0440\u0430\u0437\u043E\u043C?",
+        "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0430\u0440\u0430\u0437 \u0437 \u0444\u0456\u043D\u0430\u043D\u0441\u0430\u043C\u0438 \u2014 \u0432\u0435\u0434\u0435\u0448 \u043E\u0431\u043B\u0456\u043A \u0447\u0438 \u043F\u043E\u043A\u0438 \u0445\u0430\u043E\u0441?",
+        "\u0404 \u044F\u043A\u0438\u0439\u0441\u044C \u043F\u0440\u043E\u0435\u043A\u0442 \u0430\u0431\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0446\u0456\u043B\u044C \u043D\u0430\u0434 \u044F\u043A\u043E\u044E \u0437\u0430\u0440\u0430\u0437 \u043F\u0440\u0430\u0446\u044E\u0454\u0448?",
+        "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u043F\u0440\u043E \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C: \u043E \u043A\u043E\u0442\u0440\u0456\u0439 \u0437\u0430\u0437\u0432\u0438\u0447\u0430\u0439 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0448\u0441\u044F, \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0448 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0440\u043E\u0431\u043E\u0442\u0443 \u0456 \u043B\u044F\u0433\u0430\u0454\u0448 \u0441\u043F\u0430\u0442\u0438? (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0432\u0441\u0442\u0430\u044E \u043E 7, \u043F\u0440\u0430\u0446\u044E\u044E \u0437 9 \u0434\u043E 18, \u0441\u043F\u043B\u044E \u043E 23)",
+        "\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0430\u0432\u0430\u0436\u0430\u0454 \u0442\u043E\u0431\u0456 \u0431\u0443\u0442\u0438 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0438\u043C \u0437\u0430\u0440\u0430\u0437?",
+        "\u042F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0445\u043E\u0447\u0435\u0448 \u0441\u0444\u043E\u0440\u043C\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043E \u0432\u0436\u0435 \u043D\u0430\u043C\u0430\u0433\u0430\u0454\u0448\u0441\u044F \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0442\u0438?",
+        "\u042F\u043A \u0442\u0438 \u0437\u0430\u0437\u0432\u0438\u0447\u0430\u0439 \u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u043E\u0432\u0443\u0454\u0448 \u0456\u0434\u0435\u0457 \u2014 \u0442\u0435\u043B\u0435\u0444\u043E\u043D, \u0431\u043B\u043E\u043A\u043D\u043E\u0442, \u0433\u043E\u043B\u043E\u0432\u0430?",
+        "\u0429\u043E \u0445\u043E\u0447\u0435\u0448 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0436\u0438\u0442\u0442\u0456 \u0447\u0435\u0440\u0435\u0437 3 \u043C\u0456\u0441\u044F\u0446\u0456?"
+      ];
+      surveyAnswers = [];
+      surveyStep = 0;
+      surveyWaiting = false;
+      OWL_GUIDE_TOPICS = [
+        { key: "health", q: "\u042F\u043A \u0442\u0438 \u0437\u0430\u0440\u0430\u0437 \u0437 \u0435\u043D\u0435\u0440\u0433\u0456\u0454\u044E \u0456 \u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F\u043C \u2014 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0448 \u0447\u0438 \u043F\u0443\u0441\u043A\u0430\u0454\u0448 \u043D\u0430 \u0441\u0430\u043C\u043E\u043F\u043B\u0438\u0432?" },
+        { key: "relations", q: "\u0404 \u0432\u0430\u0436\u043B\u0438\u0432\u0456 \u043B\u044E\u0434\u0438 \u0432 \u0436\u0438\u0442\u0442\u0456 \u044F\u043A\u0438\u043C \u0445\u043E\u0447\u0435\u0448 \u043F\u0440\u0438\u0434\u0456\u043B\u044F\u0442\u0438 \u0431\u0456\u043B\u044C\u0448\u0435 \u0443\u0432\u0430\u0433\u0438?" },
+        { key: "learning", q: "\u0417\u0430\u0440\u0430\u0437 \u0449\u043E\u0441\u044C \u0430\u043A\u0442\u0438\u0432\u043D\u043E \u0432\u0438\u0432\u0447\u0430\u0454\u0448 \u2014 \u043A\u043D\u0438\u0433\u0438, \u043A\u0443\u0440\u0441\u0438, \u043D\u043E\u0432\u0456 \u043D\u0430\u0432\u0438\u0447\u043A\u0438?" },
+        { key: "stress", q: "\u0429\u043E \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0442\u0438\u0441\u043D\u0435 \u0430\u0431\u043E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0454 \u0442\u0440\u0438\u0432\u043E\u0433\u0443?" },
+        { key: "money_goal", q: "\u0404 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u2014 \u043D\u0430\u043A\u043E\u043F\u0438\u0447\u0438\u0442\u0438, \u043A\u0443\u043F\u0438\u0442\u0438, \u0456\u043D\u0432\u0435\u0441\u0442\u0443\u0432\u0430\u0442\u0438?" },
+        { key: "daily_routine", q: "\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u0442\u0432\u0456\u0439 \u0456\u0434\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u2014 \u0454 \u044F\u043A\u0438\u0439\u0441\u044C \u0440\u0438\u0442\u043C \u0430\u0431\u043E \u0432\u0441\u0435 \u0445\u0430\u043E\u0442\u0438\u0447\u043D\u043E?" },
+        { key: "motivation", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442, \u0432\u0438\u0437\u043D\u0430\u043D\u043D\u044F, \u0440\u043E\u0437\u0432\u0438\u0442\u043E\u043A, \u0430\u0431\u043E \u0449\u043E\u0441\u044C \u0456\u043D\u0448\u0435?" },
+        { key: "obstacles", q: "\u0429\u043E \u043D\u0430\u0439\u0447\u0430\u0441\u0442\u0456\u0448\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0454 \u043A\u043E\u043B\u0438 \u0431\u0435\u0440\u0435\u0448\u0441\u044F \u0437\u0430 \u0449\u043E\u0441\u044C \u043D\u043E\u0432\u0435?" }
+      ];
+      OWL_APP_TIPS = [
+        { key: "tip_inbox", msg: '\u0414\u043E \u0440\u0435\u0447\u0456 \u2014 \u0432 Inbox \u043C\u043E\u0436\u043D\u0430 \u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0441e \u043F\u0456\u0434\u0440\u044F\u0434 \u043E\u0434\u043D\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C, \u043D\u0430\u0432\u0456\u0442\u044C "\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431 \u0456 \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u043C\u0430\u043C\u0456". \u042F \u0440\u043E\u0437\u0431\u0435\u0440\u0443\u0441\u044F \u0441\u0430\u043C.' },
+        { key: "tip_habits", msg: '\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u2192 \u0417\u0432\u0438\u0447\u043A\u0438 \u2014 \u043C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0456 \u0434\u0456\u0457 \u0437 \u043F\u0456\u0434\u0440\u0430\u0445\u0443\u043D\u043A\u043E\u043C \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456. \u041D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A \u0432\u043E\u0434\u0438".' },
+        { key: "tip_notes", msg: "\u0423 \u041D\u043E\u0442\u0430\u0442\u043A\u0430\u0445 \u043F\u0430\u043F\u043A\u0438 \u0441\u0442\u0432\u043E\u0440\u044E\u044E\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0438\u0448\u0438 \u0432 Inbox \u0456 \u044F \u043A\u043B\u0430\u0434\u0443 \u0432 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0435 \u043C\u0456\u0441\u0446\u0435. \u0410\u0431\u043E \u0441\u0430\u043C \u043C\u043E\u0436\u0435\u0448 \u0441\u043A\u0430\u0437\u0430\u0442\u0438 \u043A\u0443\u0434\u0438." },
+        { key: "tip_finance", msg: '\u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0432\u0435\u0434\u0443\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 Inbox \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043D\u0430\u043F\u0438\u0448\u0438 "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 200 \u043D\u0430 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438" \u0456 \u044F \u0437\u0430\u043F\u0438\u0448\u0443. \u0411\u0435\u0437 \u0444\u043E\u0440\u043C \u0456 \u043F\u043E\u043B\u0456\u0432.' },
+        { key: "tip_evening", msg: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0430\u043C \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0456 \u043D\u0430\u0441\u0442\u0440\u0456\u0439 \u043E\u0434\u043D\u0438\u043C \u0442\u0430\u043F\u043E\u043C. \u0414\u043E\u0431\u0440\u0435 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0442\u0438 \u0432\u0432\u0435\u0447\u0435\u0440\u0456 \u0449\u043E\u0431 \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u0434\u0435\u043D\u044C." },
+        { key: "tip_projects", msg: "\u042F\u043A\u0449\u043E \u0454 \u0432\u0435\u043B\u0438\u043A\u0430 \u0446\u0456\u043B\u044C \u0430\u0431\u043E \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u041F\u0440\u043E\u0435\u043A\u0442\u0438 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0435 \u0437 \u043F\u043B\u0430\u043D\u043E\u043C \u0456 \u0442\u0435\u043C\u043F\u043E\u043C. \u041F\u0440\u043E\u0441\u0442\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u043F\u0440\u043E \u043D\u0435\u0457 \u0456 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438." },
+        { key: "tip_owl_mode", msg: "\u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439), \u0430\u0431\u043E \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439). \u042F\u043A\u0438\u0439 \u0442\u043E\u0431\u0456 \u0431\u043B\u0438\u0436\u0447\u0435?" },
+        { key: "tip_memory", msg: "\u0412\u0441\u0435 \u0449\u043E \u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u0448 \u2014 \u044F \u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u043E\u0432\u0443\u044E. \u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0454 \u0440\u043E\u0437\u0434\u0456\u043B \u041F\u0430\u043C\u02BC\u044F\u0442\u044C \u0434\u0435 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0434\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0456 \u0432\u0456\u0434\u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0449\u043E \u044F \u0437\u043D\u0430\u044E \u043F\u0440\u043E \u0442\u0435\u0431\u0435." }
+      ];
+      Object.assign(window, {
+        openHelp,
+        closeHelp,
+        openSlidesTour,
+        closeSlidesTour,
+        slidesNext,
+        obNext,
+        obSkipKey,
+        obFinish,
+        selectOwlMode,
+        openUpdateSlides
+      });
+    }
   });
 
   // src/tabs/inbox.js
-  var _inboxTypingEl = null;
   function addInboxChatMsg(role, text) {
     const el = document.getElementById("inbox-chat-messages");
     if (!el) return;
@@ -8869,7 +8982,6 @@ ${userText}
       if (!isOpen) _showInboxUnreadBadge();
     }
   }
-  var _inboxUnreadCount = 0;
   function _showInboxUnreadBadge() {
     _inboxUnreadCount++;
     let badge = document.getElementById("inbox-chat-badge");
@@ -8889,30 +9001,6 @@ ${userText}
     const badge = document.getElementById("inbox-chat-badge");
     if (badge) badge.remove();
   }
-  var CAT_DOT_SOLID = {
-    task: "background:#2fd0f9",
-    idea: "background:#c4b820",
-    note: "background:#a07850",
-    habit: "background:#16a34a",
-    event: "background:#3b82f6",
-    finance: "background:#c2410c"
-  };
-  var CAT_TAG_STYLE = {
-    task: "background:rgba(47,208,249,0.2);color:#0a7a97",
-    idea: "background:rgba(245,240,168,0.5);color:#7a6c00",
-    note: "background:rgba(180,140,90,0.2);color:#6a4a1a",
-    habit: "background:rgba(22,163,74,0.15);color:#14532d",
-    event: "background:rgba(59,130,246,0.15);color:#1d4ed8",
-    finance: "background:rgba(194,65,12,0.15);color:#7c2d12"
-  };
-  var CAT_META = {
-    idea: { icon: "\u{1F4A1}", label: "\u0406\u0434\u0435\u044F", dotClass: "cat-dot-idea", tagClass: "cat-idea" },
-    task: { icon: "\u{1F4CC}", label: "\u0417\u0430\u0434\u0430\u0447\u0430", dotClass: "cat-dot-task", tagClass: "cat-task" },
-    habit: { icon: "\u{1F331}", label: "\u0417\u0432\u0438\u0447\u043A\u0430", dotClass: "cat-dot-habit", tagClass: "cat-habit" },
-    note: { icon: "\u{1F4DD}", label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0430", dotClass: "cat-dot-note", tagClass: "cat-note" },
-    event: { icon: "\u{1F4C5}", label: "\u041F\u043E\u0434\u0456\u044F", dotClass: "cat-dot-event", tagClass: "cat-event" },
-    finance: { icon: "\u20B4", label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", dotClass: "cat-dot-finance", tagClass: "cat-finance" }
-  };
   function getInbox() {
     return JSON.parse(localStorage.getItem("nm_inbox") || "[]");
   }
@@ -8934,7 +9022,6 @@ ${userText}
     const months = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406\u0422", "\u0422\u0420\u0410\u0412", "\u0427\u0415\u0420\u0412", "\u041B\u0418\u041F", "\u0421\u0415\u0420\u041F", "\u0412\u0415\u0420", "\u0416\u041E\u0412\u0422", "\u041B\u0418\u0421\u0422", "\u0413\u0420\u0423\u0414"];
     return `${d.getDate()} ${months[d.getMonth()]}`;
   }
-  var _inboxSwipedRecently = false;
   function toggleInboxExpand(id) {
     if (_inboxSwipedRecently) return;
     const el = document.getElementById("item-" + id);
@@ -8988,7 +9075,6 @@ ${userText}
     });
     list.innerHTML = html;
   }
-  var swipeState = {};
   function swipeStart(e, id) {
     const t = e.touches[0];
     swipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
@@ -9046,10 +9132,6 @@ ${userText}
     }
     delete swipeState[id];
   }
-  var aiLoading = false;
-  var inboxChatHistory = [];
-  var _lastUserMsgTs = 0;
-  var SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
   async function sendToAI(fromChip = false) {
     if (aiLoading) return;
     const input = document.getElementById("inbox-input");
@@ -9258,8 +9340,6 @@ ${list}
     } catch (e) {
     }
   }
-  var clarifyParsed = null;
-  var clarifyOriginalText = null;
   function showClarify(parsed, originalText) {
     clarifyParsed = parsed;
     clarifyOriginalText = originalText;
@@ -9461,15 +9541,67 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tb = document.getElementById("tab-bar");
     return tb ? tb.offsetHeight : 83;
   }
-  Object.assign(window, {
-    sendToAI,
-    sendClarifyText,
-    closeClarify,
-    selectClarifyOption,
-    toggleInboxExpand,
-    swipeStart,
-    swipeMove,
-    swipeEnd
+  var _inboxTypingEl, _inboxUnreadCount, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, _inboxSwipedRecently, swipeState, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
+  var init_inbox = __esm({
+    "src/tabs/inbox.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_core();
+      init_inbox_board();
+      init_swipe_delete();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_evening();
+      init_projects();
+      init_onboarding();
+      _inboxTypingEl = null;
+      _inboxUnreadCount = 0;
+      CAT_DOT_SOLID = {
+        task: "background:#2fd0f9",
+        idea: "background:#c4b820",
+        note: "background:#a07850",
+        habit: "background:#16a34a",
+        event: "background:#3b82f6",
+        finance: "background:#c2410c"
+      };
+      CAT_TAG_STYLE = {
+        task: "background:rgba(47,208,249,0.2);color:#0a7a97",
+        idea: "background:rgba(245,240,168,0.5);color:#7a6c00",
+        note: "background:rgba(180,140,90,0.2);color:#6a4a1a",
+        habit: "background:rgba(22,163,74,0.15);color:#14532d",
+        event: "background:rgba(59,130,246,0.15);color:#1d4ed8",
+        finance: "background:rgba(194,65,12,0.15);color:#7c2d12"
+      };
+      CAT_META = {
+        idea: { icon: "\u{1F4A1}", label: "\u0406\u0434\u0435\u044F", dotClass: "cat-dot-idea", tagClass: "cat-idea" },
+        task: { icon: "\u{1F4CC}", label: "\u0417\u0430\u0434\u0430\u0447\u0430", dotClass: "cat-dot-task", tagClass: "cat-task" },
+        habit: { icon: "\u{1F331}", label: "\u0417\u0432\u0438\u0447\u043A\u0430", dotClass: "cat-dot-habit", tagClass: "cat-habit" },
+        note: { icon: "\u{1F4DD}", label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0430", dotClass: "cat-dot-note", tagClass: "cat-note" },
+        event: { icon: "\u{1F4C5}", label: "\u041F\u043E\u0434\u0456\u044F", dotClass: "cat-dot-event", tagClass: "cat-event" },
+        finance: { icon: "\u20B4", label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", dotClass: "cat-dot-finance", tagClass: "cat-finance" }
+      };
+      _inboxSwipedRecently = false;
+      swipeState = {};
+      aiLoading = false;
+      inboxChatHistory = [];
+      _lastUserMsgTs = 0;
+      SEND_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+      clarifyParsed = null;
+      clarifyOriginalText = null;
+      Object.assign(window, {
+        sendToAI,
+        sendClarifyText,
+        closeClarify,
+        selectClarifyOption,
+        toggleInboxExpand,
+        swipeStart,
+        swipeMove,
+        swipeEnd
+      });
+    }
   });
 
   // src/core/utils.js
@@ -9518,7 +9650,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function escapeHtml(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
-  window.autoResizeTextarea = autoResizeTextarea;
+  var init_utils = __esm({
+    "src/core/utils.js"() {
+      init_inbox();
+      window.autoResizeTextarea = autoResizeTextarea;
+    }
+  });
 
   // src/ui/keyboard.js
   function setupKeyboardAvoiding() {
@@ -9654,6 +9791,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }, { passive: true });
   }
+  var init_keyboard = __esm({
+    "src/ui/keyboard.js"() {
+      init_utils();
+      init_inbox_board();
+      init_inbox();
+    }
+  });
 
   // src/core/boot.js
   function setupPWA() {
@@ -9855,7 +9999,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     };
   }
-  var currentTabForAnim = "inbox";
   function animateTabSwitch(newTab) {
     const oldPage = document.getElementById(`page-${currentTabForAnim}`);
     const newPage = document.getElementById(`page-${newTab}`);
@@ -9924,63 +10067,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       scroll.style.paddingTop = h + 14 + "px";
     });
   }
-  var NM_KEYS = {
-    // Основні дані (→ Supabase таблиці в майбутньому)
-    data: [
-      "nm_inbox",
-      "nm_tasks",
-      "nm_notes",
-      "nm_folders_meta",
-      "nm_moments",
-      "nm_habits2",
-      "nm_habit_log2",
-      "nm_quit_log",
-      "nm_finance",
-      "nm_finance_budget",
-      "nm_finance_cats",
-      "nm_health_cards",
-      "nm_health_log",
-      "nm_projects",
-      "nm_trash"
-    ],
-    // Налаштування (→ Supabase user_settings)
-    settings: [
-      "nm_settings",
-      "nm_gemini_key",
-      "nm_memory",
-      "nm_memory_ts",
-      "nm_active_tabs",
-      "nm_onboarding_done",
-      "nm_evening_mood",
-      "nm_evening_summary",
-      "nm_notes_folders_ts"
-    ],
-    // Чат-историки (→ Supabase chat_messages)
-    chat: [
-      "nm_chat_inbox",
-      "nm_chat_tasks",
-      "nm_chat_notes",
-      "nm_chat_me",
-      "nm_chat_evening",
-      "nm_chat_finance",
-      "nm_chat_health",
-      "nm_chat_projects"
-    ],
-    // Кеш/тимчасове (не потребує Supabase)
-    cache: [
-      "nm_owl_board",
-      "nm_owl_board_ts",
-      "nm_owl_cooldowns",
-      "nm_owl_schedule_asked",
-      "nm_owl_schedule_pending",
-      "nm_error_log",
-      "nm_fin_coach_week",
-      "nm_fin_coach_month",
-      "nm_fin_coach_3months"
-    ],
-    // Динамічні патерни (видаляти через startsWith)
-    patterns: ["nm_task_chat_", "nm_visited_", "nm_owl_tab_"]
-  };
   function runMigrations() {
     const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
     let changed = false;
@@ -10133,79 +10219,98 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const delay = document.readyState === "complete" ? 300 : 500;
     setTimeout(showApp, delay);
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootApp);
-  } else {
-    bootApp();
-  }
-  setTimeout(() => {
-    const splash = document.getElementById("splash");
-    if (splash && !splash.classList.contains("gone")) {
-      splash.classList.add("hide");
-      setTimeout(() => splash.classList.add("gone"), 600);
+  var currentTabForAnim, NM_KEYS;
+  var init_boot = __esm({
+    "src/core/boot.js"() {
+      init_nav();
+      init_trash();
+      init_core();
+      init_board();
+      init_inbox_board();
+      init_keyboard();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_evening();
+      init_onboarding();
+      init_health();
+      init_projects();
+      currentTabForAnim = "inbox";
+      NM_KEYS = {
+        // Основні дані (→ Supabase таблиці в майбутньому)
+        data: [
+          "nm_inbox",
+          "nm_tasks",
+          "nm_notes",
+          "nm_folders_meta",
+          "nm_moments",
+          "nm_habits2",
+          "nm_habit_log2",
+          "nm_quit_log",
+          "nm_finance",
+          "nm_finance_budget",
+          "nm_finance_cats",
+          "nm_health_cards",
+          "nm_health_log",
+          "nm_projects",
+          "nm_trash"
+        ],
+        // Налаштування (→ Supabase user_settings)
+        settings: [
+          "nm_settings",
+          "nm_gemini_key",
+          "nm_memory",
+          "nm_memory_ts",
+          "nm_active_tabs",
+          "nm_onboarding_done",
+          "nm_evening_mood",
+          "nm_evening_summary",
+          "nm_notes_folders_ts"
+        ],
+        // Чат-историки (→ Supabase chat_messages)
+        chat: [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_health",
+          "nm_chat_projects"
+        ],
+        // Кеш/тимчасове (не потребує Supabase)
+        cache: [
+          "nm_owl_board",
+          "nm_owl_board_ts",
+          "nm_owl_cooldowns",
+          "nm_owl_schedule_asked",
+          "nm_owl_schedule_pending",
+          "nm_error_log",
+          "nm_fin_coach_week",
+          "nm_fin_coach_month",
+          "nm_fin_coach_3months"
+        ],
+        // Динамічні патерни (видаляти через startsWith)
+        patterns: ["nm_task_chat_", "nm_visited_", "nm_owl_tab_"]
+      };
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bootApp);
+      } else {
+        bootApp();
+      }
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+        if (splash && !splash.classList.contains("gone")) {
+          splash.classList.add("hide");
+          setTimeout(() => splash.classList.add("gone"), 600);
+        }
+      }, 3e3);
     }
-  }, 3e3);
+  });
 
   // src/core/nav.js
-  var TAB_THEMES = {
-    inbox: {
-      bg: "linear-gradient(160deg, #f5f0e8, #ffffff)",
-      orb: "rgba(220,200,170,0.25)",
-      tabBg: "rgb(220,200,170)",
-      accent: "#5c4a2a",
-      accent2: "#8b6914"
-    },
-    tasks: {
-      bg: "linear-gradient(160deg, #fdb87a, #ffd4a8)",
-      orb: "rgba(234,88,12,0.15)",
-      tabBg: "rgb(253,184,122)",
-      accent: "#ea580c",
-      accent2: "#f97316"
-    },
-    notes: {
-      bg: "linear-gradient(160deg, #fed7aa, #ffedd5)",
-      orb: "rgba(234,88,12,0.10)",
-      tabBg: "rgb(254,215,170)",
-      accent: "#c2620a",
-      accent2: "#f97316"
-    },
-    me: {
-      bg: "linear-gradient(160deg, #e8d5c4, #f5ede4)",
-      orb: "rgba(124,74,42,0.12)",
-      tabBg: "rgb(200,160,130)",
-      accent: "#7c4a2a",
-      accent2: "#c2620a"
-    },
-    evening: {
-      bg: "linear-gradient(160deg, #1e3350, #3a5a80)",
-      orb: "rgba(30,51,80,0.20)",
-      tabBg: "rgb(25,45,75)",
-      accent: "#1e3350",
-      accent2: "#3a5a80"
-    },
-    finance: {
-      bg: "linear-gradient(160deg, #fcd9bd, #fff7ed)",
-      orb: "rgba(249,115,22,0.12)",
-      tabBg: "rgb(249,155,100)",
-      accent: "#c2410c",
-      accent2: "#f97316"
-    },
-    health: {
-      bg: "linear-gradient(160deg, #d4e8d8, #edf7ef)",
-      orb: "rgba(26,92,42,0.12)",
-      tabBg: "rgb(26,92,42)",
-      accent: "#1a5c2a",
-      accent2: "#16a34a"
-    },
-    projects: {
-      bg: "linear-gradient(160deg, #e8e0d5, #f5f0ea)",
-      orb: "rgba(61,46,30,0.10)",
-      tabBg: "rgb(61,46,30)",
-      accent: "#3d2e1e",
-      accent2: "#7c5c3a"
-    }
-  };
-  var currentTab = "inbox";
   function switchTab(tab) {
     if (tab === currentTab) return;
     animateTabSwitch(tab);
@@ -10288,65 +10393,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }, 750);
     }
   }
-  var DEFAULT_TABS = ["inbox", "notes"];
-  var ALL_TABS_CONFIG = [
-    {
-      id: "inbox",
-      label: "Inbox",
-      accent: "#8b6914",
-      bg: "rgba(245,240,232,0.9)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>'
-    },
-    {
-      id: "tasks",
-      label: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432.",
-      accent: "#c2410c",
-      bg: "rgba(253,184,122,0.25)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
-    },
-    {
-      id: "notes",
-      label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      accent: "#c2620a",
-      bg: "rgba(254,215,170,0.3)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>'
-    },
-    {
-      id: "me",
-      label: "\u042F",
-      accent: "#7c4a2a",
-      bg: "rgba(232,213,196,0.35)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'
-    },
-    {
-      id: "evening",
-      label: "\u0412\u0435\u0447\u0456\u0440",
-      accent: "#1e3350",
-      bg: "rgba(30,51,80,0.12)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
-    },
-    {
-      id: "finance",
-      label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      accent: "#c2410c",
-      bg: "rgba(252,217,189,0.35)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="14" r="2"/></svg>'
-    },
-    {
-      id: "health",
-      label: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
-      accent: "#1a5c2a",
-      bg: "rgba(212,232,216,0.4)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
-    },
-    {
-      id: "projects",
-      label: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      accent: "#3d2e1e",
-      bg: "rgba(232,224,213,0.4)",
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
-    }
-  ];
   function getActiveTabs() {
     try {
       const saved = JSON.parse(localStorage.getItem("nm_active_tabs") || "null");
@@ -10412,7 +10458,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }, { passive: true });
   }
-  var _pendingTabs = null;
   function toggleTabSelection(tabId) {
     if (!_pendingTabs) _pendingTabs = [...getActiveTabs()];
     const locked = ["inbox", "notes"];
@@ -10458,7 +10503,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     rebuildDrumTabbar();
     showToast("\u2713 \u0412\u043A\u043B\u0430\u0434\u043A\u0438 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
   }
-  var _selectedOrderTab = null;
   function closeTabSelector() {
     _pendingTabs = null;
     _selectedOrderTab = null;
@@ -11129,8 +11173,6 @@ ${notesList || "\u043D\u0435\u043C\u0430\u0454"}
     }
     if (showResult) showToast("\u2713 \u041F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
   }
-  var _undoToastTimer = null;
-  var _undoData = null;
   function setUndoTimer(v) {
     _undoToastTimer = v;
   }
@@ -11147,32 +11189,196 @@ ${notesList || "\u043D\u0435\u043C\u0430\u0454"}
     el.classList.add("show");
     _undoToastTimer = setTimeout(() => el.classList.remove("show"), duration);
   }
-  Object.assign(window, {
-    switchTab,
-    showToast,
-    closeSettings,
-    openSettings,
-    saveSettings,
-    setLanguage,
-    setOwlModeSetting,
-    openTabSelector,
-    openFeedback,
-    clearAllData,
-    openMemoryModal,
-    closeMemoryModal,
-    refreshMemory,
-    saveMemoryCards,
-    addMemoryEntry,
-    openPrivacyPolicy,
-    openTerms,
-    applyTabSelection,
-    selectTabOrder,
-    moveTabOrder,
-    deleteMemoryCard,
-    saveFinanceSettings,
-    clearFinanceData,
-    exportData,
-    toggleTabSelection
+  var TAB_THEMES, currentTab, DEFAULT_TABS, ALL_TABS_CONFIG, _pendingTabs, _selectedOrderTab, _undoToastTimer, _undoData;
+  var init_nav = __esm({
+    "src/core/nav.js"() {
+      init_logger();
+      init_utils();
+      init_boot();
+      init_core();
+      init_proactive();
+      init_evening();
+      init_finance();
+      init_habits();
+      init_health();
+      init_inbox();
+      init_notes();
+      init_onboarding();
+      init_projects();
+      init_tasks();
+      TAB_THEMES = {
+        inbox: {
+          bg: "linear-gradient(160deg, #f5f0e8, #ffffff)",
+          orb: "rgba(220,200,170,0.25)",
+          tabBg: "rgb(220,200,170)",
+          accent: "#5c4a2a",
+          accent2: "#8b6914"
+        },
+        tasks: {
+          bg: "linear-gradient(160deg, #fdb87a, #ffd4a8)",
+          orb: "rgba(234,88,12,0.15)",
+          tabBg: "rgb(253,184,122)",
+          accent: "#ea580c",
+          accent2: "#f97316"
+        },
+        notes: {
+          bg: "linear-gradient(160deg, #fed7aa, #ffedd5)",
+          orb: "rgba(234,88,12,0.10)",
+          tabBg: "rgb(254,215,170)",
+          accent: "#c2620a",
+          accent2: "#f97316"
+        },
+        me: {
+          bg: "linear-gradient(160deg, #e8d5c4, #f5ede4)",
+          orb: "rgba(124,74,42,0.12)",
+          tabBg: "rgb(200,160,130)",
+          accent: "#7c4a2a",
+          accent2: "#c2620a"
+        },
+        evening: {
+          bg: "linear-gradient(160deg, #1e3350, #3a5a80)",
+          orb: "rgba(30,51,80,0.20)",
+          tabBg: "rgb(25,45,75)",
+          accent: "#1e3350",
+          accent2: "#3a5a80"
+        },
+        finance: {
+          bg: "linear-gradient(160deg, #fcd9bd, #fff7ed)",
+          orb: "rgba(249,115,22,0.12)",
+          tabBg: "rgb(249,155,100)",
+          accent: "#c2410c",
+          accent2: "#f97316"
+        },
+        health: {
+          bg: "linear-gradient(160deg, #d4e8d8, #edf7ef)",
+          orb: "rgba(26,92,42,0.12)",
+          tabBg: "rgb(26,92,42)",
+          accent: "#1a5c2a",
+          accent2: "#16a34a"
+        },
+        projects: {
+          bg: "linear-gradient(160deg, #e8e0d5, #f5f0ea)",
+          orb: "rgba(61,46,30,0.10)",
+          tabBg: "rgb(61,46,30)",
+          accent: "#3d2e1e",
+          accent2: "#7c5c3a"
+        }
+      };
+      currentTab = "inbox";
+      DEFAULT_TABS = ["inbox", "notes"];
+      ALL_TABS_CONFIG = [
+        {
+          id: "inbox",
+          label: "Inbox",
+          accent: "#8b6914",
+          bg: "rgba(245,240,232,0.9)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>'
+        },
+        {
+          id: "tasks",
+          label: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432.",
+          accent: "#c2410c",
+          bg: "rgba(253,184,122,0.25)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+        },
+        {
+          id: "notes",
+          label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
+          accent: "#c2620a",
+          bg: "rgba(254,215,170,0.3)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>'
+        },
+        {
+          id: "me",
+          label: "\u042F",
+          accent: "#7c4a2a",
+          bg: "rgba(232,213,196,0.35)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'
+        },
+        {
+          id: "evening",
+          label: "\u0412\u0435\u0447\u0456\u0440",
+          accent: "#1e3350",
+          bg: "rgba(30,51,80,0.12)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+        },
+        {
+          id: "finance",
+          label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
+          accent: "#c2410c",
+          bg: "rgba(252,217,189,0.35)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="14" r="2"/></svg>'
+        },
+        {
+          id: "health",
+          label: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+          accent: "#1a5c2a",
+          bg: "rgba(212,232,216,0.4)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+        },
+        {
+          id: "projects",
+          label: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+          accent: "#3d2e1e",
+          bg: "rgba(232,224,213,0.4)",
+          svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        }
+      ];
+      _pendingTabs = null;
+      _selectedOrderTab = null;
+      _undoToastTimer = null;
+      _undoData = null;
+      Object.assign(window, {
+        switchTab,
+        showToast,
+        closeSettings,
+        openSettings,
+        saveSettings,
+        setLanguage,
+        setOwlModeSetting,
+        openTabSelector,
+        openFeedback,
+        clearAllData,
+        openMemoryModal,
+        closeMemoryModal,
+        refreshMemory,
+        saveMemoryCards,
+        addMemoryEntry,
+        openPrivacyPolicy,
+        openTerms,
+        applyTabSelection,
+        selectTabOrder,
+        moveTabOrder,
+        deleteMemoryCard,
+        saveFinanceSettings,
+        clearFinanceData,
+        exportData,
+        toggleTabSelection
+      });
+    }
   });
+
+  // src/app.js
+  init_nav();
+  init_utils();
+  init_trash();
+  init_logger();
+  init_keyboard();
+  init_swipe_delete();
+  init_core();
+  init_inbox_board();
+  init_chips();
+  init_board();
+  init_proactive();
+  init_inbox();
+  init_tasks();
+  init_habits();
+  init_notes();
+  init_finance();
+  init_evening();
+  init_onboarding();
+  init_health();
+  init_projects();
+  init_boot();
 })();
 //# sourceMappingURL=bundle.js.map
