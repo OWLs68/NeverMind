@@ -100,6 +100,41 @@ function filterStaleChips(chips) {
 }
 
 // ============================================================
+// CHIP TRACKING — навчання через взаємодію з чіпами
+// nm_chip_stats = { clicked: [{action,label,ts}], ignored: number }
+// ============================================================
+const NM_CHIP_STATS_KEY = 'nm_chip_stats';
+const CHIP_STATS_MAX_CLICKED = 50;
+
+function _getChipStats() {
+  try { return JSON.parse(localStorage.getItem(NM_CHIP_STATS_KEY) || '{"clicked":[],"ignored":0}'); } catch { return { clicked: [], ignored: 0 }; }
+}
+
+function trackChipClick(action, label) {
+  const stats = _getChipStats();
+  stats.clicked.push({ action, label, ts: Date.now() });
+  if (stats.clicked.length > CHIP_STATS_MAX_CLICKED) stats.clicked.splice(0, stats.clicked.length - CHIP_STATS_MAX_CLICKED);
+  localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
+}
+
+function trackChipsIgnored(count) {
+  if (count <= 0) return;
+  const stats = _getChipStats();
+  stats.ignored += count;
+  localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
+}
+
+export function getChipStatsForPrompt() {
+  const stats = _getChipStats();
+  if (stats.clicked.length === 0 && stats.ignored === 0) return '';
+  const recent = stats.clicked.slice(-20);
+  const chatClicks = recent.filter(c => c.action === 'chat').length;
+  const navClicks = recent.filter(c => c.action === 'nav').length;
+  const completionClicks = recent.filter(c => c.label && c.label.includes('✔️')).length;
+  return `Статистика чіпів: натиснуто ${stats.clicked.length} (✔️: ${completionClicks}, діалог: ${chatClicks - completionClicks}, навігація: ${navClicks}), проігноровано ${stats.ignored}. ${completionClicks > chatClicks ? 'Юзер частіше підтверджує дії ✔️ ніж веде діалог.' : ''}`;
+}
+
+// ============================================================
 // renderChips — малює чіпи в контейнер
 // containerEl: DOM-елемент куди вставляти
 // chips: масив (сирий, до нормалізації)
@@ -110,6 +145,10 @@ function filterStaleChips(chips) {
 // ============================================================
 export function renderChips(containerEl, chips, tab, options = {}) {
   if (!containerEl) return;
+
+  // Трекінг: рахуємо чіпи що залишились (не натиснуті) перед перерендером
+  const oldChips = containerEl.querySelectorAll('.owl-chip:not(.owl-chip-speak)');
+  if (oldChips.length > 0) trackChipsIgnored(oldChips.length);
 
   const normChips = filterStaleChips(normalizeChips(chips));
   if (normChips.length === 0 && !options.showSpeak) {
@@ -148,6 +187,9 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     const text = chipEl.dataset.chipText || '';
     const action = chipEl.dataset.chipAction;
     const target = chipEl.dataset.chipTarget;
+
+    // Трекінг: записуємо клік
+    trackChipClick(action, text);
 
     // Ховаємо чіп після кліку (до наступної генерації табло)
     chipEl.style.transition = 'opacity 0.2s, transform 0.2s';
