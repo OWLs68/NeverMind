@@ -13,6 +13,7 @@ import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHi
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats } from './finance.js';
 import { renderMeHabitsStats } from './evening.js';
+import { getEvents, saveEvents } from './calendar.js';
 
 // === HABITS ===
 let editingHabitId = null;
@@ -955,6 +956,19 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (currentTab === 'notes') renderNotes();
     addMsg('agent', '✓ Нотатку збережено' + (parsed.folder ? ' в папку "' + parsed.folder + '"' : ''));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
+    return true;
+  }
+
+  if (action === 'create_event') {
+    const title = (parsed.title || '').trim();
+    if (!title || !parsed.date) return false;
+    const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+    const events = getEvents();
+    events.unshift(ev);
+    saveEvents(events);
+    const dateObj = new Date(parsed.date);
+    const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+    addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${parsed.time ? ' о ' + parsed.time : ''}`);
     return true;
   }
 

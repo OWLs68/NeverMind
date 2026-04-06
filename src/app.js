@@ -30,6 +30,7 @@ import './tabs/evening.js';
 import './tabs/onboarding.js';
 import './tabs/health.js';
 import './tabs/projects.js';
+import './tabs/calendar.js';
 
 // Boot (завантаження — має бути останнім, викликає init/bootApp)
 import './core/boot.js';
