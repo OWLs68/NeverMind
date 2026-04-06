@@ -6,7 +6,7 @@
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { callAI, callAIWithHistory, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { getTasks } from './tasks.js';
+import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus, processUniversalAction } from './habits.js';
 import { getNotes } from './notes.js';
 import { getCurrency, getFinance } from './finance.js';
@@ -554,13 +554,14 @@ export function renderEvening() {
       momEl.innerHTML = allItems.map(m => {
         const dot = m.isNote ? '#818cf8' : (moodDots[m.mood] || '#888');
         const timeStr = m.ts ? new Date(m.ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
-        return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+        const clickable = !m.isNote;
+        return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ';cursor:pointer' : ''}"${clickable ? ` onclick="openMomentView(${m.id})"` : ''}>
           <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:5px"></div>
           <div style="flex:1">
             <div style="font-size:13px;color:#1e1040;font-weight:500;line-height:1.45">${escapeHtml(m.summary || m.text)}</div>
             ${timeStr ? `<div style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600;margin-top:2px">${timeStr}</div>` : ''}
           </div>
-          ${!m.isNote ? `<div onclick="deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">×</div>` : ''}
+          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">×</div>` : ''}
         </div>`;
       }).join('');
     }
@@ -970,10 +971,46 @@ export async function sendEveningBarMessage() {
 }
 
 
+// === MOMENT VIEW MODAL ===
+function openMomentView(momentId) {
+  const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+  const m = moments.find(x => x.id === momentId);
+  if (!m) return;
+
+  const moodEmoji = { positive: '😊', neutral: '😐', negative: '😞' };
+  const headerEl = document.getElementById('moment-view-header');
+  const timeEl = document.getElementById('moment-view-time');
+  const textEl = document.getElementById('moment-view-text');
+  const summaryBlock = document.getElementById('moment-view-summary-block');
+  const summaryEl = document.getElementById('moment-view-summary');
+
+  if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || '') + ' Момент дня';
+  if (timeEl && m.ts) timeEl.textContent = new Date(m.ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  if (textEl) textEl.textContent = m.text || '';
+
+  if (summaryBlock && summaryEl && m.summary && m.summary !== m.text) {
+    summaryEl.textContent = m.summary;
+    summaryBlock.style.display = 'block';
+  } else if (summaryBlock) {
+    summaryBlock.style.display = 'none';
+  }
+
+  const modal = document.getElementById('moment-view-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeMomentView);
+  }
+}
+
+function closeMomentView() {
+  const modal = document.getElementById('moment-view-modal');
+  if (modal) modal.style.display = 'none';
+}
+
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddMoment, saveMoment, closeMomentModal, setMomentMood,
   generateEveningSummary, closeEveningDialog, setEveningMood,
   sendDialogMessage, sendEveningBarMessage, sendMeChatMessage,
-  switchTab, deleteMoment,
+  switchTab, deleteMoment, openMomentView, closeMomentView,
 });
