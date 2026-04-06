@@ -969,8 +969,9 @@ export function getProfile() {
 export function shouldRefreshMemory() {
   const lastTs = localStorage.getItem('nm_memory_ts');
   if (!lastTs) return true;
-  const elapsed = Date.now() - parseInt(lastTs);
-  return elapsed > 2 * 24 * 60 * 60 * 1000; // кожні 2 дні
+  const last = new Date(parseInt(lastTs));
+  const now = new Date();
+  return last.toDateString() !== now.toDateString(); // раз на день
 }
 
 export async function autoRefreshMemory() {
