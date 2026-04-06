@@ -18,6 +18,10 @@ let tempSteps = [];
 export function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
 export function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' })); }
 
+// === EVENTS (календарні події) ===
+export function getEvents() { return JSON.parse(localStorage.getItem('nm_events') || '[]'); }
+export function saveEvents(arr) { localStorage.setItem('nm_events', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'events' })); }
+
 export function openAddTask() {
   editingTaskId = null;
   tempSteps = [];
