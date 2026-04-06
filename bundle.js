@@ -3313,12 +3313,12 @@ ${aiContext ? "\n\n" + aiContext : ""}
       return;
     }
     if (text.includes("\u2714\uFE0F")) {
-      const handled = handleCompletionChip(text);
+      const handled = handleCompletionChip(text, tab);
       if (handled) return;
     }
     sendChipToChat(tab, text);
   }
-  function handleCompletionChip(text) {
+  function handleCompletionChip(text, tab) {
     const cleanText = text.replace(/✔️/g, "").trim().toLowerCase();
     if (!cleanText) return false;
     const chipWords = cleanText.split(/\s+/).filter((w) => w.length >= 3);
@@ -3336,7 +3336,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
           tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
           saveTasks(tasks);
           renderTasks();
-          showToast(`\u2713 "${task.title}" \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`);
+          const msg = `\u2713 "${task.title}" \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`;
+          showToast(msg);
+          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
           return true;
         }
       }
@@ -3358,7 +3360,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
           localStorage.setItem("nm_quit_log", JSON.stringify(quitLog));
           renderHabits();
           renderProdHabits();
-          showToast(`\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`);
+          const msg = `\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`;
+          showToast(msg);
+          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
           return true;
         } else {
           if (!log[today]) log[today] = {};
@@ -3366,7 +3370,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
           saveHabitLog(log);
           renderHabits();
           renderProdHabits();
-          showToast(`\u2713 "${habit.name}" \u2014 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E`);
+          const msg = `\u2713 "${habit.name}" \u2014 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E`;
+          showToast(msg);
+          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
           return true;
         }
       }
