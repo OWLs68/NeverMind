@@ -1200,11 +1200,10 @@ body {
 .owl-speech-text {
   font-size: 15px; font-weight: 500;
   color: rgba(255,255,255,0.92);
-  line-height: 1.55; padding-right: 36px;
+  line-height: 1.55;
 }
 .owl-speech-time {
-  position: absolute; top: 16px; right: 18px;
-  font-size: 10px; font-weight: 600;
+  display: none;
   color: rgba(255,255,255,0.25);
 }
 /* Чіпи під баблом — один рядок */
