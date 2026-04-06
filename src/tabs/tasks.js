@@ -8,7 +8,7 @@ import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
-import { updateProdTabCounters } from './habits.js';
+import { updateProdTabCounters, processUniversalAction } from './habits.js';
 import { closeNoteView } from './notes.js';
 
 // === TASKS ===
@@ -367,7 +367,15 @@ async function sendTaskChatMessage() {
   const aiContext = getAIContext();
   const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
   const stepInstruction = wantsSteps ? ' ВАЖЛИВО: користувач просить кроки. Відповідай ТІЛЬКИ валідним JSON і нічим іншим: {"steps":["крок 1","крок 2","крок 3"]}. Жодного тексту до або після JSON.' : '';
-  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках. ЗАБОРОНЕНО виводити {"action":...}, task_id, JSON з полем action або будь-який машинний формат — тільки звичайний текст або {"steps":[...]} коли потрібні кроки.${stepInstruction} Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках.${stepInstruction}
+Якщо юзер просить кроки — {"steps":["крок 1","крок 2"]}
+Якщо юзер просить щось НЕ про цю задачу (нова задача, подія, нотатка, звичка, витрата) — відповідай відповідним JSON:
+- Задача: {"action":"create_task","title":"назва","steps":[]}
+- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Нотатка: {"action":"create_note","text":"текст","folder":null}
+- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
+- Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+Інакше — звичайний текст українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -397,15 +405,19 @@ async function sendTaskChatMessage() {
             addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроків до задачі. Перевір картку.`);
           }
         } else if (parsed.action) {
-          // AI повернув формат дій з Inbox — ігноруємо сирий JSON, показуємо нейтральну відповідь
-          addTaskChatMsg('agent', 'Зроблено! Що ще хочеш додати?');
+          if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
+            addTaskChatMsg('agent', reply);
+          }
         } else {
           addTaskChatMsg('agent', reply);
         }
       } catch {
-        // Якщо reply містить сирі JSON-дії — не показувати машинний текст
         if (/\{"action"/.test(reply)) {
-          addTaskChatMsg('agent', 'Зроблено! Що ще хочеш додати?');
+          try {
+            const jsonMatch = reply.match(/\{[\s\S]*\}/);
+            const p = JSON.parse(jsonMatch[0]);
+            if (!processUniversalAction(p, text, addTaskChatMsg)) addTaskChatMsg('agent', reply);
+          } catch { addTaskChatMsg('agent', reply); }
         } else {
           addTaskChatMsg('agent', reply);
         }
