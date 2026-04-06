@@ -162,7 +162,7 @@ export async function generateBoardMessage(tab) {
 
   // Останні повідомлення з чату — щоб табло знало що обговорювалось
   const chatMsgs = loadChatMsgs(tab);
-  const recentChat = chatMsgs.slice(-3).map(m => {
+  const recentChat = chatMsgs.slice(-30).map(m => {
     const ago = Date.now() - (m.ts || 0);
     const mins = Math.floor(ago / 60000);
     const when = mins < 1 ? 'щойно' : mins < 60 ? mins + ' хв тому' : Math.floor(mins / 60) + ' год тому';
