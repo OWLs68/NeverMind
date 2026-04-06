@@ -11,7 +11,7 @@ import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
-import { addEveningBarMsg, addMeChatMsg } from '../tabs/evening.js';
+import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
 
@@ -151,6 +151,13 @@ export function getAIContext() {
       parts.push(`OWL щойно сказав на табло (вкладка "${tab}"): "${boardText}". Якщо користувач відповідає на це — це відповідь на питання OWL, НЕ нова задача/нотатка.`);
     }
   } catch(e) {}
+
+  // === Настрій дня (смайлик "Як пройшов день?") ===
+  const eveningMood = getEveningMood();
+  if (eveningMood) {
+    const moodLabels = { bad: '😔 погано', meh: '😐 так собі', ok: '🙂 нормально', good: '😄 добре', fire: '🔥 чудово' };
+    parts.push(`Настрій дня (обрав користувач): ${moodLabels[eveningMood] || eveningMood}. Адаптуй тон: якщо погано — підтримай, якщо добре — підбадьор.`);
+  }
 
   return parts.join('\n\n');
 }

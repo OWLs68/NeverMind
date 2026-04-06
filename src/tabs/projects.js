@@ -297,6 +297,7 @@ function toggleProjectStep(projectId, stepId) {
   const step = (p.steps || []).find(s => s.id === stepId);
   if (step) {
     step.done = !step.done;
+    step.doneAt = step.done ? Date.now() : null;
     p.lastActivity = Date.now();
     // Перераховуємо прогрес
     const done = p.steps.filter(s => s.done).length;
@@ -527,6 +528,7 @@ ${aiContext ? '\n\n' + aiContext : ''}
           const step = (p.steps || []).find(s => s.id === parsed.step_id);
           if (step) {
             step.done = true;
+            step.doneAt = Date.now();
             p.progress = Math.round(p.steps.filter(s => s.done).length / p.steps.length * 100);
             p.lastActivity = Date.now();
             saveProjects(projs);

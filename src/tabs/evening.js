@@ -517,24 +517,38 @@ export function renderEvening() {
       </div>`;
   }
 
-  // === 2. Кільце продуктивності ===
-  const doneTasks2 = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
+  // === 2. Кільце продуктивності (динамічна формула) ===
+  // Кожне джерело дає 0..1, скор = середнє тих що мають дані
+  const sources = [];
+
+  // Звички: % виконаних за сьогодні
   const habits2 = getHabits().filter(h => h.type !== 'quit'); const log2 = getHabitLog();
   const todayDow2 = (new Date().getDay() + 6) % 7;
   const todayH2 = habits2.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow2));
   const doneH2 = todayH2.filter(h => !!log2[today]?.[h.id]).length;
-  const habitPct = todayH2.length > 0 ? doneH2 / todayH2.length : 0;
-  const pos = todayMoments.filter(m => m.mood === 'positive').length;
-  const moodBonus = todayMoments.length > 0 ? (pos / todayMoments.length) * 0.3 : 0;
-  const taskBonus = doneTasks2 > 0 ? Math.min(doneTasks2 / 5, 1) * 0.4 : 0;
-  const score = Math.round((habitPct * 0.3 + moodBonus + taskBonus) * 100);
+  if (todayH2.length > 0) sources.push(doneH2 / todayH2.length);
+
+  // Задачі: closedToday / max(totalActive * 0.2, 1)
+  const allTasks = getTasks();
+  const doneTasks2 = allTasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
+  const activeTasks = allTasks.filter(t => t.status === 'active').length;
+  if (doneTasks2 > 0 || activeTasks > 0) sources.push(Math.min(doneTasks2 / Math.max(activeTasks * 0.2, 1), 1));
+
+  // Проекти: stepsClosedToday / max(totalOpenSteps * 0.2, 1)
+  const activeProjs = getProjects().filter(p => p.status === 'active');
+  const allSteps = activeProjs.flatMap(p => p.steps || []);
+  const stepsToday = allSteps.filter(s => s.done && s.doneAt && new Date(s.doneAt).toDateString() === today).length;
+  const openSteps = allSteps.filter(s => !s.done).length;
+  if (stepsToday > 0 || openSteps > 0) sources.push(Math.min(stepsToday / Math.max((openSteps + stepsToday) * 0.2, 1), 1));
+
+  const score = sources.length > 0 ? Math.round((sources.reduce((a, b) => a + b, 0) / sources.length) * 100) : 0;
 
   const arc = document.getElementById('evening-ring-arc');
   const pctEl = document.getElementById('evening-ring-pct');
   const descEl = document.getElementById('evening-score-desc');
   if (arc) { const circ = 151; setTimeout(() => { arc.style.strokeDashoffset = circ - (circ * score / 100); }, 100); }
   if (pctEl) pctEl.textContent = score + '%';
-  if (descEl) descEl.textContent = score === 0 ? 'Додай моменти дня' : score >= 70 ? 'Гарний день 💪' : score >= 40 ? 'Середній день' : 'Важкий день';
+  if (descEl) descEl.textContent = sources.length === 0 ? 'Додай задачі або звички' : score >= 70 ? 'Гарний день 💪' : score >= 40 ? 'Середній день' : 'Важкий день';
 
   // === 3. Настрій ===
   const savedMood = getEveningMood();
@@ -601,7 +615,7 @@ export function renderEvening() {
   } catch(e) {}
 }
 
-function getEveningMood() {
+export function getEveningMood() {
   const today = new Date().toDateString();
   try {
     const saved = JSON.parse(localStorage.getItem('nm_evening_mood') || 'null');
@@ -614,6 +628,7 @@ function setEveningMood(level) {
   const today = new Date().toDateString();
   localStorage.setItem('nm_evening_mood', JSON.stringify({ mood: level, date: today }));
   renderEveningMoodButtons(level);
+  renderEvening();
 }
 
 function renderEveningMoodButtons(active) {
