@@ -683,9 +683,9 @@ body {
 }
 
 /* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
-#page-inbox .page-header { background: linear-gradient(to bottom, #f5f0e8 30%, transparent); padding-bottom: 0; }
+#page-inbox .page-header { background: linear-gradient(to bottom, #fed7aa 30%, transparent); padding-bottom: 0; }
 #page-tasks .page-header { background: linear-gradient(to bottom, #fdb87a 30%, transparent); }
-#page-notes .page-header { background: linear-gradient(to bottom, #fed7aa 30%, transparent); }
+#page-notes .page-header { background: linear-gradient(to bottom, #f5f0e8 30%, transparent); }
 #page-me .page-header { background: linear-gradient(to bottom, #e8d5c4 30%, transparent); }
 #page-evening .page-header { background: linear-gradient(to bottom, #1e3350 30%, transparent); }
 #page-evening .page-header .page-title { color: white; }
