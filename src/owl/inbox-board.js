@@ -510,9 +510,16 @@ export function getOwlBoardContext() {
   });
 
   // Задача завʼязла 3+ дні
-  const stuck = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000);
-  stuck.forEach(t => {
+  const stuckDays3 = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000 && t.createdAt >= Date.now() - 5*24*60*60*1000);
+  stuckDays3.forEach(t => {
     important.push(`[ВАЖЛИВО] Задача "${t.title}" відкрита вже 3+ дні.`);
+  });
+
+  // Забуті задачі 5+ днів — м'яке питання чи ще актуально
+  const forgotten = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 5*24*60*60*1000);
+  forgotten.forEach(t => {
+    const days = Math.floor((Date.now() - t.createdAt) / (24*60*60*1000));
+    important.push(`[ЗАБУТА ЗАДАЧА] "${t.title}" висить ${days} днів. М'яко запитай чи ще актуально — може видалити або переформулювати?`);
   });
 
   if (activeTasks.length > 0) {
