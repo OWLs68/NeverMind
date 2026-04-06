@@ -911,6 +911,7 @@ export async function sendEveningBarMessage() {
 - Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
+- Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
 Інакше — текст українською 1-3 речення.
 НЕ вигадуй ліміти, плани або факти яких немає в даних вище.${aiContext ? '\n\n' + aiContext : ''}`;
 

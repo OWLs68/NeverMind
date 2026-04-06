@@ -1057,6 +1057,7 @@ export async function sendNotesBarMessage() {
 - Створити задачу: {"action":"create_task","title":"назва","steps":[]}
 - Створити звичку: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
 - Зберегти фінанси: {"action":"save_finance","fin_type":"expense або income","amount":число,"category":"категорія","comment":"коментар"}
+- Запланована подія: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"} — якщо юзер каже про подію з датою в майбутньому (приїзд, зустріч, день народження)
 - Просто відповісти: текст (1-3 речення)
 ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
 Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
