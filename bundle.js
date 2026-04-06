@@ -3848,6 +3848,44 @@ ${aiContext ? "\n\n" + aiContext : ""}
     normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
     const tasks = getTasks();
     const activeTasks = tasks.filter((t) => t.status !== "done");
+    if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
+      const todayDow = now.getDay();
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const briefParts = [];
+      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '"').join(", ")}`);
+      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name).join(", ")}`);
+      const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
+      if (quitHabitsAll.length > 0) {
+        const todayIso = now.toISOString().slice(0, 10);
+        const quitInfo = quitHabitsAll.map((h) => {
+          const s = getQuitStatus(h.id);
+          return `"${h.name}": ${s.streak || 0} \u0434\u043D`;
+        });
+        briefParts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
+      }
+      if (briefParts.length > 0) important.push(`[\u0420\u0410\u041D\u041A\u041E\u0412\u0418\u0419 \u0411\u0420\u0418\u0424] \u0417\u0432\u0435\u0434\u0435\u043D\u043D\u044F \u043D\u0430 \u0434\u0435\u043D\u044C:
+${briefParts.join("\n")}
+\u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
+    }
+    if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
+      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
+      const todayDow = now.getDay();
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const todayLogAll = getHabitLog()[todayStr] || {};
+      const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
+      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+      const pulseParts = [];
+      pulseParts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneTasks.length}`);
+      pulseParts.push(`\u0417\u0432\u0438\u0447\u043E\u043A: ${doneH}/${todayHabitsAll.length}`);
+      if (todayMoments.length > 0) pulseParts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: ${todayMoments.length}`);
+      if (!hasSummary) pulseParts.push("\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
+      important.push(`[\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u041F\u0423\u041B\u042C\u0421] \u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C:
+${pulseParts.join("\n")}
+\u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
+    }
     const urgent = activeTasks.filter((t) => {
       const m = t.title.match(/(\d{1,2}):(\d{2})/);
       if (!m) return false;
