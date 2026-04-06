@@ -392,6 +392,11 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Додати препарат до картки: {"action":"add_medication","card_id":${activeHealthCardId || 'null'},"name":"назва","dose":"дозування","time":"час"}
 - Записати нотатку: {"action":"create_note","text":"текст","folder":"${activeCard ? activeCard.name : 'Здоровʼя'}"}
 - Оновити прогрес картки: {"action":"update_health_progress","card_id":${activeHealthCardId || 'null'},"progress":число 0-100,"nextStep":"наступний крок"}
+Також вмієш (для будь-яких записів, не тільки здоров'я):
+- Задача: {"action":"create_task","title":"назва","steps":[]}
+- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
+- Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
 Інакше — відповідай текстом 1-3 речення українською. НЕ вигадуй медичних рекомендацій.`;
 
   try {
