@@ -7,6 +7,7 @@ import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { activeChatBar, callOwlChat, closeChatBar, getOWLPersonality, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
+import { renderChips, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT } from './chips.js';
 import { addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getQuitStatus, renderHabits, renderProdHabits, saveHabitLog } from '../tabs/habits.js';
@@ -659,14 +660,8 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 - Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
 - НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
-- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}]}
-- chips — кнопки швидких дій, масив об'єктів. Кожен має label (до 3 слів) і action:
-  • "nav" — перекидає на вкладку (target: tasks|notes|habits|finance|health|projects|evening|me). Використовуй коли юзер має САМ переглянути/обрати.
-  • "chat" — відправляє label у чат як повідомлення. ДВА випадки використання:
-    1) Уточнення/діалог: "нагадай завтра", "розкажи детальніше", "пізніше".
-    2) ЗВІТ про виконану задачу — ОБОВ'ЯЗКОВО в МИНУЛОМУ ЧАСІ + галочка ✔️ в кінці. Приклади: "Подав декларацію ✔️", "Купив продукти ✔️". НЕ пиши інфінітивом ("подати", "купити") — це плутає юзера бо виглядає як опис майбутньої дії, а агент після кліку закриває задачу.
-- Приклад хорошого JSON: {"text":"Маєш 3 відкриті задачі — декларація, одяг, продукти","chips":[{"label":"Подав декларацію ✔️","action":"chat"},{"label":"Купив продукти ✔️","action":"chat"},{"label":"Відкрити задачі","action":"nav","target":"tasks"}]}
-- Якщо нічого конкретного — chips: []. Враховуй що знаєш про людину.
+- Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
+${CHIP_PROMPT_RULES}
 - Відповідай українською.`;
 
   try {
@@ -807,7 +802,7 @@ function renderOwlChatMessages() {
   el.scrollTop = el.scrollHeight;
 }
 
-// Рендер чіпів
+// Рендер чіпів (через централізований renderChips з chips.js)
 function renderOwlChips(boardMsg) {
   const el = document.getElementById('owl-tab-exp-chips-inbox');
   if (!el) return;
@@ -816,32 +811,18 @@ function renderOwlChips(boardMsg) {
     return;
   }
   const VALID = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
-  // Нормалізація: старі рядки → {label, action:'chat'}
-  const normChips = boardMsg.chips.map(c =>
-    typeof c === 'string' ? { label: c, action: 'chat' } : c
-  );
-  el.innerHTML = normChips.map(c => {
-    const label = c.label || '';
-    const action = c.action === 'nav' ? 'nav' : 'chat';
-    const target = c.target || '';
-    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
-  }).join('');
-  // Делегований click-обробник — навішується один раз на контейнер
-  if (!el._chipClickReady) {
-    el.addEventListener('click', (e) => {
-      const chip = e.target.closest('.owl-chip');
-      if (!chip) return;
-      const action = chip.dataset.chipAction;
-      const target = chip.dataset.chipTarget;
+  renderChips(el, boardMsg.chips, 'inbox', {
+    onChipClick: (text, action, target) => {
+      // Навігаційні чіпи — переключити вкладку
       if (action === 'nav' && VALID.includes(target)) {
         switchTab(target);
         showToast('Переходжу до вкладки');
         return;
       }
-      sendOwlReply(chip.dataset.chipText || '');
-    });
-    el._chipClickReady = true;
-  }
+      // Чат-чіпи — через OWL міні-чат (sendOwlReply), а не через inbox sendToAI
+      sendOwlReply(text);
+    }
+  });
 }
 
 // Typing індикатор

@@ -1,6 +1,5 @@
-import { escapeHtml } from '../core/utils.js';
 import { openChatBar } from '../ai/core.js';
-import { owlChipToChat } from './chips.js';
+import { renderChips } from './chips.js';
 import { getOwlBoardMessages } from './inbox-board.js';
 
 // === OWL TAB BOARDS (#37) ===
@@ -134,30 +133,8 @@ export function renderTabBoard(tab) {
   if (tmEl) tmEl.textContent = timeStr;
 
   const chipsEl = document.getElementById('owl-tab-chips-' + tab);
-  // Нормалізація: старі чіпи (рядки) → {label, action:'chat'}, нові залишаються як є
-  const normChips = (msg.chips || []).map(c =>
-    typeof c === 'string' ? { label: c, action: 'chat' } : c
-  );
-  const chipsHTML = normChips.map(c => {
-    const label = c.label || '';
-    const action = c.action === 'nav' ? 'nav' : 'chat';
-    const target = c.target || '';
-    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
-  });
   if (chipsEl) {
-    const barTab = tab === 'me' ? 'me' : tab;
-    const speechChips = [...chipsHTML, `<div class="owl-chip owl-chip-speak">Поговорити</div>`];
-    chipsEl.innerHTML = speechChips.join('');
-    chipsEl.scrollLeft = 0;
-    // Делегований click-обробник (один раз на контейнер)
-    if (chipsEl._chipClickHandler) chipsEl.removeEventListener('click', chipsEl._chipClickHandler);
-    chipsEl._chipClickHandler = (e) => {
-      const chip = e.target.closest('.owl-chip');
-      if (!chip) return;
-      if (chip.classList.contains('owl-chip-speak')) openChatBar(barTab);
-      else owlChipToChat(tab, chip.dataset.chipText || '', chip.dataset.chipAction, chip.dataset.chipTarget);
-    };
-    chipsEl.addEventListener('click', chipsEl._chipClickHandler);
+    renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
     chipsEl.removeEventListener('scroll', chipsEl._arrowHandler);
     chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
     chipsEl.addEventListener('scroll', chipsEl._arrowHandler, { passive: true });
@@ -168,5 +145,5 @@ export function renderTabBoard(tab) {
 // === WINDOW GLOBALS (HTML handlers only) ===
 Object.assign(window, {
   toggleOwlTabChat, owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
-  scrollOwlTabChips, owlChipToChat, openChatBar,
+  scrollOwlTabChips, openChatBar,
 });

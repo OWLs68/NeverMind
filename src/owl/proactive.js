@@ -1,6 +1,7 @@
 import { getAIContext, getOWLPersonality, restoreChatUI } from '../ai/core.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase } from './inbox-board.js';
+import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT } from './chips.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
 import { getNotes } from '../tabs/notes.js';
@@ -182,14 +183,8 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 - Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес". Кажи конкретно і зрозуміло що відбувається — як друг, не як програма.
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти і дані яких немає.
 - НЕ повторюй нещодавнє: "${recentText || 'нічого'}"
-- Відповідай ТІЛЬКИ JSON: {"text":"повідомлення","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}]}
-- chips — кнопки швидких дій, масив об'єктів. Кожен має label (до 3 слів) і action:
-  • "nav" — перекидає на вкладку (target: tasks|notes|habits|finance|health|projects|evening|me). Використовуй коли юзер має САМ переглянути/обрати.
-  • "chat" — відправляє label у чат як повідомлення. ДВА випадки використання:
-    1) Уточнення/діалог: "нагадай завтра", "розкажи детальніше", "пізніше".
-    2) ЗВІТ про виконану задачу — ОБОВ'ЯЗКОВО в МИНУЛОМУ ЧАСІ + галочка ✔️ в кінці. Приклади: "Подав декларацію ✔️", "Купив продукти ✔️", "Попрас одяг ✔️". НЕ пиши інфінітивом ("подати", "купити") — це плутає юзера бо виглядає як опис майбутньої дії, а агент після кліку закриває задачу.
-- Приклад хорошого JSON: {"text":"Маєш 3 відкриті задачі — декларація, одяг, продукти","chips":[{"label":"Подав декларацію ✔️","action":"chat"},{"label":"Купив продукти ✔️","action":"chat"},{"label":"Відкрити задачі","action":"nav","target":"tasks"}]}
-- Якщо нічого конкретного — chips: []. Враховуй що знаєш про людину.
+- Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
+${CHIP_PROMPT_RULES}
 - Відповідай українською.`;
 
   try {
