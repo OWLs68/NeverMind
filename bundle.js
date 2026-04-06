@@ -4569,6 +4569,14 @@ ${aiContext ? "\n\n" + aiContext : ""}
       const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
       return `[${when}] ${m.text}`;
     }).join("\n");
+    const chatMsgs = loadChatMsgs(tab);
+    const recentChat = chatMsgs.slice(-3).map((m) => {
+      const ago = Date.now() - (m.ts || 0);
+      const mins = Math.floor(ago / 6e4);
+      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+      const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
+      return `[${when}] ${who}: ${m.text}`;
+    }).join("\n");
     const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
     const phase = getDayPhase();
     const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
@@ -4586,6 +4594,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
 
 \u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F (\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F):
 ${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
+
+\u041E\u0421\u0422\u0410\u041D\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F \u0417 \u0427\u0410\u0422\u0423 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0432\u0430\u043B\u0438, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0456 \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u044C):
+${recentChat || "(\u0447\u0430\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439)"}
 
 \u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430):
 ${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
@@ -4643,9 +4654,9 @@ ${CHIP_PROMPT_RULES}
       }
       try {
         const chatKey = "nm_chat_" + tab;
-        const chatMsgs = JSON.parse(localStorage.getItem(chatKey) || "[]");
-        chatMsgs.push({ role: "agent", text: "\u{1F989} " + parsed.text, ts: Date.now() });
-        localStorage.setItem(chatKey, JSON.stringify(chatMsgs));
+        const chatMsgs2 = JSON.parse(localStorage.getItem(chatKey) || "[]");
+        chatMsgs2.push({ role: "agent", text: "\u{1F989} " + parsed.text, ts: Date.now() });
+        localStorage.setItem(chatKey, JSON.stringify(chatMsgs2));
         restoreChatUI(tab);
       } catch (e) {
       }
