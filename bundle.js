@@ -3895,9 +3895,14 @@ ${pulseParts.join("\n")}
     urgent.forEach((t) => {
       critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}".`);
     });
-    const stuck = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
-    stuck.forEach((t) => {
+    const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    stuckDays3.forEach((t) => {
       important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
+    });
+    const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    forgotten.forEach((t) => {
+      const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
+      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
     });
     if (activeTasks.length > 0) {
       normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
