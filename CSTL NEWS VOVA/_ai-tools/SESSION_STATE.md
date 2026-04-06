@@ -11,7 +11,7 @@
 | **URL** | https://vshevchukkk.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/VShevchukkk/CSTL_NEWS |
 | **Гілка** | `main` |
-| **Власник** | Влад Шевчук (VShevchukkk) |
+| **Власник** | Вова Шевчук (VShevchukkk) |
 
 ---
 
@@ -33,9 +33,9 @@
 - Визначили архітектуру: JSON файли як база даних, модульний src/
 - Побудували MVP: 17 файлів, 4 вкладки (Новини/Події/Автобуси/Подати)
 - Задеплоїли на GitHub Pages (старе посилання volodymyr221.github.io/CSTL_NEWS)
-- Налаштували VS Code на Mac Влада
+- Налаштували VS Code на Mac Воваа
 - Клонували репозиторій на Desktop
-- Влад змінив нікнейм GitHub на VShevchukkk
+- Вова змінив нікнейм GitHub на VShevchukkk
 - Виявлено проблему з деплоєм після зміни нікнейму
 
 ---

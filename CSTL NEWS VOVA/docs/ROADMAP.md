@@ -23,7 +23,7 @@
 - [x] Service Worker (офлайн-кешування)
 - [x] GitHub Actions авто-деплой на GitHub Pages
 - [x] Тестовий контент (3 статті, 2 події)
-- [x] VS Code налаштовано на Mac Влада
+- [x] VS Code налаштовано на Mac Воваа
 
 ---
 
