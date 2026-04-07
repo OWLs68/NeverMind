@@ -645,6 +645,48 @@ async function sendClarifyText() {
 // + слова-маркери подій: приїзд, зустріч, день народження тощо.
 // Повертає { title, date } або null.
 // ============================================================
+// ============================================================
+// _detectEventDate — шукає ТІЛЬКИ дату в тексті (без маркерів)
+// Для випадку коли AI вже визначив що це event/подія
+// Повертає { title, date } або null
+// ============================================================
+function _detectEventDate(text) {
+  if (!text) return null;
+  const t = text.toLowerCase();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  // Паттерн 1: "20го", "20-го", "20 числа"
+  const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+  if (dayMatch) {
+    const day = parseInt(dayMatch[1]);
+    if (day >= 1 && day <= 31) {
+      let m = month;
+      if (day < now.getDate()) m = month + 1;
+      if (m > 11) { m = 0; }
+      const y = m < month ? year + 1 : year;
+      const date = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return { title: text.replace(/\s*\d{1,2}\s*(?:-?го|числа)\s*/i, ' ').trim(), date };
+    }
+  }
+
+  // Паттерн 2: "15 травня", "3 січня"
+  const monthNames = ['січн','лют','берез','квітн','травн','червн','липн','серпн','вересн','жовтн','листопад','грудн'];
+  const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+  if (monthMatch) {
+    const day = parseInt(monthMatch[1]);
+    const mIdx = monthNames.findIndex(m => monthMatch[2].toLowerCase().startsWith(m));
+    if (mIdx !== -1 && day >= 1 && day <= 31) {
+      const y = (mIdx < month || (mIdx === month && day < now.getDate())) ? year + 1 : year;
+      const date = `${y}-${String(mIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return { title: text.replace(/\s*\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i, ' ').trim(), date };
+    }
+  }
+
+  return null;
+}
+
 export function _detectEventFromTask(title) {
   if (!title) return null;
   const t = title.toLowerCase();
@@ -776,13 +818,27 @@ async function processSaveAction(parsed, originalText) {
     }
   }
   if (cat === 'event') {
-    const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
-                 /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
-    const moments = getMoments();
-    const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
-    moments.push(newMoment);
-    saveMoments(moments);
-    generateMomentSummary(newMoment.id, savedText);
+    // Перевіряємо чи є дата → календарна подія (nm_events), інакше → момент дня
+    const eventDetected = _detectEventDate(savedText);
+    if (eventDetected) {
+      // Календарна подія — зберігаємо в nm_events
+      const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: 'normal', createdAt: Date.now() };
+      const events = getEvents();
+      events.unshift(ev);
+      saveEvents(events);
+      const dateObj = new Date(eventDetected.date);
+      const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+      addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+    } else {
+      // Момент дня — як раніше
+      const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
+                   /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
+      const moments = getMoments();
+      const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
+      moments.push(newMoment);
+      saveMoments(moments);
+      generateMomentSummary(newMoment.id, savedText);
+    }
   }
   const catConfirm2 = {
     task: '✅ Задачу створено',
