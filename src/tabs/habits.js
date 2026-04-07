@@ -1108,11 +1108,13 @@ export async function sendTasksBarMessage() {
     + '4. Виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
     + '5. Створити звичку — JSON: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}\n'
     + '6. Створити задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
-    + '7. Додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
-    + '8. Скасувати крок — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
-    + '9. Створити нотатку — JSON: {"action":"create_note","text":"текст","folder":null}\n'
-    + '10. Зберегти витрату — JSON: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}\n'
-    + '11. Зберегти дохід — JSON: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}\n'
+    + '7. Створити ПОДІЮ (факт що станеться: приїзд, зустріч, концерт, день народження, візит) — JSON: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}\n'
+    + '   ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити, зробити). ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, свято, рейс). "приїзд мами 20го" = create_event. "купити молоко" = create_task.\n'
+    + '9. Додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
+    + '10. Скасувати крок — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
+    + '11. Створити нотатку — JSON: {"action":"create_note","text":"текст","folder":null}\n'
+    + '12. Зберегти витрату — JSON: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}\n'
+    + '13. Зберегти дохід — JSON: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}\n'
     + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.'
     + (aiContext ? '\n\n' + aiContext : '');
 
