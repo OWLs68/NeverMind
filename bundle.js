@@ -3915,7 +3915,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
     normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
     const tasks = getTasks();
-    const activeTasks = tasks.filter((t) => t.status !== "done");
+    const activeTasks = tasks.filter((t) => t.status === "active");
+    const recentlyDone = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3);
+    if (recentlyDone.length > 0) {
+      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
+    }
     if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
