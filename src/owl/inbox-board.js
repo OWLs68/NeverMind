@@ -462,7 +462,13 @@ export function getOwlBoardContext() {
 
   // Задачі
   const tasks = getTasks();
-  const activeTasks = tasks.filter(t => t.status !== 'done');
+  const activeTasks = tasks.filter(t => t.status === 'active');
+
+  // Нещодавно закриті — щоб AI не згадував їх як відкриті
+  const recentlyDone = tasks.filter(t => t.status === 'done' && t.completedAt && (Date.now() - t.completedAt) < 24 * 60 * 60 * 1000);
+  if (recentlyDone.length > 0) {
+    normal.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (НЕ згадуй як відкриті!): ${recentlyDone.map(t => '"' + t.title + '"').join(', ')}.`);
+  }
 
   // === РАНКОВИЙ БРИФ ===
   if (phase === 'morning' && owlCdExpired('morning_brief_ctx', 3 * 60 * 60 * 1000)) {
