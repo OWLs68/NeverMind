@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-06 (сесія start-session-aLcAG)
+**Оновлено:** 2026-04-07 (кінець сесії start-session-aLcAG)
 
 ---
 
@@ -12,7 +12,7 @@
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini (ключ у `localStorage`, назва `nm_gemini_key` — legacy) |
 | **Гілка** | `claude/start-session-aLcAG` |
-| **Repo** | **Private** (змінено 06.04) |
+| **Repo** | **Public** + LICENSE (All Rights Reserved) |
 
 ---
 
@@ -26,40 +26,48 @@
 
 ---
 
-## Що зроблено в сесії 06.04 (третя сесія — start-session-aLcAG)
+## Що зроблено в сесії 07.04 (start-session-aLcAG)
 
 ### B-18 — Модалка перегляду моменту дня
 - Тап на момент → модалка з повним текстом, часом, настроєм
 - Дизайн: темно-синій glassmorphism (як фон вкладки Вечір)
 - Модалка додавання моменту — той самий синій стиль
-- `setupModalSwipeClose` для свайпу закриття
 
 ### B-19 — Динамічна формула скору + настрій → OWL
-- **Скор тепер чисто об'єктивний:** середнє з джерел які мають дані
-  - Звички: done/planned
-  - Задачі: closedToday / max(active×0.2, 1)
-  - Проекти: stepsClosedToday / max(openSteps×0.2, 1)
-- Нове джерело — просто push в масив (адаптивна формула)
-- **Настрій окремо:** смайлик "Як пройшов день?" → getAIContext + getOwlBoardContext
-- OWL адаптує тон під настрій (підтримує якщо погано, підбадьорює якщо добре)
-- `doneAt` на кроках проектів для денного скору
-- 3.12 закрито, додано 3.13 в roadmap
+- **Скор чисто об'єктивний:** середнє з джерел які мають дані (звички, задачі, проекти)
+- Нове джерело — просто push в масив (адаптивна формула, 20% від активних)
+- **Настрій окремо:** смайлик → OWL prompt (адаптує тон), не впливає на скор
+- `doneAt` на кроках проектів. 3.12 закрито, 3.13 додано
 
-### Верифікація старих багів
-- **B-03, B-04, B-05, B-06, B-11, B-12** — закриті (не відтворюються або виправлені раніше)
-- **B-09** — був відкритий → вирішений через Calendar modal
+### Верифікація багів
+- **B-03, B-04, B-05, B-06, B-11, B-12** — закриті (не відтворюються)
 
-### Calendar modal (фази 1+2 з FEATURES_ROADMAP)
+### Calendar — повна фіча (фази 1-3 з FEATURES_ROADMAP)
 - Прибрано зламаний міні-календар з вкладки "Я"
+- **Новий файл `src/tabs/calendar.js`** — події, календар, блок "Найближче"
 - Кнопка 📅 між лічильниками Задачі/Звички в Продуктивність
-- Модалка календаря: місячний вигляд, навігація ‹/›, маркери днів
-- Тап на день → список задач цього дня
-- `dueDate` (ISO дата) і `priority` (critical/important/normal) в структурі задач
-- AI промпт оновлений — AI встановлює dueDate з тексту ("завтра", "в п'ятницю")
-- B-09 закрито
+- Модалка: зверху "Найближче" (події + дедлайни 7 днів), знизу місячний календар
+- `nm_events` — новий localStorage ключ для подій (не задач!)
+- `dueDate` і `priority` в структурі задач
+- `create_event` action — AI розрізняє задачі від подій (промпти оновлені)
+- Тап на день → спочатку події (📅 фіолетові), потім задачі
+- Inbox карточки створюються при `create_event` і `create_task` з будь-якого чат-бара
+
+### Один мозок — всі чат-бари
+- **Всі 7 чат-барів** знають про всі actions (create_event, create_task, create_habit, create_note, save_finance)
+- Task chat більше не блокує actions — обробляє через `processUniversalAction`
+- Пишеш де стоїш — OWL розбереться
 
 ### Інше
-- Репозиторій зроблений **Private**
+- Кольори фону Inbox ↔ Нотатки поміняні місцями
+- Repo: private → public + LICENSE (All Rights Reserved) + README.md
+- CI фікс: `contents:read` permission для private repo + environment protection rules
+- B-09 закрито (Calendar modal замінив зламаний міні-календар)
+
+### Нові баги
+- **B-20** — табло не реагує на відповіді юзера в чаті (продовжує те саме питання)
+- **B-21** — табло маловаріативне (зациклюється на тих самих задачах)
+- **B-22** — GPT-4o-mini плутає подію з задачею (промпт ігнорує, потрібна кодова детекція)
 
 ---
 
@@ -98,10 +106,14 @@
 
 ## 🔴 Що треба зробити далі
 
-### Календар — наступні фази (FEATURES_ROADMAP)
-- **Фаза 3** — `nm_events` (події без чекбоксу, дата/час + нотатка)
-- **Фаза 4** — Закріплені картки-нагадування в Inbox
-- **Фаза 5** — `getAIContext()` + OWL нагадування по `dueDate`
+### Пріоритетні баги
+- **B-20** — табло не реагує на відповіді (відповідь в чаті → оновити табло)
+- **B-21** — табло маловаріативне (cooldown по контенту, різноманітність тем)
+- **B-22** — GPT-4o-mini плутає подію з задачею (кодова детекція regex як fallback)
+
+### Календар — наступні фази
+- **Фаза 4** — Закріплені картки-нагадування в Inbox (дедлайни зверху стрічки)
+- **Фаза 5** — `getAIContext()` + OWL нагадування по `dueDate` і `nm_events`
 
 ### По плану Мозку OWL
 - **3.8** Забуті задачі (5+ днів → м'яке питання "хочеш ще робити?")
@@ -110,8 +122,8 @@
 - **3.13** OWL запитує ціль продуктивності на день
 - **4.1** Push-сповіщення (після Supabase)
 
-### Баги
-- B-15 — setTimeout(100) — низький пріоритет (єдиний відкритий баг)
+### Дрібні
+- B-15 — setTimeout(100) — низький пріоритет
 
 ---
 
@@ -119,18 +131,20 @@
 
 | Файл | Опис |
 |------|------|
-| `src/owl/proactive.js` | **ЄДИНА генерація табло** `generateBoardMessage(tab)` для ВСІХ вкладок. Debounce listener. Welcome Back. Крос-контекст. Емпатія |
-| `src/owl/chips.js` | Центральний модуль чіпів — рендер, клік, fuzzy match ✔️, трекінг `nm_chip_stats`, CHIP_PROMPT_RULES |
-| `src/owl/inbox-board.js` | OWL Board Inbox: тригери, cooldowns, контекст. `generateOwlBoardMessage` ВИДАЛЕНО (замінено на proactive.js) |
-| `src/owl/board.js` | Рендер табло всіх вкладок |
-| `src/ai/core.js` | getAIContext, callAI, getOWLPersonality (залізне правило) |
-| `src/core/nav.js` | doRefreshMemory (факти + слова юзера), налаштування |
-| `src/core/utils.js` | logRecentAction, getRecentActions (крос-контекст) |
+| `src/tabs/calendar.js` | **НОВИЙ** — nm_events, Calendar modal, блок "Найближче", getEvents/saveEvents |
+| `src/owl/proactive.js` | Єдина генерація табло для ВСІХ вкладок. Debounce, Welcome Back, крос-контекст, емпатія |
+| `src/owl/chips.js` | Центральний модуль чіпів — рендер, клік, fuzzy match ✔️, трекінг |
+| `src/owl/inbox-board.js` | OWL Board: тригери, cooldowns, getOwlBoardContext (вечірній пульс + настрій) |
+| `src/ai/core.js` | getAIContext (+ eveningMood, dueDate, priority), callAI, OWL особистість |
+| `src/tabs/tasks.js` | Задачі + task chat (тепер з processUniversalAction) |
+| `src/tabs/habits.js` | Звички + processUniversalAction (create_event, create_task, тощо) |
+| `src/core/nav.js` | TAB_THEMES (кольори поміняні Inbox↔Notes), doRefreshMemory |
 
 ---
 
 ## Попередні сесії
 
+- **07.04** — B-18/B-19 закриті, Calendar modal + nm_events, один мозок (всі чати = universal action), динамічний скор, верифікація 6 багів, LICENSE/README, CI фікс. Нові: B-20/B-21/B-22.
 - **06.04 (2)** — Мозок OWL Фази 1-3: єдина генерація, синхронізація табло↔чат, Welcome Back, крос-контекст, трекінг чіпів, insights, емпатія, ранковий бриф. B-16/B-17 закриті.
 - **06.04** — B-16: централізація чіпів в chips.js, fuzzy match ✔️, промпт "чіпи = відповіді". Roadmap: 12 ідей проактивності.
 - **05.04** — Inline стилі → CSS: 17 нових класів, ~145 inline стилів замінено.
