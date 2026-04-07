@@ -7470,6 +7470,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       msgs.push({ role, text, ts: Date.now() });
       if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
       localStorage.setItem(key, JSON.stringify(msgs));
+      if (role === "user") window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "chat" }));
     } catch (e) {
     }
   }
