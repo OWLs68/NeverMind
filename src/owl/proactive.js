@@ -309,6 +309,35 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
   _boardGenerating[tab] = false;
 }
 
+// === Контекстні підказки при першому відвідуванні вкладки ===
+const NM_FIRST_VISIT_KEY = 'nm_tab_first_visit';
+const TAB_HINTS = {
+  tasks: 'Тут живуть твої задачі і звички. Напиши мені що треба зробити — я створю задачу з кроками 📋',
+  notes: 'Це твої нотатки. Можеш розкладати по папках. Напиши що хочеш запам\'ятати — я збережу 📝',
+  finance: 'Тут фінанси. Скажи скільки витратив — я запишу. Можеш встановити місячний бюджет 💰',
+  health: 'Тут про здоров\'я. Додавай картки (ліки, симптоми, аналізи) і щоденні шкали (енергія, сон, біль) 🏥',
+  projects: 'Тут великі проекти з кроками і метриками. Скажи "новий проект" — я допоможу створити 🚀',
+  evening: 'Тут моменти дня і вечірній підсумок. Записуй що важливого сталося — ввечері підведемо підсумки ✨',
+  me: 'Це вкладка "Я" — звички, стріки, статистика. Тут бачиш свій прогрес за тиждень і місяць 📊',
+  habits: 'Тут твої звички. Відмічай щодня — будуй серії! Можеш додати нову через чат-бар знизу 🌱',
+};
+
+function _showFirstVisitHint(tab) {
+  if (!TAB_HINTS[tab]) return false;
+  try {
+    const visited = JSON.parse(localStorage.getItem(NM_FIRST_VISIT_KEY) || '{}');
+    if (visited[tab]) return false;
+    // Позначаємо як відвідану
+    visited[tab] = Date.now();
+    localStorage.setItem(NM_FIRST_VISIT_KEY, JSON.stringify(visited));
+    // Показуємо підказку на табло
+    const newMsg = { text: TAB_HINTS[tab], priority: 'normal', chips: [], ts: Date.now() };
+    saveTabBoardMsg(tab, newMsg);
+    renderTabBoard(tab);
+    return true;
+  } catch(e) { return false; }
+}
+
 export function tryTabBoardUpdate(tab) {
   if (tab === 'inbox') return;
   // Скидаємо стан до speech при кожному переключенні вкладки
@@ -316,6 +345,8 @@ export function tryTabBoardUpdate(tab) {
     _owlTabStates[tab] = 'speech';
     _owlTabApplyState(tab);
   }
+  // Підказка при першому відвідуванні
+  if (_showFirstVisitHint(tab)) return;
   renderTabBoard(tab); // завжди показуємо збережені дані
   const hour = new Date().getHours();
   if (hour < 5) return; // тихі години — генерація пропускається
