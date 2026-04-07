@@ -7361,6 +7361,33 @@ ${memory}`);
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_task):
 ${taskList}`);
     }
+    try {
+      const todayISO = now.toISOString().slice(0, 10);
+      const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+      const upcoming = [];
+      getEvents().forEach((ev) => {
+        if (ev.date >= todayISO && ev.date <= in7) {
+          const diff = Math.round((/* @__PURE__ */ new Date(ev.date + "T00:00:00") - /* @__PURE__ */ new Date(todayISO + "T00:00:00")) / 864e5);
+          const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
+          upcoming.push(`- \u{1F4C5} "${ev.title}" \u2014 ${when}${ev.time ? " \u043E " + ev.time : ""}`);
+        }
+      });
+      getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
+        if (t.dueDate >= todayISO && t.dueDate <= in7) {
+          const diff = Math.round((/* @__PURE__ */ new Date(t.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO + "T00:00:00")) / 864e5);
+          const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
+          if (!upcoming.some((u) => u.includes(t.title))) {
+            upcoming.push(`- \u23F0 "${t.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D ${when}`);
+          }
+        }
+      });
+      if (upcoming.length > 0) {
+        parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0442\u0430 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0438:
+${upcoming.join("\n")}
+\u041D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u043E!`);
+      }
+    } catch (e) {
+    }
     const habits = getHabits();
     const log = getHabitLog();
     const today = now.toDateString();
@@ -7713,6 +7740,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
       init_habits();
       init_notes();
       init_finance();
+      init_calendar();
       init_evening();
       init_inbox_board();
       init_chips();
