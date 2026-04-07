@@ -97,6 +97,12 @@ export function getAIContext() {
     parts.push(`Активні задачі (використовуй ID для complete_task):\n${taskList}`);
   }
 
+  // === Нещодавно закриті задачі (24 години) — щоб AI знав що вже зроблено ===
+  const recentlyDone = getTasks().filter(t => t.status === 'done' && t.completedAt && (now - t.completedAt) < 24 * 60 * 60 * 1000).slice(0, 5);
+  if (recentlyDone.length > 0) {
+    parts.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (вже виконані, НЕ нагадуй про них!):\n${recentlyDone.map(t => '- ✅ "' + t.title + '"').join('\n')}`);
+  }
+
   // === Найближчі події та дедлайни (7 днів) ===
   try {
     const todayISO = now.toISOString().slice(0, 10);
