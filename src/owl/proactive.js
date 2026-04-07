@@ -332,15 +332,73 @@ export function tryTabBoardUpdate(tab) {
 
 // === Єдиний реактивний listener для ВСІХ вкладок (включно з inbox) ===
 let _boardUpdateTimer = null;
-const BOARD_UPDATE_DELAY = 3000;
+const BOARD_UPDATE_DELAY = 5000;
 
-window.addEventListener('nm-data-changed', () => {
+// Локальні миттєві реакції — без API, показуються одразу
+const INSTANT_REACTIONS = {
+  complete_task: [
+    'Зроблено! Одна менше 💪',
+    'Так тримати! ✅',
+    'Закрито! Що далі?',
+    'Молодець! Рухаємось далі 🎯',
+    'Готово! Ще трішки і все чисто',
+  ],
+  complete_habit: [
+    'Є! Звичка на місці 🔥',
+    'Зараховано! Продовжуй серію 💪',
+    'Молодець! Крок за кроком',
+    'Відмічено! Стабільність — сила ✅',
+  ],
+  hold_quit_habit: [
+    'Тримаєшся! Це головне 💪',
+    'Ще один день перемоги! 🔥',
+    'Красава! Кожен день рахується',
+  ],
+  add_moment: [
+    'Записав момент ✨',
+    'Гарно що фіксуєш!',
+  ],
+};
+
+function _showInstantReaction(tab) {
+  const actions = getRecentActions();
+  const now = Date.now();
+  // Шукаємо дію за останні 3 сек
+  const recent = actions.filter(a => (now - a.ts) < 3000).pop();
+  if (!recent) return false;
+
+  const reactions = INSTANT_REACTIONS[recent.action];
+  if (!reactions) return false;
+
+  const text = reactions[Math.floor(Math.random() * reactions.length)];
+  const isInbox = tab === 'inbox';
+  const newMsg = { text, priority: 'normal', chips: [], ts: now };
+
+  if (isInbox) {
+    newMsg.id = now;
+    const msgs = getOwlBoardMessages();
+    msgs.unshift(newMsg);
+    saveOwlBoardMessages(msgs.slice(0, 3));
+    renderOwlBoard();
+  } else {
+    saveTabBoardMsg(tab, newMsg);
+    renderTabBoard(tab);
+  }
+  return true;
+}
+
+window.addEventListener('nm-data-changed', (e) => {
+  const tab = currentTab || 'inbox';
+
+  // Миттєва локальна реакція (без API)
+  if (e.detail !== 'chat') _showInstantReaction(tab);
+
+  // Відкладена AI-генерація нового повідомлення
   if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
   _boardUpdateTimer = setTimeout(() => {
     _boardUpdateTimer = null;
-    const tab = currentTab || 'inbox';
     const phase = getDayPhase();
-    if (phase !== 'silent') generateBoardMessage(tab);
+    if (phase !== 'silent') generateBoardMessage(currentTab || 'inbox');
   }, BOARD_UPDATE_DELAY);
 });
 
