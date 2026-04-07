@@ -9489,11 +9489,17 @@ ${userText}
     const months = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406\u0422", "\u0422\u0420\u0410\u0412", "\u0427\u0415\u0420\u0412", "\u041B\u0418\u041F", "\u0421\u0415\u0420\u041F", "\u0412\u0415\u0420", "\u0416\u041E\u0412\u0422", "\u041B\u0418\u0421\u0422", "\u0413\u0420\u0423\u0414"];
     return `${d.getDate()} ${months[d.getMonth()]}`;
   }
-  function toggleInboxExpand(id) {
+  function navigateInboxItem(id) {
     if (_inboxSwipedRecently) return;
     const el = document.getElementById("item-" + id);
     if (!el) return;
-    el.classList.toggle("inbox-expanded");
+    const cat = el.dataset.cat;
+    if (cat === "event") {
+      window.openCalendarModal();
+      return;
+    }
+    const tab = INBOX_NAV_MAP[cat];
+    if (tab) switchTab(tab);
   }
   function _renderUpcoming() {
     const now = /* @__PURE__ */ new Date();
@@ -9564,7 +9570,7 @@ ${userText}
            ontouchstart="swipeStart(event,${item.id})"
            ontouchmove="swipeMove(event,${item.id})"
            ontouchend="swipeEnd(event,${item.id})"
-           onclick="toggleInboxExpand(${item.id})">
+           onclick="navigateInboxItem(${item.id})">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">
@@ -10107,7 +10113,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tb = document.getElementById("tab-bar");
     return tb ? tb.offsetHeight : 83;
   }
-  var _inboxTypingEl, _inboxUnreadCount, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, _inboxSwipedRecently, swipeState, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
+  var _inboxTypingEl, _inboxUnreadCount, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, _inboxSwipedRecently, INBOX_NAV_MAP, swipeState, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
   var init_inbox = __esm({
     "src/tabs/inbox.js"() {
       init_nav();
@@ -10151,6 +10157,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         finance: { icon: "\u20B4", label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", dotClass: "cat-dot-finance", tagClass: "cat-finance" }
       };
       _inboxSwipedRecently = false;
+      INBOX_NAV_MAP = {
+        task: "tasks",
+        habit: "habits",
+        note: "notes",
+        idea: "notes",
+        finance: "finance"
+      };
       swipeState = {};
       aiLoading = false;
       inboxChatHistory = [];
@@ -10163,7 +10176,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         sendClarifyText,
         closeClarify,
         selectClarifyOption,
-        toggleInboxExpand,
+        navigateInboxItem,
         swipeStart,
         swipeMove,
         swipeEnd
