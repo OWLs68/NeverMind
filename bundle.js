@@ -6901,6 +6901,20 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     if (action === "create_task") {
       const title = (parsed.title || "").trim();
       if (!title) return false;
+      const eventDetected = _detectEventFromTask(title);
+      if (eventDetected) {
+        const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
+        const events = getEvents();
+        events.unshift(ev);
+        saveEvents(events);
+        const dateObj = new Date(eventDetected.date);
+        const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+        const items2 = getInbox();
+        items2.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
+        saveInbox(items2);
+        addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}`);
+        return true;
+      }
       const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
       const newTask = { id: Date.now(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() };
       if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
@@ -9857,6 +9871,41 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
   }
+  function _detectEventFromTask(title) {
+    if (!title) return null;
+    const t = title.toLowerCase();
+    const eventMarkers = /приїзд|приїжд|приліт|прибут|зустріч(?!ай)|візит|прийом|рейс|концерт|виставк|свято|день народження|ювілей|весілля|іспит|екзамен|співбесід/i;
+    if (!eventMarkers.test(t)) return null;
+    const now = /* @__PURE__ */ new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+    if (dayMatch) {
+      const day = parseInt(dayMatch[1]);
+      if (day >= 1 && day <= 31) {
+        let m = month;
+        if (day < now.getDate()) m = month + 1;
+        if (m > 11) {
+          m = 0;
+        }
+        const y = m < month ? year + 1 : year;
+        const date = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return { title: title.replace(/\s*\d{1,2}\s*(?:-?го|числа)\s*/i, " ").trim(), date };
+      }
+    }
+    const monthNames = ["\u0441\u0456\u0447\u043D", "\u043B\u044E\u0442", "\u0431\u0435\u0440\u0435\u0437", "\u043A\u0432\u0456\u0442\u043D", "\u0442\u0440\u0430\u0432\u043D", "\u0447\u0435\u0440\u0432\u043D", "\u043B\u0438\u043F\u043D", "\u0441\u0435\u0440\u043F\u043D", "\u0432\u0435\u0440\u0435\u0441\u043D", "\u0436\u043E\u0432\u0442\u043D", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0433\u0440\u0443\u0434\u043D"];
+    const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+    if (monthMatch) {
+      const day = parseInt(monthMatch[1]);
+      const mIdx = monthNames.findIndex((m) => monthMatch[2].toLowerCase().startsWith(m));
+      if (mIdx !== -1 && day >= 1 && day <= 31) {
+        const y = mIdx < month || mIdx === month && day < now.getDate() ? year + 1 : year;
+        const date = `${y}-${String(mIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return { title: title.replace(/\s*\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i, " ").trim(), date };
+      }
+    }
+    return null;
+  }
   async function processSaveAction(parsed, originalText) {
     const catMap = { "\u043D\u043E\u0442\u0430\u0442\u043A\u0430": "note", "\u0437\u0430\u0434\u0430\u0447\u0430": "task", "\u0437\u0432\u0438\u0447\u043A\u0430": "habit", "\u0456\u0434\u0435\u044F": "idea", "\u043F\u043E\u0434\u0456\u044F": "event" };
     const rawCat = (parsed.category || "").toLowerCase();
@@ -9868,9 +9917,20 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     saveInbox(items);
     renderInbox();
     if (cat === "task") {
+      const taskTitle = parsed.task_title || savedText;
+      const eventDetected = _detectEventFromTask(taskTitle);
+      if (eventDetected) {
+        const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
+        const events = getEvents();
+        events.unshift(ev);
+        saveEvents(events);
+        const dateObj = new Date(eventDetected.date);
+        const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+        addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
+        return;
+      }
       const taskId = Date.now();
       const tasks = getTasks();
-      const taskTitle = parsed.task_title || savedText;
       const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0 ? parsed.task_steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
       const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: taskId };
       if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
