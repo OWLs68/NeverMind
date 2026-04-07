@@ -408,6 +408,7 @@ export async function sendToAI(fromChip = false) {
           const events = getEvents();
           events.unshift(ev);
           saveEvents(events);
+          const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
           addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${action.time ? ' о ' + action.time : ''}`);
