@@ -1004,7 +1004,14 @@
   </div>
 </div>
 
-<!-- CALENDAR MODAL -->
+<!-- CALENDAR EVENTS LIST (зверху екрану) -->
+<div id="calendar-events-modal" style="display:none;position:fixed;top:0;left:0;right:0;z-index:201;padding:calc(env(safe-area-inset-top) + 12px) 16px 0;pointer-events:none">
+  <div style="pointer-events:auto;width:100%;max-width:480px;margin:0 auto;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:20px;overflow:hidden;border:1.5px solid rgba(255,255,255,0.5);max-height:35vh">
+    <div id="calendar-events-list" style="overflow-y:auto;max-height:35vh;padding:18px 18px"></div>
+  </div>
+</div>
+
+<!-- CALENDAR MODAL (знизу екрану) -->
 <div id="calendar-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div onclick="closeCalendarModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
