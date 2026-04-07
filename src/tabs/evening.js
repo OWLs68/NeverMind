@@ -65,11 +65,37 @@ export async function sendMeChatMessage() {
 
   const context = getAIContext();
   const stats = getMeStatsContext();
-  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською. НЕ вигадуй факти яких немає в даних.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+  const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською. НЕ вигадуй факти яких немає в даних.
+Якщо треба виконати дію — відповідай JSON:
+- Задача: {"action":"create_task","title":"назва","steps":[]}
+- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
+- Закрити задачу: {"action":"complete_task","task_id":ID}
+- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
+- Нотатка: {"action":"create_note","text":"текст","folder":null}
+- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
+- Подія: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
 
   const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
   const loadEl = document.getElementById(loadId);
-  if (loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
+
+  // Спробуємо розпарсити JSON дію
+  let handled = false;
+  if (reply) {
+    try {
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
+          if (loadEl) loadEl.textContent = '✅';
+          handled = true;
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (!handled && loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
   if (reply) meChatHistory.push({ role: 'assistant', content: reply });
   if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
 }
@@ -909,9 +935,13 @@ export async function sendEveningBarMessage() {
 - Нотатка: {"action":"create_note","text":"текст","folder":null}
 - Задача: {"action":"create_task","title":"назва","steps":[]}
 - Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
+- Закрити задачу: {"action":"complete_task","task_id":ID}
+- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження).
 Інакше — текст українською 1-3 речення.
 НЕ вигадуй ліміти, плани або факти яких немає в даних вище.${aiContext ? '\n\n' + aiContext : ''}`;
 

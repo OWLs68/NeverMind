@@ -372,6 +372,9 @@ async function sendTaskChatMessage() {
 Якщо юзер просить щось НЕ про цю задачу (нова задача, подія, нотатка, звичка, витрата) — відповідай відповідним JSON:
 - Задача: {"action":"create_task","title":"назва","steps":[]}
 - Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
+- Закрити задачу: {"action":"complete_task","task_id":ID}
+- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
 - Нотатка: {"action":"create_note","text":"текст","folder":null}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}

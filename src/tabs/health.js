@@ -395,9 +395,13 @@ ${aiContext ? '\n\n' + aiContext : ''}
 Також вмієш (для будь-яких записів, не тільки здоров'я):
 - Задача: {"action":"create_task","title":"назва","steps":[]}
 - Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
+- Закрити задачу: {"action":"complete_task","task_id":ID}
+- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження).
 Інакше — відповідай текстом 1-3 речення українською. НЕ вигадуй медичних рекомендацій.`;
 
   try {
