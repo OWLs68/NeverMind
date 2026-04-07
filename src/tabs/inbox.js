@@ -167,13 +167,72 @@ function toggleInboxExpand(id) {
   el.classList.toggle('inbox-expanded');
 }
 
+// ============================================================
+// _renderUpcoming — закріплені картки найближчих подій/дедлайнів
+// Показує зверху стрічки Inbox: події (nm_events) + задачі з dueDate
+// Максимум 3, наступні 7 днів, відсортовані по даті
+// ============================================================
+function _renderUpcoming() {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const upcoming = [];
+
+  // Події з nm_events
+  const events = getEvents();
+  for (const ev of events) {
+    if (ev.date >= todayStr && ev.date <= in7days) {
+      upcoming.push({ type: 'event', title: ev.title, date: ev.date, time: ev.time, id: ev.id });
+    }
+  }
+
+  // Задачі з dueDate
+  const tasks = getTasks().filter(t => t.status === 'active' && t.dueDate);
+  for (const t of tasks) {
+    if (t.dueDate >= todayStr && t.dueDate <= in7days) {
+      upcoming.push({ type: 'task', title: t.title, date: t.dueDate, id: t.id });
+    }
+  }
+
+  if (upcoming.length === 0) return '';
+
+  // Сортуємо по даті (найближчі першими)
+  upcoming.sort((a, b) => a.date.localeCompare(b.date));
+
+  const MONTHS_OF = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+
+  const cards = upcoming.slice(0, 3).map(item => {
+    const d = new Date(item.date + 'T00:00:00');
+    const diffDays = Math.round((d - new Date(todayStr + 'T00:00:00')) / 86400000);
+    let when;
+    if (diffDays === 0) when = 'сьогодні';
+    else if (diffDays === 1) when = 'завтра';
+    else when = `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
+
+    const icon = item.type === 'event' ? '📅' : '⏰';
+    const timeStr = item.time ? ` о ${item.time}` : '';
+    const action = item.type === 'event'
+      ? `onclick="openCalendarModal()"`
+      : `onclick="switchTab('tasks')"`;
+
+    return `<div class="inbox-upcoming-card" ${action}>
+      <span class="inbox-upcoming-icon">${icon}</span>
+      <span class="inbox-upcoming-text">${escapeHtml(item.title)}</span>
+      <span class="inbox-upcoming-when">${when}${timeStr}</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="inbox-upcoming">${cards}</div>`;
+}
+
 export function renderInbox() {
   const items = getInbox();
   const list = document.getElementById('inbox-list');
   const countEl = document.getElementById('inbox-count');
 
   if (items.length === 0) {
-    list.innerHTML = `<div class="inbox-empty">
+    list.innerHTML = _renderUpcoming() + `<div class="inbox-empty">
       <div class="inbox-empty-icon">📥</div>
       <div class="inbox-empty-title">Inbox порожній</div>
       <div class="inbox-empty-sub">Напиши що завгодно — Агент розбереться</div>
@@ -184,7 +243,7 @@ export function renderInbox() {
   countEl.style.display = 'inline';
   countEl.textContent = items.length;
 
-  let html = '';
+  let html = _renderUpcoming();
   let lastDateLabel = '';
 
   items.forEach(item => {
