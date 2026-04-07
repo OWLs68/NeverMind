@@ -135,6 +135,45 @@ function checkTabBoardTrigger(tab) {
 let _boardGenerating = {};
 
 // ============================================================
+// _extractBannedWords — витягує ключові слова з останніх повідомлень
+// для явної заборони в промпті (GPT-4o-mini краще реагує на конкретику)
+// ============================================================
+function _extractBannedWords(msgs) {
+  if (!msgs || msgs.length === 0) return '';
+  const stopWords = new Set(['що','які','яка','який','яке','для','при','або','але','цей','ця','це','той','та','те','вже','ще','так','ні','не','без','над','під','між','через','коли','тому','якщо','було','буде','має','треба','можна','можеш','сьогодні','вчора','завтра','зараз','потім','добре','гарно','давай','може','ось','там','тут','дуже','всі','все','його','її','вони','тобі','тебе','мені','нас','час','день','дні','раз','ти','він','вона','як']);
+  const words = new Set();
+  for (const m of msgs) {
+    const text = (m.text || '').toLowerCase().replace(/[^\wа-яіїєґ'\s]/g, '');
+    for (const w of text.split(/\s+/)) {
+      if (w.length >= 4 && !stopWords.has(w)) words.add(w);
+    }
+  }
+  return [...words].slice(0, 15).join(', ');
+}
+
+// ============================================================
+// _isTooSimilar — перевіряє чи нове повідомлення надто схоже на останні
+// Повертає true якщо overlap ключових слів > 60%
+// ============================================================
+function _isTooSimilar(newText, recentMsgs) {
+  if (!recentMsgs || recentMsgs.length === 0) return false;
+  const getWords = (t) => {
+    const ws = (t || '').toLowerCase().replace(/[^\wа-яіїєґ'\s]/g, '').split(/\s+/).filter(w => w.length >= 4);
+    return new Set(ws);
+  };
+  const newWords = getWords(newText);
+  if (newWords.size === 0) return false;
+  for (const m of recentMsgs.slice(0, 3)) {
+    const oldWords = getWords(m.text);
+    if (oldWords.size === 0) continue;
+    let overlap = 0;
+    for (const w of newWords) { if (oldWords.has(w)) overlap++; }
+    if (overlap / newWords.size > 0.6) return true;
+  }
+  return false;
+}
+
+// ============================================================
 // generateBoardMessage — ЄДИНА функція генерації повідомлення табло
 // Працює для БУДЬ-якої вкладки включно з inbox
 // ============================================================
@@ -219,7 +258,7 @@ ${localStorage.getItem('nm_memory') || '(ще не знаю)'}
 - Максимум 2 речення. Коротко і конкретно.
 - Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". ${isInbox ? 'Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.' : 'Кажи конкретно і зрозуміло що відбувається — як друг, не як програма.'}
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
-- НЕ повторюй те що вже казав: "${recentTexts || 'нічого'}"
+- НЕ повторюй те що вже казав. ЗАБОРОНЕНІ слова (вже використані в останніх повідомленнях, ОБОВ'ЯЗКОВО обери ІНШУ тему): ${_extractBannedWords(allMsgs.slice(0, 3)) || 'немає'}.
 - ЕМПАТІЯ: якщо в чаті або моментах є слова-маркери ("втомився", "не можу", "забив", "погано", "зле", "хворію", "важко", "дістало") — реагуй ВІДПОВІДНО ДО СВОГО ХАРАКТЕРУ: Coach — визнай що важко, але підштовхни зробити хоча б мінімум ("Тяжко? Ок. Але одну дрібницю закрий — потім легше"). Partner — м'яка підтримка, дозволь відпочити ("Відпочинь, задачі почекають"). Mentor — запитай причину, допоможи розібратись ("Що саме виснажило? Може переглянемо пріоритети?").
 - Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
 ${CHIP_PROMPT_RULES}
@@ -245,6 +284,9 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (!reply) { _boardGenerating[tab] = false; return; }
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
+
+    // Антиповтор: якщо нове повідомлення надто схоже на останні — відкидаємо
+    if (_isTooSimilar(parsed.text, allMsgs)) { _boardGenerating[tab] = false; return; }
 
     // Збереження: inbox і вкладки мають різні сховища
     const newMsg = { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
