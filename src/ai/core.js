@@ -11,6 +11,7 @@ import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
+import { getEvents } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
@@ -95,6 +96,32 @@ export function getAIContext() {
     }).join('\n');
     parts.push(`Активні задачі (використовуй ID для complete_task):\n${taskList}`);
   }
+
+  // === Найближчі події та дедлайни (7 днів) ===
+  try {
+    const todayISO = now.toISOString().slice(0, 10);
+    const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const upcoming = [];
+    getEvents().forEach(ev => {
+      if (ev.date >= todayISO && ev.date <= in7) {
+        const diff = Math.round((new Date(ev.date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
+        const when = diff === 0 ? 'СЬОГОДНІ' : diff === 1 ? 'ЗАВТРА' : `через ${diff} дн`;
+        upcoming.push(`- 📅 "${ev.title}" — ${when}${ev.time ? ' о ' + ev.time : ''}`);
+      }
+    });
+    getTasks().filter(t => t.status === 'active' && t.dueDate).forEach(t => {
+      if (t.dueDate >= todayISO && t.dueDate <= in7) {
+        const diff = Math.round((new Date(t.dueDate + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
+        const when = diff === 0 ? 'СЬОГОДНІ' : diff === 1 ? 'ЗАВТРА' : `через ${diff} дн`;
+        if (!upcoming.some(u => u.includes(t.title))) {
+          upcoming.push(`- ⏰ "${t.title}" — дедлайн ${when}`);
+        }
+      }
+    });
+    if (upcoming.length > 0) {
+      parts.push(`[ВАЖЛИВО] Найближчі події та дедлайни:\n${upcoming.join('\n')}\nНагадуй про них проактивно!`);
+    }
+  } catch(e) {}
 
   // === Звички сьогодні (з ID для зіставлення) ===
   const habits = getHabits();
