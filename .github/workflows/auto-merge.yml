@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
 
     steps:
       - name: Checkout repo
@@ -55,27 +59,6 @@ jobs:
           git diff --staged --quiet || git commit -m "build: generate bundle.js"
           git push origin main
           echo "Deployed"
-
-  deploy:
-    needs: merge
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Pull latest main
-        run: git pull origin main --ff-only
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
