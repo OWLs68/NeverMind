@@ -398,6 +398,11 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
 - Закрити задачу: {"action":"complete_task","task_id":ID}
 - Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
+- Редагувати задачу: {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- Видалити задачу: {"action":"delete_task","task_id":ID}
+- Видалити звичку: {"action":"delete_habit","habit_id":ID}
+- Перевідкрити задачу: {"action":"reopen_task","task_id":ID}
+- Записати момент дня: {"action":"add_moment","text":"що сталося"}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}

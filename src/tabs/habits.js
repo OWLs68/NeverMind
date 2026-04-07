@@ -12,7 +12,7 @@ import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats } from './finance.js';
-import { renderMeHabitsStats } from './evening.js';
+import { renderMeHabitsStats, getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents } from './calendar.js';
 
 // === HABITS ===
@@ -981,6 +981,86 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  if (action === 'edit_task') {
+    const tasks = getTasks();
+    const t = tasks.find(x => x.id === parsed.task_id);
+    if (!t) {
+      const nameQ = (parsed.title || '').toLowerCase();
+      const found = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      if (!found) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
+      if (parsed.title) found.title = parsed.title;
+      if (parsed.dueDate) found.dueDate = parsed.dueDate;
+      if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) found.priority = parsed.priority;
+      saveTasks(tasks);
+      if (currentTab === 'tasks') renderTasks();
+      addMsg('agent', '✏️ Задачу "' + found.title + '" оновлено');
+      return true;
+    }
+    if (parsed.title) t.title = parsed.title;
+    if (parsed.dueDate) t.dueDate = parsed.dueDate;
+    if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) t.priority = parsed.priority;
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', '✏️ Задачу "' + t.title + '" оновлено');
+    return true;
+  }
+
+  if (action === 'delete_task') {
+    const tasks = getTasks();
+    const t = tasks.find(x => x.id === parsed.task_id);
+    const nameQ = (parsed.title || parsed.query || '').toLowerCase();
+    const target = t || tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+    if (!target) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
+    addToTrash('task', target, null);
+    const remaining = tasks.filter(x => x.id !== target.id);
+    saveTasks(remaining);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', '🗑️ Задачу "' + target.title + '" видалено');
+    showUndoToast();
+    return true;
+  }
+
+  if (action === 'delete_habit') {
+    const habits = getHabits();
+    const h = habits.find(x => x.id === parsed.habit_id);
+    const nameQ = (parsed.name || parsed.query || '').toLowerCase();
+    const target = h || habits.find(x => x.name.toLowerCase().includes(nameQ.slice(0, 6)));
+    if (!target) { addMsg('agent', 'Не знайшов цю звичку.'); return true; }
+    addToTrash('habit', target, null);
+    const remaining = habits.filter(x => x.id !== target.id);
+    saveHabits(remaining);
+    renderProdHabits(); renderHabits();
+    addMsg('agent', '🗑️ Звичку "' + target.name + '" видалено');
+    showUndoToast();
+    return true;
+  }
+
+  if (action === 'reopen_task') {
+    const tasks = getTasks();
+    const t = tasks.find(x => x.id === parsed.task_id && x.status === 'done');
+    const nameQ = (parsed.title || parsed.query || '').toLowerCase();
+    const target = t || tasks.find(x => x.status === 'done' && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+    if (!target) { addMsg('agent', 'Не знайшов закриту задачу з такою назвою.'); return true; }
+    target.status = 'active';
+    delete target.completedAt;
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', '🔄 Задачу "' + target.title + '" перевідкрито');
+    return true;
+  }
+
+  if (action === 'add_moment') {
+    const text = (parsed.text || '').trim();
+    if (!text) return false;
+    const mood = /добре|чудово|супер|відмінно|весело|щасли|круто|кайф/i.test(text) ? 'positive' :
+                 /погано|жахливо|сумно|нудно|важко|втомив|зле|дістало/i.test(text) ? 'negative' : 'neutral';
+    const moments = getMoments();
+    moments.push({ id: Date.now(), text, mood, ts: Date.now() });
+    saveMoments(moments);
+    addMsg('agent', '✨ Момент записано');
+    return true;
+  }
+
   if (action === 'create_habit') {
     const name = (parsed.name || '').trim();
     if (!name) return false;
@@ -1141,6 +1221,11 @@ export async function sendTasksBarMessage() {
     + '11. Створити нотатку — JSON: {"action":"create_note","text":"текст","folder":null}\n'
     + '12. Зберегти витрату — JSON: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}\n'
     + '13. Зберегти дохід — JSON: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}\n'
+    + '14. Редагувати задачу (назву, дедлайн, пріоритет) — JSON: {"action":"edit_task","task_id":ID,"title":"нова назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}\n'
+    + '15. Видалити задачу — JSON: {"action":"delete_task","task_id":ID}\n'
+    + '16. Видалити звичку — JSON: {"action":"delete_habit","habit_id":ID}\n'
+    + '17. Перевідкрити закриту задачу — JSON: {"action":"reopen_task","task_id":ID}\n'
+    + '18. Записати момент дня — JSON: {"action":"add_moment","text":"що сталося"}\n'
     + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.'
     + (aiContext ? '\n\n' + aiContext : '');
 
