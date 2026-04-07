@@ -10102,6 +10102,39 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
   }
+  function _detectEventDate(text) {
+    if (!text) return null;
+    const t = text.toLowerCase();
+    const now = /* @__PURE__ */ new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+    if (dayMatch) {
+      const day = parseInt(dayMatch[1]);
+      if (day >= 1 && day <= 31) {
+        let m = month;
+        if (day < now.getDate()) m = month + 1;
+        if (m > 11) {
+          m = 0;
+        }
+        const y = m < month ? year + 1 : year;
+        const date = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return { title: text.replace(/\s*\d{1,2}\s*(?:-?го|числа)\s*/i, " ").trim(), date };
+      }
+    }
+    const monthNames = ["\u0441\u0456\u0447\u043D", "\u043B\u044E\u0442", "\u0431\u0435\u0440\u0435\u0437", "\u043A\u0432\u0456\u0442\u043D", "\u0442\u0440\u0430\u0432\u043D", "\u0447\u0435\u0440\u0432\u043D", "\u043B\u0438\u043F\u043D", "\u0441\u0435\u0440\u043F\u043D", "\u0432\u0435\u0440\u0435\u0441\u043D", "\u0436\u043E\u0432\u0442\u043D", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0433\u0440\u0443\u0434\u043D"];
+    const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+    if (monthMatch) {
+      const day = parseInt(monthMatch[1]);
+      const mIdx = monthNames.findIndex((m) => monthMatch[2].toLowerCase().startsWith(m));
+      if (mIdx !== -1 && day >= 1 && day <= 31) {
+        const y = mIdx < month || mIdx === month && day < now.getDate() ? year + 1 : year;
+        const date = `${y}-${String(mIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return { title: text.replace(/\s*\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i, " ").trim(), date };
+      }
+    }
+    return null;
+  }
   function _detectEventFromTask(title) {
     if (!title) return null;
     const t = title.toLowerCase();
@@ -10216,12 +10249,23 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     if (cat === "event") {
-      const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral";
-      const moments = getMoments();
-      const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
-      moments.push(newMoment);
-      saveMoments(moments);
-      generateMomentSummary(newMoment.id, savedText);
+      const eventDetected = _detectEventDate(savedText);
+      if (eventDetected) {
+        const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal", createdAt: Date.now() };
+        const events = getEvents();
+        events.unshift(ev);
+        saveEvents(events);
+        const dateObj = new Date(eventDetected.date);
+        const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+        addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
+      } else {
+        const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral";
+        const moments = getMoments();
+        const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
+        moments.push(newMoment);
+        saveMoments(moments);
+        generateMomentSummary(newMoment.id, savedText);
+      }
     }
     const catConfirm2 = {
       task: "\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E",
