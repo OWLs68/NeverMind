@@ -7361,6 +7361,11 @@ ${memory}`);
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_task):
 ${taskList}`);
     }
+    const recentlyDone = getTasks().filter((t) => t.status === "done" && t.completedAt && now - t.completedAt < 24 * 60 * 60 * 1e3).slice(0, 5);
+    if (recentlyDone.length > 0) {
+      parts.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0436\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u041D\u0415 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445!):
+${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
+    }
     try {
       const todayISO = now.toISOString().slice(0, 10);
       const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
