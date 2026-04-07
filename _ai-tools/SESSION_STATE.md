@@ -79,10 +79,15 @@
 - Deploy job об'єднано з merge job — один job без race condition
 - cache-bust `?v=CACHE_NAME` у sw.js для iOS PWA
 
-### Jarvis Architecture — повний план (обговорено з Gemini 3 Pro + GPT-4o)
-- 24 пункти записані в `FEATURES_ROADMAP.md` секція "Фаза 4: Jarvis Architecture"
-- 10 пунктів ДО Supabase, 14 ПІСЛЯ
-- Ключові ідеї: Tool Calling, Day State, семантичні cooldowns, Judge Layer, Negative Memory, Intent Graph, Pattern Detection, Relevance Scoring
+### Jarvis Architecture — повний план (мозковий штурм з 5 AI + дослідження)
+- **46 пунктів** записані в `FEATURES_ROADMAP.md` секція "Фаза 4: Jarvis Architecture"
+- **Claude** (10): Day State, Relevance Scoring, Contextual Personality, instant reactions, Pattern Detection
+- **Gemini** (7): семантичні cooldowns, Tool Calling, Context Bloat fix
+- **GPT-4o** (15): Judge Layer, Conversation OS, Belief Graph, Mission Lock, Attention Budget, Repair Loop, Negative Memory, Episode Summary, Voice-first
+- **Grok** (11): Micro-mood Sensor, Memory Echo, Override Memory ("відчепись"), Auto-silence, Mirror Mode, Ghost Presence, Fast Path/Deep Path, Life Threading, "уважніший а не розумніший"
+- **DeepSeek** (3 прийнято, 3 відхилено): Event Sourcing, CSS-анімація, ембеддинг-антиповтор. Відхилено: робо-стиль мови, видалення табло, видалення чіпів
+- **Perplexity** (12 фактів): Google Now +41% помилок, max 1-2 nudges/год, Tool Calls швидші за strict-JSON, "AI silence" дослідження
+- Живий OWL: 8 станів анімації + мікро-переходи (сова біжить на місце коли бабл з'являється)
 
 ---
 
