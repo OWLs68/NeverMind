@@ -68,23 +68,42 @@
 ### Документація
 - i18n (дві мови) записано в `FEATURES_ROADMAP.md` — після Supabase
 
+### 5 нових actions (дій) для єдиного мозку
+- **edit_task** — змінити назву/дедлайн/пріоритет задачі (fuzzy match)
+- **delete_task** / **delete_habit** — видалити через чат (+ undo toast)
+- **add_moment** — додати момент дня з будь-якої вкладки
+- **reopen_task** — перевідкрити закриту задачу
+- Всі 5 додані в processUniversalAction + промпти ВСІХ 8 чат-барів
+
+### CI фікс
+- Deploy job об'єднано з merge job — один job без race condition
+- cache-bust `?v=CACHE_NAME` у sw.js для iOS PWA
+
+### Jarvis Architecture — повний план (обговорено з Gemini 3 Pro + GPT-4o)
+- 24 пункти записані в `FEATURES_ROADMAP.md` секція "Фаза 4: Jarvis Architecture"
+- 10 пунктів ДО Supabase, 14 ПІСЛЯ
+- Ключові ідеї: Tool Calling, Day State, семантичні cooldowns, Judge Layer, Negative Memory, Intent Graph, Pattern Detection, Relevance Scoring
+
 ---
 
 ## 🔴 Що треба зробити далі
 
-### Нові actions для єдиного мозку
-- **edit_task** — змінити назву/дедлайн/пріоритет задачі
-- **delete_task** / **delete_habit** — видалити через чат
-- **add_moment** — додати момент дня з будь-якої вкладки
-- **reopen_task** — перевідкрити закриту задачу
+### Jarvis Architecture — ДО Supabase (пріоритет)
+1. **4.1 Tool Calling** — перевести API на function calling (найбільший ефект, 2 сесії)
+2. **4.19 Judge Layer** — шар судді "чи взагалі говорити" (критично для UX)
+3. **4.2 Day State** — наративна пам'ять дня замість 30 сирих повідомлень
+4. **4.3 Семантичні cooldowns** — topic-based антиповтор замість лексичного
+5. **4.4 Relevance Scoring** — локальний бал доречності
+6. **4.5 Блокування табло поки чат відкритий**
+7. **4.20 Negative Memory** — пам'ять що дратує
 
-### По плану Мозку OWL
-- **3.8** Забуті задачі (5+ днів → м'яке питання "хочеш ще робити?") — вже в getOwlBoardContext
-- **3.10** Кореляції між вкладками (сон ↔ зарядка, витрати ↔ настрій)
-- **3.11** Навігаційні чіпи на всі вкладки (підсилити промпт)
-- **3.13** OWL запитує ціль продуктивності на день
+### По плану Мозку OWL (менший пріоритет)
+- **3.8** Забуті задачі — вже в getOwlBoardContext
+- **3.10** Кореляції між вкладками
+- **3.11** Навігаційні чіпи
+- **3.13** Ціль продуктивності на день
 
-### Після мозку
+### Після Jarvis Architecture
 - **Supabase** — хмарна БД, синхронізація, акаунти
 - **Push-сповіщення** — після Supabase
 - **i18n** — дві мови, після Supabase і стабілізації
