@@ -533,6 +533,7 @@ export function saveChatMsg(tab, role, text) {
     msgs.push({ role, text, ts: Date.now() });
     if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
     localStorage.setItem(key, JSON.stringify(msgs));
+    if (role === 'user') window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'chat' }));
   } catch(e) {}
 }
 
