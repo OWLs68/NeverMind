@@ -9495,12 +9495,50 @@ ${userText}
     if (!el) return;
     el.classList.toggle("inbox-expanded");
   }
+  function _renderUpcoming() {
+    const now = /* @__PURE__ */ new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+    const upcoming = [];
+    const events = getEvents();
+    for (const ev of events) {
+      if (ev.date >= todayStr && ev.date <= in7days) {
+        upcoming.push({ type: "event", title: ev.title, date: ev.date, time: ev.time, id: ev.id });
+      }
+    }
+    const tasks = getTasks().filter((t) => t.status === "active" && t.dueDate);
+    for (const t of tasks) {
+      if (t.dueDate >= todayStr && t.dueDate <= in7days) {
+        upcoming.push({ type: "task", title: t.title, date: t.dueDate, id: t.id });
+      }
+    }
+    if (upcoming.length === 0) return "";
+    upcoming.sort((a, b) => a.date.localeCompare(b.date));
+    const MONTHS_OF2 = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+    const cards = upcoming.slice(0, 3).map((item) => {
+      const d = /* @__PURE__ */ new Date(item.date + "T00:00:00");
+      const diffDays = Math.round((d - /* @__PURE__ */ new Date(todayStr + "T00:00:00")) / 864e5);
+      let when;
+      if (diffDays === 0) when = "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+      else if (diffDays === 1) when = "\u0437\u0430\u0432\u0442\u0440\u0430";
+      else when = `${d.getDate()} ${MONTHS_OF2[d.getMonth()]}`;
+      const icon = item.type === "event" ? "\u{1F4C5}" : "\u23F0";
+      const timeStr = item.time ? ` \u043E ${item.time}` : "";
+      const action = item.type === "event" ? `onclick="openCalendarModal()"` : `onclick="switchTab('tasks')"`;
+      return `<div class="inbox-upcoming-card" ${action}>
+      <span class="inbox-upcoming-icon">${icon}</span>
+      <span class="inbox-upcoming-text">${escapeHtml(item.title)}</span>
+      <span class="inbox-upcoming-when">${when}${timeStr}</span>
+    </div>`;
+    }).join("");
+    return `<div class="inbox-upcoming">${cards}</div>`;
+  }
   function renderInbox() {
     const items = getInbox();
     const list = document.getElementById("inbox-list");
     const countEl = document.getElementById("inbox-count");
     if (items.length === 0) {
-      list.innerHTML = `<div class="inbox-empty">
+      list.innerHTML = _renderUpcoming() + `<div class="inbox-empty">
       <div class="inbox-empty-icon">\u{1F4E5}</div>
       <div class="inbox-empty-title">Inbox \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439</div>
       <div class="inbox-empty-sub">\u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u0410\u0433\u0435\u043D\u0442 \u0440\u043E\u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F</div>
@@ -9510,7 +9548,7 @@ ${userText}
     }
     countEl.style.display = "inline";
     countEl.textContent = items.length;
-    let html = "";
+    let html = _renderUpcoming();
     let lastDateLabel = "";
     items.forEach((item) => {
       const dateLabel = _inboxDateLabel(item.ts);
