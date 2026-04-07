@@ -7,7 +7,7 @@
 //   3. Якщо немає інтернету — все одно відкривається з кешу
 //   4. При оновленні версії — старий кеш автоматично видаляється
 
-const CACHE_NAME = 'nm-20260407-1100';
+const CACHE_NAME = 'nm-20260407-1639';
 
 // Список файлів які кешуємо при встановленні
 const STATIC_ASSETS = [
@@ -17,13 +17,14 @@ const STATIC_ASSETS = [
   './bundle.js',
 ];
 
-// Встановлення: кешуємо всі статичні файли (cache:'reload' — завжди з мережі, не з HTTP-кешу)
+// Встановлення: кешуємо всі статичні файли (cache-bust через timestamp для iOS PWA)
 self.addEventListener('install', e => {
+  const bust = '?v=' + CACHE_NAME;
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => Promise.all(
         STATIC_ASSETS.map(url =>
-          fetch(url, { cache: 'reload' }).then(r => {
+          fetch(url + bust, { cache: 'reload' }).then(r => {
             if (!r.ok) throw new Error(url + ' ' + r.status);
             return cache.put(url, r);
           })
