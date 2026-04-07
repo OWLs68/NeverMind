@@ -569,6 +569,56 @@ async function sendClarifyText() {
   }
 }
 
+// ============================================================
+// _detectEventFromTask — кодова детекція подій серед задач
+// GPT-4o-mini іноді ігнорує промпт і створює task замість event.
+// Шукає паттерни дат: "20го", "20 числа", "в середу", "15 травня"
+// + слова-маркери подій: приїзд, зустріч, день народження тощо.
+// Повертає { title, date } або null.
+// ============================================================
+export function _detectEventFromTask(title) {
+  if (!title) return null;
+  const t = title.toLowerCase();
+
+  // Слова-маркери що це ПОДІЯ а не задача (дія)
+  const eventMarkers = /приїзд|приїжд|приліт|прибут|зустріч(?!ай)|візит|прийом|рейс|концерт|виставк|свято|день народження|ювілей|весілля|іспит|екзамен|співбесід/i;
+  if (!eventMarkers.test(t)) return null;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-based
+
+  // Паттерн 1: "20го", "20-го", "20 числа"
+  const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+  if (dayMatch) {
+    const day = parseInt(dayMatch[1]);
+    if (day >= 1 && day <= 31) {
+      // Якщо день вже минув цього місяця — беремо наступний
+      let m = month;
+      if (day < now.getDate()) m = month + 1;
+      if (m > 11) { m = 0; }
+      const y = m < month ? year + 1 : year;
+      const date = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return { title: title.replace(/\s*\d{1,2}\s*(?:-?го|числа)\s*/i, ' ').trim(), date };
+    }
+  }
+
+  // Паттерн 2: "15 травня", "3 січня"
+  const monthNames = ['січн','лют','берез','квітн','травн','червн','липн','серпн','вересн','жовтн','листопад','грудн'];
+  const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+  if (monthMatch) {
+    const day = parseInt(monthMatch[1]);
+    const mIdx = monthNames.findIndex(m => monthMatch[2].toLowerCase().startsWith(m));
+    if (mIdx !== -1 && day >= 1 && day <= 31) {
+      const y = (mIdx < month || (mIdx === month && day < now.getDate())) ? year + 1 : year;
+      const date = `${y}-${String(mIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return { title: title.replace(/\s*\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i, ' ').trim(), date };
+    }
+  }
+
+  return null;
+}
+
 // Виносимо логіку збереження в окрему функцію щоб використовувати і з clarify і з sendToAI
 async function processSaveAction(parsed, originalText) {
   const catMap = {'нотатка':'note','задача':'task','звичка':'habit','ідея':'idea','подія':'event'};
@@ -582,9 +632,21 @@ async function processSaveAction(parsed, originalText) {
   renderInbox();
 
   if (cat === 'task') {
+    // Fallback: якщо AI створив task але це схоже на подію — конвертуємо в event
+    const taskTitle = parsed.task_title || savedText;
+    const eventDetected = _detectEventFromTask(taskTitle);
+    if (eventDetected) {
+      const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+      const events = getEvents();
+      events.unshift(ev);
+      saveEvents(events);
+      const dateObj = new Date(eventDetected.date);
+      const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+      addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+      return;
+    }
     const taskId = Date.now();
     const tasks = getTasks();
-    const taskTitle = parsed.task_title || savedText;
     const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
       ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
       : [];

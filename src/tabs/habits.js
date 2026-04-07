@@ -8,7 +8,7 @@ import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
-import { addInboxChatMsg, getInbox, saveInbox, renderInbox } from './inbox.js';
+import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats } from './finance.js';
@@ -929,6 +929,19 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   if (action === 'create_task') {
     const title = (parsed.title || '').trim();
     if (!title) return false;
+    // Fallback: якщо AI створив task але це схоже на подію — конвертуємо в event
+    const eventDetected = _detectEventFromTask(title);
+    if (eventDetected) {
+      const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+      const events = getEvents();
+      events.unshift(ev);
+      saveEvents(events);
+      const dateObj = new Date(eventDetected.date);
+      const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+      const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
+      addMsg('agent', `📅 Подію "${ev.title}" додано на ${dayStr}`);
+      return true;
+    }
     const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
     const newTask = { id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
     if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
