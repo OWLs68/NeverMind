@@ -847,11 +847,10 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Розгорнутий стан */
-.inbox-expanded .inbox-item-text {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
+/* Тап на картку — навігація на вкладку */
+.inbox-item:active {
+  opacity: 0.7;
+  transform: scale(0.98);
 }
 .inbox-item-right {
   display: flex;

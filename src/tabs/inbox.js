@@ -4,7 +4,7 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
-import { currentTab } from '../core/nav.js';
+import { currentTab, switchTab } from '../core/nav.js';
 import { escapeHtml, saveOffline } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, callAI, callAIWithHistory, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
@@ -158,13 +158,23 @@ function _inboxDateLabel(ts) {
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
-// Тап: розгорнути/згорнути текст картки (блокується після свайпу)
+// Тап: перекинути на відповідну вкладку (блокується після свайпу)
 let _inboxSwipedRecently = false;
-function toggleInboxExpand(id) {
+const INBOX_NAV_MAP = {
+  task: 'tasks',
+  habit: 'habits',
+  note: 'notes',
+  idea: 'notes',
+  finance: 'finance',
+};
+function navigateInboxItem(id) {
   if (_inboxSwipedRecently) return;
   const el = document.getElementById('item-' + id);
   if (!el) return;
-  el.classList.toggle('inbox-expanded');
+  const cat = el.dataset.cat;
+  if (cat === 'event') { window.openCalendarModal(); return; }
+  const tab = INBOX_NAV_MAP[cat];
+  if (tab) switchTab(tab);
 }
 
 // ============================================================
@@ -263,7 +273,7 @@ export function renderInbox() {
            ontouchstart="swipeStart(event,${item.id})"
            ontouchmove="swipeMove(event,${item.id})"
            ontouchend="swipeEnd(event,${item.id})"
-           onclick="toggleInboxExpand(${item.id})">
+           onclick="navigateInboxItem(${item.id})">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">
@@ -876,5 +886,5 @@ export function getTabbarHeight() {
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   sendToAI, sendClarifyText, closeClarify, selectClarifyOption,
-  toggleInboxExpand, swipeStart, swipeMove, swipeEnd,
+  navigateInboxItem, swipeStart, swipeMove, swipeEnd,
 });
