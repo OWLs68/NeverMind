@@ -8,7 +8,7 @@ import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
-import { addInboxChatMsg } from './inbox.js';
+import { addInboxChatMsg, getInbox, saveInbox, renderInbox } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats } from './finance.js';
@@ -930,10 +930,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const title = (parsed.title || '').trim();
     if (!title) return false;
     const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+    const newTask = { id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
+    if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
+    if (parsed.priority && ['important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
     const tasks = getTasks();
-    tasks.unshift({ id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+    tasks.unshift(newTask);
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
+    const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'task', ts: Date.now(), processed: true }); saveInbox(items);
     addMsg('agent', '✅ Задачу "' + title + '" створено');
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
@@ -968,6 +972,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveEvents(events);
     const dateObj = new Date(parsed.date);
     const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+    const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${parsed.time ? ' о ' + parsed.time : ''}`);
     return true;
   }

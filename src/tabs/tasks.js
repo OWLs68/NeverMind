@@ -375,6 +375,7 @@ async function sendTaskChatMessage() {
 - Нотатка: {"action":"create_note","text":"текст","folder":null}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити). ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження). "Мама приїжає 20го" = create_event НЕ task!
 Інакше — звичайний текст українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
