@@ -652,6 +652,37 @@ export function getOwlBoardContext() {
     normal.push(`[АКТИВНІ ВКЛАДКИ] Користувач використовує: ${activeTabs.join(', ')}. Цікався ТІЛЬКИ цими темами.`);
   }
 
+  // === АНКЕТУВАННЯ — OWL дізнається про користувача ===
+  const OWL_Q_KEY = 'nm_owl_questions';
+  const OWL_Q_TS_KEY = 'nm_owl_q_ts';
+  const OWL_QUESTIONS = [
+    { id: 'work', q: 'Чим ти займаєшся? Де працюєш або навчаєшся?' },
+    { id: 'goals', q: 'Яка твоя головна ціль зараз — над чим працюєш найбільше?' },
+    { id: 'interests', q: 'Що тебе цікавить поза роботою? Хобі, захоплення?' },
+    { id: 'motivation', q: 'Що тебе найкраще мотивує — результат, процес чи визнання?' },
+    { id: 'routine', q: 'Як виглядає твій типовий день? Коли ти найпродуктивніший?' },
+    { id: 'challenges', q: 'Що тобі зараз найважче дається — що хотів би покращити?' },
+    { id: 'values', q: 'Що для тебе найважливіше в житті — що ти ніколи не пожертвуєш?' },
+    { id: 'relax', q: 'Як ти відпочиваєш? Що допомагає перезарядитись?' },
+    { id: 'people', q: 'Хто найважливіші люди навколо тебе? Родина, друзі, партнер?' },
+    { id: 'health', q: 'Як у тебе зі здоров\'ям? Є щось що хвилює або над чим працюєш?' },
+    { id: 'dreams', q: 'Де ти бачиш себе через рік? Що має змінитись?' },
+    { id: 'style', q: 'Як тобі зручніше спілкуватись — коротко і по справі чи розгорнуто з поясненнями?' },
+  ];
+  try {
+    const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || '[]');
+    const lastQTs = parseInt(localStorage.getItem(OWL_Q_TS_KEY) || '0');
+    const nextQ = OWL_QUESTIONS.find(q => !asked.includes(q.id));
+    // Задаємо 1 питання на день (24 години з останнього)
+    if (nextQ && (Date.now() - lastQTs) > 24 * 60 * 60 * 1000 && (phase === 'morning' || phase === 'work')) {
+      normal.push(`[АНКЕТА] Задай юзеру це питання природно, вплети в розмову (НЕ сухо як в анкеті): "${nextQ.q}". Після цього чіп "Розкажи" з action:"chat". Запам'ятай ID питання: ${nextQ.id}`);
+      // Позначаємо як задане одразу (щоб не повторити)
+      asked.push(nextQ.id);
+      localStorage.setItem(OWL_Q_KEY, JSON.stringify(asked));
+      localStorage.setItem(OWL_Q_TS_KEY, Date.now().toString());
+    }
+  } catch(e) {}
+
   return [...critical, ...important, ...normal].join(' ');
 }
 
