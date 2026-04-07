@@ -200,16 +200,18 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 **Флоу:** Claude пушить у `claude/**` → `auto-merge.yml` мержить у `main`, збирає bundle, деплоїть на GitHub Pages.
 
-**`auto-merge.yml` робить:**
+**`auto-merge.yml` робить (ОДИН job, послідовно):**
 1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
 2. `sed` оновлює badge в `index.html` (Amsterdam час деплою)
 3. `npm ci && node build.js` — збирає bundle.js з src/
 4. Комітить bundle.js і пушить у `main`
-5. Деплоїть на GitHub Pages
+5. Upload artifact + Deploy to GitHub Pages — **в тому ж job**, без race condition
+
+**Чому один job:** раніше deploy був окремим job і міг взяти стару версію main (race condition — стан гонки між push і checkout). Тепер merge → build → push → deploy послідовно в одному job.
 
 **Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → конфлікт → CI падає тихо. `-X theirs` вирішує на користь feature-гілки.
 
-**Чому НЕ два воркфлоу:** GitHub блокує `deploy.yml` якщо `auto-merge.yml` пушить через `GITHUB_TOKEN`. Тому деплой прямо в `auto-merge.yml`.
+**`concurrency: cancel-in-progress: true`** — якщо новий push приходить поки CI ще працює, попередній CI скасовується. Тому при частих пушах деплоїться тільки останній.
 
 ---
 
