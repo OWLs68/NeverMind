@@ -218,6 +218,33 @@
 - **Ніяких графів, belief systems, multi-agent ролей** — Event Log + nm_memory + nm_negative_rules = достатньо для MVP
 - **AI Layer два виклики:** 4o-mini (3500 токенів, 95%) + 4o/Claude (коли confidence < 65%)
 
+**Дослідження і реальний досвід (Perplexity, 07.04.2026):**
+
+Джерела і ключові висновки з реальних продуктів та наукових досліджень:
+
+| Факт | Джерело | Вплив на NeverMind |
+|------|---------|-------------------|
+| Google Now cards: +41% помилок, -29% швидкості повернення до задачі. Кожна карточка = ~2.7 мікро-задачі (скануй → зрозумій → закрий → повернись) | [2] lifetips.alibaba.com | Підтверджує: Judge Layer + Attention Budget КРИТИЧНІ. Max 1-2 ініціативи на годину |
+| Clippy провалився через shallow triggers (поверхневі тригери) і відсутність контексту. Dismiss rate (частота закриття) була надзвичайно високою | [1] deliveredsocial.com | Підтверджує: Relevance Scoring обов'язковий ПЕРЕД показом табло |
+| Cortana: ідея сканувати email → створювати нагадування правильна, але UX занадто агресивний і неконфігурований | [3] skywork.ai | Підтверджує: Override Memory ("відчепись" кнопка) + negative rules |
+| Tool Calls ШВИДШІ за strict-JSON для простих схем на GPT-4o-mini (~2.9 сек vs ~4.5 сек). Для складних схем tools МЕНШ надійні | [12] rwilinski.ai | Tool Calling для наших простих action-схем = правильний вибір |
+| Structured Outputs: перший запит з новою схемою ПОВІЛЬНІШИЙ (парсинг схеми). Повторні — нормальні | [13] github.com/vercel/ai | Тримати схеми стабільними і перевикористовувати |
+| "AI silence" дослідження: мовчазна згода НЕ підвищує довіру. Краще сказати "Згоден" одним рядком ніж мовчати | [11] lancashire.ac.uk | Instant reactions ("Зроблено! 💪") = правильний підхід. Навіть коротке підтвердження краще за мовчання |
+| GitHub Copilot: "ghost text" (напівпрозорі підказки) — найменш нав'язливий формат. Ніколи не відкриває повний UI | [5] docs.github.com | Можливо: chips як ghost-елементи що зникають якщо ігноруються |
+| Arc browser: AI в sidebar (бокова панель), не в popup. Manual invocation + lightweight suggestions | [4] seraphicsecurity.com | Табло = sidebar-підхід (не popup). Правильно |
+| ChatGPT memory: юзер бачить що AI знає, може видалити. "Silent memory" + periodic "I noticed..." | [7] aicompetence.org | Потрібна Memory Pane — UI де юзер бачить nm_memory і може редагувати |
+| Дослідження переривань: AI може перебивати ТІЛЬКИ коли: 1) контекст-релевантно 2) вартість пропуску висока 3) AI визнає поточну задачу юзера | [8] essv.de | 3 умови перед кожним табло. Вшити в Judge Layer |
+| NN/Group: промпти/підказки працюють коли РІДКІ і ГІПЕР-РЕЛЕВАНТНІ. Надмірність → юзер ігнорує ВСЕ | [9] nngroup.com | "OWL рідко говорить але завжди влучив" = підтверджено дослідженнями |
+| Ambient Intelligence: працює тихо у фоні, дає маленькі пасивні affordances замість повних промптів | [10] aiuxdesign.guide | Наші instant reactions = правильний ambient підхід |
+
+Посилання для глибшого вивчення:
+- Переривання AI: https://www.essv.de/pdf/2023_24_31.pdf
+- AI мовчання і довіра: https://knowledge.lancashire.ac.uk/id/eprint/58055/
+- Ambient Intelligence UX: https://www.aiuxdesign.guide/patterns/ambient-intelligence
+- Бенчмарк Tool Calls vs JSON: https://rwilinski.ai/posts/benchmarking-llms-for-structured-json-generation/
+- Memory-augmented assistants: https://aicompetence.org/memory-augmented-ai-assistants-remember-you/
+- Supabase + OpenAI pattern: https://www.klavis.ai/mcp-server-connections/postgres--github--supabase?framework=openai
+
 **Архітектурні принципи від Grok (загальні):**
 - **"OWL трохи менш розумний але набагато уважніший"** — якщо OWL здається розумнішим за юзера, юзер перестає довіряти. OWL = уважний друг, не всезнаюча система
 - **Критика переускладнення:** Belief Graph + Intent Graph + Conversation OS зі стейт-машиною = maintenance hell для PWA. Простіший Event Log + priority queue + relevance threshold працює краще
