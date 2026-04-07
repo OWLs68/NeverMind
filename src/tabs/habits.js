@@ -956,6 +956,31 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  if (action === 'edit_habit') {
+    const habits = getHabits();
+    const h = habits.find(x => x.id === parsed.habit_id);
+    if (!h) {
+      // Fuzzy match по назві
+      const nameQ = (parsed.name || parsed.habit_name || '').toLowerCase();
+      const found = habits.find(x => x.name.toLowerCase().includes(nameQ.slice(0, 6)));
+      if (!found) { addMsg('agent', 'Не знайшов цю звичку.'); return true; }
+      if (parsed.name) found.name = parsed.name;
+      if (parsed.days) found.days = parsed.days;
+      if (parsed.details !== undefined) found.details = parsed.details;
+      saveHabits(habits);
+      renderProdHabits(); renderHabits();
+      addMsg('agent', '✏️ Звичку "' + found.name + '" оновлено');
+      return true;
+    }
+    if (parsed.name) h.name = parsed.name;
+    if (parsed.days) h.days = parsed.days;
+    if (parsed.details !== undefined) h.details = parsed.details;
+    saveHabits(habits);
+    renderProdHabits(); renderHabits();
+    addMsg('agent', '✏️ Звичку "' + h.name + '" оновлено');
+    return true;
+  }
+
   if (action === 'create_habit') {
     const name = (parsed.name || '').trim();
     if (!name) return false;
@@ -1107,6 +1132,7 @@ export async function sendTasksBarMessage() {
     + '3. Виконав задачу — JSON: {"action":"complete_task","task_id":ID}\n'
     + '4. Виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
     + '5. Створити звичку — JSON: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}\n'
+    + '5b. РЕДАГУВАТИ існуючу звичку (змінити назву, дні, деталі) — JSON: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}. Якщо юзер каже "бігати ввечері замість зранку" — НЕ створюй нову, а РЕДАГУЙ існуючу!\n'
     + '6. Створити задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
     + '7. Створити ПОДІЮ (факт що станеться: приїзд, зустріч, концерт, день народження, візит) — JSON: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}\n'
     + '   ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити, зробити). ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, свято, рейс). "приїзд мами 20го" = create_event. "купити молоко" = create_task.\n'
