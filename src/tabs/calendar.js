@@ -21,6 +21,7 @@ function openCalendarModal() {
   _calMonth = now.getMonth();
   renderCalendar();
   renderUpcoming();
+  renderMonthEventsList();
   const modal = document.getElementById('calendar-modal');
   if (modal) {
     modal.style.display = 'flex';
@@ -31,10 +32,72 @@ function openCalendarModal() {
 function closeCalendarModal() {
   const modal = document.getElementById('calendar-modal');
   if (modal) modal.style.display = 'none';
+  const eventsModal = document.getElementById('calendar-events-modal');
+  if (eventsModal) eventsModal.style.display = 'none';
 }
 
-function calendarPrevMonth() { _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; } renderCalendar(); }
-function calendarNextMonth() { _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; } renderCalendar(); }
+// === EVENTS LIST MODAL (зверху екрану) ===
+function renderMonthEventsList() {
+  const listEl = document.getElementById('calendar-events-list');
+  const modalEl = document.getElementById('calendar-events-modal');
+  if (!listEl || !modalEl) return;
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const monthStart = `${_calYear}-${String(_calMonth + 1).padStart(2, '0')}-01`;
+  const monthEnd = `${_calYear}-${String(_calMonth + 1).padStart(2, '0')}-${new Date(_calYear, _calMonth + 1, 0).getDate()}`;
+
+  const items = [];
+
+  getEvents().forEach(ev => {
+    if (ev.date >= monthStart && ev.date <= monthEnd) {
+      items.push({ title: ev.title, date: ev.date, time: ev.time || null, type: 'event', priority: ev.priority || 'normal' });
+    }
+  });
+
+  getTasks().filter(t => t.status === 'active' && t.dueDate).forEach(t => {
+    if (t.dueDate >= monthStart && t.dueDate <= monthEnd) {
+      items.push({ title: t.title, date: t.dueDate, type: 'task', priority: t.priority || 'normal' });
+    }
+  });
+
+  if (items.length === 0) {
+    modalEl.style.display = 'none';
+    return;
+  }
+
+  items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+
+  const prioIcons = { critical: '🔴 ', important: '🟠 ', normal: '' };
+
+  let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Події · ${MONTHS_UA[_calMonth]}</div>`;
+
+  items.forEach(item => {
+    const d = new Date(item.date + 'T00:00:00');
+    const isPast = item.date < todayStr;
+    const isToday = item.date === todayStr;
+    const dayLabel = isToday ? 'Сьогодні' : `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
+    const icon = item.type === 'event' ? '📅' : '⏰';
+    const prio = prioIcons[item.priority] || '';
+    const timeStr = item.time ? ` · ${item.time}` : '';
+    const opacity = isPast ? 'opacity:0.4;' : '';
+    const dateColor = isToday ? '#ea580c' : item.type === 'event' ? '#6366f1' : 'rgba(30,16,64,0.45)';
+
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
+      <div style="font-size:15px;flex-shrink:0">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prio}${escapeHtml(item.title)}</div>
+        <div style="font-size:11px;font-weight:600;color:${dateColor};margin-top:1px">${dayLabel}${timeStr}</div>
+      </div>
+    </div>`;
+  });
+
+  listEl.innerHTML = html;
+  modalEl.style.display = 'block';
+}
+
+function calendarPrevMonth() { _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; } renderCalendar(); renderMonthEventsList(); }
+function calendarNextMonth() { _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; } renderCalendar(); renderMonthEventsList(); }
 
 // === UPCOMING BLOCK (Найближче) ===
 function renderUpcoming() {
