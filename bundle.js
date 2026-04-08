@@ -3846,28 +3846,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const todayStr = now.toDateString();
     const hour = now.getHours();
     const min = now.getMinutes();
-    if (activeChatBar) {
-      score -= 10;
-      reasons.push("chat-open");
-    }
     const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
     const sinceLastAttempt = Date.now() - lastAttemptTs;
     const msgs = getOwlBoardMessages();
     const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
     const sinceLastVisible = Date.now() - lastVisibleTs;
-    if (trigger !== "chat-reply") {
-      if (sinceLastAttempt < 5 * 60 * 1e3) {
-        score -= 4;
-        reasons.push("attempt<5m");
-      } else if (sinceLastAttempt < 15 * 60 * 1e3) {
-        score -= 1;
-        reasons.push("attempt<15m");
-      }
-    }
-    if (trigger === "chat-reply") {
-      score += 5;
-      reasons.push("chat-reply");
-    }
     if (trigger === "first-time" || trigger === "new-day") {
       score += 5;
       reasons.push(trigger);
@@ -3880,6 +3863,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
       score += 3;
       reasons.push("data-changed");
     }
+    if (trigger === "chat-closed") {
+      score += 4;
+      reasons.push("chat-closed");
+    }
+    let hasCritical = false;
     const tasks = getTasks().filter((t) => t.status !== "done");
     for (const t of tasks) {
       const m = t.title.match(/(\d{1,2}):(\d{2})/);
@@ -3888,6 +3876,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
         if (diff > 0 && diff <= 65) {
           score += 3;
           reasons.push("deadline-soon");
+          hasCritical = true;
           break;
         }
       }
@@ -3896,6 +3885,24 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (tasks.some((t) => t.dueDate === todayISO)) {
       score += 2;
       reasons.push("due-today");
+    }
+    if (activeChatBar) {
+      if (hasCritical) {
+        score -= 3;
+        reasons.push("chat-open(soft)");
+      } else {
+        score -= 10;
+        reasons.push("chat-open");
+      }
+    }
+    if (trigger !== "chat-closed") {
+      if (sinceLastAttempt < 5 * 60 * 1e3) {
+        score -= 4;
+        reasons.push("attempt<5m");
+      } else if (sinceLastAttempt < 15 * 60 * 1e3) {
+        score -= 1;
+        reasons.push("attempt<15m");
+      }
     }
     if (phase === "evening" || phase === "night") {
       const habits = getHabits();
@@ -5141,13 +5148,20 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       window.addEventListener("nm-data-changed", (e) => {
         const tab = currentTab || "inbox";
         if (e.detail !== "chat") _showInstantReaction(tab);
-        const trigger = e.detail === "chat" ? "chat-reply" : "data-changed";
+        if (e.detail === "chat") return;
+        const trigger = "data-changed";
         if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
         _boardUpdateTimer = setTimeout(() => {
           _boardUpdateTimer = null;
           const judge = shouldOwlSpeak(trigger);
           if (judge.speak) generateBoardMessage(currentTab || "inbox");
         }, BOARD_UPDATE_DELAY);
+      });
+      window.addEventListener("nm-chat-closed", () => {
+        setTimeout(() => {
+          const judge = shouldOwlSpeak("chat-closed");
+          if (judge.speak) generateBoardMessage(currentTab || "inbox");
+        }, 3e3);
       });
       NM_LAST_ACTIVE_KEY = "nm_last_active";
       WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1e3;
@@ -8155,6 +8169,7 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
     const inputs = bar.querySelectorAll("input, textarea");
     inputs.forEach((i) => i.blur());
     activeChatBar = null;
+    window.dispatchEvent(new CustomEvent("nm-chat-closed", { detail: tab }));
   }
   function closeAllChatBars(resetActive = true) {
     ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
