@@ -553,11 +553,13 @@ export async function sendToAI(fromChip = false) {
           }
         } else if (action.action === 'save_routine') {
           const routine = getRoutine();
-          const day = action.day || 'default';
-          routine[day] = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
-          saveRoutine(routine);
+          const blocks = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
+          const days = Array.isArray(action.day) ? action.day : [action.day || 'default'];
           const dayLabels = { default:'будні', mon:'понеділок', tue:'вівторок', wed:'середу', thu:'четвер', fri:'п\'ятницю', sat:'суботу', sun:'неділю' };
-          addInboxChatMsg('agent', `🕐 Розпорядок на ${dayLabels[day] || day} збережено (${routine[day].length} блоків)`);
+          days.forEach(d => { routine[d] = [...blocks]; });
+          saveRoutine(routine);
+          const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
+          addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // delete_folder, move_note, create_task, create_note тощо
         } else {
