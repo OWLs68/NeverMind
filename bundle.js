@@ -3839,7 +3839,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return false;
     const phase = getDayPhase();
-    if (phase === "silent" || phase === "dawn") return false;
+    if (phase === "silent") return false;
     const now = /* @__PURE__ */ new Date();
     const todayStr = now.toDateString();
     const hour = now.getHours();
