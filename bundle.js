@@ -3888,8 +3888,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
     if (activeChatBar) {
       if (hasCritical) {
-        score -= 3;
-        reasons.push("chat-open(soft)");
+        score -= 0;
+        reasons.push("chat-open(critical-override)");
       } else {
         score -= 10;
         reasons.push("chat-open");
