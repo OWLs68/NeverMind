@@ -3835,65 +3835,111 @@ ${aiContext ? "\n\n" + aiContext : ""}
     });
     localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
   }
-  function checkOwlBoardTrigger() {
+  function shouldOwlSpeak(trigger) {
     const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return false;
+    if (!key) return { speak: false, score: -1, reason: "no-api-key" };
     const phase = getDayPhase();
-    if (phase === "silent") return false;
+    if (phase === "silent") return { speak: false, score: -100, reason: "silent-phase" };
+    let score = 0;
+    let reasons = [];
     const now = /* @__PURE__ */ new Date();
     const todayStr = now.toDateString();
     const hour = now.getHours();
     const min = now.getMinutes();
-    const sc = getSchedule();
-    if (owlCdExpired("phase_pulse", 45 * 60 * 1e3)) return true;
+    if (activeChatBar) {
+      score -= 10;
+      reasons.push("chat-open");
+    }
+    const lastGen = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
+    const sinceLastGen = Date.now() - lastGen;
+    if (sinceLastGen < 5 * 60 * 1e3) {
+      score -= 4;
+      reasons.push("gen<5m");
+    } else if (sinceLastGen < 15 * 60 * 1e3) {
+      score -= 1;
+      reasons.push("gen<15m");
+    }
+    if (trigger === "first-time" || trigger === "new-day") {
+      score += 5;
+      reasons.push(trigger);
+    }
+    if (trigger === "welcome-back") {
+      score += 4;
+      reasons.push("welcome-back");
+    }
+    if (trigger === "data-changed") {
+      score += 3;
+      reasons.push("data-changed");
+    }
     const tasks = getTasks().filter((t) => t.status !== "done");
     for (const t of tasks) {
       const m = t.title.match(/(\d{1,2}):(\d{2})/);
       if (m) {
         const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
-        if (diff > 0 && diff <= 65 && owlCdExpired("deadline_" + t.id, 30 * 60 * 1e3)) return true;
+        if (diff > 0 && diff <= 65) {
+          score += 3;
+          reasons.push("deadline-soon");
+          break;
+        }
       }
+    }
+    const todayISO = now.toISOString().slice(0, 10);
+    if (tasks.some((t) => t.dueDate === todayISO)) {
+      score += 2;
+      reasons.push("due-today");
     }
     if (phase === "evening" || phase === "night") {
       const habits = getHabits();
       const log = getHabitLog();
       const todayLog = log[todayStr] || {};
-      const atRisk = habits.filter((h) => h.days.includes(now.getDay()) && !todayLog[h.id]);
-      if (atRisk.length > 0 && owlCdExpired("streak_risk", 60 * 60 * 1e3)) return true;
+      const atRisk = habits.filter((h) => h.days?.includes(now.getDay()) && !todayLog[h.id]);
+      if (atRisk.length > 0) {
+        score += 3;
+        reasons.push("streak-risk");
+      }
     }
-    const stuck = tasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
-    if (stuck.length > 0 && owlCdExpired("stuck_tasks", 6 * 60 * 60 * 1e3)) return true;
-    if (phase === "work" || phase === "evening") {
-      const habits = getHabits();
-      const log = getHabitLog();
-      const todayLog = log[todayStr] || {};
-      const pending = habits.filter((h) => h.days.includes(now.getDay()) && !todayLog[h.id]);
-      if (pending.length > 0 && owlCdExpired("habits_check", 3 * 60 * 60 * 1e3)) return true;
-    }
-    if (phase === "work" || phase === "evening") {
-      const habits = getHabits();
-      const log = getHabitLog();
-      const todayLog = log[todayStr] || {};
-      const todayH = habits.filter((h) => h.days.includes(now.getDay()));
-      if (todayH.length > 0 && todayH.every((h) => todayLog[h.id]) && owlCdExpired("habits_done", 8 * 60 * 60 * 1e3)) return true;
+    if ((phase === "morning" || phase === "dawn") && owlCdExpired("morning_brief", 3 * 60 * 60 * 1e3)) {
+      score += 3;
+      reasons.push("morning-brief");
     }
     try {
       const budget = getFinBudget();
       if (budget.total > 0) {
         const from = getFinPeriodRange("month");
         const exp = getFinance().filter((t) => t.ts >= from && t.type === "expense").reduce((s, t) => s + t.amount, 0);
-        if (exp / budget.total >= 0.8 && owlCdExpired("budget_warn", 4 * 60 * 60 * 1e3)) return true;
+        if (exp / budget.total >= 0.8) {
+          score += 2;
+          reasons.push("budget-warn");
+        }
       }
     } catch (e) {
     }
     if (phase === "evening" || phase === "night") {
       const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      if ((!s || new Date(s.date).toDateString() !== todayStr) && owlCdExpired("evening_prompt", 4 * 60 * 60 * 1e3)) return true;
+      if (!s || new Date(s.date).toDateString() !== todayStr) {
+        score += 2;
+        reasons.push("no-evening-summary");
+      }
     }
-    if (phase === "morning" && owlCdExpired("morning_brief", 3 * 60 * 60 * 1e3)) return true;
-    if (now.getDay() === 1 && (phase === "morning" || phase === "work") && owlCdExpired("week_start", 6 * 60 * 60 * 1e3)) return true;
-    if (now.getDay() === 5 && phase === "evening" && owlCdExpired("week_end", 6 * 60 * 60 * 1e3)) return true;
-    return false;
+    const stuck = tasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
+    if (stuck.length > 0) {
+      score += 1;
+      reasons.push("stuck-tasks");
+    }
+    if (now.getDay() === 1 && (phase === "morning" || phase === "work") && owlCdExpired("week_start", 6 * 60 * 60 * 1e3)) {
+      score += 2;
+      reasons.push("week-start");
+    }
+    if (now.getDay() === 5 && phase === "evening" && owlCdExpired("week_end", 6 * 60 * 60 * 1e3)) {
+      score += 2;
+      reasons.push("week-end");
+    }
+    if (sinceLastGen > 45 * 60 * 1e3) {
+      score += 1;
+      reasons.push("long-silence");
+    }
+    const speak = score >= SPEAK_THRESHOLD;
+    return { speak, score, reason: reasons.join(", ") };
   }
   function getOwlBoardContext() {
     const now = /* @__PURE__ */ new Date();
@@ -4360,15 +4406,14 @@ ${pulseParts.join("\n")}
     _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
   }
   function tryOwlBoardUpdate() {
-    const phase = getDayPhase();
-    if (phase === "silent") return;
     const msgs = getOwlBoardMessages();
     if (msgs.length > 0) renderOwlBoard();
     const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
     const isFirstTime = msgs.length === 0 && lastTs === 0;
     const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
-    const shouldGenerate = isFirstTime || isNewDay || checkOwlBoardTrigger();
-    if (shouldGenerate) {
+    const trigger = isFirstTime ? "first-time" : isNewDay ? "new-day" : "timer";
+    const judge = shouldOwlSpeak(trigger);
+    if (judge.speak) {
       Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
     }
   }
@@ -4424,7 +4469,7 @@ ${pulseParts.join("\n")}
     }
     return true;
   }
-  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
   var init_inbox_board = __esm({
     "src/owl/inbox-board.js"() {
       init_nav();
@@ -4441,10 +4486,11 @@ ${pulseParts.join("\n")}
       _tabChatState = {};
       OWL_BOARD_KEY = "nm_owl_board";
       OWL_BOARD_TS_KEY = "nm_owl_board_ts";
-      OWL_BOARD_INTERVAL = 3 * 60 * 1e3;
+      OWL_BOARD_INTERVAL = 10 * 60 * 1e3;
       _owlBoardMessages = [];
       _owlBoardTimer = null;
       OWL_CD_KEY = "nm_owl_cooldowns";
+      SPEAK_THRESHOLD = 3;
       OWL_CHAT_KEY = "nm_owl_chat";
       OWL_CHAT_MAX = 20;
       _owlChatOpen = false;
@@ -5016,8 +5062,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
         _boardUpdateTimer = setTimeout(() => {
           _boardUpdateTimer = null;
-          const phase = getDayPhase();
-          if (phase !== "silent") generateBoardMessage(currentTab || "inbox");
+          const judge = shouldOwlSpeak("data-changed");
+          if (judge.speak) generateBoardMessage(currentTab || "inbox");
         }, BOARD_UPDATE_DELAY);
       });
       NM_LAST_ACTIVE_KEY = "nm_last_active";
@@ -5029,10 +5075,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || "0");
           if (!lastActive) return;
           const away = Date.now() - lastActive;
-          const phase = getDayPhase();
-          if (away > WELCOME_BACK_THRESHOLD && phase !== "silent") {
-            const tab = currentTab || "inbox";
-            generateBoardMessage(tab);
+          if (away > WELCOME_BACK_THRESHOLD) {
+            const judge = shouldOwlSpeak("welcome-back");
+            if (judge.speak) generateBoardMessage(currentTab || "inbox");
           }
         }
       });
