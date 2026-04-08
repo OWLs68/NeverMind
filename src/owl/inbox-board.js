@@ -1081,7 +1081,7 @@ export function startOwlBoardCycle() {
   _owlAskScheduleIfNeeded();
   // Одразу при відкритті
   tryOwlBoardUpdate();
-  // Потім кожні 3 хвилини
+  // Потім кожні 10 хвилин (fallback — основні тригери через події)
   if (_owlBoardTimer) clearInterval(_owlBoardTimer);
   _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
 }

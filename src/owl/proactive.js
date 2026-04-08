@@ -287,7 +287,13 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
 
     // Антиповтор: якщо нове повідомлення надто схоже на останні — відкидаємо
-    if (_isTooSimilar(parsed.text, allMsgs)) { _boardGenerating[tab] = false; return; }
+    // Але оновлюємо timestamp щоб не спамити API повторними запитами
+    if (_isTooSimilar(parsed.text, allMsgs)) {
+      if (isInbox) localStorage.setItem('nm_owl_board_ts', Date.now().toString());
+      else localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+      _boardGenerating[tab] = false;
+      return;
+    }
 
     // Збереження: inbox і вкладки мають різні сховища
     const newMsg = { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
