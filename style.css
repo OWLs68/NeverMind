@@ -1207,6 +1207,7 @@ body {
 .owl-speech {
   position: relative;
   padding: 4px 0 0 0;
+  min-height: 82px; /* чіпи не вище 5px під совою (96px avatar, top:-8px) */
   touch-action: none;
 }
 .owl-speech-avatar {
