@@ -3500,7 +3500,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       input.value = text;
       input.dispatchEvent(new Event("input"));
     }
-    setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       if (barTab === "inbox") {
         sendToAI(true);
       } else if (barTab === "tasks") {
@@ -3518,7 +3518,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       } else if (barTab === "evening") {
         sendEveningBarMessage();
       }
-    }, 100);
+    }));
   }
   var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED;
   var init_chips = __esm({
