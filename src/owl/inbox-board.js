@@ -1101,6 +1101,17 @@ function tryOwlBoardUpdate() {
   const msgs = getOwlBoardMessages();
   if (msgs.length > 0) renderOwlBoard();
 
+  const phase = getDayPhase();
+  if (phase === 'silent') return;
+
+  // SAFETY NET: якщо повідомлення на табло > 60 хв — примусова генерація
+  const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+  if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1000) {
+    console.warn('[OWL board] stale message detected, forcing generation');
+    import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
+    return;
+  }
+
   // Judge Layer вирішує чи генерувати нове
   const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
   const isFirstTime = msgs.length === 0 && lastTs === 0;

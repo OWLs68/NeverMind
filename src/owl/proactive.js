@@ -280,9 +280,18 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
         temperature: 0.8
       })
     });
+    if (!res.ok) {
+      console.warn('[OWL board] API HTTP error:', res.status, res.statusText);
+      _boardGenerating[tab] = false;
+      return;
+    }
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content?.trim();
-    if (!reply) { _boardGenerating[tab] = false; return; }
+    if (!reply) {
+      console.warn('[OWL board] empty API reply:', JSON.stringify(data?.error || data).slice(0, 200));
+      _boardGenerating[tab] = false;
+      return;
+    }
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
 
