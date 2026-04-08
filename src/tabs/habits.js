@@ -11,7 +11,7 @@ import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
-import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats } from './finance.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate } from './finance.js';
 import { renderMeHabitsStats, getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents } from './calendar.js';
 
@@ -1163,7 +1163,8 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const catList = type === 'expense' ? cats.expense : cats.income;
     if (!catList.includes(category)) { catList.push(category); saveFinCats(cats); }
     const txs = getFinance();
-    txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: Date.now() });
+    const finTs = _resolveFinanceDate(parsed.date, originalText);
+    txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: finTs });
     saveFinance(txs);
     if (currentTab === 'finance') renderFinance();
     addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · категорія: ' + category + (parsed.comment ? ' · ' + parsed.comment : ''));

@@ -889,6 +889,30 @@ function closeFinBudgetModal() {
   document.getElementById('fin-budget-modal')?.remove();
 }
 
+// Визначення дати транзакції: AI date → "вчора/позавчора" → Date.now()
+export function _resolveFinanceDate(aiDate, text) {
+  // 1. AI повернув дату у форматі YYYY-MM-DD
+  if (aiDate) {
+    const d = new Date(aiDate + 'T12:00:00');
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+  // 2. Fallback: шукаємо "вчора/позавчора" у тексті
+  const lower = (text || '').toLowerCase();
+  const now = new Date();
+  if (/\bвчора\b/.test(lower)) {
+    now.setDate(now.getDate() - 1);
+    now.setHours(20, 0, 0, 0);
+    return now.getTime();
+  }
+  if (/\bпозавчора\b/.test(lower)) {
+    now.setDate(now.getDate() - 2);
+    now.setHours(20, 0, 0, 0);
+    return now.getTime();
+  }
+  // 3. Нічого не знайшли — поточний час
+  return Date.now();
+}
+
 // Обробка фінансів з Inbox
 export function processFinanceAction(parsed, originalText) {
   const cats = getFinCats();
@@ -909,13 +933,16 @@ export function processFinanceAction(parsed, originalText) {
     saveFinCats(cats);
   }
 
+  // Визначення дати: AI date → fallback "вчора/позавчора" → поточний час
+  const ts = _resolveFinanceDate(parsed.date, originalText);
+
   const txs = getFinance();
-  txs.unshift({ id: Date.now(), type, amount, category, comment, ts: Date.now() });
+  txs.unshift({ id: Date.now(), type, amount, category, comment, ts });
   saveFinance(txs);
 
   // Зберігаємо в Inbox для історії
   const items = getInbox();
-  items.unshift({ id: Date.now(), text: originalText, category: 'finance', ts: Date.now(), processed: true });
+  items.unshift({ id: Date.now(), text: originalText, category: 'finance', ts, processed: true });
   saveInbox(items);
   renderInbox();
 
