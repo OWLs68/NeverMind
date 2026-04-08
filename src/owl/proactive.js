@@ -281,7 +281,9 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
       })
     });
     if (!res.ok) {
-      console.warn('[OWL board] API HTTP error:', res.status, res.statusText);
+      const errDetail = `HTTP ${res.status} ${res.statusText}`;
+      console.warn('[OWL board] API error:', errDetail);
+      localStorage.setItem('nm_owl_api_error', errDetail + ' @ ' + new Date().toLocaleTimeString('uk-UA'));
       _tryLocalFallback(tab);
       _boardGenerating[tab] = false;
       return;
@@ -289,11 +291,15 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     const data = await res.json();
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) {
-      console.warn('[OWL board] empty API reply:', JSON.stringify(data?.error || data).slice(0, 200));
+      const errDetail = 'empty reply: ' + JSON.stringify(data?.error || {}).slice(0, 150);
+      console.warn('[OWL board]', errDetail);
+      localStorage.setItem('nm_owl_api_error', errDetail + ' @ ' + new Date().toLocaleTimeString('uk-UA'));
       _tryLocalFallback(tab);
       _boardGenerating[tab] = false;
       return;
     }
+    // Очищуємо помилку — API працює
+    localStorage.removeItem('nm_owl_api_error');
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
 
@@ -332,28 +338,51 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
   _boardGenerating[tab] = false;
 }
 
-// Локальне fallback-повідомлення коли API не працює а табло застаріло
+// Розумне fallback-повідомлення з РЕАЛЬНИХ даних коли API не працює
 function _tryLocalFallback(tab) {
   if (tab !== 'inbox') return;
   const msgs = getOwlBoardMessages();
   const visibleTs = msgs[0]?.ts || 0;
-  if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return; // не застаріло — не чіпаємо
-  const phase = getDayPhase();
-  const fallbacks = {
-    dawn:    'Ранній підйом! Тихий ранок — гарний час для себе.',
-    morning: 'Доброго ранку! Новий день, нові можливості.',
-    work:    'Робочий час. Тримаєшся?',
-    evening: 'Вечір. Як пройшов день?',
-    night:   'Пізній час. Не забудь відпочити.',
-  };
-  const text = fallbacks[phase] || 'Привіт! Як справи?';
-  const newMsg = { text, priority: 'normal', chips: [], ts: Date.now(), id: Date.now() };
+  if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return;
+
+  let text = '';
+  const chips = [];
+  try {
+    const tasks = getTasks().filter(t => t.status === 'active');
+    const habits = getHabits();
+    const todayStr = new Date().toDateString();
+    const habitLog = getHabitLog();
+    const todayLog = habitLog[todayStr] || {};
+    const dow = new Date().getDay();
+    const todayHabits = habits.filter(h => h.type !== 'quit' && (h.days || []).includes(dow));
+    const doneH = todayHabits.filter(h => todayLog[h.id]);
+    const pendingH = todayHabits.filter(h => !todayLog[h.id]);
+
+    if (tasks.length > 0 && pendingH.length > 0) {
+      text = `${tasks.length} задач і ${pendingH.length} звичок на сьогодні.`;
+      chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
+      chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
+    } else if (tasks.length > 0) {
+      text = tasks.length === 1 ? `Одна задача: "${tasks[0].title}".` : `${tasks.length} відкритих задач.`;
+      chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
+    } else if (pendingH.length > 0) {
+      text = `${doneH.length}/${todayHabits.length} звичок виконано.`;
+      chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
+    } else if (doneH.length > 0) {
+      text = 'Всі звички на сьогодні виконано! 💪';
+    } else {
+      const phase = getDayPhase();
+      text = ({ dawn:'Ранній ранок.', morning:'Доброго ранку!', work:'Робочий день.', evening:'Добрий вечір!', night:'Доброї ночі.' })[phase] || 'Привіт!';
+    }
+  } catch(e) { text = 'Привіт!'; }
+
+  const newMsg = { text, priority: 'normal', chips, ts: Date.now(), id: Date.now() };
   const all = getOwlBoardMessages();
   all.unshift(newMsg);
   saveOwlBoardMessages(all.slice(0, 3));
   localStorage.setItem('nm_owl_board_ts', Date.now().toString());
   renderOwlBoard();
-  console.warn('[OWL board] showed local fallback:', text);
+  console.warn('[OWL board] smart fallback:', text);
 }
 
 // === Контекстні підказки при першому відвідуванні вкладки ===
