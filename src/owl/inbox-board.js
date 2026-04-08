@@ -282,7 +282,7 @@ export function setupChatBarSwipe() {
 const OWL_BOARD_KEY = 'nm_owl_board';       // масив до 3 повідомлень
 const OWL_BOARD_SEEN_KEY = 'nm_owl_board_seen'; // які ID вже показано
 const OWL_BOARD_TS_KEY = 'nm_owl_board_ts'; // timestamp останньої генерації
-const OWL_BOARD_INTERVAL = 3 * 60 * 1000;  // 3 хвилини
+const OWL_BOARD_INTERVAL = 10 * 60 * 1000; // 10 хв — fallback, основні тригери через події
 
 let _owlBoardMessages = [];
 // _owlBoardGenerating видалено — guard тепер у generateBoardMessage (proactive.js)
@@ -346,94 +346,155 @@ export function setOwlCd(topic) {
   localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
 }
 
-// Перевірка чи є щось важливе — БЕЗ API
-function checkOwlBoardTrigger() {
+// ============================================================
+// JUDGE LAYER — shouldOwlSpeak()
+// Єдиний шар що вирішує "чи є що сказати".
+// Повертає { speak: bool, score: number, reason: string }
+// Замінює старий checkOwlBoardTrigger() з cooldowns.
+// ============================================================
+const SPEAK_THRESHOLD = 3;
+
+export function shouldOwlSpeak(trigger) {
+  // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time'
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return false;
+  if (!key) return { speak: false, score: -1, reason: 'no-api-key' };
 
   const phase = getDayPhase();
-  if (phase === 'silent') return false;
+  if (phase === 'silent') return { speak: false, score: -100, reason: 'silent-phase' };
+
+  let score = 0;
+  let reasons = [];
 
   const now = new Date();
   const todayStr = now.toDateString();
   const hour = now.getHours();
-  const min  = now.getMinutes();
-  const sc   = getSchedule();
+  const min = now.getMinutes();
 
-  // Регулярний пульс — мінімум кожні 45 хв незалежно від теми
-  if (owlCdExpired('phase_pulse', 45 * 60 * 1000)) return true;
+  // === БЛОКЕРИ (сильний мінус) ===
 
-  // КРИТИЧНІ — короткі cooldown, можуть повторитись
+  // Чат відкритий — не перебивай
+  if (activeChatBar) {
+    score -= 10;
+    reasons.push('chat-open');
+  }
+
+  // Час від останньої генерації
+  const lastGen = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const sinceLastGen = Date.now() - lastGen;
+  if (sinceLastGen < 5 * 60 * 1000) {
+    score -= 4;
+    reasons.push('gen<5m');
+  } else if (sinceLastGen < 15 * 60 * 1000) {
+    score -= 1;
+    reasons.push('gen<15m');
+  }
+
+  // === ТРИГЕРИ (плюс) ===
+
+  // Перший раз / новий день — завжди є що сказати
+  if (trigger === 'first-time' || trigger === 'new-day') {
+    score += 5;
+    reasons.push(trigger);
+  }
+
+  // Повернувся після довгої відсутності
+  if (trigger === 'welcome-back') {
+    score += 4;
+    reasons.push('welcome-back');
+  }
+
+  // Дані змінились (закрив задачу, відмітив звичку) — є про що сказати
+  if (trigger === 'data-changed') {
+    score += 3;
+    reasons.push('data-changed');
+  }
+
+  // Дедлайн через ~годину
   const tasks = getTasks().filter(t => t.status !== 'done');
-
-  // Дедлайн через ~годину (30 хв cooldown — може повторно попередити)
   for (const t of tasks) {
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
     if (m) {
-      const diff = (parseInt(m[1])*60+parseInt(m[2])) - (hour*60+min);
-      if (diff > 0 && diff <= 65 && owlCdExpired('deadline_' + t.id, 30 * 60 * 1000)) return true;
+      const diff = (parseInt(m[1]) * 60 + parseInt(m[2])) - (hour * 60 + min);
+      if (diff > 0 && diff <= 65) {
+        score += 3;
+        reasons.push('deadline-soon');
+        break;
+      }
     }
   }
+  // Дедлайн сьогодні (dueDate)
+  const todayISO = now.toISOString().slice(0, 10);
+  if (tasks.some(t => t.dueDate === todayISO)) {
+    score += 2;
+    reasons.push('due-today');
+  }
 
-  // Стрік під загрозою ввечері (1 год cooldown)
+  // Стрік під загрозою ввечері
   if (phase === 'evening' || phase === 'night') {
     const habits = getHabits();
     const log = getHabitLog();
     const todayLog = log[todayStr] || {};
-    const atRisk = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
-    if (atRisk.length > 0 && owlCdExpired('streak_risk', 60 * 60 * 1000)) return true;
+    const atRisk = habits.filter(h => h.days?.includes(now.getDay()) && !todayLog[h.id]);
+    if (atRisk.length > 0) {
+      score += 3;
+      reasons.push('streak-risk');
+    }
   }
 
-  // ВАЖЛИВІ — середні cooldown
-
-  // Задача застрягла 3+ дні (6 год cooldown)
-  const stuck = tasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000);
-  if (stuck.length > 0 && owlCdExpired('stuck_tasks', 6 * 60 * 60 * 1000)) return true;
-
-  // Звички не виконані (3 год cooldown, тільки в робочий час і вечір)
-  if (phase === 'work' || phase === 'evening') {
-    const habits = getHabits();
-    const log = getHabitLog();
-    const todayLog = log[todayStr] || {};
-    const pending = habits.filter(h => h.days.includes(now.getDay()) && !todayLog[h.id]);
-    if (pending.length > 0 && owlCdExpired('habits_check', 3 * 60 * 60 * 1000)) return true;
+  // Ранковий брифінг (ще не було сьогодні)
+  if ((phase === 'morning' || phase === 'dawn') && owlCdExpired('morning_brief', 3 * 60 * 60 * 1000)) {
+    score += 3;
+    reasons.push('morning-brief');
   }
 
-  // Всі звички виконані — привітати (8 год cooldown)
-  if (phase === 'work' || phase === 'evening') {
-    const habits = getHabits();
-    const log = getHabitLog();
-    const todayLog = log[todayStr] || {};
-    const todayH = habits.filter(h => h.days.includes(now.getDay()));
-    if (todayH.length > 0 && todayH.every(h => todayLog[h.id]) && owlCdExpired('habits_done', 8 * 60 * 60 * 1000)) return true;
-  }
-
-  // Бюджет 80%+ (4 год cooldown)
+  // Бюджет 80%+
   try {
     const budget = getFinBudget();
     if (budget.total > 0) {
       const from = getFinPeriodRange('month');
-      const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
-      if (exp / budget.total >= 0.8 && owlCdExpired('budget_warn', 4 * 60 * 60 * 1000)) return true;
+      const exp = getFinance().filter(t => t.ts >= from && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      if (exp / budget.total >= 0.8) {
+        score += 2;
+        reasons.push('budget-warn');
+      }
     }
-  } catch(e) {}
+  } catch (e) {}
 
-  // Вечір без підсумку (4 год cooldown)
+  // Вечір без підсумку
   if (phase === 'evening' || phase === 'night') {
     const s = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
-    if ((!s || new Date(s.date).toDateString() !== todayStr) && owlCdExpired('evening_prompt', 4 * 60 * 60 * 1000)) return true;
+    if (!s || new Date(s.date).toDateString() !== todayStr) {
+      score += 2;
+      reasons.push('no-evening-summary');
+    }
   }
 
-  // Ранковий брифінг (3 год cooldown)
-  if (phase === 'morning' && owlCdExpired('morning_brief', 3 * 60 * 60 * 1000)) return true;
+  // Задачі застрягли 3+ дні
+  const stuck = tasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1000);
+  if (stuck.length > 0) {
+    score += 1;
+    reasons.push('stuck-tasks');
+  }
 
-  // Понеділок — огляд тижня (6 год cooldown)
-  if (now.getDay() === 1 && (phase === 'morning' || phase === 'work') && owlCdExpired('week_start', 6 * 60 * 60 * 1000)) return true;
+  // Понеділок — огляд тижня
+  if (now.getDay() === 1 && (phase === 'morning' || phase === 'work') && owlCdExpired('week_start', 6 * 60 * 60 * 1000)) {
+    score += 2;
+    reasons.push('week-start');
+  }
+  // П'ятниця — підсумок тижня
+  if (now.getDay() === 5 && phase === 'evening' && owlCdExpired('week_end', 6 * 60 * 60 * 1000)) {
+    score += 2;
+    reasons.push('week-end');
+  }
 
-  // Пʼятниця — підсумок тижня (6 год cooldown)
-  if (now.getDay() === 5 && phase === 'evening' && owlCdExpired('week_end', 6 * 60 * 60 * 1000)) return true;
+  // Давно не генерували (45+ хв) — невеликий плюс
+  if (sinceLastGen > 45 * 60 * 1000) {
+    score += 1;
+    reasons.push('long-silence');
+  }
 
-  return false;
+  const speak = score >= SPEAK_THRESHOLD;
+  return { speak, score, reason: reasons.join(', ') };
 }
 
 // Будуємо контекст для табло з пріоритетами
@@ -1026,20 +1087,18 @@ export function startOwlBoardCycle() {
 }
 
 function tryOwlBoardUpdate() {
-  const phase = getDayPhase();
-  if (phase === 'silent') return;
-
-  // Показуємо що є зараз
+  // Показуємо що є зараз (кешоване повідомлення)
   const msgs = getOwlBoardMessages();
   if (msgs.length > 0) renderOwlBoard();
 
+  // Judge Layer вирішує чи генерувати нове
   const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
   const isFirstTime = msgs.length === 0 && lastTs === 0;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
 
-  const shouldGenerate = isFirstTime || isNewDay || checkOwlBoardTrigger();
-  if (shouldGenerate) {
-    // Викликаємо єдину генерацію через lazy import щоб уникнути circular dependency
+  const trigger = isFirstTime ? 'first-time' : isNewDay ? 'new-day' : 'timer';
+  const judge = shouldOwlSpeak(trigger);
+  if (judge.speak) {
     import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
   }
 }
