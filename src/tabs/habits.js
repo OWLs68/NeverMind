@@ -25,7 +25,7 @@ export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.s
 
 // === QUIT HABITS — челендж "Кинути" ===
 function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
-function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); }
+function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }
 // freedomDays — сумарна кількість днів "тримався", ніколи не скидається
