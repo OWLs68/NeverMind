@@ -6534,9 +6534,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const r = getRoutine();
     return r[dayKey] || r["default"] || [];
   }
-  function getTodayRoutine() {
-    return getRoutineForDay(DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()]);
-  }
   function openRoutineModal() {
     _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
     _renderRoutineDayTabs();
@@ -7696,10 +7693,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     if (action === "save_routine") {
       const routine = getRoutine();
-      const day = parsed.day || "default";
-      routine[day] = (parsed.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
+      const blocks = (parsed.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
+      const days = Array.isArray(parsed.day) ? parsed.day : [parsed.day || "default"];
+      days.forEach((d) => {
+        routine[d] = [...blocks];
+      });
       saveRoutine(routine);
-      addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E (${routine[day].length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+      addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${days.length} \u0434\u043D. (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
       return true;
     }
     return false;
@@ -8059,16 +8059,24 @@ ${inboxList}`);
     } catch (e) {
     }
     try {
-      const routine = getTodayRoutine();
-      if (routine.length > 0) {
+      const allRoutine = getRoutine();
+      const dayLabels = { default: "\u0411\u0443\u0434\u043D\u0456", mon: "\u041F\u043D", tue: "\u0412\u0442", wed: "\u0421\u0440", thu: "\u0427\u0442", fri: "\u041F\u0442", sat: "\u0421\u0431", sun: "\u041D\u0434" };
+      const filledDays = Object.keys(allRoutine).filter((k) => allRoutine[k]?.length > 0);
+      if (filledDays.length > 0) {
         const nowMin = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
-        const routineStr = routine.sort((a, b) => a.time.localeCompare(b.time)).map((b) => {
-          const [h, m] = b.time.split(":").map(Number);
-          const bMin = h * 60 + (m || 0);
-          const mark = bMin <= nowMin ? "\u2713" : "";
-          return `${b.time} ${b.activity}${mark}`;
-        }).join(", ");
-        parts.push(`\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${routineStr}. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0456\u0434\u043A\u0430\u0437\u043E\u043A \u2014 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u0449\u043E \u0434\u0430\u043B\u0456 \u0437\u0430 \u043F\u043B\u0430\u043D\u043E\u043C.`);
+        const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+        const todayKey = dayKeys[(/* @__PURE__ */ new Date()).getDay()];
+        const routineParts = filledDays.map((day) => {
+          const isToday = day === todayKey || day === "default" && !allRoutine[todayKey];
+          const blocks = allRoutine[day].sort((a, b) => a.time.localeCompare(b.time)).map((b) => {
+            const mark = isToday && parseInt(b.time) * 60 + parseInt(b.time.split(":")[1] || 0) <= nowMin ? "\u2713" : "";
+            return `${b.time} ${b.activity}${mark}`;
+          }).join(", ");
+          return `${dayLabels[day] || day}${isToday ? " (\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)" : ""}: ${blocks}`;
+        });
+        parts.push(`\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F:
+${routineParts.join("\n")}
+\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0456\u0434\u043A\u0430\u0437\u043E\u043A. \u041C\u043E\u0436\u0435\u0448 \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438, \u0437\u043C\u0456\u043D\u044E\u0432\u0430\u0442\u0438, \u0432\u0438\u0434\u0430\u043B\u044F\u0442\u0438 \u0431\u043B\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 save_routine.`);
       }
     } catch (e) {
     }
@@ -8192,7 +8200,11 @@ ${context}
 \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
 \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
 \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
-\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon|tue|wed|thu|fri|sat|sun|default","blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"},{"time":"09:00","activity":"\u0420\u043E\u0431\u043E\u0442\u0430"}]}
+\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"},{"time":"09:00","activity":"\u0420\u043E\u0431\u043E\u0442\u0430"}]}
+- day \u043C\u043E\u0436\u0435 \u0431\u0443\u0442\u0438 \u043E\u0434\u0438\u043D \u0434\u0435\u043D\u044C ("thu") \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432 \u0434\u043D\u0456\u0432 (["mon","tue","wed","thu","fri"]) \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F
+- "\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043D\u0430 \u0432\u0441\u0456 \u0431\u0443\u0434\u043D\u0456" \u2192 day:["mon","tue","wed","thu","fri"], blocks \u0437 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u0434\u043D\u044F
+- "\u041F\u0440\u0438\u0431\u0435\u0440\u0438 \u0431\u0456\u0433" \u2192 \u0432\u0456\u0434\u043F\u0440\u0430\u0432 blocks \u0411\u0415\u0417 \u0431\u0456\u0433\u0430 (\u0432\u0435\u0441\u044C \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u0434\u043D\u044F \u043C\u0456\u043D\u0443\u0441 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0431\u043B\u043E\u043A)
+- "\u0417\u043C\u0456\u043D\u0438 \u0437\u0430\u043B \u0437 18 \u043D\u0430 19" \u2192 \u0432\u0456\u0434\u043F\u0440\u0430\u0432 blocks \u0437 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u043C \u0447\u0430\u0441\u043E\u043C
 
 ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.`;
     const messages = [
@@ -10560,11 +10572,15 @@ ${list}
             }
           } else if (action.action === "save_routine") {
             const routine = getRoutine();
-            const day = action.day || "default";
-            routine[day] = (action.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
-            saveRoutine(routine);
+            const blocks = (action.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
+            const days = Array.isArray(action.day) ? action.day : [action.day || "default"];
             const dayLabels = { default: "\u0431\u0443\u0434\u043D\u0456", mon: "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", tue: "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", wed: "\u0441\u0435\u0440\u0435\u0434\u0443", thu: "\u0447\u0435\u0442\u0432\u0435\u0440", fri: "\u043F'\u044F\u0442\u043D\u0438\u0446\u044E", sat: "\u0441\u0443\u0431\u043E\u0442\u0443", sun: "\u043D\u0435\u0434\u0456\u043B\u044E" };
-            addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 ${dayLabels[day] || day} \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E (${routine[day].length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+            days.forEach((d) => {
+              routine[d] = [...blocks];
+            });
+            saveRoutine(routine);
+            const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map((d) => dayLabels[d] || d).join(", ");
+            addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${label} (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || reply;
