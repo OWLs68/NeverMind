@@ -370,43 +370,16 @@ export function shouldOwlSpeak(trigger) {
   const hour = now.getHours();
   const min = now.getMinutes();
 
-  // === БЛОКЕРИ (сильний мінус) ===
-
-  // Чат відкритий — не перебивай
-  if (activeChatBar) {
-    score -= 10;
-    reasons.push('chat-open');
-  }
-
-  // Два таймери:
-  // sinceLastAttempt — коли востаннє СПРОБУВАЛИ генерувати (для антиспаму API)
-  // sinceLastVisible — скільки юзер бачить ОДНЕ й ТЕ САМЕ повідомлення (для бонусу тиші)
+  // === ТАЙМЕРИ ===
   const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
   const sinceLastAttempt = Date.now() - lastAttemptTs;
   const msgs = getOwlBoardMessages();
   const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
   const sinceLastVisible = Date.now() - lastVisibleTs;
 
-  // Штраф за нещодавню генерацію — НЕ для chat-reply (юзер відповів на табло = діалог)
-  if (trigger !== 'chat-reply') {
-    if (sinceLastAttempt < 5 * 60 * 1000) {
-      score -= 4;
-      reasons.push('attempt<5m');
-    } else if (sinceLastAttempt < 15 * 60 * 1000) {
-      score -= 1;
-      reasons.push('attempt<15m');
-    }
-  }
+  // === ТРИГЕРИ (плюс) — рахуємо ПЕРЕД блокерами щоб знати чи є критичне ===
 
-  // === ТРИГЕРИ (плюс) ===
-
-  // Юзер відповів на повідомлення табло — табло МУСИТЬ оновитись
-  if (trigger === 'chat-reply') {
-    score += 5;
-    reasons.push('chat-reply');
-  }
-
-  // Перший раз / новий день — завжди є що сказати
+  // Перший раз / новий день
   if (trigger === 'first-time' || trigger === 'new-day') {
     score += 5;
     reasons.push(trigger);
@@ -418,13 +391,20 @@ export function shouldOwlSpeak(trigger) {
     reasons.push('welcome-back');
   }
 
-  // Дані змінились (закрив задачу, відмітив звичку) — є про що сказати
+  // Дані змінились (закрив задачу, відмітив звичку)
   if (trigger === 'data-changed') {
     score += 3;
     reasons.push('data-changed');
   }
 
-  // Дедлайн через ~годину
+  // Закриття чату — час оновити табло
+  if (trigger === 'chat-closed') {
+    score += 4;
+    reasons.push('chat-closed');
+  }
+
+  // Дедлайн через ~годину — КРИТИЧНЕ
+  let hasCritical = false;
   const tasks = getTasks().filter(t => t.status !== 'done');
   for (const t of tasks) {
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
@@ -433,6 +413,7 @@ export function shouldOwlSpeak(trigger) {
       if (diff > 0 && diff <= 65) {
         score += 3;
         reasons.push('deadline-soon');
+        hasCritical = true;
         break;
       }
     }
@@ -442,6 +423,30 @@ export function shouldOwlSpeak(trigger) {
   if (tasks.some(t => t.dueDate === todayISO)) {
     score += 2;
     reasons.push('due-today');
+  }
+
+  // === БЛОКЕРИ (мінус) — ПІСЛЯ тригерів ===
+
+  // Чат відкритий — критичне пробивається, звичайне чекає
+  if (activeChatBar) {
+    if (hasCritical) {
+      score -= 3;
+      reasons.push('chat-open(soft)');
+    } else {
+      score -= 10;
+      reasons.push('chat-open');
+    }
+  }
+
+  // Штраф за нещодавню генерацію
+  if (trigger !== 'chat-closed') {
+    if (sinceLastAttempt < 5 * 60 * 1000) {
+      score -= 4;
+      reasons.push('attempt<5m');
+    } else if (sinceLastAttempt < 15 * 60 * 1000) {
+      score -= 1;
+      reasons.push('attempt<15m');
+    }
   }
 
   // Стрік під загрозою ввечері
