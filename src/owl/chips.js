@@ -335,7 +335,8 @@ function sendChipToChat(tab, text) {
     input.dispatchEvent(new Event('input'));
   }
 
-  setTimeout(() => {
+  // Подвійний rAF гарантує що openChatBar's requestAnimationFrame вже виконався
+  requestAnimationFrame(() => requestAnimationFrame(() => {
     if (barTab === 'inbox') { sendToAI(true); } // fromChip=true
     else if (barTab === 'tasks') { sendTasksBarMessage(); }
     else if (barTab === 'notes') { sendNotesBarMessage(); }
@@ -344,7 +345,7 @@ function sendChipToChat(tab, text) {
     else if (barTab === 'projects') { sendProjectsBarMessage(); }
     else if (barTab === 'me') { sendMeChatMessage(); }
     else if (barTab === 'evening') { sendEveningBarMessage(); }
-  }, 100);
+  }));
 }
 
 // === WINDOW GLOBALS (HTML handlers only) ===
