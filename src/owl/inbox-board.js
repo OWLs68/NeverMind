@@ -487,10 +487,14 @@ export function shouldOwlSpeak(trigger) {
     reasons.push('week-end');
   }
 
-  // Давно не генерували (45+ хв) — невеликий плюс
-  if (sinceLastGen > 45 * 60 * 1000) {
-    score += 1;
-    reasons.push('long-silence');
+  // Давно не генерували — градуйований бонус
+  // Це заміна старого phase_pulse (45хв безумовно)
+  if (sinceLastGen > 60 * 60 * 1000) {
+    score += 3;
+    reasons.push('silence>60m');
+  } else if (sinceLastGen > 30 * 60 * 1000) {
+    score += 2;
+    reasons.push('silence>30m');
   }
 
   const speak = score >= SPEAK_THRESHOLD;

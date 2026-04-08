@@ -312,7 +312,9 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     // Рендер
     if (isInbox) renderOwlBoard();
     else renderTabBoard(tab);
-  } catch(e) {}
+  } catch(e) {
+    console.warn('[OWL board] generation error:', e?.message || e);
+  }
   _boardGenerating[tab] = false;
 }
 
