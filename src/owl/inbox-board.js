@@ -387,15 +387,24 @@ export function shouldOwlSpeak(trigger) {
   const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
   const sinceLastVisible = Date.now() - lastVisibleTs;
 
-  if (sinceLastAttempt < 5 * 60 * 1000) {
-    score -= 4;
-    reasons.push('attempt<5m');
-  } else if (sinceLastAttempt < 15 * 60 * 1000) {
-    score -= 1;
-    reasons.push('attempt<15m');
+  // Штраф за нещодавню генерацію — НЕ для chat-reply (юзер відповів на табло = діалог)
+  if (trigger !== 'chat-reply') {
+    if (sinceLastAttempt < 5 * 60 * 1000) {
+      score -= 4;
+      reasons.push('attempt<5m');
+    } else if (sinceLastAttempt < 15 * 60 * 1000) {
+      score -= 1;
+      reasons.push('attempt<15m');
+    }
   }
 
   // === ТРИГЕРИ (плюс) ===
+
+  // Юзер відповів на повідомлення табло — табло МУСИТЬ оновитись
+  if (trigger === 'chat-reply') {
+    score += 5;
+    reasons.push('chat-reply');
+  }
 
   // Перший раз / новий день — завжди є що сказати
   if (trigger === 'first-time' || trigger === 'new-day') {
