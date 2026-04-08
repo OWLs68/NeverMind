@@ -3934,9 +3934,12 @@ ${aiContext ? "\n\n" + aiContext : ""}
       score += 2;
       reasons.push("week-end");
     }
-    if (sinceLastGen > 45 * 60 * 1e3) {
-      score += 1;
-      reasons.push("long-silence");
+    if (sinceLastGen > 60 * 60 * 1e3) {
+      score += 3;
+      reasons.push("silence>60m");
+    } else if (sinceLastGen > 30 * 60 * 1e3) {
+      score += 2;
+      reasons.push("silence>30m");
     }
     const speak = score >= SPEAK_THRESHOLD;
     return { speak, score, reason: reasons.join(", ") };
@@ -4948,6 +4951,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (isInbox) renderOwlBoard();
       else renderTabBoard(tab);
     } catch (e) {
+      console.warn("[OWL board] generation error:", e?.message || e);
     }
     _boardGenerating[tab] = false;
   }
