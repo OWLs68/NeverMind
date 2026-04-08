@@ -11,7 +11,7 @@ import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
-import { getEvents } from '../tabs/calendar.js';
+import { getEvents, getTodayRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
@@ -184,6 +184,21 @@ export function getAIContext() {
     }
     if (boardText) {
       parts.push(`OWL щойно сказав на табло (вкладка "${tab}"): "${boardText}". Якщо користувач відповідає на це — це відповідь на питання OWL, НЕ нова задача/нотатка.`);
+    }
+  } catch(e) {}
+
+  // === Розпорядок дня ===
+  try {
+    const routine = getTodayRoutine();
+    if (routine.length > 0) {
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const routineStr = routine.sort((a, b) => a.time.localeCompare(b.time)).map(b => {
+        const [h, m] = b.time.split(':').map(Number);
+        const bMin = h * 60 + (m || 0);
+        const mark = bMin <= nowMin ? '✓' : '';
+        return `${b.time} ${b.activity}${mark}`;
+      }).join(', ');
+      parts.push(`Розпорядок на сьогодні: ${routineStr}. Використовуй для підказок — нагадуй що далі за планом.`);
     }
   } catch(e) {}
 
@@ -515,6 +530,7 @@ ${context}
 Створити нотатку: {"action":"create_note","text":"текст нотатки"}
 Записати витрату: {"action":"save_finance","fin_type":"expense","amount":ЧИСЛО,"category":"категорія"}
 Записати дохід: {"action":"save_finance","fin_type":"income","amount":ЧИСЛО,"category":"категорія"}
+Зберегти розпорядок: {"action":"save_routine","day":"mon|tue|wed|thu|fri|sat|sun|default","blocks":[{"time":"07:00","activity":"Підйом"},{"time":"09:00","activity":"Робота"}]}
 
 ID задач і звичок є в КОНТЕКСТ ДАНИХ вище. Використовуй тільки реальні ID.`;
 

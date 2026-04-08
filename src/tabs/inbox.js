@@ -17,6 +17,7 @@ import { addNoteFromInbox } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction } from './finance.js';
 import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
 import { getProjects, saveProjects, startProjectInboxInterview } from './projects.js';
+import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 
 // === INBOX CHAT MESSAGES ===
@@ -550,6 +551,13 @@ export async function sendToAI(fromChip = false) {
               addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме, або скажи "відновити всі".`);
             }
           }
+        } else if (action.action === 'save_routine') {
+          const routine = getRoutine();
+          const day = action.day || 'default';
+          routine[day] = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
+          saveRoutine(routine);
+          const dayLabels = { default:'будні', mon:'понеділок', tue:'вівторок', wed:'середу', thu:'четвер', fri:'п\'ятницю', sat:'суботу', sun:'неділю' };
+          addInboxChatMsg('agent', `🕐 Розпорядок на ${dayLabels[day] || day} збережено (${routine[day].length} блоків)`);
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // delete_folder, move_note, create_task, create_note тощо
         } else {

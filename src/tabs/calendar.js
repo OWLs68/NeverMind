@@ -270,7 +270,135 @@ function calendarDayTap(day) {
   el.innerHTML = html;
 }
 
+// ============================================================
+// ROUTINE — Розпорядок дня
+// nm_routine = { default: [{time,activity}], mon: [...], ... }
+// ============================================================
+const NM_ROUTINE_KEY = 'nm_routine';
+const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
+const DAY_LABELS = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+let _routineDay = DAY_KEYS[new Date().getDay()]; // поточний день
+
+export function getRoutine() {
+  try { return JSON.parse(localStorage.getItem(NM_ROUTINE_KEY) || '{}'); } catch { return {}; }
+}
+export function saveRoutine(obj) {
+  localStorage.setItem(NM_ROUTINE_KEY, JSON.stringify(obj));
+  window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'routine' }));
+}
+
+// Отримати розклад на конкретний день (fallback → default)
+export function getRoutineForDay(dayKey) {
+  const r = getRoutine();
+  return r[dayKey] || r['default'] || [];
+}
+
+// Отримати розклад на сьогодні (для AI контексту)
+export function getTodayRoutine() {
+  return getRoutineForDay(DAY_KEYS[new Date().getDay()]);
+}
+
+function openRoutineModal() {
+  _routineDay = DAY_KEYS[new Date().getDay()];
+  _renderRoutineDayTabs();
+  _renderRoutineTimeline();
+  const modal = document.getElementById('routine-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeRoutineModal);
+  }
+}
+
+function closeRoutineModal() {
+  const modal = document.getElementById('routine-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function _renderRoutineDayTabs() {
+  const el = document.getElementById('routine-day-tabs');
+  if (!el) return;
+  const routine = getRoutine();
+  const todayIdx = new Date().getDay();
+  el.innerHTML = DAY_KEYS.map((key, i) => {
+    const isActive = key === _routineDay;
+    const isToday = i === todayIdx;
+    const hasOwn = !!routine[key];
+    return `<div onclick="routineSelectDay('${key}')" style="padding:6px 10px;border-radius:10px;font-size:12px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;
+      background:${isActive ? '#ea580c' : 'rgba(255,255,255,0.5)'};
+      color:${isActive ? 'white' : isToday ? '#ea580c' : 'rgba(30,16,64,0.5)'};
+      border:1.5px solid ${isActive ? '#ea580c' : isToday ? 'rgba(234,88,12,0.3)' : 'rgba(30,16,64,0.08)'};
+      ${hasOwn && !isActive ? 'box-shadow:inset 0 -2px 0 rgba(234,88,12,0.3);' : ''}
+      ">${DAY_LABELS[i]}</div>`;
+  }).join('');
+  const label = document.getElementById('routine-day-label');
+  if (label) label.textContent = _routineDay === DAY_KEYS[todayIdx] ? 'сьогодні' : '';
+}
+
+function _renderRoutineTimeline() {
+  const el = document.getElementById('routine-timeline');
+  if (!el) return;
+  const blocks = getRoutineForDay(_routineDay);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const isToday = DAY_KEYS[now.getDay()] === _routineDay;
+
+  if (blocks.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
+      Розпорядок порожній.<br>Натисни «+ Додати блок» або напиши в чат:<br>
+      <span style="color:rgba(234,88,12,0.6);font-weight:600">"Мій розклад: 7 підйом, 9 робота, 18 зал"</span>
+    </div>`;
+    return;
+  }
+
+  const sorted = [...blocks].sort((a, b) => a.time.localeCompare(b.time));
+  el.innerHTML = sorted.map((b, i) => {
+    const [h, m] = b.time.split(':').map(Number);
+    const blockMin = h * 60 + (m || 0);
+    const nextBlock = sorted[i + 1];
+    const nextMin = nextBlock ? parseInt(nextBlock.time.split(':')[0]) * 60 + (parseInt(nextBlock.time.split(':')[1]) || 0) : 24 * 60;
+    const isCurrent = isToday && nowMin >= blockMin && nowMin < nextMin;
+    const isPast = isToday && nowMin >= nextMin;
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? 'opacity:0.4;' : ''}${isCurrent ? 'background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;' : ''}">
+      <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : '#1e1040'};text-align:right">${b.time}</div>
+      <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${isCurrent ? '#ea580c' : '#1e1040'}">${escapeHtml(b.activity)}${isCurrent ? ' ←' : ''}</div>
+        <div onclick="routineDeleteBlock(${i})" style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 4px">×</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function routineSelectDay(dayKey) {
+  _routineDay = dayKey;
+  _renderRoutineDayTabs();
+  _renderRoutineTimeline();
+}
+
+function routineAddBlock() {
+  const time = prompt('Час (наприклад 07:30):');
+  if (!time || !/^\d{1,2}:\d{2}$/.test(time)) return;
+  const activity = prompt('Що робити:');
+  if (!activity) return;
+  const routine = getRoutine();
+  if (!routine[_routineDay]) routine[_routineDay] = [...(routine['default'] || [])];
+  routine[_routineDay].push({ time, activity });
+  saveRoutine(routine);
+  _renderRoutineTimeline();
+}
+
+function routineDeleteBlock(idx) {
+  const routine = getRoutine();
+  const blocks = routine[_routineDay] || routine['default'] || [];
+  if (!routine[_routineDay]) routine[_routineDay] = [...blocks];
+  routine[_routineDay].splice(idx, 1);
+  if (routine[_routineDay].length === 0) delete routine[_routineDay];
+  saveRoutine(routine);
+  _renderRoutineTimeline();
+}
+
 // === WINDOW EXPORTS ===
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
+  openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock,
 });
