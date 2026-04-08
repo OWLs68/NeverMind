@@ -513,7 +513,11 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження).
+- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- Видалити подію: {"action":"delete_event","event_id":ID}
+- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
+- Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
+ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
 Інакше — відповідай текстом 1-3 речення. Якщо незрозуміло — перепитуй. НЕ вигадуй дані яких немає.`;
 
   try {

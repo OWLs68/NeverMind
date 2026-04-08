@@ -112,9 +112,17 @@ export function getAIContext() {
       if (ev.date >= todayISO && ev.date <= in7) {
         const diff = Math.round((new Date(ev.date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
         const when = diff === 0 ? 'СЬОГОДНІ' : diff === 1 ? 'ЗАВТРА' : `через ${diff} дн`;
-        upcoming.push(`- 📅 "${ev.title}" — ${when}${ev.time ? ' о ' + ev.time : ''}`);
+        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${when}${ev.time ? ' о ' + ev.time : ''}`);
       }
     });
+    // Всі події (не тільки 7 днів) — для редагування
+    const allEvents = getEvents();
+    const futureEvents = allEvents.filter(ev => ev.date >= todayISO && !upcoming.some(u => u.includes(ev.id)));
+    if (futureEvents.length > 0) {
+      futureEvents.slice(0, 10).forEach(ev => {
+        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${ev.date}${ev.time ? ' о ' + ev.time : ''}`);
+      });
+    }
     getTasks().filter(t => t.status === 'active' && t.dueDate).forEach(t => {
       if (t.dueDate >= todayISO && t.dueDate <= in7) {
         const diff = Math.round((new Date(t.dueDate + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
@@ -536,13 +544,14 @@ ${context}
 Створити нотатку: {"action":"create_note","text":"текст нотатки"}
 Записати витрату: {"action":"save_finance","fin_type":"expense","amount":ЧИСЛО,"category":"категорія"}
 Записати дохід: {"action":"save_finance","fin_type":"income","amount":ЧИСЛО,"category":"категорія"}
+Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD","time":"HH:MM","title":"нова назва"} (передавай тільки поля що змінюються)
+Видалити подію: {"action":"delete_event","event_id":ID}
+Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст","folder":"нова папка"} (тільки поля що змінюються)
 Зберегти/змінити розпорядок: {"action":"save_routine","day":"mon" або ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"Підйом"},{"time":"09:00","activity":"Робота"}]}
-- day може бути один день ("thu") або масив днів (["mon","tue","wed","thu","fri"]) для копіювання
 - "Скопіюй на всі будні" → day:["mon","tue","wed","thu","fri"], blocks з поточного дня
-- "Прибери біг" → відправ blocks БЕЗ біга (весь розклад дня мінус видалений блок)
-- "Зміни зал з 18 на 19" → відправ blocks з оновленим часом
+- "Зміни дату" → edit_event з новою датою. "Перенеси на 24" → edit_event з date
 
-ID задач і звичок є в КОНТЕКСТ ДАНИХ вище. Використовуй тільки реальні ID.`;
+ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вище. Використовуй тільки реальні ID.`;
 
   const messages = [
     { role: 'system', content: systemPrompt },

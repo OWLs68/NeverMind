@@ -1066,7 +1066,11 @@ export async function sendNotesBarMessage() {
 - Записати момент дня: {"action":"add_moment","text":"що сталося"}
 - Зберегти фінанси: {"action":"save_finance","fin_type":"expense або income","amount":число,"category":"категорія","comment":"коментар"}
 - Запланована подія: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження).
+- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- Видалити подію: {"action":"delete_event","event_id":ID}
+- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст","folder":"папка"}
+- Розпорядок: {"action":"save_routine","day":"mon" або ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"Підйом"}]}
+ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію на 24" = edit_event.
 - Просто відповісти: текст (1-3 речення)
 ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
 Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
