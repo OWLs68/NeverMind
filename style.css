@@ -1173,7 +1173,7 @@ body {
 /* --- OWL Agent — персонаж який говорить --- */
 .owl-board-sticky {
   z-index: 5;
-  padding: 0 4px;
+  padding: 0 14px;
   margin-top: 0;
 }
 
