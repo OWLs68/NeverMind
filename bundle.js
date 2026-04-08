@@ -5837,6 +5837,25 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function closeFinBudgetModal() {
     document.getElementById("fin-budget-modal")?.remove();
   }
+  function _resolveFinanceDate(aiDate, text) {
+    if (aiDate) {
+      const d = /* @__PURE__ */ new Date(aiDate + "T12:00:00");
+      if (!isNaN(d.getTime())) return d.getTime();
+    }
+    const lower = (text || "").toLowerCase();
+    const now = /* @__PURE__ */ new Date();
+    if (/\bвчора\b/.test(lower)) {
+      now.setDate(now.getDate() - 1);
+      now.setHours(20, 0, 0, 0);
+      return now.getTime();
+    }
+    if (/\bпозавчора\b/.test(lower)) {
+      now.setDate(now.getDate() - 2);
+      now.setHours(20, 0, 0, 0);
+      return now.getTime();
+    }
+    return Date.now();
+  }
   function processFinanceAction(parsed, originalText) {
     const cats = getFinCats();
     const type = parsed.fin_type || "expense";
@@ -5852,11 +5871,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       catList.push(category);
       saveFinCats(cats);
     }
+    const ts = _resolveFinanceDate(parsed.date, originalText);
     const txs = getFinance();
-    txs.unshift({ id: Date.now(), type, amount, category, comment, ts: Date.now() });
+    txs.unshift({ id: Date.now(), type, amount, category, comment, ts });
     saveFinance(txs);
     const items = getInbox();
-    items.unshift({ id: Date.now(), text: originalText, category: "finance", ts: Date.now(), processed: true });
+    items.unshift({ id: Date.now(), text: originalText, category: "finance", ts, processed: true });
     saveInbox(items);
     renderInbox();
     if (currentTab === "finance") renderFinance();
@@ -7371,7 +7391,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         saveFinCats(cats);
       }
       const txs = getFinance();
-      txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: Date.now() });
+      const finTs = _resolveFinanceDate(parsed.date, originalText);
+      txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: finTs });
       saveFinance(txs);
       if (currentTab === "finance") renderFinance();
       addMsg("agent", "\u2713 " + (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + category + (parsed.comment ? " \xB7 " + parsed.comment : ""));
@@ -8142,7 +8163,8 @@ ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u
   "fin_type": "expense|income",
   "amount": 50,
   "category": "\u0407\u0436\u0430",
-  "fin_comment": "\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438 (1-3 \u0441\u043B\u043E\u0432\u0430, \u0442\u0456\u043B\u044C\u043A\u0438 \u0449\u043E/\u0434\u0435, \u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0437\u0430\u043F\u0440\u0430\u0432\u043A\u0430, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438, \u043A\u0430\u0432\u0430)"
+  "fin_comment": "\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438 (1-3 \u0441\u043B\u043E\u0432\u0430, \u0442\u0456\u043B\u044C\u043A\u0438 \u0449\u043E/\u0434\u0435, \u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0437\u0430\u043F\u0440\u0430\u0432\u043A\u0430, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438, \u043A\u0430\u0432\u0430)",
+  "date": "YYYY-MM-DD (\u0422\u0406\u041B\u042C\u041A\u0418 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E '\u0432\u0447\u043E\u0440\u0430'/'\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430'. \u042F\u043A\u0449\u043E \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u0432 \u2014 \u041D\u0415 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u0446\u0435 \u043F\u043E\u043B\u0435)"
 }
 
 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0440\u0438\u043A\u043B\u0430\u0434\u0430\u043C\u0438:
