@@ -3850,14 +3850,17 @@ ${aiContext ? "\n\n" + aiContext : ""}
       score -= 10;
       reasons.push("chat-open");
     }
-    const lastGen = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
-    const sinceLastGen = Date.now() - lastGen;
-    if (sinceLastGen < 5 * 60 * 1e3) {
+    const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
+    const sinceLastAttempt = Date.now() - lastAttemptTs;
+    const msgs = getOwlBoardMessages();
+    const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+    const sinceLastVisible = Date.now() - lastVisibleTs;
+    if (sinceLastAttempt < 5 * 60 * 1e3) {
       score -= 4;
-      reasons.push("gen<5m");
-    } else if (sinceLastGen < 15 * 60 * 1e3) {
+      reasons.push("attempt<5m");
+    } else if (sinceLastAttempt < 15 * 60 * 1e3) {
       score -= 1;
-      reasons.push("gen<15m");
+      reasons.push("attempt<15m");
     }
     if (trigger === "first-time" || trigger === "new-day") {
       score += 5;
@@ -3934,12 +3937,12 @@ ${aiContext ? "\n\n" + aiContext : ""}
       score += 2;
       reasons.push("week-end");
     }
-    if (sinceLastGen > 60 * 60 * 1e3) {
+    if (sinceLastVisible > 60 * 60 * 1e3) {
       score += 3;
-      reasons.push("silence>60m");
-    } else if (sinceLastGen > 30 * 60 * 1e3) {
+      reasons.push("stale>60m");
+    } else if (sinceLastVisible > 30 * 60 * 1e3) {
       score += 2;
-      reasons.push("silence>30m");
+      reasons.push("stale>30m");
     }
     const speak = score >= SPEAK_THRESHOLD;
     return { speak, score, reason: reasons.join(", ") };
