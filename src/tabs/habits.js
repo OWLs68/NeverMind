@@ -13,7 +13,7 @@ import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHi
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate } from './finance.js';
 import { renderMeHabitsStats, getMoments, saveMoments } from './evening.js';
-import { getEvents, saveEvents } from './calendar.js';
+import { getEvents, saveEvents, getRoutine, saveRoutine } from './calendar.js';
 
 // === HABITS ===
 let editingHabitId = null;
@@ -1168,6 +1168,15 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveFinance(txs);
     if (currentTab === 'finance') renderFinance();
     addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · категорія: ' + category + (parsed.comment ? ' · ' + parsed.comment : ''));
+    return true;
+  }
+
+  if (action === 'save_routine') {
+    const routine = getRoutine();
+    const day = parsed.day || 'default';
+    routine[day] = (parsed.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
+    saveRoutine(routine);
+    addMsg('agent', `🕐 Розпорядок збережено (${routine[day].length} блоків)`);
     return true;
   }
 
