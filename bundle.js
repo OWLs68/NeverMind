@@ -5583,9 +5583,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const monday = new Date(now);
     monday.setDate(now.getDate() + diffToMonday);
     monday.setHours(0, 0, 0, 0);
-    const DAY_LABELS = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+    const DAY_LABELS2 = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
     const allTxs = getFinance();
-    const groups = DAY_LABELS.map((label, i) => {
+    const groups = DAY_LABELS2.map((label, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const nextD = new Date(d);
@@ -6511,19 +6511,136 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     el.style.display = "block";
     el.innerHTML = html;
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth;
+  function getRoutine() {
+    try {
+      return JSON.parse(localStorage.getItem(NM_ROUTINE_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function saveRoutine(obj) {
+    localStorage.setItem(NM_ROUTINE_KEY, JSON.stringify(obj));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "routine" }));
+  }
+  function getRoutineForDay(dayKey) {
+    const r = getRoutine();
+    return r[dayKey] || r["default"] || [];
+  }
+  function getTodayRoutine() {
+    return getRoutineForDay(DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()]);
+  }
+  function openRoutineModal() {
+    _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+    _renderRoutineDayTabs();
+    _renderRoutineTimeline();
+    const modal = document.getElementById("routine-modal");
+    if (modal) {
+      modal.style.display = "flex";
+      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeRoutineModal);
+    }
+  }
+  function closeRoutineModal() {
+    const modal = document.getElementById("routine-modal");
+    if (modal) modal.style.display = "none";
+  }
+  function _renderRoutineDayTabs() {
+    const el = document.getElementById("routine-day-tabs");
+    if (!el) return;
+    const routine = getRoutine();
+    const todayIdx = (/* @__PURE__ */ new Date()).getDay();
+    el.innerHTML = DAY_KEYS.map((key, i) => {
+      const isActive = key === _routineDay;
+      const isToday = i === todayIdx;
+      const hasOwn = !!routine[key];
+      return `<div onclick="routineSelectDay('${key}')" style="padding:6px 10px;border-radius:10px;font-size:12px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;
+      background:${isActive ? "#ea580c" : "rgba(255,255,255,0.5)"};
+      color:${isActive ? "white" : isToday ? "#ea580c" : "rgba(30,16,64,0.5)"};
+      border:1.5px solid ${isActive ? "#ea580c" : isToday ? "rgba(234,88,12,0.3)" : "rgba(30,16,64,0.08)"};
+      ${hasOwn && !isActive ? "box-shadow:inset 0 -2px 0 rgba(234,88,12,0.3);" : ""}
+      ">${DAY_LABELS[i]}</div>`;
+    }).join("");
+    const label = document.getElementById("routine-day-label");
+    if (label) label.textContent = _routineDay === DAY_KEYS[todayIdx] ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "";
+  }
+  function _renderRoutineTimeline() {
+    const el = document.getElementById("routine-timeline");
+    if (!el) return;
+    const blocks = getRoutineForDay(_routineDay);
+    const now = /* @__PURE__ */ new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const isToday = DAY_KEYS[now.getDay()] === _routineDay;
+    if (blocks.length === 0) {
+      el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
+      \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\xBB \u0430\u0431\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u0432 \u0447\u0430\u0442:<br>
+      <span style="color:rgba(234,88,12,0.6);font-weight:600">"\u041C\u0456\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434: 7 \u043F\u0456\u0434\u0439\u043E\u043C, 9 \u0440\u043E\u0431\u043E\u0442\u0430, 18 \u0437\u0430\u043B"</span>
+    </div>`;
+      return;
+    }
+    const sorted = [...blocks].sort((a, b) => a.time.localeCompare(b.time));
+    el.innerHTML = sorted.map((b, i) => {
+      const [h, m] = b.time.split(":").map(Number);
+      const blockMin = h * 60 + (m || 0);
+      const nextBlock = sorted[i + 1];
+      const nextMin = nextBlock ? parseInt(nextBlock.time.split(":")[0]) * 60 + (parseInt(nextBlock.time.split(":")[1]) || 0) : 24 * 60;
+      const isCurrent = isToday && nowMin >= blockMin && nowMin < nextMin;
+      const isPast = isToday && nowMin >= nextMin;
+      return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
+      <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "#1e1040"};text-align:right">${b.time}</div>
+      <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${isCurrent ? "#ea580c" : "#1e1040"}">${escapeHtml(b.activity)}${isCurrent ? " \u2190" : ""}</div>
+        <div onclick="routineDeleteBlock(${i})" style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 4px">\xD7</div>
+      </div>
+    </div>`;
+    }).join("");
+  }
+  function routineSelectDay(dayKey) {
+    _routineDay = dayKey;
+    _renderRoutineDayTabs();
+    _renderRoutineTimeline();
+  }
+  function routineAddBlock() {
+    const time = prompt("\u0427\u0430\u0441 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 07:30):");
+    if (!time || !/^\d{1,2}:\d{2}$/.test(time)) return;
+    const activity = prompt("\u0429\u043E \u0440\u043E\u0431\u0438\u0442\u0438:");
+    if (!activity) return;
+    const routine = getRoutine();
+    if (!routine[_routineDay]) routine[_routineDay] = [...routine["default"] || []];
+    routine[_routineDay].push({ time, activity });
+    saveRoutine(routine);
+    _renderRoutineTimeline();
+  }
+  function routineDeleteBlock(idx) {
+    const routine = getRoutine();
+    const blocks = routine[_routineDay] || routine["default"] || [];
+    if (!routine[_routineDay]) routine[_routineDay] = [...blocks];
+    routine[_routineDay].splice(idx, 1);
+    if (routine[_routineDay].length === 0) delete routine[_routineDay];
+    saveRoutine(routine);
+    _renderRoutineTimeline();
+  }
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
       init_tasks();
       MONTHS_UA = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
       MONTHS_OF = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      NM_ROUTINE_KEY = "nm_routine";
+      DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      DAY_LABELS = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
+      _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
       Object.assign(window, {
         openCalendarModal,
         closeCalendarModal,
         calendarPrevMonth,
         calendarNextMonth,
-        calendarDayTap
+        calendarDayTap,
+        openRoutineModal,
+        closeRoutineModal,
+        routineSelectDay,
+        routineAddBlock,
+        routineDeleteBlock
       });
     }
   });
@@ -7541,6 +7658,14 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       addMsg("agent", "\u2713 " + (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + category + (parsed.comment ? " \xB7 " + parsed.comment : ""));
       return true;
     }
+    if (action === "save_routine") {
+      const routine = getRoutine();
+      const day = parsed.day || "default";
+      routine[day] = (parsed.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
+      saveRoutine(routine);
+      addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E (${routine[day].length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+      return true;
+    }
     return false;
   }
   async function sendTasksBarMessage() {
@@ -7897,6 +8022,20 @@ ${inboxList}`);
       }
     } catch (e) {
     }
+    try {
+      const routine = getTodayRoutine();
+      if (routine.length > 0) {
+        const nowMin = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+        const routineStr = routine.sort((a, b) => a.time.localeCompare(b.time)).map((b) => {
+          const [h, m] = b.time.split(":").map(Number);
+          const bMin = h * 60 + (m || 0);
+          const mark = bMin <= nowMin ? "\u2713" : "";
+          return `${b.time} ${b.activity}${mark}`;
+        }).join(", ");
+        parts.push(`\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${routineStr}. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0456\u0434\u043A\u0430\u0437\u043E\u043A \u2014 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u0449\u043E \u0434\u0430\u043B\u0456 \u0437\u0430 \u043F\u043B\u0430\u043D\u043E\u043C.`);
+      }
+    } catch (e) {
+    }
     const eveningMood = getEveningMood();
     if (eveningMood) {
       const moodLabels = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
@@ -8017,6 +8156,7 @@ ${context}
 \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
 \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
 \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
+\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon|tue|wed|thu|fri|sat|sun|default","blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"},{"time":"09:00","activity":"\u0420\u043E\u0431\u043E\u0442\u0430"}]}
 
 ID \u0437\u0430\u0434\u0430\u0447 \u0456 \u0437\u0432\u0438\u0447\u043E\u043A \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.`;
     const messages = [
@@ -10382,6 +10522,13 @@ ${list}
 \u0423\u0442\u043E\u0447\u043D\u0438 \u044F\u043A\u0438\u0439 \u0441\u0430\u043C\u0435, \u0430\u0431\u043E \u0441\u043A\u0430\u0436\u0438 "\u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0441\u0456".`);
               }
             }
+          } else if (action.action === "save_routine") {
+            const routine = getRoutine();
+            const day = action.day || "default";
+            routine[day] = (action.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
+            saveRoutine(routine);
+            const dayLabels = { default: "\u0431\u0443\u0434\u043D\u0456", mon: "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", tue: "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", wed: "\u0441\u0435\u0440\u0435\u0434\u0443", thu: "\u0447\u0435\u0442\u0432\u0435\u0440", fri: "\u043F'\u044F\u0442\u043D\u0438\u0446\u044E", sat: "\u0441\u0443\u0431\u043E\u0442\u0443", sun: "\u043D\u0435\u0434\u0456\u043B\u044E" };
+            addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 ${dayLabels[day] || day} \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E (${routine[day].length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || reply;
@@ -10729,6 +10876,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_finance();
       init_evening();
       init_projects();
+      init_calendar();
       init_onboarding();
       _inboxTypingEl = null;
       _inboxUnreadCount = 0;
