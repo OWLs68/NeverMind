@@ -4414,6 +4414,14 @@ ${pulseParts.join("\n")}
   function tryOwlBoardUpdate() {
     const msgs = getOwlBoardMessages();
     if (msgs.length > 0) renderOwlBoard();
+    const phase = getDayPhase();
+    if (phase === "silent") return;
+    const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+    if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1e3) {
+      console.warn("[OWL board] stale message detected, forcing generation");
+      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+      return;
+    }
     const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
     const isFirstTime = msgs.length === 0 && lastTs === 0;
     const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
@@ -4922,9 +4930,15 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           temperature: 0.8
         })
       });
+      if (!res.ok) {
+        console.warn("[OWL board] API HTTP error:", res.status, res.statusText);
+        _boardGenerating[tab] = false;
+        return;
+      }
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) {
+        console.warn("[OWL board] empty API reply:", JSON.stringify(data?.error || data).slice(0, 200));
         _boardGenerating[tab] = false;
         return;
       }
