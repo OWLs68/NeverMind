@@ -528,12 +528,19 @@ window.addEventListener('nm-data-changed', (e) => {
   if (e.detail === 'chat') return;
   const trigger = 'data-changed';
 
-  // Відкладена AI-генерація — тільки якщо Judge Layer дозволяє
+  // Відкладена AI-генерація
   if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
   _boardUpdateTimer = setTimeout(() => {
     _boardUpdateTimer = null;
-    const judge = shouldOwlSpeak(trigger);
-    if (judge.speak) generateBoardMessage(currentTab || 'inbox');
+    const curTab = currentTab || 'inbox';
+    if (curTab === 'inbox') {
+      // Inbox — через Judge Layer
+      const judge = shouldOwlSpeak(trigger);
+      if (judge.speak) generateBoardMessage('inbox');
+    } else {
+      // Інші вкладки — генерація напряму (Judge Layer inbox-specific)
+      generateBoardMessage(curTab);
+    }
   }, BOARD_UPDATE_DELAY);
 });
 
