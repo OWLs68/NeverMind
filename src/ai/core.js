@@ -11,7 +11,7 @@ import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
-import { getEvents, getTodayRoutine } from '../tabs/calendar.js';
+import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
@@ -187,18 +187,24 @@ export function getAIContext() {
     }
   } catch(e) {}
 
-  // === Розпорядок дня ===
+  // === Розпорядок дня (всі дні) ===
   try {
-    const routine = getTodayRoutine();
-    if (routine.length > 0) {
+    const allRoutine = getRoutine();
+    const dayLabels = { default:'Будні', mon:'Пн', tue:'Вт', wed:'Ср', thu:'Чт', fri:'Пт', sat:'Сб', sun:'Нд' };
+    const filledDays = Object.keys(allRoutine).filter(k => allRoutine[k]?.length > 0);
+    if (filledDays.length > 0) {
       const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-      const routineStr = routine.sort((a, b) => a.time.localeCompare(b.time)).map(b => {
-        const [h, m] = b.time.split(':').map(Number);
-        const bMin = h * 60 + (m || 0);
-        const mark = bMin <= nowMin ? '✓' : '';
-        return `${b.time} ${b.activity}${mark}`;
-      }).join(', ');
-      parts.push(`Розпорядок на сьогодні: ${routineStr}. Використовуй для підказок — нагадуй що далі за планом.`);
+      const dayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
+      const todayKey = dayKeys[new Date().getDay()];
+      const routineParts = filledDays.map(day => {
+        const isToday = day === todayKey || (day === 'default' && !allRoutine[todayKey]);
+        const blocks = allRoutine[day].sort((a, b) => a.time.localeCompare(b.time)).map(b => {
+          const mark = isToday && (parseInt(b.time) * 60 + parseInt(b.time.split(':')[1] || 0)) <= nowMin ? '✓' : '';
+          return `${b.time} ${b.activity}${mark}`;
+        }).join(', ');
+        return `${dayLabels[day] || day}${isToday ? ' (сьогодні)' : ''}: ${blocks}`;
+      });
+      parts.push(`Розпорядок дня:\n${routineParts.join('\n')}\nВикористовуй для підказок. Можеш копіювати, змінювати, видаляти блоки через save_routine.`);
     }
   } catch(e) {}
 
@@ -530,7 +536,11 @@ ${context}
 Створити нотатку: {"action":"create_note","text":"текст нотатки"}
 Записати витрату: {"action":"save_finance","fin_type":"expense","amount":ЧИСЛО,"category":"категорія"}
 Записати дохід: {"action":"save_finance","fin_type":"income","amount":ЧИСЛО,"category":"категорія"}
-Зберегти розпорядок: {"action":"save_routine","day":"mon|tue|wed|thu|fri|sat|sun|default","blocks":[{"time":"07:00","activity":"Підйом"},{"time":"09:00","activity":"Робота"}]}
+Зберегти/змінити розпорядок: {"action":"save_routine","day":"mon" або ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"Підйом"},{"time":"09:00","activity":"Робота"}]}
+- day може бути один день ("thu") або масив днів (["mon","tue","wed","thu","fri"]) для копіювання
+- "Скопіюй на всі будні" → day:["mon","tue","wed","thu","fri"], blocks з поточного дня
+- "Прибери біг" → відправ blocks БЕЗ біга (весь розклад дня мінус видалений блок)
+- "Зміни зал з 18 на 19" → відправ blocks з оновленим часом
 
 ID задач і звичок є в КОНТЕКСТ ДАНИХ вище. Використовуй тільки реальні ID.`;
 

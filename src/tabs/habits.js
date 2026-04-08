@@ -1173,10 +1173,11 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'save_routine') {
     const routine = getRoutine();
-    const day = parsed.day || 'default';
-    routine[day] = (parsed.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
+    const blocks = (parsed.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
+    const days = Array.isArray(parsed.day) ? parsed.day : [parsed.day || 'default'];
+    days.forEach(d => { routine[d] = [...blocks]; });
     saveRoutine(routine);
-    addMsg('agent', `🕐 Розпорядок збережено (${routine[day].length} блоків)`);
+    addMsg('agent', `🕐 Розпорядок збережено на ${days.length} дн. (${blocks.length} блоків)`);
     return true;
   }
 
