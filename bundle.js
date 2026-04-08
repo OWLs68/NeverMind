@@ -6548,6 +6548,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   }
   function saveQuitLog(obj) {
     localStorage.setItem("nm_quit_log", JSON.stringify(obj));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
   }
   function getQuitStatus(habitId) {
     const log = getQuitLog();
