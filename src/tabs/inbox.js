@@ -381,8 +381,18 @@ export async function sendToAI(fromChip = false) {
     ? `\n\n[Увага: між попереднім і цим повідомленням пройшло ${Math.round(gapMs/60000)} хв — це може бути нова незалежна думка, не продовження попереднього. Але НЕ припускай автоматично — просто зберігай як окремий запис без уточнень якщо все зрозуміло.]`
     : '';
   const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}${gapContext}\n\n${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
+  // Якщо це відповідь на чіп — вставити повідомлення табло прямо в текст для AI
+  let aiText = text;
+  if (fromChip) {
+    try {
+      const boardMsgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
+      if (boardMsgs[0]?.text) {
+        aiText = `[Відповідь на повідомлення OWL на табло: "${boardMsgs[0].text}"] ${text}`;
+      }
+    } catch(e) {}
+  }
   // Build history for context — but keep it short so JSON format is not broken
-  inboxChatHistory.push({ role: 'user', content: text });
+  inboxChatHistory.push({ role: 'user', content: aiText });
   if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
   // Передаємо останні 12 повідомлень — достатньо для контексту розмови
   const historySlice = inboxChatHistory.slice(-12);
