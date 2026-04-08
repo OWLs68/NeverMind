@@ -500,8 +500,9 @@ window.addEventListener('nm-data-changed', (e) => {
   // Миттєва локальна реакція (без API)
   if (e.detail !== 'chat') _showInstantReaction(tab);
 
-  // Відповідь юзера в чаті — табло МУСИТЬ оновитись (це діалог, не спам)
-  const trigger = e.detail === 'chat' ? 'chat-reply' : 'data-changed';
+  // Чат-повідомлення НЕ тригерять табло напряму — табло оновиться при закритті чату
+  if (e.detail === 'chat') return;
+  const trigger = 'data-changed';
 
   // Відкладена AI-генерація — тільки якщо Judge Layer дозволяє
   if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
@@ -510,6 +511,14 @@ window.addEventListener('nm-data-changed', (e) => {
     const judge = shouldOwlSpeak(trigger);
     if (judge.speak) generateBoardMessage(currentTab || 'inbox');
   }, BOARD_UPDATE_DELAY);
+});
+
+// === Chat Closed — табло оновлюється після закриття чату ===
+window.addEventListener('nm-chat-closed', () => {
+  setTimeout(() => {
+    const judge = shouldOwlSpeak('chat-closed');
+    if (judge.speak) generateBoardMessage(currentTab || 'inbox');
+  }, 3000); // 3 сек затримка після закриття чату
 });
 
 // === Welcome Back — привітання при поверненні в додаток ===

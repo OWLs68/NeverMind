@@ -692,6 +692,9 @@ export function closeChatBar(tab) {
   inputs.forEach(i => i.blur());
 
   activeChatBar = null;
+
+  // Табло може оновитись після закриття чату
+  window.dispatchEvent(new CustomEvent('nm-chat-closed', { detail: tab }));
 }
 
 export function toggleChatBar(tab) {
