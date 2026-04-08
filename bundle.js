@@ -4930,9 +4930,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         _boardGenerating[tab] = false;
         return;
       }
-      if (_isTooSimilar(parsed.text, allMsgs)) {
-        if (isInbox) localStorage.setItem("nm_owl_board_ts", Date.now().toString());
-        else localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+      const lastBoardTs = parseInt(localStorage.getItem(isInbox ? "nm_owl_board_ts" : getOwlTabTsKey(tab)) || "0");
+      const boardStale = Date.now() - lastBoardTs > 30 * 60 * 1e3;
+      if (!boardStale && _isTooSimilar(parsed.text, allMsgs)) {
+        console.warn("[OWL board] similar message rejected:", parsed.text?.slice(0, 50));
         _boardGenerating[tab] = false;
         return;
       }
