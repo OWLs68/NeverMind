@@ -282,6 +282,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     });
     if (!res.ok) {
       console.warn('[OWL board] API HTTP error:', res.status, res.statusText);
+      _tryLocalFallback(tab);
       _boardGenerating[tab] = false;
       return;
     }
@@ -289,6 +290,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) {
       console.warn('[OWL board] empty API reply:', JSON.stringify(data?.error || data).slice(0, 200));
+      _tryLocalFallback(tab);
       _boardGenerating[tab] = false;
       return;
     }
@@ -324,8 +326,34 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     else renderTabBoard(tab);
   } catch(e) {
     console.warn('[OWL board] generation error:', e?.message || e);
+    // Якщо API впав а повідомлення застаріло — показати локальне fallback
+    _tryLocalFallback(tab);
   }
   _boardGenerating[tab] = false;
+}
+
+// Локальне fallback-повідомлення коли API не працює а табло застаріло
+function _tryLocalFallback(tab) {
+  if (tab !== 'inbox') return;
+  const msgs = getOwlBoardMessages();
+  const visibleTs = msgs[0]?.ts || 0;
+  if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return; // не застаріло — не чіпаємо
+  const phase = getDayPhase();
+  const fallbacks = {
+    dawn:    'Ранній підйом! Тихий ранок — гарний час для себе.',
+    morning: 'Доброго ранку! Новий день, нові можливості.',
+    work:    'Робочий час. Тримаєшся?',
+    evening: 'Вечір. Як пройшов день?',
+    night:   'Пізній час. Не забудь відпочити.',
+  };
+  const text = fallbacks[phase] || 'Привіт! Як справи?';
+  const newMsg = { text, priority: 'normal', chips: [], ts: Date.now(), id: Date.now() };
+  const all = getOwlBoardMessages();
+  all.unshift(newMsg);
+  saveOwlBoardMessages(all.slice(0, 3));
+  localStorage.setItem('nm_owl_board_ts', Date.now().toString());
+  renderOwlBoard();
+  console.warn('[OWL board] showed local fallback:', text);
 }
 
 // === Контекстні підказки при першому відвідуванні вкладки ===
