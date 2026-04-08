@@ -362,26 +362,26 @@ function _tryLocalFallback(tab) {
 
     if (tasks.length > 0 && pendingH.length > 0) {
       text = mode === 'coach'
-        ? `Є ${tasks.length} задач і ${pendingH.length} звичок. Давай хоча б одну закриємо.`
+        ? `${tasks.length} задач і ${pendingH.length} звичок. Що заважає закрити?`
         : mode === 'mentor'
-        ? `${tasks.length} задач і ${pendingH.length} звичок чекають. З чого почнеш?`
+        ? `Є ${tasks.length} задач і ${pendingH.length} звичок. Давай хоча б одну закриємо.`
         : `У тебе ${tasks.length} задач і ${pendingH.length} звичок на сьогодні. Тримаєшся?`;
       chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
       chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
     } else if (tasks.length > 0) {
       const first = tasks[0].title;
       text = mode === 'coach'
-        ? `"${first}" — все ще відкрита. Закриваємо?`
+        ? `"${first}" — все ще відкрита. Що заважає?`
         : mode === 'mentor'
-        ? `Задача "${first}" чекає. Є план?`
+        ? `Задача "${first}" чекає. Може варто почати з неї?`
         : `Є задача "${first}". Як з нею справи?`;
       chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
     } else if (pendingH.length > 0) {
       const names = pendingH.slice(0, 2).map(h => h.name).join(' і ');
       text = mode === 'coach'
-        ? `Ще жодної звички сьогодні. ${names} — давай хоча б одну.`
-        : mode === 'mentor'
         ? `${names} — ще не виконано. Що заважає?`
+        : mode === 'mentor'
+        ? `Ще жодної звички сьогодні. ${names} — давай хоча б одну.`
         : `Залишились ${names}. Встигнеш сьогодні?`;
       chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
     } else if (doneH.length > 0 && tasks.length === 0) {
