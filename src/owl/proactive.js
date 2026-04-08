@@ -224,6 +224,7 @@ export async function generateBoardMessage(tab) {
   const phase = getDayPhase();
   const timeStr = new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'});
   const phaseInstr = {
+    dawn:    'Ранній ранок — юзер прокинувся раніше звичного. Привітай м\'яко, допоможи почати день.',
     morning: 'Ранок — твоя роль: надихнути і допомогти сфокусуватись на головному.',
     work:    'Робочий час — твоя роль: тримати в курсі прогресу, м\'яко нагадувати про незавершене.',
     evening: 'Вечір — твоя роль: допомогти підбити підсумок дня, не пропустити стріки.',
