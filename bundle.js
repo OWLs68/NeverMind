@@ -3855,12 +3855,18 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const msgs = getOwlBoardMessages();
     const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
     const sinceLastVisible = Date.now() - lastVisibleTs;
-    if (sinceLastAttempt < 5 * 60 * 1e3) {
-      score -= 4;
-      reasons.push("attempt<5m");
-    } else if (sinceLastAttempt < 15 * 60 * 1e3) {
-      score -= 1;
-      reasons.push("attempt<15m");
+    if (trigger !== "chat-reply") {
+      if (sinceLastAttempt < 5 * 60 * 1e3) {
+        score -= 4;
+        reasons.push("attempt<5m");
+      } else if (sinceLastAttempt < 15 * 60 * 1e3) {
+        score -= 1;
+        reasons.push("attempt<15m");
+      }
+    }
+    if (trigger === "chat-reply") {
+      score += 5;
+      reasons.push("chat-reply");
     }
     if (trigger === "first-time" || trigger === "new-day") {
       score += 5;
@@ -5108,10 +5114,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       window.addEventListener("nm-data-changed", (e) => {
         const tab = currentTab || "inbox";
         if (e.detail !== "chat") _showInstantReaction(tab);
+        const trigger = e.detail === "chat" ? "chat-reply" : "data-changed";
         if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
         _boardUpdateTimer = setTimeout(() => {
           _boardUpdateTimer = null;
-          const judge = shouldOwlSpeak("data-changed");
+          const judge = shouldOwlSpeak(trigger);
           if (judge.speak) generateBoardMessage(currentTab || "inbox");
         }, BOARD_UPDATE_DELAY);
       });
