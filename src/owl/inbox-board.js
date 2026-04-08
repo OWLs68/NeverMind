@@ -378,15 +378,21 @@ export function shouldOwlSpeak(trigger) {
     reasons.push('chat-open');
   }
 
-  // Час від останньої генерації
-  const lastGen = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
-  const sinceLastGen = Date.now() - lastGen;
-  if (sinceLastGen < 5 * 60 * 1000) {
+  // Два таймери:
+  // sinceLastAttempt — коли востаннє СПРОБУВАЛИ генерувати (для антиспаму API)
+  // sinceLastVisible — скільки юзер бачить ОДНЕ й ТЕ САМЕ повідомлення (для бонусу тиші)
+  const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
+  const sinceLastAttempt = Date.now() - lastAttemptTs;
+  const msgs = getOwlBoardMessages();
+  const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+  const sinceLastVisible = Date.now() - lastVisibleTs;
+
+  if (sinceLastAttempt < 5 * 60 * 1000) {
     score -= 4;
-    reasons.push('gen<5m');
-  } else if (sinceLastGen < 15 * 60 * 1000) {
+    reasons.push('attempt<5m');
+  } else if (sinceLastAttempt < 15 * 60 * 1000) {
     score -= 1;
-    reasons.push('gen<15m');
+    reasons.push('attempt<15m');
   }
 
   // === ТРИГЕРИ (плюс) ===
@@ -487,14 +493,14 @@ export function shouldOwlSpeak(trigger) {
     reasons.push('week-end');
   }
 
-  // Давно не генерували — градуйований бонус
-  // Це заміна старого phase_pulse (45хв безумовно)
-  if (sinceLastGen > 60 * 60 * 1000) {
+  // Як довго юзер бачить ТЕ САМЕ повідомлення — градуйований бонус
+  // Використовує вік ВИДИМОГО повідомлення, не час останньої спроби генерації
+  if (sinceLastVisible > 60 * 60 * 1000) {
     score += 3;
-    reasons.push('silence>60m');
-  } else if (sinceLastGen > 30 * 60 * 1000) {
+    reasons.push('stale>60m');
+  } else if (sinceLastVisible > 30 * 60 * 1000) {
     score += 2;
-    reasons.push('silence>30m');
+    reasons.push('stale>30m');
   }
 
   const speak = score >= SPEAK_THRESHOLD;
