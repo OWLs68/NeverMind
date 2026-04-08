@@ -2,7 +2,7 @@ import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs } from '..
 import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
-import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard } from './inbox-board.js';
+import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard, shouldOwlSpeak } from './inbox-board.js';
 import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, getChipStatsForPrompt } from './chips.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
@@ -425,12 +425,12 @@ window.addEventListener('nm-data-changed', (e) => {
   // Миттєва локальна реакція (без API)
   if (e.detail !== 'chat') _showInstantReaction(tab);
 
-  // Відкладена AI-генерація нового повідомлення
+  // Відкладена AI-генерація — тільки якщо Judge Layer дозволяє
   if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
   _boardUpdateTimer = setTimeout(() => {
     _boardUpdateTimer = null;
-    const phase = getDayPhase();
-    if (phase !== 'silent') generateBoardMessage(currentTab || 'inbox');
+    const judge = shouldOwlSpeak('data-changed');
+    if (judge.speak) generateBoardMessage(currentTab || 'inbox');
   }, BOARD_UPDATE_DELAY);
 });
 
@@ -440,18 +440,14 @@ const WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1000; // 2 години
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    // Зберігаємо час коли юзер пішов
     localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
   } else if (document.visibilityState === 'visible') {
-    // Юзер повернувся — перевіряємо скільки був відсутній
     const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || '0');
     if (!lastActive) return;
     const away = Date.now() - lastActive;
-    const phase = getDayPhase();
-    if (away > WELCOME_BACK_THRESHOLD && phase !== 'silent') {
-      // Був більше 2 годин — генеруємо нове повідомлення для поточної вкладки
-      const tab = currentTab || 'inbox';
-      generateBoardMessage(tab);
+    if (away > WELCOME_BACK_THRESHOLD) {
+      const judge = shouldOwlSpeak('welcome-back');
+      if (judge.speak) generateBoardMessage(currentTab || 'inbox');
     }
   }
 });
