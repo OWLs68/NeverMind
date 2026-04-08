@@ -10174,7 +10174,17 @@ ${userText}
     const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}${gapContext}
 
 ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
-    inboxChatHistory.push({ role: "user", content: text });
+    let aiText = text;
+    if (fromChip) {
+      try {
+        const boardMsgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+        if (boardMsgs[0]?.text) {
+          aiText = `[\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F OWL \u043D\u0430 \u0442\u0430\u0431\u043B\u043E: "${boardMsgs[0].text}"] ${text}`;
+        }
+      } catch (e) {
+      }
+    }
+    inboxChatHistory.push({ role: "user", content: aiText });
     if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
     const historySlice = inboxChatHistory.slice(-12);
     const reply = await callAIWithHistory(fullPrompt, historySlice);
