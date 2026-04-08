@@ -287,10 +287,11 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
 
     // Антиповтор: якщо нове повідомлення надто схоже на останні — відкидаємо
-    // Але оновлюємо timestamp щоб не спамити API повторними запитами
-    if (_isTooSimilar(parsed.text, allMsgs)) {
-      if (isInbox) localStorage.setItem('nm_owl_board_ts', Date.now().toString());
-      else localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+    // Виняток: якщо табло застаріло (30+ хв) — краще схоже нове ніж неправильне старе
+    const lastBoardTs = parseInt(localStorage.getItem(isInbox ? 'nm_owl_board_ts' : getOwlTabTsKey(tab)) || '0');
+    const boardStale = Date.now() - lastBoardTs > 30 * 60 * 1000;
+    if (!boardStale && _isTooSimilar(parsed.text, allMsgs)) {
+      console.warn('[OWL board] similar message rejected:', parsed.text?.slice(0, 50));
       _boardGenerating[tab] = false;
       return;
     }
