@@ -1095,6 +1095,46 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  if (action === 'edit_event') {
+    const events = getEvents();
+    const idx = events.findIndex(e => e.id === parsed.event_id);
+    if (idx === -1) { addMsg('agent', 'Не знайшов подію для редагування.'); return true; }
+    if (parsed.date) events[idx].date = parsed.date;
+    if (parsed.time !== undefined) events[idx].time = parsed.time || null;
+    if (parsed.title) events[idx].title = parsed.title;
+    if (parsed.priority) events[idx].priority = parsed.priority;
+    saveEvents(events);
+    const dateObj = new Date(events[idx].date);
+    const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+    addMsg('agent', `✓ Подію "${events[idx].title}" змінено → ${dayStr}${events[idx].time ? ' о ' + events[idx].time : ''}`);
+    return true;
+  }
+
+  if (action === 'delete_event') {
+    const events = getEvents();
+    const idx = events.findIndex(e => e.id === parsed.event_id);
+    if (idx === -1) { addMsg('agent', 'Не знайшов подію.'); return true; }
+    const title = events[idx].title;
+    addToTrash('event', events[idx]);
+    events.splice(idx, 1);
+    saveEvents(events);
+    addMsg('agent', `🗑 Подію "${title}" видалено`);
+    showUndoToast('event', title);
+    return true;
+  }
+
+  if (action === 'edit_note') {
+    const notes = getNotes();
+    const idx = notes.findIndex(n => n.id === parsed.note_id);
+    if (idx === -1) { addMsg('agent', 'Не знайшов нотатку.'); return true; }
+    if (parsed.text) notes[idx].text = parsed.text;
+    if (parsed.folder) notes[idx].folder = parsed.folder;
+    notes[idx].updatedAt = Date.now();
+    saveNotes(notes);
+    addMsg('agent', `✓ Нотатку оновлено${parsed.folder ? ' → папка "' + parsed.folder + '"' : ''}`);
+    return true;
+  }
+
   if (action === 'create_folder') {
     const folderName = (parsed.folder || '').trim();
     if (!folderName) return false;

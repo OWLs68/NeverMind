@@ -383,7 +383,11 @@ async function sendTaskChatMessage() {
 - Нотатка: {"action":"create_note","text":"текст","folder":null}
 - Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
 - Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити). ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження). "Мама приїжає 20го" = create_event НЕ task!
+- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"} (тільки поля що міняються)
+- Видалити подію: {"action":"delete_event","event_id":ID}
+- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
+- Розпорядок: {"action":"save_routine","day":"mon" або ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"Підйом"}]}
+ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити). ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, день народження). "Мама приїжає 20го" = create_event НЕ task! "Перенеси мамин приїзд на 24" = edit_event.
 Інакше — звичайний текст українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
