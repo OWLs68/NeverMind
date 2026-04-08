@@ -4928,6 +4928,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         return;
       }
       if (_isTooSimilar(parsed.text, allMsgs)) {
+        if (isInbox) localStorage.setItem("nm_owl_board_ts", Date.now().toString());
+        else localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
         _boardGenerating[tab] = false;
         return;
       }
