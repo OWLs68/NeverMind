@@ -352,7 +352,7 @@ function checkOwlBoardTrigger() {
   if (!key) return false;
 
   const phase = getDayPhase();
-  if (phase === 'silent' || phase === 'dawn') return false;
+  if (phase === 'silent') return false;
 
   const now = new Date();
   const todayStr = now.toDateString();
