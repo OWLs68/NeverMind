@@ -345,6 +345,7 @@ function _tryLocalFallback(tab) {
   const visibleTs = msgs[0]?.ts || 0;
   if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return;
 
+  const mode = (JSON.parse(localStorage.getItem('nm_settings') || '{}').owl_mode) || 'partner';
   let text = '';
   const chips = [];
   try {
@@ -357,22 +358,45 @@ function _tryLocalFallback(tab) {
     const todayHabits = habits.filter(h => h.type !== 'quit' && (h.days || []).includes(dow));
     const doneH = todayHabits.filter(h => todayLog[h.id]);
     const pendingH = todayHabits.filter(h => !todayLog[h.id]);
+    const phase = getDayPhase();
 
     if (tasks.length > 0 && pendingH.length > 0) {
-      text = `${tasks.length} задач і ${pendingH.length} звичок на сьогодні.`;
+      text = mode === 'coach'
+        ? `Є ${tasks.length} задач і ${pendingH.length} звичок. Давай хоча б одну закриємо.`
+        : mode === 'mentor'
+        ? `${tasks.length} задач і ${pendingH.length} звичок чекають. З чого почнеш?`
+        : `У тебе ${tasks.length} задач і ${pendingH.length} звичок на сьогодні. Тримаєшся?`;
       chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
       chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
     } else if (tasks.length > 0) {
-      text = tasks.length === 1 ? `Одна задача: "${tasks[0].title}".` : `${tasks.length} відкритих задач.`;
+      const first = tasks[0].title;
+      text = mode === 'coach'
+        ? `"${first}" — все ще відкрита. Закриваємо?`
+        : mode === 'mentor'
+        ? `Задача "${first}" чекає. Є план?`
+        : `Є задача "${first}". Як з нею справи?`;
       chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
     } else if (pendingH.length > 0) {
-      text = `${doneH.length}/${todayHabits.length} звичок виконано.`;
+      const names = pendingH.slice(0, 2).map(h => h.name).join(' і ');
+      text = mode === 'coach'
+        ? `Ще жодної звички сьогодні. ${names} — давай хоча б одну.`
+        : mode === 'mentor'
+        ? `${names} — ще не виконано. Що заважає?`
+        : `Залишились ${names}. Встигнеш сьогодні?`;
       chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
-    } else if (doneH.length > 0) {
-      text = 'Всі звички на сьогодні виконано! 💪';
+    } else if (doneH.length > 0 && tasks.length === 0) {
+      text = mode === 'coach'
+        ? 'Всі звички закриті. Так тримати.'
+        : mode === 'mentor'
+        ? 'Все зроблено. Вільний час — як використаєш?'
+        : 'Всі звички виконано! Красава 💪';
     } else {
-      const phase = getDayPhase();
-      text = ({ dawn:'Ранній ранок.', morning:'Доброго ранку!', work:'Робочий день.', evening:'Добрий вечір!', night:'Доброї ночі.' })[phase] || 'Привіт!';
+      const greetings = {
+        coach:   { dawn:'Ранній підйом. Поважаю.', morning:'Ранок. Що на сьогодні?', work:'Робочий час. Що далі?', evening:'Вечір. Як день?', night:'Пізно. Відпочивай.' },
+        partner: { dawn:'Рано встав! Гарного ранку.', morning:'Доброго ранку!', work:'Як робочий день?', evening:'Добрий вечір!', night:'Доброї ночі!' },
+        mentor:  { dawn:'Ранній ранок. Тихий час для роздумів.', morning:'Новий день. Що важливе сьогодні?', work:'Робочий час. Все за планом?', evening:'Вечір. Що вдалось сьогодні?', night:'Час відпочинку.' },
+      };
+      text = (greetings[mode] || greetings.partner)[phase] || 'Привіт!';
     }
   } catch(e) { text = 'Привіт!'; }
 
