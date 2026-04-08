@@ -6608,15 +6608,41 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _renderRoutineTimeline();
   }
   function routineAddBlock() {
-    const time = prompt("\u0427\u0430\u0441 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 07:30):");
-    if (!time || !/^\d{1,2}:\d{2}$/.test(time)) return;
-    const activity = prompt("\u0429\u043E \u0440\u043E\u0431\u0438\u0442\u0438:");
-    if (!activity) return;
+    const wrap = document.getElementById("routine-add-wrap");
+    if (!wrap) return;
+    wrap.innerHTML = `
+    <div style="background:rgba(255,255,255,0.6);border-radius:16px;padding:14px;border:1.5px solid rgba(234,88,12,0.2)">
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <input type="time" id="routine-add-time" value="09:00"
+          style="flex:0 0 110px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:600;color:#1e1040;background:white;-webkit-appearance:none">
+        <input type="text" id="routine-add-activity" placeholder="\u0429\u043E \u0440\u043E\u0431\u0438\u0442\u0438..." maxlength="40"
+          style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:15px;color:#1e1040;background:white">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+      </div>
+    </div>`;
+    setTimeout(() => document.getElementById("routine-add-activity")?.focus(), 100);
+  }
+  function routineSaveNewBlock() {
+    const timeInput = document.getElementById("routine-add-time");
+    const actInput = document.getElementById("routine-add-activity");
+    if (!timeInput || !actInput) return;
+    const time = timeInput.value;
+    const activity = actInput.value.trim();
+    if (!time || !activity) return;
     const routine = getRoutine();
     if (!routine[_routineDay]) routine[_routineDay] = [...routine["default"] || []];
     routine[_routineDay].push({ time, activity });
     saveRoutine(routine);
     _renderRoutineTimeline();
+    routineCancelAdd();
+  }
+  function routineCancelAdd() {
+    const wrap = document.getElementById("routine-add-wrap");
+    if (!wrap) return;
+    wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.25);background:none;font-size:14px;font-weight:600;color:rgba(234,88,12,0.6);cursor:pointer">+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A</button>`;
   }
   function routineDeleteBlock(idx) {
     const routine = getRoutine();
@@ -6648,7 +6674,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         closeRoutineModal,
         routineSelectDay,
         routineAddBlock,
-        routineDeleteBlock
+        routineDeleteBlock,
+        routineSaveNewBlock,
+        routineCancelAdd
       });
     }
   });
