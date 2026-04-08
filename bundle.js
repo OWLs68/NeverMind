@@ -5161,8 +5161,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
         _boardUpdateTimer = setTimeout(() => {
           _boardUpdateTimer = null;
-          const judge = shouldOwlSpeak(trigger);
-          if (judge.speak) generateBoardMessage(currentTab || "inbox");
+          const curTab = currentTab || "inbox";
+          if (curTab === "inbox") {
+            const judge = shouldOwlSpeak(trigger);
+            if (judge.speak) generateBoardMessage("inbox");
+          } else {
+            generateBoardMessage(curTab);
+          }
         }, BOARD_UPDATE_DELAY);
       });
       window.addEventListener("nm-chat-closed", () => {
