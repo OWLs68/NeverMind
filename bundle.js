@@ -6570,16 +6570,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         color = "#1e1040";
       }
       if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#6366f1" : "currentColor"};margin-top:1px"></div>`;
-      cells += `<div onclick="calendarDayTap(${d},event)" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
     grid.innerHTML = cells;
   }
-  function calendarDayTap(day, e) {
+  function calendarDayTap(day) {
     _selectedDay = day;
     renderCalendar();
-    _openDayScheduleModal(day, e);
+    _openDayScheduleModal(day);
   }
-  function _openDayScheduleModal(day, e) {
+  function _openDayScheduleModal(day) {
     const date = new Date(_calYear, _calMonth, day);
     const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayKey = DAY_KEYS[date.getDay()];
@@ -6673,23 +6673,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const modal = document.getElementById("day-schedule-modal");
     const panel = document.getElementById("day-schedule-panel");
     if (modal && panel) {
-      panel.style.transition = "none";
-      panel.style.transform = "scale(1)";
-      panel.style.opacity = "0";
       modal.style.display = "flex";
-      if (e && e.target) {
-        const btn = e.target.closest("[onclick]") || e.target;
-        const btnRect = btn.getBoundingClientRect();
-        const panelRect = panel.getBoundingClientRect();
-        const ox = btnRect.left + btnRect.width / 2 - panelRect.left;
-        const oy = btnRect.top + btnRect.height / 2 - panelRect.top;
-        panel.style.transformOrigin = `${ox}px ${oy}px`;
-      } else {
-        panel.style.transformOrigin = "center center";
-      }
-      panel.style.transform = "scale(0)";
-      panel.offsetHeight;
-      panel.style.transition = "transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease";
       _zoomIn("day-schedule-panel");
       setupModalSwipeClose(panel, closeDayScheduleModal);
     }
