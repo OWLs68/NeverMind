@@ -365,12 +365,13 @@ function _openDayScheduleModal(day, e) {
   const modal = document.getElementById('day-schedule-modal');
   const panel = document.getElementById('day-schedule-panel');
   if (modal && panel) {
-    // Спочатку показуємо modal щоб panel отримав свою кінцеву позицію
-    panel.style.transform = 'scale(0)';
+    // 1) Тимчасово показуємо панель у повному розмірі без анімації — щоб зняти координати
+    panel.style.transition = 'none';
+    panel.style.transform = 'scale(1)';
     panel.style.opacity = '0';
     modal.style.display = 'flex';
 
-    // transform-origin відносно панелі
+    // 2) Зчитуємо позицію панелі і кнопки
     if (e && e.target) {
       const btn = e.target.closest('[onclick]') || e.target;
       const btnRect = btn.getBoundingClientRect();
@@ -382,6 +383,11 @@ function _openDayScheduleModal(day, e) {
       panel.style.transformOrigin = 'center center';
     }
 
+    // 3) Ставимо scale(0) без анімації, потім анімуємо до scale(1)
+    panel.style.transform = 'scale(0)';
+    // force reflow щоб браузер застосував scale(0) перед анімацією
+    panel.offsetHeight;
+    panel.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease';
     _zoomIn('day-schedule-panel');
     setupModalSwipeClose(panel, closeDayScheduleModal);
   }
