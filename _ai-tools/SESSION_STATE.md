@@ -165,24 +165,25 @@
 
 ---
 
-## Ключові файли (оновлено)
+## Ключові файли (оновлено 09.04)
 
 | Файл | Опис |
 |------|------|
-| `src/tabs/calendar.js` | nm_events, Calendar modal, Events list modal, блок "Найближче" |
-| `src/owl/proactive.js` | Єдина генерація табло, instant reactions, first-visit hints, антиповтор контенту |
-| `src/owl/chips.js` | Центральний модуль чіпів — рендер, клік, fuzzy match ✔️, трекінг |
-| `src/owl/inbox-board.js` | OWL Board: тригери, cooldowns, getOwlBoardContext, анкетування, вечірній пульс |
-| `src/ai/core.js` | getAIContext (+ recently done, upcoming events), callAI, OWL особистість |
-| `src/tabs/inbox.js` | sendToAI, processSaveAction, _detectEventFromTask, _detectEventDate, navigateInboxItem, _renderUpcoming |
-| `src/tabs/tasks.js` | Задачі + task chat (з processUniversalAction + edit_habit) |
-| `src/tabs/habits.js` | Звички + processUniversalAction (edit_habit, create_event, complete_*, тощо) |
+| `src/tabs/calendar.js` | nm_events, Calendar modal, Events list modal, блок "Найближче", **Розпорядок дня** (nm_routine, модалка 🕐, таймлайн) |
+| `src/owl/proactive.js` | Єдина генерація табло, instant reactions, first-visit hints, антиповтор контенту, **local fallback з характером**, **API error dot** |
+| `src/owl/inbox-board.js` | OWL Board: **shouldOwlSpeak() Judge Layer**, getOwlBoardContext, анкетування, вечірній пульс, **нагадування (перевірка кожну хв)**, **safety net**, **chat-closed тригер** |
+| `src/owl/chips.js` | Центральний модуль чіпів — рендер, клік, fuzzy match ✔️, трекінг, **chip context для AI** |
+| `src/ai/core.js` | getAIContext (+ розпорядок всіх днів, upcoming events з ID), callAI, OWL особистість, **правило ЗМІНИТИ=edit** |
+| `src/tabs/inbox.js` | sendToAI, processSaveAction, **save_routine**, **chip board context**, _detectEventFromTask |
+| `src/tabs/tasks.js` | Задачі + task chat (з processUniversalAction) |
+| `src/tabs/habits.js` | Звички + processUniversalAction (**edit_event, delete_event, edit_note, set_reminder, save_routine**), **saveQuitLog з dispatch** |
 | `src/core/nav.js` | TAB_THEMES, doRefreshMemory |
 
 ---
 
 ## Попередні сесії
 
+- **08-09.04** — Judge Layer (shouldOwlSpeak), Relevance Scoring, chat/board priorities, розпорядок дня (🕐 модалка), нагадування (set_reminder), edit_event/delete_event/edit_note, повне редагування з усіх чат-барів, B-15/dawn/quit dispatch/finance date/CI auto-increment. Gemini review → G1-G8 записані. Рішення: тільки сова з 3 характерами.
 - **07.04 (2)** — B-20/B-21/B-22 закриті. Calendar Фази 4-5. Instant reactions. Анкетування. First-visit hints. Єдиний мозок (всі промпти синхронізовані). Фікс event vs момент. i18n записано в roadmap.
 - **07.04** — B-18/B-19 закриті, Calendar modal + nm_events, один мозок (всі чати = universal action), динамічний скор, верифікація 6 багів, LICENSE/README, CI фікс. Нові: B-20/B-21/B-22.
 - **06.04 (2)** — Мозок OWL Фази 1-3: єдина генерація, синхронізація табло↔чат, Welcome Back, крос-контекст, трекінг чіпів, insights, емпатія, ранковий бриф. B-16/B-17 закриті.
