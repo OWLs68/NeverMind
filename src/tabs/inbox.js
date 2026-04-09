@@ -397,7 +397,11 @@ export async function sendToAI(fromChip = false) {
   if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
   // Передаємо останні 12 повідомлень — достатньо для контексту розмови
   const historySlice = inboxChatHistory.slice(-12);
+  const _aiStart = Date.now();
   const reply = await callAIWithHistory(fullPrompt, historySlice);
+  // Мінімальна затримка — typing indicator тримається хоча б 0.8 сек
+  const elapsed = Date.now() - _aiStart;
+  if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
 
   if (reply) {
     try {
@@ -460,6 +464,7 @@ export async function sendToAI(fromChip = false) {
             addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
           }
         } else if (action.action === 'create_project' && !fromChip) {
+          addInboxChatMsg('agent', `Створюю проект "${action.name || text}"...`);
           const projects = getProjects();
           const newProject = {
             id: Date.now(),
