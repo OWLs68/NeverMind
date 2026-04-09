@@ -4,6 +4,7 @@
 
 import { escapeHtml } from '../core/utils.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
 
 // === EVENTS STORAGE ===
 export function getEvents() { return JSON.parse(localStorage.getItem('nm_events') || '[]'); }
@@ -51,7 +52,7 @@ function renderMonthEventsList() {
 
   getEvents().forEach(ev => {
     if (ev.date >= monthStart && ev.date <= monthEnd) {
-      items.push({ title: ev.title, date: ev.date, time: ev.time || null, type: 'event', priority: ev.priority || 'normal' });
+      items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, type: 'event', priority: ev.priority || 'normal' });
     }
   });
 
@@ -83,7 +84,8 @@ function renderMonthEventsList() {
     const opacity = isPast ? 'opacity:0.4;' : '';
     const dateColor = isToday ? '#ea580c' : item.type === 'event' ? '#6366f1' : 'rgba(30,16,64,0.45)';
 
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
+    const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
+    html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       <div style="font-size:15px;flex-shrink:0">${icon}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13.5px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prio}${escapeHtml(item.title)}</div>
@@ -114,7 +116,7 @@ function renderUpcoming() {
   getEvents().forEach(ev => {
     const d = new Date(ev.date);
     if (d >= new Date(now.toDateString()) && d <= in7days) {
-      items.push({ title: ev.title, date: d, type: 'event', priority: ev.priority || 'normal', time: ev.time || null });
+      items.push({ id: ev.id, title: ev.title, date: d, type: 'event', priority: ev.priority || 'normal', time: ev.time || null });
     }
   });
 
@@ -144,7 +146,8 @@ function renderUpcoming() {
       const icon = item.type === 'event' ? '📅' : '☑️';
       const prio = prioIcons[item.priority] || '';
       const timeStr = item.time ? ` · ${item.time}` : '';
-      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal(${item.id})" ` : '';
+      return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? 'cursor:pointer;' : ''}">
         <div style="font-size:16px;flex-shrink:0">${icon}</div>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:#1e1040">${prio} ${escapeHtml(item.title)}</div>
@@ -249,7 +252,7 @@ function calendarDayTap(day) {
   events.forEach(ev => {
     const timeStr = ev.time ? `${ev.time} · ` : '';
     const prio = ev.priority === 'critical' ? '🔴 ' : ev.priority === 'important' ? '🟠 ' : '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+    html += `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);cursor:pointer">
       <div style="font-size:16px;flex-shrink:0">📅</div>
       <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${timeStr}${escapeHtml(ev.title)}</div>
     </div>`;
@@ -427,8 +430,91 @@ function routineDeleteBlock(idx) {
   _renderRoutineTimeline();
 }
 
+// ============================================================
+// EVENT EDIT MODAL — редагування події
+// ============================================================
+let _editEventId = null;
+let _editEventPriority = 'normal';
+
+function openEventEditModal(eventId) {
+  const events = getEvents();
+  const ev = events.find(e => e.id === eventId);
+  if (!ev) return;
+  _editEventId = eventId;
+  _editEventPriority = ev.priority || 'normal';
+  document.getElementById('event-edit-title').value = ev.title || '';
+  document.getElementById('event-edit-date').value = ev.date || '';
+  document.getElementById('event-edit-time').value = ev.time || '';
+  _renderEventPriority();
+  const modal = document.getElementById('event-edit-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeEventEditModal);
+  }
+}
+
+function closeEventEditModal() {
+  const modal = document.getElementById('event-edit-modal');
+  if (modal) modal.style.display = 'none';
+  _editEventId = null;
+}
+
+function setEventPriority(p) {
+  _editEventPriority = p;
+  _renderEventPriority();
+}
+
+function _renderEventPriority() {
+  const wrap = document.getElementById('event-edit-priority');
+  if (!wrap) return;
+  const colors = { normal: '#6366f1', important: '#ea580c', critical: '#ef4444' };
+  wrap.querySelectorAll('[data-p]').forEach(el => {
+    const p = el.dataset.p;
+    const active = p === _editEventPriority;
+    el.style.background = active ? colors[p] : 'rgba(255,255,255,0.5)';
+    el.style.color = active ? 'white' : 'rgba(30,16,64,0.5)';
+    el.style.borderColor = active ? colors[p] : 'rgba(30,16,64,0.12)';
+  });
+}
+
+function saveEventFromModal() {
+  if (!_editEventId) return;
+  const title = document.getElementById('event-edit-title').value.trim();
+  const date = document.getElementById('event-edit-date').value;
+  if (!title || !date) return;
+  const time = document.getElementById('event-edit-time').value || null;
+  const events = getEvents();
+  const idx = events.findIndex(e => e.id === _editEventId);
+  if (idx === -1) return;
+  events[idx].title = title;
+  events[idx].date = date;
+  events[idx].time = time;
+  events[idx].priority = _editEventPriority;
+  saveEvents(events);
+  closeEventEditModal();
+  renderCalendar();
+  renderUpcoming();
+  renderMonthEventsList();
+}
+
+function deleteEventFromModal() {
+  if (!_editEventId) return;
+  const events = getEvents();
+  const idx = events.findIndex(e => e.id === _editEventId);
+  if (idx === -1) return;
+  const removed = events.splice(idx, 1)[0];
+  saveEvents(events);
+  addToTrash('event', removed);
+  showUndoToast('Подію видалено');
+  closeEventEditModal();
+  renderCalendar();
+  renderUpcoming();
+  renderMonthEventsList();
+}
+
 // === WINDOW EXPORTS ===
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
+  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority,
 });
