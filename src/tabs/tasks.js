@@ -55,14 +55,17 @@ function openEditTask(id) {
 export function setupModalSwipeClose(contentEl, closeFn) {
   if (!contentEl || contentEl._swipeClose) return;
   contentEl._swipeClose = true;
-  let startY = 0, startX = 0, dy = 0;
+  let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
   contentEl.addEventListener('touchstart', e => {
+    // Не перехоплювати свайп на скролюваних елементах (барабан, чат)
+    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item');
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     dy = 0;
-    contentEl.style.transition = 'none';
+    if (!_swipeBlocked) contentEl.style.transition = 'none';
   }, { passive: true });
   contentEl.addEventListener('touchmove', e => {
+    if (_swipeBlocked) return;
     dy = e.touches[0].clientY - startY;
     const dx = Math.abs(e.touches[0].clientX - startX);
     if (dy > 0 && dy > dx) {
@@ -70,6 +73,7 @@ export function setupModalSwipeClose(contentEl, closeFn) {
     }
   }, { passive: true });
   contentEl.addEventListener('touchend', () => {
+    if (_swipeBlocked) { _swipeBlocked = false; return; }
     contentEl.style.transition = 'transform 0.25s ease';
     if (dy > 80) {
       contentEl.style.transform = 'translateY(100%)';
