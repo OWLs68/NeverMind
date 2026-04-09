@@ -226,55 +226,142 @@ function renderCalendar() {
   grid.innerHTML = cells;
 }
 
-// === DAY TAP ===
+// === DAY TAP → модалка розкладу дня ===
+const DAYS_UA_FULL = ['Неділя','Понеділок','Вівторок','Середа','Четвер','П\'ятниця','Субота'];
+
 function calendarDayTap(day) {
   _selectedDay = day;
   renderCalendar();
-  const el = document.getElementById('calendar-day-tasks');
-  if (!el) return;
+  _openDayScheduleModal(day);
+}
 
-  const dateStr = new Date(_calYear, _calMonth, day).toDateString();
+function _openDayScheduleModal(day) {
+  const date = new Date(_calYear, _calMonth, day);
+  const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const dayKey = DAY_KEYS[date.getDay()];
 
-  const tasks = getTasks().filter(t => {
-    if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
-    if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
-    return false;
-  });
+  // Заголовок
+  const titleEl = document.getElementById('day-schedule-title');
+  if (titleEl) titleEl.textContent = `${day} ${MONTHS_OF[_calMonth]} · ${DAYS_UA_FULL[date.getDay()]}`;
 
-  const events = getEvents().filter(ev => new Date(ev.date).toDateString() === dateStr);
+  // Events на цей день
+  const dayEvents = getEvents().filter(ev => ev.date === dateISO);
+  const allDayEvents = dayEvents.filter(ev => !ev.time);
+  const timedEvents = dayEvents.filter(ev => ev.time);
 
-  if (tasks.length === 0 && events.length === 0) {
-    el.style.display = 'block';
-    el.innerHTML = `<div style="text-align:center;font-size:13px;color:rgba(30,16,64,0.35);padding:12px 0">Немає записів на ${day} ${MONTHS_OF[_calMonth]}</div>`;
-    return;
+  // Tasks з dueDate на цей день
+  const dayTasks = getTasks().filter(t => t.dueDate === dateISO && t.status === 'active');
+
+  // Routine blocks на цей день тижня
+  const routineBlocks = getRoutineForDay(dayKey);
+
+  // All-day events (події без часу) — зверху
+  const alldayEl = document.getElementById('day-schedule-allday');
+  if (alldayEl) {
+    if (allDayEvents.length > 0) {
+      alldayEl.style.display = 'block';
+      alldayEl.innerHTML = allDayEvents.map(ev => {
+        const prio = ev.priority === 'critical' ? '🔴 ' : ev.priority === 'important' ? '🟠 ' : '';
+        return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(99,102,241,0.08)">
+          <div style="font-size:15px;flex-shrink:0">📅</div>
+          <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${escapeHtml(ev.title)}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">весь день</div>
+        </div>`;
+      }).join('');
+    } else {
+      alldayEl.style.display = 'none';
+    }
   }
 
-  const prioColors = { critical: '#ef4444', important: '#ea580c' };
-  let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${day} ${MONTHS_OF[_calMonth]}</div>`;
-
-  // Events first
-  events.forEach(ev => {
-    const timeStr = ev.time ? `${ev.time} · ` : '';
-    const prio = ev.priority === 'critical' ? '🔴 ' : ev.priority === 'important' ? '🟠 ' : '';
-    html += `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);cursor:pointer">
-      <div style="font-size:16px;flex-shrink:0">📅</div>
-      <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${timeStr}${escapeHtml(ev.title)}</div>
-    </div>`;
+  // Об'єднаний таймлайн: routine + timed events + tasks з dueDate
+  const timeline = [];
+  routineBlocks.forEach(b => timeline.push({ time: b.time, text: b.activity, type: 'routine' }));
+  timedEvents.forEach(ev => timeline.push({ time: ev.time, text: ev.title, type: 'event', id: ev.id, priority: ev.priority }));
+  dayTasks.forEach(t => {
+    // Задачі з часом у назві (HH:MM)
+    const m = t.title.match(/(\d{1,2}):(\d{2})/);
+    const time = m ? `${String(m[1]).padStart(2,'0')}:${m[2]}` : null;
+    timeline.push({ time, text: t.title, type: 'task', priority: t.priority });
   });
+  // Задачі без часу — внизу
+  const timedItems = timeline.filter(i => i.time).sort((a, b) => a.time.localeCompare(b.time));
+  const untimedTasks = timeline.filter(i => !i.time && i.type === 'task');
 
-  // Tasks
-  tasks.forEach(t => {
-    const isDone = t.status === 'done';
-    const prioColor = prioColors[t.priority] || '';
-    const dueLabel = t.dueDate ? ' 📅' : '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-      <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${isDone ? '#16a34a' : (prioColor || 'rgba(30,16,64,0.2)')};background:${isDone ? '#16a34a' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">${isDone ? '✓' : ''}</div>
-      <div style="flex:1;font-size:14px;font-weight:600;color:${isDone ? 'rgba(30,16,64,0.3)' : '#1e1040'};${isDone ? 'text-decoration:line-through' : ''}">${escapeHtml(t.title)}${dueLabel}</div>
-    </div>`;
-  });
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  el.style.display = 'block';
-  el.innerHTML = html;
+  const timelineEl = document.getElementById('day-schedule-timeline');
+  if (timelineEl) {
+    if (timedItems.length === 0 && untimedTasks.length === 0 && allDayEvents.length === 0) {
+      timelineEl.innerHTML = `<div style="text-align:center;font-size:14px;color:rgba(30,16,64,0.3);padding:24px 0">Немає подій</div>`;
+    } else {
+      let html = '';
+      timedItems.forEach((item, i) => {
+        const [h, m] = item.time.split(':').map(Number);
+        const itemMin = h * 60 + (m || 0);
+        const next = timedItems[i + 1];
+        const nextMin = next ? parseInt(next.time.split(':')[0]) * 60 + (parseInt(next.time.split(':')[1]) || 0) : 24 * 60;
+        const isCurrent = isToday && nowMin >= itemMin && nowMin < nextMin;
+        const isPast = isToday && nowMin >= nextMin;
+
+        const isEvent = item.type === 'event';
+        const isTask = item.type === 'task';
+        const color = isEvent ? '#6366f1' : isCurrent ? '#ea580c' : '#1e1040';
+        const icon = isEvent ? '📅' : isTask ? '☑️' : '';
+        const prio = (item.priority === 'critical') ? '🔴 ' : (item.priority === 'important') ? '🟠 ' : '';
+        let tapAttr;
+        if (isEvent && item.id) tapAttr = `onclick="openEventEditModal(${item.id})" style="cursor:pointer;`;
+        else if (item.type === 'routine') tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
+        else tapAttr = `style="`;
+
+        html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? 'opacity:0.4;' : ''}${isCurrent ? 'background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;' : ''}">
+          <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : 'rgba(30,16,64,0.5)'};text-align:right">${item.time}</div>
+          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? '#6366f1' : isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
+          <div style="flex:1;font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${color}">${icon ? icon + ' ' : ''}${prio}${escapeHtml(item.text)}${isCurrent ? ' ←' : ''}</div>
+        </div>`;
+      });
+
+      // Задачі без часу — внизу
+      if (untimedTasks.length > 0) {
+        html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
+        html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Задачі</div>`;
+        untimedTasks.forEach(t => {
+          const prio = (t.priority === 'critical') ? '🔴 ' : (t.priority === 'important') ? '🟠 ' : '';
+          html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+            <div style="font-size:14px">☑️</div>
+            <div style="font-size:14px;font-weight:500;color:#1e1040">${prio}${escapeHtml(t.text)}</div>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      timelineEl.innerHTML = html;
+    }
+  }
+
+  // Відкриваємо модалку з анімацією
+  const modal = document.getElementById('day-schedule-modal');
+  const panel = document.getElementById('day-schedule-panel');
+  if (modal && panel) {
+    modal.style.display = 'flex';
+    // Запуск анімації zoom наступним кадром
+    requestAnimationFrame(() => {
+      panel.style.transform = 'scale(1)';
+      panel.style.opacity = '1';
+    });
+    setupModalSwipeClose(panel, closeDayScheduleModal);
+  }
+}
+
+function closeDayScheduleModal() {
+  const modal = document.getElementById('day-schedule-modal');
+  const panel = document.getElementById('day-schedule-panel');
+  if (panel) {
+    panel.style.transform = 'scale(0)';
+    panel.style.opacity = '0';
+    setTimeout(() => { if (modal) modal.style.display = 'none'; }, 300);
+  }
 }
 
 // ============================================================
@@ -305,7 +392,21 @@ export function getTodayRoutine() {
   return getRoutineForDay(DAY_KEYS[new Date().getDay()]);
 }
 
+function openRoutineFromCalendar(dayKey) {
+  closeDayScheduleModal();
+  _routineReturnTo = 'calendar';
+  _routineDay = dayKey;
+  _renderRoutineDayTabs();
+  _renderRoutineTimeline();
+  const modal = document.getElementById('routine-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeRoutineModal);
+  }
+}
+
 function openRoutineModal() {
+  _routineReturnTo = null;
   _routineDay = DAY_KEYS[new Date().getDay()];
   _renderRoutineDayTabs();
   _renderRoutineTimeline();
@@ -316,9 +417,18 @@ function openRoutineModal() {
   }
 }
 
+// Навігаційний стек: звідки відкрили routine modal
+let _routineReturnTo = null;
+
 function closeRoutineModal() {
   const modal = document.getElementById('routine-modal');
   if (modal) modal.style.display = 'none';
+  // Якщо прийшли з calendar → повернутись в calendar
+  if (_routineReturnTo === 'calendar') {
+    _routineReturnTo = null;
+    openCalendarModal();
+  }
+  _routineReturnTo = null;
 }
 
 function _renderRoutineDayTabs() {
@@ -521,4 +631,5 @@ Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
   openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority,
+  closeDayScheduleModal, openRoutineFromCalendar,
 });
