@@ -33,15 +33,12 @@ function openCalendarModal() {
 function closeCalendarModal() {
   const modal = document.getElementById('calendar-modal');
   if (modal) modal.style.display = 'none';
-  const eventsModal = document.getElementById('calendar-events-modal');
-  if (eventsModal) eventsModal.style.display = 'none';
 }
 
-// === EVENTS LIST MODAL (зверху екрану) ===
+// === EVENTS LIST (всередині calendar modal) ===
 function renderMonthEventsList() {
   const listEl = document.getElementById('calendar-events-list');
-  const modalEl = document.getElementById('calendar-events-modal');
-  if (!listEl || !modalEl) return;
+  if (!listEl) return;
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -63,7 +60,7 @@ function renderMonthEventsList() {
   });
 
   if (items.length === 0) {
-    modalEl.style.display = 'none';
+    listEl.style.display = 'none';
     return;
   }
 
@@ -95,11 +92,11 @@ function renderMonthEventsList() {
   });
 
   listEl.innerHTML = html;
-  modalEl.style.display = 'block';
+  listEl.style.display = 'block';
 }
 
-function calendarPrevMonth() { _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; } renderCalendar(); renderMonthEventsList(); }
-function calendarNextMonth() { _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; } renderCalendar(); renderMonthEventsList(); }
+function calendarPrevMonth() { _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; } _selectedDay = null; renderCalendar(); renderMonthEventsList(); }
+function calendarNextMonth() { _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; } _selectedDay = null; renderCalendar(); renderMonthEventsList(); }
 
 // === UPCOMING BLOCK (Найближче) ===
 function renderUpcoming() {
@@ -158,6 +155,8 @@ function renderUpcoming() {
 }
 
 // === CALENDAR GRID ===
+let _selectedDay = null;
+
 function renderCalendar() {
   const label = document.getElementById('calendar-month-label');
   const grid = document.getElementById('calendar-grid');
@@ -211,7 +210,10 @@ function renderCalendar() {
     let border = 'transparent';
     let dot = '';
 
+    const isSelected = _selectedDay === d && !isToday;
+
     if (isToday) { bg = '#ea580c'; color = 'white'; border = '#ea580c'; }
+    else if (isSelected) { bg = 'rgba(234,88,12,0.18)'; color = '#ea580c'; border = '#ea580c'; }
     else if (hasCritical) { bg = 'rgba(239,68,68,0.15)'; color = '#ef4444'; border = 'rgba(239,68,68,0.3)'; }
     else if (hasImportant) { bg = 'rgba(234,88,12,0.12)'; color = '#ea580c'; border = 'rgba(234,88,12,0.25)'; }
     else if (hasEvent) { bg = 'rgba(99,102,241,0.12)'; color = '#6366f1'; border = 'rgba(99,102,241,0.25)'; }
@@ -219,13 +221,15 @@ function renderCalendar() {
 
     if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#6366f1' : 'currentColor'};margin-top:1px"></div>`;
 
-    cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s">${d}${dot}</div>`;
+    cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
   }
   grid.innerHTML = cells;
 }
 
 // === DAY TAP ===
 function calendarDayTap(day) {
+  _selectedDay = day;
+  renderCalendar();
   const el = document.getElementById('calendar-day-tasks');
   if (!el) return;
 
