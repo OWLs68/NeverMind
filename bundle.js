@@ -6380,7 +6380,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const items = [];
     getEvents().forEach((ev) => {
       if (ev.date >= monthStart && ev.date <= monthEnd) {
-        items.push({ title: ev.title, date: ev.date, time: ev.time || null, type: "event", priority: ev.priority || "normal" });
+        items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, type: "event", priority: ev.priority || "normal" });
       }
     });
     getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
@@ -6405,7 +6405,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const timeStr = item.time ? ` \xB7 ${item.time}` : "";
       const opacity = isPast ? "opacity:0.4;" : "";
       const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#6366f1" : "rgba(30,16,64,0.45)";
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
+      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
+      html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       <div style="font-size:15px;flex-shrink:0">${icon}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13.5px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prio}${escapeHtml(item.title)}</div>
@@ -6444,7 +6445,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     getEvents().forEach((ev) => {
       const d = new Date(ev.date);
       if (d >= new Date(now.toDateString()) && d <= in7days) {
-        items.push({ title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null });
+        items.push({ id: ev.id, title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null });
       }
     });
     getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
@@ -6467,7 +6468,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u2611\uFE0F";
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}` : "";
-      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" ` : "";
+      return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? "cursor:pointer;" : ""}">
         <div style="font-size:16px;flex-shrink:0">${icon}</div>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:#1e1040">${prio} ${escapeHtml(item.title)}</div>
@@ -6568,7 +6570,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     events.forEach((ev) => {
       const timeStr = ev.time ? `${ev.time} \xB7 ` : "";
       const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      html += `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);cursor:pointer">
       <div style="font-size:16px;flex-shrink:0">\u{1F4C5}</div>
       <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${timeStr}${escapeHtml(ev.title)}</div>
     </div>`;
@@ -6716,17 +6718,90 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     saveRoutine(routine);
     _renderRoutineTimeline();
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay;
+  function openEventEditModal(eventId) {
+    const events = getEvents();
+    const ev = events.find((e) => e.id === eventId);
+    if (!ev) return;
+    _editEventId = eventId;
+    _editEventPriority = ev.priority || "normal";
+    document.getElementById("event-edit-title").value = ev.title || "";
+    document.getElementById("event-edit-date").value = ev.date || "";
+    document.getElementById("event-edit-time").value = ev.time || "";
+    _renderEventPriority();
+    const modal = document.getElementById("event-edit-modal");
+    if (modal) {
+      modal.style.display = "flex";
+      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeEventEditModal);
+    }
+  }
+  function closeEventEditModal() {
+    const modal = document.getElementById("event-edit-modal");
+    if (modal) modal.style.display = "none";
+    _editEventId = null;
+  }
+  function setEventPriority(p) {
+    _editEventPriority = p;
+    _renderEventPriority();
+  }
+  function _renderEventPriority() {
+    const wrap = document.getElementById("event-edit-priority");
+    if (!wrap) return;
+    const colors = { normal: "#6366f1", important: "#ea580c", critical: "#ef4444" };
+    wrap.querySelectorAll("[data-p]").forEach((el) => {
+      const p = el.dataset.p;
+      const active = p === _editEventPriority;
+      el.style.background = active ? colors[p] : "rgba(255,255,255,0.5)";
+      el.style.color = active ? "white" : "rgba(30,16,64,0.5)";
+      el.style.borderColor = active ? colors[p] : "rgba(30,16,64,0.12)";
+    });
+  }
+  function saveEventFromModal() {
+    if (!_editEventId) return;
+    const title = document.getElementById("event-edit-title").value.trim();
+    const date = document.getElementById("event-edit-date").value;
+    if (!title || !date) return;
+    const time = document.getElementById("event-edit-time").value || null;
+    const events = getEvents();
+    const idx = events.findIndex((e) => e.id === _editEventId);
+    if (idx === -1) return;
+    events[idx].title = title;
+    events[idx].date = date;
+    events[idx].time = time;
+    events[idx].priority = _editEventPriority;
+    saveEvents(events);
+    closeEventEditModal();
+    renderCalendar();
+    renderUpcoming();
+    renderMonthEventsList();
+  }
+  function deleteEventFromModal() {
+    if (!_editEventId) return;
+    const events = getEvents();
+    const idx = events.findIndex((e) => e.id === _editEventId);
+    if (idx === -1) return;
+    const removed = events.splice(idx, 1)[0];
+    saveEvents(events);
+    addToTrash("event", removed);
+    showUndoToast("\u041F\u043E\u0434\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
+    closeEventEditModal();
+    renderCalendar();
+    renderUpcoming();
+    renderMonthEventsList();
+  }
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _editEventId, _editEventPriority;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
       init_tasks();
+      init_trash();
       MONTHS_UA = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
       MONTHS_OF = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
       NM_ROUTINE_KEY = "nm_routine";
       DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       DAY_LABELS = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
       _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+      _editEventId = null;
+      _editEventPriority = "normal";
       Object.assign(window, {
         openCalendarModal,
         closeCalendarModal,
@@ -6739,7 +6814,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         routineAddBlock,
         routineDeleteBlock,
         routineSaveNewBlock,
-        routineCancelAdd
+        routineCancelAdd,
+        openEventEditModal,
+        closeEventEditModal,
+        saveEventFromModal,
+        deleteEventFromModal,
+        setEventPriority
       });
     }
   });
