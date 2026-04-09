@@ -134,6 +134,16 @@ function checkTabBoardTrigger(tab) {
 
 let _boardGenerating = {};
 
+// Червона крапка на сові якщо API табло падає
+function _updateApiDot() {
+  const dot = document.getElementById('owl-api-dot');
+  if (!dot) return;
+  const err = localStorage.getItem('nm_owl_api_error');
+  dot.style.display = err ? 'block' : 'none';
+}
+// Перевіряємо при старті
+setTimeout(_updateApiDot, 3000);
+
 // ============================================================
 // _extractBannedWords — витягує ключові слова з останніх повідомлень
 // для явної заборони в промпті (GPT-4o-mini краще реагує на конкретику)
@@ -284,6 +294,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
       const errDetail = `HTTP ${res.status} ${res.statusText}`;
       console.warn('[OWL board] API error:', errDetail);
       localStorage.setItem('nm_owl_api_error', errDetail + ' @ ' + new Date().toLocaleTimeString('uk-UA'));
+      _updateApiDot();
       _tryLocalFallback(tab);
       _boardGenerating[tab] = false;
       return;
@@ -294,12 +305,14 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
       const errDetail = 'empty reply: ' + JSON.stringify(data?.error || {}).slice(0, 150);
       console.warn('[OWL board]', errDetail);
       localStorage.setItem('nm_owl_api_error', errDetail + ' @ ' + new Date().toLocaleTimeString('uk-UA'));
+      _updateApiDot();
       _tryLocalFallback(tab);
       _boardGenerating[tab] = false;
       return;
     }
     // Очищуємо помилку — API працює
     localStorage.removeItem('nm_owl_api_error');
+    _updateApiDot();
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
 

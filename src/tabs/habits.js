@@ -1221,6 +1221,19 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  if (action === 'set_reminder') {
+    const time = parsed.time;
+    const text = parsed.text || 'Нагадування';
+    const date = parsed.date || new Date().toISOString().slice(0, 10);
+    if (!time) { addMsg('agent', 'Вкажи час нагадування.'); return true; }
+    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    reminders.push({ id: Date.now(), time, text, date, done: false });
+    localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+    window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
+    addMsg('agent', `⏰ Нагадаю о ${time}: "${text}"`);
+    return true;
+  }
+
   return false;
 }
 
