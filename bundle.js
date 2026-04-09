@@ -6673,7 +6673,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const modal = document.getElementById("day-schedule-modal");
     const panel = document.getElementById("day-schedule-panel");
     if (modal && panel) {
-      panel.style.transform = "scale(0)";
+      panel.style.transition = "none";
+      panel.style.transform = "scale(1)";
       panel.style.opacity = "0";
       modal.style.display = "flex";
       if (e && e.target) {
@@ -6686,6 +6687,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       } else {
         panel.style.transformOrigin = "center center";
       }
+      panel.style.transform = "scale(0)";
+      panel.offsetHeight;
+      panel.style.transition = "transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease";
       _zoomIn("day-schedule-panel");
       setupModalSwipeClose(panel, closeDayScheduleModal);
     }
