@@ -926,6 +926,12 @@ function _levenshtein(a, b) {
 export function processUniversalAction(parsed, originalText, addMsg) {
   const action = parsed.action;
 
+  // Розбита відповідь: проміжне повідомлення → пауза → результат
+  const _splitReply = (thinking, doWork) => {
+    addMsg('agent', thinking);
+    setTimeout(() => doWork(), 1200 + Math.random() * 800);
+  };
+
   if (action === 'create_task') {
     const title = (parsed.title || '').trim();
     if (!title) return false;
@@ -1212,12 +1218,21 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   }
 
   if (action === 'save_routine') {
-    const routine = getRoutine();
     const blocks = (parsed.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
     const days = Array.isArray(parsed.day) ? parsed.day : [parsed.day || 'default'];
-    days.forEach(d => { routine[d] = [...blocks]; });
-    saveRoutine(routine);
-    addMsg('agent', `🕐 Розпорядок збережено на ${days.length} дн. (${blocks.length} блоків)`);
+    if (days.length > 1) {
+      _splitReply(`Копіюю розпорядок на ${days.length} днів...`, () => {
+        const routine = getRoutine();
+        days.forEach(d => { routine[d] = [...blocks]; });
+        saveRoutine(routine);
+        addMsg('agent', `🕐 Готово! Розпорядок на ${days.length} дн. (${blocks.length} блоків)`);
+      });
+    } else {
+      const routine = getRoutine();
+      days.forEach(d => { routine[d] = [...blocks]; });
+      saveRoutine(routine);
+      addMsg('agent', `🕐 Розпорядок збережено (${blocks.length} блоків)`);
+    }
     return true;
   }
 
