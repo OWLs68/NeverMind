@@ -6964,6 +6964,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     renderUpcoming();
     renderMonthEventsList();
   }
+  function _updateCalIconDay() {
+    const el = document.getElementById("cal-icon-day");
+    if (el) el.textContent = (/* @__PURE__ */ new Date()).getDate();
+  }
   var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H, MONTHS_SHORT;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
@@ -6984,6 +6988,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
       DRUM_H = 40;
       MONTHS_SHORT = ["\u0421\u0456\u0447", "\u041B\u044E\u0442", "\u0411\u0435\u0440", "\u041A\u0432\u0456", "\u0422\u0440\u0430", "\u0427\u0435\u0440", "\u041B\u0438\u043F", "\u0421\u0435\u0440", "\u0412\u0435\u0440", "\u0416\u043E\u0432", "\u041B\u0438\u0441", "\u0413\u0440\u0443"];
+      _updateCalIconDay();
+      setInterval(_updateCalIconDay, 60 * 1e3);
       Object.assign(window, {
         openCalendarModal,
         closeCalendarModal,
