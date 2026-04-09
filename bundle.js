@@ -3888,6 +3888,18 @@ ${aiContext ? "\n\n" + aiContext : ""}
       reasons.push("chat-closed");
     }
     let hasCritical = false;
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const todayISO2 = now.toISOString().slice(0, 10);
+      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= nowTime);
+      if (due.length > 0) {
+        score += 5;
+        reasons.push("reminder-due");
+        hasCritical = true;
+      }
+    } catch (e) {
+    }
     const tasks = getTasks().filter((t) => t.status !== "done");
     for (const t of tasks) {
       const m = t.title.match(/(\d{1,2}):(\d{2})/);
@@ -3991,6 +4003,25 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const critical = [];
     const important = [];
     const normal = [];
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const todayISO = now.toISOString().slice(0, 10);
+      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      if (due.length > 0) {
+        due.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
+        const updated = reminders.map((r) => due.find((d) => d.id === r.id) ? { ...r, done: true } : r);
+        localStorage.setItem("nm_reminders", JSON.stringify(updated));
+      }
+      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
+      if (upcoming.length > 0) {
+        const next = upcoming[0];
+        const [nh, nm] = next.time.split(":").map(Number);
+        const minsUntil = nh * 60 + nm - (hour * 60 + min);
+        if (minsUntil <= 30) important.push(`[\u0421\u041A\u041E\u0420\u041E] \u23F0 \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043E ${next.time}: "${next.text}" (\u0447\u0435\u0440\u0435\u0437 ${minsUntil} \u0445\u0432)`);
+      }
+    } catch (e) {
+    }
     const phaseLabels = {
       morning: `[\u0424\u0410\u0417\u0410: \u0420\u0410\u041D\u041E\u041A] \u0427\u0430\u0441 \u043F\u043B\u0430\u043D\u0443\u0432\u0430\u043D\u043D\u044F. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438 \u043D\u0430 \u0434\u0435\u043D\u044C, \u043C\u043E\u0442\u0438\u0432\u0430\u0446\u0456\u044F, \u0449\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u041F\u0456\u0434\u0439\u043E\u043C \u043E ${sc.wakeUp}:00, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workStart}:00.`,
       work: `[\u0424\u0410\u0417\u0410: \u0420\u041E\u0411\u041E\u0422\u0410] \u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0447\u0430\u0441. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D.`,
@@ -4438,9 +4469,23 @@ ${pulseParts.join("\n")}
       return;
     }
   }
+  function _checkReminders() {
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const now = /* @__PURE__ */ new Date();
+      const todayISO = now.toISOString().slice(0, 10);
+      const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      if (due.length > 0) {
+        Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+      }
+    } catch (e) {
+    }
+  }
   function startOwlBoardCycle() {
     _owlAskScheduleIfNeeded();
     tryOwlBoardUpdate();
+    setInterval(_checkReminders, 60 * 1e3);
     if (_owlBoardTimer) clearInterval(_owlBoardTimer);
     _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
   }
@@ -4844,6 +4889,12 @@ ${pulseParts.join("\n")}
     }
     return true;
   }
+  function _updateApiDot() {
+    const dot = document.getElementById("owl-api-dot");
+    if (!dot) return;
+    const err = localStorage.getItem("nm_owl_api_error");
+    dot.style.display = err ? "block" : "none";
+  }
   function _extractBannedWords(msgs) {
     if (!msgs || msgs.length === 0) return "";
     const stopWords = /* @__PURE__ */ new Set(["\u0449\u043E", "\u044F\u043A\u0456", "\u044F\u043A\u0430", "\u044F\u043A\u0438\u0439", "\u044F\u043A\u0435", "\u0434\u043B\u044F", "\u043F\u0440\u0438", "\u0430\u0431\u043E", "\u0430\u043B\u0435", "\u0446\u0435\u0439", "\u0446\u044F", "\u0446\u0435", "\u0442\u043E\u0439", "\u0442\u0430", "\u0442\u0435", "\u0432\u0436\u0435", "\u0449\u0435", "\u0442\u0430\u043A", "\u043D\u0456", "\u043D\u0435", "\u0431\u0435\u0437", "\u043D\u0430\u0434", "\u043F\u0456\u0434", "\u043C\u0456\u0436", "\u0447\u0435\u0440\u0435\u0437", "\u043A\u043E\u043B\u0438", "\u0442\u043E\u043C\u0443", "\u044F\u043A\u0449\u043E", "\u0431\u0443\u043B\u043E", "\u0431\u0443\u0434\u0435", "\u043C\u0430\u0454", "\u0442\u0440\u0435\u0431\u0430", "\u043C\u043E\u0436\u043D\u0430", "\u043C\u043E\u0436\u0435\u0448", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456", "\u0432\u0447\u043E\u0440\u0430", "\u0437\u0430\u0432\u0442\u0440\u0430", "\u0437\u0430\u0440\u0430\u0437", "\u043F\u043E\u0442\u0456\u043C", "\u0434\u043E\u0431\u0440\u0435", "\u0433\u0430\u0440\u043D\u043E", "\u0434\u0430\u0432\u0430\u0439", "\u043C\u043E\u0436\u0435", "\u043E\u0441\u044C", "\u0442\u0430\u043C", "\u0442\u0443\u0442", "\u0434\u0443\u0436\u0435", "\u0432\u0441\u0456", "\u0432\u0441\u0435", "\u0439\u043E\u0433\u043E", "\u0457\u0457", "\u0432\u043E\u043D\u0438", "\u0442\u043E\u0431\u0456", "\u0442\u0435\u0431\u0435", "\u043C\u0435\u043D\u0456", "\u043D\u0430\u0441", "\u0447\u0430\u0441", "\u0434\u0435\u043D\u044C", "\u0434\u043D\u0456", "\u0440\u0430\u0437", "\u0442\u0438", "\u0432\u0456\u043D", "\u0432\u043E\u043D\u0430", "\u044F\u043A"]);
@@ -4967,6 +5018,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         const errDetail = `HTTP ${res.status} ${res.statusText}`;
         console.warn("[OWL board] API error:", errDetail);
         localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
+        _updateApiDot();
         _tryLocalFallback(tab);
         _boardGenerating[tab] = false;
         return;
@@ -4977,11 +5029,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         const errDetail = "empty reply: " + JSON.stringify(data?.error || {}).slice(0, 150);
         console.warn("[OWL board]", errDetail);
         localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
+        _updateApiDot();
         _tryLocalFallback(tab);
         _boardGenerating[tab] = false;
         return;
       }
       localStorage.removeItem("nm_owl_api_error");
+      _updateApiDot();
       const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
       if (!parsed.text) {
         _boardGenerating[tab] = false;
@@ -5136,6 +5190,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_notes();
       init_finance();
       _boardGenerating = {};
+      setTimeout(_updateApiDot, 3e3);
       NM_FIRST_VISIT_KEY = "nm_tab_first_visit";
       TAB_HINTS = {
         tasks: "\u0422\u0443\u0442 \u0436\u0438\u0432\u0443\u0442\u044C \u0442\u0432\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438. \u041D\u0430\u043F\u0438\u0448\u0438 \u043C\u0435\u043D\u0456 \u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u2014 \u044F \u0441\u0442\u0432\u043E\u0440\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u{1F4CB}",
@@ -7774,6 +7829,21 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${days.length} \u0434\u043D. (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
       return true;
     }
+    if (action === "set_reminder") {
+      const time = parsed.time;
+      const text = parsed.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F";
+      const date = parsed.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      if (!time) {
+        addMsg("agent", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F.");
+        return true;
+      }
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      reminders.push({ id: Date.now(), time, text, date, done: false });
+      localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
+      addMsg("agent", `\u23F0 \u041D\u0430\u0433\u0430\u0434\u0430\u044E \u043E ${time}: "${text}"`);
+      return true;
+    }
     return false;
   }
   async function sendTasksBarMessage() {
@@ -8153,9 +8223,21 @@ ${inboxList}`);
           }).join(", ");
           return `${dayLabels[day] || day}${isToday ? " (\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)" : ""}: ${blocks}`;
         });
+        const todayBlocks = (allRoutine[todayKey] || allRoutine["default"] || []).sort((a, b) => a.time.localeCompare(b.time));
+        const nextBlock = todayBlocks.find((b) => {
+          const [bh, bm] = b.time.split(":").map(Number);
+          return bh * 60 + (bm || 0) > nowMin;
+        });
+        let nextHint = "";
+        if (nextBlock) {
+          const [bh, bm] = nextBlock.time.split(":").map(Number);
+          const minsUntil = bh * 60 + (bm || 0) - nowMin;
+          nextHint = `
+[\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0415 \u0417\u0410 \u0420\u041E\u0417\u041A\u041B\u0410\u0414\u041E\u041C] ${nextBlock.time} \u2014 ${nextBlock.activity} (\u0447\u0435\u0440\u0435\u0437 ${minsUntil} \u0445\u0432). \u041D\u0430\u0433\u0430\u0434\u0430\u0439 \u0437\u0430\u0432\u0447\u0430\u0441\u043D\u043E!`;
+        }
         parts.push(`\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F:
-${routineParts.join("\n")}
-\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0456\u0434\u043A\u0430\u0437\u043E\u043A. \u041C\u043E\u0436\u0435\u0448 \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438, \u0437\u043C\u0456\u043D\u044E\u0432\u0430\u0442\u0438, \u0432\u0438\u0434\u0430\u043B\u044F\u0442\u0438 \u0431\u043B\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 save_routine.`);
+${routineParts.join("\n")}${nextHint}
+\u041C\u043E\u0436\u0435\u0448 \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438, \u0437\u043C\u0456\u043D\u044E\u0432\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\u0438 \u0447\u0435\u0440\u0435\u0437 save_routine.`);
       }
     } catch (e) {
     }
@@ -8286,7 +8368,11 @@ ${context}
 - "\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043D\u0430 \u0432\u0441\u0456 \u0431\u0443\u0434\u043D\u0456" \u2192 day:["mon","tue","wed","thu","fri"], blocks \u0437 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u0434\u043D\u044F
 - "\u0417\u043C\u0456\u043D\u0438 \u0434\u0430\u0442\u0443" \u2192 edit_event \u0437 \u043D\u043E\u0432\u043E\u044E \u0434\u0430\u0442\u043E\u044E. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043D\u0430 24" \u2192 edit_event \u0437 date
 
-ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0434\u0456\u0439 \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.`;
+ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0434\u0456\u0439 \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.
+
+\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: {"action":"set_reminder","time":"HH:MM","text":"\u0449\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438","date":"YYYY-MM-DD"} (date \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C = \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)
+
+\u0413\u041E\u041B\u041E\u0412\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439", "\u043E\u043D\u043E\u0432\u0438\u0442\u0438" \u2014 \u0446\u0435 \u0417\u0410\u0412\u0416\u0414\u0418 edit \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443 (edit_event, edit_task, edit_note). \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F. "\u041C\u0430\u043C\u0430 \u043F\u0440\u0438\u0457\u0434\u0435 24\u0433\u043E \u0430 \u043D\u0435 20\u0433\u043E" \u2192 edit_event (\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0434\u0430\u0442\u0443), \u041D\u0415 create_event. \u0428\u0443\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u043F\u043E \u043D\u0430\u0437\u0432\u0456 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.`;
     const messages = [
       { role: "system", content: systemPrompt },
       ...recentChat,
