@@ -130,7 +130,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/core/trash.js` | Кошик (7 днів TTL), showUndoToast, undoDelete |
 | `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml |
 | `src/core/logger.js` | Error logging, console override |
-| `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість |
+| `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість, "НАГАДАЙ=set_reminder" правило |
 | `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
 | `src/owl/board.js` | OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox) |
 | `src/owl/proactive.js` | Генерація проактивних повідомлень, getTabBoardContext |
@@ -138,13 +138,13 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/ui/keyboard.js` | setupKeyboardAvoiding (iOS-specific) |
 | `src/ui/swipe-delete.js` | Swipe trail для видалення |
 | `src/tabs/inbox.js` | sendToAI(), processSaveAction(), renderInbox(), swipe delete |
-| `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat |
-| `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки |
+| `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat, setupModalSwipeClose (з drum-col guard) |
+| `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки, processUniversalAction (_splitReply) |
 | `src/tabs/notes.js` | Нотатки, папки, note view з чатом, пошук |
 | `src/tabs/finance.js` | Фінанси, бюджет, категорії, AI-коуч (кешований) |
 | `src/tabs/health.js` | Карточки здоров'я, денні шкали (енергія/сон/біль) |
 | `src/tabs/projects.js` | Проекти, воркспейс, кроки, метрики, темп |
-| `src/tabs/calendar.js` | Календар, події (nm_events), блок "Найближче", модалка календаря |
+| `src/tabs/calendar.js` | Календар, події (nm_events), блок "Найближче", Calendar/Routine/Day-schedule модалки, Event-edit modal з drum picker, zoom-анімації, навігаційний стек, SVG іконка з динамічною датою |
 | `src/tabs/evening.js` | Моменти дня, вечірній підсумок, "Я" вкладка, денний скор |
 | `src/tabs/onboarding.js` | Онбординг, слайди, опитування, OWL Guide, help |
 
