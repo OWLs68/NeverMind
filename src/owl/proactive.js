@@ -162,28 +162,6 @@ function _extractBannedWords(msgs) {
 }
 
 // ============================================================
-// _isTooSimilar — перевіряє чи нове повідомлення надто схоже на останні
-// Повертає true якщо overlap ключових слів > 60%
-// ============================================================
-function _isTooSimilar(newText, recentMsgs) {
-  if (!recentMsgs || recentMsgs.length === 0) return false;
-  const getWords = (t) => {
-    const ws = (t || '').toLowerCase().replace(/[^\wа-яіїєґ'\s]/g, '').split(/\s+/).filter(w => w.length >= 4);
-    return new Set(ws);
-  };
-  const newWords = getWords(newText);
-  if (newWords.size === 0) return false;
-  for (const m of recentMsgs.slice(0, 3)) {
-    const oldWords = getWords(m.text);
-    if (oldWords.size === 0) continue;
-    let overlap = 0;
-    for (const w of newWords) { if (oldWords.has(w)) overlap++; }
-    if (overlap / newWords.size > 0.6) return true;
-  }
-  return false;
-}
-
-// ============================================================
 // generateBoardMessage — ЄДИНА функція генерації повідомлення табло
 // Працює для БУДЬ-якої вкладки включно з inbox
 // ============================================================
@@ -316,16 +294,6 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
     if (!parsed.text) { _boardGenerating[tab] = false; return; }
 
-    // Антиповтор: якщо нове повідомлення надто схоже на останні — відкидаємо
-    // Виняток: якщо табло застаріло (30+ хв) — краще схоже нове ніж неправильне старе
-    const lastBoardTs = parseInt(localStorage.getItem(isInbox ? 'nm_owl_board_ts' : getOwlTabTsKey(tab)) || '0');
-    const boardStale = Date.now() - lastBoardTs > 30 * 60 * 1000;
-    if (!boardStale && _isTooSimilar(parsed.text, allMsgs)) {
-      console.warn('[OWL board] similar message rejected:', parsed.text?.slice(0, 50));
-      _boardGenerating[tab] = false;
-      return;
-    }
-
     // Збереження: inbox і вкладки мають різні сховища
     const newMsg = { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
     if (isInbox) {
@@ -361,6 +329,15 @@ function _tryLocalFallback(tab) {
   const mode = (JSON.parse(localStorage.getItem('nm_settings') || '{}').owl_mode) || 'partner';
   let text = '';
   const chips = [];
+  // Відмінювання: 1 задача, 2 задачі, 5 задач
+  const _pl = (n, one, few, many) => {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return `${n} ${many}`;
+    if (last === 1) return `${n} ${one}`;
+    if (last >= 2 && last <= 4) return `${n} ${few}`;
+    return `${n} ${many}`;
+  };
   try {
     const tasks = getTasks().filter(t => t.status === 'active');
     const habits = getHabits();
@@ -372,13 +349,15 @@ function _tryLocalFallback(tab) {
     const doneH = todayHabits.filter(h => todayLog[h.id]);
     const pendingH = todayHabits.filter(h => !todayLog[h.id]);
     const phase = getDayPhase();
+    const tStr = _pl(tasks.length, 'задача', 'задачі', 'задач');
+    const hStr = _pl(pendingH.length, 'звичка', 'звички', 'звичок');
 
     if (tasks.length > 0 && pendingH.length > 0) {
       text = mode === 'coach'
-        ? `${tasks.length} задач і ${pendingH.length} звичок. Що заважає закрити?`
+        ? `${tStr} і ${hStr}. Що заважає закрити?`
         : mode === 'mentor'
-        ? `Є ${tasks.length} задач і ${pendingH.length} звичок. Давай хоча б одну закриємо.`
-        : `У тебе ${tasks.length} задач і ${pendingH.length} звичок на сьогодні. Тримаєшся?`;
+        ? `Є ${tStr} і ${hStr}. Давай хоча б одну закриємо.`
+        : `У тебе ${tStr} і ${hStr} на сьогодні. Тримаєшся?`;
       chips.push({ label: 'Задачі', action: 'nav', target: 'tasks' });
       chips.push({ label: 'Звички', action: 'nav', target: 'habits' });
     } else if (tasks.length > 0) {
@@ -417,7 +396,8 @@ function _tryLocalFallback(tab) {
   const all = getOwlBoardMessages();
   all.unshift(newMsg);
   saveOwlBoardMessages(all.slice(0, 3));
-  localStorage.setItem('nm_owl_board_ts', Date.now().toString());
+  // НЕ оновлюємо nm_owl_board_ts — fallback не рахується як повноцінна генерація,
+  // інакше Judge Layer штрафує наступну спробу API
   renderOwlBoard();
   console.warn('[OWL board] smart fallback:', text);
 }
