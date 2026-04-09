@@ -6350,6 +6350,26 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     localStorage.setItem("nm_events", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "events" }));
   }
+  function _zoomIn(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    requestAnimationFrame(() => {
+      panel.style.transform = "scale(1)";
+      panel.style.opacity = "1";
+    });
+  }
+  function _zoomOut(panelId, modalId, cb) {
+    const panel = document.getElementById(panelId);
+    const modal = document.getElementById(modalId);
+    if (panel) {
+      panel.style.transform = "scale(0)";
+      panel.style.opacity = "0";
+    }
+    setTimeout(() => {
+      if (modal) modal.style.display = "none";
+      if (cb) cb();
+    }, 300);
+  }
   function openCalendarModal() {
     const now = /* @__PURE__ */ new Date();
     _calYear = now.getFullYear();
@@ -6360,12 +6380,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const modal = document.getElementById("calendar-modal");
     if (modal) {
       modal.style.display = "flex";
-      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeCalendarModal);
+      _zoomIn("calendar-panel");
+      setupModalSwipeClose(document.getElementById("calendar-panel"), closeCalendarModal);
     }
   }
   function closeCalendarModal() {
-    const modal = document.getElementById("calendar-modal");
-    if (modal) modal.style.display = "none";
+    _zoomOut("calendar-panel", "calendar-modal");
   }
   function renderMonthEventsList() {
     const listEl = document.getElementById("calendar-events-list");
@@ -6550,16 +6570,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         color = "#1e1040";
       }
       if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#6366f1" : "currentColor"};margin-top:1px"></div>`;
-      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+      cells += `<div onclick="calendarDayTap(${d},event)" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
     grid.innerHTML = cells;
   }
-  function calendarDayTap(day) {
+  function calendarDayTap(day, e) {
     _selectedDay = day;
     renderCalendar();
-    _openDayScheduleModal(day);
+    _openDayScheduleModal(day, e);
   }
-  function _openDayScheduleModal(day) {
+  function _openDayScheduleModal(day, e) {
     const date = new Date(_calYear, _calMonth, day);
     const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayKey = DAY_KEYS[date.getDay()];
@@ -6645,24 +6665,22 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const modal = document.getElementById("day-schedule-modal");
     const panel = document.getElementById("day-schedule-panel");
     if (modal && panel) {
+      if (e && e.target) {
+        const btn = e.target.closest("[onclick]") || e.target;
+        const rect = btn.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        panel.style.transformOrigin = `${cx}px ${cy}px`;
+      } else {
+        panel.style.transformOrigin = "center center";
+      }
       modal.style.display = "flex";
-      requestAnimationFrame(() => {
-        panel.style.transform = "scale(1)";
-        panel.style.opacity = "1";
-      });
+      _zoomIn("day-schedule-panel");
       setupModalSwipeClose(panel, closeDayScheduleModal);
     }
   }
   function closeDayScheduleModal() {
-    const modal = document.getElementById("day-schedule-modal");
-    const panel = document.getElementById("day-schedule-panel");
-    if (panel) {
-      panel.style.transform = "scale(0)";
-      panel.style.opacity = "0";
-      setTimeout(() => {
-        if (modal) modal.style.display = "none";
-      }, 300);
-    }
+    _zoomOut("day-schedule-panel", "day-schedule-modal");
   }
   function getRoutine() {
     try {
@@ -6688,7 +6706,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const modal = document.getElementById("routine-modal");
     if (modal) {
       modal.style.display = "flex";
-      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeRoutineModal);
+      _zoomIn("routine-panel");
+      setupModalSwipeClose(document.getElementById("routine-panel"), closeRoutineModal);
     }
   }
   function openRoutineModal() {
@@ -6699,17 +6718,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const modal = document.getElementById("routine-modal");
     if (modal) {
       modal.style.display = "flex";
-      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeRoutineModal);
+      _zoomIn("routine-panel");
+      setupModalSwipeClose(document.getElementById("routine-panel"), closeRoutineModal);
     }
   }
   function closeRoutineModal() {
-    const modal = document.getElementById("routine-modal");
-    if (modal) modal.style.display = "none";
-    if (_routineReturnTo === "calendar") {
-      _routineReturnTo = null;
-      openCalendarModal();
-    }
+    const returnTo = _routineReturnTo;
     _routineReturnTo = null;
+    _zoomOut("routine-panel", "routine-modal", () => {
+      if (returnTo === "calendar") openCalendarModal();
+    });
   }
   function _renderRoutineDayTabs() {
     const el = document.getElementById("routine-day-tabs");
