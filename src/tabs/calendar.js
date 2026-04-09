@@ -708,6 +708,15 @@ function deleteEventFromModal() {
 }
 
 // === WINDOW EXPORTS ===
+// Оновлення числа на іконці календаря
+function _updateCalIconDay() {
+  const el = document.getElementById('cal-icon-day');
+  if (el) el.textContent = new Date().getDate();
+}
+_updateCalIconDay();
+// Оновлювати о півночі
+setInterval(_updateCalIconDay, 60 * 1000);
+
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
