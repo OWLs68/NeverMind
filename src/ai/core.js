@@ -212,7 +212,19 @@ export function getAIContext() {
         }).join(', ');
         return `${dayLabels[day] || day}${isToday ? ' (сьогодні)' : ''}: ${blocks}`;
       });
-      parts.push(`Розпорядок дня:\n${routineParts.join('\n')}\nВикористовуй для підказок. Можеш копіювати, змінювати, видаляти блоки через save_routine.`);
+      // Знайти наступний блок сьогодні
+      const todayBlocks = (allRoutine[todayKey] || allRoutine['default'] || []).sort((a, b) => a.time.localeCompare(b.time));
+      const nextBlock = todayBlocks.find(b => {
+        const [bh, bm] = b.time.split(':').map(Number);
+        return bh * 60 + (bm || 0) > nowMin;
+      });
+      let nextHint = '';
+      if (nextBlock) {
+        const [bh, bm] = nextBlock.time.split(':').map(Number);
+        const minsUntil = bh * 60 + (bm || 0) - nowMin;
+        nextHint = `\n[НАСТУПНЕ ЗА РОЗКЛАДОМ] ${nextBlock.time} — ${nextBlock.activity} (через ${minsUntil} хв). Нагадай завчасно!`;
+      }
+      parts.push(`Розпорядок дня:\n${routineParts.join('\n')}${nextHint}\nМожеш копіювати, змінювати блоки через save_routine.`);
     }
   } catch(e) {}
 
@@ -551,7 +563,11 @@ ${context}
 - "Скопіюй на всі будні" → day:["mon","tue","wed","thu","fri"], blocks з поточного дня
 - "Зміни дату" → edit_event з новою датою. "Перенеси на 24" → edit_event з date
 
-ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вище. Використовуй тільки реальні ID.`;
+ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вище. Використовуй тільки реальні ID.
+
+Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовчуванням = сьогодні)
+
+ГОЛОВНЕ ПРАВИЛО РЕДАГУВАННЯ: Якщо юзер каже "перенеси", "зміни", "поміняй", "оновити" — це ЗАВЖДИ edit існуючого запису (edit_event, edit_task, edit_note). НІКОЛИ не створюй новий запис замість редагування. "Мама приїде 24го а не 20го" → edit_event (змінити дату), НЕ create_event. Шукай відповідний запис по назві в контексті.`;
 
   const messages = [
     { role: 'system', content: systemPrompt },

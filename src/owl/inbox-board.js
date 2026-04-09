@@ -403,8 +403,21 @@ export function shouldOwlSpeak(trigger) {
     reasons.push('chat-closed');
   }
 
-  // Дедлайн через ~годину — КРИТИЧНЕ
+  // Нагадування що настали — КРИТИЧНЕ
   let hasCritical = false;
+  try {
+    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const todayISO = now.toISOString().slice(0, 10);
+    const nowTime = `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+    const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= nowTime);
+    if (due.length > 0) {
+      score += 5;
+      reasons.push('reminder-due');
+      hasCritical = true;
+    }
+  } catch(e) {}
+
+  // Дедлайн через ~годину — КРИТИЧНЕ
   const tasks = getTasks().filter(t => t.status !== 'done');
   for (const t of tasks) {
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
@@ -533,6 +546,28 @@ export function getOwlBoardContext() {
   const critical = [];
   const important = [];
   const normal = [];
+
+  // Нагадування що настали
+  try {
+    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const todayISO = now.toISOString().slice(0, 10);
+    const nowTime = `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+    const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= nowTime);
+    if (due.length > 0) {
+      due.forEach(r => critical.push(`[КРИТИЧНО] ⏰ НАГАДУВАННЯ (${r.time}): "${r.text}". Скажи це юзеру ЗАРАЗ!`));
+      // Позначаємо як показані
+      const updated = reminders.map(r => due.find(d => d.id === r.id) ? { ...r, done: true } : r);
+      localStorage.setItem('nm_reminders', JSON.stringify(updated));
+    }
+    // Найближче нагадування
+    const upcoming = reminders.filter(r => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
+    if (upcoming.length > 0) {
+      const next = upcoming[0];
+      const [nh, nm] = next.time.split(':').map(Number);
+      const minsUntil = nh * 60 + nm - (hour * 60 + min);
+      if (minsUntil <= 30) important.push(`[СКОРО] ⏰ Нагадування о ${next.time}: "${next.text}" (через ${minsUntil} хв)`);
+    }
+  } catch(e) {}
 
   // Фаза дня — інструкція для агента
   const phaseLabels = {
@@ -1099,12 +1134,29 @@ function dismissOwlBoard() {
   if (board) board.style.display = 'none';
 }
 
+// Перевірка нагадувань кожну хвилину
+function _checkReminders() {
+  try {
+    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const now = new Date();
+    const todayISO = now.toISOString().slice(0, 10);
+    const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= nowTime);
+    if (due.length > 0) {
+      // Є нагадування — тригеримо оновлення табло
+      import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
+    }
+  } catch(e) {}
+}
+
 // Запуск циклу перевірки
 export function startOwlBoardCycle() {
   // Одноразовий запит розкладу якщо не заповнено
   _owlAskScheduleIfNeeded();
   // Одразу при відкритті
   tryOwlBoardUpdate();
+  // Перевірка нагадувань кожну хвилину
+  setInterval(_checkReminders, 60 * 1000);
   // Потім кожні 10 хвилин (fallback — основні тригери через події)
   if (_owlBoardTimer) clearInterval(_owlBoardTimer);
   _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
