@@ -6366,13 +6366,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function closeCalendarModal() {
     const modal = document.getElementById("calendar-modal");
     if (modal) modal.style.display = "none";
-    const eventsModal = document.getElementById("calendar-events-modal");
-    if (eventsModal) eventsModal.style.display = "none";
   }
   function renderMonthEventsList() {
     const listEl = document.getElementById("calendar-events-list");
-    const modalEl = document.getElementById("calendar-events-modal");
-    if (!listEl || !modalEl) return;
+    if (!listEl) return;
     const now = /* @__PURE__ */ new Date();
     const todayStr = now.toISOString().slice(0, 10);
     const monthStart = `${_calYear}-${String(_calMonth + 1).padStart(2, "0")}-01`;
@@ -6389,7 +6386,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       }
     });
     if (items.length === 0) {
-      modalEl.style.display = "none";
+      listEl.style.display = "none";
       return;
     }
     items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || "").localeCompare(b.time || ""));
@@ -6415,7 +6412,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     </div>`;
     });
     listEl.innerHTML = html;
-    modalEl.style.display = "block";
+    listEl.style.display = "block";
   }
   function calendarPrevMonth() {
     _calMonth--;
@@ -6423,6 +6420,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _calMonth = 11;
       _calYear--;
     }
+    _selectedDay = null;
     renderCalendar();
     renderMonthEventsList();
   }
@@ -6432,6 +6430,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _calMonth = 0;
       _calYear++;
     }
+    _selectedDay = null;
     renderCalendar();
     renderMonthEventsList();
   }
@@ -6525,9 +6524,14 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       let color = "rgba(30,16,64,0.35)";
       let border = "transparent";
       let dot = "";
+      const isSelected = _selectedDay === d && !isToday;
       if (isToday) {
         bg = "#ea580c";
         color = "white";
+        border = "#ea580c";
+      } else if (isSelected) {
+        bg = "rgba(234,88,12,0.18)";
+        color = "#ea580c";
         border = "#ea580c";
       } else if (hasCritical) {
         bg = "rgba(239,68,68,0.15)";
@@ -6546,11 +6550,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         color = "#1e1040";
       }
       if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#6366f1" : "currentColor"};margin-top:1px"></div>`;
-      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s">${d}${dot}</div>`;
+      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
     grid.innerHTML = cells;
   }
   function calendarDayTap(day) {
+    _selectedDay = day;
+    renderCalendar();
     const el = document.getElementById("calendar-day-tasks");
     if (!el) return;
     const dateStr = new Date(_calYear, _calMonth, day).toDateString();
@@ -6788,7 +6794,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     renderUpcoming();
     renderMonthEventsList();
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _editEventId, _editEventPriority;
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _editEventId, _editEventPriority;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
@@ -6796,6 +6802,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_trash();
       MONTHS_UA = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
       MONTHS_OF = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      _selectedDay = null;
       NM_ROUTINE_KEY = "nm_routine";
       DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       DAY_LABELS = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
