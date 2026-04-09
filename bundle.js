@@ -4907,25 +4907,6 @@ ${pulseParts.join("\n")}
     }
     return [...words].slice(0, 15).join(", ");
   }
-  function _isTooSimilar(newText, recentMsgs) {
-    if (!recentMsgs || recentMsgs.length === 0) return false;
-    const getWords = (t) => {
-      const ws = (t || "").toLowerCase().replace(/[^\wа-яіїєґ'\s]/g, "").split(/\s+/).filter((w) => w.length >= 4);
-      return new Set(ws);
-    };
-    const newWords = getWords(newText);
-    if (newWords.size === 0) return false;
-    for (const m of recentMsgs.slice(0, 3)) {
-      const oldWords = getWords(m.text);
-      if (oldWords.size === 0) continue;
-      let overlap = 0;
-      for (const w of newWords) {
-        if (oldWords.has(w)) overlap++;
-      }
-      if (overlap / newWords.size > 0.6) return true;
-    }
-    return false;
-  }
   async function generateBoardMessage(tab) {
     if (_boardGenerating[tab]) return;
     const key = localStorage.getItem("nm_gemini_key");
@@ -5041,13 +5022,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         _boardGenerating[tab] = false;
         return;
       }
-      const lastBoardTs = parseInt(localStorage.getItem(isInbox ? "nm_owl_board_ts" : getOwlTabTsKey(tab)) || "0");
-      const boardStale = Date.now() - lastBoardTs > 30 * 60 * 1e3;
-      if (!boardStale && _isTooSimilar(parsed.text, allMsgs)) {
-        console.warn("[OWL board] similar message rejected:", parsed.text?.slice(0, 50));
-        _boardGenerating[tab] = false;
-        return;
-      }
       const newMsg = { text: parsed.text, priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
       if (isInbox) {
         newMsg.id = Date.now();
@@ -5076,6 +5050,14 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
     let text = "";
     const chips = [];
+    const _pl = (n, one, few, many) => {
+      const abs = Math.abs(n) % 100;
+      const last = abs % 10;
+      if (abs > 10 && abs < 20) return `${n} ${many}`;
+      if (last === 1) return `${n} ${one}`;
+      if (last >= 2 && last <= 4) return `${n} ${few}`;
+      return `${n} ${many}`;
+    };
     try {
       const tasks = getTasks().filter((t) => t.status === "active");
       const habits = getHabits();
@@ -5087,8 +5069,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const doneH = todayHabits.filter((h) => todayLog[h.id]);
       const pendingH = todayHabits.filter((h) => !todayLog[h.id]);
       const phase = getDayPhase();
+      const tStr = _pl(tasks.length, "\u0437\u0430\u0434\u0430\u0447\u0430", "\u0437\u0430\u0434\u0430\u0447\u0456", "\u0437\u0430\u0434\u0430\u0447");
+      const hStr = _pl(pendingH.length, "\u0437\u0432\u0438\u0447\u043A\u0430", "\u0437\u0432\u0438\u0447\u043A\u0438", "\u0437\u0432\u0438\u0447\u043E\u043A");
       if (tasks.length > 0 && pendingH.length > 0) {
-        text = mode === "coach" ? `${tasks.length} \u0437\u0430\u0434\u0430\u0447 \u0456 ${pendingH.length} \u0437\u0432\u0438\u0447\u043E\u043A. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454 \u0437\u0430\u043A\u0440\u0438\u0442\u0438?` : mode === "mentor" ? `\u0404 ${tasks.length} \u0437\u0430\u0434\u0430\u0447 \u0456 ${pendingH.length} \u0437\u0432\u0438\u0447\u043E\u043A. \u0414\u0430\u0432\u0430\u0439 \u0445\u043E\u0447\u0430 \u0431 \u043E\u0434\u043D\u0443 \u0437\u0430\u043A\u0440\u0438\u0454\u043C\u043E.` : `\u0423 \u0442\u0435\u0431\u0435 ${tasks.length} \u0437\u0430\u0434\u0430\u0447 \u0456 ${pendingH.length} \u0437\u0432\u0438\u0447\u043E\u043A \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F?`;
+        text = mode === "coach" ? `${tStr} \u0456 ${hStr}. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454 \u0437\u0430\u043A\u0440\u0438\u0442\u0438?` : mode === "mentor" ? `\u0404 ${tStr} \u0456 ${hStr}. \u0414\u0430\u0432\u0430\u0439 \u0445\u043E\u0447\u0430 \u0431 \u043E\u0434\u043D\u0443 \u0437\u0430\u043A\u0440\u0438\u0454\u043C\u043E.` : `\u0423 \u0442\u0435\u0431\u0435 ${tStr} \u0456 ${hStr} \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F?`;
         chips.push({ label: "\u0417\u0430\u0434\u0430\u0447\u0456", action: "nav", target: "tasks" });
         chips.push({ label: "\u0417\u0432\u0438\u0447\u043A\u0438", action: "nav", target: "habits" });
       } else if (tasks.length > 0) {
@@ -5116,7 +5100,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const all = getOwlBoardMessages();
     all.unshift(newMsg);
     saveOwlBoardMessages(all.slice(0, 3));
-    localStorage.setItem("nm_owl_board_ts", Date.now().toString());
     renderOwlBoard();
     console.warn("[OWL board] smart fallback:", text);
   }
