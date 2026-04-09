@@ -6899,12 +6899,14 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _editEventId = eventId;
     _editEventPriority = ev.priority || "normal";
     document.getElementById("event-edit-title").value = ev.title || "";
-    _initDateDrum(ev.date);
-    _initTimeDrum(ev.time);
     _renderEventPriority();
     const modal = document.getElementById("event-edit-modal");
     if (modal) {
       modal.style.display = "flex";
+      requestAnimationFrame(() => {
+        _initDateDrum(ev.date);
+        _initTimeDrum(ev.time);
+      });
       setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeEventEditModal);
     }
   }
