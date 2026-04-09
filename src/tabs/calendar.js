@@ -559,6 +559,74 @@ function routineDeleteBlock(idx) {
 // ============================================================
 let _editEventId = null;
 let _editEventPriority = 'normal';
+let _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
+
+// === DRUM PICKER ===
+const DRUM_H = 40;
+const MONTHS_SHORT = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+
+function _initDrumCol(colId, items, selectedIdx, onSelect) {
+  const col = document.getElementById(colId);
+  if (!col) return;
+  col.innerHTML = '<div class="drum-spacer"></div>' +
+    items.map((label, i) => `<div class="drum-item" data-i="${i}">${label}</div>`).join('') +
+    '<div class="drum-spacer"></div>';
+  col.scrollTop = selectedIdx * DRUM_H;
+  let timer;
+  col.onscroll = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const idx = Math.round(col.scrollTop / DRUM_H);
+      const clamped = Math.max(0, Math.min(items.length - 1, idx));
+      col.scrollTo({ top: clamped * DRUM_H, behavior: 'smooth' });
+      onSelect(clamped);
+    }, 80);
+  };
+}
+
+function _initDateDrum(dateStr) {
+  const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  _drumValues.day = d.getDate();
+  _drumValues.month = d.getMonth();
+  _drumValues.year = d.getFullYear();
+
+  const days = Array.from({length: 31}, (_, i) => String(i + 1));
+  const years = Array.from({length: 8}, (_, i) => String(2024 + i));
+
+  _initDrumCol('drum-day', days, _drumValues.day - 1, i => { _drumValues.day = i + 1; });
+  _initDrumCol('drum-month', MONTHS_SHORT, _drumValues.month, i => { _drumValues.month = i; });
+  _initDrumCol('drum-year', years, _drumValues.year - 2024, i => { _drumValues.year = 2024 + i; });
+}
+
+function _initTimeDrum(timeStr) {
+  const hours = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0'));
+  const mins = Array.from({length: 12}, (_, i) => String(i * 5).padStart(2, '0'));
+
+  if (timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    _drumValues.hour = h;
+    _drumValues.min = Math.round(m / 5);
+  } else {
+    _drumValues.hour = -1;
+    _drumValues.min = 0;
+  }
+
+  _initDrumCol('drum-hour', hours, Math.max(0, _drumValues.hour), i => { _drumValues.hour = i; });
+  _initDrumCol('drum-min', mins, _drumValues.min, i => { _drumValues.min = i; });
+}
+
+function _getDrumDate() {
+  const y = _drumValues.year;
+  const m = String(_drumValues.month + 1).padStart(2, '0');
+  const maxDay = new Date(y, _drumValues.month + 1, 0).getDate();
+  const d = String(Math.min(_drumValues.day, maxDay)).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function _getDrumTime() {
+  if (_drumValues.hour < 0) return null;
+  return `${String(_drumValues.hour).padStart(2, '0')}:${String(_drumValues.min * 5).padStart(2, '0')}`;
+}
 
 function openEventEditModal(eventId) {
   const events = getEvents();
@@ -567,8 +635,8 @@ function openEventEditModal(eventId) {
   _editEventId = eventId;
   _editEventPriority = ev.priority || 'normal';
   document.getElementById('event-edit-title').value = ev.title || '';
-  document.getElementById('event-edit-date').value = ev.date || '';
-  document.getElementById('event-edit-time').value = ev.time || '';
+  _initDateDrum(ev.date);
+  _initTimeDrum(ev.time);
   _renderEventPriority();
   const modal = document.getElementById('event-edit-modal');
   if (modal) {
@@ -604,9 +672,9 @@ function _renderEventPriority() {
 function saveEventFromModal() {
   if (!_editEventId) return;
   const title = document.getElementById('event-edit-title').value.trim();
-  const date = document.getElementById('event-edit-date').value;
+  const date = _getDrumDate();
   if (!title || !date) return;
-  const time = document.getElementById('event-edit-time').value || null;
+  const time = _getDrumTime();
   const events = getEvents();
   const idx = events.findIndex(e => e.id === _editEventId);
   if (idx === -1) return;

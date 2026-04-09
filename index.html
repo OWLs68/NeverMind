@@ -1061,13 +1061,23 @@
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Назва</div>
       <input id="event-edit-title" type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" autocomplete="off">
       <div style="display:flex;gap:10px;margin-bottom:14px">
-        <div style="flex:1">
+        <div style="flex:3">
           <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Дата</div>
-          <input id="event-edit-date" type="date" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+          <div id="event-date-drum" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative">
+            <div id="drum-day" class="drum-col"></div>
+            <div id="drum-month" class="drum-col" style="flex:1.5"></div>
+            <div id="drum-year" class="drum-col"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(99,102,241,0.3);border-bottom:1.5px solid rgba(99,102,241,0.3);pointer-events:none"></div>
+          </div>
         </div>
-        <div style="flex:1">
+        <div style="flex:2">
           <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Час</div>
-          <input id="event-edit-time" type="time" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+          <div id="event-time-drum" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative">
+            <div id="drum-hour" class="drum-col"></div>
+            <div style="display:flex;align-items:center;font-size:18px;font-weight:700;color:#1e1040;flex-shrink:0">:</div>
+            <div id="drum-min" class="drum-col"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(99,102,241,0.3);border-bottom:1.5px solid rgba(99,102,241,0.3);pointer-events:none"></div>
+          </div>
         </div>
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Пріоритет</div>
