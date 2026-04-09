@@ -262,8 +262,13 @@ function _openDayScheduleModal(day, e) {
   const allDayEvents = dayEvents.filter(ev => !ev.time);
   const timedEvents = dayEvents.filter(ev => ev.time);
 
-  // Tasks з dueDate на цей день
-  const dayTasks = getTasks().filter(t => t.dueDate === dateISO && t.status === 'active');
+  // Tasks на цей день (по dueDate або createdAt)
+  const dateStr = date.toDateString();
+  const dayTasks = getTasks().filter(t => {
+    if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
+    if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
+    return false;
+  });
 
   // Routine blocks на цей день тижня
   const routineBlocks = getRoutineForDay(dayKey);
@@ -294,7 +299,7 @@ function _openDayScheduleModal(day, e) {
     // Задачі з часом у назві (HH:MM)
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
     const time = m ? `${String(m[1]).padStart(2,'0')}:${m[2]}` : null;
-    timeline.push({ time, text: t.title, type: 'task', priority: t.priority });
+    timeline.push({ time, text: t.title, type: 'task', priority: t.priority, done: t.status === 'done', dueDate: t.dueDate });
   });
   // Задачі без часу — внизу
   const timedItems = timeline.filter(i => i.time).sort((a, b) => a.time.localeCompare(b.time));
@@ -320,9 +325,11 @@ function _openDayScheduleModal(day, e) {
 
         const isEvent = item.type === 'event';
         const isTask = item.type === 'task';
-        const color = isEvent ? '#6366f1' : isCurrent ? '#ea580c' : '#1e1040';
-        const icon = isEvent ? '📅' : isTask ? '☑️' : '';
+        const isDone = item.done;
+        const color = isDone ? 'rgba(30,16,64,0.3)' : isEvent ? '#6366f1' : isCurrent ? '#ea580c' : '#1e1040';
+        const icon = isEvent ? '📅' : isTask ? (isDone ? '✅' : '☑️') : '';
         const prio = (item.priority === 'critical') ? '🔴 ' : (item.priority === 'important') ? '🟠 ' : '';
+        const strike = isDone ? 'text-decoration:line-through;' : '';
         let tapAttr;
         if (isEvent && item.id) tapAttr = `onclick="openEventEditModal(${item.id})" style="cursor:pointer;`;
         else if (item.type === 'routine') tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
@@ -331,7 +338,7 @@ function _openDayScheduleModal(day, e) {
         html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? 'opacity:0.4;' : ''}${isCurrent ? 'background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;' : ''}">
           <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : 'rgba(30,16,64,0.5)'};text-align:right">${item.time}</div>
           <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? '#6366f1' : isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
-          <div style="flex:1;font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${color}">${icon ? icon + ' ' : ''}${prio}${escapeHtml(item.text)}${isCurrent ? ' ←' : ''}</div>
+          <div style="flex:1;font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${color};${strike}">${icon ? icon + ' ' : ''}${prio}${escapeHtml(item.text)}${isCurrent ? ' ←' : ''}${isTask && item.dueDate ? ' 📅' : ''}</div>
         </div>`;
       });
 
@@ -341,9 +348,10 @@ function _openDayScheduleModal(day, e) {
         html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Задачі</div>`;
         untimedTasks.forEach(t => {
           const prio = (t.priority === 'critical') ? '🔴 ' : (t.priority === 'important') ? '🟠 ' : '';
+          const doneStyle = t.done ? 'color:rgba(30,16,64,0.3);text-decoration:line-through;' : 'color:#1e1040;';
           html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-            <div style="font-size:14px">☑️</div>
-            <div style="font-size:14px;font-weight:500;color:#1e1040">${prio}${escapeHtml(t.text)}</div>
+            <div style="font-size:14px">${t.done ? '✅' : '☑️'}</div>
+            <div style="font-size:14px;font-weight:500;${doneStyle}">${prio}${escapeHtml(t.text)}${t.dueDate ? ' 📅' : ''}</div>
           </div>`;
         });
         html += `</div>`;
