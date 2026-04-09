@@ -16,6 +16,19 @@ const MONTHS_OF = ['січня','лютого','березня','квітня','
 // === CALENDAR MODAL ===
 let _calYear, _calMonth;
 
+// === Zoom-анімація для модалок ===
+function _zoomIn(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  requestAnimationFrame(() => { panel.style.transform = 'scale(1)'; panel.style.opacity = '1'; });
+}
+function _zoomOut(panelId, modalId, cb) {
+  const panel = document.getElementById(panelId);
+  const modal = document.getElementById(modalId);
+  if (panel) { panel.style.transform = 'scale(0)'; panel.style.opacity = '0'; }
+  setTimeout(() => { if (modal) modal.style.display = 'none'; if (cb) cb(); }, 300);
+}
+
 function openCalendarModal() {
   const now = new Date();
   _calYear = now.getFullYear();
@@ -26,13 +39,13 @@ function openCalendarModal() {
   const modal = document.getElementById('calendar-modal');
   if (modal) {
     modal.style.display = 'flex';
-    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeCalendarModal);
+    _zoomIn('calendar-panel');
+    setupModalSwipeClose(document.getElementById('calendar-panel'), closeCalendarModal);
   }
 }
 
 function closeCalendarModal() {
-  const modal = document.getElementById('calendar-modal');
-  if (modal) modal.style.display = 'none';
+  _zoomOut('calendar-panel', 'calendar-modal');
 }
 
 // === EVENTS LIST (всередині calendar modal) ===
@@ -221,7 +234,7 @@ function renderCalendar() {
 
     if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#6366f1' : 'currentColor'};margin-top:1px"></div>`;
 
-    cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+    cells += `<div onclick="calendarDayTap(${d},event)" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
   }
   grid.innerHTML = cells;
 }
@@ -229,13 +242,13 @@ function renderCalendar() {
 // === DAY TAP → модалка розкладу дня ===
 const DAYS_UA_FULL = ['Неділя','Понеділок','Вівторок','Середа','Четвер','П\'ятниця','Субота'];
 
-function calendarDayTap(day) {
+function calendarDayTap(day, e) {
   _selectedDay = day;
   renderCalendar();
-  _openDayScheduleModal(day);
+  _openDayScheduleModal(day, e);
 }
 
-function _openDayScheduleModal(day) {
+function _openDayScheduleModal(day, e) {
   const date = new Date(_calYear, _calMonth, day);
   const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const dayKey = DAY_KEYS[date.getDay()];
@@ -340,28 +353,28 @@ function _openDayScheduleModal(day) {
     }
   }
 
-  // Відкриваємо модалку з анімацією
+  // Відкриваємо модалку з анімацією zoom з кнопки дати
   const modal = document.getElementById('day-schedule-modal');
   const panel = document.getElementById('day-schedule-panel');
   if (modal && panel) {
+    // transform-origin з позиції тапнутої кнопки
+    if (e && e.target) {
+      const btn = e.target.closest('[onclick]') || e.target;
+      const rect = btn.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      panel.style.transformOrigin = `${cx}px ${cy}px`;
+    } else {
+      panel.style.transformOrigin = 'center center';
+    }
     modal.style.display = 'flex';
-    // Запуск анімації zoom наступним кадром
-    requestAnimationFrame(() => {
-      panel.style.transform = 'scale(1)';
-      panel.style.opacity = '1';
-    });
+    _zoomIn('day-schedule-panel');
     setupModalSwipeClose(panel, closeDayScheduleModal);
   }
 }
 
 function closeDayScheduleModal() {
-  const modal = document.getElementById('day-schedule-modal');
-  const panel = document.getElementById('day-schedule-panel');
-  if (panel) {
-    panel.style.transform = 'scale(0)';
-    panel.style.opacity = '0';
-    setTimeout(() => { if (modal) modal.style.display = 'none'; }, 300);
-  }
+  _zoomOut('day-schedule-panel', 'day-schedule-modal');
 }
 
 // ============================================================
@@ -401,7 +414,8 @@ function openRoutineFromCalendar(dayKey) {
   const modal = document.getElementById('routine-modal');
   if (modal) {
     modal.style.display = 'flex';
-    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeRoutineModal);
+    _zoomIn('routine-panel');
+    setupModalSwipeClose(document.getElementById('routine-panel'), closeRoutineModal);
   }
 }
 
@@ -413,7 +427,8 @@ function openRoutineModal() {
   const modal = document.getElementById('routine-modal');
   if (modal) {
     modal.style.display = 'flex';
-    setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeRoutineModal);
+    _zoomIn('routine-panel');
+    setupModalSwipeClose(document.getElementById('routine-panel'), closeRoutineModal);
   }
 }
 
@@ -421,14 +436,11 @@ function openRoutineModal() {
 let _routineReturnTo = null;
 
 function closeRoutineModal() {
-  const modal = document.getElementById('routine-modal');
-  if (modal) modal.style.display = 'none';
-  // Якщо прийшли з calendar → повернутись в calendar
-  if (_routineReturnTo === 'calendar') {
-    _routineReturnTo = null;
-    openCalendarModal();
-  }
+  const returnTo = _routineReturnTo;
   _routineReturnTo = null;
+  _zoomOut('routine-panel', 'routine-modal', () => {
+    if (returnTo === 'calendar') openCalendarModal();
+  });
 }
 
 function _renderRoutineDayTabs() {
