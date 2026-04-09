@@ -6830,6 +6830,68 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     saveRoutine(routine);
     _renderRoutineTimeline();
   }
+  function _initDrumCol(colId, items, selectedIdx, onSelect) {
+    const col = document.getElementById(colId);
+    if (!col) return;
+    col.innerHTML = '<div class="drum-spacer"></div>' + items.map((label, i) => `<div class="drum-item" data-i="${i}">${label}</div>`).join("") + '<div class="drum-spacer"></div>';
+    col.scrollTop = selectedIdx * DRUM_H;
+    let timer;
+    col.onscroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const idx = Math.round(col.scrollTop / DRUM_H);
+        const clamped = Math.max(0, Math.min(items.length - 1, idx));
+        col.scrollTo({ top: clamped * DRUM_H, behavior: "smooth" });
+        onSelect(clamped);
+      }, 80);
+    };
+  }
+  function _initDateDrum(dateStr) {
+    const d = dateStr ? /* @__PURE__ */ new Date(dateStr + "T00:00:00") : /* @__PURE__ */ new Date();
+    _drumValues.day = d.getDate();
+    _drumValues.month = d.getMonth();
+    _drumValues.year = d.getFullYear();
+    const days = Array.from({ length: 31 }, (_, i) => String(i + 1));
+    const years = Array.from({ length: 8 }, (_, i) => String(2024 + i));
+    _initDrumCol("drum-day", days, _drumValues.day - 1, (i) => {
+      _drumValues.day = i + 1;
+    });
+    _initDrumCol("drum-month", MONTHS_SHORT, _drumValues.month, (i) => {
+      _drumValues.month = i;
+    });
+    _initDrumCol("drum-year", years, _drumValues.year - 2024, (i) => {
+      _drumValues.year = 2024 + i;
+    });
+  }
+  function _initTimeDrum(timeStr) {
+    const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+    const mins = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+    if (timeStr) {
+      const [h, m] = timeStr.split(":").map(Number);
+      _drumValues.hour = h;
+      _drumValues.min = Math.round(m / 5);
+    } else {
+      _drumValues.hour = -1;
+      _drumValues.min = 0;
+    }
+    _initDrumCol("drum-hour", hours, Math.max(0, _drumValues.hour), (i) => {
+      _drumValues.hour = i;
+    });
+    _initDrumCol("drum-min", mins, _drumValues.min, (i) => {
+      _drumValues.min = i;
+    });
+  }
+  function _getDrumDate() {
+    const y = _drumValues.year;
+    const m = String(_drumValues.month + 1).padStart(2, "0");
+    const maxDay = new Date(y, _drumValues.month + 1, 0).getDate();
+    const d = String(Math.min(_drumValues.day, maxDay)).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  function _getDrumTime() {
+    if (_drumValues.hour < 0) return null;
+    return `${String(_drumValues.hour).padStart(2, "0")}:${String(_drumValues.min * 5).padStart(2, "0")}`;
+  }
   function openEventEditModal(eventId) {
     const events = getEvents();
     const ev = events.find((e) => e.id === eventId);
@@ -6837,8 +6899,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _editEventId = eventId;
     _editEventPriority = ev.priority || "normal";
     document.getElementById("event-edit-title").value = ev.title || "";
-    document.getElementById("event-edit-date").value = ev.date || "";
-    document.getElementById("event-edit-time").value = ev.time || "";
+    _initDateDrum(ev.date);
+    _initTimeDrum(ev.time);
     _renderEventPriority();
     const modal = document.getElementById("event-edit-modal");
     if (modal) {
@@ -6870,9 +6932,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function saveEventFromModal() {
     if (!_editEventId) return;
     const title = document.getElementById("event-edit-title").value.trim();
-    const date = document.getElementById("event-edit-date").value;
+    const date = _getDrumDate();
     if (!title || !date) return;
-    const time = document.getElementById("event-edit-time").value || null;
+    const time = _getDrumTime();
     const events = getEvents();
     const idx = events.findIndex((e) => e.id === _editEventId);
     if (idx === -1) return;
@@ -6900,7 +6962,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     renderUpcoming();
     renderMonthEventsList();
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority;
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H, MONTHS_SHORT;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
@@ -6917,6 +6979,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _routineReturnTo = null;
       _editEventId = null;
       _editEventPriority = "normal";
+      _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
+      DRUM_H = 40;
+      MONTHS_SHORT = ["\u0421\u0456\u0447", "\u041B\u044E\u0442", "\u0411\u0435\u0440", "\u041A\u0432\u0456", "\u0422\u0440\u0430", "\u0427\u0435\u0440", "\u041B\u0438\u043F", "\u0421\u0435\u0440", "\u0412\u0435\u0440", "\u0416\u043E\u0432", "\u041B\u0438\u0441", "\u0413\u0440\u0443"];
       Object.assign(window, {
         openCalendarModal,
         closeCalendarModal,
