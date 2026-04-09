@@ -7771,6 +7771,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   }
   function processUniversalAction(parsed, originalText, addMsg) {
     const action = parsed.action;
+    const _splitReply = (thinking, doWork) => {
+      addMsg("agent", thinking);
+      setTimeout(() => doWork(), 1200 + Math.random() * 800);
+    };
     if (action === "create_task") {
       const title = (parsed.title || "").trim();
       if (!title) return false;
@@ -8074,14 +8078,25 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       return true;
     }
     if (action === "save_routine") {
-      const routine = getRoutine();
       const blocks = (parsed.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
       const days = Array.isArray(parsed.day) ? parsed.day : [parsed.day || "default"];
-      days.forEach((d) => {
-        routine[d] = [...blocks];
-      });
-      saveRoutine(routine);
-      addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${days.length} \u0434\u043D. (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+      if (days.length > 1) {
+        _splitReply(`\u041A\u043E\u043F\u0456\u044E\u044E \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 ${days.length} \u0434\u043D\u0456\u0432...`, () => {
+          const routine = getRoutine();
+          days.forEach((d) => {
+            routine[d] = [...blocks];
+          });
+          saveRoutine(routine);
+          addMsg("agent", `\u{1F550} \u0413\u043E\u0442\u043E\u0432\u043E! \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 ${days.length} \u0434\u043D. (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+        });
+      } else {
+        const routine = getRoutine();
+        days.forEach((d) => {
+          routine[d] = [...blocks];
+        });
+        saveRoutine(routine);
+        addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+      }
       return true;
     }
     if (action === "set_reminder") {
@@ -10862,7 +10877,10 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
     inboxChatHistory.push({ role: "user", content: aiText });
     if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
     const historySlice = inboxChatHistory.slice(-12);
+    const _aiStart = Date.now();
     const reply = await callAIWithHistory(fullPrompt, historySlice);
+    const elapsed = Date.now() - _aiStart;
+    if (elapsed < 800) await new Promise((r) => setTimeout(r, 800 - elapsed));
     if (reply) {
       try {
         const clean = reply.replace(/```json|```/g, "").trim();
@@ -10918,6 +10936,7 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
               addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0447\u0435\u0440\u0435\u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C.");
             }
           } else if (action.action === "create_project" && !fromChip) {
+            addInboxChatMsg("agent", `\u0421\u0442\u0432\u043E\u0440\u044E\u044E \u043F\u0440\u043E\u0435\u043A\u0442 "${action.name || text}"...`);
             const projects = getProjects();
             const newProject = {
               id: Date.now(),
