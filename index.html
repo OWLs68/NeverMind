@@ -1041,6 +1041,42 @@
   </div>
 </div>
 
+<!-- EVENT EDIT MODAL -->
+<div id="event-edit-modal" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+  <div onclick="closeEventEditModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
+    <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Редагувати подію</div>
+        <button id="event-edit-delete-btn" onclick="deleteEventFromModal()" style="background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Назва</div>
+      <input id="event-edit-title" type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" autocomplete="off">
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Дата</div>
+          <input id="event-edit-date" type="date" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Час</div>
+          <input id="event-edit-time" type="time" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Пріоритет</div>
+      <div id="event-edit-priority" style="display:flex;gap:8px;margin-bottom:20px">
+        <div onclick="setEventPriority('normal')" data-p="normal" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Звичайний</div>
+        <div onclick="setEventPriority('important')" data-p="important" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Важливий</div>
+        <div onclick="setEventPriority('critical')" data-p="critical" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Критичний</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeEventEditModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+        <button onclick="saveEventFromModal()" style="flex:2;background:linear-gradient(135deg,#818cf8,#6366f1);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ROUTINE MODAL -->
 <div id="routine-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div onclick="closeRoutineModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
