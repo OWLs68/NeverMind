@@ -6557,41 +6557,112 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function calendarDayTap(day) {
     _selectedDay = day;
     renderCalendar();
-    const el = document.getElementById("calendar-day-tasks");
-    if (!el) return;
-    const dateStr = new Date(_calYear, _calMonth, day).toDateString();
-    const tasks = getTasks().filter((t) => {
-      if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
-      if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
-      return false;
-    });
-    const events = getEvents().filter((ev) => new Date(ev.date).toDateString() === dateStr);
-    if (tasks.length === 0 && events.length === 0) {
-      el.style.display = "block";
-      el.innerHTML = `<div style="text-align:center;font-size:13px;color:rgba(30,16,64,0.35);padding:12px 0">\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u043D\u0430 ${day} ${MONTHS_OF[_calMonth]}</div>`;
-      return;
+    _openDayScheduleModal(day);
+  }
+  function _openDayScheduleModal(day) {
+    const date = new Date(_calYear, _calMonth, day);
+    const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dayKey = DAY_KEYS[date.getDay()];
+    const titleEl = document.getElementById("day-schedule-title");
+    if (titleEl) titleEl.textContent = `${day} ${MONTHS_OF[_calMonth]} \xB7 ${DAYS_UA_FULL[date.getDay()]}`;
+    const dayEvents = getEvents().filter((ev) => ev.date === dateISO);
+    const allDayEvents = dayEvents.filter((ev) => !ev.time);
+    const timedEvents = dayEvents.filter((ev) => ev.time);
+    const dayTasks = getTasks().filter((t) => t.dueDate === dateISO && t.status === "active");
+    const routineBlocks = getRoutineForDay(dayKey);
+    const alldayEl = document.getElementById("day-schedule-allday");
+    if (alldayEl) {
+      if (allDayEvents.length > 0) {
+        alldayEl.style.display = "block";
+        alldayEl.innerHTML = allDayEvents.map((ev) => {
+          const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
+          return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(99,102,241,0.08)">
+          <div style="font-size:15px;flex-shrink:0">\u{1F4C5}</div>
+          <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${escapeHtml(ev.title)}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C</div>
+        </div>`;
+        }).join("");
+      } else {
+        alldayEl.style.display = "none";
+      }
     }
-    const prioColors = { critical: "#ef4444", important: "#ea580c" };
-    let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${day} ${MONTHS_OF[_calMonth]}</div>`;
-    events.forEach((ev) => {
-      const timeStr = ev.time ? `${ev.time} \xB7 ` : "";
-      const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
-      html += `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);cursor:pointer">
-      <div style="font-size:16px;flex-shrink:0">\u{1F4C5}</div>
-      <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${timeStr}${escapeHtml(ev.title)}</div>
-    </div>`;
+    const timeline = [];
+    routineBlocks.forEach((b) => timeline.push({ time: b.time, text: b.activity, type: "routine" }));
+    timedEvents.forEach((ev) => timeline.push({ time: ev.time, text: ev.title, type: "event", id: ev.id, priority: ev.priority }));
+    dayTasks.forEach((t) => {
+      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+      const time = m ? `${String(m[1]).padStart(2, "0")}:${m[2]}` : null;
+      timeline.push({ time, text: t.title, type: "task", priority: t.priority });
     });
-    tasks.forEach((t) => {
-      const isDone = t.status === "done";
-      const prioColor = prioColors[t.priority] || "";
-      const dueLabel = t.dueDate ? " \u{1F4C5}" : "";
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-      <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${isDone ? "#16a34a" : prioColor || "rgba(30,16,64,0.2)"};background:${isDone ? "#16a34a" : "transparent"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:white">${isDone ? "\u2713" : ""}</div>
-      <div style="flex:1;font-size:14px;font-weight:600;color:${isDone ? "rgba(30,16,64,0.3)" : "#1e1040"};${isDone ? "text-decoration:line-through" : ""}">${escapeHtml(t.title)}${dueLabel}</div>
-    </div>`;
-    });
-    el.style.display = "block";
-    el.innerHTML = html;
+    const timedItems = timeline.filter((i) => i.time).sort((a, b) => a.time.localeCompare(b.time));
+    const untimedTasks = timeline.filter((i) => !i.time && i.type === "task");
+    const now = /* @__PURE__ */ new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const timelineEl = document.getElementById("day-schedule-timeline");
+    if (timelineEl) {
+      if (timedItems.length === 0 && untimedTasks.length === 0 && allDayEvents.length === 0) {
+        timelineEl.innerHTML = `<div style="text-align:center;font-size:14px;color:rgba(30,16,64,0.3);padding:24px 0">\u041D\u0435\u043C\u0430\u0454 \u043F\u043E\u0434\u0456\u0439</div>`;
+      } else {
+        let html = "";
+        timedItems.forEach((item, i) => {
+          const [h, m] = item.time.split(":").map(Number);
+          const itemMin = h * 60 + (m || 0);
+          const next = timedItems[i + 1];
+          const nextMin = next ? parseInt(next.time.split(":")[0]) * 60 + (parseInt(next.time.split(":")[1]) || 0) : 24 * 60;
+          const isCurrent = isToday && nowMin >= itemMin && nowMin < nextMin;
+          const isPast = isToday && nowMin >= nextMin;
+          const isEvent = item.type === "event";
+          const isTask = item.type === "task";
+          const color = isEvent ? "#6366f1" : isCurrent ? "#ea580c" : "#1e1040";
+          const icon = isEvent ? "\u{1F4C5}" : isTask ? "\u2611\uFE0F" : "";
+          const prio = item.priority === "critical" ? "\u{1F534} " : item.priority === "important" ? "\u{1F7E0} " : "";
+          let tapAttr;
+          if (isEvent && item.id) tapAttr = `onclick="openEventEditModal(${item.id})" style="cursor:pointer;`;
+          else if (item.type === "routine") tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
+          else tapAttr = `style="`;
+          html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
+          <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "rgba(30,16,64,0.5)"};text-align:right">${item.time}</div>
+          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#6366f1" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
+          <div style="flex:1;font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${color}">${icon ? icon + " " : ""}${prio}${escapeHtml(item.text)}${isCurrent ? " \u2190" : ""}</div>
+        </div>`;
+        });
+        if (untimedTasks.length > 0) {
+          html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
+          html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">\u0417\u0430\u0434\u0430\u0447\u0456</div>`;
+          untimedTasks.forEach((t) => {
+            const prio = t.priority === "critical" ? "\u{1F534} " : t.priority === "important" ? "\u{1F7E0} " : "";
+            html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+            <div style="font-size:14px">\u2611\uFE0F</div>
+            <div style="font-size:14px;font-weight:500;color:#1e1040">${prio}${escapeHtml(t.text)}</div>
+          </div>`;
+          });
+          html += `</div>`;
+        }
+        timelineEl.innerHTML = html;
+      }
+    }
+    const modal = document.getElementById("day-schedule-modal");
+    const panel = document.getElementById("day-schedule-panel");
+    if (modal && panel) {
+      modal.style.display = "flex";
+      requestAnimationFrame(() => {
+        panel.style.transform = "scale(1)";
+        panel.style.opacity = "1";
+      });
+      setupModalSwipeClose(panel, closeDayScheduleModal);
+    }
+  }
+  function closeDayScheduleModal() {
+    const modal = document.getElementById("day-schedule-modal");
+    const panel = document.getElementById("day-schedule-panel");
+    if (panel) {
+      panel.style.transform = "scale(0)";
+      panel.style.opacity = "0";
+      setTimeout(() => {
+        if (modal) modal.style.display = "none";
+      }, 300);
+    }
   }
   function getRoutine() {
     try {
@@ -6608,7 +6679,20 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const r = getRoutine();
     return r[dayKey] || r["default"] || [];
   }
+  function openRoutineFromCalendar(dayKey) {
+    closeDayScheduleModal();
+    _routineReturnTo = "calendar";
+    _routineDay = dayKey;
+    _renderRoutineDayTabs();
+    _renderRoutineTimeline();
+    const modal = document.getElementById("routine-modal");
+    if (modal) {
+      modal.style.display = "flex";
+      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeRoutineModal);
+    }
+  }
   function openRoutineModal() {
+    _routineReturnTo = null;
     _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
     _renderRoutineDayTabs();
     _renderRoutineTimeline();
@@ -6621,6 +6705,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function closeRoutineModal() {
     const modal = document.getElementById("routine-modal");
     if (modal) modal.style.display = "none";
+    if (_routineReturnTo === "calendar") {
+      _routineReturnTo = null;
+      openCalendarModal();
+    }
+    _routineReturnTo = null;
   }
   function _renderRoutineDayTabs() {
     const el = document.getElementById("routine-day-tabs");
@@ -6794,7 +6883,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     renderUpcoming();
     renderMonthEventsList();
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _editEventId, _editEventPriority;
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
@@ -6803,10 +6892,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       MONTHS_UA = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
       MONTHS_OF = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
       _selectedDay = null;
+      DAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
       NM_ROUTINE_KEY = "nm_routine";
       DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       DAY_LABELS = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
       _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+      _routineReturnTo = null;
       _editEventId = null;
       _editEventPriority = "normal";
       Object.assign(window, {
@@ -6826,7 +6917,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         closeEventEditModal,
         saveEventFromModal,
         deleteEventFromModal,
-        setEventPriority
+        setEventPriority,
+        closeDayScheduleModal,
+        openRoutineFromCalendar
       });
     }
   });
