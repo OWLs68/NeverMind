@@ -7,7 +7,7 @@
 import { currentTab, switchTab } from '../core/nav.js';
 import { escapeHtml, saveOffline } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
-import { INBOX_SYSTEM_PROMPT, callAI, callAIWithHistory, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithHistory, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
@@ -344,6 +344,38 @@ function unifiedInputKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToAI(); }
 }
 
+// === TOOL CALL → OLD ACTION FORMAT CONVERTER ===
+function _toolCallToAction(name, args) {
+  switch(name) {
+    case 'save_task': return { action: 'save', category: 'task', task_title: args.title, text: args.text, task_steps: args.steps || [], dueDate: args.due_date, priority: args.priority, comment: args.comment };
+    case 'save_note': return { action: 'save', category: args.folder === 'Ідеї' ? 'idea' : 'note', text: args.text, folder: args.folder, comment: args.comment };
+    case 'save_habit': return { action: 'save', category: 'habit', text: args.name, days: args.days, targetCount: args.target_count, comment: args.comment };
+    case 'save_moment': return { action: 'save', category: 'event', text: args.text, comment: args.comment };
+    case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, priority: args.priority || 'normal', comment: args.comment };
+    case 'save_finance': return { action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
+    case 'complete_habit': return { action: 'complete_habit', habit_ids: args.habit_ids, comment: args.comment };
+    case 'complete_task': return { action: 'complete_task', task_ids: args.task_ids, comment: args.comment };
+    case 'create_project': return { action: 'create_project', name: args.name, subtitle: args.subtitle || '' };
+    case 'add_step': return { action: 'add_step', task_id: args.task_id, steps: args.steps };
+    case 'update_transaction': return { action: 'update_transaction', id: args.id, category: args.category, amount: args.amount, comment: args.comment };
+    case 'restore_deleted': return { action: 'restore_deleted', query: args.query, type: args.type || null };
+    case 'save_routine': return { action: 'save_routine', day: args.day, blocks: args.blocks };
+    case 'clarify': return { action: 'clarify', question: args.question, options: args.options };
+    case 'set_reminder': return { action: 'set_reminder', text: args.text, time: args.time, date: args.date };
+    case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority };
+    case 'delete_event': return { action: 'delete_event', event_id: args.event_id };
+    case 'edit_note': return { action: 'edit_note', note_id: args.note_id, text: args.text, folder: args.folder };
+    case 'edit_task': return { action: 'edit_task', task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority };
+    case 'edit_habit': return { action: 'edit_habit', habit_id: args.habit_id, name: args.name, days: args.days, details: args.details };
+    case 'delete_task': return { action: 'delete_task', task_id: args.task_id };
+    case 'delete_habit': return { action: 'delete_habit', habit_id: args.habit_id };
+    case 'delete_folder': return { action: 'delete_folder', folder: args.folder };
+    case 'move_note': return { action: 'move_note', query: args.query, folder: args.folder };
+    case 'reopen_task': return { action: 'reopen_task', task_id: args.task_id };
+    default: return null;
+  }
+}
+
 export async function sendToAI(fromChip = false) {
   if (aiLoading) return;
   const input = document.getElementById('inbox-input');
@@ -379,7 +411,7 @@ export async function sendToAI(fromChip = false) {
   // Додаємо контекст паузи якщо >5 хвилин
   const gapMs = _lastUserMsgTs > 0 ? Date.now() - _lastUserMsgTs : 0;
   const gapContext = gapMs > 5 * 60 * 1000
-    ? `\n\n[Увага: між попереднім і цим повідомленням пройшло ${Math.round(gapMs/60000)} хв — це може бути нова незалежна думка, не продовження попереднього. Але НЕ припускай автоматично — просто зберігай як окремий запис без уточнень якщо все зрозуміло.]`
+    ? `\n\n[Пауза ${Math.round(gapMs/60000)} хв — може бути нова думка, не продовження]`
     : '';
   const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}${gapContext}\n\n${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
   // Якщо це відповідь на чіп — вставити повідомлення табло прямо в текст для AI
@@ -398,23 +430,37 @@ export async function sendToAI(fromChip = false) {
   // Передаємо останні 12 повідомлень — достатньо для контексту розмови
   const historySlice = inboxChatHistory.slice(-12);
   const _aiStart = Date.now();
-  const reply = await callAIWithHistory(fullPrompt, historySlice);
+
+  // === TOOL CALLING — основний виклик ===
+  const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS);
+
   // Мінімальна затримка — typing indicator тримається хоча б 0.8 сек
   const elapsed = Date.now() - _aiStart;
   if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
 
-  if (reply) {
-    try {
-      const clean = reply.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
+  if (!msg) {
+    saveOffline(text);
+    addInboxChatMsg('agent', '✓ Збережено');
+    aiLoading = false;
+    btn.disabled = false;
+    btn.innerHTML = SEND_SVG;
+    return;
+  }
 
-      // Save assistant reply to history for context
-      inboxChatHistory.push({ role: 'assistant', content: reply });
+  // Save assistant reply to history for context
+  const historyEntry = { role: 'assistant', content: msg.content || '' };
+  if (msg.tool_calls) historyEntry.tool_calls = msg.tool_calls;
+  inboxChatHistory.push(historyEntry);
 
-      // Підтримка масиву дій — агент може повернути [{action:...}, {action:...}]
-      const actions = Array.isArray(parsed) ? parsed : [parsed];
+  try {
+    if (msg.tool_calls && msg.tool_calls.length > 0) {
+      // === TOOL CALLING DISPATCH ===
+      for (const tc of msg.tool_calls) {
+        const args = JSON.parse(tc.function.arguments);
+        const action = _toolCallToAction(tc.function.name, args);
+        if (!action) continue;
 
-      for (const action of actions) {
+        // Dispatch через існуючі handlers
         if (action.action === 'clarify') {
           showClarify(action, text);
           aiLoading = false;
@@ -424,7 +470,6 @@ export async function sendToAI(fromChip = false) {
         }
         if (action.action === 'save') {
           if (fromChip) {
-            // Чіп-клік не створює нових записів у Inbox — це відповідь на табло, не нова задача
             addInboxChatMsg('agent', 'Окей, записав у чат як відповідь.');
           } else {
             await processSaveAction(action, text);
@@ -455,7 +500,7 @@ export async function sendToAI(fromChip = false) {
           const tasks = getTasks();
           const idx = tasks.findIndex(t => t.id === action.task_id);
           if (idx !== -1) {
-            const steps = Array.isArray(action.steps) ? action.steps : (action.step ? [action.step] : []);
+            const steps = Array.isArray(action.steps) ? action.steps : [];
             steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
             saveTasks(tasks);
             renderTasks();
@@ -503,21 +548,15 @@ export async function sendToAI(fromChip = false) {
           const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
           const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'транзакцію' };
           const typeIcon = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' };
-
-          // Фільтруємо по типу якщо вказано
           const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
-
           if (q === 'all') {
-            // Відновити всі (або всі певного типу)
             if (filtered.length === 0) {
               addInboxChatMsg('agent', 'Кеш видалених порожній. Записи зберігаються 7 днів.');
             } else {
               filtered.forEach(t => restoreFromTrash(t.deletedAt));
-              const label = typeFilter ? (typeLabel[typeFilter] + 'и/ки') : 'записів';
-              addInboxChatMsg('agent', `✅ Відновив ${filtered.length} ${label}`);
+              addInboxChatMsg('agent', `✅ Відновив ${filtered.length} записів`);
             }
           } else if (q === 'last') {
-            // Відновити останній видалений (або останній певного типу)
             const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
             if (!last) {
               addInboxChatMsg('agent', 'Нічого не знайшов в кеші видалених.');
@@ -527,33 +566,24 @@ export async function sendToAI(fromChip = false) {
               addInboxChatMsg('agent', `✅ Відновив ${typeLabel[last.type] || 'запис'} "${itemLabel}"`);
             }
           } else {
-            // Пошук по ключових словах
             const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
             const results = filtered.filter(t => {
-              const text = (t.item.text || t.item.title || t.item.name || t.item.folder || '').toLowerCase();
-              return words.some(w => text.includes(w));
+              const txt = (t.item.text || t.item.title || t.item.name || t.item.folder || '').toLowerCase();
+              return words.some(w => txt.includes(w));
             }).sort((a, b) => b.deletedAt - a.deletedAt);
-
             if (results.length === 0) {
-              addInboxChatMsg('agent', 'Не знайшов нічого схожого в кеші видалених. Записи зберігаються 7 днів.');
-            } else if (results.length === 1) {
-              const entry = results[0];
-              const itemLabel = entry.item.text || entry.item.title || entry.item.name || entry.item.folder || 'запис';
-              restoreFromTrash(entry.deletedAt);
-              addInboxChatMsg('agent', `✅ Відновив ${typeLabel[entry.type] || 'запис'} "${itemLabel}"`);
+              addInboxChatMsg('agent', 'Не знайшов нічого схожого в кеші видалених.');
             } else if (results.length <= 5) {
-              // Кілька — відновлюємо всі що підходять
               results.forEach(t => restoreFromTrash(t.deletedAt));
               const labels = results.map(e => `${typeIcon[e.type] || '•'} ${(e.item.text || e.item.title || e.item.name || '').substring(0, 35)}`).join('\n');
               addInboxChatMsg('agent', `✅ Відновив ${results.length} записи:\n${labels}`);
             } else {
-              // Забагато результатів — показуємо і просимо уточнити
               const list = results.slice(0, 5).map(e => {
                 const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || 'запис').substring(0, 40);
                 const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
                 return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? 'сьогодні' : ago + ' дн. тому'})`;
               }).join('\n');
-              addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме, або скажи "відновити всі".`);
+              addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме.`);
             }
           }
         } else if (action.action === 'save_routine') {
@@ -566,40 +596,33 @@ export async function sendToAI(fromChip = false) {
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
-          // delete_folder, move_note, create_task, create_note тощо
+          // edit_event, delete_event, edit_note, edit_task, etc.
         } else {
-          // action === 'reply' — просто відповідь
-          const replyText = action.comment || reply;
-          addInboxChatMsg('agent', replyText);
+          // Fallback — показуємо comment якщо є
+          const replyText = action.comment || args?.comment || '';
+          if (replyText) addInboxChatMsg('agent', replyText);
         }
       }
-    } catch(e) {
-      console.error('JSON parse error:', e);
-      // Спробуємо витягти clarify з часткового JSON
-      try {
-        const jsonMatch = (reply||'').match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const p2 = JSON.parse(jsonMatch[0]);
-          if (p2.action === 'clarify') {
-            showClarify(p2, text);
-            aiLoading = false; btn.disabled = false; btn.innerHTML = SEND_SVG;
-            return;
-          }
-        }
-      } catch(e2) {}
+      // Якщо AI також надіслав текст (follow-up питання) — показуємо
+      if (msg.content) {
+        addInboxChatMsg('agent', msg.content);
+      }
+    } else if (msg.content) {
+      // Текстова відповідь без tool calls = reply
+      addInboxChatMsg('agent', msg.content);
+    } else {
       saveOffline(text);
       addInboxChatMsg('agent', '✓ Збережено');
     }
-  } else {
+  } catch(e) {
+    console.error('Tool call processing error:', e);
     saveOffline(text);
-    addInboxChatMsg('agent', '📝 Збережено в Inbox. Інтернет недоступний — Агент не визначив категорію. Надішли ще раз коли буде мережа.');
+    addInboxChatMsg('agent', '✓ Збережено');
   }
 
   aiLoading = false;
   btn.disabled = false;
   btn.innerHTML = SEND_SVG;
-  // Органічне питання провідника (25% шанс, не частіше 3 хв)
-  try { maybeAskGuideQuestion(); } catch(e) {}
 }
 
 // === CLARIFY SYSTEM ===
@@ -644,21 +667,30 @@ async function sendClarifyText() {
   const text = input.value.trim();
   if (!text) return;
   closeClarify();
-  // Відправляємо уточнення назад в ШІ разом з оригінальним текстом
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   const combinedMsg = `Оригінальний запис: "${clarifyOriginalText}". Уточнення від користувача: "${text}"`;
   clarifyOriginalText = null;
   clarifyParsed = null;
-  const reply = await callAI(fullPrompt, combinedMsg, {});
-  if (reply) {
+  // Tool calling для уточнення
+  const msg = await callAIWithTools(fullPrompt, [{ role: 'user', content: combinedMsg }], INBOX_TOOLS);
+  if (msg) {
     try {
-      const parsed = JSON.parse(reply.replace(/\`\`\`json|\`\`\`/g, '').trim());
-      if (parsed.action === 'save') await processSaveAction(parsed, combinedMsg);
-      else if (parsed.action === 'complete_habit') processCompleteHabit(parsed, combinedMsg);
-      else if (parsed.action === 'complete_task') processCompleteTask(parsed, combinedMsg);
-      else if (parsed.action === 'reply') addInboxChatMsg('agent', parsed.comment || reply);
+      if (msg.tool_calls && msg.tool_calls.length > 0) {
+        const tc = msg.tool_calls[0];
+        const args = JSON.parse(tc.function.arguments);
+        const action = _toolCallToAction(tc.function.name, args);
+        if (action) {
+          if (action.action === 'save') await processSaveAction(action, combinedMsg);
+          else if (action.action === 'complete_habit') processCompleteHabit(action, combinedMsg);
+          else if (action.action === 'complete_task') processCompleteTask(action, combinedMsg);
+          else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) { /* handled */ }
+          else if (action.comment) addInboxChatMsg('agent', action.comment);
+        }
+      } else if (msg.content) {
+        addInboxChatMsg('agent', msg.content);
+      }
     } catch(e) {}
   }
 }
