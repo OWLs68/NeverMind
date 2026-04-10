@@ -9,6 +9,21 @@ import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } fr
 import { getNotes } from '../tabs/notes.js';
 import { getFinance, getFinanceContext } from '../tabs/finance.js';
 
+// Толерантний JSON парсер — якщо звичайний JSON.parse впав, витягує {...} або [...] блок з тексту.
+// Страховка на випадок якщо AI все ж поверне звичайний текст з JSON всередині попри response_format.
+function _parseJsonTolerant(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const cleaned = raw.replace(/```json|```/g, '').trim();
+  try { return JSON.parse(cleaned); } catch {}
+  // Спроба витягти {...} блок
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) { try { return JSON.parse(objMatch[0]); } catch {} }
+  // Спроба витягти [...] блок
+  const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrMatch) { try { return JSON.parse(arrMatch[0]); } catch {} }
+  return null;
+}
+
 export function getTabBoardContext(tab) {
   const parts = [];
   try { const ctx = getAIContext(); if (ctx) parts.push(ctx); } catch(e) {}
@@ -265,7 +280,8 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
           { role: 'user', content: `Дані: ${context}` }
         ],
         max_tokens: 150,
-        temperature: 0.8
+        temperature: 0.8,
+        response_format: { type: "json_object" }
       })
     });
     if (!res.ok) {
@@ -291,8 +307,8 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     // Очищуємо помилку — API працює
     localStorage.removeItem('nm_owl_api_error');
     _updateApiDot();
-    const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
-    if (!parsed.text) { _boardGenerating[tab] = false; return; }
+    const parsed = _parseJsonTolerant(reply);
+    if (!parsed || !parsed.text) { _boardGenerating[tab] = false; return; }
 
     // Збереження: inbox і вкладки мають різні сховища
     const newMsg = { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
