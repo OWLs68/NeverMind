@@ -10705,9 +10705,9 @@ ${userText}
       case "save_note":
         return { action: "save", category: args.folder === "\u0406\u0434\u0435\u0457" ? "idea" : "note", text: args.text, folder: args.folder, comment: args.comment };
       case "save_habit":
-        return { action: "save", category: "habit", text: args.name, days: args.days, targetCount: args.target_count, comment: args.comment };
+        return { action: "save", category: "habit", text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
       case "save_moment":
-        return { action: "save", category: "event", text: args.text, comment: args.comment };
+        return { action: "save", category: "event", text: args.text, mood: args.mood, comment: args.comment };
       case "create_event":
         return { action: "create_event", title: args.title, date: args.date, time: args.time || null, priority: args.priority || "normal", comment: args.comment };
       case "save_finance":
@@ -10731,15 +10731,15 @@ ${userText}
       case "set_reminder":
         return { action: "set_reminder", text: args.text, time: args.time, date: args.date };
       case "edit_event":
-        return { action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority };
+        return { action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority, comment: args.comment };
       case "delete_event":
         return { action: "delete_event", event_id: args.event_id };
       case "edit_note":
-        return { action: "edit_note", note_id: args.note_id, text: args.text, folder: args.folder };
+        return { action: "edit_note", note_id: args.note_id, text: args.text, folder: args.folder, comment: args.comment };
       case "edit_task":
-        return { action: "edit_task", task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority };
+        return { action: "edit_task", task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority, comment: args.comment };
       case "edit_habit":
-        return { action: "edit_habit", habit_id: args.habit_id, name: args.name, days: args.days, details: args.details };
+        return { action: "edit_habit", habit_id: args.habit_id, name: args.name, days: args.days, details: args.details, comment: args.comment };
       case "delete_task":
         return { action: "delete_task", task_id: args.task_id };
       case "delete_habit":
@@ -11021,15 +11021,14 @@ ${list}
     const input = document.getElementById("clarify-input");
     const text = input.value.trim();
     if (!text) return;
+    const origText = clarifyOriginalText;
     closeClarify();
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
     const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}
 
 ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
-    const combinedMsg = `\u041E\u0440\u0438\u0433\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441: "${clarifyOriginalText}". \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0432\u0456\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430: "${text}"`;
-    clarifyOriginalText = null;
-    clarifyParsed = null;
+    const combinedMsg = `\u041E\u0440\u0438\u0433\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441: "${origText}". \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0432\u0456\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430: "${text}"`;
     const msg = await callAIWithTools(fullPrompt, [{ role: "user", content: combinedMsg }], INBOX_TOOLS);
     if (msg) {
       try {
@@ -11187,7 +11186,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         }
         const habitParts = savedText.split(/[,.]\s*/);
         const habitName = habitParts[0].trim().split(" ").slice(0, 5).join(" ");
-        const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/, "").trim() : "";
+        const habitDetails = parsed.details || (savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/, "").trim() : "");
         let targetCount = parseInt(parsed.targetCount) || 1;
         if (targetCount === 1) {
           const countMatch = txt.match(/(\d+)\s*(рази?|раз|разів|склянок|склянки|стакан|кроків|хвилин|разу)/i);
@@ -11208,7 +11207,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
         addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
       } else {
-        const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral";
+        const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral");
         const moments = getMoments();
         const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
         moments.push(newMoment);
