@@ -279,218 +279,84 @@ export function safeAgentReply(reply, addMsg) {
 }
 
 // === OpenAI API === (ключ зберігається як nm_gemini_key — стара назва з часів Gemini)
-export const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind. 
-Користувач надсилає тобі повідомлення — це може бути думка, задача, ідея, звичка, подія, або звіт про виконане.
+export const INBOX_SYSTEM_PROMPT = `Ти — персональний асистент в застосунку NeverMind.
+Користувач надсилає повідомлення — думка, задача, ідея, звичка, подія, або звіт про виконане.
+Використовуй відповідний tool для дії. Якщо це просто питання або розмова — відповідай текстом БЕЗ tool, коротко, 2-4 речення.
 
-ГРАМАТИКА: Якщо бачиш очевидну помилку або опечатку — виправляй в полі "text" без питань. Наприклад: "голити в зал" → "ходити в зал", "купити хіб" → "купити хліб".
+ГРАМАТИКА: Якщо бачиш помилку або опечатку — виправляй в тексті без питань.
 
-СПОЧАТКУ перевір: чи повідомлення говорить про ВИКОНАННЯ або ФАКТ того що вже є в списку звичок або задач?
-Якщо так — дій відповідно (complete_habit або complete_task), НЕ створюй дублікат.
+ПРІОРИТЕТ ПЕРЕВІРКИ (завжди перевіряй СПОЧАТКУ):
+1. Чи це ВИКОНАННЯ звички/задачі зі списку? → complete_habit / complete_task. "Все готово", "зробив все" після переліку → передай ВСІ ID
+2. Чи це НАГАДАЙ/нагадай мені → ЗАВЖДИ set_reminder, НІКОЛИ не save_task
+3. Чи це витрата/дохід із сумою → save_finance
+4. Чи це запис, думка, задача, ідея → відповідний tool
 
-ЯКЩО повідомлення означає що одна або кілька звичок виконані сьогодні (є в списку "Звички"):
-{
-  "action": "complete_habit",
-  "habit_ids": [123456, 789012],
-  "comment": "коротке підтвердження (1 речення)"
-}
+РОЗРІЗНЕННЯ task vs event vs project:
+- ЗАДАЧА (save_task) = ДІЯ яку ТИ маєш ЗРОБИТИ: купити, подзвонити, зробити, написати
+- ПОДІЯ (create_event) = ФАКТ що СТАНЕТЬСЯ з датою: приїзд, зустріч, день народження, візит
+- ПРОЕКТ (create_project) = масштабна ціль на тижні/місяці: ремонт, запуск бізнесу. Тригери: запустити, побудувати, розробити, організувати [щось велике]
+- МОМЕНТ (save_moment) = факт що вже стався БЕЗ дати в майбутньому
+- НОТАТКА (save_note) = думки, емоції, рефлексія, спостереження, стан здоров'я, опис дня/ситуації
+- Якщо сумнів задача vs подія → clarify. Якщо сумнів момент vs нотатка → save_note
 
-ЯКЩО повідомлення означає що одна або кілька задач виконані або закриті (є в списку "Активні задачі"):
-{
-  "action": "complete_task",
-  "task_ids": [123456, 789012],
-  "comment": "коротке підтвердження (1 речення)"
-}
+СПИСОК чи ОКРЕМІ ЗАДАЧІ:
+- "Список покупок: хліб, молоко" → ОДНА save_task з steps (кроками)
+- "Зателефонувати Вові, записатися до лікаря" → ДВА окремі save_task виклики
 
-ВАЖЛИВО для complete_task і complete_habit:
-- Якщо користувач каже "все готово", "зробив все", "виконав" після того як агент перелічив кілька задач/звичок — передай ВСІ ID з того переліку
-- Якщо однозначно йдеться про одну — передай масив з одним елементом
-- Завжди масив, навіть якщо один елемент: [123456]
+РЕДАГУВАННЯ: "перенеси", "зміни", "поміняй" → edit_event/edit_task/edit_note/edit_habit. НІКОЛИ не створюй новий замість редагування.
 
-ЯКЩО користувач хоче створити ПРОЕКТ (масштабна або довгострокова ціль з кількома етапами) — відповідай ТІЛЬКИ JSON:
-{
-  "action": "create_project",
-  "name": "коротка назва проекту (2-5 слів)",
-  "subtitle": "підзаголовок або порожньо"
-}
-Проект — це велика ціль що потребує кількох тижнів/місяців і багато кроків. Тригери: "запустити", "побудувати", "розробити", "відкрити", "ремонт", "створити проект", "реалізувати", "організувати [щось велике]".
-Приклади проектів: "ремонт квартири", "запустити онлайн-курс", "розробити додаток", "відкрити кафе", "організувати весілля".
-Приклади задач (НЕ проектів): "зателефонувати в банк", "купити ліки", "написати email", "зробити звіт".
-ВАЖЛИВО: якщо є хоча б один тригер проекту — НЕ використовуй action:"save". Обирай create_project або clarify. Ніколи не зберігай проект як задачу.
-Якщо сумнів між задачею і проектом — питай: action "clarify" з варіантами.
+УТОЧНЕННЯ: Якщо повідомлення — уточнення до попереднього ("так", "ні", "видали") — відповідай текстом, не створюй запис.
 
-ЯКЩО це новий запис (думка, задача, ідея, нова звичка, подія, нотатка) — відповідай ТІЛЬКИ JSON:
-{
-  "action": "save",
-  "category": "idea|task|habit|note|event",
-  "folder": "назва папки українською або null",
-  "text": "очищений текст запису",
-  "comment": "коротка практична ремарка (1 речення). НЕ хвали запис."
-}
+НЕ вигадуй ліміти, бюджети або плани яких немає в контексті.`;
 
-ЯКЩО в одному повідомленні є КІЛЬКА РІЗНИХ записів різних типів (наприклад дві звички, задача і нотатка) — відповідай масивом JSON. УВАГА: список однотипних речей через кому (наприклад "список покупок: хліб, молоко") — це ОДНА задача з кроками, не масив окремих задач:
-[
-  {"action": "save", "category": "habit", "text": "Присідати", ...},
-  {"action": "save", "category": "habit", "text": "Планка", ...}
-]
-
-ЯКЩО це питання або розмова (не запис і не виконання) — відповідай ТІЛЬКИ JSON:
-{
-  "action": "reply",
-  "comment": "відповідь українською, 2-4 речення. Якщо є список — кожен пункт з нового рядка через \\n"
-}
-
-ЯКЩО є сумнів (кілька можливих дій, незрозуміла категорія) — відповідай ТІЛЬКИ JSON:
-{
-  "action": "clarify",
-  "question": "коротке питання українською (1 речення)",
-  "options": [
-    {"label": "📋 Купити запасне колесо", "action": "save", "category": "task", "text": "Купити запасне колесо", "task_title": "Купити запасне колесо", "task_steps": []},
-    {"label": "✅ Виконав звичку X", "action": "complete_habit", "habit_id": 123456}
-  ]
-}
-
-Правила визначення категорії для action=save:
-- task: є конкретна НОВА разова дія яку треба зробити ("зателефонувати", "купити", "зробити", "відправити"). НЕ task: довгострокова ціль на тижні/місяці з кількома етапами — це create_project.
-  - "text" — оригінальний текст (виправ тільки граматику)
-  - "task_title" — коротка назва 2-5 слів. ЯКЩО є час/дата — включи у task_title (формат 24г)
-  - "task_steps" — масив кроків якщо є список дій. Інакше []
-  - "dueDate" — ISO дата (YYYY-MM-DD) ЯКЩО юзер вказав коли зробити ("завтра", "в п'ятницю", "15 квітня"). Не вигадуй дату якщо не вказана
-  - "priority" — "critical"|"important"|"normal". За замовчуванням не додавай (буде normal). Додавай тільки якщо юзер явно каже "терміново"/"важливо"/"критично"
-  ВАЖЛИВО — список чи окремі задачі:
-  - Якщо є назва списку + елементи ("список покупок: хліб, молоко, яйця" або "підготувати звіт: зібрати дані, написати висновки") — ОДНА задача з кроками
-  - Якщо елементи явно різні і незалежні ("зателефонувати Вові, записатися до лікаря") — окремі задачі (масив)
-  - Якщо незрозуміло — action: "clarify" з питанням "Це один список чи окремі задачі?"
-- habit: НОВА регулярна повторювана дія ("щодня", "кожен ранок", "тричі на тиждень"). "text" — коротка назва 2-4 слова. ЯКЩО вказані конкретні дні — додай "days" масив (0=Пн,1=Вт,2=Ср,3=Чт,4=Пт,5=Сб,6=Нд). Приклад: "по середах і вівторках" → "days":[1,2]. ЯКЩО вказана кількість разів на день ("8 разів", "5 склянок") — додай "targetCount":8
-- event: короткий факт того що сталося БЕЗ дати в майбутньому ("поїхав на рибалку", "зустрівся з Вовою"). Це момент дня. Якщо є емоції/роздуми — це note
-- idea: творча думка, ідея, план, натхнення
-- note: рефлексія, думки, емоції, висновки, спостереження, факти, щоденникові записи, стан здоровʼя, що відбувається в житті. ЯКЩО людина описує свій день, стан, ситуацію — це note, НЕ reply.
-- finance: витрата або дохід (будь-яка сума грошей). Якщо є сума і контекст витрат/доходу — це finance
-
-ЯКЩО це ЗАПЛАНОВАНА ПОДІЯ з конкретною датою в МАЙБУТНЬОМУ ("приїзд мами 20 числа", "зустріч з Олегом в середу", "день народження 15 травня") — це НЕ task і НЕ save/event. Відповідай JSON:
-{"action":"create_event","title":"Приїзд мами","date":"2026-04-20","time":null,"priority":"normal"}
-- "title" — короткий опис 2-5 слів
-- "date" — ISO дата (YYYY-MM-DD), обов'язково
-- "time" — "HH:MM" якщо вказаний час, інакше null
-- "priority" — "critical"|"important"|"normal"
-КЛЮЧОВЕ РОЗРІЗНЕННЯ задача vs подія:
-- ЗАДАЧА (task) = ДІЯ яку ТИ маєш ЗРОБИТИ. Дієслово: купити, подзвонити, зробити, написати, відправити, подати, прибрати.
-- ПОДІЯ (create_event) = ФАКТ що СТАНЕТЬСЯ. Хтось приїде, зустріч, день народження, свято, візит, прийом, рейс, виставка, концерт, платіж.
-Приклади: "купи молоко завтра" = task. "Мама приїжає 20го" = create_event. "Заплануй на 20те приїзд мами" = create_event. "Подзвони мамі завтра" = task. "Зустріч з лікарем в середу" = create_event.
-Якщо НЕ ЗРОЗУМІЛО — action "clarify" з варіантами: "Це задача (треба зробити) чи подія (станеться)?"
-
-ЯКЩО користувач каже "НАГАДАЙ", "нагадай мені", "напомни" — це ЗАВЖДИ set_reminder, НІКОЛИ не task і не event:
-{"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"}
-- date за замовчуванням = сьогодні
-- Маркери часу: "вранці"=08:00, "вдень"=12:00, "після обіду"=14:00, "ввечері"=18:00, "перед сном"=22:00, "через годину"=поточний час+1
-- Приклади: "нагадай ввечері переїзд" → set_reminder time:"18:00". "Нагадай завтра вранці подзвонити" → set_reminder date:завтра time:"08:00"
-
-ЯКЩО це витрата або дохід (є конкретна сума) — відповідай ТІЛЬКИ JSON:
-{
-  "action": "save_finance",
-  "fin_type": "expense|income",
-  "amount": 50,
-  "category": "Їжа",
-  "fin_comment": "короткий опис БЕЗ суми (1-3 слова, тільки що/де, наприклад: заправка, продукти, кава)",
-  "date": "YYYY-MM-DD (ТІЛЬКИ якщо юзер вказав конкретну дату або 'вчора'/'позавчора'. Якщо не вказав — НЕ додавай це поле)"
-}
-
-Категорії витрат з прикладами:
-- Їжа: кава, ресторан, продукти, супермаркет, обід, вечеря, сніданок, доставка їжі, піца, суші
-- Транспорт: бензин, заправка, таксі, Uber, метро, автобус, парковка, авто
-- Підписки: Netflix, Spotify, ChatGPT, Apple, Google, додатки, сервіси
-- Здоровʼя: аптека, ліки, лікар, спортзал, фітнес, стоматолог
-- Житло: оренда, комуналка, інтернет, ремонт, меблі
-- Покупки: одяг, техніка, подарунок, магазин, Amazon
-- Інше: все що не підходить вище
-Категорії доходів: Зарплата, Надходження, Повернення, Інше
-Якщо є сумнів — обирай найближчу категорію з прикладів, НЕ "Інше".
-
-ЯКЩО користувач просить додати кроки до існуючої задачі — відповідай ТІЛЬКИ JSON:
-{
-  "action": "add_step",
-  "task_id": 123456,
-  "steps": ["крок 1", "крок 2"]
-}
-Використовуй task_id з контексту активних задач.
-
-ЯКЩО користувач ЯВНО просить змінити, виправити, оновити існуючу транзакцію (використовує слова "зміни", "виправ", "оновити", "та сама", "попередня", "та витрата") — відповідай ТІЛЬКИ JSON:
-{
-  "action": "update_transaction",
-  "id": 1234567890,
-  "category": "Нова категорія",
-  "amount": 18,
-  "comment": "новий коментар або пусто"
-}
-Поля "category", "amount", "comment" — вказуй тільки ті що змінюються. Якщо сума не змінюється — не включай "amount".
-Використовуй id з останньої транзакції в контексті. НЕ створюй нову транзакцію.
-ВАЖЛИВО: "додай кроки", "додай крок до задачі" — це НЕ update_transaction. Це стосується задач, відповідай як на звичайний запис або reply.
-
-ЯКЩО користувач просить видалити папку нотаток — відповідай ТІЛЬКИ JSON:
-{"action":"delete_folder","folder":"назва папки (максимально близько до оригінальної)"}
-
-ЯКЩО користувач просить перемістити нотатку в іншу папку — відповідай ТІЛЬКИ JSON:
-{"action":"move_note","query":"частина тексту нотатки","folder":"нова папка"}
-
-ЯКЩО користувач просить відновити видалений запис, задачу, нотатку, звичку або папку — відповідай ТІЛЬКИ JSON:
-{
-  "action": "restore_deleted",
-  "query": "ключові слова для пошуку або: all (відновити всі), last (останню видалену)",
-  "type": "task|note|habit|inbox|folder|finance або null якщо будь-який тип"
-}
-Приклади:
-- "відновити нотатку про машину" → {"action":"restore_deleted","query":"машина","type":"note"}
-- "поверни видалену задачу купити хліб" → {"action":"restore_deleted","query":"купити хліб","type":"task"}
-- "відновити всі задачі" → {"action":"restore_deleted","query":"all","type":"task"}
-- "відновити всі видалені" → {"action":"restore_deleted","query":"all","type":null}
-- "відновити останню задачу" → {"action":"restore_deleted","query":"last","type":"task"}
-- "відновити останнє видалене" → {"action":"restore_deleted","query":"last","type":null}
-- "відновити задачі про машину і молоко" → {"action":"restore_deleted","query":"машина молоко","type":"task"}
-
-ЯКЩО повідомлення є уточненням, командою або поясненням до попереднього (наприклад: "так", "ні", "видали", "це була помилка") — НЕ зберігай як запис, відповідай:
-{
-  "action": "reply",
-  "comment": "відповідь або підтвердження"
-}
-
-Пріоритет: якщо сумнів між event і note — обирай note з папкою "Особисте".
-
-Правила визначення папки (для category=note або idea):
-- "Харчування" — їжа, напої, калорії, рецепти, що їв/пив
-- "Фінанси" — витрати, доходи, ціни, гроші (але НЕ якщо це просто згадка)
-- "Здоровʼя" — самопочуття, симптоми, ліки, медицина, тренування як ціль
-- "Робота" — ТІЛЬКИ якщо це РОБОЧІ записи: задачі по роботі, рішення на роботі, колеги, проекти для роботодавця. НЕ "Робота" якщо людина просто думає про щось пов'язане з роботою або кодингом у вільний час — це "Особисте"
-- "Навчання" — що вивчаю, книги, курси, нові знання
-- "Ідеї" — творчі ідеї (якщо category=idea)
-- "Подорожі" — ТІЛЬКИ якщо йдеться про реальну подорож, поїздку, маршрут, враження від місця. НЕ "Подорожі" якщо просто сказав "їздив до друга" або "поїхав в магазин"
-- "Особисте" — стосунки, емоції, особисті думки, роздуми, враження від зустрічей, відчуття, все що не підходить ЧІТКО в інші папки
-- Якщо є сумнів — ЗАВЖДИ "Особисте", НЕ вигадуй нових папок
-- ЗАБОРОНЕНО автоматично використовувати папку "Чернетки" — тільки якщо користувач ЯВНО просить
-- Для task/habit/event — folder: null
-
-Правила для clarify:
-- ЗАБОРОНЕНО використовувати clarify перед збереженням — спочатку завжди зберігай, потім уточнюй
-- Якщо є сумнів між task/note/habit — обирай найімовірніший варіант і зберігай. Додай поле "ask_after":"коротке питання" щоб уточнити після збереження
-- clarify використовуй ТІЛЬКИ якщо: 2+ різні типи записів і незрозуміло яким є кожен, АБО незрозуміло чи це нова звичка чи виконання існуючої (тоді clarify доречний бо дія різна)
-- Максимум 3 варіанти в options
-- label ОБОВʼЯЗКОВО містить реальний конкретний текст варіанту
-
-Приклад save з уточненням:
-{"action":"save","category":"task","text":"Зателефонувати Вові","comment":"Задачу збережено.","ask_after":"Це одноразово чи хочеш зробити регулярним?"}
-
-ВАЖЛИВО: відповідай ТІЛЬКИ валідним JSON, без markdown, без тексту поза JSON.
-НЕ вигадуй ліміти, бюджети або плани яких немає в контексті. Якщо дані відсутні — не згадуй їх.`;
+// === INBOX TOOLS — визначення функцій для OpenAI tool calling ===
+export const INBOX_TOOLS = [
+  // --- СТВОРЕННЯ ---
+  { type: "function", function: { name: "save_task", description: "Створити нову разову задачу. Дія яку треба ЗРОБИТИ: купити, зателефонувати, відправити, зробити, написати.", parameters: { type: "object", properties: { title: { type: "string", description: "Коротка назва 2-5 слів. Включай час/дату якщо є" }, text: { type: "string", description: "Повний текст з виправленою граматикою" }, steps: { type: "array", items: { type: "string" }, description: "Кроки якщо є список дій" }, due_date: { type: "string", description: "YYYY-MM-DD якщо юзер вказав дату" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string", description: "Коротка ремарка агента, 1 речення. НЕ хвали" } }, required: ["title","text","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "save_note", description: "Зберегти нотатку, рефлексію, думки, емоції, спостереження, факти, ідеї, стан здоров'я, щоденниковий запис. Якщо людина описує свій день/стан/ситуацію — це save_note.", parameters: { type: "object", properties: { text: { type: "string", description: "Текст нотатки з виправленою граматикою" }, folder: { type: "string", enum: ["Особисте","Здоров'я","Робота","Навчання","Харчування","Фінанси","Подорожі","Ідеї"], description: "Папка. Якщо сумнів — Особисте. Ідеї — для творчих ідей. Робота — ТІЛЬКИ робочі записи. Подорожі — ТІЛЬКИ реальні поїздки" }, comment: { type: "string", description: "Коротка ремарка 1 речення" } }, required: ["text","folder","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "save_habit", description: "Створити НОВУ регулярну повторювану звичку. Щодня, кожен ранок, тричі на тиждень.", parameters: { type: "object", properties: { name: { type: "string", description: "Назва 2-4 слова" }, details: { type: "string", description: "Деталі якщо є" }, days: { type: "array", items: { type: "integer" }, description: "Дні тижня: 0=Пн,1=Вт,2=Ср,3=Чт,4=Пт,5=Сб,6=Нд. Порожній масив = щодня" }, target_count: { type: "integer", description: "Разів на день (8 склянок = 8). За замовчуванням 1" }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["name","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "save_moment", description: "Зберегти момент дня — що сталося, короткий факт БЕЗ дати в майбутньому: поїхав, зустрівся, побачив, був на...", parameters: { type: "object", properties: { text: { type: "string", description: "Текст моменту" }, mood: { type: "string", enum: ["positive","neutral","negative"] }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["text","mood","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "create_event", description: "Запланована подія з датою в МАЙБУТНЬОМУ: приїзд, зустріч, день народження, концерт, візит, прийом, рейс. ПОДІЯ = факт що СТАНЕТЬСЯ, не дія яку треба зробити.", parameters: { type: "object", properties: { title: { type: "string", description: "Назва 2-5 слів" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM якщо вказано" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["title","date","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "save_finance", description: "Записати витрату або дохід — є конкретна сума грошей.", parameters: { type: "object", properties: { fin_type: { type: "string", enum: ["expense","income"] }, amount: { type: "number", description: "Сума" }, category: { type: "string", description: "Витрати: Їжа, Транспорт, Підписки, Здоров'я, Житло, Покупки, Інше. Доходи: Зарплата, Надходження, Повернення, Інше" }, fin_comment: { type: "string", description: "Короткий опис БЕЗ суми, 1-3 слова" }, date: { type: "string", description: "YYYY-MM-DD тільки якщо юзер вказав дату або вчора/позавчора" } }, required: ["fin_type","amount","category","fin_comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "create_project", description: "Створити проект — масштабна довгострокова ціль на тижні/місяці: ремонт, запуск бізнесу, розробка додатку, організація весілля.", parameters: { type: "object", properties: { name: { type: "string", description: "Назва 2-5 слів" }, subtitle: { type: "string", description: "Підзаголовок" }, comment: { type: "string", description: "Ремарка" } }, required: ["name"], additionalProperties: false } } },
+  // --- ВИКОНАННЯ ---
+  { type: "function", function: { name: "complete_habit", description: "Відмітити звичку(и) як виконані сьогодні. Юзер каже що зробив щось зі списку звичок.", parameters: { type: "object", properties: { habit_ids: { type: "array", items: { type: "integer" }, description: "ID звичок зі списку" }, comment: { type: "string", description: "Коротке підтвердження" } }, required: ["habit_ids","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "complete_task", description: "Закрити задачу(і) як виконані. Юзер каже що зробив щось з активних задач.", parameters: { type: "object", properties: { task_ids: { type: "array", items: { type: "integer" }, description: "ID задач зі списку" }, comment: { type: "string", description: "Коротке підтвердження" } }, required: ["task_ids","comment"], additionalProperties: false } } },
+  // --- РЕДАГУВАННЯ ---
+  { type: "function", function: { name: "edit_task", description: "Змінити існуючу задачу: назву, дедлайн, пріоритет. Юзер каже перенеси/зміни/поміняй задачу.", parameters: { type: "object", properties: { task_id: { type: "integer", description: "ID задачі" }, title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "edit_habit", description: "Змінити існуючу звичку: назву, дні, деталі. НЕ створювати нову якщо юзер хоче змінити існуючу!", parameters: { type: "object", properties: { habit_id: { type: "integer", description: "ID звички" }, name: { type: "string" }, days: { type: "array", items: { type: "integer" } }, details: { type: "string" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "edit_event", description: "Змінити існуючу подію: дату, час, назву. Перенеси/зміни подію.", parameters: { type: "object", properties: { event_id: { type: "integer", description: "ID події" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "edit_note", description: "Змінити існуючу нотатку: текст або папку.", parameters: { type: "object", properties: { note_id: { type: "integer", description: "ID нотатки" }, text: { type: "string" }, folder: { type: "string" }, comment: { type: "string" } }, required: ["note_id"], additionalProperties: false } } },
+  // --- ВИДАЛЕННЯ ---
+  { type: "function", function: { name: "delete_task", description: "Видалити задачу.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "delete_habit", description: "Видалити звичку.", parameters: { type: "object", properties: { habit_id: { type: "integer" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "delete_event", description: "Видалити подію з календаря.", parameters: { type: "object", properties: { event_id: { type: "integer" }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "delete_folder", description: "Видалити папку нотаток з усіма нотатками.", parameters: { type: "object", properties: { folder: { type: "string", description: "Назва папки" } }, required: ["folder"], additionalProperties: false } } },
+  // --- ІНШЕ ---
+  { type: "function", function: { name: "reopen_task", description: "Повернути закриту задачу в активні.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "add_step", description: "Додати кроки до існуючої задачі.", parameters: { type: "object", properties: { task_id: { type: "integer" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id","steps"], additionalProperties: false } } },
+  { type: "function", function: { name: "move_note", description: "Перемістити нотатку в іншу папку.", parameters: { type: "object", properties: { query: { type: "string", description: "Частина тексту нотатки для пошуку" }, folder: { type: "string", description: "Нова папка" } }, required: ["query","folder"], additionalProperties: false } } },
+  { type: "function", function: { name: "update_transaction", description: "Змінити існуючу фінансову транзакцію. Юзер ЯВНО каже змінити/виправити суму або категорію.", parameters: { type: "object", properties: { id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
+  { type: "function", function: { name: "set_reminder", description: "Встановити нагадування. Юзер каже НАГАДАЙ, нагадай мені, напомни. ЗАВЖДИ set_reminder, НІКОЛИ не save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "Що нагадати" }, time: { type: "string", description: "HH:MM. вранці=08:00, вдень=12:00, після обіду=14:00, ввечері=18:00, перед сном=22:00, через годину=поточний+1" }, date: { type: "string", description: "YYYY-MM-DD, за замовчуванням сьогодні" } }, required: ["text","time"], additionalProperties: false } } },
+  { type: "function", function: { name: "restore_deleted", description: "Відновити видалений запис з кошика.", parameters: { type: "object", properties: { query: { type: "string", description: "Ключові слова, 'all' (всі) або 'last' (останній)" }, type: { type: "string", enum: ["task","note","habit","inbox","folder","finance"], description: "Тип запису" } }, required: ["query"], additionalProperties: false } } },
+  { type: "function", function: { name: "save_routine", description: "Зберегти/змінити розпорядок дня.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon","tue","wed","thu","fri","sat","sun","default"] }, description: "Дні. default=будні. Масив: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time","activity"] }, description: "Блоки розпорядку" } }, required: ["day","blocks"], additionalProperties: false } } },
+  { type: "function", function: { name: "clarify", description: "Запитати уточнення. ТІЛЬКИ коли 2+ різних типів і незрозуміло, або задача vs проект. Якщо 80%+ впевненості — зберігай без питань.", parameters: { type: "object", properties: { question: { type: "string", description: "Коротке питання 1 речення" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 варіанти з вбудованими діями" } }, required: ["question","options"], additionalProperties: false } } },
+];
 
 // === HTTP WRAPPER — єдине місце де робиться запит до AI ===
-// TODO після Supabase: змінити URL на Edge Function + auth header
-async function _fetchAI(messages, signal) {
+// Повертає message object { content?, tool_calls? } коли tools передані
+// Повертає content string коли tools НЕ передані (backward compat)
+async function _fetchAI(messages, signal, tools) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
+  const body = { model: 'gpt-4o-mini', messages, max_tokens: 400, temperature: 0.7 };
+  if (tools && tools.length > 0) body.tools = tools;
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     signal,
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 300, temperature: 0.7 })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -498,7 +364,12 @@ async function _fetchAI(messages, signal) {
     return null;
   }
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || null;
+  const msg = data.choices?.[0]?.message;
+  if (!msg) return null;
+  // Якщо tools передані — повертаємо повний message object
+  if (tools) return msg;
+  // Інакше — backward compat, тільки content string
+  return msg.content || null;
 }
 
 export async function callAI(systemPrompt, userMessage, contextData = {}) {
@@ -600,6 +471,23 @@ export async function callAIWithHistory(systemPrompt, history) {
   } catch(e) {
     clearTimeout(timeout);
     console.error('callAIWithHistory error:', e);
+    return null;
+  }
+}
+
+// === callAIWithTools — tool calling для Inbox ===
+// Повертає message object { content?, tool_calls? } або null
+export async function callAIWithTools(systemPrompt, history, tools) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+    const messages = [{ role: 'system', content: systemPrompt }, ...history];
+    const msg = await _fetchAI(messages, controller.signal, tools);
+    clearTimeout(timeout);
+    return msg;
+  } catch(e) {
+    clearTimeout(timeout);
+    console.error('callAIWithTools error:', e);
     return null;
   }
 }
