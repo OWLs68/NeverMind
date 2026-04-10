@@ -1241,9 +1241,35 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const text = parsed.text || 'Нагадування';
     const date = parsed.date || new Date().toISOString().slice(0, 10);
     if (!time) { addMsg('agent', 'Вкажи час нагадування.'); return true; }
+    const reminderId = Date.now();
+    // 1. nm_reminders — для тригера спливаючого попередження
     const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
-    reminders.push({ id: Date.now(), time, text, date, done: false });
+    reminders.push({ id: reminderId, time, text, date, done: false });
     localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+    // 2. nm_events — щоб було видно у календарі і модалці "Розпорядок дня"
+    const events = getEvents();
+    events.unshift({
+      id: reminderId + 1,
+      title: text,
+      date,
+      time,
+      priority: 'normal',
+      createdAt: Date.now(),
+      source: 'reminder',
+      reminderId
+    });
+    saveEvents(events);
+    // 3. nm_inbox — картка у стрічку з категорією "Нагадування" (⏰)
+    const items = getInbox();
+    items.unshift({
+      id: reminderId + 2,
+      text: `${time} — ${text}`,
+      category: 'reminder',
+      ts: Date.now(),
+      processed: true
+    });
+    saveInbox(items);
+    try { renderInbox(); } catch(e) {}
     window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
     addMsg('agent', `⏰ Нагадаю о ${time}: "${text}"`);
     return true;
