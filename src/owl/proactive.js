@@ -1,4 +1,4 @@
-import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs } from '../ai/core.js';
+import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError } from '../ai/core.js';
 import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
@@ -328,7 +328,10 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (isInbox) renderOwlBoard();
     else renderTabBoard(tab);
   } catch(e) {
-    console.warn('[OWL board] generation error:', e?.message || e);
+    // Мережеві помилки (offline, timeout) — тихо, не засмічувати логи
+    if (!_isNetworkError(e)) {
+      console.warn('[OWL board] generation error:', e?.message || e);
+    }
     // Якщо API впав а повідомлення застаріло — показати локальне fallback
     _tryLocalFallback(tab);
   }
