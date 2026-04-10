@@ -8131,9 +8131,35 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         addMsg("agent", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F.");
         return true;
       }
+      const reminderId = Date.now();
       const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      reminders.push({ id: Date.now(), time, text, date, done: false });
+      reminders.push({ id: reminderId, time, text, date, done: false });
       localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+      const events = getEvents();
+      events.unshift({
+        id: reminderId + 1,
+        title: text,
+        date,
+        time,
+        priority: "normal",
+        createdAt: Date.now(),
+        source: "reminder",
+        reminderId
+      });
+      saveEvents(events);
+      const items = getInbox();
+      items.unshift({
+        id: reminderId + 2,
+        text: `${time} \u2014 ${text}`,
+        category: "reminder",
+        ts: Date.now(),
+        processed: true
+      });
+      saveInbox(items);
+      try {
+        renderInbox();
+      } catch (e) {
+      }
       window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
       addMsg("agent", `\u23F0 \u041D\u0430\u0433\u0430\u0434\u0430\u044E \u043E ${time}: "${text}"`);
       return true;
@@ -11018,42 +11044,6 @@ ${list}
             saveRoutine(routine);
             const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map((d) => dayLabels[d] || d).join(", ");
             addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${label} (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
-          } else if (action.action === "set_reminder") {
-            const rTime = action.time;
-            const rText = action.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F";
-            const rDate = action.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-            if (!rTime) {
-              addInboxChatMsg("agent", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F.");
-            } else {
-              const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-              const reminderId = Date.now();
-              reminders.push({ id: reminderId, time: rTime, text: rText, date: rDate, done: false });
-              localStorage.setItem("nm_reminders", JSON.stringify(reminders));
-              const events = getEvents();
-              events.unshift({
-                id: reminderId + 1,
-                title: rText,
-                date: rDate,
-                time: rTime,
-                priority: "normal",
-                createdAt: Date.now(),
-                source: "reminder",
-                reminderId
-              });
-              saveEvents(events);
-              const items = getInbox();
-              items.unshift({
-                id: reminderId + 2,
-                text: `${rTime} \u2014 ${rText}`,
-                category: "reminder",
-                ts: Date.now(),
-                processed: true
-              });
-              saveInbox(items);
-              renderInbox();
-              window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
-              addInboxChatMsg("agent", `\u23F0 \u041D\u0430\u0433\u0430\u0434\u0430\u044E \u043E ${rTime}: "${rText}"`);
-            }
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || args?.comment || "";
