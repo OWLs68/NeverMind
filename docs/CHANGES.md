@@ -6,6 +6,38 @@
 
 ---
 
+## 2026-04-10 — 🎯 4.1 Tool Calling — перехід AI на OpenAI function calling
+
+**Що зроблено:**
+- **`src/ai/core.js`**: Додано `INBOX_TOOLS` — 25 визначень функцій (save_task, save_note, save_habit, save_moment, create_event, save_finance, complete_habit/task, create_project, edit_*/delete_*/reopen_task, add_step, move_note, update_transaction, set_reminder, restore_deleted, save_routine, clarify). Додано `callAIWithTools()`. `_fetchAI()` приймає optional tools параметр, повертає message object коли tools передані, content string — коли ні.
+- **`src/ai/core.js`**: `INBOX_SYSTEM_PROMPT` скорочено з ~200 рядків до ~30. Прибрано всі описи JSON-форматів, залишено тільки правила класифікації (task vs event vs project, НАГАДАЙ=set_reminder, список vs окремі задачі).
+- **`src/tabs/inbox.js`**: Додано `_toolCallToAction()` конвертер. `sendToAI()` переписаний на tool calling dispatch. `sendClarifyText()` теж. Існуючі handlers (processSaveAction, processCompleteHabit, processCompleteTask, processUniversalAction) працюють БЕЗ змін через конвертер.
+- **`sw.js`**: CACHE_NAME → `nm-20260410-0325`
+
+**Переваги:**
+- AI ніколи не поверне зламаний JSON — OpenAI гарантує валідну структуру
+- Promt у 6-7 разів коротший → дешевше в токенах, більше контексту
+- AI краще класифікує дії (окремі tools з чіткими описами)
+- Backward compat: callAI/callAIWithHistory/callOwlChat працюють для tab chat bars і proactive.js
+
+**Аудит виявив і виправив 6 багів:**
+- 🔴 **CRITICAL:** `sendClarifyText` читав `clarifyOriginalText` ПІСЛЯ `closeClarify()` яка обнуляла його → AI отримував `"null"` замість тексту. Це був pre-existing bug і в старому коді — виправлено збереженням у локальну змінну.
+- 🟡 `save_habit`: поле `details` губилось у конвертері → детальний опис звички втрачався. Тепер `parsed.details` використовується в processSaveAction якщо є.
+- 🟡 `save_moment`: поле `mood` губилось → AI-класифікація настрою замінювалась regex fallback. Тепер `parsed.mood` використовується якщо є.
+- 🟡 `edit_event`, `edit_note`, `edit_task`, `edit_habit`: поле `comment` не передавалось через конвертер.
+- 🟢 Вкладені об'єкти у `save_routine.blocks` і `clarify.options` без `additionalProperties: false` — не ламає (strict mode вимкнений), але несумісно з майбутнім strict mode.
+- 🟢 `callAIWithHistory` імпортувався в inbox.js але не використовувався — прибрано (знайдено першим аудитом).
+
+**Змінені файли:** `src/ai/core.js`, `src/tabs/inbox.js`, `sw.js`, `_ai-tools/SESSION_STATE.md`, `CLAUDE.md`, `docs/CHANGES.md`
+
+**Коміти:** 5 (феншуй-коміти на гілці `claude/start-session-HdqBj`)
+
+**Що треба далі:** 4.2 Day State + Nightly Brain Dump, 4.3 Семантичні cooldowns, G1-G8 виправлення. 4.1 закрито.
+
+---
+
+---
+
 ## 2026-04-06 — B-16: Централізація системи чіпів + Roadmap проактивності
 
 **Що зроблено:**
