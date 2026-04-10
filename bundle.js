@@ -4484,8 +4484,23 @@ ${pulseParts.join("\n")}
     } catch (e) {
     }
   }
+  function _cleanupOldReminders() {
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      if (reminders.length === 0) return;
+      const cutoffDate = /* @__PURE__ */ new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 7);
+      const cutoffISO = cutoffDate.toISOString().slice(0, 10);
+      const fresh = reminders.filter((r) => r.date >= cutoffISO);
+      if (fresh.length < reminders.length) {
+        localStorage.setItem("nm_reminders", JSON.stringify(fresh));
+      }
+    } catch (e) {
+    }
+  }
   function startOwlBoardCycle() {
     _owlAskScheduleIfNeeded();
+    _cleanupOldReminders();
     tryOwlBoardUpdate();
     setInterval(_checkReminders, 60 * 1e3);
     if (_owlBoardTimer) clearInterval(_owlBoardTimer);
@@ -5063,7 +5078,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (isInbox) renderOwlBoard();
       else renderTabBoard(tab);
     } catch (e) {
-      console.warn("[OWL board] generation error:", e?.message || e);
+      if (!_isNetworkError(e)) {
+        console.warn("[OWL board] generation error:", e?.message || e);
+      }
       _tryLocalFallback(tab);
     }
     _boardGenerating[tab] = false;
@@ -8598,6 +8615,12 @@ ${routineParts.join("\n")}${nextHint}
     }
     addMsg("agent", reply);
   }
+  function _isNetworkError(e) {
+    if (!e) return false;
+    if (e.name === "AbortError") return true;
+    const msg = e.message || String(e);
+    return /Load failed|Failed to fetch|NetworkError|aborted|The operation was aborted/i.test(msg);
+  }
   async function _fetchAI(messages, signal, tools, temperature = 0.7) {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
@@ -8720,7 +8743,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       return reply;
     } catch (e) {
       clearTimeout(timeout);
-      console.error("callAIWithHistory error:", e);
+      if (!_isNetworkError(e)) console.error("callAIWithHistory error:", e);
       return null;
     }
   }
@@ -8734,7 +8757,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       return msg;
     } catch (e) {
       clearTimeout(timeout);
-      console.error("callAIWithTools error:", e);
+      if (!_isNetworkError(e)) console.error("callAIWithTools error:", e);
       return null;
     }
   }
