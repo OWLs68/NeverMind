@@ -349,8 +349,8 @@ function _toolCallToAction(name, args) {
   switch(name) {
     case 'save_task': return { action: 'save', category: 'task', task_title: args.title, text: args.text, task_steps: args.steps || [], dueDate: args.due_date, priority: args.priority, comment: args.comment };
     case 'save_note': return { action: 'save', category: args.folder === 'Ідеї' ? 'idea' : 'note', text: args.text, folder: args.folder, comment: args.comment };
-    case 'save_habit': return { action: 'save', category: 'habit', text: args.name, days: args.days, targetCount: args.target_count, comment: args.comment };
-    case 'save_moment': return { action: 'save', category: 'event', text: args.text, comment: args.comment };
+    case 'save_habit': return { action: 'save', category: 'habit', text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
+    case 'save_moment': return { action: 'save', category: 'event', text: args.text, mood: args.mood, comment: args.comment };
     case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, priority: args.priority || 'normal', comment: args.comment };
     case 'save_finance': return { action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
     case 'complete_habit': return { action: 'complete_habit', habit_ids: args.habit_ids, comment: args.comment };
@@ -362,11 +362,11 @@ function _toolCallToAction(name, args) {
     case 'save_routine': return { action: 'save_routine', day: args.day, blocks: args.blocks };
     case 'clarify': return { action: 'clarify', question: args.question, options: args.options };
     case 'set_reminder': return { action: 'set_reminder', text: args.text, time: args.time, date: args.date };
-    case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority };
+    case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority, comment: args.comment };
     case 'delete_event': return { action: 'delete_event', event_id: args.event_id };
-    case 'edit_note': return { action: 'edit_note', note_id: args.note_id, text: args.text, folder: args.folder };
-    case 'edit_task': return { action: 'edit_task', task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority };
-    case 'edit_habit': return { action: 'edit_habit', habit_id: args.habit_id, name: args.name, days: args.days, details: args.details };
+    case 'edit_note': return { action: 'edit_note', note_id: args.note_id, text: args.text, folder: args.folder, comment: args.comment };
+    case 'edit_task': return { action: 'edit_task', task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority, comment: args.comment };
+    case 'edit_habit': return { action: 'edit_habit', habit_id: args.habit_id, name: args.name, days: args.days, details: args.details, comment: args.comment };
     case 'delete_task': return { action: 'delete_task', task_id: args.task_id };
     case 'delete_habit': return { action: 'delete_habit', habit_id: args.habit_id };
     case 'delete_folder': return { action: 'delete_folder', folder: args.folder };
@@ -666,13 +666,12 @@ async function sendClarifyText() {
   const input = document.getElementById('clarify-input');
   const text = input.value.trim();
   if (!text) return;
+  const origText = clarifyOriginalText;
   closeClarify();
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
-  const combinedMsg = `Оригінальний запис: "${clarifyOriginalText}". Уточнення від користувача: "${text}"`;
-  clarifyOriginalText = null;
-  clarifyParsed = null;
+  const combinedMsg = `Оригінальний запис: "${origText}". Уточнення від користувача: "${text}"`;
   // Tool calling для уточнення
   const msg = await callAIWithTools(fullPrompt, [{ role: 'user', content: combinedMsg }], INBOX_TOOLS);
   if (msg) {
@@ -861,7 +860,7 @@ async function processSaveAction(parsed, originalText) {
 
       const habitParts = savedText.split(/[,.]\s*/);
       const habitName = habitParts[0].trim().split(' ').slice(0,5).join(' ');
-      const habitDetails = savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '';
+      const habitDetails = parsed.details || (savedText.length > habitName.length + 2 ? savedText.substring(habitName.length).replace(/^[,.\s]+/,'').trim() : '');
 
       // Витягуємо кількість разів — з parsed або з тексту
       let targetCount = parseInt(parsed.targetCount) || 1;
@@ -888,8 +887,8 @@ async function processSaveAction(parsed, originalText) {
       addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
     } else {
       // Момент дня — як раніше
-      const mood = /добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
-                   /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral';
+      const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
+                   /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral');
       const moments = getMoments();
       const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
       moments.push(newMoment);
