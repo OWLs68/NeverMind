@@ -289,14 +289,17 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 1. Чи це ВИКОНАННЯ звички/задачі зі списку? → complete_habit / complete_task. "Все готово", "зробив все" після переліку → передай ВСІ ID
 2. Чи це НАГАДАЙ/нагадай мені → ЗАВЖДИ set_reminder, НІКОЛИ не save_task
 3. Чи це витрата/дохід із сумою → save_finance
-4. Чи це запис, думка, задача, ідея → відповідний tool
+4. **Чи є дієслово дії в інфінітиві/наказовому (купити, зробити, написати, зателефонувати, помити, попрати, відправити, замовити, принести, віднести)? → save_task. Завжди. Без винятків. Навіть якщо немає часу, дати, емоцій — це ЗАДАЧА.**
+5. Чи це запис, думка, ідея → відповідний tool
+
+МЕТАІНСТРУКЦІЇ: Якщо юзер пише "це задача", "це нотатка", "це звичка" — він прямо каже ТОБІ який тип створити. Створи відповідний тип з цим текстом. НЕ save_note за замовчуванням.
 
 РОЗРІЗНЕННЯ task vs event vs project:
-- ЗАДАЧА (save_task) = ДІЯ яку ТИ маєш ЗРОБИТИ: купити, подзвонити, зробити, написати
+- ЗАДАЧА (save_task) = ДІЯ яку ТИ маєш ЗРОБИТИ: купити, подзвонити, зробити, написати. Дієслово = задача.
 - ПОДІЯ (create_event) = ФАКТ що СТАНЕТЬСЯ з датою: приїзд, зустріч, день народження, візит
 - ПРОЕКТ (create_project) = масштабна ціль на тижні/місяці: ремонт, запуск бізнесу. Тригери: запустити, побудувати, розробити, організувати [щось велике]
 - МОМЕНТ (save_moment) = факт що вже стався БЕЗ дати в майбутньому
-- НОТАТКА (save_note) = думки, емоції, рефлексія, спостереження, стан здоров'я, опис дня/ситуації
+- НОТАТКА (save_note) = ТІЛЬКИ думки, емоції, рефлексія, стан здоров'я, опис дня/ситуації. НЕ для дій які треба зробити.
 - Якщо сумнів задача vs подія → clarify. Якщо сумнів момент vs нотатка → save_note
 
 СПИСОК чи ОКРЕМІ ЗАДАЧІ:
@@ -313,7 +316,7 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 export const INBOX_TOOLS = [
   // --- СТВОРЕННЯ ---
   { type: "function", function: { name: "save_task", description: "Створити нову разову задачу. Дія яку треба ЗРОБИТИ: купити, зателефонувати, відправити, зробити, написати.", parameters: { type: "object", properties: { title: { type: "string", description: "Коротка назва 2-5 слів. Включай час/дату якщо є" }, text: { type: "string", description: "Повний текст з виправленою граматикою" }, steps: { type: "array", items: { type: "string" }, description: "Кроки якщо є список дій" }, due_date: { type: "string", description: "YYYY-MM-DD якщо юзер вказав дату" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string", description: "Коротка ремарка агента, 1 речення. НЕ хвали" } }, required: ["title","text","comment"], additionalProperties: false } } },
-  { type: "function", function: { name: "save_note", description: "Зберегти нотатку, рефлексію, думки, емоції, спостереження, факти, ідеї, стан здоров'я, щоденниковий запис. Якщо людина описує свій день/стан/ситуацію — це save_note.", parameters: { type: "object", properties: { text: { type: "string", description: "Текст нотатки з виправленою граматикою" }, folder: { type: "string", enum: ["Особисте","Здоров'я","Робота","Навчання","Харчування","Фінанси","Подорожі","Ідеї"], description: "Папка. Якщо сумнів — Особисте. Ідеї — для творчих ідей. Робота — ТІЛЬКИ робочі записи. Подорожі — ТІЛЬКИ реальні поїздки" }, comment: { type: "string", description: "Коротка ремарка 1 речення" } }, required: ["text","folder","comment"], additionalProperties: false } } },
+  { type: "function", function: { name: "save_note", description: "Зберегти нотатку — ТІЛЬКИ думки, рефлексія, емоції, ідеї, стан здоров'я, щоденниковий запис, опис дня/ситуації. НЕ використовувати для дій які треба зробити (купити, зробити, зателефонувати) — це save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "Текст нотатки з виправленою граматикою" }, folder: { type: "string", enum: ["Особисте","Здоров'я","Робота","Навчання","Харчування","Фінанси","Подорожі","Ідеї"], description: "Папка. Якщо сумнів — Особисте. Ідеї — для творчих ідей. Робота — ТІЛЬКИ робочі записи. Подорожі — ТІЛЬКИ реальні поїздки" }, comment: { type: "string", description: "Коротка ремарка 1 речення" } }, required: ["text","folder","comment"], additionalProperties: false } } },
   { type: "function", function: { name: "save_habit", description: "Створити НОВУ регулярну повторювану звичку. Щодня, кожен ранок, тричі на тиждень.", parameters: { type: "object", properties: { name: { type: "string", description: "Назва 2-4 слова" }, details: { type: "string", description: "Деталі якщо є" }, days: { type: "array", items: { type: "integer" }, description: "Дні тижня: 0=Пн,1=Вт,2=Ср,3=Чт,4=Пт,5=Сб,6=Нд. Порожній масив = щодня" }, target_count: { type: "integer", description: "Разів на день (8 склянок = 8). За замовчуванням 1" }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["name","comment"], additionalProperties: false } } },
   { type: "function", function: { name: "save_moment", description: "Зберегти момент дня — що сталося, короткий факт БЕЗ дати в майбутньому: поїхав, зустрівся, побачив, був на...", parameters: { type: "object", properties: { text: { type: "string", description: "Текст моменту" }, mood: { type: "string", enum: ["positive","neutral","negative"] }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["text","mood","comment"], additionalProperties: false } } },
   { type: "function", function: { name: "create_event", description: "Запланована подія з датою в МАЙБУТНЬОМУ: приїзд, зустріч, день народження, концерт, візит, прийом, рейс. ПОДІЯ = факт що СТАНЕТЬСЯ, не дія яку треба зробити.", parameters: { type: "object", properties: { title: { type: "string", description: "Назва 2-5 слів" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM якщо вказано" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["title","date","comment"], additionalProperties: false } } },
@@ -346,11 +349,11 @@ export const INBOX_TOOLS = [
 // === HTTP WRAPPER — єдине місце де робиться запит до AI ===
 // Повертає message object { content?, tool_calls? } коли tools передані
 // Повертає content string коли tools НЕ передані (backward compat)
-async function _fetchAI(messages, signal, tools) {
+async function _fetchAI(messages, signal, tools, temperature = 0.7) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
-  const body = { model: 'gpt-4o-mini', messages, max_tokens: 400, temperature: 0.7 };
+  const body = { model: 'gpt-4o-mini', messages, max_tokens: 400, temperature };
   if (tools && tools.length > 0) body.tools = tools;
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -477,12 +480,13 @@ export async function callAIWithHistory(systemPrompt, history) {
 
 // === callAIWithTools — tool calling для Inbox ===
 // Повертає message object { content?, tool_calls? } або null
+// Temperature 0.2 — класифікація має бути стабільною, не творчою
 export async function callAIWithTools(systemPrompt, history, tools) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const messages = [{ role: 'system', content: systemPrompt }, ...history];
-    const msg = await _fetchAI(messages, controller.signal, tools);
+    const msg = await _fetchAI(messages, controller.signal, tools, 0.2);
     clearTimeout(timeout);
     return msg;
   } catch(e) {
