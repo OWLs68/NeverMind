@@ -1091,6 +1091,69 @@ export function showToast(msg, duration = 2000) {
   _undoToastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
+// === DEPLOY INFO MODAL ===
+// Тап на бейдж версії → показує технічну інформацію про деплой
+// (версія, час, коміт hash, гілка) — для діагностики "що зараз на телефоні"
+export function showDeployInfo() {
+  const badge = document.getElementById('deploy-version');
+  if (!badge) return;
+  const version = badge.textContent || '';
+  const commit  = badge.dataset.commit  || 'local';
+  const source  = badge.dataset.source  || 'dev';
+  const branch  = badge.dataset.branch  || 'dev';
+
+  // Створюємо модалку через createElement щоб не додавати HTML у index.html
+  let modal = document.getElementById('deploy-info-modal');
+  if (modal) modal.remove();
+  modal = document.createElement('div');
+  modal.id = 'deploy-info-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(30,16,64,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0 20px;opacity:0;transition:opacity 0.2s';
+  modal.onclick = (e) => { if (e.target === modal) closeDeployInfo(); };
+
+  const repoUrl = 'https://github.com/OWLs68/NeverMind';
+  const commitLink = (commit && commit !== 'local') ? `${repoUrl}/commit/${commit}` : null;
+  const sourceLink = (source && source !== 'dev')   ? `${repoUrl}/tree/${source}`   : null;
+
+  modal.innerHTML = `
+    <div style="background:#fef8ec;border-radius:22px;padding:22px 20px 18px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(30,16,64,0.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:17px;font-weight:800;color:#1e1040">Інфо про деплой</div>
+        <button onclick="closeDeployInfo()" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">Версія</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace">${version}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">Коміт</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace">${commitLink ? `<a href="${commitLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${commit}</a>` : commit}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">Гілка звідки</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace;text-align:right;word-break:break-all">${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${source}</a>` : source}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">Гілка у main</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace">${branch}</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08);font-size:11px;color:rgba(30,16,64,0.45);line-height:1.45">
+        Якщо бейдж не оновився після пушу — CI ще не доробив. Потягни застосунок вниз за 2 хв.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => { modal.style.opacity = '1'; });
+}
+
+export function closeDeployInfo() {
+  const modal = document.getElementById('deploy-info-modal');
+  if (!modal) return;
+  modal.style.opacity = '0';
+  setTimeout(() => modal.remove(), 200);
+}
+
 // Functions called from HTML event handlers (onclick, oninput, etc.)
 Object.assign(window, {
   switchTab, showToast, closeSettings, openSettings, saveSettings,
@@ -1099,5 +1162,5 @@ Object.assign(window, {
   saveMemoryCards, addMemoryEntry, openPrivacyPolicy, openTerms,
   applyTabSelection, selectTabOrder, moveTabOrder,
   deleteMemoryCard, saveFinanceSettings, clearFinanceData, exportData,
-  toggleTabSelection,
+  toggleTabSelection, showDeployInfo, closeDeployInfo,
 });

@@ -1134,7 +1134,12 @@ function _checkReminders() {
     const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= nowTime);
     if (due.length > 0) {
-      // Є нагадування — тригеримо оновлення табло
+      // Дедуплікація: позначаємо due нагадування як "done" одразу,
+      // щоб тригер не повторювався щохвилини поки вони активні.
+      // `done: true` означає "вже показано", не "виконано користувачем".
+      due.forEach(r => { r.done = true; r.firedAt = Date.now(); });
+      localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+      // Одноразовий тригер оновлення табло
       import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
     }
   } catch(e) {}
