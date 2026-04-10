@@ -23,6 +23,19 @@
     } catch {
     }
   }
+  function _groupConsecutive(log) {
+    const out = [];
+    for (const e of log) {
+      const prev = out[out.length - 1];
+      if (prev && prev.type === e.type && prev.msg === e.msg && prev.src === e.src) {
+        prev.count++;
+        prev.lastTs = e.ts;
+      } else {
+        out.push({ ...e, count: 1, firstTs: e.ts, lastTs: e.ts });
+      }
+    }
+    return out;
+  }
   function logError(type, message, source) {
     const log = getErrorLog();
     log.push({
@@ -50,14 +63,17 @@
     if (log.length === 0) {
       list.innerHTML = '<div style="text-align:center;padding:48px 20px;color:rgba(30,16,64,0.35);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
     } else {
-      list.innerHTML = [...log].reverse().map((e) => {
-        const d = new Date(e.ts);
+      const grouped = _groupConsecutive(log);
+      list.innerHTML = [...grouped].reverse().map((e) => {
+        const d = new Date(e.lastTs || e.ts);
         const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         const date = d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
         const s = typeStyle[e.type] || { bg: "rgba(30,16,64,0.06)", color: "rgba(30,16,64,0.5)" };
+        const countBadge = e.count > 1 ? `<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(194,121,10,0.15);color:#7a4e05">\xD7${e.count}</span>` : "";
         return `<div style="padding:10px 14px;border-bottom:1px solid rgba(30,16,64,0.06)">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:${s.bg};color:${s.color};text-transform:uppercase">${e.type}</span>
+          ${countBadge}
           <span style="font-size:11px;color:rgba(30,16,64,0.35)">${date} ${time}</span>
           <span style="font-size:11px;color:rgba(30,16,64,0.25);margin-left:auto">${e.tab}</span>
         </div>
@@ -67,7 +83,12 @@
       }).join("");
     }
     const countEl = document.getElementById("log-panel-count");
-    if (countEl) countEl.textContent = log.length + " \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443";
+    if (countEl) {
+      const grouped = _groupConsecutive(log);
+      const groupedN = grouped.length;
+      const txt = groupedN === log.length ? `${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443` : `${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 ${groupedN} \u0433\u0440\u0443\u043F \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443`;
+      countEl.textContent = txt;
+    }
     panel.style.display = "flex";
     requestAnimationFrame(() => panel.style.opacity = "1");
   }
@@ -77,11 +98,18 @@
       showToast("\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439");
       return;
     }
-    const lines = log.slice(-50).map((e) => {
-      const time = new Date(e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      return `[${time}][${e.type}][${e.tab}] ${e.msg}${e.src ? " @ " + e.src : ""}`;
+    const grouped = _groupConsecutive(log);
+    const lastGroups = grouped.slice(-50);
+    const lines = lastGroups.map((e) => {
+      const time = new Date(e.lastTs || e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const cnt = e.count > 1 ? ` \xD7${e.count}` : "";
+      return `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? " @ " + e.src : ""}`;
     }).join("\n");
-    const text = `NeverMind Logs (\u043E\u0441\u0442\u0430\u043D\u043D\u0456 ${Math.min(log.length, 50)} \u0437 ${log.length}):
+    const badge = document.getElementById("deploy-version");
+    const deployLine = badge ? `
+\u0412\u0435\u0440\u0441\u0456\u044F: ${badge.textContent || "?"} \xB7 \u043A\u043E\u043C\u0456\u0442: ${badge.dataset.commit || "local"} \xB7 \u0437 \u0433\u0456\u043B\u043A\u0438: ${badge.dataset.source || "dev"}` : "";
+    const header = `NeverMind Logs (${lastGroups.length} \u0433\u0440\u0443\u043F \u0437 ${grouped.length}, \u0432\u0441\u044C\u043E\u0433\u043E ${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432):${deployLine}`;
+    const text = `${header}
 \`\`\`
 ${lines}
 \`\`\``;
@@ -4479,6 +4507,11 @@ ${pulseParts.join("\n")}
       const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
       if (due.length > 0) {
+        due.forEach((r) => {
+          r.done = true;
+          r.firedAt = Date.now();
+        });
+        localStorage.setItem("nm_reminders", JSON.stringify(reminders));
         Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
       }
     } catch (e) {
@@ -13217,6 +13250,64 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
     el.classList.add("show");
     _undoToastTimer = setTimeout(() => el.classList.remove("show"), duration);
   }
+  function showDeployInfo() {
+    const badge = document.getElementById("deploy-version");
+    if (!badge) return;
+    const version = badge.textContent || "";
+    const commit = badge.dataset.commit || "local";
+    const source = badge.dataset.source || "dev";
+    const branch = badge.dataset.branch || "dev";
+    let modal = document.getElementById("deploy-info-modal");
+    if (modal) modal.remove();
+    modal = document.createElement("div");
+    modal.id = "deploy-info-modal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:300;background:rgba(30,16,64,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0 20px;opacity:0;transition:opacity 0.2s";
+    modal.onclick = (e) => {
+      if (e.target === modal) closeDeployInfo();
+    };
+    const repoUrl = "https://github.com/OWLs68/NeverMind";
+    const commitLink = commit && commit !== "local" ? `${repoUrl}/commit/${commit}` : null;
+    const sourceLink = source && source !== "dev" ? `${repoUrl}/tree/${source}` : null;
+    modal.innerHTML = `
+    <div style="background:#fef8ec;border-radius:22px;padding:22px 20px 18px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(30,16,64,0.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:17px;font-weight:800;color:#1e1040">\u0406\u043D\u0444\u043E \u043F\u0440\u043E \u0434\u0435\u043F\u043B\u043E\u0439</div>
+        <button onclick="closeDeployInfo()" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">\xD7</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u0412\u0435\u0440\u0441\u0456\u044F</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace">${version}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u041A\u043E\u043C\u0456\u0442</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace">${commitLink ? `<a href="${commitLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${commit}</a>` : commit}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u0413\u0456\u043B\u043A\u0430 \u0437\u0432\u0456\u0434\u043A\u0438</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace;text-align:right;word-break:break-all">${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${source}</a>` : source}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u0413\u0456\u043B\u043A\u0430 \u0443 main</div>
+          <div style="color:#1e1040;font-weight:700;font-family:monospace">${branch}</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08);font-size:11px;color:rgba(30,16,64,0.45);line-height:1.45">
+        \u042F\u043A\u0449\u043E \u0431\u0435\u0439\u0434\u0436 \u043D\u0435 \u043E\u043D\u043E\u0432\u0438\u0432\u0441\u044F \u043F\u0456\u0441\u043B\u044F \u043F\u0443\u0448\u0443 \u2014 CI \u0449\u0435 \u043D\u0435 \u0434\u043E\u0440\u043E\u0431\u0438\u0432. \u041F\u043E\u0442\u044F\u0433\u043D\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u0432\u043D\u0438\u0437 \u0437\u0430 2 \u0445\u0432.
+      </div>
+    </div>
+  `;
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => {
+      modal.style.opacity = "1";
+    });
+  }
+  function closeDeployInfo() {
+    const modal = document.getElementById("deploy-info-modal");
+    if (!modal) return;
+    modal.style.opacity = "0";
+    setTimeout(() => modal.remove(), 200);
+  }
   var TAB_THEMES, currentTab, DEFAULT_TABS, ALL_TABS_CONFIG, _pendingTabs, _selectedOrderTab, _undoToastTimer, _undoData;
   var init_nav = __esm({
     "src/core/nav.js"() {
@@ -13381,7 +13472,9 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
         saveFinanceSettings,
         clearFinanceData,
         exportData,
-        toggleTabSelection
+        toggleTabSelection,
+        showDeployInfo,
+        closeDeployInfo
       });
     }
   });
