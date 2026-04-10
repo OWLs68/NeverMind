@@ -11018,6 +11018,42 @@ ${list}
             saveRoutine(routine);
             const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map((d) => dayLabels[d] || d).join(", ");
             addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${label} (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+          } else if (action.action === "set_reminder") {
+            const rTime = action.time;
+            const rText = action.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F";
+            const rDate = action.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+            if (!rTime) {
+              addInboxChatMsg("agent", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F.");
+            } else {
+              const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+              const reminderId = Date.now();
+              reminders.push({ id: reminderId, time: rTime, text: rText, date: rDate, done: false });
+              localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+              const events = getEvents();
+              events.unshift({
+                id: reminderId + 1,
+                title: rText,
+                date: rDate,
+                time: rTime,
+                priority: "normal",
+                createdAt: Date.now(),
+                source: "reminder",
+                reminderId
+              });
+              saveEvents(events);
+              const items = getInbox();
+              items.unshift({
+                id: reminderId + 2,
+                text: `${rTime} \u2014 ${rText}`,
+                category: "reminder",
+                ts: Date.now(),
+                processed: true
+              });
+              saveInbox(items);
+              renderInbox();
+              window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
+              addInboxChatMsg("agent", `\u23F0 \u041D\u0430\u0433\u0430\u0434\u0430\u044E \u043E ${rTime}: "${rText}"`);
+            }
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || args?.comment || "";
@@ -11370,7 +11406,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         note: "background:#a07850",
         habit: "background:#16a34a",
         event: "background:#3b82f6",
-        finance: "background:#c2410c"
+        finance: "background:#c2410c",
+        reminder: "background:#c2790a"
       };
       CAT_TAG_STYLE = {
         task: "background:rgba(47,208,249,0.2);color:#0a7a97",
@@ -11378,7 +11415,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         note: "background:rgba(180,140,90,0.2);color:#6a4a1a",
         habit: "background:rgba(22,163,74,0.15);color:#14532d",
         event: "background:rgba(59,130,246,0.15);color:#1d4ed8",
-        finance: "background:rgba(194,65,12,0.15);color:#7c2d12"
+        finance: "background:rgba(194,65,12,0.15);color:#7c2d12",
+        reminder: "background:rgba(194,121,10,0.18);color:#7a4e05"
       };
       CAT_META = {
         idea: { icon: "\u{1F4A1}", label: "\u0406\u0434\u0435\u044F", dotClass: "cat-dot-idea", tagClass: "cat-idea" },
@@ -11386,7 +11424,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         habit: { icon: "\u{1F331}", label: "\u0417\u0432\u0438\u0447\u043A\u0430", dotClass: "cat-dot-habit", tagClass: "cat-habit" },
         note: { icon: "\u{1F4DD}", label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0430", dotClass: "cat-dot-note", tagClass: "cat-note" },
         event: { icon: "\u{1F4C5}", label: "\u041F\u043E\u0434\u0456\u044F", dotClass: "cat-dot-event", tagClass: "cat-event" },
-        finance: { icon: "\u20B4", label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", dotClass: "cat-dot-finance", tagClass: "cat-finance" }
+        finance: { icon: "\u20B4", label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", dotClass: "cat-dot-finance", tagClass: "cat-finance" },
+        reminder: { icon: "\u23F0", label: "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", dotClass: "cat-dot-reminder", tagClass: "cat-reminder" }
       };
       _inboxSwipedRecently = false;
       INBOX_NAV_MAP = {
