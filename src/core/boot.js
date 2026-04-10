@@ -3,6 +3,7 @@ import { cleanupTrash } from './trash.js';
 import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
 import { renderOwlBoard, setupChatBarSwipe, startOwlBoardCycle } from '../owl/inbox-board.js';
+import { startFollowupsCycle } from '../owl/followups.js';
 import { setupKeyboardAvoiding } from '../ui/keyboard.js';
 import { renderInbox } from '../tabs/inbox.js';
 import { renderTasks } from '../tabs/tasks.js';
@@ -341,6 +342,8 @@ function init() {
   try { const _msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]'); if (_msgs.length > 0) renderOwlBoard(); } catch(e) {}
   // Цикл генерації нових повідомлень — з невеликою затримкою
   setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 2000);
+  // Live chat replies (Фаза 2 OWL-мозку) — follow-up повідомлення у контекстний чат
+  setTimeout(() => { try { startFollowupsCycle(); } catch(e) {} }, 3000);
 }
 
 function showApp() {

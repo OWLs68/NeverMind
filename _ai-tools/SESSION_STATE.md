@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-10 (кінець сесії start-session-HdqBj)
+**Оновлено:** 2026-04-10 (сесія start-session-BOJ9T — Фаза 2 Live Chat Replies)
 
 ---
 
@@ -11,7 +11,7 @@
 | **Версія** | v113+ (деплої через auto-merge) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з **Tool Calling** (function calling) — SINCE 10.04 |
-| **Гілка** | `claude/start-session-HdqBj` |
+| **Гілка** | `claude/start-session-BOJ9T` |
 | **Repo** | **Public** + LICENSE (All Rights Reserved) |
 
 ---
@@ -23,6 +23,64 @@
 **2. Без "Роби" від Романа — НЕ змінювати код.** Роман каже "Роби" — і тільки тоді.
 
 **3. Архітектурний принцип: ОДИН МОЗОК НА ВСЕ.** OWL = єдиний Jarvis. Табло, чати, чіпи — різні вікна одного мозку. **Зміна в одній вкладці = зміна в усіх.** Повний план → `FEATURES_ROADMAP.md` секція "🧠 Мозок OWL".
+
+---
+
+## Що зроблено в сесії 10.04 (start-session-BOJ9T)
+
+### 🐛 Фікс класифікації інбоксу — дії не ставали нотатками
+**Проблема:** "Купити мусорні пакети" / "Це задача" → AI класифікував як `save_note` замість `save_task`. Працювало тільки якщо в тексті був час ("ввечері попрати").
+
+**3 зміни у `src/ai/core.js`:**
+1. **`INBOX_SYSTEM_PROMPT`** — додано жорстке правило №4: дієслово дії (купити, зробити, написати, зателефонувати, попрати...) → ЗАВЖДИ `save_task`, без винятків. Додано правило метаінструкцій: "це задача/нотатка/звичка" → створити відповідний тип.
+2. **`save_note` tool description** — прибрано слово "факти" яке розмивало межу з `save_task`. Тепер явно: "ТІЛЬКИ думки, рефлексія, емоції", "НЕ для дій які треба зробити".
+3. **`_fetchAI` temperature параметр** — додано, `callAIWithTools` передає 0.2 (класифікація має бути стабільною). Для інших викликів (chat bars, proactive) — дефолт 0.7, backward compat.
+
+### 🧠 Фаза 2 OWL-мозку: Live Chat Replies
+**Концепція:** Агент сам ініціює повідомлення у контекстний чат коли є привід. Принцип "один мозок на все" — follow-up йде у чат тієї вкладки яка тематично пов'язана з тригером, не завжди в Inbox.
+
+**Новий файл `src/owl/followups.js`** (~170 рядків):
+- `checkFollowups()` — головна функція перевірки тригерів, надсилає МАКСИМУМ один follow-up за виклик
+- `_checkStuckTasks()` — задачі старші 3 днів, cooldown 24 год per-task
+- `_checkPassedEvents()` — події з часом що пройшли 30+ хв тому і ≤ 24 год тому, cooldown 365 днів per-event (≈ одноразово)
+- `_sendFollowupToChat(tab, type, item)` — генерація тексту через `callAI()` + вставка в чат
+- `_generateFollowupText(type, item)` — компактні промпти для кожного типу, 1 речення, emoji доречно
+- `startFollowupsCycle()` — перша перевірка через 30 сек, далі кожні 5 хв + `nm-data-changed` listener з debounce 5 сек
+
+**Блокери (щоб не спамити):**
+- `silent phase` (нічний час) → skip
+- Глобальний cooldown `followup_global` 1 год → skip
+- Немає API ключа → skip
+- `activeChatBar === tab` (юзер активно в цьому чаті) → skip
+- `_checkInFlight` flag проти race conditions
+
+**Trigger→tab map (правило "один мозок"):**
+- `stuck-task` → `tasks` (Продуктивність)
+- `event-passed` → `tasks` (календар живе там же)
+
+**Новий диспатчер у `src/ai/core.js` — `addMsgForTab(tab, role, text)`:**
+- Для inbox — викликає `addInboxChatMsg` (бейдж непрочитаного автоматично)
+- Для інших — зберігає через `saveChatMsg` + рендерить у DOM ТІЛЬКИ якщо `el.dataset.restored` (юзер уже відкривав бар у сесії)
+- НЕ відкриває чат-бар автоматично (respekt Роману — заборонено насильно відкривати бари)
+- Використовує існуючі `addTaskBarMsg`, `addNotesChatMsg`, `addMeChatMsg`, `addEveningBarMsg`, `addFinanceChatMsg` з `_noSave=true`
+
+**Cooldown-система:** використовується існуючий `nm_owl_cooldowns` (НЕ створено новий ключ):
+- `followup_global` (глобальний)
+- `followup_stuck_<taskId>` (per-task)
+- `followup_event_<eventId>` (per-event)
+- `owlCdExpired()` тепер експортована з `inbox-board.js` (раніше була приватна)
+
+**Що НЕ в цій фазі** (відкладено за рішенням Романа):
+- `welcome-back` у чат — після тестування базових тригерів
+- `after-action` тригер — найскладніший, окрема фаза
+- Крапки/бейджі на tab bar для інших вкладок — окрема фіча
+
+**Файли змінено:**
+- `src/ai/core.js` — `_fetchAI` temperature + `callAIWithTools` 0.2 + `INBOX_SYSTEM_PROMPT` + `save_note` desc + `addMsgForTab` + імпорт `addInboxChatMsg`
+- `src/owl/inbox-board.js` — `export` для `owlCdExpired`
+- `src/owl/followups.js` — новий файл
+- `src/app.js` — імпорт followups
+- `src/core/boot.js` — виклик `startFollowupsCycle()` через 3 сек
 
 ---
 
@@ -109,13 +167,14 @@
 
 ## 🔴 Що треба зробити далі
 
-### Живі відповіді Фаза 2 — агент пише в чат сам (ПРІОРИТЕТ)
-Агент ініціює повідомлення в чат (не табло):
-- Подія пройшла → "Як пройшла консультація?"
-- Задача висить 3+ дні → "Що з переїздом?"
-- Юзер повернувся після паузи → follow-up
-- Після дії → контекстне питання
-- Обмеження: max 1/год, cooldown на тип тригера, `nm_owl_followups`
+### Живі відповіді Фаза 2 — агент пише в чат сам
+**Статус:** Фаза 2.0 ЗРОБЛЕНО 10.04 (2 тригери: stuck-task, event-passed). Треба тестувати на продакшені.
+
+**Відкрите у Фазі 2.1 (після тесту):**
+- `welcome-back` у чат (зараз тільки на табло) — follow-up при поверненні після паузи 2+ год
+- `after-action` тригер — контекстне питання після дії
+- Крапки/бейджі на tab bar щоб юзер бачив нові повідомлення з будь-якої вкладки (зараз бачить тільки коли зайде у Продуктивність)
+- Потенційно: розширити trigger→tab map на інші вкладки (habit-streak, budget-warn, mood-check, note-reminder)
 
 ### Jarvis Architecture — ДО Supabase
 1. ~~**4.1 Tool Calling**~~ → ✅ ЗРОБЛЕНО 10.04 (25 tools, prompt скорочений у 6-7 разів, 6 багів виправлено аудитом)

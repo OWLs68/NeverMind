@@ -19,6 +19,7 @@ import './owl/inbox-board.js';
 import './owl/chips.js';
 import './owl/board.js';
 import './owl/proactive.js';
+import './owl/followups.js';
 
 // Tabs (вкладки) — порядок як в оригінальних <script> тегах
 import './tabs/inbox.js';

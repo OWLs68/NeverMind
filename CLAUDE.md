@@ -134,6 +134,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
 | `src/owl/board.js` | OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox) |
 | `src/owl/proactive.js` | Генерація проактивних повідомлень, getTabBoardContext |
+| `src/owl/followups.js` | **Live Chat Replies** — follow-up повідомлення агента у контекстний чат (stuck-task, event-passed), 5 хв таймер + nm-data-changed |
 | `src/owl/chips.js` | **Центральний модуль чіпів** — renderChips(), handleChipClick(), fuzzy match ✔️, CHIP_PROMPT_RULES |
 | `src/ui/keyboard.js` | setupKeyboardAvoiding (iOS-specific) |
 | `src/ui/swipe-delete.js` | Swipe trail для видалення |

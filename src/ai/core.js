@@ -6,7 +6,7 @@
 import { currentTab, getProfile, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { getTrash } from '../core/trash.js';
-import { getInbox, _clearInboxUnreadBadge } from '../tabs/inbox.js';
+import { getInbox, _clearInboxUnreadBadge, addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
@@ -524,6 +524,40 @@ export function loadChatMsgs(tab) {
   const key = CHAT_STORE_KEYS[tab];
   if (!key) return [];
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+
+// === addMsgForTab — універсальний диспатчер для проактивних повідомлень агента ===
+// Використовується followups.js щоб писати в контекстний чат ("один мозок на все")
+// Не відкриває чат-бар, не спамить DOM при закритому барі — надійно зберігає в localStorage
+// і синхронізує DOM якщо чат уже був відновлений (юзер відкривав бар у цій сесії)
+export function addMsgForTab(tab, role, text) {
+  // Inbox — спеціальний: addInboxChatMsg сам зберігає + показує бейдж
+  if (tab === 'inbox') {
+    addInboxChatMsg(role, text);
+    return;
+  }
+  // Інші вкладки: зберігаємо у localStorage (при відкритті чат-бара restoreChatUI прочитає)
+  saveChatMsg(tab, role, text);
+  // Якщо DOM контейнер уже був відновлений (юзер відкривав бар) — додаємо у DOM зараз
+  const containerMap = {
+    tasks:   'tasks-chat-messages',
+    notes:   'notes-chat-messages',
+    me:      'me-chat-messages',
+    evening: 'evening-bar-messages',
+    finance: 'finance-chat-messages',
+  };
+  const renderMap = {
+    tasks:   addTaskBarMsg,
+    notes:   addNotesChatMsg,
+    me:      addMeChatMsg,
+    evening: addEveningBarMsg,
+    finance: addFinanceChatMsg,
+  };
+  const el = document.getElementById(containerMap[tab]);
+  if (el && el.dataset.restored && renderMap[tab]) {
+    // _noSave=true — не відкриває чат-бар і не зберігає повторно
+    renderMap[tab](role, text, true);
+  }
 }
 
 export function restoreChatUI(tab) {

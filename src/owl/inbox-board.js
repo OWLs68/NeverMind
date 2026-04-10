@@ -333,7 +333,7 @@ const OWL_CD_KEY = 'nm_owl_cooldowns';
 function _getOwlCooldowns() {
   try { return JSON.parse(localStorage.getItem(OWL_CD_KEY) || '{}'); } catch { return {}; }
 }
-function owlCdExpired(topic, ms) {
+export function owlCdExpired(topic, ms) {
   const cd = _getOwlCooldowns();
   return !cd[topic] || (Date.now() - cd[topic]) > ms;
 }
