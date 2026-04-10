@@ -1006,15 +1006,6 @@ export async function sendOwlReply(text) {
   _owlChatSending = false;
 }
 
-// Відправка з input
-export function sendOwlReplyFromInput() {
-  const inp = document.getElementById('owl-tab-input-inbox');
-  if (!inp || !inp.value.trim()) return;
-  const text = inp.value.trim();
-  inp.value = '';
-  sendOwlReply(text);
-}
-
 // Виконання дій з OWL чату (ті самі що в Inbox, але без запису в inbox chat)
 function executeOwlAction(action, originalText) {
   if (!action || !action.action) return;
@@ -1149,10 +1140,28 @@ function _checkReminders() {
   } catch(e) {}
 }
 
+// Автоочищення старих нагадувань — видаляє записи старші 7 днів
+// Запускається один раз при старті застосунку
+function _cleanupOldReminders() {
+  try {
+    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    if (reminders.length === 0) return;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 7);
+    const cutoffISO = cutoffDate.toISOString().slice(0, 10);
+    const fresh = reminders.filter(r => r.date >= cutoffISO);
+    if (fresh.length < reminders.length) {
+      localStorage.setItem('nm_reminders', JSON.stringify(fresh));
+    }
+  } catch(e) {}
+}
+
 // Запуск циклу перевірки
 export function startOwlBoardCycle() {
   // Одноразовий запит розкладу якщо не заповнено
   _owlAskScheduleIfNeeded();
+  // Разове автоочищення старих нагадувань (>7 днів)
+  _cleanupOldReminders();
   // Одразу при відкритті
   tryOwlBoardUpdate();
   // Перевірка нагадувань кожну хвилину

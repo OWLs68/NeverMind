@@ -349,6 +349,17 @@ export const INBOX_TOOLS = [
 // === HTTP WRAPPER — єдине місце де робиться запит до AI ===
 // Повертає message object { content?, tool_calls? } коли tools передані
 // Повертає content string коли tools НЕ передані (backward compat)
+
+// Helper: чи це мережева помилка яку можна ігнорувати у логах
+// (Safari: "Load failed", Chrome: "Failed to fetch", Firefox: "NetworkError",
+//  timeout abort: "AbortError"/"aborted"). Засмічують error-log без користі.
+export function _isNetworkError(e) {
+  if (!e) return false;
+  if (e.name === 'AbortError') return true;
+  const msg = e.message || String(e);
+  return /Load failed|Failed to fetch|NetworkError|aborted|The operation was aborted/i.test(msg);
+}
+
 async function _fetchAI(messages, signal, tools, temperature = 0.7) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
@@ -473,7 +484,7 @@ export async function callAIWithHistory(systemPrompt, history) {
     return reply;
   } catch(e) {
     clearTimeout(timeout);
-    console.error('callAIWithHistory error:', e);
+    if (!_isNetworkError(e)) console.error('callAIWithHistory error:', e);
     return null;
   }
 }
@@ -491,7 +502,7 @@ export async function callAIWithTools(systemPrompt, history, tools) {
     return msg;
   } catch(e) {
     clearTimeout(timeout);
-    console.error('callAIWithTools error:', e);
+    if (!_isNetworkError(e)) console.error('callAIWithTools error:', e);
     return null;
   }
 }
@@ -678,14 +689,6 @@ export function closeChatBar(tab) {
 
   // Табло може оновитись після закриття чату
   window.dispatchEvent(new CustomEvent('nm-chat-closed', { detail: tab }));
-}
-
-export function toggleChatBar(tab) {
-  if (activeChatBar === tab) {
-    closeChatBar(tab);
-  } else {
-    openChatBar(tab);
-  }
 }
 
 export function closeAllChatBars(resetActive = true) {
