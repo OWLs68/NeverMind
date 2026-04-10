@@ -104,37 +104,41 @@ export function _clearInboxUnreadBadge() {
 
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
 const CAT_DOT_BG = {
-  task:    'background:rgba(47,208,249,0.2)',
-  idea:    'background:rgba(236,247,85,0.3)',
-  note:    'background:rgba(180,140,90,0.15)',
-  habit:   'background:rgba(22,163,74,0.15)',
-  event:   'background:rgba(59,130,246,0.15)',
-  finance: 'background:rgba(194,65,12,0.15)',
+  task:     'background:rgba(47,208,249,0.2)',
+  idea:     'background:rgba(236,247,85,0.3)',
+  note:     'background:rgba(180,140,90,0.15)',
+  habit:    'background:rgba(22,163,74,0.15)',
+  event:    'background:rgba(59,130,246,0.15)',
+  finance:  'background:rgba(194,65,12,0.15)',
+  reminder: 'background:rgba(194,121,10,0.15)',
 };
 // Solid кольори для 8px крапки в компактній стрічці
 const CAT_DOT_SOLID = {
-  task:    'background:#2fd0f9',
-  idea:    'background:#c4b820',
-  note:    'background:#a07850',
-  habit:   'background:#16a34a',
-  event:   'background:#3b82f6',
-  finance: 'background:#c2410c',
+  task:     'background:#2fd0f9',
+  idea:     'background:#c4b820',
+  note:     'background:#a07850',
+  habit:    'background:#16a34a',
+  event:    'background:#3b82f6',
+  finance:  'background:#c2410c',
+  reminder: 'background:#c2790a',
 };
 const CAT_TAG_STYLE = {
-  task:    'background:rgba(47,208,249,0.2);color:#0a7a97',
-  idea:    'background:rgba(245,240,168,0.5);color:#7a6c00',
-  note:    'background:rgba(180,140,90,0.2);color:#6a4a1a',
-  habit:   'background:rgba(22,163,74,0.15);color:#14532d',
-  event:   'background:rgba(59,130,246,0.15);color:#1d4ed8',
-  finance: 'background:rgba(194,65,12,0.15);color:#7c2d12',
+  task:     'background:rgba(47,208,249,0.2);color:#0a7a97',
+  idea:     'background:rgba(245,240,168,0.5);color:#7a6c00',
+  note:     'background:rgba(180,140,90,0.2);color:#6a4a1a',
+  habit:    'background:rgba(22,163,74,0.15);color:#14532d',
+  event:    'background:rgba(59,130,246,0.15);color:#1d4ed8',
+  finance:  'background:rgba(194,65,12,0.15);color:#7c2d12',
+  reminder: 'background:rgba(194,121,10,0.18);color:#7a4e05',
 };
 const CAT_META = {
-  idea:    { icon: '💡', label: 'Ідея',     dotClass: 'cat-dot-idea',    tagClass: 'cat-idea'    },
-  task:    { icon: '📌', label: 'Задача',   dotClass: 'cat-dot-task',    tagClass: 'cat-task'    },
-  habit:   { icon: '🌱', label: 'Звичка',   dotClass: 'cat-dot-habit',   tagClass: 'cat-habit'   },
-  note:    { icon: '📝', label: 'Нотатка',  dotClass: 'cat-dot-note',    tagClass: 'cat-note'    },
-  event:   { icon: '📅', label: 'Подія',    dotClass: 'cat-dot-event',   tagClass: 'cat-event'   },
-  finance: { icon: '₴',  label: 'Фінанси',  dotClass: 'cat-dot-finance', tagClass: 'cat-finance' },
+  idea:     { icon: '💡', label: 'Ідея',        dotClass: 'cat-dot-idea',     tagClass: 'cat-idea'     },
+  task:     { icon: '📌', label: 'Задача',      dotClass: 'cat-dot-task',     tagClass: 'cat-task'     },
+  habit:    { icon: '🌱', label: 'Звичка',      dotClass: 'cat-dot-habit',    tagClass: 'cat-habit'    },
+  note:     { icon: '📝', label: 'Нотатка',     dotClass: 'cat-dot-note',     tagClass: 'cat-note'     },
+  event:    { icon: '📅', label: 'Подія',       dotClass: 'cat-dot-event',    tagClass: 'cat-event'    },
+  finance:  { icon: '₴',  label: 'Фінанси',     dotClass: 'cat-dot-finance',  tagClass: 'cat-finance'  },
+  reminder: { icon: '⏰', label: 'Нагадування', dotClass: 'cat-dot-reminder', tagClass: 'cat-reminder' },
 };
 
 export function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
@@ -595,6 +599,46 @@ export async function sendToAI(fromChip = false) {
           saveRoutine(routine);
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
+        } else if (action.action === 'set_reminder') {
+          // Нагадування → зберегти у nm_reminders + створити event + картка в Inbox
+          const rTime = action.time;
+          const rText = action.text || 'Нагадування';
+          const rDate = action.date || new Date().toISOString().slice(0, 10);
+          if (!rTime) {
+            addInboxChatMsg('agent', 'Вкажи час нагадування.');
+          } else {
+            // 1. Збереження у nm_reminders (для тригера спливаючого попередження)
+            const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+            const reminderId = Date.now();
+            reminders.push({ id: reminderId, time: rTime, text: rText, date: rDate, done: false });
+            localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+            // 2. Подія у календарі (щоб було видно у day-schedule модалці через тап на день)
+            const events = getEvents();
+            events.unshift({
+              id: reminderId + 1,
+              title: rText,
+              date: rDate,
+              time: rTime,
+              priority: 'normal',
+              createdAt: Date.now(),
+              source: 'reminder',
+              reminderId
+            });
+            saveEvents(events);
+            // 3. Картка у стрічку Inbox з категорією "Нагадування"
+            const items = getInbox();
+            items.unshift({
+              id: reminderId + 2,
+              text: `${rTime} — ${rText}`,
+              category: 'reminder',
+              ts: Date.now(),
+              processed: true
+            });
+            saveInbox(items);
+            renderInbox();
+            window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
+            addInboxChatMsg('agent', `⏰ Нагадаю о ${rTime}: "${rText}"`);
+          }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // edit_event, delete_event, edit_note, edit_task, etc.
         } else {
