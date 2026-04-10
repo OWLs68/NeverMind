@@ -599,48 +599,8 @@ export async function sendToAI(fromChip = false) {
           saveRoutine(routine);
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
-        } else if (action.action === 'set_reminder') {
-          // Нагадування → зберегти у nm_reminders + створити event + картка в Inbox
-          const rTime = action.time;
-          const rText = action.text || 'Нагадування';
-          const rDate = action.date || new Date().toISOString().slice(0, 10);
-          if (!rTime) {
-            addInboxChatMsg('agent', 'Вкажи час нагадування.');
-          } else {
-            // 1. Збереження у nm_reminders (для тригера спливаючого попередження)
-            const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
-            const reminderId = Date.now();
-            reminders.push({ id: reminderId, time: rTime, text: rText, date: rDate, done: false });
-            localStorage.setItem('nm_reminders', JSON.stringify(reminders));
-            // 2. Подія у календарі (щоб було видно у day-schedule модалці через тап на день)
-            const events = getEvents();
-            events.unshift({
-              id: reminderId + 1,
-              title: rText,
-              date: rDate,
-              time: rTime,
-              priority: 'normal',
-              createdAt: Date.now(),
-              source: 'reminder',
-              reminderId
-            });
-            saveEvents(events);
-            // 3. Картка у стрічку Inbox з категорією "Нагадування"
-            const items = getInbox();
-            items.unshift({
-              id: reminderId + 2,
-              text: `${rTime} — ${rText}`,
-              category: 'reminder',
-              ts: Date.now(),
-              processed: true
-            });
-            saveInbox(items);
-            renderInbox();
-            window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
-            addInboxChatMsg('agent', `⏰ Нагадаю о ${rTime}: "${rText}"`);
-          }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
-          // edit_event, delete_event, edit_note, edit_task, etc.
+          // edit_event, delete_event, edit_note, edit_task, set_reminder, etc.
         } else {
           // Fallback — показуємо comment якщо є
           const replyText = action.comment || args?.comment || '';
