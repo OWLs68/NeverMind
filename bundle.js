@@ -8710,6 +8710,31 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       return [];
     }
   }
+  function addMsgForTab(tab, role, text) {
+    if (tab === "inbox") {
+      addInboxChatMsg(role, text);
+      return;
+    }
+    saveChatMsg(tab, role, text);
+    const containerMap = {
+      tasks: "tasks-chat-messages",
+      notes: "notes-chat-messages",
+      me: "me-chat-messages",
+      evening: "evening-bar-messages",
+      finance: "finance-chat-messages"
+    };
+    const renderMap = {
+      tasks: addTaskBarMsg,
+      notes: addNotesChatMsg,
+      me: addMeChatMsg,
+      evening: addEveningBarMsg,
+      finance: addFinanceChatMsg
+    };
+    const el = document.getElementById(containerMap[tab]);
+    if (el && el.dataset.restored && renderMap[tab]) {
+      renderMap[tab](role, text, true);
+    }
+  }
   function restoreChatUI(tab) {
     const containerMap = {
       inbox: "inbox-chat-messages",
@@ -11439,6 +11464,111 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     }
   });
 
+  // src/owl/followups.js
+  async function checkFollowups() {
+    if (_checkInFlight) return;
+    if (getDayPhase() === "silent") return;
+    if (!owlCdExpired("followup_global", FOLLOWUP_GLOBAL_CD)) return;
+    if (!localStorage.getItem("nm_gemini_key")) return;
+    _checkInFlight = true;
+    try {
+      const triggers = [
+        _checkStuckTasks,
+        _checkPassedEvents
+      ];
+      for (const trig of triggers) {
+        const hit = trig();
+        if (hit) {
+          const tab = TRIGGER_TO_TAB[hit.type];
+          if (activeChatBar === tab) return;
+          await _sendFollowupToChat(tab, hit.type, hit.item);
+          return;
+        }
+      }
+    } finally {
+      _checkInFlight = false;
+    }
+  }
+  function _checkStuckTasks() {
+    const cutoff = Date.now() - STUCK_TASK_DAYS * 24 * 60 * 60 * 1e3;
+    const tasks = getTasks().filter((t) => t.status === "active").filter((t) => t.createdAt && t.createdAt < cutoff).filter((t) => owlCdExpired(`followup_stuck_${t.id}`, STUCK_TASK_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (tasks.length === 0) return null;
+    return { type: "stuck-task", item: tasks[0] };
+  }
+  function _checkPassedEvents() {
+    const now = Date.now();
+    const events = getEvents().filter((ev) => ev.time).filter((ev) => {
+      const [h, m] = ev.time.split(":").map(Number);
+      if (isNaN(h) || isNaN(m)) return false;
+      const [y, mo, d] = ev.date.split("-").map(Number);
+      if (isNaN(y) || isNaN(mo) || isNaN(d)) return false;
+      const evDate = new Date(y, mo - 1, d, h, m);
+      return now - evDate.getTime() > 30 * 60 * 1e3 && now - evDate.getTime() < 24 * 60 * 60 * 1e3;
+    }).filter((ev) => owlCdExpired(`followup_event_${ev.id}`, EVENT_PASSED_CD)).sort((a, b) => (b.id || 0) - (a.id || 0));
+    if (events.length === 0) return null;
+    return { type: "event-passed", item: events[0] };
+  }
+  async function _sendFollowupToChat(tab, type, item) {
+    const text = await _generateFollowupText(type, item);
+    if (!text) return;
+    addMsgForTab(tab, "agent", text);
+    setOwlCd("followup_global");
+    if (type === "stuck-task") setOwlCd(`followup_stuck_${item.id}`);
+    if (type === "event-passed") setOwlCd(`followup_event_${item.id}`);
+  }
+  async function _generateFollowupText(type, item) {
+    const prompts = {
+      "stuck-task": {
+        system: `\u0422\u0438 \u2014 OWL, \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u041F\u0438\u0448\u0435\u0448 \u044E\u0437\u0435\u0440\u0443 \u0443 \u0447\u0430\u0442 \u0431\u043E \u0431\u0430\u0447\u0438\u0448 \u0449\u043E \u0439\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0432\u0438\u0441\u0438\u0442\u044C \u0443\u0436\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 3 \u0434\u043D\u0456\u0432. \u0417\u0430\u0434\u0430\u0447\u0430: "${item.title}". \u041D\u0430\u043F\u0438\u0448\u0438 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043B\u044E\u0434\u044F\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u043C'\u044F\u043A\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u0449\u043E \u0437 \u043D\u0435\u044E, \u0431\u0435\u0437 \u0442\u0438\u0441\u043A\u0443 \u0456 \u043C\u043E\u0440\u0430\u043B\u0456. \u041C\u043E\u0436\u0435\u0448 \u0434\u043E\u0434\u0430\u0442\u0438 \u043E\u0434\u043D\u0435 \u0434\u043E\u0440\u0435\u0447\u043D\u0435 emoji (\u23F0 \u0430\u0431\u043E \u043F\u043E\u0434\u0456\u0431\u043D\u0435) \u044F\u043A\u0449\u043E \u043F\u0430\u0441\u0443\u0454. \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0435\u0442\u0430\u043B\u0435\u0439 \u044F\u043A\u0438\u0445 \u043D\u0435 \u0437\u043D\u0430\u0454\u0448.`,
+        user: "\u041D\u0430\u043F\u0438\u0448\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F"
+      },
+      "event-passed": {
+        system: `\u0422\u0438 \u2014 OWL, \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u041F\u0438\u0448\u0435\u0448 \u044E\u0437\u0435\u0440\u0443 \u0443 \u0447\u0430\u0442 \u0431\u043E \u0431\u0430\u0447\u0438\u0448 \u0449\u043E \u0443 \u043D\u044C\u043E\u0433\u043E \u0431\u0443\u043B\u0430 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F "${item.title}" \u0456 \u0432\u043E\u043D\u0430 \u0449\u043E\u0439\u043D\u043E \u043F\u0440\u043E\u0439\u0448\u043B\u0430. \u041D\u0430\u043F\u0438\u0448\u0438 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043B\u044E\u0434\u044F\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0449\u0438\u0440\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u044F\u043A \u0432\u043E\u043D\u043E \u043F\u0440\u043E\u0439\u0448\u043B\u043E. \u041C\u043E\u0436\u0435\u0448 \u0434\u043E\u0434\u0430\u0442\u0438 \u043E\u0434\u043D\u0435 \u0434\u043E\u0440\u0435\u0447\u043D\u0435 emoji (\u{1F4AC} \u0430\u0431\u043E \u043F\u043E\u0434\u0456\u0431\u043D\u0435). \u0411\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0444\u0440\u0430\u0437.`,
+        user: "\u041D\u0430\u043F\u0438\u0448\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F"
+      }
+    };
+    const p = prompts[type];
+    if (!p) return null;
+    try {
+      const reply = await callAI(p.system, p.user);
+      if (!reply || typeof reply !== "string") return null;
+      return reply.trim().slice(0, 240);
+    } catch (e) {
+      console.warn("[followups] generation failed:", e);
+      return null;
+    }
+  }
+  function startFollowupsCycle() {
+    setTimeout(checkFollowups, 30 * 1e3);
+    setInterval(checkFollowups, FOLLOWUP_CHECK_INTERVAL);
+    window.addEventListener("nm-data-changed", () => {
+      clearTimeout(_debounceTimer);
+      _debounceTimer = setTimeout(checkFollowups, FOLLOWUP_DEBOUNCE);
+    });
+  }
+  var FOLLOWUP_CHECK_INTERVAL, FOLLOWUP_DEBOUNCE, FOLLOWUP_GLOBAL_CD, STUCK_TASK_DAYS, STUCK_TASK_CD, EVENT_PASSED_CD, TRIGGER_TO_TAB, _debounceTimer, _checkInFlight;
+  var init_followups = __esm({
+    "src/owl/followups.js"() {
+      init_core();
+      init_tasks();
+      init_calendar();
+      init_inbox_board();
+      FOLLOWUP_CHECK_INTERVAL = 5 * 60 * 1e3;
+      FOLLOWUP_DEBOUNCE = 5 * 1e3;
+      FOLLOWUP_GLOBAL_CD = 60 * 60 * 1e3;
+      STUCK_TASK_DAYS = 3;
+      STUCK_TASK_CD = 24 * 60 * 60 * 1e3;
+      EVENT_PASSED_CD = 365 * 24 * 60 * 60 * 1e3;
+      TRIGGER_TO_TAB = {
+        "stuck-task": "tasks",
+        "event-passed": "tasks"
+        // календар зараз живе всередині Продуктивності
+      };
+      _debounceTimer = null;
+      _checkInFlight = false;
+    }
+  });
+
   // src/ui/keyboard.js
   function setupKeyboardAvoiding() {
     if (!window.visualViewport) return;
@@ -11980,6 +12110,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       } catch (e) {
       }
     }, 2e3);
+    setTimeout(() => {
+      try {
+        startFollowupsCycle();
+      } catch (e) {
+      }
+    }, 3e3);
   }
   function showApp() {
     const splash = document.getElementById("splash");
@@ -12009,6 +12145,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_core();
       init_board();
       init_inbox_board();
+      init_followups();
       init_keyboard();
       init_inbox();
       init_tasks();
@@ -13185,6 +13322,7 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
   init_chips();
   init_board();
   init_proactive();
+  init_followups();
   init_inbox();
   init_tasks();
   init_habits();
