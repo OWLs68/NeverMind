@@ -4754,6 +4754,29 @@ ${pulseParts.join("\n")}
     getTabBoardContext: () => getTabBoardContext,
     tryTabBoardUpdate: () => tryTabBoardUpdate
   });
+  function _parseJsonTolerant(raw) {
+    if (!raw || typeof raw !== "string") return null;
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+    }
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      try {
+        return JSON.parse(objMatch[0]);
+      } catch {
+      }
+    }
+    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (arrMatch) {
+      try {
+        return JSON.parse(arrMatch[0]);
+      } catch {
+      }
+    }
+    return null;
+  }
   function getTabBoardContext(tab) {
     const parts = [];
     try {
@@ -4994,7 +5017,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
             { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
           ],
           max_tokens: 150,
-          temperature: 0.8
+          temperature: 0.8,
+          response_format: { type: "json_object" }
         })
       });
       if (!res.ok) {
@@ -5019,8 +5043,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       }
       localStorage.removeItem("nm_owl_api_error");
       _updateApiDot();
-      const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
-      if (!parsed.text) {
+      const parsed = _parseJsonTolerant(reply);
+      if (!parsed || !parsed.text) {
         _boardGenerating[tab] = false;
         return;
       }
