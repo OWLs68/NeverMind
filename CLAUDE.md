@@ -217,20 +217,32 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 ## AI-логіка
 
-### Inbox flow
+### Inbox flow (з 10.04 — OpenAI Tool Calling)
 ```
-Юзер пише → sendToAI() → getAIContext() → callAIWithHistory() → JSON відповідь
-→ switch(action.action):
-  'save'            → processSaveAction() → inbox + вкладки (task/note/habit/event)
-  'save_finance'    → processFinanceAction()
-  'complete_habit'  → processCompleteHabit()
-  'complete_task'   → processCompleteTask() → task.status='done'
-  'clarify'         → showClarify() → модалка з варіантами
-  'add_step'        → додати кроки до task
-  'create_project'  → новий проект + startProjectInboxInterview()
-  'restore_deleted' → searchTrash() → restoreFromTrash()
-  'reply'           → просто повідомлення
+Юзер пише → sendToAI() → getAIContext() → callAIWithTools(prompt, history, INBOX_TOOLS)
+→ OpenAI повертає msg.tool_calls[] (гарантовано валідна структура, без JSON.parse)
+→ for each tool_call:
+    _toolCallToAction(name, args) → старий action format
+    → dispatch через існуючі handlers:
+       save_task/note/habit/moment → processSaveAction() → inbox + вкладки
+       save_finance                → processFinanceAction()
+       complete_habit/task         → processCompleteHabit/Task()
+       clarify                     → showClarify() → модалка з варіантами
+       add_step                    → додати кроки до task
+       create_project              → новий проект + startProjectInboxInterview()
+       create_event                → inline (nm_events + inbox entry)
+       restore_deleted             → searchTrash() → restoreFromTrash()
+       save_routine                → inline (nm_routine)
+       update_transaction          → inline (зміна fin запису)
+       edit_*/delete_*/reopen_task → processUniversalAction() у habits.js
+→ msg.content (якщо є) → показується як follow-up повідомлення від агента
+
+Якщо msg.tool_calls немає → msg.content = reply (просто текст)
 ```
+
+**INBOX_TOOLS** — 25 function definitions у `src/ai/core.js`. Описують всі можливі дії з параметрами. AI ОБОВ'ЯЗКОВО вибирає одну чи кілька функцій замість тексту JSON. Промпт скорочений з ~200 до ~30 рядків — він тільки класифікує (task vs event vs project), самі формати у tool definitions.
+
+**Backward compat:** `callAI()`, `callAIWithHistory()`, `callOwlChat()` працюють БЕЗ tools для tab chat bars і proactive.js (вони ще на текстовому форматі).
 
 ### AI контекст (getAIContext повертає)
 1. Дата/час/день тижня (укр)

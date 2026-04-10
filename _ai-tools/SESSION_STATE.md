@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-09 (кінець сесії start-session-0xaJ3)
+**Оновлено:** 2026-04-10 (кінець сесії start-session-HdqBj)
 
 ---
 
@@ -8,10 +8,10 @@
 
 | | |
 |--|--|
-| **Версія** | v71+ (деплої через auto-merge) |
+| **Версія** | v113+ (деплої через auto-merge) |
 | **URL** | owls68.github.io/NeverMind |
-| **AI модель** | OpenAI GPT-4o-mini (ключ у `localStorage`, назва `nm_gemini_key` — legacy) |
-| **Гілка** | `claude/start-session-0xaJ3` |
+| **AI модель** | OpenAI GPT-4o-mini з **Tool Calling** (function calling) — SINCE 10.04 |
+| **Гілка** | `claude/start-session-HdqBj` |
 | **Repo** | **Public** + LICENSE (All Rights Reserved) |
 
 ---
@@ -23,6 +23,47 @@
 **2. Без "Роби" від Романа — НЕ змінювати код.** Роман каже "Роби" — і тільки тоді.
 
 **3. Архітектурний принцип: ОДИН МОЗОК НА ВСЕ.** OWL = єдиний Jarvis. Табло, чати, чіпи — різні вікна одного мозку. **Зміна в одній вкладці = зміна в усіх.** Повний план → `FEATURES_ROADMAP.md` секція "🧠 Мозок OWL".
+
+---
+
+## Що зроблено в сесії 10.04 (start-session-HdqBj)
+
+### 🎯 4.1 Tool Calling — ПОВНИЙ ПЕРЕХІД НА FUNCTION CALLING
+Найбільша архітектурна зміна AI-інтеграції. Замість тексту з JSON — OpenAI function calling (виклик функцій з гарантовано валідною структурою).
+
+**Що змінилось у `src/ai/core.js`:**
+- Додано `INBOX_TOOLS` — 25 визначень функцій (save_task, save_note, save_habit, save_moment, create_event, save_finance, complete_habit, complete_task, create_project, edit_task/habit/event/note, delete_task/habit/event/folder, reopen_task, add_step, move_note, update_transaction, set_reminder, restore_deleted, save_routine, clarify)
+- `_fetchAI()` приймає опційний параметр `tools`. Повертає повний message object коли tools передані, або `content` string — коли ні (backward compat для tab chat bars)
+- Додано `callAIWithTools(systemPrompt, history, tools)` — нова public функція для tool calling mode
+- **`INBOX_SYSTEM_PROMPT` скорочено з ~200 рядків до ~30.** Прибрано всі описи JSON-форматів (тепер це в tool definitions), залишено тільки правила класифікації (task vs event vs project, розрізнення nagаdaй=set_reminder, список vs окремі задачі)
+
+**Що змінилось у `src/tabs/inbox.js`:**
+- Додано `_toolCallToAction(name, args)` — конвертер: перетворює tool_call → старий action format. Це дозволяє використовувати існуючі handlers (processSaveAction, processCompleteHabit, processCompleteTask, processUniversalAction) БЕЗ змін — вони протестовані і працюють
+- `sendToAI()` повністю переписаний: викликає `callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS)`, ітерує по `msg.tool_calls`, конвертує через `_toolCallToAction`, dispatch через існуючий if/else ланцюг
+- Якщо AI повертає `msg.content` разом з tool_calls — показує як follow-up повідомлення (замінює старий `ask_after` pattern)
+- `sendClarifyText()` теж на tool calling
+- Прибрано імпорт `callAIWithHistory` (більше не використовується в inbox)
+
+**Переваги нового підходу:**
+1. AI ніколи не поверне зламаний JSON — OpenAI гарантує валідну структуру
+2. Promt у 6-7 разів коротший → більше контексту, дешевше в токенах
+3. AI краще класифікує дії (окремі tools з чіткими описами замість "інтерпретації тексту")
+4. Масиви дій обробляються натівно через `msg.tool_calls` array
+5. Backward compat: `callAI()`, `callAIWithHistory()`, `callOwlChat()` працюють для інших модулів (tab chat bars, proactive.js)
+
+**Аудит виявив і виправив 6 багів:**
+- 🔴 **CRITICAL:** `sendClarifyText` читав `clarifyOriginalText` ПІСЛЯ `closeClarify()` яка обнуляла його → AI отримував `"null"` замість тексту уточнення. **Це був pre-existing bug і в старому коді**, тепер виправлено збереженням у локальну змінну до виклику `closeClarify()`
+- 🟡 `save_habit`: поле `details` губилось у конвертері → детальний опис звички втрачався
+- 🟡 `save_moment`: поле `mood` губилось → AI-класифікація настрою замінювалась regex fallback (гіршої якості). Тепер `parsed.mood` використовується якщо є
+- 🟡 `edit_event`, `edit_note`, `edit_task`, `edit_habit`: поле `comment` не передавалось через конвертер
+- 🟢 Вкладені об'єкти у `save_routine.blocks` і `clarify.options` без `additionalProperties: false` — зараз не ламає (strict mode не увімкнено), але несумісно з майбутнім strict mode
+
+**Коміти сесії:**
+1. `feat: tool calling infrastructure — INBOX_TOOLS, callAIWithTools, compact prompt`
+2. `feat: sendToAI + sendClarifyText switched to tool calling`
+3. `chore: update CACHE_NAME for tool calling deploy`
+4. `cleanup: remove unused callAIWithHistory import from inbox.js`
+5. `fix: 6 bugs found by deep audit of tool calling migration`
 
 ---
 
@@ -77,7 +118,7 @@
 - Обмеження: max 1/год, cooldown на тип тригера, `nm_owl_followups`
 
 ### Jarvis Architecture — ДО Supabase
-1. **4.1 Tool Calling** — перевести API на function calling (2 сесії, найбільший ефект)
+1. ~~**4.1 Tool Calling**~~ → ✅ ЗРОБЛЕНО 10.04 (25 tools, prompt скорочений у 6-7 разів, 6 багів виправлено аудитом)
 2. **4.2 Day State + Nightly Brain Dump** — нічна компресія дня в 3 пункти (1 сесія)
 3. **4.3 Семантичні cooldowns** — topic-based антиповтор замість лексичного (1 сесія)
 4. **G3 Характери → Judge Layer поріг** — різна поведінка coach/partner/mentor (0.5 сесії)
@@ -98,16 +139,16 @@
 
 ---
 
-## Ключові файли (оновлено 09.04)
+## Ключові файли (оновлено 10.04)
 
 | Файл | Опис |
 |------|------|
-| `src/tabs/calendar.js` | nm_events, Calendar modal, **Day schedule modal (об'єднаний таймлайн)**, Events list, "Найближче", Routine modal, **Drum picker (барабан дати/часу)**, Event-edit modal, zoom-анімації, навігаційний стек, **SVG іконка з динамічною датою** |
-| `src/owl/proactive.js` | Єдина генерація табло, instant reactions, first-visit hints, **_extractBannedWords антиповтор** (isTooSimilar видалено), local fallback з характером + правильна граматика, API error dot |
-| `src/owl/inbox-board.js` | OWL Board: **shouldOwlSpeak() Judge Layer**, getOwlBoardContext, анкетування, вечірній пульс, нагадування (перевірка кожну хв), safety net, chat-closed тригер |
+| `src/tabs/calendar.js` | nm_events, Calendar modal, Day schedule modal (об'єднаний таймлайн), Events list, "Найближче", Routine modal, Drum picker (барабан дати/часу), Event-edit modal, zoom-анімації, навігаційний стек, SVG іконка з динамічною датою |
+| `src/owl/proactive.js` | Єдина генерація табло, instant reactions, first-visit hints, _extractBannedWords антиповтор, local fallback з характером + правильна граматика, API error dot |
+| `src/owl/inbox-board.js` | OWL Board: shouldOwlSpeak() Judge Layer, getOwlBoardContext, анкетування, вечірній пульс, нагадування (перевірка кожну хв), safety net, chat-closed тригер |
 | `src/owl/chips.js` | Центральний модуль чіпів — рендер, клік, fuzzy match ✔️, трекінг, chip context для AI |
-| `src/ai/core.js` | getAIContext, callAI, OWL особистість, **"НАГАДАЙ = set_reminder" правило**, правило ЗМІНИТИ=edit |
-| `src/tabs/inbox.js` | sendToAI, processSaveAction, save_routine, chip board context, _detectEventFromTask, **min 0.8s typing**, **split reply для create_project** |
+| `src/ai/core.js` | getAIContext, callAI, callAIWithHistory, **callAIWithTools (NEW 10.04)**, **INBOX_TOOLS 25 function definitions (NEW 10.04)**, **INBOX_SYSTEM_PROMPT скорочений ~200→~30 рядків (10.04)**, OWL особистість, правило ЗМІНИТИ=edit |
+| `src/tabs/inbox.js` | **sendToAI() на tool calling (10.04)**, **_toolCallToAction() конвертер (10.04)**, processSaveAction (подовжений: parsed.mood, parsed.details), save_routine, chip board context, _detectEventFromTask, min 0.8s typing, split reply для create_project |
 | `src/tabs/tasks.js` | Задачі + task chat, **setupModalSwipeClose з drum-col guard** |
 | `src/tabs/habits.js` | Звички + processUniversalAction (edit_event, delete_event, edit_note, set_reminder, save_routine), **_splitReply helper**, saveQuitLog з dispatch |
 | `src/core/nav.js` | TAB_THEMES, doRefreshMemory |
@@ -116,6 +157,7 @@
 
 ## Попередні сесії
 
+- **10.04** — 🎯 **4.1 Tool Calling зроблено.** Перехід AI з текстового JSON на OpenAI function calling. 25 tools, prompt скорочений ~200→~30 рядків. `callAIWithTools()` нова функція, `_toolCallToAction()` конвертер. Backward compat для tab chat bars. Глибокий аудит виявив і виправив 6 багів (1 critical: sendClarifyText pre-existing null bug; 4 medium: втрачені details/mood/comment поля; 1 low: nested additionalProperties).
 - **09.04** — B-23/B-24/B-25 закриті. Календар переробка: day schedule modal, об'єднаний таймлайн routine+events, all-day events, drum picker, event-edit modal, zoom-анімації, SVG іконки з динамічною датою. Живі відповіді Фаза 1: split replies, min typing delay. Аудит промптів: set_reminder додано в Notes/Health.
 - **08-09.04** — Judge Layer (shouldOwlSpeak), Relevance Scoring, chat/board priorities, розпорядок дня (🕐 модалка), нагадування (set_reminder), edit_event/delete_event/edit_note, повне редагування з усіх чат-барів, B-15/dawn/quit dispatch/finance date/CI auto-increment. Gemini review → G1-G8 записані. Рішення: тільки сова з 3 характерами.
 - **07.04 (2)** — B-20/B-21/B-22 закриті. Calendar Фази 4-5. Instant reactions. Анкетування. First-visit hints. Єдиний мозок (всі промпти синхронізовані). Фікс event vs момент. i18n записано в roadmap.
