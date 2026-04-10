@@ -7,7 +7,7 @@
 import { currentTab, switchTab } from '../core/nav.js';
 import { escapeHtml, saveOffline } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
-import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithHistory, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
