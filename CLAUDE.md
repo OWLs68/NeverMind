@@ -154,7 +154,8 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/core/trash.js` | Кошик (7 днів TTL), showUndoToast, undoDelete |
 | `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml |
 | `src/core/logger.js` | Error logging, console override |
-| `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість, "НАГАДАЙ=set_reminder" правило |
+| `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість, "НАГАДАЙ=set_reminder" правило, 26 INBOX_TOOLS (включно з save_memory_fact) |
+| `src/ai/memory.js` | **Структурована пам'ять фактів** — `nm_facts` з часовими мітками (11.04). CRUD, дедуплікація, TTL, категорії (preferences/health/work/relationships/context/goals), formatFactsForContext/Board, міграція legacy nm_memory |
 | `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
 | `src/owl/board.js` | OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox) |
 | `src/owl/proactive.js` | Генерація проактивних повідомлень, getTabBoardContext |
@@ -272,7 +273,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 ### AI контекст (getAIContext повертає)
 1. Дата/час/день тижня (укр)
 2. Профіль користувача (з налаштувань)
-3. `nm_memory` — AI-генерований профіль (оновлюється раз на день)
+3. `nm_facts` — структуровані факти з часовими мітками (формат `formatFactsForContext()`). Заповнюється через tool calling (save_memory_fact у Inbox) + фонова екстракція раз на день (doRefreshMemory). Fallback на legacy `nm_memory` поки не пройшла міграція.
 4. Останні 8 активних задач з ID
 5. Всі звички з статусом виконання сьогодні
 6. Останні 8 записів inbox сьогодні
@@ -339,7 +340,9 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `nm_trash` | `[]` max 200, 7 днів TTL | `src/core/trash.js` |
 | `nm_settings` | `{}` | `src/core/nav.js` |
 | `nm_gemini_key` | string (OpenAI ключ — legacy-назва, **тимчасово** до Supabase. Після міграції — ключ на сервері, юзер не вводить вручну) | `src/core/nav.js` |
-| `nm_memory` | string (300 слів, AI-профіль) | `src/ai/core.js` |
+| `nm_memory` | string (300 слів, AI-профіль) — **legacy з 11.04**, залишений як fallback поки не пройшла міграція | `src/ai/core.js` |
+| `nm_facts` | `[{id, text, category, ts, lastSeen, source, ttl}]` — структурована пам'ять (11.04) | `src/ai/memory.js` |
+| `nm_facts_migrated` | `'1'` — прапор що міграція з legacy nm_memory виконана | `src/ai/memory.js` |
 
 **Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`, `nm_fin_coach_{period}`
 

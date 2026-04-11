@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-11 (сесія start-session-FPKOV — Крок 1: уніфікація followups.js з Judge Layer)
+**Оновлено:** 2026-04-11 (сесія start-session-FPKOV — Крок 1 уніфікація + Крок 2 структурована пам'ять фактів)
 
 ---
 
@@ -26,13 +26,92 @@
 
 **4. Архітектурний принцип: ОДИН МОЗОК НА ВСЕ.** OWL = єдиний Jarvis. Табло, чати, чіпи — різні вікна одного мозку. **Зміна в одній вкладці = зміна в усіх.** Мозок має працювати на будь-якій комбінації активних вкладок — юзер може не використовувати 5 з 8. Повний план → `FEATURES_ROADMAP.md` секція "🧠 Мозок OWL".
 
-**5. Наступний крок роботи:** ✅ Крок 1 ЗРОБЛЕНО 11.04. Далі — **Крок 2: структурована пам'ять фактів** (заміна тексту `nm_memory` на факти з timestamps — часовими мітками). Архітектурно вирішує корінь бага "болить горло". Деталі → секція "Jarvis Architecture — ДО Supabase" нижче.
+**5. Наступний крок роботи:** ✅ Крок 1 і ✅ Крок 2 ЗРОБЛЕНО 11.04. Далі — **Крок 3: семантичні cooldowns** (AI повертає `topic` поле у JSON; блокуємо теми а не слова; видалити `_extractBannedWords`; 1 сесія). Або тест Кроку 2 на продакшені перед рухом далі. Деталі → секція "Jarvis Architecture — ДО Supabase" нижче.
 
 **6. Бізнес-модель зафіксована (11.04):** freemium — безкоштовна базова версія з мінімальними функціями, підписка для повного функціоналу. **API через хмару Supabase Edge Functions** — користувач НЕ вписує свій OpenAI ключ. Роман тримає спільний ключ на сервері, виклики OpenAI йдуть через Edge Function, ліміти застосовуються за рівнем підписки. Це фундаментальне рішення яке впливає на: (а) що буде в безкоштовній версії vs платній, (б) архітектуру Supabase Edge Functions з першого дня, (в) систему обліку використання (хто скільки запитів зробив).
 
 ---
 
 ## Що зроблено в сесії 11.04 (start-session-FPKOV)
+
+### ✅ Крок 2 — Структурована пам'ять фактів (архітектурний фікс бага "болить горло")
+
+**Проблема:** `nm_memory` — текстовий абзац ~300 слів без часових міток. AI не розрізняв "хворів минулого місяця" vs "хворіє зараз" → видавав старі факти як актуальні. Попередня сесія виправила латкою ("ПРАВИЛО ЧЕСНОСТІ" у промпті), але корінь лишився.
+
+**Рішення — нова архітектура пам'яті:**
+
+1. **Новий модуль `src/ai/memory.js`** (~280 рядків):
+   - Структура факту: `{id, text, category, ts, lastSeen, source, ttl}`
+   - 6 категорій: `preferences | health | work | relationships | context | goals` (кожна з кольором/emoji для UI)
+   - TTL (time-to-live — скільки днів жити): `null` для постійних (сім'я, алергія), 7-30 днів для тимчасових (симптоми, поточні обставини)
+   - CRUD: `getFacts()` (з фільтром TTL), `getFactsRaw()` (без фільтра, для UI), `addFact()` (з bigram-дедуплікацією 75% поріг), `deleteFact()`, `updateFactText()`, `touchFact()`, `cleanupExpiredFacts()`
+   - Forматтери: `formatFactsForContext(30)` (для `getAIContext()`, з відносним часом), `formatFactsForBoard(15)` (коротший для промпту табло)
+   - Міграція: `isMigrationDone()`, `markMigrationDone()`, `getLegacyMemoryText()`
+   - Hard limit 100 фактів (trim за `lastSeen`)
+
+2. **Новий tool `save_memory_fact` у `INBOX_TOOLS`** (стало 26 tools):
+   - Параметри: `fact` (3-15 слів від третьої особи), `category`, `ttl_days?`
+   - Description інструктує AI: викликати ПАРАЛЕЛЬНО з іншими tools коли юзер згадує факт про себе; НЕ для поточних справ
+   - Dispatcher у `src/tabs/inbox.js` (і `sendToAI`, і `sendClarifyText`) — зберігає тихо через `addFact()`, UI-повідомлення приходить через `msg.content` який AI додає параллельно
+
+3. **Переписаний `doRefreshMemory()` у `src/core/nav.js`:**
+   - Крок 1: `cleanupExpiredFacts()` — прибирає прострочені
+   - Крок 2: одноразова міграція `_migrateLegacyMemoryToFacts()` — на першому запуску передає старий текст у AI через `callAIWithTools` зі `save_memory_fact` tool → AI витягує до 30 фактів з текстового абзацу → `addFact(source: 'migration')`. Прапор `nm_facts_migrated` = '1'
+   - Крок 3: фонова екстракція `_backgroundExtractFacts()` — безумовно раз на день аналізує дані за 7 днів (inbox, задачі, нотатки, моменти, чати всіх вкладок), викликає AI з `save_memory_fact` tool + списком вже відомих фактів для дедуплікації, макс 5 нових фактів за виклик. Safety net для джерел що ще не на tool calling
+
+4. **`getAIContext()` у `src/ai/core.js`:**
+   - Читає факти через `formatFactsForContext(30)` — групує по категорії з відносним часом ("3 дні тому")
+   - Якщо фактів ще немає → fallback на legacy `nm_memory` (поки міграція не пройшла)
+   - Інструктує AI не цитувати факти здоров'я/обставин старші ніж день як актуальний стан
+
+5. **UI "Що агент знає про мене" у налаштуваннях:**
+   - `renderMemoryCards()` повністю переписаний — групує факти за категорією з кольоровими бейджами, показує відносний час і джерело (Inbox/фон/вручну/міграція), TTL якщо є
+   - Inline редагування через `contenteditable` + `onblur → saveMemoryFactEdit(id, text)`
+   - Видалення через `deleteMemoryCard(id)` → `deleteFact(id)`
+   - Додавання вручну через `addMemoryEntry()` → `addFact(source: 'manual', category: 'context')` (юзер потім може змінити категорію редагуванням)
+   - Порожній стан з підказкою
+
+6. **Проактивність (`src/owl/proactive.js`):**
+   - Промпт табло тепер читає `formatFactsForBoard(15)` замість `localStorage.getItem('nm_memory')`
+   - Fallback на legacy текст для backward compat
+
+7. **Фінанси (`src/tabs/finance.js`):**
+   - `hasDebt` детекція тепер читає і нові факти (категорії work/context), і legacy `nm_memory` — комбінує обидва через `.toLowerCase().includes()`
+
+8. **Інфраструктура:**
+   - `NM_KEYS.settings` у `boot.js` отримав `nm_facts` і `nm_facts_migrated`
+   - `exportData()` у `nav.js` — додано `nm_facts` у бекап JSON
+
+**Архітектурний результат:** корінь бага "болить горло" вирішено. Тепер:
+- AI бачить КОЛИ факт записано → сам судить чи досі актуальний
+- Тимчасові факти (симптоми) живуть 7-14 днів, далі самі зникають через TTL
+- Постійні факти (сім'я, алергія, вподобання) — без TTL, живуть вічно
+- Дедуплікація через bigram similarity (перекриття пар символів) — "Любить каву" не створить 5 копій
+- Два канали наповнення (real-time Inbox + background daily) забезпечують покриття
+- Юзер бачить все що агент знає і може виправляти через UI
+
+**Файли змінено (сесія сумарно, Крок 1 + Крок 2):**
+- `src/ai/memory.js` — НОВИЙ, ~280 рядків
+- `src/ai/core.js` — імпорт memory, нова секція у getAIContext, новий tool `save_memory_fact`, правило у INBOX_SYSTEM_PROMPT
+- `src/tabs/inbox.js` — імпорт `addFact`, converter + dispatcher для `save_memory_fact` (у sendToAI і sendClarifyText, тепер обидва цикли обробляють ВСІ tool_calls паралельно)
+- `src/core/nav.js` — повний перепис doRefreshMemory + UI functions renderMemoryCards/addMemoryEntry/deleteMemoryCard/saveMemoryFactEdit, імпорт memory функцій
+- `src/owl/proactive.js` — промпт табло через formatFactsForBoard
+- `src/owl/inbox-board.js` — Крок 1 (Judge Layer channel-aware)
+- `src/owl/followups.js` — Крок 1 (делегація у Judge Layer)
+- `src/tabs/finance.js` — hasDebt читає і facts і legacy
+- `src/core/boot.js` — NM_KEYS + nm_facts/nm_facts_migrated
+- `sw.js` — CACHE_NAME `nm-20260411-1519`
+- `FEATURES_ROADMAP.md` — 4.2 позначено зробленим, додано 4.47 (RAG через search_facts) у "Після Supabase"
+- `CLAUDE.md` — додано memory.js у таблицю файлів, додано nm_facts/nm_facts_migrated у таблицю даних, оновлено "що AI бачить" секцію
+- `_ai-tools/SESSION_STATE.md` — цей запис
+
+**Наступна сесія:**
+1. **Тест на продакшені** (рекомендую першим):
+   - Перевірити що міграція з `nm_memory` пройшла при першому запуску після деплою — відкрити налаштування → "Що агент знає про мене", має з'явитись структурований список фактів замість плоского тексту
+   - Написати в Inbox щось типу "у мене алергія на горіхи" — має тихо викликатись `save_memory_fact`, потім відкрити налаштування → перевірити що факт з'явився
+   - Через день — `doRefreshMemory()` автоматично витягне нові факти з активності (фоновий канал)
+2. **Крок 3 Semantic cooldowns** — 1 сесія, невелика зміна у промтах табло і cooldown-системі
+3. **Крок 4 Negative Memory** — окрема сесія
 
 ### ✅ Крок 1 — Уніфікація `followups.js` з `shouldOwlSpeak()`
 **Проблема:** Два паралельні "судді" — `shouldOwlSpeak()` у `inbox-board.js` (для табло) і власні hard-блокери у `followups.js` (для chat follow-ups). Дубльована логіка "чи говорити": silent phase, API key, global cooldown, activeChatBar.
@@ -281,9 +360,9 @@
 
 2. ~~**Крок 1 — Уніфікація `followups.js` з `shouldOwlSpeak()`**~~ → ✅ ЗРОБЛЕНО 11.04 (start-session-FPKOV). Додано channel-aware routing у `shouldOwlSpeak(trigger, opts)`: `'board'` (default) або `'chat-followup'`. Спільні hard-блокери винесено в роутер, далі делегація у `_judgeBoard` або `_judgeFollowup`. `followups.js` скорочено — тільки доменна логіка (детекція тригерів, per-item cooldowns, генерація, надсилання), усі глобальні блокери делегуються Judge Layer.
 
-3. **Крок 2 — Структурована пам'ять фактів (4.2 переформульовано)** (1.5-2 сесії). Замість тексту `nm_memory` — список фактів з timestamps. Новий tool `save_memory_fact(що, коли, категорія)`. Переписати `doRefreshMemory()`. Міграція існуючого тексту. **Вирішує корінь бага "болить горло" архітектурно.** ← **НАСТУПНИЙ**
+3. ~~**Крок 2 — Структурована пам'ять фактів (4.2)**~~ → ✅ ЗРОБЛЕНО 11.04 (start-session-FPKOV). Новий модуль `src/ai/memory.js` з `nm_facts` (структура `{id, text, category, ts, lastSeen, source, ttl}`). Новий tool `save_memory_fact` у `INBOX_TOOLS`. Повністю переписаний `doRefreshMemory()` з одноразовою міграцією legacy `nm_memory` + фоновою екстракцією через tool calling. UI у налаштуваннях показує факти з категоріями/часом/джерелом. Простий варіант (всі факти у getAIContext без фільтрації) — RAG відкладено як Крок 4.47 після Supabase+pgvector. Архітектурно виправляє корінь бага "болить горло". Детально — секція "Що зроблено в сесії 11.04" вище.
 
-4. **Крок 3 — Semantic cooldowns (4.3)** (1 сесія). AI повертає поле `topic` у JSON-відповіді. Блокувати теми (`daily_mood`, `task_reminder`) а не слова. Видалити `_extractBannedWords`. Переписати cooldown-систему щоб блокувала теми.
+4. **Крок 3 — Semantic cooldowns (4.3)** (1 сесія). AI повертає поле `topic` у JSON-відповіді. Блокувати теми (`daily_mood`, `task_reminder`) а не слова. Видалити `_extractBannedWords`. Переписати cooldown-систему щоб блокувала теми. ← **НАСТУПНИЙ (після тесту Кроку 2 на продакшені)**
 
 5. **Крок 4 — Negative Memory (4.20)** (1 сесія). Новий ключ `nm_negative_rules` з правилами "що дратує". Логіка авто-додавання (ігнорування 3+ разів → правило). UI кнопка "не нагадуй мені про це" на повідомленнях OWL. Передача правил у `getAIContext()`.
 

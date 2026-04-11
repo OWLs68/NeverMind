@@ -15,6 +15,7 @@ import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
+import { formatFactsForContext, getFacts } from './memory.js';
 
 export let activeChatBar = null;
 export function setActiveChatBar(v) { activeChatBar = v; }
@@ -71,7 +72,6 @@ export function getOWLPersonality() {
 
 export function getAIContext() {
   const profile = getProfile();
-  const memory = localStorage.getItem('nm_memory') || '';
   const parts = [];
 
   // === Дата і час ===
@@ -85,9 +85,20 @@ export function getAIContext() {
   const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}, часовий пояс: ${tzStr}`;
   parts.push(`Зараз: ${dateStr}`);
 
-  // === Профіль і памʼять ===
+  // === Профіль і пам'ять ===
   if (profile) parts.push(`Профіль: ${profile}`);
-  if (memory) parts.push(`Довгостроковий профіль користувача (ІСТОРИЧНИЙ, може бути застарілим — використовуй ТІЛЬКИ для стилю спілкування і загальних вподобань, НЕ цитуй звідти поточний стан здоров'я/настрою/обставин):\n${memory}`);
+
+  // Структуровані факти (nm_facts) — нова пам'ять з часовими мітками
+  const factsStr = formatFactsForContext(30);
+  if (factsStr) {
+    parts.push(factsStr);
+  } else {
+    // Fallback на legacy текст поки міграція не пройшла (щоб AI не втрачав контекст)
+    const legacyMemory = localStorage.getItem('nm_memory') || '';
+    if (legacyMemory) {
+      parts.push(`Довгостроковий профіль (ІСТОРИЧНИЙ, може бути застарілим — для стилю спілкування; НЕ цитуй поточний стан здоров'я/настрою):\n${legacyMemory}`);
+    }
+  }
 
   // === Активні задачі (з ID для зіставлення) ===
   const tasks = getTasks().filter(t => t.status === 'active').slice(0, 8);
@@ -300,6 +311,8 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 
 МЕТАІНСТРУКЦІЇ: Якщо юзер пише "це задача", "це нотатка", "це звичка" — він прямо каже ТОБІ який тип створити. Створи відповідний тип з цим текстом. НЕ save_note за замовчуванням.
 
+ПАМ'ЯТЬ: Якщо юзер мимохідь повідомляє ФАКТ ПРО СЕБЕ (сім'я, робота, здоров'я, вподобання, розклад, ціль) — виклич save_memory_fact ПАРАЛЕЛЬНО з іншими tools. Приклад: "У мене алергія на горіхи, купи безглютенову піцу" → save_task (купити піцу) + save_memory_fact (алергія). Приклад: "Моя дочка Марія йде завтра у школу о 8" → create_event + save_memory_fact (має дочку Марію). НЕ викликай для поточних справ — тільки для стійких фактів про людину.
+
 РОЗРІЗНЕННЯ task vs event vs project:
 - ЗАДАЧА (save_task) = ДІЯ яку ТИ маєш ЗРОБИТИ: купити, подзвонити, зробити, написати. Дієслово = задача.
 - ПОДІЯ (create_event) = ФАКТ що СТАНЕТЬСЯ з датою: приїзд, зустріч, день народження, візит
@@ -350,6 +363,8 @@ export const INBOX_TOOLS = [
   { type: "function", function: { name: "restore_deleted", description: "Відновити видалений запис з кошика.", parameters: { type: "object", properties: { query: { type: "string", description: "Ключові слова, 'all' (всі) або 'last' (останній)" }, type: { type: "string", enum: ["task","note","habit","inbox","folder","finance"], description: "Тип запису" } }, required: ["query"], additionalProperties: false } } },
   { type: "function", function: { name: "save_routine", description: "Зберегти/змінити розпорядок дня.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon","tue","wed","thu","fri","sat","sun","default"] }, description: "Дні. default=будні. Масив: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time","activity"] }, description: "Блоки розпорядку" } }, required: ["day","blocks"], additionalProperties: false } } },
   { type: "function", function: { name: "clarify", description: "Запитати уточнення. ТІЛЬКИ коли 2+ різних типів і незрозуміло, або задача vs проект. Якщо 80%+ впевненості — зберігай без питань.", parameters: { type: "object", properties: { question: { type: "string", description: "Коротке питання 1 речення" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 варіанти з вбудованими діями" } }, required: ["question","options"], additionalProperties: false } } },
+  // --- ПАМ'ЯТЬ ---
+  { type: "function", function: { name: "save_memory_fact", description: "Записати ФАКТ ПРО КОРИСТУВАЧА у довгострокову пам'ять. Використовуй КОЛИ юзер повідомляє щось важливе ПРО СЕБЕ: звичку, алергію, сім'ю, роботу, ціль, улюблений спосіб робити щось, обмеження, вподобання. НЕ використовуй для поточних справ/задач/подій — для цього save_task/save_note/create_event. Приклади коли треба: 'У мене алергія на горіхи' → health; 'Працюю в Kyivstar з 9 до 18' → work; 'Моя дочка Марія ходить у 3 клас' → relationships; 'Люблю каву тільки зранку' → preferences; 'Хочу відкрити хімчистку до літа' → goals; 'Зараз у Amsterdam на 2 тижні' → context. Можна викликати РАЗОМ з іншими tools (юзер записав задачу І повідомив факт). Після виклику ОБОВ'ЯЗКОВО додай короткий text content ('Запам'ятав ...') щоб юзер побачив відповідь.", parameters: { type: "object", properties: { fact: { type: "string", description: "Факт одним реченням 3-15 слів від третьої особи українською. 'Має дочку Марію', 'Працює в Kyivstar', 'Алергія на горіхи', 'Прокидається о 7'" }, category: { type: "string", enum: ["preferences","health","work","relationships","context","goals"], description: "preferences=вподобання/звички; health=здоров'я/алергії/діагнози; work=робота/кар'єра/фінанси; relationships=сім'я/друзі/колеги; context=локація/розпорядок/поточні обставини; goals=цілі/плани/наміри" }, ttl_days: { type: "integer", description: "Через скільки днів факт вважатиметься застарілим і зникне. НЕ вказувати для постійних фактів (сім'я, алергія, вік, вподобання — живуть вічно). Вказувати ТІЛЬКИ для тимчасових: симптоми здоров'я=7-14; поточні обставини (відрядження, тимчасовий проект)=30-60" } }, required: ["fact","category"], additionalProperties: false } } },
 ];
 
 // === HTTP WRAPPER — єдине місце де робиться запит до AI ===

@@ -8,6 +8,7 @@ import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { getFacts } from '../ai/memory.js';
 import { tryTabBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
 import { processUniversalAction } from './habits.js';
@@ -137,9 +138,16 @@ function _hideOldFinBlocks() {
 // Адаптивний бенчмарк на основі контексту користувача
 function getFinAdaptiveBenchmark() {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  const memory = (localStorage.getItem('nm_memory') || '').toLowerCase();
+  // Шукаємо індикатори боргу у нових фактах (categories work/context) і
+  // у legacy nm_memory (для backward compat поки не всі юзери мігрували).
+  const factText = getFacts()
+    .filter(f => f.category === 'work' || f.category === 'context')
+    .map(f => (f.text || '').toLowerCase())
+    .join(' ');
+  const legacyMem = (localStorage.getItem('nm_memory') || '').toLowerCase();
+  const combinedMem = factText + ' ' + legacyMem;
   const age = parseInt(settings.age) || 0;
-  const hasDebt = memory.includes('борг') || memory.includes('кредит') || memory.includes('позик');
+  const hasDebt = combinedMem.includes('борг') || combinedMem.includes('кредит') || combinedMem.includes('позик');
   const from3m = getFinPeriodRange('3months');
   const recentTxs = getFinance().filter(t => t.ts >= from3m);
   const hasFewData = recentTxs.length < 5;

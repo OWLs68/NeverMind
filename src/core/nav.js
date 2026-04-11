@@ -4,7 +4,20 @@
 import { updateErrorLogBtn } from './logger.js';
 import { escapeHtml } from './utils.js';
 import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
-import { callAI, closeAllChatBars } from '../ai/core.js';
+import { callAI, callAIWithTools, INBOX_TOOLS, closeAllChatBars } from '../ai/core.js';
+import {
+  addFact,
+  cleanupExpiredFacts,
+  deleteFact,
+  getFacts,
+  getFactsRaw,
+  updateFactText,
+  FACT_CATEGORIES,
+  relativeTime,
+  isMigrationDone,
+  markMigrationDone,
+  getLegacyMemoryText,
+} from '../ai/memory.js';
 import { tryTabBoardUpdate } from '../owl/proactive.js';
 import { renderEvening, renderMe, renderMeHabitsStats } from '../tabs/evening.js';
 import { getFinBudget, renderFinance, saveFinBudget, setCurrency } from '../tabs/finance.js';
@@ -798,57 +811,107 @@ function closeMemoryModal() {
   document.getElementById('memory-modal').style.display = 'none';
 }
 
+// === UI: "Що агент знає про мене" — структуровані факти з категоріями ===
+// Рендер групує факти за категорією, показує відносний час, кольорові бейджі.
 function renderMemoryCards() {
-  const raw = localStorage.getItem('nm_memory') || '';
   const list = document.getElementById('memory-cards-list');
-  const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
-  if (!entries.length) {
-    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще порожньо.<br>Напиши кілька записів в Inbox і натисни "Оновити через OWL".</div>';
+  if (!list) return;
+
+  const facts = getFactsRaw().filter(f => f && f.text); // навіть прострочені показуємо (видно джерело)
+
+  if (!facts.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще порожньо.<br>Напиши кілька записів в Inbox і натисни "Оновити через OWL".<br><br>Або додай факт вручну через поле вище.</div>';
     return;
   }
-  list.innerHTML = entries.map((entry, i) => `
-    <div id="memory-card-${i}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
-      <div contenteditable="true" id="memory-entry-${i}" style="flex:1;font-size:15px;color:#1e1040;line-height:1.5;outline:none;min-width:0;word-break:break-word" onblur="saveMemoryCards()">${escapeHtml(entry)}</div>
-      <button onclick="deleteMemoryCard(${i})" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">×</button>
-    </div>`).join('');
+
+  // Групуємо по категорії
+  const grouped = {};
+  facts.forEach(f => {
+    const c = f.category || 'context';
+    if (!grouped[c]) grouped[c] = [];
+    grouped[c].push(f);
+  });
+
+  // Порядок відображення — найважливіші категорії зверху
+  const order = ['health', 'relationships', 'work', 'goals', 'preferences', 'context'];
+
+  const parts = [];
+  for (const cat of order) {
+    if (!grouped[cat] || !grouped[cat].length) continue;
+    const meta = FACT_CATEGORIES[cat] || { label: cat, emoji: '•', color: '#666' };
+    // Заголовок категорії
+    parts.push(`<div style="display:flex;align-items:center;gap:8px;margin:14px 2px 6px;padding:0 2px"><span style="font-size:14px">${meta.emoji}</span><span style="font-size:12px;font-weight:700;letter-spacing:0.02em;color:${meta.color};text-transform:uppercase">${meta.label}</span><span style="font-size:11px;color:rgba(30,16,64,0.35);margin-left:auto">${grouped[cat].length}</span></div>`);
+    // Сортуємо всередині категорії за свіжістю
+    grouped[cat].sort((a, b) => (b.lastSeen || b.ts || 0) - (a.lastSeen || a.ts || 0));
+    for (const f of grouped[cat]) {
+      const ago = relativeTime(f.ts);
+      const ttlNote = f.ttl ? ` · живе ${f.ttl} дн` : '';
+      const sourceLabel = {
+        inbox: 'Inbox',
+        auto: 'фон',
+        manual: 'вручну',
+        migration: 'стара пам\'ять',
+        onboarding: 'онбординг',
+      }[f.source] || '';
+      const escId = escapeHtml(f.id);
+      parts.push(`
+        <div data-fact-id="${escId}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div contenteditable="true" data-fact-edit="${escId}" onblur="saveMemoryFactEdit('${escId}', this.textContent)" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
+            <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-top:4px">${ago}${sourceLabel ? ' · ' + sourceLabel : ''}${ttlNote}</div>
+          </div>
+          <button onclick="deleteMemoryCard('${escId}')" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">×</button>
+        </div>`);
+    }
+  }
+
+  list.innerHTML = parts.join('');
 }
 
+// Додати факт вручну (з поля вводу у модалці)
 function addMemoryEntry() {
   const input = document.getElementById('memory-new-input');
+  if (!input) return;
   const text = input.value.trim();
   if (!text) return;
-  const raw = localStorage.getItem('nm_memory') || '';
-  const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
-  entries.push(text);
-  localStorage.setItem('nm_memory', entries.join('\n'));
+  addFact({
+    text,
+    category: 'context', // за замовчуванням — юзер сам може змінити редагуванням
+    source: 'manual',
+  });
   input.value = '';
   renderMemoryCards();
-  // scroll to bottom
   const list = document.getElementById('memory-cards-list');
   if (list) setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
 }
 
-function deleteMemoryCard(idx) {
-  const raw = localStorage.getItem('nm_memory') || '';
-  const entries = raw.split('\n').map(s => s.trim()).filter(Boolean);
-  entries.splice(idx, 1);
-  localStorage.setItem('nm_memory', entries.join('\n'));
+// Видалити факт за id
+function deleteMemoryCard(id) {
+  if (!id) return;
+  deleteFact(id);
   renderMemoryCards();
 }
 
+// Редагування тексту факту inline (contenteditable blur)
+function saveMemoryFactEdit(id, newText) {
+  if (!id) return;
+  const trimmed = (newText || '').trim();
+  if (!trimmed) {
+    deleteFact(id);
+    renderMemoryCards();
+    return;
+  }
+  updateFactText(id, trimmed);
+}
+
+// Збереження всіх карток (legacy — викликається старим "Зберегти" кнопкою)
+// Тепер inline редагування зберігає себе само через onblur, тож ця функція
+// просто перемальовує і показує toast.
 function saveMemoryCards() {
-  const list = document.getElementById('memory-cards-list');
-  if (!list) return;
-  const divs = list.querySelectorAll('[id^="memory-entry-"]');
-  const entries = Array.from(divs).map(d => d.textContent.trim()).filter(Boolean);
-  const text = entries.join('\n');
-  localStorage.setItem('nm_memory', text);
-  // sync hidden field
-  const hidden = document.getElementById('input-memory');
-  if (hidden) hidden.value = text;
-  // update timestamp label
+  renderMemoryCards();
   const tsEl = document.getElementById('memory-last-updated');
   if (tsEl) tsEl.textContent = 'Збережено щойно';
+  showToast('✓ Збережено');
 }
 
 function openPrivacyPolicy() {
@@ -909,7 +972,7 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
-  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats','nm_health_cards','nm_health_log','nm_projects','nm_evening_mood'];
+  const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_facts','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats','nm_health_cards','nm_health_log','nm_projects','nm_evening_mood'];
   keys.forEach(k => {
     const v = localStorage.getItem(k);
     if (v) data[k] = JSON.parse(v);
@@ -994,75 +1057,40 @@ async function refreshMemory() {
   }
 }
 
+// === ПАМ'ЯТЬ (структуровані факти, v2 — 11.04) ===
+// Нова архітектура: замість текстового nm_memory — масив nm_facts з часовими мітками.
+// Два канали наповнення:
+//   1. Real-time — Inbox tool calling (save_memory_fact у INBOX_TOOLS)
+//   2. Background — ця функція (раз на день, аналіз даних за 7 днів)
+// Перший запуск робить міграцію старого nm_memory (текст → факти).
+
 async function doRefreshMemory(showResult) {
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
-  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
-  const notes = getNotes();
-  const profile = getProfile();
-  const existingMemory = localStorage.getItem('nm_memory') || '';
+  // 1. Прибираємо прострочені факти
+  cleanupExpiredFacts();
 
-  const recentInbox = inbox.slice(-50).map(i => `[${i.category}] ${i.text}`).join('\n');
-  const tasksList = tasks.map(t => `${t.title} (${t.status})`).join('\n');
-  const notesList = notes.slice(-20).map(n => `[${n.folder||'Загальне'}]${n.updatedAt ? ' (оновлено)' : ''} ${n.text.substring(0,80)}`).join('\n');
-
-  // Збираємо чати для витягування фактів
-  const chatTabs = ['inbox','tasks','notes','me','evening','finance','health','projects'];
-  const recentChats = chatTabs.map(t => {
+  // 2. Перший запуск — міграція старого тексту у факти
+  if (!isMigrationDone()) {
     try {
-      const msgs = JSON.parse(localStorage.getItem('nm_chat_' + t) || '[]');
-      return msgs.slice(-10).map(m => `[${t}/${m.role}] ${m.text}`).join('\n');
-    } catch { return ''; }
-  }).filter(Boolean).join('\n');
-
-  const systemPrompt = `Ти — OWL, агент NeverMind. Проаналізуй записи і чати користувача і витягни КОНКРЕТНІ ФАКТИ про людину.
-
-ПОТОЧНА ПАМ'ЯТЬ (що ми вже знаємо):
-${existingMemory || '(порожньо)'}
-
-ПРАВИЛА:
-- Поверни ТІЛЬКИ НОВІ факти яких ще НЕМАЄ у поточній пам'яті
-- Кожен факт — окремий рядок, коротко і конкретно (5-15 слів)
-- Факти: звички, цілі, вподобання, розпорядок, що не любить, робота, здоров'я, фінанси
-- Пиши як коротку замітку: "Прокидається о 7:00", "Збирає на авто", "Не любить бігати зранку"
-- МОВА ЮЗЕРА: знайди слова/фрази які юзер часто повторює і додай факт. Наприклад якщо пише "зарядка" а не "гімнастика" — запиши "Каже 'зарядка' (не гімнастика)". Якщо використовує специфічний сленг — запиши його.
-- КОРЕЛЯЦІЇ: шукай зв'язки між різними сферами. Наприклад: "Коли пізно лягає — наступного дня пропускає зарядку", "У дні з великими витратами пише негативні моменти". Записуй як факт ТІЛЬКИ якщо бачиш чіткий паттерн (мінімум 2-3 збіги), не вигадуй.
-- Максимум 5 нових фактів за раз (тільки найважливіші)
-- Якщо нових фактів немає — поверни ПУСТО
-- НЕ повторюй те що вже в пам'яті. НЕ вигадуй. Тільки з реальних записів.
-- Відповідай українською.`;
-
-  const userMsg = `Профіль: ${profile || 'не заповнено'}
-
-Останні записи Inbox:
-${recentInbox || 'порожньо'}
-
-Задачі:
-${tasksList || 'немає'}
-
-Нотатки:
-${notesList || 'немає'}
-
-Останні чати:
-${recentChats || 'немає'}`;
-
-  const result = await callAI(systemPrompt, userMsg, {});
-  if (!result || result.trim() === 'ПУСТО' || result.trim().length < 5) {
-    localStorage.setItem('nm_memory_ts', Date.now().toString());
-    return;
+      await _migrateLegacyMemoryToFacts();
+    } catch (e) {
+      console.warn('[memory] migration failed:', e);
+    }
+    markMigrationDone();
   }
 
-  // Додаємо нові факти до існуючих (не перезаписуємо)
-  const existingEntries = existingMemory.split('\n').map(s => s.trim()).filter(Boolean);
-  const newEntries = result.split('\n').map(s => s.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
-  const combined = [...existingEntries, ...newEntries];
-  // Ліміт 50 записів — прибираємо найстаріші
-  if (combined.length > 50) combined.splice(0, combined.length - 50);
-  localStorage.setItem('nm_memory', combined.join('\n'));
+  // 3. Фонова екстракція нових фактів з останніх 7 днів даних
+  try {
+    await _backgroundExtractFacts();
+  } catch (e) {
+    console.warn('[memory] background extraction failed:', e);
+  }
+
   localStorage.setItem('nm_memory_ts', Date.now().toString());
 
-  // Оновити поле якщо відкрите
-  const memEl = document.getElementById('input-memory');
-  if (memEl) memEl.value = result;
+  // Оновити UI якщо модалка відкрита
+  if (document.getElementById('memory-modal')?.style.display !== 'none') {
+    renderMemoryCards();
+  }
 
   const tsEl = document.getElementById('memory-last-updated');
   if (tsEl) {
@@ -1070,7 +1098,141 @@ ${recentChats || 'немає'}`;
     tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
   }
 
-  if (showResult) showToast('✓ Пам\'ять оновлено');
+  if (showResult) showToast("✓ Пам'ять оновлено");
+}
+
+// Одноразова міграція: старий текстовий nm_memory пропускаємо через AI
+// з save_memory_fact tool — AI витягує структуровані факти з тексту.
+async function _migrateLegacyMemoryToFacts() {
+  const legacy = (getLegacyMemoryText() || '').trim();
+  if (!legacy || legacy.length < 10) return; // нічого мігрувати
+
+  const saveMemTool = INBOX_TOOLS.find(t => t.function?.name === 'save_memory_fact');
+  if (!saveMemTool) return;
+
+  const systemPrompt = `Ти — OWL, агент NeverMind. Зараз ОДНОРАЗОВА МІГРАЦІЯ пам'яті: отримуєш старий текстовий абзац фактів про користувача і маєш витягти з нього СТРУКТУРОВАНІ факти. Для КОЖНОГО факту який знаходиш — виклич tool save_memory_fact.
+
+ПРАВИЛА:
+- Максимум 30 фактів. Якщо більше — обери найважливіші.
+- НЕ вигадуй нічого чого не видно в тексті.
+- Пиши від третьої особи українською: "Має...", "Працює...", "Любить..."
+- Постійні факти (сім'я, алергія, вік, стійкі вподобання) — БЕЗ ttl_days.
+- Тимчасові факти (поточна робота, локація, симптоми) — з ttl_days 30-90.
+- Категорії: preferences (вподобання/звички), health (здоров'я/алергії), work (робота/кар'єра), relationships (сім'я), context (локація/розклад), goals (цілі/плани).
+- НЕ повторюй один факт у різних категоріях.`;
+
+  const userContent = `СТАРА ТЕКСТОВА ПАМ'ЯТЬ (кожен рядок — один факт):\n${legacy}`;
+
+  const msg = await callAIWithTools(systemPrompt, [{ role: 'user', content: userContent }], [saveMemTool]);
+  if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
+
+  let added = 0;
+  for (const tc of msg.tool_calls) {
+    if (tc.function?.name !== 'save_memory_fact') continue;
+    try {
+      const args = JSON.parse(tc.function.arguments || '{}');
+      const f = addFact({
+        text: args.fact,
+        category: args.category,
+        ttlDays: args.ttl_days,
+        source: 'migration',
+      });
+      if (f) added++;
+    } catch (e) {
+      console.warn('[memory migration] bad fact:', e);
+    }
+  }
+  console.log('[memory] migrated', added, 'facts from legacy nm_memory');
+}
+
+// Фонова екстракція — аналіз даних за останні 7 днів, витягування нових фактів.
+// Safety net для джерел що ще НЕ на tool calling (tab chat bars, нотатки, моменти).
+async function _backgroundExtractFacts() {
+  const saveMemTool = INBOX_TOOLS.find(t => t.function?.name === 'save_memory_fact');
+  if (!saveMemTool) return;
+
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+  const notes = getNotes();
+  const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recentInbox = inbox.filter(i => (i.ts || 0) >= cutoff).slice(-30);
+  const recentTasks = tasks.filter(t => (t.createdAt || 0) >= cutoff || (t.completedAt && t.completedAt >= cutoff)).slice(-20);
+  const recentNotes = notes.filter(n => ((n.ts || n.updatedAt || 0) >= cutoff)).slice(-15);
+  const recentMoments = moments.filter(m => (m.ts || 0) >= cutoff).slice(-15);
+
+  const chatTabs = ['inbox','tasks','notes','me','evening','finance','health','projects'];
+  const recentChats = chatTabs.map(t => {
+    try {
+      const msgs = JSON.parse(localStorage.getItem('nm_chat_' + t) || '[]');
+      return msgs
+        .filter(m => (m.ts || m.id || 0) >= cutoff)
+        .slice(-15)
+        .map(m => `[${t}/${m.role}] ${m.text}`)
+        .join('\n');
+    } catch { return ''; }
+  }).filter(Boolean).join('\n---\n');
+
+  const totalData = recentInbox.length + recentTasks.length + recentNotes.length + recentMoments.length;
+  if (totalData < 3) return; // замало даних
+
+  // Показуємо вже відомі факти — для дедуплікації на стороні AI
+  const existing = getFacts().slice(0, 50).map(f => `[${f.category}] ${f.text}`).join('\n');
+  const profile = getProfile() || 'не заповнено';
+
+  const systemPrompt = `Ти — OWL, агент NeverMind. Проаналізуй активність користувача за останні 7 днів і витягни НОВІ факти ПРО ЛЮДИНУ. Для КОЖНОГО нового факту — виклич tool save_memory_fact.
+
+ПРАВИЛА:
+- Максимум 5 НОВИХ фактів за виклик (тільки найважливіші)
+- НЕ дублюй факти які вже є у "ВЖЕ ЗНАЄМО" нижче
+- Пиши від третьої особи українською: "Має...", "Працює...", "Любить..."
+- ФАКТ = щось стійке про людину (вподобання, звичка, сім'я, робота, ціль, стан, обмеження)
+- НЕ ФАКТ = поточна задача/подія/справа (для того є save_task/create_event)
+- НЕ вигадуй нічого чого не видно в даних
+- Постійні факти → БЕЗ ttl_days; тимчасові (симптоми, відрядження) → ttl_days 14-30
+- Категорії: preferences, health, work, relationships, context, goals
+
+ВЖЕ ЗНАЄМО (НЕ дублюй):
+${existing || '(порожньо)'}`;
+
+  const userContent = `Профіль: ${profile}
+
+Inbox (7 днів):
+${recentInbox.map(i => `[${i.category||'?'}] ${i.text}`).join('\n') || '(порожньо)'}
+
+Задачі (нові/закриті):
+${recentTasks.map(t => `${t.title} (${t.status})`).join('\n') || '(порожньо)'}
+
+Нотатки:
+${recentNotes.map(n => `${n.folder || 'Загальне'}: ${(n.text||'').substring(0, 80)}`).join('\n') || '(порожньо)'}
+
+Моменти:
+${recentMoments.map(m => `[${m.mood}] ${m.text}`).join('\n') || '(порожньо)'}
+
+Чати (усі вкладки):
+${recentChats || '(порожньо)'}`;
+
+  const msg = await callAIWithTools(systemPrompt, [{ role: 'user', content: userContent }], [saveMemTool]);
+  if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
+
+  let added = 0;
+  for (const tc of msg.tool_calls) {
+    if (tc.function?.name !== 'save_memory_fact') continue;
+    try {
+      const args = JSON.parse(tc.function.arguments || '{}');
+      const f = addFact({
+        text: args.fact,
+        category: args.category,
+        ttlDays: args.ttl_days,
+        source: 'auto',
+      });
+      if (f) added++;
+    } catch (e) {
+      console.warn('[memory bg] bad fact:', e);
+    }
+  }
+  console.log('[memory] background extracted', added, 'new facts');
 }
 
 // Додаємо профіль і памʼять до кожного AI запиту
@@ -1159,7 +1321,7 @@ Object.assign(window, {
   switchTab, showToast, closeSettings, openSettings, saveSettings,
   setLanguage, setOwlModeSetting, openTabSelector, openFeedback,
   clearAllData, openMemoryModal, closeMemoryModal, refreshMemory,
-  saveMemoryCards, addMemoryEntry, openPrivacyPolicy, openTerms,
+  saveMemoryCards, addMemoryEntry, saveMemoryFactEdit, openPrivacyPolicy, openTerms,
   applyTabSelection, selectTabOrder, moveTabOrder,
   deleteMemoryCard, saveFinanceSettings, clearFinanceData, exportData,
   toggleTabSelection, showDeployInfo, closeDeployInfo,
