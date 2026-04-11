@@ -8,21 +8,26 @@
 // Принцип "один мозок на все": follow-up йде у чат тієї вкладки
 // яка тематично пов'язана з тригером, не завжди в Inbox.
 //
+// ОНОВЛЕНО 11.04 (Крок 1 уніфікації):
+// Усі hard-блокери (silent phase, API key, global cooldown, activeChatBar)
+// тепер перевіряє ЄДИНИЙ Judge Layer — shouldOwlSpeak(trigger, {channel: 'chat-followup'}).
+// Тут лишається тільки доменна логіка: які елементи застрягли, які події пройшли,
+// per-item cooldowns, генерація тексту і надсилання.
+//
 // Cooldowns через існуючий nm_owl_cooldowns:
-//   followup_global             → 1/год глобально
-//   followup_stuck_<taskId>     → 24 год per-task
-//   followup_event_<eventId>    → 365 днів per-event (≈ одноразово)
+//   followup_global             → 1/год глобально (перевіряється у Judge Layer)
+//   followup_stuck_<taskId>     → 24 год per-task (перевіряється тут)
+//   followup_event_<eventId>    → 365 днів per-event (≈ одноразово, перевіряється тут)
 // ============================================================
 
-import { callAI, activeChatBar, addMsgForTab } from '../ai/core.js';
+import { callAI, addMsgForTab } from '../ai/core.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getEvents } from '../tabs/calendar.js';
-import { getDayPhase, owlCdExpired, setOwlCd } from './inbox-board.js';
+import { owlCdExpired, setOwlCd, shouldOwlSpeak } from './inbox-board.js';
 
 // === КОНСТАНТИ ===
 const FOLLOWUP_CHECK_INTERVAL = 5 * 60 * 1000;       // 5 хв — перевірка по таймеру
 const FOLLOWUP_DEBOUNCE       = 5 * 1000;            // 5 сек — debounce на nm-data-changed
-const FOLLOWUP_GLOBAL_CD      = 60 * 60 * 1000;      // 1 год — глобальний антиспам
 const STUCK_TASK_DAYS         = 3;
 const STUCK_TASK_CD           = 24 * 60 * 60 * 1000; // 24 год per-task
 const EVENT_PASSED_CD         = 365 * 24 * 60 * 60 * 1000; // ≈ одноразово per-event
@@ -46,32 +51,29 @@ let _checkInFlight = false;
 export async function checkFollowups() {
   if (_checkInFlight) return;
 
-  // Блокер 1: ніч
-  if (getDayPhase() === 'silent') return;
-
-  // Блокер 2: глобальний cooldown
-  if (!owlCdExpired('followup_global', FOLLOWUP_GLOBAL_CD)) return;
-
-  // Блокер 3: API ключ
-  if (!localStorage.getItem('nm_gemini_key')) return;
-
   _checkInFlight = true;
   try {
     // Перевіряємо тригери у порядку пріоритету.
-    // Перший що спрацював — надсилаємо і виходимо.
+    // Детекція (per-item cooldowns) тут, глобальні блокери — у Judge Layer.
     const triggers = [
       _checkStuckTasks,
       _checkPassedEvents,
     ];
     for (const trig of triggers) {
       const hit = trig();
-      if (hit) {
-        const tab = TRIGGER_TO_TAB[hit.type];
-        // Блокер 4: не перебивати юзера якщо він зараз сидить у цьому чаті
-        if (activeChatBar === tab) return;
-        await _sendFollowupToChat(tab, hit.type, hit.item);
-        return; // один follow-up за виклик
+      if (!hit) continue;
+      const tab = TRIGGER_TO_TAB[hit.type];
+
+      // Єдиний Judge Layer вирішує — чи можна зараз говорити у цьому каналі
+      const judge = shouldOwlSpeak(hit.type, { channel: 'chat-followup', targetTab: tab });
+      if (!judge.speak) {
+        // Якщо цей тригер заблокований, пробуємо наступний
+        // (деякі блокери можуть відрізнятись per-trigger у майбутньому)
+        continue;
       }
+
+      await _sendFollowupToChat(tab, hit.type, hit.item);
+      return; // один follow-up за виклик
     }
   } finally {
     _checkInFlight = false;

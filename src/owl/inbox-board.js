@@ -351,17 +351,66 @@ export function setOwlCd(topic) {
 // Єдиний шар що вирішує "чи є що сказати".
 // Повертає { speak: bool, score: number, reason: string }
 // Замінює старий checkOwlBoardTrigger() з cooldowns.
+//
+// ОНОВЛЕНО 11.04 (Крок 1 уніфікації):
+// Тепер обслуговує ДВА канали через параметр opts.channel:
+//   • 'board' (default) — проактивні повідомлення на табло (inbox + вкладки)
+//   • 'chat-followup'   — follow-up у контекстний чат вкладки (stuck-task,
+//                         event-passed — живуть у src/owl/followups.js)
+// Раніше followups.js мав власні hard-блокери (silent, global-cd, api-key,
+// activeChatBar) які дублювали Judge Layer. Тепер — один суддя на все.
 // ============================================================
 const SPEAK_THRESHOLD = 3;
+const FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1000; // 1 год — антиспам follow-ups
 
-export function shouldOwlSpeak(trigger) {
-  // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time'
+// Головна точка входу. opts: { channel?: 'board'|'chat-followup', targetTab?: string }
+// Backward compat: виклики без opts продовжують працювати як board-channel.
+export function shouldOwlSpeak(trigger, opts = {}) {
+  // === СПІЛЬНІ HARD-БЛОКЕРИ (однакові для обох каналів) ===
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return { speak: false, score: -1, reason: 'no-api-key' };
 
   const phase = getDayPhase();
   if (phase === 'silent') return { speak: false, score: -100, reason: 'silent-phase' };
 
+  // === РОУТИНГ ЗА КАНАЛОМ ===
+  const channel = opts.channel || 'board';
+  if (channel === 'chat-followup') {
+    return _judgeFollowup(trigger, opts.targetTab);
+  }
+  return _judgeBoard(trigger);
+}
+
+// ============================================================
+// Канал 'chat-followup' — follow-up у контекстний чат вкладки
+// Тригери: 'stuck-task', 'event-passed' (детекція у followups.js)
+// ============================================================
+function _judgeFollowup(trigger, targetTab) {
+  // Не перебивати юзера коли він сидить у цьому ж чаті
+  if (activeChatBar && activeChatBar === targetTab) {
+    return { speak: false, score: -100, reason: 'active-in-target-chat' };
+  }
+  // Глобальний антиспам follow-ups — не більше одного на годину
+  if (!owlCdExpired('followup_global', FOLLOWUP_GLOBAL_CD_MS)) {
+    return { speak: false, score: -100, reason: 'followup-global-cd' };
+  }
+  // Базове нарахування очок — follow-up тригери мають високий пріоритет
+  // (юзер сам створив контекст: задача висить / подія минула)
+  let score = 0;
+  const reasons = [];
+  if (trigger === 'stuck-task')   { score += 5; reasons.push('stuck-task'); }
+  if (trigger === 'event-passed') { score += 5; reasons.push('event-passed'); }
+  // майбутні канальні тригери (welcome-back-in-chat, after-action) додавати тут
+  const speak = score >= SPEAK_THRESHOLD;
+  return { speak, score, reason: reasons.join(', ') };
+}
+
+// ============================================================
+// Канал 'board' — проактивні повідомлення на табло
+// Існуюча логіка 08.04 (Judge Layer) — без змін, тільки винесена у приватну функцію.
+// ============================================================
+function _judgeBoard(trigger) {
+  // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time' | 'chat-closed'
   let score = 0;
   let reasons = [];
 
