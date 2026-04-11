@@ -1,4 +1,5 @@
 import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError } from '../ai/core.js';
+import { formatFactsForBoard } from '../ai/memory.js';
 import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
@@ -249,8 +250,8 @@ ${crossActions ? `
 НЕЩОДАВНІ ДІЇ НА ІНШИХ ВКЛАДКАХ (враховуй загальний контекст — що відбувається в житті юзера):
 ${crossActions}` : ''}
 
-ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина):
-${localStorage.getItem('nm_memory') || '(ще не знаю)'}
+ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина; факти мають часові мітки — якщо по здоров'ю/обставинах бачиш старий факт, НЕ цитуй як поточний стан):
+${formatFactsForBoard(15) || localStorage.getItem('nm_memory') || '(ще не знаю)'}
 
 ПРІОРИТЕТ ПОВІДОМЛЕНЬ:
 1. Якщо є [КРИТИЧНО] — пиши ТІЛЬКИ про це. Нічого іншого.

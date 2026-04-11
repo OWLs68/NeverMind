@@ -8,6 +8,7 @@ import { currentTab, switchTab } from '../core/nav.js';
 import { escapeHtml, saveOffline } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
@@ -365,6 +366,7 @@ function _toolCallToAction(name, args) {
     case 'restore_deleted': return { action: 'restore_deleted', query: args.query, type: args.type || null };
     case 'save_routine': return { action: 'save_routine', day: args.day, blocks: args.blocks };
     case 'clarify': return { action: 'clarify', question: args.question, options: args.options };
+    case 'save_memory_fact': return { action: 'save_memory_fact', fact: args.fact, category: args.category, ttl_days: args.ttl_days };
     case 'set_reminder': return { action: 'set_reminder', text: args.text, time: args.time, date: args.date };
     case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority, comment: args.comment };
     case 'delete_event': return { action: 'delete_event', event_id: args.event_id };
@@ -599,6 +601,19 @@ export async function sendToAI(fromChip = false) {
           saveRoutine(routine);
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
+        } else if (action.action === 'save_memory_fact') {
+          // Безшумно зберігаємо факт — user feedback приходить через msg.content
+          // (AI проінструктований також писати коротке "Запам'ятав..." у content)
+          try {
+            addFact({
+              text: action.fact,
+              category: action.category,
+              ttlDays: action.ttl_days,
+              source: 'inbox',
+            });
+          } catch (e) {
+            console.warn('[memory] addFact failed:', e);
+          }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // edit_event, delete_event, edit_note, edit_task, set_reminder, etc.
         } else {
@@ -681,17 +696,28 @@ async function sendClarifyText() {
   if (msg) {
     try {
       if (msg.tool_calls && msg.tool_calls.length > 0) {
-        const tc = msg.tool_calls[0];
-        const args = JSON.parse(tc.function.arguments);
-        const action = _toolCallToAction(tc.function.name, args);
-        if (action) {
-          if (action.action === 'save') await processSaveAction(action, combinedMsg);
-          else if (action.action === 'complete_habit') processCompleteHabit(action, combinedMsg);
-          else if (action.action === 'complete_task') processCompleteTask(action, combinedMsg);
-          else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) { /* handled */ }
-          else if (action.comment) addInboxChatMsg('agent', action.comment);
+        // Обробляємо ВСІ tool_calls (AI може emit save_memory_fact РАЗОМ з primary action)
+        let primaryHandled = false;
+        for (const tc of msg.tool_calls) {
+          const args = JSON.parse(tc.function.arguments);
+          const action = _toolCallToAction(tc.function.name, args);
+          if (!action) continue;
+          // Тихий канал: пам'ять — зберігаємо без UI
+          if (action.action === 'save_memory_fact') {
+            try { addFact({ text: action.fact, category: action.category, ttlDays: action.ttl_days, source: 'inbox' }); } catch {}
+            continue;
+          }
+          if (primaryHandled) continue; // основна дія вже виконана
+          if (action.action === 'save') { await processSaveAction(action, combinedMsg); primaryHandled = true; }
+          else if (action.action === 'complete_habit') { processCompleteHabit(action, combinedMsg); primaryHandled = true; }
+          else if (action.action === 'complete_task') { processCompleteTask(action, combinedMsg); primaryHandled = true; }
+          else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) { primaryHandled = true; }
+          else if (action.comment) { addInboxChatMsg('agent', action.comment); primaryHandled = true; }
         }
-      } else if (msg.content) {
+      }
+      // msg.content показуємо ЗАВЖДИ якщо є (і з tool_calls, і без) —
+      // AI при save_memory_fact має надіслати "Запам'ятав..."
+      if (msg.content) {
         addInboxChatMsg('agent', msg.content);
       }
     } catch(e) {}

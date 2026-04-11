@@ -256,6 +256,7 @@ export const NM_KEYS = {
          'nm_health_log','nm_projects','nm_trash'],
   // Налаштування (→ Supabase user_settings)
   settings: ['nm_settings','nm_gemini_key','nm_memory','nm_memory_ts',
+              'nm_facts','nm_facts_migrated',
               'nm_active_tabs','nm_onboarding_done','nm_evening_mood',
               'nm_evening_summary','nm_notes_folders_ts'],
   // Чат-историки (→ Supabase chat_messages)
