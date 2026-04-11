@@ -1352,6 +1352,180 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
   });
 
+  // src/ai/memory.js
+  function getFacts() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(NM_FACTS_KEY) || "[]");
+      if (!Array.isArray(raw)) return [];
+      const now = Date.now();
+      return raw.filter((f) => {
+        if (!f || !f.ts) return false;
+        if (!f.ttl) return true;
+        return now - f.ts < f.ttl * 24 * 60 * 60 * 1e3;
+      });
+    } catch {
+      return [];
+    }
+  }
+  function getFactsRaw() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(NM_FACTS_KEY) || "[]");
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  }
+  function _saveFacts(facts) {
+    let trimmed = facts;
+    if (trimmed.length > MAX_FACTS) {
+      trimmed = [...trimmed].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, MAX_FACTS);
+    }
+    localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
+  }
+  function addFact({ text, category, ttlDays, source = "auto" }) {
+    if (!text || typeof text !== "string") return null;
+    text = text.trim();
+    if (text.length < 3 || text.length > 200) return null;
+    if (!category || !FACT_CATEGORIES[category]) category = "context";
+    const facts = getFactsRaw();
+    const textLower = text.toLowerCase();
+    const existingIdx = facts.findIndex((f) => {
+      if (!f || f.category !== category) return false;
+      const fLower = (f.text || "").toLowerCase().trim();
+      if (fLower === textLower) return true;
+      return _textSimilarity(fLower, textLower) > 0.75;
+    });
+    if (existingIdx !== -1) {
+      facts[existingIdx].lastSeen = Date.now();
+      if (ttlDays && !facts[existingIdx].ttl) facts[existingIdx].ttl = ttlDays;
+      _saveFacts(facts);
+      return facts[existingIdx];
+    }
+    const newFact = {
+      id: `fct_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      text,
+      category,
+      ts: Date.now(),
+      lastSeen: Date.now(),
+      source,
+      ttl: typeof ttlDays === "number" && ttlDays > 0 ? ttlDays : null
+    };
+    facts.push(newFact);
+    _saveFacts(facts);
+    return newFact;
+  }
+  function deleteFact(id) {
+    const facts = getFactsRaw();
+    _saveFacts(facts.filter((f) => f.id !== id));
+  }
+  function updateFactText(id, newText) {
+    const facts = getFactsRaw();
+    const idx = facts.findIndex((f) => f.id === id);
+    if (idx === -1) return false;
+    const t = (newText || "").trim();
+    if (t.length < 3 || t.length > 200) return false;
+    facts[idx].text = t;
+    facts[idx].lastSeen = Date.now();
+    _saveFacts(facts);
+    return true;
+  }
+  function cleanupExpiredFacts() {
+    const all = getFactsRaw();
+    const now = Date.now();
+    const alive = all.filter((f) => {
+      if (!f || !f.ts) return false;
+      if (!f.ttl) return true;
+      return now - f.ts < f.ttl * 24 * 60 * 60 * 1e3;
+    });
+    if (alive.length !== all.length) {
+      _saveFacts(alive);
+    }
+    return all.length - alive.length;
+  }
+  function formatFactsForContext(maxFacts = 30) {
+    const facts = getFacts();
+    if (facts.length === 0) return "";
+    const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
+    const grouped = {};
+    sorted.forEach((f) => {
+      if (!grouped[f.category]) grouped[f.category] = [];
+      grouped[f.category].push(f);
+    });
+    const lines = [];
+    for (const cat of CATEGORY_ORDER) {
+      if (!grouped[cat]) continue;
+      const catLabel = FACT_CATEGORIES[cat]?.label || cat;
+      grouped[cat].forEach((f) => {
+        const ago = _relativeTime(f.ts);
+        lines.push(`- [${catLabel}] ${f.text} (${ago})`);
+      });
+    }
+    if (lines.length === 0) return "";
+    return `\u0424\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u0437\u0430\u0444\u0456\u043A\u0441\u043E\u0432\u0430\u043D\u043E \u0432 \u0440\u0456\u0437\u043D\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0456 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u043E\u0433\u043E \u043F\u0440\u043E\u0444\u0456\u043B\u044E; \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442 \u2014 \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D):
+${lines.join("\n")}`;
+  }
+  function formatFactsForBoard(maxFacts = 15) {
+    const facts = getFacts();
+    if (facts.length === 0) return "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)";
+    const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
+    return sorted.map((f) => `- ${f.text}`).join("\n");
+  }
+  function _relativeTime(ts) {
+    if (!ts) return "\u2014";
+    const diff = Date.now() - ts;
+    const day = 24 * 60 * 60 * 1e3;
+    const days = Math.floor(diff / day);
+    if (days === 0) return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (days === 1) return "\u0432\u0447\u043E\u0440\u0430";
+    if (days < 7) return `${days} \u0434\u043D. \u0442\u043E\u043C\u0443`;
+    if (days < 30) return `${Math.floor(days / 7)} \u0442\u0438\u0436. \u0442\u043E\u043C\u0443`;
+    if (days < 365) return `${Math.floor(days / 30)} \u043C\u0456\u0441. \u0442\u043E\u043C\u0443`;
+    return `${Math.floor(days / 365)} \u0440. \u0442\u043E\u043C\u0443`;
+  }
+  function _textSimilarity(a, b) {
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const grams = (s) => {
+      const set = /* @__PURE__ */ new Set();
+      for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+      return set;
+    };
+    const ga = grams(a);
+    const gb = grams(b);
+    if (!ga.size || !gb.size) return 0;
+    let common = 0;
+    ga.forEach((g) => {
+      if (gb.has(g)) common++;
+    });
+    return common / Math.max(ga.size, gb.size);
+  }
+  function isMigrationDone() {
+    return localStorage.getItem(NM_FACTS_MIGRATED_KEY) === "1";
+  }
+  function markMigrationDone() {
+    localStorage.setItem(NM_FACTS_MIGRATED_KEY, "1");
+  }
+  function getLegacyMemoryText() {
+    return localStorage.getItem("nm_memory") || "";
+  }
+  var NM_FACTS_KEY, NM_FACTS_MIGRATED_KEY, MAX_FACTS, FACT_CATEGORIES, CATEGORY_ORDER;
+  var init_memory = __esm({
+    "src/ai/memory.js"() {
+      NM_FACTS_KEY = "nm_facts";
+      NM_FACTS_MIGRATED_KEY = "nm_facts_migrated";
+      MAX_FACTS = 100;
+      FACT_CATEGORIES = {
+        preferences: { label: "\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F", emoji: "\u{1F4AD}", color: "#c2790a" },
+        health: { label: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", emoji: "\u2764\uFE0F", color: "#dc2626" },
+        work: { label: "\u0420\u043E\u0431\u043E\u0442\u0430", emoji: "\u{1F4BC}", color: "#2563eb" },
+        relationships: { label: "\u0421\u0442\u043E\u0441\u0443\u043D\u043A\u0438", emoji: "\u{1F465}", color: "#7c3aed" },
+        context: { label: "\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442", emoji: "\u{1F4CD}", color: "#16a34a" },
+        goals: { label: "\u0426\u0456\u043B\u0456", emoji: "\u{1F3AF}", color: "#ea580c" }
+      };
+      CATEGORY_ORDER = ["health", "relationships", "work", "goals", "preferences", "context"];
+    }
+  });
+
   // src/tabs/projects.js
   function getProjects() {
     return JSON.parse(localStorage.getItem("nm_projects") || "[]");
@@ -5063,8 +5237,8 @@ ${crossActions ? `
 \u041D\u0415\u0429\u041E\u0414\u0410\u0412\u041D\u0406 \u0414\u0406\u0407 \u041D\u0410 \u0406\u041D\u0428\u0418\u0425 \u0412\u041A\u041B\u0410\u0414\u041A\u0410\u0425 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2014 \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0436\u0438\u0442\u0442\u0456 \u044E\u0437\u0435\u0440\u0430):
 ${crossActions}` : ""}
 
-\u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430):
-${localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
+\u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430; \u0444\u0430\u043A\u0442\u0438 \u043C\u0430\u044E\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u0456 \u043C\u0456\u0442\u043A\u0438 \u2014 \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442, \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D):
+${formatFactsForBoard(15) || localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
 
 \u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u042C:
 1. \u042F\u043A\u0449\u043E \u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u043F\u0440\u043E \u0446\u0435. \u041D\u0456\u0447\u043E\u0433\u043E \u0456\u043D\u0448\u043E\u0433\u043E.
@@ -5267,6 +5441,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   var init_proactive = __esm({
     "src/owl/proactive.js"() {
       init_core();
+      init_memory();
       init_utils();
       init_nav();
       init_board();
@@ -5448,9 +5623,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   }
   function getFinAdaptiveBenchmark() {
     const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    const memory = (localStorage.getItem("nm_memory") || "").toLowerCase();
+    const factText = getFacts().filter((f) => f.category === "work" || f.category === "context").map((f) => (f.text || "").toLowerCase()).join(" ");
+    const legacyMem = (localStorage.getItem("nm_memory") || "").toLowerCase();
+    const combinedMem = factText + " " + legacyMem;
     const age = parseInt(settings.age) || 0;
-    const hasDebt = memory.includes("\u0431\u043E\u0440\u0433") || memory.includes("\u043A\u0440\u0435\u0434\u0438\u0442") || memory.includes("\u043F\u043E\u0437\u0438\u043A");
+    const hasDebt = combinedMem.includes("\u0431\u043E\u0440\u0433") || combinedMem.includes("\u043A\u0440\u0435\u0434\u0438\u0442") || combinedMem.includes("\u043F\u043E\u0437\u0438\u043A");
     const from3m = getFinPeriodRange("3months");
     const recentTxs = getFinance().filter((t) => t.ts >= from3m);
     const hasFewData = recentTxs.length < 5;
@@ -6404,6 +6581,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_utils();
       init_trash();
       init_core();
+      init_memory();
       init_proactive();
       init_inbox();
       init_habits();
@@ -8492,7 +8670,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   }
   function getAIContext() {
     const profile = getProfile();
-    const memory = localStorage.getItem("nm_memory") || "";
     const parts = [];
     const now = /* @__PURE__ */ new Date();
     const days = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"];
@@ -8504,8 +8681,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${timeStr}, \u0447\u0430\u0441\u043E\u0432\u0438\u0439 \u043F\u043E\u044F\u0441: ${tzStr}`;
     parts.push(`\u0417\u0430\u0440\u0430\u0437: ${dateStr}`);
     if (profile) parts.push(`\u041F\u0440\u043E\u0444\u0456\u043B\u044C: ${profile}`);
-    if (memory) parts.push(`\u0414\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u0406\u0421\u0422\u041E\u0420\u0418\u0427\u041D\u0418\u0419, \u043C\u043E\u0436\u0435 \u0431\u0443\u0442\u0438 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0438\u043C \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0456 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0445 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C, \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u0437\u0432\u0456\u0434\u0442\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u043D\u0430\u0441\u0442\u0440\u043E\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D):
-${memory}`);
+    const factsStr = formatFactsForContext(30);
+    if (factsStr) {
+      parts.push(factsStr);
+    } else {
+      const legacyMemory = localStorage.getItem("nm_memory") || "";
+      if (legacyMemory) {
+        parts.push(`\u0414\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C (\u0406\u0421\u0422\u041E\u0420\u0418\u0427\u041D\u0418\u0419, \u043C\u043E\u0436\u0435 \u0431\u0443\u0442\u0438 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0438\u043C \u2014 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u043D\u043D\u044F; \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u043D\u0430\u0441\u0442\u0440\u043E\u044E):
+${legacyMemory}`);
+      }
+    }
     const tasks = getTasks().filter((t) => t.status === "active").slice(0, 8);
     if (tasks.length > 0) {
       const taskList = tasks.map((t) => {
@@ -9009,6 +9194,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       init_evening();
       init_inbox_board();
       init_chips();
+      init_memory();
       activeChatBar = null;
       INBOX_SYSTEM_PROMPT = `\u0422\u0438 \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind.
 \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0434\u0443\u043C\u043A\u0430, \u0437\u0430\u0434\u0430\u0447\u0430, \u0456\u0434\u0435\u044F, \u0437\u0432\u0438\u0447\u043A\u0430, \u043F\u043E\u0434\u0456\u044F, \u0430\u0431\u043E \u0437\u0432\u0456\u0442 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435.
@@ -9024,6 +9210,8 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
 5. \u0427\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441, \u0434\u0443\u043C\u043A\u0430, \u0456\u0434\u0435\u044F \u2192 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool
 
 \u041C\u0415\u0422\u0410\u0406\u041D\u0421\u0422\u0420\u0423\u041A\u0426\u0406\u0407: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0438\u0448\u0435 "\u0446\u0435 \u0437\u0430\u0434\u0430\u0447\u0430", "\u0446\u0435 \u043D\u043E\u0442\u0430\u0442\u043A\u0430", "\u0446\u0435 \u0437\u0432\u0438\u0447\u043A\u0430" \u2014 \u0432\u0456\u043D \u043F\u0440\u044F\u043C\u043E \u043A\u0430\u0436\u0435 \u0422\u041E\u0411\u0406 \u044F\u043A\u0438\u0439 \u0442\u0438\u043F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438. \u0421\u0442\u0432\u043E\u0440\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0442\u0438\u043F \u0437 \u0446\u0438\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C. \u041D\u0415 save_note \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C.
+
+\u041F\u0410\u041C'\u042F\u0422\u042C: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043C\u0438\u043C\u043E\u0445\u0456\u0434\u044C \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0424\u0410\u041A\u0422 \u041F\u0420\u041E \u0421\u0415\u0411\u0415 (\u0441\u0456\u043C'\u044F, \u0440\u043E\u0431\u043E\u0442\u0430, \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F, \u0440\u043E\u0437\u043A\u043B\u0430\u0434, \u0446\u0456\u043B\u044C) \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 save_memory_fact \u041F\u0410\u0420\u0410\u041B\u0415\u041B\u042C\u041D\u041E \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 tools. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438, \u043A\u0443\u043F\u0438 \u0431\u0435\u0437\u0433\u043B\u044E\u0442\u0435\u043D\u043E\u0432\u0443 \u043F\u0456\u0446\u0443" \u2192 save_task (\u043A\u0443\u043F\u0438\u0442\u0438 \u043F\u0456\u0446\u0443) + save_memory_fact (\u0430\u043B\u0435\u0440\u0433\u0456\u044F). \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F \u0439\u0434\u0435 \u0437\u0430\u0432\u0442\u0440\u0430 \u0443 \u0448\u043A\u043E\u043B\u0443 \u043E 8" \u2192 create_event + save_memory_fact (\u043C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E). \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0434\u043B\u044F \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0445 \u0441\u043F\u0440\u0430\u0432 \u2014 \u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0456\u0439\u043A\u0438\u0445 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443.
 
 \u0420\u041E\u0417\u0420\u0406\u0417\u041D\u0415\u041D\u041D\u042F task vs event vs project:
 - \u0417\u0410\u0414\u0410\u0427\u0410 (save_task) = \u0414\u0406\u042F \u044F\u043A\u0443 \u0422\u0418 \u043C\u0430\u0454\u0448 \u0417\u0420\u041E\u0411\u0418\u0422\u0418: \u043A\u0443\u043F\u0438\u0442\u0438, \u043F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438. \u0414\u0456\u0454\u0441\u043B\u043E\u0432\u043E = \u0437\u0430\u0434\u0430\u0447\u0430.
@@ -9072,7 +9260,9 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
         { type: "function", function: { name: "set_reminder", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419, \u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456, \u043D\u0430\u043F\u043E\u043C\u043D\u0438. \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0429\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438" }, time: { type: "string", description: "HH:MM. \u0432\u0440\u0430\u043D\u0446\u0456=08:00, \u0432\u0434\u0435\u043D\u044C=12:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443=\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439+1" }, date: { type: "string", description: "YYYY-MM-DD, \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" } }, required: ["text", "time"], additionalProperties: false } } },
         { type: "function", function: { name: "restore_deleted", description: "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437 \u043A\u043E\u0448\u0438\u043A\u0430.", parameters: { type: "object", properties: { query: { type: "string", description: "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u0441\u043B\u043E\u0432\u0430, 'all' (\u0432\u0441\u0456) \u0430\u0431\u043E 'last' (\u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439)" }, type: { type: "string", enum: ["task", "note", "habit", "inbox", "folder", "finance"], description: "\u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443" } }, required: ["query"], additionalProperties: false } } },
         { type: "function", function: { name: "save_routine", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "default"] }, description: "\u0414\u043D\u0456. default=\u0431\u0443\u0434\u043D\u0456. \u041C\u0430\u0441\u0438\u0432: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time", "activity"] }, description: "\u0411\u043B\u043E\u043A\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043A\u0443" } }, required: ["day", "blocks"], additionalProperties: false } } },
-        { type: "function", function: { name: "clarify", description: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 2+ \u0440\u0456\u0437\u043D\u0438\u0445 \u0442\u0438\u043F\u0456\u0432 \u0456 \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E, \u0430\u0431\u043E \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u0440\u043E\u0435\u043A\u0442. \u042F\u043A\u0449\u043E 80%+ \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E\u0441\u0442\u0456 \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.", parameters: { type: "object", properties: { question: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0437 \u0432\u0431\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u043C\u0438 \u0434\u0456\u044F\u043C\u0438" } }, required: ["question", "options"], additionalProperties: false } } }
+        { type: "function", function: { name: "clarify", description: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 2+ \u0440\u0456\u0437\u043D\u0438\u0445 \u0442\u0438\u043F\u0456\u0432 \u0456 \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E, \u0430\u0431\u043E \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u0440\u043E\u0435\u043A\u0442. \u042F\u043A\u0449\u043E 80%+ \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E\u0441\u0442\u0456 \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.", parameters: { type: "object", properties: { question: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0437 \u0432\u0431\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u043C\u0438 \u0434\u0456\u044F\u043C\u0438" } }, required: ["question", "options"], additionalProperties: false } } },
+        // --- ПАМ'ЯТЬ ---
+        { type: "function", function: { name: "save_memory_fact", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0424\u0410\u041A\u0422 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 \u0443 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0443 \u043F\u0430\u043C'\u044F\u0442\u044C. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u041A\u041E\u041B\u0418 \u044E\u0437\u0435\u0440 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0449\u043E\u0441\u044C \u0432\u0430\u0436\u043B\u0438\u0432\u0435 \u041F\u0420\u041E \u0421\u0415\u0411\u0415: \u0437\u0432\u0438\u0447\u043A\u0443, \u0430\u043B\u0435\u0440\u0433\u0456\u044E, \u0441\u0456\u043C'\u044E, \u0440\u043E\u0431\u043E\u0442\u0443, \u0446\u0456\u043B\u044C, \u0443\u043B\u044E\u0431\u043B\u0435\u043D\u0438\u0439 \u0441\u043F\u043E\u0441\u0456\u0431 \u0440\u043E\u0431\u0438\u0442\u0438 \u0449\u043E\u0441\u044C, \u043E\u0431\u043C\u0435\u0436\u0435\u043D\u043D\u044F, \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0445 \u0441\u043F\u0440\u0430\u0432/\u0437\u0430\u0434\u0430\u0447/\u043F\u043E\u0434\u0456\u0439 \u2014 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E save_task/save_note/create_event. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438 \u043A\u043E\u043B\u0438 \u0442\u0440\u0435\u0431\u0430: '\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438' \u2192 health; '\u041F\u0440\u0430\u0446\u044E\u044E \u0432 Kyivstar \u0437 9 \u0434\u043E 18' \u2192 work; '\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F \u0445\u043E\u0434\u0438\u0442\u044C \u0443 3 \u043A\u043B\u0430\u0441' \u2192 relationships; '\u041B\u044E\u0431\u043B\u044E \u043A\u0430\u0432\u0443 \u0442\u0456\u043B\u044C\u043A\u0438 \u0437\u0440\u0430\u043D\u043A\u0443' \u2192 preferences; '\u0425\u043E\u0447\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0445\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0443 \u0434\u043E \u043B\u0456\u0442\u0430' \u2192 goals; '\u0417\u0430\u0440\u0430\u0437 \u0443 Amsterdam \u043D\u0430 2 \u0442\u0438\u0436\u043D\u0456' \u2192 context. \u041C\u043E\u0436\u043D\u0430 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 \u0420\u0410\u0417\u041E\u041C \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 tools (\u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0406 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0432 \u0444\u0430\u043A\u0442). \u041F\u0456\u0441\u043B\u044F \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 text content ('\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 ...') \u0449\u043E\u0431 \u044E\u0437\u0435\u0440 \u043F\u043E\u0431\u0430\u0447\u0438\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.", parameters: { type: "object", properties: { fact: { type: "string", description: "\u0424\u0430\u043A\u0442 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. '\u041C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E', '\u041F\u0440\u0430\u0446\u044E\u0454 \u0432 Kyivstar', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438', '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043E 7'" }, category: { type: "string", enum: ["preferences", "health", "work", "relationships", "context", "goals"], description: "preferences=\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F/\u0437\u0432\u0438\u0447\u043A\u0438; health=\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u0430\u043B\u0435\u0440\u0433\u0456\u0457/\u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438; work=\u0440\u043E\u0431\u043E\u0442\u0430/\u043A\u0430\u0440'\u0454\u0440\u0430/\u0444\u0456\u043D\u0430\u043D\u0441\u0438; relationships=\u0441\u0456\u043C'\u044F/\u0434\u0440\u0443\u0437\u0456/\u043A\u043E\u043B\u0435\u0433\u0438; context=\u043B\u043E\u043A\u0430\u0446\u0456\u044F/\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A/\u043F\u043E\u0442\u043E\u0447\u043D\u0456 \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438; goals=\u0446\u0456\u043B\u0456/\u043F\u043B\u0430\u043D\u0438/\u043D\u0430\u043C\u0456\u0440\u0438" }, ttl_days: { type: "integer", description: "\u0427\u0435\u0440\u0435\u0437 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0434\u043D\u0456\u0432 \u0444\u0430\u043A\u0442 \u0432\u0432\u0430\u0436\u0430\u0442\u0438\u043C\u0435\u0442\u044C\u0441\u044F \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0438\u043C \u0456 \u0437\u043D\u0438\u043A\u043D\u0435. \u041D\u0415 \u0432\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0438\u0445 \u0444\u0430\u043A\u0442\u0456\u0432 (\u0441\u0456\u043C'\u044F, \u0430\u043B\u0435\u0440\u0433\u0456\u044F, \u0432\u0456\u043A, \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F \u2014 \u0436\u0438\u0432\u0443\u0442\u044C \u0432\u0456\u0447\u043D\u043E). \u0412\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0438\u0445: \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F=7-14; \u043F\u043E\u0442\u043E\u0447\u043D\u0456 \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438 (\u0432\u0456\u0434\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F, \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442)=30-60" } }, required: ["fact", "category"], additionalProperties: false } } }
       ];
       CHAT_STORE_MAX = 30;
       CHAT_STORE_KEYS = {
@@ -10896,6 +11086,8 @@ ${userText}
         return { action: "save_routine", day: args.day, blocks: args.blocks };
       case "clarify":
         return { action: "clarify", question: args.question, options: args.options };
+      case "save_memory_fact":
+        return { action: "save_memory_fact", fact: args.fact, category: args.category, ttl_days: args.ttl_days };
       case "set_reminder":
         return { action: "set_reminder", text: args.text, time: args.time, date: args.date };
       case "edit_event":
@@ -11134,6 +11326,17 @@ ${list}
             saveRoutine(routine);
             const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map((d) => dayLabels[d] || d).join(", ");
             addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${label} (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+          } else if (action.action === "save_memory_fact") {
+            try {
+              addFact({
+                text: action.fact,
+                category: action.category,
+                ttlDays: action.ttl_days,
+                source: "inbox"
+              });
+            } catch (e) {
+              console.warn("[memory] addFact failed:", e);
+            }
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || args?.comment || "";
@@ -11201,17 +11404,37 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (msg) {
       try {
         if (msg.tool_calls && msg.tool_calls.length > 0) {
-          const tc = msg.tool_calls[0];
-          const args = JSON.parse(tc.function.arguments);
-          const action = _toolCallToAction(tc.function.name, args);
-          if (action) {
-            if (action.action === "save") await processSaveAction(action, combinedMsg);
-            else if (action.action === "complete_habit") processCompleteHabit(action, combinedMsg);
-            else if (action.action === "complete_task") processCompleteTask(action, combinedMsg);
-            else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
-            } else if (action.comment) addInboxChatMsg("agent", action.comment);
+          let primaryHandled = false;
+          for (const tc of msg.tool_calls) {
+            const args = JSON.parse(tc.function.arguments);
+            const action = _toolCallToAction(tc.function.name, args);
+            if (!action) continue;
+            if (action.action === "save_memory_fact") {
+              try {
+                addFact({ text: action.fact, category: action.category, ttlDays: action.ttl_days, source: "inbox" });
+              } catch {
+              }
+              continue;
+            }
+            if (primaryHandled) continue;
+            if (action.action === "save") {
+              await processSaveAction(action, combinedMsg);
+              primaryHandled = true;
+            } else if (action.action === "complete_habit") {
+              processCompleteHabit(action, combinedMsg);
+              primaryHandled = true;
+            } else if (action.action === "complete_task") {
+              processCompleteTask(action, combinedMsg);
+              primaryHandled = true;
+            } else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
+              primaryHandled = true;
+            } else if (action.comment) {
+              addInboxChatMsg("agent", action.comment);
+              primaryHandled = true;
+            }
           }
-        } else if (msg.content) {
+        }
+        if (msg.content) {
           addInboxChatMsg("agent", msg.content);
         }
       } catch (e) {
@@ -11467,6 +11690,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_utils();
       init_trash();
       init_core();
+      init_memory();
       init_inbox_board();
       init_swipe_delete();
       init_tasks();
@@ -12323,6 +12547,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           "nm_gemini_key",
           "nm_memory",
           "nm_memory_ts",
+          "nm_facts",
+          "nm_facts_migrated",
           "nm_active_tabs",
           "nm_onboarding_done",
           "nm_evening_mood",
@@ -13024,27 +13250,60 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     document.getElementById("memory-modal").style.display = "none";
   }
   function renderMemoryCards() {
-    const raw = localStorage.getItem("nm_memory") || "";
     const list = document.getElementById("memory-cards-list");
-    const entries = raw.split("\n").map((s) => s.trim()).filter(Boolean);
-    if (!entries.length) {
-      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">\u0429\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0438 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox \u0456 \u043D\u0430\u0442\u0438\u0441\u043D\u0438 "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL".</div>';
+    if (!list) return;
+    const facts = getFactsRaw().filter((f) => f && f.text);
+    if (!facts.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">\u0429\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0438 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox \u0456 \u043D\u0430\u0442\u0438\u0441\u043D\u0438 "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL".<br><br>\u0410\u0431\u043E \u0434\u043E\u0434\u0430\u0439 \u0444\u0430\u043A\u0442 \u0432\u0440\u0443\u0447\u043D\u0443 \u0447\u0435\u0440\u0435\u0437 \u043F\u043E\u043B\u0435 \u0432\u0438\u0449\u0435.</div>';
       return;
     }
-    list.innerHTML = entries.map((entry, i) => `
-    <div id="memory-card-${i}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
-      <div contenteditable="true" id="memory-entry-${i}" style="flex:1;font-size:15px;color:#1e1040;line-height:1.5;outline:none;min-width:0;word-break:break-word" onblur="saveMemoryCards()">${escapeHtml(entry)}</div>
-      <button onclick="deleteMemoryCard(${i})" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">\xD7</button>
-    </div>`).join("");
+    const grouped = {};
+    facts.forEach((f) => {
+      const c = f.category || "context";
+      if (!grouped[c]) grouped[c] = [];
+      grouped[c].push(f);
+    });
+    const order = ["health", "relationships", "work", "goals", "preferences", "context"];
+    const parts = [];
+    for (const cat of order) {
+      if (!grouped[cat] || !grouped[cat].length) continue;
+      const meta = FACT_CATEGORIES[cat] || { label: cat, emoji: "\u2022", color: "#666" };
+      parts.push(`<div style="display:flex;align-items:center;gap:8px;margin:14px 2px 6px;padding:0 2px"><span style="font-size:14px">${meta.emoji}</span><span style="font-size:12px;font-weight:700;letter-spacing:0.02em;color:${meta.color};text-transform:uppercase">${meta.label}</span><span style="font-size:11px;color:rgba(30,16,64,0.35);margin-left:auto">${grouped[cat].length}</span></div>`);
+      grouped[cat].sort((a, b) => (b.lastSeen || b.ts || 0) - (a.lastSeen || a.ts || 0));
+      for (const f of grouped[cat]) {
+        const ago = _relativeTime(f.ts);
+        const ttlNote = f.ttl ? ` \xB7 \u0436\u0438\u0432\u0435 ${f.ttl} \u0434\u043D` : "";
+        const sourceLabel = {
+          inbox: "Inbox",
+          auto: "\u0444\u043E\u043D",
+          manual: "\u0432\u0440\u0443\u0447\u043D\u0443",
+          migration: "\u0441\u0442\u0430\u0440\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C",
+          onboarding: "\u043E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433"
+        }[f.source] || "";
+        const escId = escapeHtml(f.id);
+        parts.push(`
+        <div data-fact-id="${escId}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div contenteditable="true" data-fact-edit="${escId}" onblur="saveMemoryFactEdit('${escId}', this.textContent)" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
+            <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-top:4px">${ago}${sourceLabel ? " \xB7 " + sourceLabel : ""}${ttlNote}</div>
+          </div>
+          <button onclick="deleteMemoryCard('${escId}')" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">\xD7</button>
+        </div>`);
+      }
+    }
+    list.innerHTML = parts.join("");
   }
   function addMemoryEntry() {
     const input = document.getElementById("memory-new-input");
+    if (!input) return;
     const text = input.value.trim();
     if (!text) return;
-    const raw = localStorage.getItem("nm_memory") || "";
-    const entries = raw.split("\n").map((s) => s.trim()).filter(Boolean);
-    entries.push(text);
-    localStorage.setItem("nm_memory", entries.join("\n"));
+    addFact({
+      text,
+      category: "context",
+      // за замовчуванням — юзер сам може змінити редагуванням
+      source: "manual"
+    });
     input.value = "";
     renderMemoryCards();
     const list = document.getElementById("memory-cards-list");
@@ -13052,24 +13311,26 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       list.scrollTop = list.scrollHeight;
     }, 50);
   }
-  function deleteMemoryCard(idx) {
-    const raw = localStorage.getItem("nm_memory") || "";
-    const entries = raw.split("\n").map((s) => s.trim()).filter(Boolean);
-    entries.splice(idx, 1);
-    localStorage.setItem("nm_memory", entries.join("\n"));
+  function deleteMemoryCard(id) {
+    if (!id) return;
+    deleteFact(id);
     renderMemoryCards();
   }
+  function saveMemoryFactEdit(id, newText) {
+    if (!id) return;
+    const trimmed = (newText || "").trim();
+    if (!trimmed) {
+      deleteFact(id);
+      renderMemoryCards();
+      return;
+    }
+    updateFactText(id, trimmed);
+  }
   function saveMemoryCards() {
-    const list = document.getElementById("memory-cards-list");
-    if (!list) return;
-    const divs = list.querySelectorAll('[id^="memory-entry-"]');
-    const entries = Array.from(divs).map((d) => d.textContent.trim()).filter(Boolean);
-    const text = entries.join("\n");
-    localStorage.setItem("nm_memory", text);
-    const hidden = document.getElementById("input-memory");
-    if (hidden) hidden.value = text;
+    renderMemoryCards();
     const tsEl = document.getElementById("memory-last-updated");
     if (tsEl) tsEl.textContent = "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0449\u043E\u0439\u043D\u043E";
+    showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
   }
   function openPrivacyPolicy() {
     showToast("\u041A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u0456\u0441\u0442\u044C \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
@@ -13120,7 +13381,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function exportData() {
     const data = {};
-    const keys = ["nm_inbox", "nm_tasks", "nm_notes", "nm_moments", "nm_settings", "nm_memory", "nm_habits2", "nm_habit_log2", "nm_finance", "nm_finance_budget", "nm_finance_cats", "nm_health_cards", "nm_health_log", "nm_projects", "nm_evening_mood"];
+    const keys = ["nm_inbox", "nm_tasks", "nm_notes", "nm_moments", "nm_settings", "nm_memory", "nm_facts", "nm_habits2", "nm_habit_log2", "nm_finance", "nm_finance_budget", "nm_finance_cats", "nm_health_cards", "nm_health_log", "nm_projects", "nm_evening_mood"];
     keys.forEach((k) => {
       const v = localStorage.getItem(k);
       if (v) data[k] = JSON.parse(v);
@@ -13200,71 +13461,142 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     }
   }
   async function doRefreshMemory(showResult) {
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-    const notes = getNotes();
-    const profile = getProfile();
-    const existingMemory = localStorage.getItem("nm_memory") || "";
-    const recentInbox = inbox.slice(-50).map((i) => `[${i.category}] ${i.text}`).join("\n");
-    const tasksList = tasks.map((t) => `${t.title} (${t.status})`).join("\n");
-    const notesList = notes.slice(-20).map((n) => `[${n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"}]${n.updatedAt ? " (\u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E)" : ""} ${n.text.substring(0, 80)}`).join("\n");
-    const chatTabs = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
-    const recentChats = chatTabs.map((t) => {
+    cleanupExpiredFacts();
+    if (!isMigrationDone()) {
       try {
-        const msgs = JSON.parse(localStorage.getItem("nm_chat_" + t) || "[]");
-        return msgs.slice(-10).map((m) => `[${t}/${m.role}] ${m.text}`).join("\n");
-      } catch {
-        return "";
+        await _migrateLegacyMemoryToFacts();
+      } catch (e) {
+        console.warn("[memory] migration failed:", e);
       }
-    }).filter(Boolean).join("\n");
-    const systemPrompt = `\u0422\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0437\u0430\u043F\u0438\u0441\u0438 \u0456 \u0447\u0430\u0442\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0432\u0438\u0442\u044F\u0433\u043D\u0438 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u0406 \u0424\u0410\u041A\u0422\u0418 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443.
-
-\u041F\u041E\u0422\u041E\u0427\u041D\u0410 \u041F\u0410\u041C'\u042F\u0422\u042C (\u0449\u043E \u043C\u0438 \u0432\u0436\u0435 \u0437\u043D\u0430\u0454\u043C\u043E):
-${existingMemory || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u041D\u041E\u0412\u0406 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u0449\u0435 \u041D\u0415\u041C\u0410\u0404 \u0443 \u043F\u043E\u0442\u043E\u0447\u043D\u0456\u0439 \u043F\u0430\u043C'\u044F\u0442\u0456
-- \u041A\u043E\u0436\u0435\u043D \u0444\u0430\u043A\u0442 \u2014 \u043E\u043A\u0440\u0435\u043C\u0438\u0439 \u0440\u044F\u0434\u043E\u043A, \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E (5-15 \u0441\u043B\u0456\u0432)
-- \u0424\u0430\u043A\u0442\u0438: \u0437\u0432\u0438\u0447\u043A\u0438, \u0446\u0456\u043B\u0456, \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F, \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A, \u0449\u043E \u043D\u0435 \u043B\u044E\u0431\u0438\u0442\u044C, \u0440\u043E\u0431\u043E\u0442\u0430, \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0444\u0456\u043D\u0430\u043D\u0441\u0438
-- \u041F\u0438\u0448\u0438 \u044F\u043A \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0437\u0430\u043C\u0456\u0442\u043A\u0443: "\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043E 7:00", "\u0417\u0431\u0438\u0440\u0430\u0454 \u043D\u0430 \u0430\u0432\u0442\u043E", "\u041D\u0435 \u043B\u044E\u0431\u0438\u0442\u044C \u0431\u0456\u0433\u0430\u0442\u0438 \u0437\u0440\u0430\u043D\u043A\u0443"
-- \u041C\u041E\u0412\u0410 \u042E\u0417\u0415\u0420\u0410: \u0437\u043D\u0430\u0439\u0434\u0438 \u0441\u043B\u043E\u0432\u0430/\u0444\u0440\u0430\u0437\u0438 \u044F\u043A\u0456 \u044E\u0437\u0435\u0440 \u0447\u0430\u0441\u0442\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0454 \u0456 \u0434\u043E\u0434\u0430\u0439 \u0444\u0430\u043A\u0442. \u041D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 \u044F\u043A\u0449\u043E \u043F\u0438\u0448\u0435 "\u0437\u0430\u0440\u044F\u0434\u043A\u0430" \u0430 \u043D\u0435 "\u0433\u0456\u043C\u043D\u0430\u0441\u0442\u0438\u043A\u0430" \u2014 \u0437\u0430\u043F\u0438\u0448\u0438 "\u041A\u0430\u0436\u0435 '\u0437\u0430\u0440\u044F\u0434\u043A\u0430' (\u043D\u0435 \u0433\u0456\u043C\u043D\u0430\u0441\u0442\u0438\u043A\u0430)". \u042F\u043A\u0449\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454 \u0441\u043F\u0435\u0446\u0438\u0444\u0456\u0447\u043D\u0438\u0439 \u0441\u043B\u0435\u043D\u0433 \u2014 \u0437\u0430\u043F\u0438\u0448\u0438 \u0439\u043E\u0433\u043E.
-- \u041A\u041E\u0420\u0415\u041B\u042F\u0426\u0406\u0407: \u0448\u0443\u043A\u0430\u0439 \u0437\u0432'\u044F\u0437\u043A\u0438 \u043C\u0456\u0436 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u0444\u0435\u0440\u0430\u043C\u0438. \u041D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041A\u043E\u043B\u0438 \u043F\u0456\u0437\u043D\u043E \u043B\u044F\u0433\u0430\u0454 \u2014 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u0454 \u0437\u0430\u0440\u044F\u0434\u043A\u0443", "\u0423 \u0434\u043D\u0456 \u0437 \u0432\u0435\u043B\u0438\u043A\u0438\u043C\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0430\u043C\u0438 \u043F\u0438\u0448\u0435 \u043D\u0435\u0433\u0430\u0442\u0438\u0432\u043D\u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438". \u0417\u0430\u043F\u0438\u0441\u0443\u0439 \u044F\u043A \u0444\u0430\u043A\u0442 \u0422\u0406\u041B\u042C\u041A\u0418 \u044F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0447\u0456\u0442\u043A\u0438\u0439 \u043F\u0430\u0442\u0442\u0435\u0440\u043D (\u043C\u0456\u043D\u0456\u043C\u0443\u043C 2-3 \u0437\u0431\u0456\u0433\u0438), \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439.
-- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 5 \u043D\u043E\u0432\u0438\u0445 \u0444\u0430\u043A\u0442\u0456\u0432 \u0437\u0430 \u0440\u0430\u0437 (\u0442\u0456\u043B\u044C\u043A\u0438 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456)
-- \u042F\u043A\u0449\u043E \u043D\u043E\u0432\u0438\u0445 \u0444\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454 \u2014 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u041F\u0423\u0421\u0422\u041E
-- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u0432 \u043F\u0430\u043C'\u044F\u0442\u0456. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439. \u0422\u0456\u043B\u044C\u043A\u0438 \u0437 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432.
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
-    const userMsg = `\u041F\u0440\u043E\u0444\u0456\u043B\u044C: ${profile || "\u043D\u0435 \u0437\u0430\u043F\u043E\u0432\u043D\u0435\u043D\u043E"}
-
-\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 Inbox:
-${recentInbox || "\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E"}
-
-\u0417\u0430\u0434\u0430\u0447\u0456:
-${tasksList || "\u043D\u0435\u043C\u0430\u0454"}
-
-\u041D\u043E\u0442\u0430\u0442\u043A\u0438:
-${notesList || "\u043D\u0435\u043C\u0430\u0454"}
-
-\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0447\u0430\u0442\u0438:
-${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
-    const result = await callAI(systemPrompt, userMsg, {});
-    if (!result || result.trim() === "\u041F\u0423\u0421\u0422\u041E" || result.trim().length < 5) {
-      localStorage.setItem("nm_memory_ts", Date.now().toString());
-      return;
+      markMigrationDone();
     }
-    const existingEntries = existingMemory.split("\n").map((s) => s.trim()).filter(Boolean);
-    const newEntries = result.split("\n").map((s) => s.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
-    const combined = [...existingEntries, ...newEntries];
-    if (combined.length > 50) combined.splice(0, combined.length - 50);
-    localStorage.setItem("nm_memory", combined.join("\n"));
+    try {
+      await _backgroundExtractFacts();
+    } catch (e) {
+      console.warn("[memory] background extraction failed:", e);
+    }
     localStorage.setItem("nm_memory_ts", Date.now().toString());
-    const memEl = document.getElementById("input-memory");
-    if (memEl) memEl.value = result;
+    if (document.getElementById("memory-modal")?.style.display !== "none") {
+      renderMemoryCards();
+    }
     const tsEl = document.getElementById("memory-last-updated");
     if (tsEl) {
       const d = /* @__PURE__ */ new Date();
       tsEl.textContent = `\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: ${d.toLocaleDateString("uk-UA")} \u043E ${d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`;
     }
     if (showResult) showToast("\u2713 \u041F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
+  }
+  async function _migrateLegacyMemoryToFacts() {
+    const legacy = (getLegacyMemoryText() || "").trim();
+    if (!legacy || legacy.length < 10) return;
+    const saveMemTool = INBOX_TOOLS.find((t) => t.function?.name === "save_memory_fact");
+    if (!saveMemTool) return;
+    const systemPrompt = `\u0422\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442 NeverMind. \u0417\u0430\u0440\u0430\u0437 \u041E\u0414\u041D\u041E\u0420\u0410\u0417\u041E\u0412\u0410 \u041C\u0406\u0413\u0420\u0410\u0426\u0406\u042F \u043F\u0430\u043C'\u044F\u0442\u0456: \u043E\u0442\u0440\u0438\u043C\u0443\u0454\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0438\u0439 \u0430\u0431\u0437\u0430\u0446 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u043C\u0430\u0454\u0448 \u0432\u0438\u0442\u044F\u0433\u0442\u0438 \u0437 \u043D\u044C\u043E\u0433\u043E \u0421\u0422\u0420\u0423\u041A\u0422\u0423\u0420\u041E\u0412\u0410\u041D\u0406 \u0444\u0430\u043A\u0442\u0438. \u0414\u043B\u044F \u041A\u041E\u0416\u041D\u041E\u0413\u041E \u0444\u0430\u043A\u0442\u0443 \u044F\u043A\u0438\u0439 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0448 \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 tool save_memory_fact.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 30 \u0444\u0430\u043A\u0442\u0456\u0432. \u042F\u043A\u0449\u043E \u0431\u0456\u043B\u044C\u0448\u0435 \u2014 \u043E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456.
+- \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043D\u0456\u0447\u043E\u0433\u043E \u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u0434\u043D\u043E \u0432 \u0442\u0435\u043A\u0441\u0442\u0456.
+- \u041F\u0438\u0448\u0438 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E: "\u041C\u0430\u0454...", "\u041F\u0440\u0430\u0446\u044E\u0454...", "\u041B\u044E\u0431\u0438\u0442\u044C..."
+- \u041F\u043E\u0441\u0442\u0456\u0439\u043D\u0456 \u0444\u0430\u043A\u0442\u0438 (\u0441\u0456\u043C'\u044F, \u0430\u043B\u0435\u0440\u0433\u0456\u044F, \u0432\u0456\u043A, \u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F) \u2014 \u0411\u0415\u0417 ttl_days.
+- \u0422\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0456 \u0444\u0430\u043A\u0442\u0438 (\u043F\u043E\u0442\u043E\u0447\u043D\u0430 \u0440\u043E\u0431\u043E\u0442\u0430, \u043B\u043E\u043A\u0430\u0446\u0456\u044F, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438) \u2014 \u0437 ttl_days 30-90.
+- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: preferences (\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F/\u0437\u0432\u0438\u0447\u043A\u0438), health (\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u0430\u043B\u0435\u0440\u0433\u0456\u0457), work (\u0440\u043E\u0431\u043E\u0442\u0430/\u043A\u0430\u0440'\u0454\u0440\u0430), relationships (\u0441\u0456\u043C'\u044F), context (\u043B\u043E\u043A\u0430\u0446\u0456\u044F/\u0440\u043E\u0437\u043A\u043B\u0430\u0434), goals (\u0446\u0456\u043B\u0456/\u043F\u043B\u0430\u043D\u0438).
+- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u043E\u0434\u0438\u043D \u0444\u0430\u043A\u0442 \u0443 \u0440\u0456\u0437\u043D\u0438\u0445 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445.`;
+    const userContent = `\u0421\u0422\u0410\u0420\u0410 \u0422\u0415\u041A\u0421\u0422\u041E\u0412\u0410 \u041F\u0410\u041C'\u042F\u0422\u042C (\u043A\u043E\u0436\u0435\u043D \u0440\u044F\u0434\u043E\u043A \u2014 \u043E\u0434\u0438\u043D \u0444\u0430\u043A\u0442):
+${legacy}`;
+    const msg = await callAIWithTools(systemPrompt, [{ role: "user", content: userContent }], [saveMemTool]);
+    if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
+    let added = 0;
+    for (const tc of msg.tool_calls) {
+      if (tc.function?.name !== "save_memory_fact") continue;
+      try {
+        const args = JSON.parse(tc.function.arguments || "{}");
+        const f = addFact({
+          text: args.fact,
+          category: args.category,
+          ttlDays: args.ttl_days,
+          source: "migration"
+        });
+        if (f) added++;
+      } catch (e) {
+        console.warn("[memory migration] bad fact:", e);
+      }
+    }
+    console.log("[memory] migrated", added, "facts from legacy nm_memory");
+  }
+  async function _backgroundExtractFacts() {
+    const saveMemTool = INBOX_TOOLS.find((t) => t.function?.name === "save_memory_fact");
+    if (!saveMemTool) return;
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    const notes = getNotes();
+    const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1e3;
+    const recentInbox = inbox.filter((i) => (i.ts || 0) >= cutoff).slice(-30);
+    const recentTasks = tasks.filter((t) => (t.createdAt || 0) >= cutoff || t.completedAt && t.completedAt >= cutoff).slice(-20);
+    const recentNotes = notes.filter((n) => (n.ts || n.updatedAt || 0) >= cutoff).slice(-15);
+    const recentMoments = moments.filter((m) => (m.ts || 0) >= cutoff).slice(-15);
+    const chatTabs = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
+    const recentChats = chatTabs.map((t) => {
+      try {
+        const msgs = JSON.parse(localStorage.getItem("nm_chat_" + t) || "[]");
+        return msgs.filter((m) => (m.ts || m.id || 0) >= cutoff).slice(-15).map((m) => `[${t}/${m.role}] ${m.text}`).join("\n");
+      } catch {
+        return "";
+      }
+    }).filter(Boolean).join("\n---\n");
+    const totalData = recentInbox.length + recentTasks.length + recentNotes.length + recentMoments.length;
+    if (totalData < 3) return;
+    const existing = getFacts().slice(0, 50).map((f) => `[${f.category}] ${f.text}`).join("\n");
+    const profile = getProfile() || "\u043D\u0435 \u0437\u0430\u043F\u043E\u0432\u043D\u0435\u043D\u043E";
+    const systemPrompt = `\u0422\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0430\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0437\u0430 \u043E\u0441\u0442\u0430\u043D\u043D\u0456 7 \u0434\u043D\u0456\u0432 \u0456 \u0432\u0438\u0442\u044F\u0433\u043D\u0438 \u041D\u041E\u0412\u0406 \u0444\u0430\u043A\u0442\u0438 \u041F\u0420\u041E \u041B\u042E\u0414\u0418\u041D\u0423. \u0414\u043B\u044F \u041A\u041E\u0416\u041D\u041E\u0413\u041E \u043D\u043E\u0432\u043E\u0433\u043E \u0444\u0430\u043A\u0442\u0443 \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 tool save_memory_fact.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 5 \u041D\u041E\u0412\u0418\u0425 \u0444\u0430\u043A\u0442\u0456\u0432 \u0437\u0430 \u0432\u0438\u043A\u043B\u0438\u043A (\u0442\u0456\u043B\u044C\u043A\u0438 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456)
+- \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0456 \u0432\u0436\u0435 \u0454 \u0443 "\u0412\u0416\u0415 \u0417\u041D\u0410\u0404\u041C\u041E" \u043D\u0438\u0436\u0447\u0435
+- \u041F\u0438\u0448\u0438 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E: "\u041C\u0430\u0454...", "\u041F\u0440\u0430\u0446\u044E\u0454...", "\u041B\u044E\u0431\u0438\u0442\u044C..."
+- \u0424\u0410\u041A\u0422 = \u0449\u043E\u0441\u044C \u0441\u0442\u0456\u0439\u043A\u0435 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443 (\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F, \u0437\u0432\u0438\u0447\u043A\u0430, \u0441\u0456\u043C'\u044F, \u0440\u043E\u0431\u043E\u0442\u0430, \u0446\u0456\u043B\u044C, \u0441\u0442\u0430\u043D, \u043E\u0431\u043C\u0435\u0436\u0435\u043D\u043D\u044F)
+- \u041D\u0415 \u0424\u0410\u041A\u0422 = \u043F\u043E\u0442\u043E\u0447\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430/\u043F\u043E\u0434\u0456\u044F/\u0441\u043F\u0440\u0430\u0432\u0430 (\u0434\u043B\u044F \u0442\u043E\u0433\u043E \u0454 save_task/create_event)
+- \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043D\u0456\u0447\u043E\u0433\u043E \u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u0434\u043D\u043E \u0432 \u0434\u0430\u043D\u0438\u0445
+- \u041F\u043E\u0441\u0442\u0456\u0439\u043D\u0456 \u0444\u0430\u043A\u0442\u0438 \u2192 \u0411\u0415\u0417 ttl_days; \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0456 (\u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0432\u0456\u0434\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F) \u2192 ttl_days 14-30
+- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: preferences, health, work, relationships, context, goals
+
+\u0412\u0416\u0415 \u0417\u041D\u0410\u0404\u041C\u041E (\u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439):
+${existing || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}`;
+    const userContent = `\u041F\u0440\u043E\u0444\u0456\u043B\u044C: ${profile}
+
+Inbox (7 \u0434\u043D\u0456\u0432):
+${recentInbox.map((i) => `[${i.category || "?"}] ${i.text}`).join("\n") || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}
+
+\u0417\u0430\u0434\u0430\u0447\u0456 (\u043D\u043E\u0432\u0456/\u0437\u0430\u043A\u0440\u0438\u0442\u0456):
+${recentTasks.map((t) => `${t.title} (${t.status})`).join("\n") || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}
+
+\u041D\u043E\u0442\u0430\u0442\u043A\u0438:
+${recentNotes.map((n) => `${n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"}: ${(n.text || "").substring(0, 80)}`).join("\n") || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}
+
+\u041C\u043E\u043C\u0435\u043D\u0442\u0438:
+${recentMoments.map((m) => `[${m.mood}] ${m.text}`).join("\n") || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}
+
+\u0427\u0430\u0442\u0438 (\u0443\u0441\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438):
+${recentChats || "(\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)"}`;
+    const msg = await callAIWithTools(systemPrompt, [{ role: "user", content: userContent }], [saveMemTool]);
+    if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
+    let added = 0;
+    for (const tc of msg.tool_calls) {
+      if (tc.function?.name !== "save_memory_fact") continue;
+      try {
+        const args = JSON.parse(tc.function.arguments || "{}");
+        const f = addFact({
+          text: args.fact,
+          category: args.category,
+          ttlDays: args.ttl_days,
+          source: "auto"
+        });
+        if (f) added++;
+      } catch (e) {
+        console.warn("[memory bg] bad fact:", e);
+      }
+    }
+    console.log("[memory] background extracted", added, "new facts");
   }
   function setUndoTimer(v) {
     _undoToastTimer = v;
@@ -13347,6 +13679,7 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
       init_utils();
       init_boot();
       init_core();
+      init_memory();
       init_proactive();
       init_evening();
       init_finance();
@@ -13495,6 +13828,7 @@ ${recentChats || "\u043D\u0435\u043C\u0430\u0454"}`;
         refreshMemory,
         saveMemoryCards,
         addMemoryEntry,
+        saveMemoryFactEdit,
         openPrivacyPolicy,
         openTerms,
         applyTabSelection,
