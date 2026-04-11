@@ -4062,8 +4062,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
   function shouldOwlSpeak(trigger, opts = {}) {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return { speak: false, score: -1, reason: "no-api-key" };
-    const phase2 = getDayPhase();
-    if (phase2 === "silent") return { speak: false, score: -100, reason: "silent-phase" };
+    const phase = getDayPhase();
+    if (phase === "silent") return { speak: false, score: -100, reason: "silent-phase" };
     const channel = opts.channel || "board";
     if (channel === "chat-followup") {
       return _judgeFollowup(trigger, opts.targetTab);
@@ -4097,6 +4097,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const todayStr = now.toDateString();
     const hour = now.getHours();
     const min = now.getMinutes();
+    const phase = getDayPhase();
     const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
     const sinceLastAttempt = Date.now() - lastAttemptTs;
     const msgs = getOwlBoardMessages();
@@ -4229,7 +4230,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const hour = now.getHours();
     const min = now.getMinutes();
     const weekDay = now.getDay();
-    const phase2 = getDayPhase();
+    const phase = getDayPhase();
     const sc = getSchedule();
     const critical = [];
     const important = [];
@@ -4259,7 +4260,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       evening: `[\u0424\u0410\u0417\u0410: \u0412\u0415\u0427\u0406\u0420] \u0427\u0430\u0441 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432. \u0424\u043E\u043A\u0443\u0441: \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E, \u044F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u043F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u0420\u043E\u0431\u043E\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workEnd}:00.`,
       night: `[\u0424\u0410\u0417\u0410: \u041D\u0406\u0427] \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441. \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435 \u2014 \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0456 \u043C\u043E\u0436\u043D\u0430 \u0449\u0435 \u0432\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E.`
     };
-    if (phaseLabels[phase2]) normal.push(phaseLabels[phase2]);
+    if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
     normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
     const tasks = getTasks();
     const activeTasks = tasks.filter((t) => t.status === "active");
@@ -4267,7 +4268,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (recentlyDone.length > 0) {
       normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
     }
-    if (phase2 === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
+    if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const briefParts = [];
@@ -4286,7 +4287,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
 ${briefParts.join("\n")}
 \u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
     }
-    if ((phase2 === "evening" || phase2 === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
+    if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
       const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
@@ -4344,7 +4345,7 @@ ${pulseParts.join("\n")}
     if (todayHabits.length > 0 && pendingHabits.length === 0) {
       important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${todayHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
     }
-    if ((phase2 === "evening" || phase2 === "night") && pendingHabits.length > 0) {
+    if ((phase === "evening" || phase === "night") && pendingHabits.length > 0) {
       const atRisk = pendingHabits.filter((h) => {
         const streak = Object.values(log).filter((d) => d[h.id]).length;
         return streak >= 3;
@@ -4357,7 +4358,7 @@ ${pulseParts.join("\n")}
         critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0417\u0432\u0438\u0447\u043A\u0438 \u0437 \u0441\u0435\u0440\u0456\u0454\u044E \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E \u2014 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u0430 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0440\u043E\u0431\u0438\u0432: ${details.join(", ")}.`);
       }
     }
-    if ((phase2 === "work" || phase2 === "evening") && pendingHabits.length > 0) {
+    if ((phase === "work" || phase === "evening") && pendingHabits.length > 0) {
       important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name).join(", ")}.`);
     }
     if (todayHabits.length > 0) {
@@ -4366,7 +4367,7 @@ ${pulseParts.join("\n")}
     if (quitHabits.length > 0) {
       const todayIso = now.toISOString().slice(0, 10);
       const notHeldToday = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayIso);
-      if ((phase2 === "evening" || phase2 === "night") && notHeldToday.length > 0) {
+      if ((phase === "evening" || phase === "night") && notHeldToday.length > 0) {
         important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '"').join(", ")}.`);
       }
       quitHabits.forEach((h) => {
@@ -4411,16 +4412,16 @@ ${pulseParts.join("\n")}
       }
     } catch (e) {
     }
-    if (phase2 === "evening" || phase2 === "night") {
+    if (phase === "evening" || phase === "night") {
       const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
       if (!s || new Date(s.date).toDateString() !== todayStr) {
         important.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
       }
     }
-    if (weekDay === 1 && (phase2 === "morning" || phase2 === "work")) {
+    if (weekDay === 1 && (phase === "morning" || phase === "work")) {
       normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
     }
-    if (weekDay === 5 && phase2 === "evening") {
+    if (weekDay === 5 && phase === "evening") {
       const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 7 * 24 * 60 * 60 * 1e3);
       normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
     }
@@ -4469,7 +4470,7 @@ ${pulseParts.join("\n")}
       const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || "[]");
       const lastQTs = parseInt(localStorage.getItem(OWL_Q_TS_KEY) || "0");
       const nextQ = OWL_QUESTIONS.find((q) => !asked.includes(q.id));
-      if (nextQ && Date.now() - lastQTs > 24 * 60 * 60 * 1e3 && (phase2 === "morning" || phase2 === "work")) {
+      if (nextQ && Date.now() - lastQTs > 24 * 60 * 60 * 1e3 && (phase === "morning" || phase === "work")) {
         normal.push(`[\u0410\u041D\u041A\u0415\u0422\u0410] \u0417\u0430\u0434\u0430\u0439 \u044E\u0437\u0435\u0440\u0443 \u0446\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E, \u0432\u043F\u043B\u0435\u0442\u0438 \u0432 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 (\u041D\u0415 \u0441\u0443\u0445\u043E \u044F\u043A \u0432 \u0430\u043D\u043A\u0435\u0442\u0456): "${nextQ.q}". \u041F\u0456\u0441\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u0447\u0456\u043F "\u0420\u043E\u0437\u043A\u0430\u0436\u0438" \u0437 action:"chat". \u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 ID \u043F\u0438\u0442\u0430\u043D\u043D\u044F: ${nextQ.id}`);
         asked.push(nextQ.id);
         localStorage.setItem(OWL_Q_KEY, JSON.stringify(asked));
@@ -4743,8 +4744,8 @@ ${pulseParts.join("\n")}
   function tryOwlBoardUpdate() {
     const msgs = getOwlBoardMessages();
     if (msgs.length > 0) renderOwlBoard();
-    const phase2 = getDayPhase();
-    if (phase2 === "silent") return;
+    const phase = getDayPhase();
+    if (phase === "silent") return;
     const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
     if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1e3) {
       console.warn("[OWL board] stale message detected, forcing generation");
@@ -5213,7 +5214,7 @@ ${pulseParts.join("\n")}
       return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
     }).join("\n");
     const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
-    const phase2 = getDayPhase();
+    const phase = getDayPhase();
     const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
     const phaseInstr = {
       dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A \u2014 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F \u0440\u0430\u043D\u0456\u0448\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E. \u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439 \u043C'\u044F\u043A\u043E, \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043F\u043E\u0447\u0430\u0442\u0438 \u0434\u0435\u043D\u044C.",
@@ -5224,7 +5225,7 @@ ${pulseParts.join("\n")}
     };
     const systemPrompt = getOWLPersonality() + `
 
-\u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase2] || ""}
+\u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase] || ""}
 
 \u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E${isInbox ? " \u0432 Inbox" : ' \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 "' + (tabLabels[tab] || tab) + '"'}. \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
 
@@ -5346,7 +5347,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const todayHabits = habits.filter((h) => h.type !== "quit" && (h.days || []).includes(dow));
       const doneH = todayHabits.filter((h) => todayLog[h.id]);
       const pendingH = todayHabits.filter((h) => !todayLog[h.id]);
-      const phase2 = getDayPhase();
+      const phase = getDayPhase();
       const tStr = _pl(tasks.length, "\u0437\u0430\u0434\u0430\u0447\u0430", "\u0437\u0430\u0434\u0430\u0447\u0456", "\u0437\u0430\u0434\u0430\u0447");
       const hStr = _pl(pendingH.length, "\u0437\u0432\u0438\u0447\u043A\u0430", "\u0437\u0432\u0438\u0447\u043A\u0438", "\u0437\u0432\u0438\u0447\u043E\u043A");
       if (tasks.length > 0 && pendingH.length > 0) {
@@ -5369,7 +5370,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           partner: { dawn: "\u0420\u0430\u043D\u043E \u0432\u0441\u0442\u0430\u0432! \u0413\u0430\u0440\u043D\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443.", morning: "\u0414\u043E\u0431\u0440\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443!", work: "\u042F\u043A \u0440\u043E\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C?", evening: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440!", night: "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456!" },
           mentor: { dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A. \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441 \u0434\u043B\u044F \u0440\u043E\u0437\u0434\u0443\u043C\u0456\u0432.", morning: "\u041D\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C. \u0429\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441. \u0412\u0441\u0435 \u0437\u0430 \u043F\u043B\u0430\u043D\u043E\u043C?", evening: "\u0412\u0435\u0447\u0456\u0440. \u0429\u043E \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", night: "\u0427\u0430\u0441 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u043D\u043A\u0443." }
         };
-        text = (greetings[mode] || greetings.partner)[phase2] || "\u041F\u0440\u0438\u0432\u0456\u0442!";
+        text = (greetings[mode] || greetings.partner)[phase] || "\u041F\u0440\u0438\u0432\u0456\u0442!";
       }
     } catch (e) {
       text = "\u041F\u0440\u0438\u0432\u0456\u0442!";
