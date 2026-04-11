@@ -70,7 +70,7 @@
 Персональний PWA-агент продуктивності. Ключова ідея: **мінімальне тертя** — користувач пише будь-що в Inbox, ШІ (GPT-4o-mini) автоматично визначає тип запису і розподіляє по вкладках.
 
 - Стек: ванільний JS, localStorage, GitHub Pages, без фреймворків і бекенду
-- API: OpenAI GPT-4o-mini (ключ зберігається в localStorage `nm_gemini_key`)
+- API: OpenAI GPT-4o-mini (ключ зберігається в localStorage `nm_gemini_key` — **тимчасово**. Після Supabase — ключ на сервері, Edge Functions викликають OpenAI, юзер не бачить ключа. Бізнес-модель: freemium, API через хмару.)
 - Деплой: автоматичний через GitHub Actions при пуші в feature-гілку `claude/**`
 - Мова: Ukrainian (весь UI та AI промпти)
 
@@ -338,7 +338,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `nm_evening_summary` | `{text, date}` | `src/tabs/evening.js` |
 | `nm_trash` | `[]` max 200, 7 днів TTL | `src/core/trash.js` |
 | `nm_settings` | `{}` | `src/core/nav.js` |
-| `nm_gemini_key` | string (насправді OpenAI ключ — legacy-назва) | `src/core/nav.js` |
+| `nm_gemini_key` | string (OpenAI ключ — legacy-назва, **тимчасово** до Supabase. Після міграції — ключ на сервері, юзер не вводить вручну) | `src/core/nav.js` |
 | `nm_memory` | string (300 слів, AI-профіль) | `src/ai/core.js` |
 
 **Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`, `nm_fin_coach_{period}`
