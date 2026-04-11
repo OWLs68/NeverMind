@@ -418,6 +418,10 @@ function _judgeBoard(trigger) {
   const todayStr = now.toDateString();
   const hour = now.getHours();
   const min = now.getMinutes();
+  // Фаза дня потрібна для тригерів streak/morning/evening/week — була у старій
+  // shouldOwlSpeak(), при рефакторингу Крок 1 лишилась у роутері і тут губилась.
+  // Регресія: ReferenceError: phase is not defined. Фікс 11.04 — повертаємо.
+  const phase = getDayPhase();
 
   // === ТАЙМЕРИ ===
   const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || '0');
