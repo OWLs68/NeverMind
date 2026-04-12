@@ -454,9 +454,9 @@ export async function sendToAI(fromChip = false) {
   }
 
   // Save assistant reply to history for context
-  const historyEntry = { role: 'assistant', content: msg.content || '' };
-  if (msg.tool_calls) historyEntry.tool_calls = msg.tool_calls;
-  inboxChatHistory.push(historyEntry);
+  // НЕ зберігаємо tool_calls в історію — OpenAI вимагає tool result messages після них,
+  // а ми їх не надсилаємо. Для контексту розмови достатньо msg.content.
+  inboxChatHistory.push({ role: 'assistant', content: msg.content || '' });
 
   try {
     if (msg.tool_calls && msg.tool_calls.length > 0) {
