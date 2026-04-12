@@ -11352,6 +11352,8 @@ ${list}
         }
         if (msg.content) {
           addInboxChatMsg("agent", msg.content);
+        } else if (msg.tool_calls.every((tc) => tc.function.name === "save_memory_fact")) {
+          addInboxChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
         }
       } else if (msg.content) {
         addInboxChatMsg("agent", msg.content);
@@ -11411,7 +11413,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (msg) {
       try {
         if (msg.tool_calls && msg.tool_calls.length > 0) {
-          let primaryHandled = false;
+          let primaryHandled2 = false;
           for (const tc of msg.tool_calls) {
             const args = JSON.parse(tc.function.arguments);
             const action = _toolCallToAction(tc.function.name, args);
@@ -11423,26 +11425,28 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
               }
               continue;
             }
-            if (primaryHandled) continue;
+            if (primaryHandled2) continue;
             if (action.action === "save") {
               await processSaveAction(action, combinedMsg);
-              primaryHandled = true;
+              primaryHandled2 = true;
             } else if (action.action === "complete_habit") {
               processCompleteHabit(action, combinedMsg);
-              primaryHandled = true;
+              primaryHandled2 = true;
             } else if (action.action === "complete_task") {
               processCompleteTask(action, combinedMsg);
-              primaryHandled = true;
+              primaryHandled2 = true;
             } else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
-              primaryHandled = true;
+              primaryHandled2 = true;
             } else if (action.comment) {
               addInboxChatMsg("agent", action.comment);
-              primaryHandled = true;
+              primaryHandled2 = true;
             }
           }
         }
         if (msg.content) {
           addInboxChatMsg("agent", msg.content);
+        } else if (!primaryHandled) {
+          addInboxChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
         }
       } catch (e) {
       }
