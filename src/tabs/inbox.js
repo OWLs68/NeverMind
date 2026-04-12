@@ -625,6 +625,9 @@ export async function sendToAI(fromChip = false) {
       // Якщо AI також надіслав текст (follow-up питання) — показуємо
       if (msg.content) {
         addInboxChatMsg('agent', msg.content);
+      } else if (msg.tool_calls.every(tc => tc.function.name === 'save_memory_fact')) {
+        // Якщо AI викликав ТІЛЬКИ save_memory_fact без тексту — показати fallback
+        addInboxChatMsg('agent', 'Запам\'ятав ✓');
       }
     } else if (msg.content) {
       // Текстова відповідь без tool calls = reply
@@ -719,6 +722,8 @@ async function sendClarifyText() {
       // AI при save_memory_fact має надіслати "Запам'ятав..."
       if (msg.content) {
         addInboxChatMsg('agent', msg.content);
+      } else if (!primaryHandled) {
+        addInboxChatMsg('agent', 'Запам\'ятав ✓');
       }
     } catch(e) {}
   }
