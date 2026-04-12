@@ -3,7 +3,7 @@ import { formatFactsForBoard } from '../ai/memory.js';
 import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
-import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, renderOwlBoard, shouldOwlSpeak } from './inbox-board.js';
+import { getDayPhase, getOwlBoardContext, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, owlCdExpired, renderOwlBoard, shouldOwlSpeak } from './inbox-board.js';
 import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, getChipStatsForPrompt } from './chips.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
@@ -161,20 +161,19 @@ function _updateApiDot() {
 setTimeout(_updateApiDot, 3000);
 
 // ============================================================
-// _extractBannedWords — витягує ключові слова з останніх повідомлень
-// для явної заборони в промпті (GPT-4o-mini краще реагує на конкретику)
+// _getBannedTopics — збирає теми останніх повідомлень що ще в cooldown (3 год)
 // ============================================================
-function _extractBannedWords(msgs) {
+const TOPIC_CD_MS = 3 * 60 * 60 * 1000; // 3 години cooldown на тему
+
+function _getBannedTopics(msgs) {
   if (!msgs || msgs.length === 0) return '';
-  const stopWords = new Set(['що','які','яка','який','яке','для','при','або','але','цей','ця','це','той','та','те','вже','ще','так','ні','не','без','над','під','між','через','коли','тому','якщо','було','буде','має','треба','можна','можеш','сьогодні','вчора','завтра','зараз','потім','добре','гарно','давай','може','ось','там','тут','дуже','всі','все','його','її','вони','тобі','тебе','мені','нас','час','день','дні','раз','ти','він','вона','як']);
-  const words = new Set();
-  for (const m of msgs) {
-    const text = (m.text || '').toLowerCase().replace(/[^\wа-яіїєґ'\s]/g, '');
-    for (const w of text.split(/\s+/)) {
-      if (w.length >= 4 && !stopWords.has(w)) words.add(w);
+  const topics = [];
+  for (const m of msgs.slice(0, 5)) {
+    if (m.topic && !owlCdExpired('topic_' + m.topic, TOPIC_CD_MS)) {
+      topics.push(m.topic);
     }
   }
-  return [...words].slice(0, 15).join(', ');
+  return topics.join(', ');
 }
 
 // ============================================================
@@ -263,7 +262,8 @@ ${formatFactsForBoard(15) || localStorage.getItem('nm_memory') || '(ще не з
 - Максимум 2 речення. Коротко і конкретно.
 - Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". ${isInbox ? 'Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.' : 'Кажи конкретно і зрозуміло що відбувається — як друг, не як програма.'}
 - Використовуй ТІЛЬКИ факти з контексту нижче. НЕ вигадуй ліміти, суми, плани або звички яких немає в даних.
-- НЕ повторюй те що вже казав. ЗАБОРОНЕНІ слова (вже використані в останніх повідомленнях, ОБОВ'ЯЗКОВО обери ІНШУ тему): ${_extractBannedWords(allMsgs.slice(0, 3)) || 'немає'}.
+- НЕ повторюй те що вже казав. ${_getBannedTopics(allMsgs) ? 'ЗАБОРОНЕНІ ТЕМИ (вже обговорені, в cooldown — ОБОВ\'ЯЗКОВО обери ІНШУ тему): ' + _getBannedTopics(allMsgs) + '.' : 'Дивись попередні повідомлення і обирай іншу тему.'}
+- Поле "topic" у JSON — коротка назва теми латиницею (наприклад: "daily_habits", "stuck_task", "budget_warning", "morning_greeting", "habit_streak", "project_progress"). Це потрібно для антиповтору.
 - ЕМПАТІЯ: якщо в чаті або моментах є слова-маркери ("втомився", "не можу", "забив", "погано", "зле", "хворію", "важко", "дістало") — реагуй ВІДПОВІДНО ДО СВОГО ХАРАКТЕРУ: Coach — визнай що важко, але підштовхни зробити хоча б мінімум ("Тяжко? Ок. Але одну дрібницю закрий — потім легше"). Partner — м'яка підтримка, дозволь відпочити ("Відпочинь, задачі почекають"). Mentor — запитай причину, допоможи розібратись ("Що саме виснажило? Може переглянемо пріоритети?").
 - Відповідай ТІЛЬКИ JSON: ${CHIP_JSON_FORMAT}
 ${CHIP_PROMPT_RULES}
@@ -312,7 +312,9 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (!parsed || !parsed.text) { _boardGenerating[tab] = false; return; }
 
     // Збереження: inbox і вкладки мають різні сховища
-    const newMsg = { text: parsed.text, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
+    const newMsg = { text: parsed.text, topic: parsed.topic || '', priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
+    // Ставимо cooldown на тему щоб не повторювати 3 години
+    if (parsed.topic) setOwlCd('topic_' + parsed.topic);
     if (isInbox) {
       newMsg.id = Date.now();
       const msgs = getOwlBoardMessages();

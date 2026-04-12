@@ -38,7 +38,7 @@ export const CHIP_PROMPT_RULES = `- chips — варіанти швидкої В
 - Якщо нічого конкретного — chips: [].
 - ТОН чіпів має відповідати твоєму характеру (описаний вище). Coach — прямий і конкретний. Partner — м'який і підтримуючий. Mentor — запитує і направляє.`;
 
-export const CHIP_JSON_FORMAT = `{"text":"повідомлення","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}]}`;
+export const CHIP_JSON_FORMAT = `{"text":"повідомлення","topic":"коротка_тема_латиницею","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}]}`;
 
 // ============================================================
 // normalizeChips — приведення до єдиного формату
