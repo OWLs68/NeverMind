@@ -9,7 +9,6 @@ import {
   addFact,
   cleanupExpiredFacts,
   deleteFact,
-  getFacts,
   getFactsRaw,
   updateFactText,
   FACT_CATEGORIES,
@@ -1057,11 +1056,12 @@ async function refreshMemory() {
   }
 }
 
-// === ПАМ'ЯТЬ (структуровані факти, v2 — 11.04) ===
-// Нова архітектура: замість текстового nm_memory — масив nm_facts з часовими мітками.
-// Два канали наповнення:
-//   1. Real-time — Inbox tool calling (save_memory_fact у INBOX_TOOLS)
-//   2. Background — ця функція (раз на день, аналіз даних за 7 днів)
+// === ПАМ'ЯТЬ (структуровані факти, v3 — 12.04) ===
+// Архітектура: масив nm_facts з часовими мітками.
+// ЄДИНИЙ канал наповнення: AI викликає save_memory_fact tool коли юзер ПРЯМО
+// повідомляє стійкий факт про себе (на будь-якій вкладці з tool calling).
+// Фонове "вгадування" (аналіз історії за 7 днів) прибрано 12.04 — генерувало
+// сміття (дії як факти, вигадані компліменти). Один мозок, одне правило.
 // Перший запуск робить міграцію старого nm_memory (текст → факти).
 
 async function doRefreshMemory(showResult) {
@@ -1076,13 +1076,6 @@ async function doRefreshMemory(showResult) {
       console.warn('[memory] migration failed:', e);
     }
     markMigrationDone();
-  }
-
-  // 3. Фонова екстракція нових фактів з останніх 7 днів даних
-  try {
-    await _backgroundExtractFacts();
-  } catch (e) {
-    console.warn('[memory] background extraction failed:', e);
   }
 
   localStorage.setItem('nm_memory_ts', Date.now().toString());
@@ -1143,96 +1136,6 @@ async function _migrateLegacyMemoryToFacts() {
     }
   }
   console.log('[memory] migrated', added, 'facts from legacy nm_memory');
-}
-
-// Фонова екстракція — аналіз даних за останні 7 днів, витягування нових фактів.
-// Safety net для джерел що ще НЕ на tool calling (tab chat bars, нотатки, моменти).
-async function _backgroundExtractFacts() {
-  const saveMemTool = INBOX_TOOLS.find(t => t.function?.name === 'save_memory_fact');
-  if (!saveMemTool) return;
-
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
-  const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
-  const notes = getNotes();
-  const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
-
-  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const recentInbox = inbox.filter(i => (i.ts || 0) >= cutoff).slice(-30);
-  const recentTasks = tasks.filter(t => (t.createdAt || 0) >= cutoff || (t.completedAt && t.completedAt >= cutoff)).slice(-20);
-  const recentNotes = notes.filter(n => ((n.ts || n.updatedAt || 0) >= cutoff)).slice(-15);
-  const recentMoments = moments.filter(m => (m.ts || 0) >= cutoff).slice(-15);
-
-  const chatTabs = ['inbox','tasks','notes','me','evening','finance','health','projects'];
-  const recentChats = chatTabs.map(t => {
-    try {
-      const msgs = JSON.parse(localStorage.getItem('nm_chat_' + t) || '[]');
-      return msgs
-        .filter(m => (m.ts || m.id || 0) >= cutoff)
-        .slice(-15)
-        .map(m => `[${t}/${m.role}] ${m.text}`)
-        .join('\n');
-    } catch { return ''; }
-  }).filter(Boolean).join('\n---\n');
-
-  const totalData = recentInbox.length + recentTasks.length + recentNotes.length + recentMoments.length;
-  if (totalData < 3) return; // замало даних
-
-  // Показуємо вже відомі факти — для дедуплікації на стороні AI
-  const existing = getFacts().slice(0, 50).map(f => `[${f.category}] ${f.text}`).join('\n');
-  const profile = getProfile() || 'не заповнено';
-
-  const systemPrompt = `Ти — OWL, агент NeverMind. Проаналізуй активність користувача за останні 7 днів і витягни НОВІ факти ПРО ЛЮДИНУ. Для КОЖНОГО нового факту — виклич tool save_memory_fact.
-
-ПРАВИЛА:
-- Максимум 5 НОВИХ фактів за виклик (тільки найважливіші)
-- НЕ дублюй факти які вже є у "ВЖЕ ЗНАЄМО" нижче
-- Пиши від третьої особи українською: "Має...", "Працює...", "Любить..."
-- ФАКТ = щось стійке про людину (вподобання, звичка, сім'я, робота, ціль, стан, обмеження)
-- НЕ ФАКТ = поточна задача/подія/справа (для того є save_task/create_event)
-- НЕ вигадуй нічого чого не видно в даних
-- Постійні факти → БЕЗ ttl_days; тимчасові (симптоми, відрядження) → ttl_days 14-30
-- Категорії: preferences, health, work, relationships, context, goals
-
-ВЖЕ ЗНАЄМО (НЕ дублюй):
-${existing || '(порожньо)'}`;
-
-  const userContent = `Профіль: ${profile}
-
-Inbox (7 днів):
-${recentInbox.map(i => `[${i.category||'?'}] ${i.text}`).join('\n') || '(порожньо)'}
-
-Задачі (нові/закриті):
-${recentTasks.map(t => `${t.title} (${t.status})`).join('\n') || '(порожньо)'}
-
-Нотатки:
-${recentNotes.map(n => `${n.folder || 'Загальне'}: ${(n.text||'').substring(0, 80)}`).join('\n') || '(порожньо)'}
-
-Моменти:
-${recentMoments.map(m => `[${m.mood}] ${m.text}`).join('\n') || '(порожньо)'}
-
-Чати (усі вкладки):
-${recentChats || '(порожньо)'}`;
-
-  const msg = await callAIWithTools(systemPrompt, [{ role: 'user', content: userContent }], [saveMemTool]);
-  if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
-
-  let added = 0;
-  for (const tc of msg.tool_calls) {
-    if (tc.function?.name !== 'save_memory_fact') continue;
-    try {
-      const args = JSON.parse(tc.function.arguments || '{}');
-      const f = addFact({
-        text: args.fact,
-        category: args.category,
-        ttlDays: args.ttl_days,
-        source: 'auto',
-      });
-      if (f) added++;
-    } catch (e) {
-      console.warn('[memory bg] bad fact:', e);
-    }
-  }
-  console.log('[memory] background extracted', added, 'new facts');
 }
 
 // Додаємо профіль і памʼять до кожного AI запиту

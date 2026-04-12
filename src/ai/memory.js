@@ -86,13 +86,62 @@ function _saveFacts(facts) {
   localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
 }
 
+// Список патернів які НЕ є фактами — захисний фільтр від "вгадування" AI.
+// Блокує: дії/задачі переказані як факти, вигадані компліменти, тавтологію.
+// Пояснення — див. save_memory_fact description у src/ai/core.js.
+const REJECT_PATTERNS = [
+  // Дії переказані як стійкі факти (юзер зробив щось раз → AI вигадав "займається")
+  /^займа(є|ю)шся\s/i,       // "Займаєшся пранням одягу"
+  /^вимика(є|ю)ш\s/i,        // "Вимикаєш світло в кімнаті"
+  /^вмика(є|ю)ш\s/i,
+  /^склада(є|ю)ш\s(списк|план)/i, // "Складаєш списки справ" — тавтологія
+  /^пере(пи)?ш\s.*одя?г/i,   // "Переш одяг"
+  /^пра(ну|є|ю)ш\s/i,
+  // Вигадані позитивні риси / суб'єктивні прикметники
+  /^відкрит(ий|а)\s/i,        // "Відкритий до нових ідей"
+  /^креативн(ий|а)/i,
+  /^цілеспрямован(ий|а)/i,
+  /^старанн(ий|а)/i,
+  /^наполегл?ив(ий|а)/i,
+  /^мудр(ий|а)/i,
+  /^добр(ий|а)\s/i,
+  /^розумн(ий|а)/i,
+  /проявля(є|ю)ш\s/i,         // "Проявляєш креативність"
+  /прагне(ш)?\s(підтримув|зроб|досягт)/i, // "Прагнеш підтримувати організованість"
+];
+
+// Повертає причину відхилення або null якщо факт валідний.
+function _rejectReason(text) {
+  const t = (text || '').trim();
+  if (!t) return 'empty';
+  // Занадто короткий або занадто довгий
+  if (t.length < 6) return 'too_short';
+  if (t.length > 200) return 'too_long';
+  // Один з заборонених патернів
+  for (const rx of REJECT_PATTERNS) {
+    if (rx.test(t)) return `pattern:${rx.source}`;
+  }
+  // Надто абстрактно: 1-2 слова без конкретики
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 2) return 'too_few_words';
+  return null;
+}
+
 // Додати новий факт з дедуплікацією.
 // Якщо вже є дуже схожий (тої ж категорії) — оновлюємо lastSeen, повертаємо його.
 // Інакше — створюємо новий.
+// Захисний фільтр: відхиляє дії/задачі переказані як факти і вигадані компліменти.
 export function addFact({ text, category, ttlDays, source = 'auto' }) {
   if (!text || typeof text !== 'string') return null;
   text = text.trim();
   if (text.length < 3 || text.length > 200) return null;
+
+  // Код-фільтр — захист від "вгадування" AI
+  const reject = _rejectReason(text);
+  if (reject) {
+    console.log('[memory] rejected fact:', reject, '—', text);
+    return null;
+  }
 
   if (!category || !FACT_CATEGORIES[category]) category = 'context';
 
