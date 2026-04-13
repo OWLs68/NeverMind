@@ -197,20 +197,28 @@ export function getAIContext() {
     }
   } catch(e) {}
 
-  // === Поточне повідомлення OWL на табло (щоб AI розумів контекст розмови) ===
+  // === Останні повідомлення OWL на табло (Фаза 1.2 — синхронізація табло ↔ чат) ===
+  // Чат бачить історію табло щоб відповіді були послідовними —
+  // якщо OWL задав кілька питань підряд, AI розуміє на яке саме юзер відповідає.
   try {
     const tab = typeof currentTab !== 'undefined' ? currentTab : 'inbox';
-    let boardText = '';
+    let msgs = [];
     if (tab === 'inbox') {
-      const msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
-      if (msgs.length > 0) boardText = msgs[0].text;
+      msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
     } else {
-      const msgs = JSON.parse(localStorage.getItem('nm_owl_tab_' + tab) || '[]');
-      if (Array.isArray(msgs) && msgs.length > 0) boardText = msgs[0].text;
-      else if (msgs && msgs.text) boardText = msgs.text;
+      const raw = JSON.parse(localStorage.getItem('nm_owl_tab_' + tab) || '[]');
+      if (Array.isArray(raw)) msgs = raw;
+      else if (raw && raw.text) msgs = [raw]; // legacy single-object format
     }
-    if (boardText) {
-      parts.push(`OWL щойно сказав на табло (вкладка "${tab}"): "${boardText}". Якщо користувач відповідає на це — це відповідь на питання OWL, НЕ нова задача/нотатка.`);
+    const recent = msgs.slice(0, 3).filter(m => m && m.text);
+    if (recent.length > 0) {
+      const formatted = recent.map(m => {
+        const ago = Date.now() - (m.ts || m.id || 0);
+        const mins = Math.floor(ago / 60000);
+        const when = mins < 1 ? 'щойно' : mins < 60 ? mins + ' хв тому' : Math.floor(mins / 60) + ' год тому';
+        return `[${when}] ${m.text}`;
+      }).join('\n');
+      parts.push(`OWL нещодавно казав на табло (вкладка "${tab}") — враховуй послідовність, не суперечь собі:\n${formatted}\n\nЯкщо користувач відповідає на це — це відповідь на повідомлення OWL, НЕ нова задача/нотатка.`);
     }
   } catch(e) {}
 
