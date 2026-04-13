@@ -5,7 +5,7 @@
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
-import { activeChatBar, callOwlChat, closeChatBar, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
+import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
 import { renderChips } from './chips.js';
 import { addInboxChatMsg } from '../tabs/inbox.js';
@@ -361,6 +361,7 @@ export function setOwlCd(topic) {
 // ============================================================
 const SPEAK_THRESHOLD = 3;
 const FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1000; // 1 год — антиспам follow-ups
+const CHAT_CLOSE_COOLDOWN_MS = 10 * 1000; // 4.5 — 10 сек тиші після закриття чату
 
 // Головна точка входу. opts: { channel?: 'board'|'chat-followup', targetTab?: string }
 // Backward compat: виклики без opts продовжують працювати як board-channel.
@@ -498,15 +499,22 @@ function _judgeBoard(trigger) {
 
   // === БЛОКЕРИ (мінус) — ПІСЛЯ тригерів ===
 
-  // Чат відкритий — критичне пробивається, звичайне чекає
-  if (activeChatBar) {
-    if (hasCritical) {
-      score -= 0;
-      reasons.push('chat-open(critical-override)');
-    } else {
-      score -= 10;
-      reasons.push('chat-open');
+  // 4.5 (ROADMAP Блок 1) — Жорсткий блок поки чат відкритий + 10 сек після.
+  // Прибирає дратівне "ти пишеш у чаті — і раптом OWL перезаписує табло над чатом".
+  // Винятки (пробивають блок):
+  //   - hasCritical: нагадування що настало зараз, або дедлайн < 65 хв
+  //   - trigger === 'chat-closed': навмисне пробудження табло після закриття чату
+  //     (цей тригер приходить через 3 сек з nm-chat-closed — ROADMAP каже +10 сек,
+  //      тому все одно перевіряємо cooldown нижче)
+  if (!hasCritical && trigger !== 'chat-closed') {
+    if (activeChatBar) {
+      return { speak: false, score: -100, reason: 'chat-open-block' };
     }
+    if (lastChatClosedTs && (Date.now() - lastChatClosedTs) < CHAT_CLOSE_COOLDOWN_MS) {
+      return { speak: false, score: -100, reason: 'chat-just-closed-cooldown' };
+    }
+  } else if (activeChatBar && hasCritical) {
+    reasons.push('chat-open(critical-override)');
   }
 
   // Штраф за нещодавню генерацію
