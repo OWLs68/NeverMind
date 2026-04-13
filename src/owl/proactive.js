@@ -521,6 +521,87 @@ function _computeCorrelations() {
         }
       }
     }
+
+    // Кореляція 3: час запису в Inbox ↔ продуктивність наступного дня
+    // "Пізні записи" = запис після 22:00. Наступного дня — скільки звичок виконано.
+    const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+    const lateByISO = {};
+    inbox.forEach(i => {
+      if (!i.ts) return;
+      const d = new Date(i.ts);
+      if (d.getHours() >= 22) {
+        const iso = d.toISOString().slice(0, 10);
+        lateByISO[iso] = (lateByISO[iso] || 0) + 1;
+      }
+    });
+    const pairs = [];
+    for (let i = 1; i < 14; i++) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - i - 1);
+      const today = new Date();
+      today.setDate(today.getDate() - i);
+      const yesterdayISO = yesterday.toISOString().slice(0, 10);
+      const todayStr = today.toDateString();
+      const wasLate = !!lateByISO[yesterdayISO];
+      const habits = habitLog[todayStr] || {};
+      const habitsDone = Object.keys(habits).filter(k => habits[k]).length;
+      pairs.push({ wasLate, habitsDone });
+    }
+    const lateDays = pairs.filter(p => p.wasLate);
+    const normalDays = pairs.filter(p => !p.wasLate);
+    if (lateDays.length >= 2 && normalDays.length >= 2) {
+      const avgLate = lateDays.reduce((s, p) => s + p.habitsDone, 0) / lateDays.length;
+      const avgNormal = normalDays.reduce((s, p) => s + p.habitsDone, 0) / normalDays.length;
+      const maxv = Math.max(avgLate, avgNormal, 0.5);
+      const diff = Math.abs(avgNormal - avgLate) / maxv;
+      if (diff > 0.3) {
+        insights.push({
+          id: 'late_inbox_next_habits',
+          text: avgNormal > avgLate
+            ? `Після пізніх записів (після 22:00) наступного дня робиш звичок ${avgLate.toFixed(1)}, а після звичайних вечорів — ${avgNormal.toFixed(1)}.`
+            : `Після пізніх записів наступного дня звичок навіть більше (${avgLate.toFixed(1)} vs ${avgNormal.toFixed(1)}) — цікаво.`
+        });
+      }
+    }
+
+    // Кореляція 4: настрій (moments.mood) ↔ витрати
+    const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+    const finance = JSON.parse(localStorage.getItem('nm_finance') || '[]');
+    const moodByISO = {};
+    moments.forEach(m => {
+      if (!m.ts || !m.mood) return;
+      const iso = new Date(m.ts).toISOString().slice(0, 10);
+      if (!moodByISO[iso]) moodByISO[iso] = { positive: 0, negative: 0, neutral: 0 };
+      moodByISO[iso][m.mood] = (moodByISO[iso][m.mood] || 0) + 1;
+    });
+    const expenseByISO = {};
+    finance.filter(t => t.type === 'expense').forEach(t => {
+      if (!t.ts) return;
+      const iso = new Date(t.ts).toISOString().slice(0, 10);
+      expenseByISO[iso] = (expenseByISO[iso] || 0) + (t.amount || 0);
+    });
+    const negSpend = [];
+    const posSpend = [];
+    Object.keys(moodByISO).forEach(iso => {
+      const m = moodByISO[iso];
+      const spend = expenseByISO[iso] || 0;
+      if (m.negative > m.positive) negSpend.push(spend);
+      else if (m.positive > m.negative) posSpend.push(spend);
+    });
+    if (negSpend.length >= 2 && posSpend.length >= 2) {
+      const avgNeg = negSpend.reduce((s, v) => s + v, 0) / negSpend.length;
+      const avgPos = posSpend.reduce((s, v) => s + v, 0) / posSpend.length;
+      const maxv = Math.max(avgNeg, avgPos, 1);
+      const diff = Math.abs(avgNeg - avgPos) / maxv;
+      if (diff > 0.3) {
+        insights.push({
+          id: 'mood_spending',
+          text: avgNeg > avgPos
+            ? `В дні з поганим настроєм (за моментами) витрачаєш у середньому ${avgNeg.toFixed(0)}, а в гарні — ${avgPos.toFixed(0)}.`
+            : `В дні з гарним настроєм витрачаєш більше (${avgPos.toFixed(0)}) ніж в погані (${avgNeg.toFixed(0)}).`
+        });
+      }
+    }
   } catch(e) {}
   return insights;
 }
