@@ -951,6 +951,8 @@ export function tryTabBoardUpdate(tab) {
   // Підказка при першому відвідуванні
   if (_showFirstVisitHint(tab)) return;
   renderTabBoard(tab); // завжди показуємо збережені дані
+  // G9 — Page Visibility: вкладка прихована → не генерувати (API економія)
+  if (typeof document !== 'undefined' && document.hidden) return;
   const hour = new Date().getHours();
   if (hour < 5) return; // тихі години — генерація пропускається
   // Вечірнє табло — "підсумок дня" не має сенсу зранку; генеруємо лише після 12:00
@@ -1043,6 +1045,9 @@ window.addEventListener('nm-data-changed', (e) => {
   if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
   _boardUpdateTimer = setTimeout(() => {
     _boardUpdateTimer = null;
+    // G9 — Page Visibility: вкладка прихована (юзер пішов за час BOARD_UPDATE_DELAY)
+    // → не генерувати
+    if (typeof document !== 'undefined' && document.hidden) return;
     const curTab = currentTab || 'inbox';
     if (curTab === 'inbox') {
       // Inbox — через Judge Layer

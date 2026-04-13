@@ -970,6 +970,11 @@ export function tryOwlBoardUpdate() {
   const msgs = getOwlBoardMessages();
   if (msgs.length > 0) renderOwlBoard();
 
+  // G9 (ROADMAP Блок 1) — Page Visibility: коли вкладка прихована,
+  // не генерувати ніяких табло (юзер не побачить, API палиться даремно).
+  // Виняток лише reminder-due — він іде через _checkReminders, не сюди.
+  if (typeof document !== 'undefined' && document.hidden) return;
+
   const phase = getDayPhase();
   if (phase === 'silent') return;
 

@@ -50,6 +50,9 @@ let _checkInFlight = false;
 // (щоб не спамити юзера коли кілька умов виконуються одночасно)
 export async function checkFollowups() {
   if (_checkInFlight) return;
+  // G9 (ROADMAP Блок 1) — Page Visibility: коли вкладка прихована,
+  // не запускати follow-ups (їх все одно ніхто не побачить, API палиться)
+  if (typeof document !== 'undefined' && document.hidden) return;
 
   _checkInFlight = true;
   try {
