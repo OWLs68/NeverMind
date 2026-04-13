@@ -5041,6 +5041,10 @@ ${pulseParts.join("\n")}
       const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
       important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
     });
+    const reshuffled = activeTasks.filter((t) => (t.rescheduleCount || 0) >= 3);
+    reshuffled.forEach((t) => {
+      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
+    });
     if (activeTasks.length > 0) {
       normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
     } else {
@@ -8200,7 +8204,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           return true;
         }
         if (parsed.title) found.title = parsed.title;
-        if (parsed.dueDate) found.dueDate = parsed.dueDate;
+        if (parsed.dueDate && parsed.dueDate !== found.dueDate) {
+          if (found.dueDate) found.rescheduleCount = (found.rescheduleCount || 0) + 1;
+          found.dueDate = parsed.dueDate;
+          found.updatedAt = Date.now();
+        }
         if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) found.priority = parsed.priority;
         saveTasks(tasks);
         if (currentTab === "tasks") renderTasks();
@@ -8208,7 +8216,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         return true;
       }
       if (parsed.title) t.title = parsed.title;
-      if (parsed.dueDate) t.dueDate = parsed.dueDate;
+      if (parsed.dueDate && parsed.dueDate !== t.dueDate) {
+        if (t.dueDate) t.rescheduleCount = (t.rescheduleCount || 0) + 1;
+        t.dueDate = parsed.dueDate;
+        t.updatedAt = Date.now();
+      }
       if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) t.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
