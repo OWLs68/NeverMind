@@ -129,6 +129,12 @@ function trackChipClick(action, label) {
   stats.clicked.push({ action, label, ts: Date.now() });
   if (stats.clicked.length > CHIP_STATS_MAX_CLICKED) stats.clicked.splice(0, stats.clicked.length - CHIP_STATS_MAX_CLICKED);
   localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
+  // 4.40 Auto-silence: будь-який клік чіпа = юзер реагує. Скидаємо лічильник
+  // проігнорованих повідомлень + записуємо ts кліку для перевірки в generateBoardMessage.
+  try {
+    localStorage.setItem('nm_owl_ignored_msgs', '0');
+    localStorage.setItem('nm_owl_last_chip_click_ts', String(Date.now()));
+  } catch(e) {}
 }
 
 function trackChipsIgnored(count) {
