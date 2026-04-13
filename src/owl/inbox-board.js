@@ -411,6 +411,18 @@ function _judgeFollowup(trigger, targetTab) {
 // ============================================================
 function _judgeBoard(trigger) {
   // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time' | 'chat-closed'
+
+  // 4.40 Auto-silence (ROADMAP Блок 1) — якщо юзер проігнорував 3 повідомлення
+  // поспіль (детекція у chips.js trackChipsIgnored), OWL мовчить 4 години.
+  // reminder-due пробиває бо йде через _checkReminders → generateBoardMessage напряму,
+  // обходячи Judge Layer.
+  try {
+    const silenceUntil = parseInt(localStorage.getItem('nm_owl_silence_until') || '0');
+    if (silenceUntil > Date.now()) {
+      return { speak: false, score: -100, reason: 'auto-silence-4h' };
+    }
+  } catch(e) {}
+
   let score = 0;
   let reasons = [];
 

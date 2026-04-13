@@ -799,6 +799,25 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     const parsed = _parseJsonTolerant(reply);
     if (!parsed || !parsed.text) { _boardGenerating[tab] = false; return; }
 
+    // 4.40 Auto-silence (ROADMAP Блок 1): перевіряємо чи попереднє повідомлення табло
+    // мало чіпи і чи не було жодного кліку чіпа з моменту його появи.
+    // Якщо ні (3 рази поспіль) → 4 год тиші. reminder-due пробиває бо обходить Judge Layer.
+    try {
+      const lastBoardTs = parseInt(localStorage.getItem('nm_owl_last_board_ts') || '0');
+      const lastClickTs = parseInt(localStorage.getItem('nm_owl_last_chip_click_ts') || '0');
+      if (lastBoardTs > 0 && lastClickTs < lastBoardTs) {
+        const ignored = parseInt(localStorage.getItem('nm_owl_ignored_msgs') || '0') + 1;
+        if (ignored >= 3) {
+          localStorage.setItem('nm_owl_silence_until', String(Date.now() + 4 * 60 * 60 * 1000));
+          localStorage.setItem('nm_owl_ignored_msgs', '0');
+          console.log('[OWL 4.40] Auto-silence 4 год — 3 повідомлення поспіль проігноровано');
+        } else {
+          localStorage.setItem('nm_owl_ignored_msgs', String(ignored));
+        }
+      }
+      localStorage.setItem('nm_owl_last_board_ts', String(Date.now()));
+    } catch(e) {}
+
     // Збереження: inbox і вкладки мають різні сховища
     const newMsg = { text: parsed.text, topic: parsed.topic || '', priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
     // Ставимо cooldown на тему щоб не повторювати 3 години
