@@ -8,9 +8,9 @@
 
 ## 🚀 Active — поточний пріоритет
 
-**Блок 1 — малі фікси з великою цінністю.** Швидкі перемоги, кожна ~1 сесія. Докладно у секції Next нижче.
+**Блок 2 — Концепції вкладок (core UX).** Блок 1 повністю закритий 13.04.2026 (сесія PBybp).
 
-Після Блоку 1 → Блок 2 (концепції вкладок).
+Стартує з **аудиту стану 5 вкладок** — прочитати код кожної (Фінанси/Вечір/Я/Проекти/Здоров'я/Календар) + порівняти з `CONCEPTS_ACTIVE.md`, дати статус по кожній (~30 хв роботи). Далі доробка у порядку пріоритету узгодженому з Романом.
 
 ---
 
@@ -18,18 +18,9 @@
 
 > Послідовність узгоджена з Романом 13.04.2026. Блоки виконуються по порядку — спочатку фікси швидких перемог, потім концепції вкладок, далі мозок OWL, потім адаптивність платформ.
 
-### Блок 1 — Малі фікси з великою цінністю (швидкі перемоги, ~1 сесія кожен)
+### ~~Блок 1 — Малі фікси з великою цінністю~~ ✅ Повністю закритий 13.04.2026 (сесія PBybp)
 
-- ~~**`set_reminder` фікси**~~ — ✅ **Done 13.04.2026** (основна логіка з 10.04 комміт `f1ab11f` + рефакторинг `784e26e`, дотягнуто 13.04: тап на картку reminder у стрічці Inbox → відкриває календар; розрізнення іконки у закріплених картках `_renderUpcoming` (reminder=⏰, event=📅, task=📌)). Мапи `CAT_DOT_BG`/`CAT_DOT_SOLID`/`CAT_TAG_STYLE`/`CAT_META` вже мають ключ `reminder`. Логіка у `habits.js:1247-1284` (processUniversalAction) створює 3 записи: `nm_reminders` + `nm_events` (з `source:'reminder'`) + `nm_inbox` з `category:'reminder'`.
-- ~~**4.5 Блокування табло поки чат відкритий**~~ — ✅ **Done 13.04.2026**. У `_judgeBoard` (`src/owl/inbox-board.js`) замість штрафу `-10` — жорсткий `return { speak: false }` коли `activeChatBar` відкритий. Додано таймстемп `lastChatClosedTs` у `src/ai/core.js` (оновлюється у `closeChatBar` і `closeAllChatBars`), блокує табло ще 10 сек після закриття (константа `CHAT_CLOSE_COOLDOWN_MS`). Винятки що пробивають блок: (а) `hasCritical` — нагадування що настало зараз або дедлайн <65 хв; (б) тригер `'chat-closed'` — навмисне пробудження табло через 3 сек після закриття чату (у паралельно з cooldown).
-- ~~**G9 Page Visibility fix**~~ — ✅ **Done 13.04.2026**. Guard `if (document.hidden) return;` додано у 4 точках: `tryOwlBoardUpdate` (`inbox-board.js`, перед safety net), `tryTabBoardUpdate` (`proactive.js`, перед `generateBoardMessage`), всередині `setTimeout` для `data-changed` listener (`proactive.js`, після BOARD_UPDATE_DELAY юзер міг піти), `checkFollowups` (`followups.js`). Виняток лишився: `_checkReminders` (кожну хв) — це reminder-due канал який ROADMAP виключає, він має продовжувати працювати щоб важливі нагадування спрацьовували.
-- ~~**G11 "Дія замість питань"**~~ — ✅ **Done 13.04.2026**. Додано правило G11 на початок `CHIP_PROMPT_RULES` у `src/owl/chips.js`: chips ніколи не порожні (мін 1, макс 3), питання без чіпів = баг. Видалено суперечливе правило "Якщо нічого конкретного — chips: []" — замінено на "дай 1-2 загальні чіпи на кшталт ['Пізніше', 'Розкажи більше']". У `src/ai/core.js` (промпт tab chat bars) змінено `chips — 0-3 варіанти` на `chips — 1-3 варіанти (ОБОВ'ЯЗКОВО мінімум 1)`. Правило діє і на табло (`proactive.js` через CHIP_PROMPT_RULES) і на всі чат-бари вкладок.
-- ~~**G12 Мікро-розмови**~~ — ✅ **Done 13.04.2026**. У `getOWLPersonality()` `universal` додано "ПРАВИЛО G12 (МІКРО-РОЗМОВИ — жорсткий ліміт)": не повторювати тему більше 2-3 разів, дві спроби — і відпускаєш, мовчати (`text:""`) якщо юзер ігнорує. Покриває всі чати (callOwlChat + всі tab chat bars + табло — бо `getOWLPersonality()` всюди). У `callOwlChat` (`ai/core.js`) скорочено `slice(-12)` (6 обмінів) на `slice(-8)` (4 обміни) — менше історії = менше зациклень на старій темі. Інші tab chat history (10-12) залишено бо це не мікро-чати.
-- ~~**4.40 Auto-silence**~~ — ✅ **Done 13.04.2026**. Якщо юзер не натиснув жодного чіпа на 3 повідомленнях табло поспіль → 4 год тиші OWL. Реалізовано:
-  - `src/owl/chips.js trackChipClick`: будь-який клік чіпа скидає лічильник `nm_owl_ignored_msgs` + записує `nm_owl_last_chip_click_ts`.
-  - `src/owl/proactive.js generateBoardMessage`: перед збереженням нового повідомлення табло — якщо `lastBoardTs > 0 && lastClickTs < lastBoardTs` → попереднє було проігноровано → інкремент `ignored_msgs`. Якщо ≥3 → встановити `nm_owl_silence_until = now + 4h`, скинути counter.
-  - `src/owl/inbox-board.js _judgeBoard`: на самому початку — якщо `silence_until > now` → return `{ speak: false, reason: 'auto-silence-4h' }`.
-  - Виняток: `reminder-due` пробиває (іде через `_checkReminders → generateBoardMessage` напряму, обходить Judge Layer). Без пониження порогу — спрощено від оригінального ROADMAP "+ reduce_threshold_by_30%" щоб лишитись у "~3 рядки".
+Деталі по кожному з 6 пунктів → секція `✅ Done` нижче. Коммити: `d171dbc`, `3afac8d`, `5965e96`, `381a3a8`, `adae757`, `bd283a7`, `b9c9c8a`.
 
 ### Блок 2 — Концепції вкладок (core UX)
 
@@ -206,6 +197,15 @@
 ## ✅ Done — останні закриті пункти
 
 > Повна історія "що мозок вже вміє" (з датами реалізації) → `_archive/FEATURES_ROADMAP.md` секція "Що мозок вже вміє".
+
+**13.04.2026** (сесія PBybp — **Блок 1 повністю закритий**, 7 коммітів)
+- **`set_reminder` фікси** — тап на картку reminder у стрічці Inbox → відкриває Calendar modal; іконка ⏰ (reminder) / 📅 (event) / 📌 (task) у закріплених картках `_renderUpcoming`. (Основна логіка з 10.04 `f1ab11f`, дотягнуто 13.04.) Файли: `src/tabs/inbox.js`.
+- **4.5 Блокування табло поки чат відкритий** — жорсткий `return { speak: false }` у `_judgeBoard` коли `activeChatBar` відкритий, +10 сек cooldown після закриття. Винятки: `hasCritical` (reminder-due / deadline-soon) і тригер `chat-closed` пробивають. Новий експорт `lastChatClosedTs` у `ai/core.js` + константа `CHAT_CLOSE_COOLDOWN_MS` у `inbox-board.js`.
+- **G9 Page Visibility fix** — `if (document.hidden) return;` у 4 точках: `tryOwlBoardUpdate`, `tryTabBoardUpdate`, data-changed listener після BOARD_UPDATE_DELAY, `checkFollowups`. Виняток: `_checkReminders` продовжує працювати (reminder-due канал).
+- **G11 "Дія замість питань"** — на початку `CHIP_PROMPT_RULES` правило G11: chips ≥ 1, ≤ 3; питання без чіпів = баг. В `ai/core.js` промпт `chips — 0-3 варіанти` → `1-3 (ОБОВ'ЯЗКОВО мін 1)`. Покриває табло + всі чат-бари через CHIP_PROMPT_RULES.
+- **G12 Мікро-розмови** — у `getOWLPersonality() universal` секція "ПРАВИЛО G12": не повторювати тему >2-3 разів, мовчати коли юзер ігнорує. У `callOwlChat` історія `slice(-12)` → `slice(-8)` (4 обміни замість 6).
+- **4.40 Auto-silence** — 3 повідомлення поспіль проігноровано → 4 год тиші OWL. Ключі localStorage: `nm_owl_last_board_ts`, `nm_owl_last_chip_click_ts`, `nm_owl_ignored_msgs`, `nm_owl_silence_until`. Детекція у `generateBoardMessage` (перед збереженням нового повідомлення), скидання у `trackChipClick`, guard у `_judgeBoard`. Виняток: `reminder-due` пробиває (обходить Judge Layer).
+- **Аудит + cleanup** — 8-пунктний аудит пройдено, прибрано мертвий експорт `_markChatClosedNow`.
 
 **13.04.2026** (сесія gQ2Hl)
 - `fix(memory)` — захист пам'яті від сміття (жорсткий промпт `save_memory_fact` + код-фільтр у `addFact` + прибрано фонове вгадування `_backgroundExtractFacts`)

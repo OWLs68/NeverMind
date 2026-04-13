@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-04-13 — ✅ Блок 1 повністю закритий (сесія PBybp, 7 коммітів)
+
+**Контекст:** Після консолідації плану в ROADMAP.md (сесія EdsNg) стартував Блок 1 — "Малі фікси з великою цінністю, ~1 сесія кожен". Усі 6 пунктів виконано послідовно за одну сесію + аудит.
+
+**Що зроблено:**
+
+1. **`set_reminder` фікси** (`d171dbc`) — Аудит виявив що основна логіка вже була з 10.04 (`f1ab11f`). Дотягнуто 2 прогалини: (а) тап на картку `reminder` у стрічці Inbox відкриває Calendar modal (раніше `navigateInboxItem` не обробляв цю категорію); (б) у закріплених картках `_renderUpcoming` розрізнено іконки: reminder=⏰, event=📅, task=📌 (читається з `ev.source === 'reminder'`).
+
+2. **4.5 Блокування табло поки чат відкритий** (`3afac8d`) — У `_judgeBoard` замість штрафу `-10` тепер ранній `return { speak: false }` коли `activeChatBar` відкритий. Додано таймстемп `lastChatClosedTs` у `ai/core.js` (оновлюється у `closeChatBar` і `closeAllChatBars`), блокує табло ще 10 сек після закриття. Винятки: `hasCritical` (reminder-due / deadline-soon < 65 хв) і тригер `'chat-closed'` пробивають блок.
+
+3. **G9 Page Visibility fix** (`5965e96`) — `if (document.hidden) return;` у 4 точках: `tryOwlBoardUpdate` (перед safety net), `tryTabBoardUpdate`, data-changed listener після BOARD_UPDATE_DELAY, `checkFollowups`. Прибирає марне спалювання API коли юзер залишив вкладку відкритою на ніч. Виняток: `_checkReminders` (щохвилини) продовжує працювати — це reminder-due канал.
+
+4. **G11 Дія замість питань** (`381a3a8`) — У `CHIP_PROMPT_RULES` на початок додано правило G11: chips НІКОЛИ не порожні (мін 1, макс 3). Видалено суперечливе "Якщо нічого конкретного — chips: []". У промпті `callOwlChat` `chips — 0-3` замінено на `1-3 (ОБОВ'ЯЗКОВО мін 1)`. Покриває табло + всі чат-бари через один `CHIP_PROMPT_RULES`.
+
+5. **G12 Мікро-розмови** (`adae757`) — У `getOWLPersonality() universal` додано секцію "ПРАВИЛО G12": не повторювати тему >2-3 разів, мовчати (`text:""`) якщо юзер ігнорує. У `callOwlChat` скорочено історію `slice(-12)` → `slice(-8)` (4 обміни замість 6). Покриває всі чати через `getOWLPersonality()`.
+
+6. **4.40 Auto-silence** (`bd283a7`) — 3 повідомлення поспіль проігноровано → 4 год тиші OWL. 4 нові ключі localStorage: `nm_owl_silence_until`, `nm_owl_ignored_msgs`, `nm_owl_last_board_ts`, `nm_owl_last_chip_click_ts`. Детекція у `generateBoardMessage` (перед збереженням — якщо `lastBoardTs > 0 && lastClickTs < lastBoardTs` → ігнор). Скидання у `trackChipClick` (будь-який клік). Guard у `_judgeBoard` на самому початку. Виняток: `reminder-due` пробиває.
+
+7. **Аудит + cleanup** (`b9c9c8a`) — 8-пунктний `/audit` пройдено: node --check чисто, дублікатів функцій немає, промпти G11 і G12 не конфліктують, всі 4 `document.hidden` guards зареєстровані. Знайдено і прибрано мертвий експорт `_markChatClosedNow` (inline оновлення `lastChatClosedTs` достатньо).
+
+**Файли:** `src/ai/core.js`, `src/tabs/inbox.js`, `src/owl/inbox-board.js`, `src/owl/proactive.js`, `src/owl/followups.js`, `src/owl/chips.js`, `sw.js`, `ROADMAP.md`.
+
+**Нові localStorage ключі** (4): `nm_owl_silence_until`, `nm_owl_ignored_msgs`, `nm_owl_last_board_ts`, `nm_owl_last_chip_click_ts`. Додати у таблицю в `CLAUDE.md` при наступній структурній зміні.
+
+**Активна гілка:** `claude/start-session-PBybp`. ROADMAP Active переключено з Блоку 1 на Блок 2 (концепції вкладок) — стартує з аудиту стану 5 вкладок.
+
+---
+
 ## 2026-04-13 — 🗺️ Консолідація плану в `ROADMAP.md` (2 коміти)
 
 **Контекст:** План проекту був розкиданий по 3 файлах — `FEATURES_ROADMAP.md` (704 рядки), секція "Відкрите на майбутнє" у `_ai-tools/SESSION_STATE.md` (537 рядків), частково `CONCEPTS_ACTIVE.md`. Новий чат губився де шукати. Попередня сесія (gQ2Hl) залишила пріоритетну задачу на новий чат — консолідувати.
