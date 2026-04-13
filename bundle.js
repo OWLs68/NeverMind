@@ -5281,6 +5281,78 @@ ${pulseParts.join("\n")}
           }
         }
       }
+      const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+      const lateByISO = {};
+      inbox.forEach((i) => {
+        if (!i.ts) return;
+        const d = new Date(i.ts);
+        if (d.getHours() >= 22) {
+          const iso = d.toISOString().slice(0, 10);
+          lateByISO[iso] = (lateByISO[iso] || 0) + 1;
+        }
+      });
+      const pairs = [];
+      for (let i = 1; i < 14; i++) {
+        const yesterday = /* @__PURE__ */ new Date();
+        yesterday.setDate(yesterday.getDate() - i - 1);
+        const today = /* @__PURE__ */ new Date();
+        today.setDate(today.getDate() - i);
+        const yesterdayISO = yesterday.toISOString().slice(0, 10);
+        const todayStr = today.toDateString();
+        const wasLate = !!lateByISO[yesterdayISO];
+        const habits = habitLog[todayStr] || {};
+        const habitsDone = Object.keys(habits).filter((k) => habits[k]).length;
+        pairs.push({ wasLate, habitsDone });
+      }
+      const lateDays = pairs.filter((p) => p.wasLate);
+      const normalDays = pairs.filter((p) => !p.wasLate);
+      if (lateDays.length >= 2 && normalDays.length >= 2) {
+        const avgLate = lateDays.reduce((s, p) => s + p.habitsDone, 0) / lateDays.length;
+        const avgNormal = normalDays.reduce((s, p) => s + p.habitsDone, 0) / normalDays.length;
+        const maxv = Math.max(avgLate, avgNormal, 0.5);
+        const diff = Math.abs(avgNormal - avgLate) / maxv;
+        if (diff > 0.3) {
+          insights.push({
+            id: "late_inbox_next_habits",
+            text: avgNormal > avgLate ? `\u041F\u0456\u0441\u043B\u044F \u043F\u0456\u0437\u043D\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 (\u043F\u0456\u0441\u043B\u044F 22:00) \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0440\u043E\u0431\u0438\u0448 \u0437\u0432\u0438\u0447\u043E\u043A ${avgLate.toFixed(1)}, \u0430 \u043F\u0456\u0441\u043B\u044F \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0432\u0435\u0447\u043E\u0440\u0456\u0432 \u2014 ${avgNormal.toFixed(1)}.` : `\u041F\u0456\u0441\u043B\u044F \u043F\u0456\u0437\u043D\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A \u043D\u0430\u0432\u0456\u0442\u044C \u0431\u0456\u043B\u044C\u0448\u0435 (${avgLate.toFixed(1)} vs ${avgNormal.toFixed(1)}) \u2014 \u0446\u0456\u043A\u0430\u0432\u043E.`
+          });
+        }
+      }
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const finance = JSON.parse(localStorage.getItem("nm_finance") || "[]");
+      const moodByISO = {};
+      moments.forEach((m) => {
+        if (!m.ts || !m.mood) return;
+        const iso = new Date(m.ts).toISOString().slice(0, 10);
+        if (!moodByISO[iso]) moodByISO[iso] = { positive: 0, negative: 0, neutral: 0 };
+        moodByISO[iso][m.mood] = (moodByISO[iso][m.mood] || 0) + 1;
+      });
+      const expenseByISO = {};
+      finance.filter((t) => t.type === "expense").forEach((t) => {
+        if (!t.ts) return;
+        const iso = new Date(t.ts).toISOString().slice(0, 10);
+        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t.amount || 0);
+      });
+      const negSpend = [];
+      const posSpend = [];
+      Object.keys(moodByISO).forEach((iso) => {
+        const m = moodByISO[iso];
+        const spend = expenseByISO[iso] || 0;
+        if (m.negative > m.positive) negSpend.push(spend);
+        else if (m.positive > m.negative) posSpend.push(spend);
+      });
+      if (negSpend.length >= 2 && posSpend.length >= 2) {
+        const avgNeg = negSpend.reduce((s, v) => s + v, 0) / negSpend.length;
+        const avgPos = posSpend.reduce((s, v) => s + v, 0) / posSpend.length;
+        const maxv = Math.max(avgNeg, avgPos, 1);
+        const diff = Math.abs(avgNeg - avgPos) / maxv;
+        if (diff > 0.3) {
+          insights.push({
+            id: "mood_spending",
+            text: avgNeg > avgPos ? `\u0412 \u0434\u043D\u0456 \u0437 \u043F\u043E\u0433\u0430\u043D\u0438\u043C \u043D\u0430\u0441\u0442\u0440\u043E\u0454\u043C (\u0437\u0430 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u043C\u0438) \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u0443 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443 ${avgNeg.toFixed(0)}, \u0430 \u0432 \u0433\u0430\u0440\u043D\u0456 \u2014 ${avgPos.toFixed(0)}.` : `\u0412 \u0434\u043D\u0456 \u0437 \u0433\u0430\u0440\u043D\u0438\u043C \u043D\u0430\u0441\u0442\u0440\u043E\u0454\u043C \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u0431\u0456\u043B\u044C\u0448\u0435 (${avgPos.toFixed(0)}) \u043D\u0456\u0436 \u0432 \u043F\u043E\u0433\u0430\u043D\u0456 (${avgNeg.toFixed(0)}).`
+          });
+        }
+      }
     } catch (e) {
     }
     return insights;
