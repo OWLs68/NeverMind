@@ -13,7 +13,8 @@ import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
 import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
-import { _getTabChatAHeight, _tabChatState, closeOwlChat, getOwlBoardContext } from '../owl/inbox-board.js';
+import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
+import { getBoardContext } from '../owl/proactive.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
 import { formatFactsForContext, getFacts } from './memory.js';
 
@@ -441,7 +442,7 @@ export async function callOwlChat(userText) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return null;
 
-  const context = getOwlBoardContext();
+  const context = getBoardContext('inbox');
   const chatHistory = JSON.parse(localStorage.getItem('nm_owl_chat') || '[]');
 
   // Беремо останні 6 обмінів для контексту

@@ -17,7 +17,7 @@ import {
   markMigrationDone,
   getLegacyMemoryText,
 } from '../ai/memory.js';
-import { tryTabBoardUpdate } from '../owl/proactive.js';
+import { tryBoardUpdate } from '../owl/proactive.js';
 import { renderEvening, renderMe, renderMeHabitsStats } from '../tabs/evening.js';
 import { getFinBudget, renderFinance, saveFinBudget, setCurrency } from '../tabs/finance.js';
 import { currentProdTab, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
@@ -137,7 +137,7 @@ export function switchTab(tab) {
   setTimeout(() => showFirstVisitTip(tab), 600);
 
   // OWL табло для вкладки
-  setTimeout(() => { try { tryTabBoardUpdate(tab); } catch(e) {} }, 700);
+  setTimeout(() => { try { tryBoardUpdate(tab); } catch(e) {} }, 700);
   // Оновлюємо висоту overlay після зміни вмісту табло
   if (['me','evening','health','projects','inbox'].includes(tab)) {
     setTimeout(() => { try { applyBoardOverlays(); } catch(e) {} }, 750);
