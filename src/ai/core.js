@@ -20,6 +20,11 @@ import { formatFactsForContext, getFacts } from './memory.js';
 
 export let activeChatBar = null;
 export function setActiveChatBar(v) { activeChatBar = v; }
+// 4.5 (ROADMAP Блок 1) — таймстемп останнього закриття чату.
+// Використовується у _judgeBoard щоб блокувати табло ще 10 сек після закриття —
+// не дає OWL перезаписати табло над чатом, з якого юзер щойно вийшов.
+export let lastChatClosedTs = 0;
+export function _markChatClosedNow() { lastChatClosedTs = Date.now(); }
 
 // ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
 export function getOWLPersonality() {
@@ -728,6 +733,7 @@ export function closeChatBar(tab) {
   inputs.forEach(i => i.blur());
 
   activeChatBar = null;
+  lastChatClosedTs = Date.now();
 
   // Табло може оновитись після закриття чату
   window.dispatchEvent(new CustomEvent('nm-chat-closed', { detail: tab }));
@@ -742,7 +748,10 @@ export function closeAllChatBars(resetActive = true) {
     const inputs = bar.querySelectorAll('input, textarea');
     inputs.forEach(i => i.blur());
   });
-  if (resetActive) activeChatBar = null;
+  if (resetActive) {
+    if (activeChatBar) lastChatClosedTs = Date.now();
+    activeChatBar = null;
+  }
 }
 
 // === WINDOW GLOBALS (HTML handlers only) ===
