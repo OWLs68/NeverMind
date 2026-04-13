@@ -4268,262 +4268,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const speak = score >= SPEAK_THRESHOLD;
     return { speak, score, reason: reasons.join(", ") };
   }
-  function getOwlBoardContext() {
-    const now = /* @__PURE__ */ new Date();
-    const todayStr = now.toDateString();
-    const hour = now.getHours();
-    const min = now.getMinutes();
-    const weekDay = now.getDay();
-    const phase = getDayPhase();
-    const sc = getSchedule();
-    const critical = [];
-    const important = [];
-    const normal = [];
-    try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      const todayISO = now.toISOString().slice(0, 10);
-      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
-      if (due.length > 0) {
-        due.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
-        const updated = reminders.map((r) => due.find((d) => d.id === r.id) ? { ...r, done: true } : r);
-        localStorage.setItem("nm_reminders", JSON.stringify(updated));
-      }
-      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
-      if (upcoming.length > 0) {
-        const next = upcoming[0];
-        const [nh, nm] = next.time.split(":").map(Number);
-        const minsUntil = nh * 60 + nm - (hour * 60 + min);
-        if (minsUntil <= 30) important.push(`[\u0421\u041A\u041E\u0420\u041E] \u23F0 \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043E ${next.time}: "${next.text}" (\u0447\u0435\u0440\u0435\u0437 ${minsUntil} \u0445\u0432)`);
-      }
-    } catch (e) {
-    }
-    const phaseLabels = {
-      morning: `[\u0424\u0410\u0417\u0410: \u0420\u0410\u041D\u041E\u041A] \u0427\u0430\u0441 \u043F\u043B\u0430\u043D\u0443\u0432\u0430\u043D\u043D\u044F. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438 \u043D\u0430 \u0434\u0435\u043D\u044C, \u043C\u043E\u0442\u0438\u0432\u0430\u0446\u0456\u044F, \u0449\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u041F\u0456\u0434\u0439\u043E\u043C \u043E ${sc.wakeUp}:00, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workStart}:00.`,
-      work: `[\u0424\u0410\u0417\u0410: \u0420\u041E\u0411\u041E\u0422\u0410] \u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0447\u0430\u0441. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D.`,
-      evening: `[\u0424\u0410\u0417\u0410: \u0412\u0415\u0427\u0406\u0420] \u0427\u0430\u0441 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432. \u0424\u043E\u043A\u0443\u0441: \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E, \u044F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u043F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u0420\u043E\u0431\u043E\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workEnd}:00.`,
-      night: `[\u0424\u0410\u0417\u0410: \u041D\u0406\u0427] \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441. \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435 \u2014 \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0456 \u043C\u043E\u0436\u043D\u0430 \u0449\u0435 \u0432\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E.`
-    };
-    if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
-    normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
-    const tasks = getTasks();
-    const activeTasks = tasks.filter((t) => t.status === "active");
-    const recentlyDone = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3);
-    if (recentlyDone.length > 0) {
-      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
-    }
-    if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
-      const todayDow = now.getDay();
-      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-      const briefParts = [];
-      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '"').join(", ")}`);
-      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name).join(", ")}`);
-      const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
-      if (quitHabitsAll.length > 0) {
-        const todayIso = now.toISOString().slice(0, 10);
-        const quitInfo = quitHabitsAll.map((h) => {
-          const s = getQuitStatus(h.id);
-          return `"${h.name}": ${s.streak || 0} \u0434\u043D`;
-        });
-        briefParts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
-      }
-      if (briefParts.length > 0) important.push(`[\u0420\u0410\u041D\u041A\u041E\u0412\u0418\u0419 \u0411\u0420\u0418\u0424] \u0417\u0432\u0435\u0434\u0435\u043D\u043D\u044F \u043D\u0430 \u0434\u0435\u043D\u044C:
-${briefParts.join("\n")}
-\u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
-    }
-    if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
-      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
-      const todayDow = now.getDay();
-      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-      const todayLogAll = getHabitLog()[todayStr] || {};
-      const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
-      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
-      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
-      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
-      const pulseParts = [];
-      pulseParts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneTasks.length}`);
-      pulseParts.push(`\u0417\u0432\u0438\u0447\u043E\u043A: ${doneH}/${todayHabitsAll.length}`);
-      if (todayMoments.length > 0) pulseParts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: ${todayMoments.length}`);
-      if (!hasSummary) pulseParts.push("\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
-      const eMood = getEveningMood();
-      if (eMood) {
-        const ml = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
-        pulseParts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u044E\u0437\u0435\u0440): ${ml[eMood] || eMood}`);
-      }
-      important.push(`[\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u041F\u0423\u041B\u042C\u0421] \u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C:
-${pulseParts.join("\n")}
-\u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
-    }
-    const urgent = activeTasks.filter((t) => {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
-      if (!m) return false;
-      const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
-      return diff > 0 && diff <= 65;
-    });
-    urgent.forEach((t) => {
-      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}".`);
-    });
-    const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    stuckDays3.forEach((t) => {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
-    });
-    const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    forgotten.forEach((t) => {
-      const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
-      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
-    });
-    if (activeTasks.length > 0) {
-      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
-    } else {
-      normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
-    }
-    const habits = getHabits();
-    const buildHabits = habits.filter((h) => h.type !== "quit");
-    const quitHabits = habits.filter((h) => h.type === "quit");
-    const log = getHabitLog();
-    const todayLog = log[todayStr] || {};
-    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()));
-    const doneHabits = todayHabits.filter((h) => todayLog[h.id]);
-    const pendingHabits = todayHabits.filter((h) => !todayLog[h.id]);
-    if (todayHabits.length > 0 && pendingHabits.length === 0) {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${todayHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
-    }
-    if ((phase === "evening" || phase === "night") && pendingHabits.length > 0) {
-      const atRisk = pendingHabits.filter((h) => {
-        const streak = Object.values(log).filter((d) => d[h.id]).length;
-        return streak >= 3;
-      });
-      if (atRisk.length > 0) {
-        const details = atRisk.map((h) => {
-          const streak = Object.values(log).filter((d) => d[h.id]).length;
-          return `"${h.name}" (\u0432\u0436\u0435 ${streak} \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434, \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E)`;
-        });
-        critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0417\u0432\u0438\u0447\u043A\u0438 \u0437 \u0441\u0435\u0440\u0456\u0454\u044E \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E \u2014 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u0430 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0440\u043E\u0431\u0438\u0432: ${details.join(", ")}.`);
-      }
-    }
-    if ((phase === "work" || phase === "evening") && pendingHabits.length > 0) {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name).join(", ")}.`);
-    }
-    if (todayHabits.length > 0) {
-      normal.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneHabits.length}/${todayHabits.length}.`);
-    }
-    if (quitHabits.length > 0) {
-      const todayIso = now.toISOString().slice(0, 10);
-      const notHeldToday = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayIso);
-      if ((phase === "evening" || phase === "night") && notHeldToday.length > 0) {
-        important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '"').join(", ")}.`);
-      }
-      quitHabits.forEach((h) => {
-        const s = getQuitStatus(h.id);
-        const streak = s.streak || 0;
-        const milestones = [7, 14, 21, 30, 60, 90];
-        if (milestones.includes(streak) && owlCdExpired("quit_milestone_" + h.id + "_" + streak, 24 * 60 * 60 * 1e3)) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] ${streak} \u0434\u043D\u0456\u0432 \u0431\u0435\u0437 "${h.name}"! \u{1F389}`);
-        }
-      });
-      const quitInfo = quitHabits.map((h) => `"${h.name}": ${getQuitStatus(h.id).streak || 0} \u0434\u043D`);
-      normal.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}.`);
-    }
-    try {
-      const budget = getFinBudget();
-      if (budget.total > 0) {
-        const from = getFinPeriodRange("month");
-        const txs = getFinance().filter((t) => t.ts >= from && t.type === "expense");
-        const exp = txs.reduce((s, t) => s + t.amount, 0);
-        const pct = Math.round(exp / budget.total * 100);
-        if (exp > budget.total) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E! \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(exp)} \u0437 ${formatMoney(budget.total)} (${pct}%).`);
-        } else if (pct >= 80) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${pct}% \u043C\u0456\u0441\u044F\u0447\u043D\u043E\u0433\u043E \u0431\u044E\u0434\u0436\u0435\u0442\u0443.`);
-        } else {
-          normal.push(`\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F: ${formatMoney(exp)} / ${formatMoney(budget.total)} (${pct}%).`);
-        }
-        if (txs.length >= 3) {
-          const bycat = {};
-          txs.forEach((t) => {
-            if (!bycat[t.category]) bycat[t.category] = [];
-            bycat[t.category].push(t.amount);
-          });
-          const lastTx = txs[0];
-          if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
-            const avg = bycat[lastTx.category].reduce((a, b) => a + b, 0) / bycat[lastTx.category].length;
-            if (lastTx.amount > avg * 2.5 && owlCdExpired("unusual_tx_" + lastTx.id, 8 * 60 * 60 * 1e3)) {
-              important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435\u0437\u0432\u0438\u0447\u043D\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430: ${formatMoney(lastTx.amount)} \u043D\u0430 "${lastTx.category}" \u2014 \u0432\u0438\u0449\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0432\u0434\u0432\u0456\u0447\u0456.`);
-            }
-          }
-        }
-      }
-    } catch (e) {
-    }
-    if (phase === "evening" || phase === "night") {
-      const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      if (!s || new Date(s.date).toDateString() !== todayStr) {
-        important.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
-      }
-    }
-    if (weekDay === 1 && (phase === "morning" || phase === "work")) {
-      normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
-    }
-    if (weekDay === 5 && phase === "evening") {
-      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 7 * 24 * 60 * 60 * 1e3);
-      normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
-    }
-    const activeTabs = [];
-    if (tasks.length > 0 || getHabits().length > 0) activeTabs.push("\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C (\u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438)");
-    try {
-      if (getNotes().length > 0) activeTabs.push("\u041D\u043E\u0442\u0430\u0442\u043A\u0438");
-    } catch (e) {
-    }
-    try {
-      if (getFinance().length > 0) activeTabs.push("\u0424\u0456\u043D\u0430\u043D\u0441\u0438");
-    } catch (e) {
-    }
-    try {
-      if (JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0) activeTabs.push("\u0417\u0434\u043E\u0440\u043E\u0432'\u044F");
-    } catch (e) {
-    }
-    try {
-      if (JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0) activeTabs.push("\u041F\u0440\u043E\u0435\u043A\u0442\u0438");
-    } catch (e) {
-    }
-    try {
-      if (JSON.parse(localStorage.getItem("nm_moments") || "[]").length > 0) activeTabs.push("\u0412\u0435\u0447\u0456\u0440 (\u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F)");
-    } catch (e) {
-    }
-    if (activeTabs.length > 0) {
-      normal.push(`[\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0412\u041A\u041B\u0410\u0414\u041A\u0418] \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454: ${activeTabs.join(", ")}. \u0426\u0456\u043A\u0430\u0432\u0441\u044F \u0422\u0406\u041B\u042C\u041A\u0418 \u0446\u0438\u043C\u0438 \u0442\u0435\u043C\u0430\u043C\u0438.`);
-    }
-    const OWL_Q_KEY = "nm_owl_questions";
-    const OWL_Q_TS_KEY = "nm_owl_q_ts";
-    const OWL_QUESTIONS = [
-      { id: "work", q: "\u0427\u0438\u043C \u0442\u0438 \u0437\u0430\u0439\u043C\u0430\u0454\u0448\u0441\u044F? \u0414\u0435 \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u0430\u0431\u043E \u043D\u0430\u0432\u0447\u0430\u0454\u0448\u0441\u044F?" },
-      { id: "goals", q: "\u042F\u043A\u0430 \u0442\u0432\u043E\u044F \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0437\u0430\u0440\u0430\u0437 \u2014 \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435?" },
-      { id: "interests", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C \u043F\u043E\u0437\u0430 \u0440\u043E\u0431\u043E\u0442\u043E\u044E? \u0425\u043E\u0431\u0456, \u0437\u0430\u0445\u043E\u043F\u043B\u0435\u043D\u043D\u044F?" },
-      { id: "motivation", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442, \u043F\u0440\u043E\u0446\u0435\u0441 \u0447\u0438 \u0432\u0438\u0437\u043D\u0430\u043D\u043D\u044F?" },
-      { id: "routine", q: "\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u0442\u0432\u0456\u0439 \u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C? \u041A\u043E\u043B\u0438 \u0442\u0438 \u043D\u0430\u0439\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0438\u0439?" },
-      { id: "challenges", q: "\u0429\u043E \u0442\u043E\u0431\u0456 \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u0439\u0432\u0430\u0436\u0447\u0435 \u0434\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u0449\u043E \u0445\u043E\u0442\u0456\u0432 \u0431\u0438 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438?" },
-      { id: "values", q: "\u0429\u043E \u0434\u043B\u044F \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0432 \u0436\u0438\u0442\u0442\u0456 \u2014 \u0449\u043E \u0442\u0438 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0436\u0435\u0440\u0442\u0432\u0443\u0454\u0448?" },
-      { id: "relax", q: "\u042F\u043A \u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0454\u0448? \u0429\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u043F\u0435\u0440\u0435\u0437\u0430\u0440\u044F\u0434\u0438\u0442\u0438\u0441\u044C?" },
-      { id: "people", q: "\u0425\u0442\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u043B\u044E\u0434\u0438 \u043D\u0430\u0432\u043A\u043E\u043B\u043E \u0442\u0435\u0431\u0435? \u0420\u043E\u0434\u0438\u043D\u0430, \u0434\u0440\u0443\u0437\u0456, \u043F\u0430\u0440\u0442\u043D\u0435\u0440?" },
-      { id: "health", q: "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0456 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F\u043C? \u0404 \u0449\u043E\u0441\u044C \u0449\u043E \u0445\u0432\u0438\u043B\u044E\u0454 \u0430\u0431\u043E \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448?" },
-      { id: "dreams", q: "\u0414\u0435 \u0442\u0438 \u0431\u0430\u0447\u0438\u0448 \u0441\u0435\u0431\u0435 \u0447\u0435\u0440\u0435\u0437 \u0440\u0456\u043A? \u0429\u043E \u043C\u0430\u0454 \u0437\u043C\u0456\u043D\u0438\u0442\u0438\u0441\u044C?" },
-      { id: "style", q: "\u042F\u043A \u0442\u043E\u0431\u0456 \u0437\u0440\u0443\u0447\u043D\u0456\u0448\u0435 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0441\u043F\u0440\u0430\u0432\u0456 \u0447\u0438 \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u043E \u0437 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F\u043C\u0438?" }
-    ];
-    try {
-      const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || "[]");
-      const lastQTs = parseInt(localStorage.getItem(OWL_Q_TS_KEY) || "0");
-      const nextQ = OWL_QUESTIONS.find((q) => !asked.includes(q.id));
-      if (nextQ && Date.now() - lastQTs > 24 * 60 * 60 * 1e3 && (phase === "morning" || phase === "work")) {
-        normal.push(`[\u0410\u041D\u041A\u0415\u0422\u0410] \u0417\u0430\u0434\u0430\u0439 \u044E\u0437\u0435\u0440\u0443 \u0446\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E, \u0432\u043F\u043B\u0435\u0442\u0438 \u0432 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 (\u041D\u0415 \u0441\u0443\u0445\u043E \u044F\u043A \u0432 \u0430\u043D\u043A\u0435\u0442\u0456): "${nextQ.q}". \u041F\u0456\u0441\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u0447\u0456\u043F "\u0420\u043E\u0437\u043A\u0430\u0436\u0438" \u0437 action:"chat". \u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 ID \u043F\u0438\u0442\u0430\u043D\u043D\u044F: ${nextQ.id}`);
-        asked.push(nextQ.id);
-        localStorage.setItem(OWL_Q_KEY, JSON.stringify(asked));
-        localStorage.setItem(OWL_Q_TS_KEY, Date.now().toString());
-      }
-    } catch (e) {
-    }
-    return [...critical, ...important, ...normal].join(" ");
-  }
   function getOwlChatHistory() {
     try {
       return JSON.parse(localStorage.getItem(OWL_CHAT_KEY) || "[]");
@@ -4870,7 +4614,6 @@ ${pulseParts.join("\n")}
       init_habits();
       init_notes();
       init_finance();
-      init_evening();
       _tabChatState = {};
       OWL_BOARD_KEY = "nm_owl_board";
       OWL_BOARD_TS_KEY = "nm_owl_board_ts";
@@ -5046,7 +4789,9 @@ ${pulseParts.join("\n")}
   var proactive_exports = {};
   __export(proactive_exports, {
     generateBoardMessage: () => generateBoardMessage,
+    getBoardContext: () => getBoardContext,
     getTabBoardContext: () => getTabBoardContext,
+    tryBoardUpdate: () => tryBoardUpdate,
     tryTabBoardUpdate: () => tryTabBoardUpdate
   });
   function _parseJsonTolerant(raw) {
@@ -5175,6 +4920,265 @@ ${pulseParts.join("\n")}
     }
     return parts.filter(Boolean).join("\n\n");
   }
+  function getBoardContext(tab) {
+    if (tab === "inbox") return _getInboxBoardContext();
+    return getTabBoardContext(tab);
+  }
+  function _getInboxBoardContext() {
+    const now = /* @__PURE__ */ new Date();
+    const todayStr = now.toDateString();
+    const hour = now.getHours();
+    const min = now.getMinutes();
+    const weekDay = now.getDay();
+    const phase = getDayPhase();
+    const sc = getSchedule();
+    const critical = [];
+    const important = [];
+    const normal = [];
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const todayISO = now.toISOString().slice(0, 10);
+      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      if (due.length > 0) {
+        due.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
+        const updated = reminders.map((r) => due.find((d) => d.id === r.id) ? { ...r, done: true } : r);
+        localStorage.setItem("nm_reminders", JSON.stringify(updated));
+      }
+      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
+      if (upcoming.length > 0) {
+        const next = upcoming[0];
+        const [nh, nm] = next.time.split(":").map(Number);
+        const minsUntil = nh * 60 + nm - (hour * 60 + min);
+        if (minsUntil <= 30) important.push(`[\u0421\u041A\u041E\u0420\u041E] \u23F0 \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043E ${next.time}: "${next.text}" (\u0447\u0435\u0440\u0435\u0437 ${minsUntil} \u0445\u0432)`);
+      }
+    } catch (e) {
+    }
+    const phaseLabels = {
+      morning: `[\u0424\u0410\u0417\u0410: \u0420\u0410\u041D\u041E\u041A] \u0427\u0430\u0441 \u043F\u043B\u0430\u043D\u0443\u0432\u0430\u043D\u043D\u044F. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438 \u043D\u0430 \u0434\u0435\u043D\u044C, \u043C\u043E\u0442\u0438\u0432\u0430\u0446\u0456\u044F, \u0449\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u041F\u0456\u0434\u0439\u043E\u043C \u043E ${sc.wakeUp}:00, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workStart}:00.`,
+      work: `[\u0424\u0410\u0417\u0410: \u0420\u041E\u0411\u041E\u0422\u0410] \u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0447\u0430\u0441. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D.`,
+      evening: `[\u0424\u0410\u0417\u0410: \u0412\u0415\u0427\u0406\u0420] \u0427\u0430\u0441 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432. \u0424\u043E\u043A\u0443\u0441: \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E, \u044F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u043F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u0420\u043E\u0431\u043E\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workEnd}:00.`,
+      night: `[\u0424\u0410\u0417\u0410: \u041D\u0406\u0427] \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441. \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435 \u2014 \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0456 \u043C\u043E\u0436\u043D\u0430 \u0449\u0435 \u0432\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E.`
+    };
+    if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
+    normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
+    const tasks = getTasks();
+    const activeTasks = tasks.filter((t) => t.status === "active");
+    const recentlyDone = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3);
+    if (recentlyDone.length > 0) {
+      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
+    }
+    if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
+      const todayDow = now.getDay();
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const briefParts = [];
+      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '"').join(", ")}`);
+      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name).join(", ")}`);
+      const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
+      if (quitHabitsAll.length > 0) {
+        const quitInfo = quitHabitsAll.map((h) => {
+          const s = getQuitStatus(h.id);
+          return `"${h.name}": ${s.streak || 0} \u0434\u043D`;
+        });
+        briefParts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
+      }
+      if (briefParts.length > 0) important.push(`[\u0420\u0410\u041D\u041A\u041E\u0412\u0418\u0419 \u0411\u0420\u0418\u0424] \u0417\u0432\u0435\u0434\u0435\u043D\u043D\u044F \u043D\u0430 \u0434\u0435\u043D\u044C:
+${briefParts.join("\n")}
+\u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
+    }
+    if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
+      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
+      const todayDow = now.getDay();
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const todayLogAll = getHabitLog()[todayStr] || {};
+      const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
+      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+      const pulseParts = [];
+      pulseParts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneTasks.length}`);
+      pulseParts.push(`\u0417\u0432\u0438\u0447\u043E\u043A: ${doneH}/${todayHabitsAll.length}`);
+      if (todayMoments.length > 0) pulseParts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: ${todayMoments.length}`);
+      if (!hasSummary) pulseParts.push("\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
+      const eMood = getEveningMood();
+      if (eMood) {
+        const ml = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
+        pulseParts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u044E\u0437\u0435\u0440): ${ml[eMood] || eMood}`);
+      }
+      important.push(`[\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u041F\u0423\u041B\u042C\u0421] \u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C:
+${pulseParts.join("\n")}
+\u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
+    }
+    const urgent = activeTasks.filter((t) => {
+      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+      if (!m) return false;
+      const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
+      return diff > 0 && diff <= 65;
+    });
+    urgent.forEach((t) => {
+      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}".`);
+    });
+    const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    stuckDays3.forEach((t) => {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
+    });
+    const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    forgotten.forEach((t) => {
+      const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
+      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
+    });
+    if (activeTasks.length > 0) {
+      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
+    } else {
+      normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
+    }
+    const habits = getHabits();
+    const buildHabits = habits.filter((h) => h.type !== "quit");
+    const quitHabits = habits.filter((h) => h.type === "quit");
+    const log = getHabitLog();
+    const todayLog = log[todayStr] || {};
+    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()));
+    const doneHabits = todayHabits.filter((h) => todayLog[h.id]);
+    const pendingHabits = todayHabits.filter((h) => !todayLog[h.id]);
+    if (todayHabits.length > 0 && pendingHabits.length === 0) {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${todayHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
+    }
+    if ((phase === "evening" || phase === "night") && pendingHabits.length > 0) {
+      const atRisk = pendingHabits.filter((h) => {
+        const streak = Object.values(log).filter((d) => d[h.id]).length;
+        return streak >= 3;
+      });
+      if (atRisk.length > 0) {
+        const details = atRisk.map((h) => {
+          const streak = Object.values(log).filter((d) => d[h.id]).length;
+          return `"${h.name}" (\u0432\u0436\u0435 ${streak} \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434, \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E)`;
+        });
+        critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0417\u0432\u0438\u0447\u043A\u0438 \u0437 \u0441\u0435\u0440\u0456\u0454\u044E \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E \u2014 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u0430 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0440\u043E\u0431\u0438\u0432: ${details.join(", ")}.`);
+      }
+    }
+    if ((phase === "work" || phase === "evening") && pendingHabits.length > 0) {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name).join(", ")}.`);
+    }
+    if (todayHabits.length > 0) {
+      normal.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneHabits.length}/${todayHabits.length}.`);
+    }
+    if (quitHabits.length > 0) {
+      const todayIso = now.toISOString().slice(0, 10);
+      const notHeldToday = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayIso);
+      if ((phase === "evening" || phase === "night") && notHeldToday.length > 0) {
+        important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '"').join(", ")}.`);
+      }
+      quitHabits.forEach((h) => {
+        const s = getQuitStatus(h.id);
+        const streak = s.streak || 0;
+        const milestones = [7, 14, 21, 30, 60, 90];
+        if (milestones.includes(streak) && owlCdExpired("quit_milestone_" + h.id + "_" + streak, 24 * 60 * 60 * 1e3)) {
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] ${streak} \u0434\u043D\u0456\u0432 \u0431\u0435\u0437 "${h.name}"! \u{1F389}`);
+        }
+      });
+      const quitInfo = quitHabits.map((h) => `"${h.name}": ${getQuitStatus(h.id).streak || 0} \u0434\u043D`);
+      normal.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}.`);
+    }
+    try {
+      const budget = getFinBudget();
+      if (budget.total > 0) {
+        const from = getFinPeriodRange("month");
+        const txs = getFinance().filter((t) => t.ts >= from && t.type === "expense");
+        const exp = txs.reduce((s, t) => s + t.amount, 0);
+        const pct = Math.round(exp / budget.total * 100);
+        if (exp > budget.total) {
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E! \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(exp)} \u0437 ${formatMoney(budget.total)} (${pct}%).`);
+        } else if (pct >= 80) {
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${pct}% \u043C\u0456\u0441\u044F\u0447\u043D\u043E\u0433\u043E \u0431\u044E\u0434\u0436\u0435\u0442\u0443.`);
+        } else {
+          normal.push(`\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F: ${formatMoney(exp)} / ${formatMoney(budget.total)} (${pct}%).`);
+        }
+        if (txs.length >= 3) {
+          const bycat = {};
+          txs.forEach((t) => {
+            if (!bycat[t.category]) bycat[t.category] = [];
+            bycat[t.category].push(t.amount);
+          });
+          const lastTx = txs[0];
+          if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
+            const avg = bycat[lastTx.category].reduce((a, b) => a + b, 0) / bycat[lastTx.category].length;
+            if (lastTx.amount > avg * 2.5 && owlCdExpired("unusual_tx_" + lastTx.id, 8 * 60 * 60 * 1e3)) {
+              important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435\u0437\u0432\u0438\u0447\u043D\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430: ${formatMoney(lastTx.amount)} \u043D\u0430 "${lastTx.category}" \u2014 \u0432\u0438\u0449\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0432\u0434\u0432\u0456\u0447\u0456.`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+    }
+    if (phase === "evening" || phase === "night") {
+      const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      if (!s || new Date(s.date).toDateString() !== todayStr) {
+        important.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
+      }
+    }
+    if (weekDay === 1 && (phase === "morning" || phase === "work")) {
+      normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
+    }
+    if (weekDay === 5 && phase === "evening") {
+      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 7 * 24 * 60 * 60 * 1e3);
+      normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
+    }
+    const activeTabs = [];
+    if (tasks.length > 0 || getHabits().length > 0) activeTabs.push("\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C (\u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438)");
+    try {
+      if (getNotes().length > 0) activeTabs.push("\u041D\u043E\u0442\u0430\u0442\u043A\u0438");
+    } catch (e) {
+    }
+    try {
+      if (getFinance().length > 0) activeTabs.push("\u0424\u0456\u043D\u0430\u043D\u0441\u0438");
+    } catch (e) {
+    }
+    try {
+      if (JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0) activeTabs.push("\u0417\u0434\u043E\u0440\u043E\u0432'\u044F");
+    } catch (e) {
+    }
+    try {
+      if (JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0) activeTabs.push("\u041F\u0440\u043E\u0435\u043A\u0442\u0438");
+    } catch (e) {
+    }
+    try {
+      if (JSON.parse(localStorage.getItem("nm_moments") || "[]").length > 0) activeTabs.push("\u0412\u0435\u0447\u0456\u0440 (\u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F)");
+    } catch (e) {
+    }
+    if (activeTabs.length > 0) {
+      normal.push(`[\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0412\u041A\u041B\u0410\u0414\u041A\u0418] \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454: ${activeTabs.join(", ")}. \u0426\u0456\u043A\u0430\u0432\u0441\u044F \u0422\u0406\u041B\u042C\u041A\u0418 \u0446\u0438\u043C\u0438 \u0442\u0435\u043C\u0430\u043C\u0438.`);
+    }
+    const OWL_Q_KEY = "nm_owl_questions";
+    const OWL_Q_TS_KEY = "nm_owl_q_ts";
+    const OWL_QUESTIONS = [
+      { id: "work", q: "\u0427\u0438\u043C \u0442\u0438 \u0437\u0430\u0439\u043C\u0430\u0454\u0448\u0441\u044F? \u0414\u0435 \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u0430\u0431\u043E \u043D\u0430\u0432\u0447\u0430\u0454\u0448\u0441\u044F?" },
+      { id: "goals", q: "\u042F\u043A\u0430 \u0442\u0432\u043E\u044F \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0437\u0430\u0440\u0430\u0437 \u2014 \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435?" },
+      { id: "interests", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C \u043F\u043E\u0437\u0430 \u0440\u043E\u0431\u043E\u0442\u043E\u044E? \u0425\u043E\u0431\u0456, \u0437\u0430\u0445\u043E\u043F\u043B\u0435\u043D\u043D\u044F?" },
+      { id: "motivation", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442, \u043F\u0440\u043E\u0446\u0435\u0441 \u0447\u0438 \u0432\u0438\u0437\u043D\u0430\u043D\u043D\u044F?" },
+      { id: "routine", q: "\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u0442\u0432\u0456\u0439 \u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C? \u041A\u043E\u043B\u0438 \u0442\u0438 \u043D\u0430\u0439\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0438\u0439?" },
+      { id: "challenges", q: "\u0429\u043E \u0442\u043E\u0431\u0456 \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u0439\u0432\u0430\u0436\u0447\u0435 \u0434\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u0449\u043E \u0445\u043E\u0442\u0456\u0432 \u0431\u0438 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438?" },
+      { id: "values", q: "\u0429\u043E \u0434\u043B\u044F \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0432 \u0436\u0438\u0442\u0442\u0456 \u2014 \u0449\u043E \u0442\u0438 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0436\u0435\u0440\u0442\u0432\u0443\u0454\u0448?" },
+      { id: "relax", q: "\u042F\u043A \u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0454\u0448? \u0429\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u043F\u0435\u0440\u0435\u0437\u0430\u0440\u044F\u0434\u0438\u0442\u0438\u0441\u044C?" },
+      { id: "people", q: "\u0425\u0442\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u043B\u044E\u0434\u0438 \u043D\u0430\u0432\u043A\u043E\u043B\u043E \u0442\u0435\u0431\u0435? \u0420\u043E\u0434\u0438\u043D\u0430, \u0434\u0440\u0443\u0437\u0456, \u043F\u0430\u0440\u0442\u043D\u0435\u0440?" },
+      { id: "health", q: "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0456 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F\u043C? \u0404 \u0449\u043E\u0441\u044C \u0449\u043E \u0445\u0432\u0438\u043B\u044E\u0454 \u0430\u0431\u043E \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448?" },
+      { id: "dreams", q: "\u0414\u0435 \u0442\u0438 \u0431\u0430\u0447\u0438\u0448 \u0441\u0435\u0431\u0435 \u0447\u0435\u0440\u0435\u0437 \u0440\u0456\u043A? \u0429\u043E \u043C\u0430\u0454 \u0437\u043C\u0456\u043D\u0438\u0442\u0438\u0441\u044C?" },
+      { id: "style", q: "\u042F\u043A \u0442\u043E\u0431\u0456 \u0437\u0440\u0443\u0447\u043D\u0456\u0448\u0435 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0441\u043F\u0440\u0430\u0432\u0456 \u0447\u0438 \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u043E \u0437 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F\u043C\u0438?" }
+    ];
+    try {
+      const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || "[]");
+      const lastQTs = parseInt(localStorage.getItem(OWL_Q_TS_KEY) || "0");
+      const nextQ = OWL_QUESTIONS.find((q) => !asked.includes(q.id));
+      if (nextQ && Date.now() - lastQTs > 24 * 60 * 60 * 1e3 && (phase === "morning" || phase === "work")) {
+        normal.push(`[\u0410\u041D\u041A\u0415\u0422\u0410] \u0417\u0430\u0434\u0430\u0439 \u044E\u0437\u0435\u0440\u0443 \u0446\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E, \u0432\u043F\u043B\u0435\u0442\u0438 \u0432 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 (\u041D\u0415 \u0441\u0443\u0445\u043E \u044F\u043A \u0432 \u0430\u043D\u043A\u0435\u0442\u0456): "${nextQ.q}". \u041F\u0456\u0441\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u0447\u0456\u043F "\u0420\u043E\u0437\u043A\u0430\u0436\u0438" \u0437 action:"chat". \u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 ID \u043F\u0438\u0442\u0430\u043D\u043D\u044F: ${nextQ.id}`);
+        asked.push(nextQ.id);
+        localStorage.setItem(OWL_Q_KEY, JSON.stringify(asked));
+        localStorage.setItem(OWL_Q_TS_KEY, Date.now().toString());
+      }
+    } catch (e) {
+    }
+    return [...critical, ...important, ...normal].join(" ");
+  }
   function checkTabBoardTrigger(tab) {
     if (tab === "tasks") {
       const tasks = getTasks().filter((t) => t.status === "active");
@@ -5231,7 +5235,7 @@ ${pulseParts.join("\n")}
     if (!key) return;
     _boardGenerating[tab] = true;
     const isInbox = tab === "inbox";
-    const context = isInbox ? getOwlBoardContext() : getTabBoardContext(tab);
+    const context = getBoardContext(tab);
     const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const existing = allMsgs[0] || null;
     const recentText = existing ? existing.text : "";
@@ -5460,6 +5464,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       generateBoardMessage(tab);
     }
   }
+  function tryBoardUpdate(tab) {
+    if (tab === "inbox") return tryOwlBoardUpdate();
+    return tryTabBoardUpdate(tab);
+  }
   function _showInstantReaction(tab) {
     const actions = getRecentActions();
     const now = Date.now();
@@ -5496,6 +5504,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_habits();
       init_notes();
       init_finance();
+      init_evening();
       _boardGenerating = {};
       setTimeout(_updateApiDot, 3e3);
       TOPIC_CD_MS = 3 * 60 * 60 * 1e3;
@@ -6288,7 +6297,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _finEditId = null;
     try {
       localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryTabBoardUpdate("finance");
+      tryBoardUpdate("finance");
     } catch (e) {
     }
   }
@@ -6300,7 +6309,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     renderFinance();
     try {
       localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryTabBoardUpdate("finance");
+      tryBoardUpdate("finance");
     } catch (e) {
     }
     if (item) showUndoToast("\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
@@ -6310,7 +6319,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       renderFinance();
       try {
         localStorage.setItem("nm_owl_tab_ts_finance", "0");
-        tryTabBoardUpdate("finance");
+        tryBoardUpdate("finance");
       } catch (e) {
       }
     });
@@ -6370,7 +6379,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     showToast("\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     try {
       localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryTabBoardUpdate("finance");
+      tryBoardUpdate("finance");
     } catch (e) {
     }
   }
@@ -6568,7 +6577,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           renderFinance();
           try {
             localStorage.setItem("nm_owl_tab_ts_finance", "0");
-            tryTabBoardUpdate("finance");
+            tryBoardUpdate("finance");
           } catch (e) {
           }
           addFinanceChatMsg("agent", `\u2713 ${type === "expense" ? "-" : "+"}${formatMoney(parsed.amount)} \xB7 ${parsed.category}`);
@@ -8978,7 +8987,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   async function callOwlChat(userText) {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return null;
-    const context = getOwlBoardContext();
+    const context = getBoardContext("inbox");
     const chatHistory = JSON.parse(localStorage.getItem("nm_owl_chat") || "[]");
     const recentChat = chatHistory.slice(-12).map((m) => ({
       role: m.role === "user" ? "user" : "assistant",
@@ -9240,6 +9249,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       init_calendar();
       init_evening();
       init_inbox_board();
+      init_proactive();
       init_chips();
       init_memory();
       activeChatBar = null;
@@ -12720,7 +12730,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     setTimeout(() => showFirstVisitTip(tab), 600);
     setTimeout(() => {
       try {
-        tryTabBoardUpdate(tab);
+        tryBoardUpdate(tab);
       } catch (e) {
       }
     }, 700);
