@@ -8838,17 +8838,26 @@ ${inboxList}`);
     }
     try {
       const tab = typeof currentTab !== "undefined" ? currentTab : "inbox";
-      let boardText = "";
+      let msgs = [];
       if (tab === "inbox") {
-        const msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
-        if (msgs.length > 0) boardText = msgs[0].text;
+        msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
       } else {
-        const msgs = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "[]");
-        if (Array.isArray(msgs) && msgs.length > 0) boardText = msgs[0].text;
-        else if (msgs && msgs.text) boardText = msgs.text;
+        const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "[]");
+        if (Array.isArray(raw)) msgs = raw;
+        else if (raw && raw.text) msgs = [raw];
       }
-      if (boardText) {
-        parts.push(`OWL \u0449\u043E\u0439\u043D\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u043D\u0430 \u0442\u0430\u0431\u043B\u043E (\u0432\u043A\u043B\u0430\u0434\u043A\u0430 "${tab}"): "${boardText}". \u042F\u043A\u0449\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0446\u0435 \u2014 \u0446\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F OWL, \u041D\u0415 \u043D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430/\u043D\u043E\u0442\u0430\u0442\u043A\u0430.`);
+      const recent = msgs.slice(0, 3).filter((m) => m && m.text);
+      if (recent.length > 0) {
+        const formatted = recent.map((m) => {
+          const ago = Date.now() - (m.ts || m.id || 0);
+          const mins = Math.floor(ago / 6e4);
+          const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+          return `[${when}] ${m.text}`;
+        }).join("\n");
+        parts.push(`OWL \u043D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u043A\u0430\u0437\u0430\u0432 \u043D\u0430 \u0442\u0430\u0431\u043B\u043E (\u0432\u043A\u043B\u0430\u0434\u043A\u0430 "${tab}") \u2014 \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u043F\u043E\u0441\u043B\u0456\u0434\u043E\u0432\u043D\u0456\u0441\u0442\u044C, \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u044C \u0441\u043E\u0431\u0456:
+${formatted}
+
+\u042F\u043A\u0449\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0446\u0435 \u2014 \u0446\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F OWL, \u041D\u0415 \u043D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430/\u043D\u043E\u0442\u0430\u0442\u043A\u0430.`);
       }
     } catch (e) {
     }
