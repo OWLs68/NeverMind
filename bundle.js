@@ -3621,6 +3621,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
     stats.clicked.push({ action, label, ts: Date.now() });
     if (stats.clicked.length > CHIP_STATS_MAX_CLICKED) stats.clicked.splice(0, stats.clicked.length - CHIP_STATS_MAX_CLICKED);
     localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
+    try {
+      localStorage.setItem("nm_owl_ignored_msgs", "0");
+      localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
+    } catch (e) {
+    }
   }
   function trackChipsIgnored(count) {
     if (count <= 0) return;
@@ -4149,6 +4154,13 @@ ${aiContext ? "\n\n" + aiContext : ""}
     return { speak, score, reason: reasons.join(", ") };
   }
   function _judgeBoard(trigger) {
+    try {
+      const silenceUntil = parseInt(localStorage.getItem("nm_owl_silence_until") || "0");
+      if (silenceUntil > Date.now()) {
+        return { speak: false, score: -100, reason: "auto-silence-4h" };
+      }
+    } catch (e) {
+    }
     let score = 0;
     let reasons = [];
     const now = /* @__PURE__ */ new Date();
@@ -5534,6 +5546,22 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (!parsed || !parsed.text) {
         _boardGenerating[tab] = false;
         return;
+      }
+      try {
+        const lastBoardTs = parseInt(localStorage.getItem("nm_owl_last_board_ts") || "0");
+        const lastClickTs = parseInt(localStorage.getItem("nm_owl_last_chip_click_ts") || "0");
+        if (lastBoardTs > 0 && lastClickTs < lastBoardTs) {
+          const ignored = parseInt(localStorage.getItem("nm_owl_ignored_msgs") || "0") + 1;
+          if (ignored >= 3) {
+            localStorage.setItem("nm_owl_silence_until", String(Date.now() + 4 * 60 * 60 * 1e3));
+            localStorage.setItem("nm_owl_ignored_msgs", "0");
+            console.log("[OWL 4.40] Auto-silence 4 \u0433\u043E\u0434 \u2014 3 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
+          } else {
+            localStorage.setItem("nm_owl_ignored_msgs", String(ignored));
+          }
+        }
+        localStorage.setItem("nm_owl_last_board_ts", String(Date.now()));
+      } catch (e) {
       }
       const newMsg = { text: parsed.text, topic: parsed.topic || "", priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
       if (parsed.topic) setOwlCd("topic_" + parsed.topic);
