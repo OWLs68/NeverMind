@@ -254,6 +254,13 @@ function _getInboxBoardContext() {
     important.push(`[ЗАБУТА ЗАДАЧА] "${t.title}" висить ${days} днів. М'яко запитай чи ще актуально — може видалити або переформулювати?`);
   });
 
+  // Прокрастинація — задачі з 3+ переносами дедлайну (3.8)
+  // Формулювання БЕЗ пасивної агресії ("ти знову не виконав" ЗАБОРОНЕНО).
+  const reshuffled = activeTasks.filter(t => (t.rescheduleCount || 0) >= 3);
+  reshuffled.forEach(t => {
+    important.push(`[ПРОКРАСТИНАЦІЯ] Задача "${t.title}" переноситься ${t.rescheduleCount}-й раз. Юзеру важко її зрушити — запропонуй або розбити на кроки, або дропнути. Чіпи: "Розбити на кроки" (chat) і "Видалити задачу" (chat). БЕЗ осуду — це не "ти знову не виконав", а "можливо задача занадто велика або не на часі".`);
+  });
+
   if (activeTasks.length > 0) {
     normal.push(`Відкритих задач: ${activeTasks.length}. ${activeTasks.slice(0,3).map(t=>t.title).join(', ')}${activeTasks.length>3?' і ще...':''}.`);
   } else {

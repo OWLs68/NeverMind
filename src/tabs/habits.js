@@ -995,7 +995,11 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       const found = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!found) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
       if (parsed.title) found.title = parsed.title;
-      if (parsed.dueDate) found.dueDate = parsed.dueDate;
+      if (parsed.dueDate && parsed.dueDate !== found.dueDate) {
+        if (found.dueDate) found.rescheduleCount = (found.rescheduleCount || 0) + 1;
+        found.dueDate = parsed.dueDate;
+        found.updatedAt = Date.now();
+      }
       if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) found.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === 'tasks') renderTasks();
@@ -1003,7 +1007,11 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       return true;
     }
     if (parsed.title) t.title = parsed.title;
-    if (parsed.dueDate) t.dueDate = parsed.dueDate;
+    if (parsed.dueDate && parsed.dueDate !== t.dueDate) {
+      if (t.dueDate) t.rescheduleCount = (t.rescheduleCount || 0) + 1;
+      t.dueDate = parsed.dueDate;
+      t.updatedAt = Date.now();
+    }
     if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) t.priority = parsed.priority;
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
