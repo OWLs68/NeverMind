@@ -241,6 +241,17 @@ function _getInboxBoardContext() {
     critical.push(`[КРИТИЧНО] Дедлайн через ~годину: "${t.title}".`);
   });
 
+  // Прострочені задачі (dueDate вчора або раніше) — Smart Boot-up (3.6)
+  // Формулювання БЕЗ "де ти був?" — просто що накопичилось.
+  const todayISOLocal = now.toISOString().slice(0, 10);
+  const overdue = activeTasks.filter(t => t.dueDate && t.dueDate < todayISOLocal);
+  if (overdue.length > 0) {
+    overdue.slice(0, 3).forEach(t => {
+      const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t.dueDate)) / (24*60*60*1000));
+      critical.push(`[ПРОСТРОЧЕНО] Задача "${t.title}" — дедлайн минув ${days === 0 ? 'сьогодні' : days + ' дн тому'}. Запропонуй розбити на кроки, перенести або дропнути. БЕЗ докорів типу "ти не встиг".`);
+    });
+  }
+
   // Задача завʼязла 3+ дні
   const stuckDays3 = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000 && t.createdAt >= Date.now() - 5*24*60*60*1000);
   stuckDays3.forEach(t => {
@@ -559,6 +570,13 @@ ${formatFactsForBoard(15) || localStorage.getItem('nm_memory') || '(ще не з
 3. Якщо є [ФАЗА] але немає критичного/важливого — коротке повідомлення відповідно до фази дня.
 4. Інакше — обери найцікавіше зі звичайних даних.
 
+SMART BOOT-UP (як писати коли відкривають застосунок):
+- ТІЛЬКИ ОДИН фокус на повідомлення. Якщо є і прострочена задача, і незавершені звички — бери найкритичніше, решту залиш на наступну генерацію.
+- НЕ вітайся без причини ("Доброго ранку!" без діла — заборонено). Починай одразу з суті.
+- ЗАВЖДИ закінчуй чіпами-діями (nav або chat). Порожніх чіпів [] при старті дня уникай — юзер щойно відкрив застосунок, дай йому одразу шлях.
+- Пізній старт (вже після workStart+2 год і мало що зроблено) — БЕЗ питання "де ти був?". Скажи: "Ось що накопичилось" і дай варіанти дій.
+- Вечірні задачі з часом "23:XX" — запропонуй відкласти: чіп "Сховати до ранку" (chat).
+
 ПРАВИЛА:
 - Максимум 2 речення. Коротко і конкретно.
 - Говори ЛЮДСЬКОЮ мовою. НЕ використовуй жаргон: "стрік", "streak", "трекер", "прогрес задач". ${isInbox ? 'Замість "стрік під загрозою" кажи "ти вже 5 днів підряд бігав — не зупиняйся, біжи і сьогодні". Замість "3 задачі відкриті" кажи конкретно що це за задачі.' : 'Кажи конкретно і зрозуміло що відбувається — як друг, не як програма.'}
@@ -876,14 +894,27 @@ window.addEventListener('nm-chat-closed', () => {
   }, 3000); // 3 сек затримка після закриття чату
 });
 
-// === Welcome Back — привітання при поверненні в додаток ===
+// === Welcome Back + Smart Boot-up (3.6) — тригери при поверненні в додаток ===
 const NM_LAST_ACTIVE_KEY = 'nm_last_active';
+const NM_LAST_ACTIVE_DAY_KEY = 'nm_last_active_day';
 const WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1000; // 2 години
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
+    localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, new Date().toISOString().slice(0, 10));
   } else if (document.visibilityState === 'visible') {
+    // Smart Boot-up: перший раз відкривається сьогодні → окремий тригер
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const lastActiveDay = localStorage.getItem(NM_LAST_ACTIVE_DAY_KEY) || '';
+    const isFirstOpenToday = lastActiveDay && lastActiveDay !== todayISO;
+    if (isFirstOpenToday) {
+      localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO);
+      const judge = shouldOwlSpeak('first-open-today');
+      if (judge.speak) generateBoardMessage(currentTab || 'inbox');
+      return; // не дублюємо welcome-back
+    }
+    // Welcome Back — повернувся після довгої паузи в межах одного дня
     const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || '0');
     if (!lastActive) return;
     const away = Date.now() - lastActive;

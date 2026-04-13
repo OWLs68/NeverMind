@@ -443,6 +443,12 @@ function _judgeBoard(trigger) {
     reasons.push('welcome-back');
   }
 
+  // Перший раз відкрив сьогодні (Smart Boot-up 3.6) — високий пріоритет
+  if (trigger === 'first-open-today') {
+    score += 5;
+    reasons.push('first-open-today');
+  }
+
   // Дані змінились (закрив задачу, відмітив звичку)
   if (trigger === 'data-changed') {
     score += 3;
