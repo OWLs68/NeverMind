@@ -178,7 +178,7 @@ function navigateInboxItem(id) {
   const el = document.getElementById('item-' + id);
   if (!el) return;
   const cat = el.dataset.cat;
-  if (cat === 'event') { window.openCalendarModal(); return; }
+  if (cat === 'event' || cat === 'reminder') { window.openCalendarModal(); return; }
   const tab = INBOX_NAV_MAP[cat];
   if (tab) switchTab(tab);
 }
@@ -199,7 +199,8 @@ function _renderUpcoming() {
   const events = getEvents();
   for (const ev of events) {
     if (ev.date >= todayStr && ev.date <= in7days) {
-      upcoming.push({ type: 'event', title: ev.title, date: ev.date, time: ev.time, id: ev.id });
+      const type = ev.source === 'reminder' ? 'reminder' : 'event';
+      upcoming.push({ type, title: ev.title, date: ev.date, time: ev.time, id: ev.id });
     }
   }
 
@@ -226,11 +227,11 @@ function _renderUpcoming() {
     else if (diffDays === 1) when = 'завтра';
     else when = `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
 
-    const icon = item.type === 'event' ? '📅' : '⏰';
+    const icon = item.type === 'task' ? '📌' : item.type === 'reminder' ? '⏰' : '📅';
     const timeStr = item.time ? ` о ${item.time}` : '';
-    const action = item.type === 'event'
-      ? `onclick="openCalendarModal()"`
-      : `onclick="switchTab('tasks')"`;
+    const action = item.type === 'task'
+      ? `onclick="switchTab('tasks')"`
+      : `onclick="openCalendarModal()"`;
 
     return `<div class="inbox-upcoming-card" ${action}>
       <span class="inbox-upcoming-icon">${icon}</span>
