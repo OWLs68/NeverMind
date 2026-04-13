@@ -260,6 +260,14 @@ function _getInboxBoardContext() {
     normal.push('Всі задачі виконано.');
   }
 
+  // Оптимальний темп (3.13) — 20% від активних якщо юзер не задав ціль.
+  // Якщо у пам'яті є факт про комфортний темп — AI побачить його через formatFactsForContext і використає.
+  if (activeTasks.length >= 3) {
+    const suggested = Math.max(1, Math.round(activeTasks.length * 0.2));
+    const doneTodayCount = tasks.filter(t => t.status === 'done' && t.completedAt && (Date.now() - t.completedAt) < 24 * 60 * 60 * 1000).length;
+    normal.push(`[ТЕМП] Оптимально сьогодні: ~${suggested} задач (20% від активних). Закрито: ${doneTodayCount}. Якщо у пам'яті є факт про комфортний темп — використовуй його замість 20%-формули.`);
+  }
+
   // Звички
   const habits = getHabits();
   const buildHabits = habits.filter(h => h.type !== 'quit');
@@ -394,6 +402,7 @@ function _getInboxBoardContext() {
     { id: 'health', q: 'Як у тебе зі здоров\'ям? Є щось що хвилює або над чим працюєш?' },
     { id: 'dreams', q: 'Де ти бачиш себе через рік? Що має змінитись?' },
     { id: 'style', q: 'Як тобі зручніше спілкуватись — коротко і по справі чи розгорнуто з поясненнями?' },
+    { id: 'daily_target', q: 'Скільки задач на день — комфортний темп для тебе? Назви число (наприклад: 3, 5, 7). Якщо запам\'ятаю цей факт — враховуватиму у порадах.' },
   ];
   try {
     const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || '[]');
