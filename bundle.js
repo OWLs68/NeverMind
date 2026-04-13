@@ -4550,6 +4550,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
   function tryOwlBoardUpdate() {
     const msgs = getOwlBoardMessages();
     if (msgs.length > 0) renderOwlBoard();
+    if (typeof document !== "undefined" && document.hidden) return;
     const phase = getDayPhase();
     if (phase === "silent") return;
     const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
@@ -5640,6 +5641,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     if (_showFirstVisitHint(tab)) return;
     renderTabBoard(tab);
+    if (typeof document !== "undefined" && document.hidden) return;
     const hour = (/* @__PURE__ */ new Date()).getHours();
     if (hour < 5) return;
     if (tab === "evening" && hour < 12) return;
@@ -5740,6 +5742,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
         _boardUpdateTimer = setTimeout(() => {
           _boardUpdateTimer = null;
+          if (typeof document !== "undefined" && document.hidden) return;
           const curTab = currentTab || "inbox";
           if (curTab === "inbox") {
             const judge = shouldOwlSpeak(trigger);
@@ -12125,6 +12128,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   // src/owl/followups.js
   async function checkFollowups() {
     if (_checkInFlight) return;
+    if (typeof document !== "undefined" && document.hidden) return;
     _checkInFlight = true;
     try {
       const triggers = [
