@@ -4211,14 +4211,15 @@ ${aiContext ? "\n\n" + aiContext : ""}
       score += 2;
       reasons.push("due-today");
     }
-    if (activeChatBar) {
-      if (hasCritical) {
-        score -= 0;
-        reasons.push("chat-open(critical-override)");
-      } else {
-        score -= 10;
-        reasons.push("chat-open");
+    if (!hasCritical && trigger !== "chat-closed") {
+      if (activeChatBar) {
+        return { speak: false, score: -100, reason: "chat-open-block" };
       }
+      if (lastChatClosedTs && Date.now() - lastChatClosedTs < CHAT_CLOSE_COOLDOWN_MS) {
+        return { speak: false, score: -100, reason: "chat-just-closed-cooldown" };
+      }
+    } else if (activeChatBar && hasCritical) {
+      reasons.push("chat-open(critical-override)");
     }
     if (trigger !== "chat-closed") {
       if (sinceLastAttempt < 5 * 60 * 1e3) {
@@ -4618,7 +4619,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
     return true;
   }
-  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
   var init_inbox_board = __esm({
     "src/owl/inbox-board.js"() {
       init_nav();
@@ -4640,6 +4641,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       OWL_CD_KEY = "nm_owl_cooldowns";
       SPEAK_THRESHOLD = 3;
       FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1e3;
+      CHAT_CLOSE_COOLDOWN_MS = 10 * 1e3;
       OWL_CHAT_KEY = "nm_owl_chat";
       OWL_CHAT_MAX = 20;
       _owlChatOpen = false;
@@ -9438,6 +9440,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     const inputs = bar.querySelectorAll("input, textarea");
     inputs.forEach((i) => i.blur());
     activeChatBar = null;
+    lastChatClosedTs = Date.now();
     window.dispatchEvent(new CustomEvent("nm-chat-closed", { detail: tab }));
   }
   function closeAllChatBars(resetActive = true) {
@@ -9452,9 +9455,12 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       const inputs = bar.querySelectorAll("input, textarea");
       inputs.forEach((i) => i.blur());
     });
-    if (resetActive) activeChatBar = null;
+    if (resetActive) {
+      if (activeChatBar) lastChatClosedTs = Date.now();
+      activeChatBar = null;
+    }
   }
-  var activeChatBar, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, CHAT_STORE_MAX, CHAT_STORE_KEYS;
+  var activeChatBar, lastChatClosedTs, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, CHAT_STORE_MAX, CHAT_STORE_KEYS;
   var init_core = __esm({
     "src/ai/core.js"() {
       init_nav();
@@ -9472,6 +9478,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       init_chips();
       init_memory();
       activeChatBar = null;
+      lastChatClosedTs = 0;
       INBOX_SYSTEM_PROMPT = `\u0422\u0438 \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind.
 \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0434\u0443\u043C\u043A\u0430, \u0437\u0430\u0434\u0430\u0447\u0430, \u0456\u0434\u0435\u044F, \u0437\u0432\u0438\u0447\u043A\u0430, \u043F\u043E\u0434\u0456\u044F, \u0430\u0431\u043E \u0437\u0432\u0456\u0442 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435.
 \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool \u0434\u043B\u044F \u0434\u0456\u0457. \u042F\u043A\u0449\u043E \u0446\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0430\u0431\u043E \u0440\u043E\u0437\u043C\u043E\u0432\u0430 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0411\u0415\u0417 tool, \u043A\u043E\u0440\u043E\u0442\u043A\u043E, 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
