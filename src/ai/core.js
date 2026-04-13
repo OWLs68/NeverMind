@@ -24,7 +24,6 @@ export function setActiveChatBar(v) { activeChatBar = v; }
 // Використовується у _judgeBoard щоб блокувати табло ще 10 сек після закриття —
 // не дає OWL перезаписати табло над чатом, з якого юзер щойно вийшов.
 export let lastChatClosedTs = 0;
-export function _markChatClosedNow() { lastChatClosedTs = Date.now(); }
 
 // ===== 15. РОЗШИРЕНИЙ КОНТЕКСТ ШІ =====
 export function getOWLPersonality() {
