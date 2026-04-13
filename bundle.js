@@ -5212,7 +5212,78 @@ ${pulseParts.join("\n")}
       }
     } catch (e) {
     }
+    if (critical.length === 0 && important.length === 0) {
+      const correlations = _computeCorrelations();
+      for (const c of correlations) {
+        if (owlCdExpired("corr_" + c.id, 7 * 24 * 60 * 60 * 1e3)) {
+          normal.push(`[\u041F\u0410\u0422\u0415\u0420\u041D] ${c.text} \u041F\u0418\u0422\u0410\u0419 \u044E\u0437\u0435\u0440\u0430 "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u043E\u0432'\u044F\u0437\u0430\u043D\u043E?" \u2014 \u041D\u0415 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u044F\u043A \u0444\u0430\u043A\u0442, \u0434\u0430\u0439 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0438 \u0430\u0431\u043E \u0441\u043F\u0440\u043E\u0441\u0442\u0443\u0432\u0430\u0442\u0438. \u0426\u0435 \u0441\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F, \u043D\u0435 \u0434\u0456\u0430\u0433\u043D\u043E\u0437.`);
+          setOwlCd("corr_" + c.id);
+          break;
+        }
+      }
+    }
     return [...critical, ...important, ...normal].join(" ");
+  }
+  function _computeCorrelations() {
+    const insights = [];
+    try {
+      const healthLog = JSON.parse(localStorage.getItem("nm_health_log") || "{}");
+      const habitLog = JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
+      const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+      const days = [];
+      for (let i = 0; i < 14; i++) {
+        const d = /* @__PURE__ */ new Date();
+        d.setDate(d.getDate() - i);
+        const iso = d.toISOString().slice(0, 10);
+        const dateStr = d.toDateString();
+        const health = healthLog[iso] || {};
+        const habits = habitLog[dateStr] || {};
+        const habitsDone = Object.keys(habits).filter((k) => habits[k]).length;
+        const tasksDone = tasks.filter((t) => t.completedAt && new Date(t.completedAt).toDateString() === dateStr).length;
+        days.push({
+          sleep: typeof health.sleep === "number" ? health.sleep : null,
+          energy: typeof health.energy === "number" ? health.energy : null,
+          habitsDone,
+          tasksDone
+        });
+      }
+      const daysWithSleep = days.filter((d) => d.sleep !== null);
+      if (daysWithSleep.length >= 7) {
+        const low = daysWithSleep.filter((d) => d.sleep < 6);
+        const high = daysWithSleep.filter((d) => d.sleep >= 7);
+        if (low.length >= 2 && high.length >= 2) {
+          const avgLow = low.reduce((s, d) => s + d.habitsDone, 0) / low.length;
+          const avgHigh = high.reduce((s, d) => s + d.habitsDone, 0) / high.length;
+          const maxv = Math.max(avgLow, avgHigh, 0.5);
+          const diff = Math.abs(avgHigh - avgLow) / maxv;
+          if (diff > 0.3) {
+            insights.push({
+              id: "sleep_habits",
+              text: avgHigh > avgLow ? `\u0412 \u0434\u043D\u0456 \u0437 \u0445\u043E\u0440\u043E\u0448\u0438\u043C \u0441\u043D\u043E\u043C (\u22657) \u0440\u043E\u0431\u0438\u0448 \u0437\u0432\u0438\u0447\u043E\u043A \u0443 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443 ${avgHigh.toFixed(1)}, \u0430 \u0437 \u043C\u0430\u043B\u0438\u043C \u0441\u043D\u043E\u043C (<6) \u2014 \u043B\u0438\u0448\u0435 ${avgLow.toFixed(1)}.` : `\u0412 \u0434\u043D\u0456 \u0437 \u043C\u0430\u043B\u0438\u043C \u0441\u043D\u043E\u043C \u0440\u043E\u0431\u0438\u0448 \u0437\u0432\u0438\u0447\u043E\u043A \u0431\u0456\u043B\u044C\u0448\u0435 (${avgLow.toFixed(1)}) \u043D\u0456\u0436 \u0437 \u0445\u043E\u0440\u043E\u0448\u0438\u043C (${avgHigh.toFixed(1)}) \u2014 \u043D\u0435\u0437\u0432\u0438\u0447\u0430\u0439\u043D\u043E.`
+            });
+          }
+        }
+      }
+      const daysWithEnergy = days.filter((d) => d.energy !== null);
+      if (daysWithEnergy.length >= 7) {
+        const low = daysWithEnergy.filter((d) => d.energy < 5);
+        const high = daysWithEnergy.filter((d) => d.energy >= 7);
+        if (low.length >= 2 && high.length >= 2) {
+          const avgLow = low.reduce((s, d) => s + d.tasksDone, 0) / low.length;
+          const avgHigh = high.reduce((s, d) => s + d.tasksDone, 0) / high.length;
+          const maxv = Math.max(avgLow, avgHigh, 0.5);
+          const diff = Math.abs(avgHigh - avgLow) / maxv;
+          if (diff > 0.3) {
+            insights.push({
+              id: "energy_tasks",
+              text: avgHigh > avgLow ? `\u0412 \u0434\u043D\u0456 \u0437 \u0432\u0438\u0441\u043E\u043A\u043E\u044E \u0435\u043D\u0435\u0440\u0433\u0456\u0454\u044E (\u22657) \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454\u0448 \u0437\u0430\u0434\u0430\u0447 ${avgHigh.toFixed(1)}, \u0430 \u0437 \u043D\u0438\u0437\u044C\u043A\u043E\u044E (<5) \u2014 ${avgLow.toFixed(1)}.` : `\u0412 \u0434\u043D\u0456 \u0437 \u043D\u0438\u0437\u044C\u043A\u043E\u044E \u0435\u043D\u0435\u0440\u0433\u0456\u0454\u044E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454\u0448 \u0437\u0430\u0434\u0430\u0447 \u0431\u0456\u043B\u044C\u0448\u0435 (${avgLow.toFixed(1)}) \u043D\u0456\u0436 \u043F\u0440\u0438 \u0432\u0438\u0441\u043E\u043A\u0456\u0439 (${avgHigh.toFixed(1)}).`
+            });
+          }
+        }
+      }
+    } catch (e) {
+    }
+    return insights;
   }
   function checkTabBoardTrigger(tab) {
     if (tab === "tasks") {
