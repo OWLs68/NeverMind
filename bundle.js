@@ -11188,7 +11188,7 @@ ${userText}
     const el = document.getElementById("item-" + id);
     if (!el) return;
     const cat = el.dataset.cat;
-    if (cat === "event") {
+    if (cat === "event" || cat === "reminder") {
       window.openCalendarModal();
       return;
     }
@@ -11203,7 +11203,8 @@ ${userText}
     const events = getEvents();
     for (const ev of events) {
       if (ev.date >= todayStr && ev.date <= in7days) {
-        upcoming.push({ type: "event", title: ev.title, date: ev.date, time: ev.time, id: ev.id });
+        const type = ev.source === "reminder" ? "reminder" : "event";
+        upcoming.push({ type, title: ev.title, date: ev.date, time: ev.time, id: ev.id });
       }
     }
     const tasks = getTasks().filter((t) => t.status === "active" && t.dueDate);
@@ -11222,9 +11223,9 @@ ${userText}
       if (diffDays === 0) when = "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
       else if (diffDays === 1) when = "\u0437\u0430\u0432\u0442\u0440\u0430";
       else when = `${d.getDate()} ${MONTHS_OF2[d.getMonth()]}`;
-      const icon = item.type === "event" ? "\u{1F4C5}" : "\u23F0";
+      const icon = item.type === "task" ? "\u{1F4CC}" : item.type === "reminder" ? "\u23F0" : "\u{1F4C5}";
       const timeStr = item.time ? ` \u043E ${item.time}` : "";
-      const action = item.type === "event" ? `onclick="openCalendarModal()"` : `onclick="switchTab('tasks')"`;
+      const action = item.type === "task" ? `onclick="switchTab('tasks')"` : `onclick="openCalendarModal()"`;
       return `<div class="inbox-upcoming-card" ${action}>
       <span class="inbox-upcoming-icon">${icon}</span>
       <span class="inbox-upcoming-text">${escapeHtml(item.title)}</span>
