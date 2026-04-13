@@ -434,7 +434,95 @@ function _getInboxBoardContext() {
     }
   } catch(e) {}
 
+  // Кореляції між вкладками (3.10) — локальний аналіз патернів.
+  // Показуємо ТІЛЬКИ коли немає нічого критичного/важливого, максимум 1 патерн.
+  // AI має ПИТАТИ, не стверджувати. Cooldown 7 днів на патерн щоб не набридало.
+  if (critical.length === 0 && important.length === 0) {
+    const correlations = _computeCorrelations();
+    for (const c of correlations) {
+      if (owlCdExpired('corr_' + c.id, 7 * 24 * 60 * 60 * 1000)) {
+        normal.push(`[ПАТЕРН] ${c.text} ПИТАЙ юзера "Можливо пов'язано?" — НЕ стверджуй як факт, дай підтвердити або спростувати. Це спостереження, не діагноз.`);
+        setOwlCd('corr_' + c.id);
+        break; // максимум один патерн за раз
+      }
+    }
+  }
+
   return [...critical, ...important, ...normal].join(' ');
+}
+
+// Локальний аналіз патернів між вкладками (3.10).
+// Повертає масив {id, text} — помічені зв'язки які AI може озвучити як питання.
+// Вимоги: мінімум 7 днів даних, різниця середніх > 30% між групами.
+function _computeCorrelations() {
+  const insights = [];
+  try {
+    const healthLog = JSON.parse(localStorage.getItem('nm_health_log') || '{}');
+    const habitLog = JSON.parse(localStorage.getItem('nm_habit_log2') || '{}');
+    const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+
+    // Збираємо дані за 14 днів
+    const days = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      const dateStr = d.toDateString();
+      const health = healthLog[iso] || {};
+      const habits = habitLog[dateStr] || {};
+      const habitsDone = Object.keys(habits).filter(k => habits[k]).length;
+      const tasksDone = tasks.filter(t => t.completedAt && new Date(t.completedAt).toDateString() === dateStr).length;
+      days.push({
+        sleep: typeof health.sleep === 'number' ? health.sleep : null,
+        energy: typeof health.energy === 'number' ? health.energy : null,
+        habitsDone,
+        tasksDone,
+      });
+    }
+
+    // Кореляція 1: сон ↔ звички
+    const daysWithSleep = days.filter(d => d.sleep !== null);
+    if (daysWithSleep.length >= 7) {
+      const low = daysWithSleep.filter(d => d.sleep < 6);
+      const high = daysWithSleep.filter(d => d.sleep >= 7);
+      if (low.length >= 2 && high.length >= 2) {
+        const avgLow = low.reduce((s, d) => s + d.habitsDone, 0) / low.length;
+        const avgHigh = high.reduce((s, d) => s + d.habitsDone, 0) / high.length;
+        const maxv = Math.max(avgLow, avgHigh, 0.5);
+        const diff = Math.abs(avgHigh - avgLow) / maxv;
+        if (diff > 0.3) {
+          insights.push({
+            id: 'sleep_habits',
+            text: avgHigh > avgLow
+              ? `В дні з хорошим сном (≥7) робиш звичок у середньому ${avgHigh.toFixed(1)}, а з малим сном (<6) — лише ${avgLow.toFixed(1)}.`
+              : `В дні з малим сном робиш звичок більше (${avgLow.toFixed(1)}) ніж з хорошим (${avgHigh.toFixed(1)}) — незвичайно.`
+          });
+        }
+      }
+    }
+
+    // Кореляція 2: енергія ↔ задачі закриті
+    const daysWithEnergy = days.filter(d => d.energy !== null);
+    if (daysWithEnergy.length >= 7) {
+      const low = daysWithEnergy.filter(d => d.energy < 5);
+      const high = daysWithEnergy.filter(d => d.energy >= 7);
+      if (low.length >= 2 && high.length >= 2) {
+        const avgLow = low.reduce((s, d) => s + d.tasksDone, 0) / low.length;
+        const avgHigh = high.reduce((s, d) => s + d.tasksDone, 0) / high.length;
+        const maxv = Math.max(avgLow, avgHigh, 0.5);
+        const diff = Math.abs(avgHigh - avgLow) / maxv;
+        if (diff > 0.3) {
+          insights.push({
+            id: 'energy_tasks',
+            text: avgHigh > avgLow
+              ? `В дні з високою енергією (≥7) закриваєш задач ${avgHigh.toFixed(1)}, а з низькою (<5) — ${avgLow.toFixed(1)}.`
+              : `В дні з низькою енергією закриваєш задач більше (${avgLow.toFixed(1)}) ніж при високій (${avgHigh.toFixed(1)}).`
+          });
+        }
+      }
+    }
+  } catch(e) {}
+  return insights;
 }
 
 function checkTabBoardTrigger(tab) {
