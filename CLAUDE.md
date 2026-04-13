@@ -355,6 +355,10 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `nm_memory` | string (300 слів, AI-профіль) — **legacy з 11.04**, залишений як fallback поки не пройшла міграція | `src/ai/core.js` |
 | `nm_facts` | `[{id, text, category, ts, lastSeen, source, ttl}]` — структурована пам'ять (11.04) | `src/ai/memory.js` |
 | `nm_facts_migrated` | `'1'` — прапор що міграція з legacy nm_memory виконана | `src/ai/memory.js` |
+| `nm_owl_silence_until` | string (ts) — 4.40 Auto-silence: до якого часу OWL мовчить (4 год після 3 ігнорів поспіль) | `src/owl/proactive.js`, `src/owl/inbox-board.js` |
+| `nm_owl_ignored_msgs` | string (count 0-2) — лічильник проігнорованих повідомлень табло поспіль (скидається при кліку чіпа або активації silence) | `src/owl/proactive.js`, `src/owl/chips.js` |
+| `nm_owl_last_board_ts` | string (ts) — таймстемп останнього згенерованого повідомлення табло (для детекції ігнору в 4.40) | `src/owl/proactive.js` |
+| `nm_owl_last_chip_click_ts` | string (ts) — таймстемп останнього кліку будь-якого чіпа (для детекції ігнору в 4.40) | `src/owl/chips.js` |
 
 **Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`, `nm_fin_coach_{period}`
 
