@@ -7516,6 +7516,54 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function saveFinCats(obj) {
     localStorage.setItem("nm_finance_cats", JSON.stringify(obj));
   }
+  function findFinCatById(id) {
+    const cats = getFinCats();
+    for (const type of ["expense", "income"]) {
+      const idx = cats[type].findIndex((c) => c.id === id);
+      if (idx !== -1) return { cat: cats[type][idx], type, idx };
+    }
+    return null;
+  }
+  function createFinCategory(type, data) {
+    const cats = getFinCats();
+    const list = cats[type] || [];
+    const order = list.length;
+    const newCat = {
+      id: "cat_" + (data.name || "new").toLowerCase().replace(/[^\wа-яґєії]/gi, "_").slice(0, 20) + "_" + Date.now().toString(36),
+      name: data.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438",
+      icon: data.icon || "other",
+      color: data.color || pickRandomCatColor(order),
+      subcategories: data.subcategories || [],
+      archived: false,
+      order
+    };
+    list.push(newCat);
+    cats[type] = list;
+    saveFinCats(cats);
+    return newCat;
+  }
+  function updateFinCategory(id, data) {
+    const found = findFinCatById(id);
+    if (!found) return false;
+    const cats = getFinCats();
+    const cat = cats[found.type][found.idx];
+    if (data.name !== void 0) cat.name = data.name;
+    if (data.icon !== void 0) cat.icon = data.icon;
+    if (data.color !== void 0) cat.color = data.color;
+    if (data.subcategories !== void 0) cat.subcategories = data.subcategories;
+    if (data.archived !== void 0) cat.archived = data.archived;
+    saveFinCats(cats);
+    return true;
+  }
+  function deleteFinCategory(id) {
+    const found = findFinCatById(id);
+    if (!found) return false;
+    const cats = getFinCats();
+    cats[found.type].splice(found.idx, 1);
+    cats[found.type].forEach((c, i) => c.order = i);
+    saveFinCats(cats);
+    return true;
+  }
   function getCurrency() {
     const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
     return s.currency || "\u20B4";
@@ -7641,7 +7689,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     if (!wrap) return;
     let startX = 0, startY = 0, onGrid = false;
     wrap.addEventListener("touchstart", (e) => {
-      onGrid = !!e.target.closest("#fin-cats-grid-wrap");
+      onGrid = !_finEditMode && !!e.target.closest("#fin-cats-grid-wrap");
       if (!onGrid) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
@@ -7676,16 +7724,25 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const sum = catMap[cat.name] || 0;
       const sumStr = sum > 0 ? formatMoney(sum) : "0 " + getCurrency();
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
-      return `<div onclick="openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+      const onClick = _finEditMode ? `openCategoryEditModal('${escapeHtml(cat.id)}')` : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
+      const editStyle = _finEditMode ? "box-shadow:0 0 0 2px " + cat.color + "55;" : "";
+      return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
-      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center">
+      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle}">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
       <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
     </div>`;
     };
-    const gridCells = inGrid.map(renderCell).join("");
-    const overflowCells = overflow.map(renderCell).join("");
+    const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+    <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">\u0414\u043E\u0434\u0430\u0442\u0438</div>
+    <div style="width:48px;height:48px;border-radius:50%;background:rgba(194,65,12,0.08);border:2px dashed rgba(194,65,12,0.35);display:flex;align-items:center;justify-content:center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.25);margin-top:4px">&nbsp;</div>
+  </div>`;
+    const gridCells = inGrid.map(renderCell).join("") + (_finEditMode && inGrid.length < 12 ? renderAddCell() : "");
+    const overflowCells = overflow.map(renderCell).join("") + (_finEditMode && inGrid.length >= 12 ? renderAddCell() : "");
     const heroLabel = isExpense ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0438" : "\u0414\u043E\u0445\u043E\u0434\u0438";
     const heroCol = isExpense ? "#c2410c" : "#16a34a";
     const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
@@ -7693,14 +7750,26 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     <div style="font-size:24px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
   </div>`;
     const isCurrent = currentFinPeriodOffset === 0;
-    const headerHtml = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
-    <button onclick="shiftFinPeriod(-1)" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
-      <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
-      ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457</div>`}
-    </div>
-    <button onclick="shiftFinPeriod(1)" aria-label="\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
-  </div>`;
+    const headerHtml = _finEditMode ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
+        <div style="width:32px"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+          <div style="font-size:14px;font-weight:800;color:#c2410c">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439</div>
+          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">\u0442\u0430\u043F\u043D\u0438 \u0449\u043E\u0431 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043E +</div>
+        </div>
+        <button onclick="toggleFinEditMode()" aria-label="\u0413\u043E\u0442\u043E\u0432\u043E" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u0413\u043E\u0442\u043E\u0432\u043E</button>
+      </div>` : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
+        <button onclick="shiftFinPeriod(-1)" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+          <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
+          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457</div>`}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button onclick="toggleFinEditMode()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" title="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+          <button onclick="shiftFinPeriod(1)" aria-label="\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
+        </div>
+      </div>`;
     return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:14px;margin-bottom:12px">
     ${headerHtml}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:10px;grid-auto-flow:row dense">
@@ -8268,14 +8337,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           renderFinance();
           addFinanceChatMsg("agent", "\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
         } else if (parsed.action === "create_category") {
+          const type = parsed.type === "income" ? "income" : "expense";
           const c = getFinCats();
-          const list = parsed.type === "income" ? c.income : c.expense;
-          if (!list.includes(parsed.name)) {
-            list.push(parsed.name);
-            saveFinCats(c);
-          }
+          const exists = (c[type] || []).some((x) => x.name.toLowerCase() === (parsed.name || "").toLowerCase());
+          if (!exists) createFinCategory(type, { name: parsed.name });
           renderFinance();
-          addFinanceChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${parsed.name}" \u0434\u043E\u0434\u0430\u043D\u043E`);
+          addFinanceChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${parsed.name}" ${exists ? "\u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0432\u0430\u043B\u0430" : "\u0434\u043E\u0434\u0430\u043D\u043E"}`);
         } else {
           safeAgentReply(reply, addFinanceChatMsg);
         }
@@ -8287,7 +8354,165 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     financeBarLoading = false;
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading;
+  function toggleFinEditMode() {
+    _finEditMode = !_finEditMode;
+    renderFinance();
+  }
+  function openCategoryEditModal(catId) {
+    _finEditingCatId = catId;
+    let draft;
+    if (catId === "new") {
+      draft = {
+        name: "",
+        icon: "other",
+        color: pickRandomCatColor(Date.now() % 14),
+        subcategories: [],
+        archived: false,
+        type: currentFinTab === "income" ? "income" : "expense"
+      };
+    } else {
+      const found = findFinCatById(catId);
+      if (!found) return;
+      draft = { ...found.cat, type: found.type, subcategories: [...found.cat.subcategories] };
+    }
+    _finCatModalDraft = draft;
+    const existing = document.getElementById("fin-cat-edit-modal");
+    if (existing) existing.remove();
+    const modal = document.createElement("div");
+    modal.id = "fin-cat-edit-modal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center";
+    modal.innerHTML = _renderCatEditModalBody();
+    document.body.appendChild(modal);
+    setupModalSwipeClose(modal.querySelector("div:last-child"), closeCategoryEditModal);
+  }
+  function _renderCatEditModalBody() {
+    const d = _finCatModalDraft;
+    const isNew = _finEditingCatId === "new";
+    const iconsHtml = FIN_CAT_ICON_NAMES.map((name) => {
+      const active = name === d.icon;
+      return `<button onclick="selectCatModalIcon('${name}')" style="width:42px;height:42px;border-radius:50%;border:2px solid ${active ? d.color : "rgba(30,16,64,0.08)"};background:${active ? d.color + "20" : "white"};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : "rgba(30,16,64,0.55)", 20)}</button>`;
+    }).join("");
+    const colorsHtml = FIN_CAT_PALETTE.map((c) => {
+      const active = c === d.color;
+      return `<button onclick="selectCatModalColor('${c}')" style="width:32px;height:32px;border-radius:50%;border:3px solid ${active ? "#1e1040" : "transparent"};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
+    }).join("");
+    const subcatsHtml = d.subcategories.map(
+      (s, i) => `<div style="display:flex;align-items:center;gap:6px">
+      <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none">
+      <button onclick="removeCatModalSubcat(${i})" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:14px;cursor:pointer;font-family:inherit">\xD7</button>
+    </div>`
+    ).join("");
+    return `<div onclick="closeCategoryEditModal()" class="modal-backdrop"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:85vh;overflow-y:auto;box-sizing:border-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">${isNew ? "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F" : "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"}</div>
+
+    <!-- \u0422\u0438\u043F (\u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u043D\u043E\u0432\u043E\u0457 \u2014 \u0434\u043B\u044F \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043D\u0435 \u043C\u0456\u043D\u044F\u0454\u043C\u043E \u0449\u043E\u0431 \u043D\u0435 \u043F\u043B\u0443\u0442\u0430\u0442\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457) -->
+    ${isNew ? `<div style="display:flex;gap:6px;margin-bottom:12px">
+      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${d.type === "expense" ? "rgba(194,65,12,0.08)" : "white"};color:${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.4)"}">\u0412\u0438\u0442\u0440\u0430\u0442\u0430</button>
+      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.1)"};background:${d.type === "income" ? "rgba(22,163,74,0.08)" : "white"};color:${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.4)"}">\u0414\u043E\u0445\u0456\u0434</button>
+    </div>` : ""}
+
+    <!-- \u041D\u0430\u0437\u0432\u0430 -->
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041D\u0430\u0437\u0432\u0430</div>
+    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456"
+      style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box">
+
+    <!-- \u0406\u043A\u043E\u043D\u043A\u0430 -->
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0406\u043A\u043E\u043D\u043A\u0430</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px">${iconsHtml}</div>
+
+    <!-- \u041A\u043E\u043B\u0456\u0440 -->
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041A\u043E\u043B\u0456\u0440</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${colorsHtml}</div>
+
+    <!-- \u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 -->
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457</div>
+    <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
+    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</button>
+
+    <!-- \u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438 (toggle) -->
+    ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438, \u0434\u0430\u043D\u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F</div>
+      </div>
+      <button onclick="toggleCatModalArchive()" style="width:44px;height:24px;border-radius:14px;border:none;background:${d.archived ? "#c2410c" : "rgba(30,16,64,0.12)"};position:relative;cursor:pointer;font-family:inherit">
+        <div style="width:18px;height:18px;border-radius:50%;background:white;position:absolute;top:3px;${d.archived ? "right:3px" : "left:3px"};transition:all 0.2s"></div>
+      </button>
+    </div>` : ""}
+
+    <!-- \u041A\u043D\u043E\u043F\u043A\u0438 -->
+    <div style="display:flex;gap:8px;margin-top:14px">
+      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
+      <button onclick="closeCategoryEditModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438"}</button>
+    </div>
+  </div>`;
+  }
+  function _refreshCatEditModal() {
+    const modal = document.getElementById("fin-cat-edit-modal");
+    if (modal) modal.innerHTML = _renderCatEditModalBody();
+  }
+  function selectCatModalIcon(name) {
+    _finCatModalDraft.icon = name;
+    _refreshCatEditModal();
+  }
+  function selectCatModalColor(c) {
+    _finCatModalDraft.color = c;
+    _refreshCatEditModal();
+  }
+  function setCatModalType(t) {
+    _finCatModalDraft.type = t;
+    _refreshCatEditModal();
+  }
+  function toggleCatModalArchive() {
+    _finCatModalDraft.archived = !_finCatModalDraft.archived;
+    _refreshCatEditModal();
+  }
+  function addCatModalSubcat() {
+    _finCatModalDraft.subcategories.push("");
+    _refreshCatEditModal();
+  }
+  function removeCatModalSubcat(i) {
+    _finCatModalDraft.subcategories.splice(i, 1);
+    _refreshCatEditModal();
+  }
+  function updateCatModalSubcat(i, v) {
+    _finCatModalDraft.subcategories[i] = v;
+  }
+  function saveCategoryFromModal() {
+    const d = _finCatModalDraft;
+    const subs = (d.subcategories || []).map((s) => (s || "").trim()).filter(Boolean);
+    const name = (d.name || "").trim();
+    if (!name) {
+      showToast("\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443");
+      return;
+    }
+    if (_finEditingCatId === "new") {
+      createFinCategory(d.type, { name, icon: d.icon, color: d.color, subcategories: subs });
+      showToast("\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
+    } else {
+      updateFinCategory(_finEditingCatId, { name, icon: d.icon, color: d.color, subcategories: subs, archived: d.archived });
+      showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
+    }
+    closeCategoryEditModal();
+    renderFinance();
+  }
+  function deleteCategoryFromModal() {
+    if (_finEditingCatId === "new") return;
+    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E? \u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F, \u0430\u043B\u0435 \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430.")) return;
+    deleteFinCategory(_finEditingCatId);
+    closeCategoryEditModal();
+    renderFinance();
+    showToast("\u2713 \u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
+  }
+  function closeCategoryEditModal() {
+    document.getElementById("fin-cat-edit-modal")?.remove();
+    _finEditingCatId = null;
+    _finCatModalDraft = null;
+  }
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading, _finCatModalDraft;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -8398,6 +8623,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       currentFinTab = "expense";
       currentFinPeriod = "month";
       currentFinPeriodOffset = 0;
+      _finEditMode = false;
+      _finEditingCatId = null;
       _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
       _finSwipeAttached = false;
       _finEditId = null;
@@ -8405,6 +8632,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _finTxSelectedCat = "";
       financeBarHistory = [];
       financeBarLoading = false;
+      _finCatModalDraft = null;
       Object.assign(window, {
         openAddTransaction,
         setCurrency,
@@ -8423,8 +8651,30 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         openAllTransactions,
         toggleFinTabType,
         // Фаза 2 (K-01): тап на круг = перемикач Витрати⇄Доходи
-        shiftFinPeriod
+        shiftFinPeriod,
         // Фаза 2 крок Б: стрілки навігації періоду
+        // Фаза 2 крок В: режим редагування + модалка категорії
+        toggleFinEditMode,
+        openCategoryEditModal,
+        closeCategoryEditModal,
+        saveCategoryFromModal,
+        deleteCategoryFromModal,
+        selectCatModalIcon,
+        selectCatModalColor,
+        setCatModalType,
+        toggleCatModalArchive,
+        addCatModalSubcat,
+        removeCatModalSubcat,
+        updateCatModalSubcat
+      });
+      Object.defineProperty(window, "_finCatModalDraft", {
+        get() {
+          return _finCatModalDraft;
+        },
+        set(v) {
+          _finCatModalDraft = v;
+        },
+        configurable: true
       });
     }
   });
