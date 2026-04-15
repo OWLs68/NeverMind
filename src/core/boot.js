@@ -258,7 +258,7 @@ export const NM_KEYS = {
   settings: ['nm_settings','nm_gemini_key','nm_memory','nm_memory_ts',
               'nm_facts','nm_facts_migrated',
               'nm_active_tabs','nm_onboarding_done','nm_evening_mood',
-              'nm_evening_summary','nm_notes_folders_ts'],
+              'nm_evening_summary'],
   // Чат-историки (→ Supabase chat_messages)
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],

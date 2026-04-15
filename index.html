@@ -404,18 +404,8 @@
         <div id="owl-tab-board-notes" style="display:none;padding:0 14px"></div>
       </div><!-- /sticky header -->
 
-      <!-- AI suggestion banner -->
-      <div id="notes-ai-banner" style="display:none;margin:0 14px 10px;background:rgba(26,10,46,0.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/></svg>
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em">OWL пропонує</div>
-        </div>
-        <div id="notes-ai-text" style="font-size:15px;line-height:1.5;color:rgba(255,255,255,0.9);font-weight:500;margin-bottom:12px"></div>
-        <div style="display:flex;gap:8px">
-          <button onclick="applyFolderSuggestion()" style="flex:1;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:white;cursor:pointer">Застосувати</button>
-          <button onclick="document.getElementById('notes-ai-banner').style.display='none'" style="flex:1;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.45);cursor:pointer">Пізніше</button>
-        </div>
-      </div>
+      <!-- 15.04 jMR6m: AI suggestion banner #notes-ai-banner прибрано (фіча "OWL пропонує
+           структуру папок" прибрана повністю — деталі у src/tabs/notes.js і ROADMAP.md). -->
 
       <!-- Folder header (назад + назва папки) -->
       <div id="notes-folder-header" style="display:none;align-items:center;justify-content:space-between;padding:4px 14px 10px;gap:8px"></div>
