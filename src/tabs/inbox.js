@@ -20,6 +20,8 @@ import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
 import { getProjects, saveProjects, startProjectInboxInterview } from './projects.js';
 import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
+// Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
+import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry } from './health.js';
 
 // === INBOX CHAT MESSAGES ===
 let _inboxTypingEl = null;
@@ -379,6 +381,16 @@ function _toolCallToAction(name, args) {
     case 'delete_folder': return { action: 'delete_folder', folder: args.folder };
     case 'move_note': return { action: 'move_note', query: args.query, folder: args.folder };
     case 'reopen_task': return { action: 'reopen_task', task_id: args.task_id };
+    // Здоров'я (Фаза 2, 15.04 6v2eR)
+    case 'create_health_card': return { action: 'create_health_card', name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, initial_history_text: args.initial_history_text, comment: args.comment };
+    case 'edit_health_card': return { action: 'edit_health_card', card_id: args.card_id, name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, comment: args.comment };
+    case 'delete_health_card': return { action: 'delete_health_card', card_id: args.card_id, comment: args.comment };
+    case 'add_medication': return { action: 'add_medication', card_id: args.card_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
+    case 'edit_medication': return { action: 'edit_medication', card_id: args.card_id, med_id: args.med_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
+    case 'log_medication_dose': return { action: 'log_medication_dose', card_id: args.card_id, med_name: args.med_name, comment: args.comment };
+    case 'add_allergy': return { action: 'add_allergy', name: args.name, notes: args.notes, comment: args.comment };
+    case 'delete_allergy': return { action: 'delete_allergy', allergy_id: args.allergy_id, comment: args.comment };
+    case 'add_health_history_entry': return { action: 'add_health_history_entry', card_id: args.card_id, entry_type: args.entry_type, text: args.text, comment: args.comment };
     default: return null;
   }
 }
@@ -614,6 +626,114 @@ export async function sendToAI(fromChip = false) {
             });
           } catch (e) {
             console.warn('[memory] addFact failed:', e);
+          }
+        // === ЗДОРОВ'Я (Фаза 2, 15.04 6v2eR) ===
+        } else if (action.action === 'create_health_card') {
+          const created = createHealthCardProgrammatic({
+            name: action.name,
+            subtitle: action.subtitle,
+            doctor: action.doctor,
+            doctorRecommendations: action.doctor_recommendations,
+            doctorConclusion: action.doctor_conclusion,
+            startDate: action.start_date,
+            nextAppointment: action.next_appointment_date ? { date: action.next_appointment_date, time: action.next_appointment_time || '' } : null,
+            status: action.status,
+            initialHistoryEntry: action.initial_history_text,
+          });
+          if (created) {
+            if (currentTab === 'health') renderHealth();
+            const items = getInbox(); items.unshift({ id: Date.now() + 1, text: `🏥 Стан: ${created.name}`, category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
+            addInboxChatMsg('agent', `🏥 Створив картку "${created.name}" у Здоров'ї. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не вдалось створити картку — потрібна назва.');
+          }
+        } else if (action.action === 'edit_health_card') {
+          const updates = {};
+          if (action.name !== undefined) updates.name = action.name;
+          if (action.subtitle !== undefined) updates.subtitle = action.subtitle;
+          if (action.doctor !== undefined) updates.doctor = action.doctor;
+          if (action.doctor_recommendations !== undefined) updates.doctorRecommendations = action.doctor_recommendations;
+          if (action.doctor_conclusion !== undefined) updates.doctorConclusion = action.doctor_conclusion;
+          if (action.start_date !== undefined) updates.startDate = action.start_date;
+          if (action.status !== undefined) updates.status = action.status;
+          // nextAppointment: null = очистити; date= встановити
+          if (action.next_appointment_date !== undefined) {
+            updates.nextAppointment = action.next_appointment_date
+              ? { date: action.next_appointment_date, time: action.next_appointment_time || '' }
+              : null;
+          }
+          const updated = editHealthCardProgrammatic(action.card_id, updates);
+          if (updated) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `✓ Оновив картку "${updated.name}". ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов картку. Спробуй ще раз.');
+          }
+        } else if (action.action === 'delete_health_card') {
+          const ok = deleteHealthCardProgrammatic(action.card_id);
+          if (ok) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `🗑️ Картку видалено (7 днів у кошику). ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов картку для видалення.');
+          }
+        } else if (action.action === 'add_medication') {
+          const med = addMedicationToCard(action.card_id, {
+            name: action.med_name,
+            dosage: action.dosage,
+            schedule: action.schedule,
+            courseDuration: action.course_duration,
+          });
+          if (med) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `💊 Додав ${med.name}${med.dosage ? ' (' + med.dosage + ')' : ''}. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов картку. Створи її спочатку.');
+          }
+        } else if (action.action === 'edit_medication') {
+          const updates = {};
+          if (action.med_name !== undefined) updates.name = action.med_name;
+          if (action.dosage !== undefined) updates.dosage = action.dosage;
+          if (action.schedule !== undefined) updates.schedule = action.schedule;
+          if (action.course_duration !== undefined) updates.courseDuration = action.course_duration;
+          const med = editMedicationInCard(action.card_id, action.med_id, updates);
+          if (med) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `✓ Оновив ${med.name}. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов препарат у картці.');
+          }
+        } else if (action.action === 'log_medication_dose') {
+          const med = logMedicationDose(action.card_id, action.med_name);
+          if (med) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `💊✓ Прийняв ${med.name}. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов препарат у картці. Уточни назву.');
+          }
+        } else if (action.action === 'add_allergy') {
+          const added = addAllergy(action.name, action.notes || '');
+          if (added) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `🚨 Додав алергію: ${action.name}. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', `Алергія "${action.name}" вже є у списку.`);
+          }
+        } else if (action.action === 'delete_allergy') {
+          const ok = deleteAllergy(action.allergy_id);
+          if (ok) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `🗑️ Алергію видалено. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов алергію для видалення.');
+          }
+        } else if (action.action === 'add_health_history_entry') {
+          const entry = addHealthHistoryEntry(action.card_id, action.entry_type, action.text);
+          if (entry) {
+            if (currentTab === 'health') renderHealth();
+            addInboxChatMsg('agent', `📝 Додав запис у історію. ${action.comment || ''}`);
+          } else {
+            addInboxChatMsg('agent', 'Не знайшов картку для запису.');
           }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // edit_event, delete_event, edit_note, edit_task, set_reminder, etc.

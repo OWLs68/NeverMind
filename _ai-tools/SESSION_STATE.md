@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-15 (сесія 6v2eR — **5 багів Здоров'я закриті (B-27..B-31) + Фаза 1.5 ВИКОНАНА (синк картка ↔ календар)**)
+**Оновлено:** 2026-04-15 (сесія 6v2eR — **5 багів Здоров'я (B-27..B-31) + Фази 1.5 і 2 ВИКОНАНІ (синк календар + AI tool calling)**)
 
 ---
 
@@ -12,7 +12,7 @@
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з **Tool Calling** (26 tools) |
 | **Гілка** | `claude/start-session-6v2eR` |
-| **CACHE_NAME** | `nm-20260415-1254` (поточний у `sw.js`) |
+| **CACHE_NAME** | `nm-20260415-1308` (поточний у `sw.js`) |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -21,13 +21,38 @@
 
 **Дорожня карта — єдине місце:** [`ROADMAP.md`](../ROADMAP.md) у корені репо.
 
-**Поточний Active:** Блок 2 — Концепції вкладок (core UX). Аудит 6 вкладок проведений 15.04.2026 (сесія Lp0Ym). **Фаза 1 Здоров'я виконана 15.04.2026 jMR6m** + **Фаза 1.5 виконана 15.04.2026 6v2eR**. Вкладка ~65%. **Наступна робоча ціль — Фаза 2 Здоров'я** (створення карток через Inbox + tool calling + 4.12 антидублювання). 6 фаз у `ROADMAP.md` секція Active.
+**Поточний Active:** Блок 2 — Концепції вкладок (core UX). Аудит 6 вкладок проведений 15.04.2026 (сесія Lp0Ym). **Фази 1 (jMR6m), 1.5 і 2 (6v2eR) виконані 15.04.2026.** Вкладка ~80%. **Наступна робоча ціль — Фаза 3 Здоров'я** (UI переробка картки — timeline історії, індикатор прогресу курсу). 6 фаз у `ROADMAP.md` секція Active.
 
 ---
 
 ## ⚠️ Для нового чату — де саме зупинились (15.04 сесія 6v2eR)
 
-**Сесія мала ДВА блоки:** (А) 5 багів Здоров'я закрити перед Фазою 1.5; (Б) Сама Фаза 1.5 — двосторонній синк картка ↔ `nm_events` з архівацією прийомів.
+**Сесія мала ТРИ блоки:** (А) 5 багів Здоров'я закрити перед Фазою 1.5; (Б) Фаза 1.5 — двосторонній синк картка ↔ `nm_events` з архівацією; (В) Фаза 2 — AI tool calling (9 нових tools) + 4.12 антидублювання.
+
+### Блок В — Фаза 2 (AI tool calling для Здоров'я)
+
+**9 нових tools у `INBOX_TOOLS` (`src/ai/core.js`):** `create_health_card`, `edit_health_card`, `delete_health_card`, `add_medication`, `edit_medication`, `log_medication_dose`, `add_allergy`, `delete_allergy`, `add_health_history_entry`.
+
+**Helper-функції з health.js (експортовано):** `createHealthCardProgrammatic` (з синком nm_events), `editHealthCardProgrammatic`, `deleteHealthCardProgrammatic` (з trash + видалення прив'язаної події), `addMedicationToCard`, `editMedicationInCard`, `logMedicationDose` (fuzzy match по назві), `addHealthHistoryEntry`.
+
+**Handlers у `inbox.js sendToAI`:** 9 нових `else if` блоків після `save_memory_fact`. Кожен викликає helper, рендерить `renderHealth()` і додає user-friendly чат-повідомлення.
+
+**Prompt-правила (`INBOX_SYSTEM_PROMPT` нова секція ЗДОРОВ'Я):**
+- Алергія → `add_allergy` (з 4.12 перевіркою дублів)
+- Симптом 3+ дні / діагноз → `add_health_history_entry` до існуючої або `create_health_card`
+- Разова скарга → `save_moment`/`save_note` (НЕ картка)
+- Прийом ліків → `log_medication_dose`
+- Лікар прописав → `add_medication` або `create_health_card`
+- Візит → `create_event` (НЕ картка)
+- Медичні питання → текст "я не лікар"
+
+**4.12 Антидублювання:** `getHealthContext()` додано `[ID:X]`, `[medID:X]`, `[ID:X]` алергій. AI бачить контекст і не дублює — використовує `edit_*` або `add_health_history_entry`.
+
+**НЕ зроблено в цій сесії (свідомо, перенесено):**
+- Чат-інтерв'ю при створенні картки (3-4 питання) — у `💡 Ideas`. Поточна реалізація: AI створює картку одразу з усіма полями, `initial_history_text` зберігає сирий текст. Редагування — модалка "Ред." (B-27).
+- Розширення tools на чат-бари інших вкладок (Notes/Finance/Health) — handlers поки тільки в `inbox.js`. Окрема невелика задача.
+
+### Блок Б — Фаза 1.5 (синк картка ↔ календар)
 
 ### Блок Б — Фаза 1.5 (синк картка ↔ календар)
 
@@ -60,16 +85,23 @@
 
 ### Файли що торкнулись
 
-- `src/tabs/health.js` — велика переробка (Блок А): новий `renderHealthList`, `_buildAllergiesCardHtml`, модалка з 8 функцій, `openAddHealthCard` без `prompt()`, видалено 3 legacy. **Блок Б:** додано `_syncCardAppointmentToEvent` (eager синк), `_archivePastAppointments`, `_syncEventDatesToCards`, `_detectOrphanAppointments` (lazy у `renderHealth`). Додано `import getEvents/saveEvents` з calendar.js + `addToTrash` з trash.js.
+- `src/tabs/health.js` — велика переробка (Блок А): новий `renderHealthList`, `_buildAllergiesCardHtml`, модалка з 8 функцій, `openAddHealthCard` без `prompt()`, видалено 3 legacy. **Блок Б:** додано `_syncCardAppointmentToEvent` (eager синк), `_archivePastAppointments`, `_syncEventDatesToCards`, `_detectOrphanAppointments` (lazy у `renderHealth`). **Блок В:** 7 нових export-helper функцій (`createHealthCardProgrammatic`, `editHealthCardProgrammatic`, `deleteHealthCardProgrammatic`, `addMedicationToCard`, `editMedicationInCard`, `logMedicationDose`, `addHealthHistoryEntry`). У `getHealthContext` додано `[ID:X]`, `[medID:X]` для AI tools.
+- `src/ai/core.js` — +9 tools у INBOX_TOOLS (Здоров'я), prompt-правила секція ЗДОРОВ'Я (~13 рядків)
+- `src/tabs/inbox.js` — +9 cases у `_toolCallToAction` + 9 handlers у `sendToAI`, import 10 функцій з health.js
 - `index.html` — додана модалка `#health-card-modal`, `#health-scroll` очищено
-- `sw.js` — CACHE_NAME `nm-20260415-1254`
+- `sw.js` — CACHE_NAME `nm-20260415-1308`
 - `NEVERMIND_BUGS.md` — 5 записів у "Закриті"
-- `ROADMAP.md` — Фаза 1.5 → "✅ Виконано", Active секція оновлена (Фаза 2 — наступна)
-- `docs/CHANGES.md` — запис сесії
+- `ROADMAP.md` — Фази 1.5 і 2 → "✅ Виконано", Active секція оновлена (Фаза 3 — наступна)
+- `docs/CHANGES.md` — 3 записи сесії (Блок А, Б, В окремо)
 
 ### Наступний крок у новому чаті
 
-**Фаза 2 Здоров'я** — створення карток через Inbox + всі чат-бари + Tool Calling + 4.12 антидублювання. Tools для `INBOX_TOOLS`: `create_health_card`, `edit_health_card`, `delete_health_card`, `add_medication`, `edit_medication`, `log_medication_dose`, `add_allergy`, `delete_allergy`, `add_health_history_entry`. Prompt-правило у `INBOX_SYSTEM_PROMPT`: детекція симптомів → пропозиція створити картку. Чат-інтерв'ю при "Так". Обсяг — більший, можливо 1.5 сесії.
+**Фаза 3 Здоров'я** — UI переробка картки. Що зробити:
+- Чат-бар Здоров'я з preloaded контекстом конкретної картки (коли відкрито з кнопки "Запитати OWL про цей стан")
+- Timeline історії (відображення `card.history` як вертикальний timeline у workspace, не лише `doctor_visit`)
+- Індикатор прогресу курсу ("Курс 71% · покращення") у workspace
+- Можливо: візуальний log прийому ліків (як "ліки сьогодні" — крапки прийому)
+- Опційно: розширення tool calling на чат-бари інших вкладок (Notes/Finance/Health)
 
 ### Чеклист ручного тестування сесії 6v2eR (для Романа на телефоні)
 
@@ -88,6 +120,16 @@
 - [ ] Виставити дату прийому у минулому (наприклад вчора) → перейти на іншу вкладку → повернутись на Здоров'я → у картці запис "Прийом відбувся {дата}" у history, поле "Наст. прийом" очистилось?
 - [ ] Подію у Календарі перемістити (новий drum picker дати) → зберегти → перейти у Здоров'я → у картці поле "Наст. прийом" оновилось?
 - [ ] Видалити подію з Календаря → перейти у Здоров'я → картка лишилась з тією датою (orphan), при наступному save модалкою — створиться нова подія у Календарі?
+
+**Блок В — Фаза 2 AI tool calling:**
+- [ ] У Inbox написати "у мене алергія на горіхи" → AI створив алергію (видно у вкладці Здоров'я, коралова картка)?
+- [ ] Повторити "у мене алергія на горіхи" → AI каже "вже у списку" (4.12 антидублювання)?
+- [ ] У Inbox написати "у мене вже 4 день свербіння на руках" → AI створив картку Здоров'я? (видно у вкладці)
+- [ ] Повторити "знову свербить шкіра" → AI додав запис у history існуючої картки, НЕ створив нову (4.12)?
+- [ ] У Inbox написати "лікар прописав Омез 20мг два рази на день" (коли є картка про шкіру) → AI додав препарат до картки?
+- [ ] У Inbox написати "прийняв Омез" → AI позначив прийом дози (видно у history картки + log[] у медикаменті)?
+- [ ] У Inbox написати "болить голова" (одноразова скарга) → AI зберіг як `save_moment`, НЕ створив картку?
+- [ ] У Inbox написати "що з моїм тиском?" → AI відповідає текстом "я не лікар", НЕ ставить діагноз?
 
 ---
 
