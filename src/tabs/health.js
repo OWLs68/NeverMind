@@ -241,6 +241,8 @@ export function createHealthCardProgrammatic(opts) {
   newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, newCard.name, nextAppointment, null);
   cards.unshift(newCard);
   saveHealthCards(cards);
+  // Фаза 5: синк будь-яких медикаментів з createTasks:true → задачі
+  (newCard.medications || []).forEach(m => _syncMedicationToTask(newCard.name, m));
   return newCard;
 }
 
@@ -304,6 +306,8 @@ export function addMedicationToCard(cardId, med) {
   };
   cards[idx].medications.push(newMed);
   saveHealthCards(cards);
+  // Фаза 5: якщо createTasks:true — створити задачу "Прийняти ..."
+  _syncMedicationToTask(cards[idx].name, newMed);
   return newMed;
 }
 
@@ -368,6 +372,249 @@ export function addHealthHistoryEntry(cardId, type, text) {
   cards[idx].history.unshift(entry);
   saveHealthCards(cards);
   return entry;
+}
+
+// === ФАЗА 5 (15.04 6v2eR): ЕКСПОРТ МЕДИЧНОЇ КАРТКИ + СИНК ЛІКИ↔ЗАДАЧІ ===
+//
+// Генерує plain-text медичну картку для копіювання у месенджер лікарю.
+// Включає: алергії, активні стани з ліками, всі ліки сумарно, історію візитів за рік.
+function buildHealthExportText() {
+  const allergies = getAllergies();
+  const cards = getHealthCards();
+  const active = cards.filter(c => c.status === 'active' || c.status === 'controlled');
+  const done = cards.filter(c => c.status === 'done');
+  const todayStr = new Date().toLocaleDateString('uk-UA');
+  const lines = [];
+
+  lines.push(`МЕДИЧНА КАРТКА`);
+  lines.push(`Дата експорту: ${todayStr}`);
+  lines.push(``);
+
+  // АЛЕРГІЇ — ЗАВЖДИ ЗВЕРХУ, великими
+  if (allergies.length > 0) {
+    lines.push(`🚨 АЛЕРГІЇ:`);
+    allergies.forEach(a => {
+      lines.push(`  • ${a.name}${a.notes ? ' — ' + a.notes : ''}`);
+    });
+  } else {
+    lines.push(`🚨 АЛЕРГІЇ: не вказано`);
+  }
+  lines.push(``);
+  lines.push(`─────────────`);
+  lines.push(``);
+
+  // Активні стани
+  if (active.length > 0) {
+    lines.push(`АКТИВНІ СТАНИ (${active.length}):`);
+    lines.push(``);
+    active.forEach((card, i) => {
+      lines.push(`${i + 1}. ${card.name.toUpperCase()}${card.subtitle ? ' — ' + card.subtitle : ''}`);
+      lines.push(`   Статус: ${card.status === 'active' ? 'активне' : 'під контролем'} · прогрес курсу: ${card.progress || 0}%`);
+      if (card.startDate) {
+        const d = new Date(card.startDate);
+        if (!isNaN(d)) {
+          const daysSince = Math.round((Date.now() - d.getTime()) / 86400000);
+          lines.push(`   Початок: ${card.startDate} (${daysSince} дн тому)`);
+        }
+      }
+      if (card.doctor) lines.push(`   Лікар: ${card.doctor}`);
+      if (card.doctorRecommendations) lines.push(`   Рекомендації: ${card.doctorRecommendations}`);
+      if (card.doctorConclusion) lines.push(`   Висновок: ${card.doctorConclusion}`);
+      if (card.nextAppointment && card.nextAppointment.date) {
+        lines.push(`   Наступний прийом: ${card.nextAppointment.date}${card.nextAppointment.time ? ' о ' + card.nextAppointment.time : ''}`);
+      }
+      if (Array.isArray(card.medications) && card.medications.length > 0) {
+        lines.push(`   Препарати:`);
+        card.medications.forEach(m => {
+          const sched = Array.isArray(m.schedule) && m.schedule.length ? m.schedule.join(', ') : '';
+          const course = m.courseDuration ? ' · курс ' + m.courseDuration : '';
+          lines.push(`     - ${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched ? ' (' + sched + ')' : ''}${course}`);
+        });
+      }
+      // Останній тренд
+      const lastTrend = (card.history || []).find(h => h.type === 'status_change');
+      if (lastTrend) lines.push(`   Останній тренд: ${lastTrend.text}`);
+      lines.push(``);
+    });
+  } else {
+    lines.push(`АКТИВНІ СТАНИ: немає`);
+    lines.push(``);
+  }
+
+  // Всі ліки сумарно (unique по назві)
+  const allMedsMap = new Map();
+  active.forEach(card => {
+    (card.medications || []).forEach(m => {
+      if (!allMedsMap.has(m.name)) {
+        allMedsMap.set(m.name, { med: m, cardName: card.name });
+      }
+    });
+  });
+  if (allMedsMap.size > 0) {
+    lines.push(`─────────────`);
+    lines.push(``);
+    lines.push(`ВСІ ПРЕПАРАТИ (${allMedsMap.size}):`);
+    Array.from(allMedsMap.values()).forEach(({ med, cardName }) => {
+      const sched = Array.isArray(med.schedule) && med.schedule.length ? med.schedule.join(', ') : '';
+      const course = med.courseDuration ? ' · курс ' + med.courseDuration : '';
+      lines.push(`  • ${med.name}${med.dosage ? ' ' + med.dosage : ''}${sched ? ' (' + sched + ')' : ''}${course} — по стану "${cardName}"`);
+    });
+    lines.push(``);
+  }
+
+  // Історія візитів за рік (doctor_visit записи з усіх карток)
+  const yearAgo = Date.now() - 365 * 86400000;
+  const visits = [];
+  cards.forEach(card => {
+    (card.history || []).forEach(h => {
+      if (h.type === 'doctor_visit' && h.ts >= yearAgo) {
+        visits.push({ ...h, cardName: card.name });
+      }
+    });
+  });
+  visits.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if (visits.length > 0) {
+    lines.push(`─────────────`);
+    lines.push(``);
+    lines.push(`ВІЗИТИ ДО ЛІКАРЯ (за рік, ${visits.length}):`);
+    visits.forEach(v => {
+      const d = new Date(v.ts);
+      const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA');
+      lines.push(`  [${dateStr}] ${v.cardName}: ${v.text}`);
+    });
+    lines.push(``);
+  }
+
+  // Завершені стани — коротко
+  if (done.length > 0) {
+    lines.push(`─────────────`);
+    lines.push(``);
+    lines.push(`ЗАВЕРШЕНІ СТАНИ (${done.length}):`);
+    done.forEach(card => {
+      lines.push(`  • ${card.name}${card.subtitle ? ' — ' + card.subtitle : ''}`);
+    });
+    lines.push(``);
+  }
+
+  lines.push(`─────────────`);
+  lines.push(``);
+  lines.push(`Згенеровано у застосунку NeverMind. Не є медичним документом — для попереднього обговорення з лікарем.`);
+
+  return lines.join('\n');
+}
+
+function openHealthExport() {
+  const modal = document.getElementById('health-export-modal');
+  const textEl = document.getElementById('health-export-text');
+  if (!modal || !textEl) return;
+  textEl.textContent = buildHealthExportText();
+  modal.style.display = 'block';
+}
+
+function closeHealthExport() {
+  const modal = document.getElementById('health-export-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function copyHealthExport() {
+  const text = buildHealthExportText();
+  const btn = document.getElementById('health-export-copy-btn');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // Fallback для старих браузерів
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Скопійовано';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+    showToast('✓ Медкартку скопійовано');
+  } catch (e) {
+    showToast('⚠️ Не вдалось скопіювати — виділи текст вручну');
+  }
+}
+
+// Синк ліків → щоденні задачі. Викликається з addMedicationToCard / createHealthCardProgrammatic
+// якщо med.createTasks === true. Створює ОДНУ задачу "Прийняти {назва}" у nm_tasks з кроками
+// для кожного часу з schedule[]. Існуючу задачу з тим же title НЕ дублює.
+function _syncMedicationToTask(cardName, med) {
+  if (!med || !med.createTasks) return;
+  try {
+    // Lazy-import щоб уникнути циклічних залежностей при ES-bundling
+    const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+    const title = `Прийняти ${med.name}${med.dosage ? ' ' + med.dosage : ''}`;
+    // Перевірка на дубль
+    const existing = tasks.find(t => t.title === title && t.status === 'active');
+    if (existing) return;
+    const schedule = Array.isArray(med.schedule) ? med.schedule : [];
+    const steps = schedule.map(t => ({ id: Date.now() + Math.floor(Math.random() * 10000), text: t, done: false }));
+    const newTask = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      title,
+      text: `[${cardName}] ${med.name}${med.dosage ? ' ' + med.dosage : ''}${med.courseDuration ? ' · курс ' + med.courseDuration : ''}`,
+      status: 'active',
+      steps,
+      priority: 'important',
+      createdAt: Date.now(),
+      sourceMedId: med.id, // маркер що задача створена з препарату
+    };
+    tasks.unshift(newTask);
+    localStorage.setItem('nm_tasks', JSON.stringify(tasks));
+    window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' }));
+  } catch (e) {
+    console.warn('[health] syncMedicationToTask failed:', e);
+  }
+}
+
+// Синк витрат на ліки → автозапис у history найбільш релевантної картки.
+// Викликається з inbox.js / finance.js після save_finance якщо category === "Здоров'я"
+// АБО comment/коментар містить маркери (аптека/ліки/лікар/тест/аналіз).
+// Fuzzy match (нечіткий пошук): шукає активну картку у назві якої є слово з comment.
+export function syncHealthFinanceToHistory(amount, category, comment) {
+  try {
+    const commentLower = (comment || '').toLowerCase();
+    const hasHealthMarker = category === "Здоров'я" || /аптек|ліки|препарат|лікар|аналіз|тест|рецепт/i.test(commentLower);
+    if (!hasHealthMarker) return false;
+    const cards = getHealthCards();
+    const active = cards.filter(c => c.status === 'active' || c.status === 'controlled');
+    if (active.length === 0) return false;
+    // Fuzzy match: шукаємо картку чия назва або назви ліків згадуються у comment
+    let target = null;
+    for (const card of active) {
+      const cardNameLower = (card.name || '').toLowerCase();
+      if (cardNameLower && commentLower.includes(cardNameLower)) { target = card; break; }
+      // перевіряємо назви препаратів
+      const meds = card.medications || [];
+      const medMatch = meds.find(m => {
+        const mn = (m.name || '').toLowerCase();
+        return mn && commentLower.includes(mn);
+      });
+      if (medMatch) { target = card; break; }
+    }
+    // Якщо не знайшли match по тексту і у юзера лише 1 активна — зв'язуємо з нею
+    if (!target && active.length === 1) target = active[0];
+    if (!target) return false;
+    if (!Array.isArray(target.history)) target.history = [];
+    target.history.unshift({
+      ts: Date.now(),
+      type: 'auto',
+      text: `Витрата: ${amount}€ — ${comment || 'ліки'}`,
+    });
+    saveHealthCards(cards);
+    return true;
+  } catch (e) {
+    console.warn('[health] syncHealthFinanceToHistory failed:', e);
+    return false;
+  }
 }
 
 // === ФАЗА 4 (15.04 6v2eR): ПАСИВНІ НАГАДУВАННЯ ЛІКІВ ===
@@ -1436,4 +1683,6 @@ Object.assign(window, {
   askOwlAboutHealthCard, logHealthMedDose,
   // Фаза 4 (15.04 6v2eR): пропуск дози
   skipHealthMedDose,
+  // Фаза 5 (15.04 6v2eR): експорт медкартки
+  openHealthExport, closeHealthExport, copyHealthExport,
 });

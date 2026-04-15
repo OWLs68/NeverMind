@@ -13,6 +13,8 @@ import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
 import { processUniversalAction } from './habits.js';
 import { setupModalSwipeClose } from './tasks.js';
+// Фаза 5 (15.04 6v2eR): синк медичних витрат → history картки Здоров'я
+import { syncHealthFinanceToHistory } from './health.js';
 
 // === FINANCE ===
 
@@ -955,6 +957,12 @@ export function processFinanceAction(parsed, originalText) {
   renderInbox();
 
   if (currentTab === 'finance') renderFinance();
+
+  // Фаза 5 (15.04 6v2eR): синк медичних витрат → history активної картки Здоров'я
+  // (якщо category="Здоров'я" або comment згадує аптека/ліки/лікар/препарат/аналіз)
+  if (type === 'expense') {
+    try { syncHealthFinanceToHistory(amount, category, comment); } catch (e) {}
+  }
 
   const sign = type === 'expense' ? '-' : '+';
   const typeLabel = type === 'expense' ? 'витрату' : 'дохід';
