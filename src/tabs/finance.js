@@ -1,14 +1,18 @@
 // ============================================================
-// app-finance.js — Фінанси — новий дизайн, транзакції, бюджет, AI coach
-// Функції: renderFinance, _finHeroCard, _finForecast, _refreshFinCoach, getFinAdaptiveBenchmark, openAddTransaction, openFinBudgetModal, processFinanceAction, sendFinanceBarMessage
-// Залежності: app-core.js, app-ai.js
+// finance.js — Фінанси — транзакції, бюджет, категорії
+// Функції: renderFinance, openAddTransaction, openFinBudgetModal, processFinanceAction, sendFinanceBarMessage
+// Залежності: core/nav.js, core/utils.js, core/trash.js, ai/core.js
+//
+// ФАЗА 1 чистки (15.04.2026 3229b): прибрано _finHeroCard, _finInsightCards,
+// _finForecast, _finCoachBlock, _refreshFinCoach, _finWeekChart + benchmark
+// текст із _finCatsBlock. Попередньо замінить K-01 (сітка категорій + круг)
+// у Фазі 2. Див. ROADMAP.md → Блок 2 → Фінанси.
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { getFacts } from '../ai/memory.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
 import { processUniversalAction } from './habits.js';
@@ -137,49 +141,6 @@ function _hideOldFinBlocks() {
   if (periodEl && periodEl.parentElement) periodEl.parentElement.style.display = 'none';
 }
 
-// Адаптивний бенчмарк на основі контексту користувача
-function getFinAdaptiveBenchmark() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  // Шукаємо індикатори боргу у нових фактах (categories work/context) і
-  // у legacy nm_memory (для backward compat поки не всі юзери мігрували).
-  const factText = getFacts()
-    .filter(f => f.category === 'work' || f.category === 'context')
-    .map(f => (f.text || '').toLowerCase())
-    .join(' ');
-  const legacyMem = (localStorage.getItem('nm_memory') || '').toLowerCase();
-  const combinedMem = factText + ' ' + legacyMem;
-  const age = parseInt(settings.age) || 0;
-  const hasDebt = combinedMem.includes('борг') || combinedMem.includes('кредит') || combinedMem.includes('позик');
-  const from3m = getFinPeriodRange('3months');
-  const recentTxs = getFinance().filter(t => t.ts >= from3m);
-  const hasFewData = recentTxs.length < 5;
-
-  let needs = 50, wants = 30, savings = 20;
-  let note = 'Орієнтовний розподіл (правило 50/30/20)';
-
-  if (hasDebt) {
-    needs = 50; wants = 20; savings = 30;
-    note = 'Більше на заощадження поки є борги';
-  } else if (age >= 35) {
-    needs = 45; wants = 25; savings = 30;
-    note = 'Рекомендований розподіл для твого віку';
-  } else if (age > 0 && age < 25) {
-    needs = 50; wants = 30; savings = 20;
-    note = 'Стандартний розподіл — ще є час нарощувати';
-  }
-
-  if (!hasFewData) {
-    const incomes = recentTxs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0) / 3;
-    const housing = recentTxs.filter(t => t.category === 'Житло').reduce((s,t) => s+t.amount, 0) / 3;
-    if (incomes > 0 && housing / incomes > 0.4) {
-      needs = 60; wants = 20; savings = 20;
-      note = 'Скориговано — житло забирає більше звичайного';
-    }
-  }
-
-  return { needs, wants, savings, note };
-}
-
 // Головний рендер
 export function renderFinance() {
   _hideOldFinBlocks();
@@ -200,27 +161,18 @@ export function renderFinance() {
   const from = getFinPeriodRange(currentFinPeriod);
   const allTxs = getFinance().filter(t => t.ts >= from);
   const expenses = allTxs.filter(t => t.type === 'expense');
-  const incomes = allTxs.filter(t => t.type === 'income');
   const totalExp = expenses.reduce((s,t) => s+t.amount, 0);
-  const totalInc = incomes.reduce((s,t) => s+t.amount, 0);
-  const savedAmt = Math.max(0, totalInc - totalExp);
-  const savedPct = totalInc > 0 ? Math.round(savedAmt / totalInc * 100) : 0;
 
   if (allTxs.length === 0) {
     wrap.innerHTML = _finEmptyState();
     return;
   }
 
+  // Фаза 1 чистки: Hero, Інсайт-картки, Прогноз, Коуч, Графік — прибрано.
+  // У Фазі 2 (K-01) з'явиться сітка категорій + круг посередині (Hero) замість _finCatsBlock.
   wrap.innerHTML =
-    _finHeroCard(totalInc, totalExp, savedPct, savedAmt) +
-    _finInsightCards(allTxs, totalExp, totalInc) +
-    _finForecast(totalExp, totalInc) +
-    _finCoachBlock() +
-    _finWeekChart() +
     _finCatsBlock(expenses, totalExp) +
     _finTxsBlock(allTxs);
-
-  _refreshFinCoach(totalExp, totalInc, expenses);
 }
 
 function _finEmptyState() {
@@ -234,309 +186,8 @@ function _finEmptyState() {
   </div>`;
 }
 
-function _finHeroCard(totalInc, totalExp, savedPct, savedAmt) {
-  const budget = getFinBudget();
-  const periodLabels = { week: 'за тиждень', month: 'цього місяця', '3months': 'за 3 місяці' };
-  const periodLbl = periodLabels[currentFinPeriod] || 'за період';
-
-  // Тренд vs попередній аналогічний період
-  let trendHtml = '';
-  try {
-    const periodMs = { week: 7*24*60*60*1000, month: 30*24*60*60*1000, '3months': 90*24*60*60*1000 };
-    const pMs = periodMs[currentFinPeriod] || periodMs.month;
-    const prevFrom = Date.now() - pMs * 2;
-    const prevTo = Date.now() - pMs;
-    const prevTxs = getFinance().filter(t => t.ts >= prevFrom && t.ts < prevTo);
-    const prevExp = prevTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
-    const prevInc = prevTxs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
-    const prevSaved = prevInc > 0 ? Math.round((prevInc - prevExp) / prevInc * 100) : null;
-    if (prevSaved !== null) {
-      const diff = savedPct - prevSaved;
-      const col = diff >= 0 ? '#16a34a' : '#c2410c';
-      const bg = diff >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(194,65,12,0.08)';
-      const arrowPts = diff >= 0 ? '18 15 12 9 6 15' : '6 9 12 15 18 9';
-      trendHtml = `<div style="display:inline-flex;align-items:center;gap:4px;background:${bg};border-radius:20px;padding:4px 10px;margin-bottom:14px">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="${arrowPts}"/></svg>
-        <span style="font-size:12px;font-weight:700;color:${col}">${diff>=0?'+':''}${diff}% vs минулий період</span>
-      </div>`;
-    }
-  } catch(e) {}
-
-  // Прогрес-бар бюджету
-  let budgetHtml = '';
-  if (budget.total > 0) {
-    const pct = Math.min(100, Math.round(totalExp / budget.total * 100));
-    const remain = budget.total - totalExp;
-    const barCol = pct >= 100 ? '#dc2626' : pct >= 80 ? '#f97316' : '#c2410c';
-    budgetHtml = `<div style="margin-top:14px">
-      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:6px;overflow:hidden;margin-bottom:5px">
-        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,${barCol});border-radius:6px;transition:width 0.5s"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">
-        <span>${getCurrency()}0</span>
-        <span>${pct}% бюджету · ${remain >= 0 ? 'залишилось ' + formatMoney(remain) : 'перевищено на ' + formatMoney(-remain)}</span>
-        <span>${formatMoney(budget.total)}</span>
-      </div>
-    </div>`;
-  }
-
-  const savedCol = savedPct >= 20 ? '#16a34a' : savedPct >= 10 ? '#d97706' : '#c2410c';
-  return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:24px;padding:18px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:4px">Фінансовий результат</div>
-    <div style="font-size:44px;font-weight:900;line-height:1;margin-bottom:4px;background:linear-gradient(135deg,#c2410c,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${savedPct}%</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:500;margin-bottom:12px">доходу збережено ${periodLbl}</div>
-    ${trendHtml}
-    <div style="display:flex;border-top:1px solid rgba(30,16,64,0.06);padding-top:12px">
-      <div style="flex:1;text-align:center;border-right:1px solid rgba(30,16,64,0.06)">
-        <div style="font-size:15px;font-weight:800;color:#16a34a">+${formatMoney(totalInc)}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">прийшло</div>
-      </div>
-      <div style="flex:1;text-align:center;border-right:1px solid rgba(30,16,64,0.06)">
-        <div style="font-size:15px;font-weight:800;color:#c2410c">-${formatMoney(totalExp)}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">пішло</div>
-      </div>
-      <div style="flex:1;text-align:center">
-        <div style="font-size:15px;font-weight:800;color:${savedCol}">${formatMoney(savedAmt)}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">залишилось</div>
-      </div>
-    </div>
-    ${budgetHtml}
-  </div>`;
-}
-
-function _finInsightCards(allTxs, totalExp, totalInc) {
-  // Картка 1: зміна витрат vs попередній період
-  let expChangePct = null;
-  try {
-    const periodMs = { week: 7*24*60*60*1000, month: 30*24*60*60*1000, '3months': 90*24*60*60*1000 };
-    const pMs = periodMs[currentFinPeriod] || periodMs.month;
-    const prevFrom = Date.now() - pMs * 2;
-    const prevTo = Date.now() - pMs;
-    const prevExp = getFinance().filter(t => t.ts >= prevFrom && t.ts < prevTo && t.type === 'expense').reduce((s,t) => s+t.amount, 0);
-    if (prevExp > 0 && totalExp > 0) expChangePct = Math.round((totalExp - prevExp) / prevExp * 100);
-  } catch(e) {}
-
-  const c1col = expChangePct !== null ? (expChangePct <= 0 ? '#16a34a' : '#c2410c') : 'rgba(30,16,64,0.4)';
-  const c1bg = expChangePct !== null ? (expChangePct <= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(194,65,12,0.1)') : 'rgba(30,16,64,0.06)';
-  const c1pts = expChangePct !== null && expChangePct <= 0 ? '22 17 13 8 8 13 2 7' : '2 17 13 8 8 13 22 7';
-  const c1v = expChangePct !== null ? `${expChangePct > 0 ? '+' : ''}${expChangePct}%` : '—';
-
-  // Картка 2: % заощаджень
-  const savedPct = totalInc > 0 ? Math.round((totalInc - totalExp) / totalInc * 100) : 0;
-  const c2col = savedPct >= 20 ? '#16a34a' : savedPct >= 10 ? '#d97706' : '#c2410c';
-  const c2bg = savedPct >= 20 ? 'rgba(22,163,74,0.1)' : savedPct >= 10 ? 'rgba(217,119,6,0.1)' : 'rgba(194,65,12,0.1)';
-
-  // Картка 3: середні витрати на день
-  const daysPassed = currentFinPeriod === 'week' ? 7 : currentFinPeriod === 'month' ? new Date().getDate() : 90;
-  const avgDay = daysPassed > 0 ? Math.round(totalExp / daysPassed) : 0;
-  const budget = getFinBudget();
-  const daysInPeriod = currentFinPeriod === 'week' ? 7 : currentFinPeriod === 'month' ? 30 : 90;
-  const normDay = budget.total > 0 ? Math.round(budget.total / daysInPeriod) : 0;
-
-  const card = (iconSvg, iconBg, val, valCol, lbl) =>
-    `<div style="flex:1;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:12px 8px;text-align:center">
-      <div style="width:28px;height:28px;border-radius:9px;background:${iconBg};display:flex;align-items:center;justify-content:center;margin:0 auto 6px">${iconSvg}</div>
-      <div style="font-size:15px;font-weight:900;color:${valCol};margin-bottom:3px">${val}</div>
-      <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);line-height:1.3">${lbl}</div>
-    </div>`;
-
-  return `<div style="display:flex;gap:8px;margin-bottom:12px">
-    ${card(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c1col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${c1pts}"/><polyline points="${expChangePct !== null && expChangePct <= 0 ? '16 17 22 17 22 11' : '16 7 22 7 22 13'}"/></svg>`, c1bg, c1v, c1col, 'витрати<br>vs минулий')}
-    ${card(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c2col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>`, c2bg, savedPct + '%', c2col, 'заощаджень<br>від доходу')}
-    ${card('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', 'rgba(99,102,241,0.1)', formatMoney(avgDay), '#6366f1', normDay > 0 ? 'в день<br>норма ' + formatMoney(normDay) : 'в день<br>середнє')}
-  </div>`;
-}
-
-function _finForecast(totalExp, totalInc) {
-  if (currentFinPeriod !== 'month') return '';
-  const now = new Date();
-  const daysPassed = now.getDate();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const daysLeft = daysInMonth - daysPassed;
-  if (daysPassed < 5) return '';
-  if (totalExp === 0) return '';
-
-  const rate = totalExp / daysPassed;
-  const proj  = Math.round(totalExp + rate * daysLeft);
-  const proj2 = Math.round(totalExp + rate * 0.75 * daysLeft);
-  const proj3 = Math.round(totalExp + rate * 0.55 * daysLeft);
-
-  const budget = getFinBudget();
-
-  // Немає ні доходу ні бюджету — показуємо підказку
-  if (totalInc === 0 && budget.total === 0) {
-    return `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:13px 16px;margin-bottom:12px">
-      <div class="fin-section-label" style="margin-bottom:8px">Прогноз</div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-weight:600">Додай дохід або встанови бюджет — OWL порахує скільки залишиться</div>
-    </div>`;
-  }
-
-  // Є дохід — показуємо залишок
-  const showBalance = totalInc > 0;
-
-  // Попередження
-  let warnHtml = '';
-  if (budget.total > 0 && proj > budget.total) {
-    warnHtml = `<div style="display:flex;align-items:flex-start;gap:6px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:9px 10px;margin-top:10px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span style="font-size:12px;color:#c2410c;font-weight:600;line-height:1.4">При поточному темпі перевищиш бюджет на ${formatMoney(proj - budget.total)}</span>
-    </div>`;
-  } else if (showBalance && Math.max(0, totalInc - proj) < totalInc * 0.1) {
-    warnHtml = `<div style="display:flex;align-items:flex-start;gap:6px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:9px 10px;margin-top:10px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span style="font-size:12px;color:#c2410c;font-weight:600;line-height:1.4">При поточному темпі залишишся з ${formatMoney(Math.max(0, totalInc - proj))} — менше фінансової подушки</span>
-    </div>`;
-  }
-
-  const sc = (iconSvg, iconBg, val, valCol, lbl, good = false) =>
-    `<div style="flex:1;border-radius:12px;padding:10px 8px;text-align:center;background:${good ? 'rgba(22,163,74,0.06)' : 'rgba(30,16,64,0.03)'};border:1px solid ${good ? 'rgba(22,163,74,0.2)' : 'rgba(30,16,64,0.06)'}">
-      <div style="width:28px;height:28px;border-radius:8px;background:${iconBg};display:flex;align-items:center;justify-content:center;margin:0 auto 5px">${iconSvg}</div>
-      <div style="font-size:13px;font-weight:800;color:${valCol};margin-bottom:2px">${val}</div>
-      <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);line-height:1.3">${lbl}</div>
-    </div>`;
-
-  if (showBalance) {
-    // З доходом — показуємо залишок
-    const v1 = formatMoney(Math.max(0, totalInc - proj));
-    const v2 = formatMoney(Math.max(0, totalInc - proj2));
-    const v3 = formatMoney(Math.max(0, totalInc - proj3));
-    return `<div class="card-glass-blur">
-      <div class="fin-section-label" style="margin-bottom:12px">Прогноз · залишок до кінця місяця</div>
-      <div style="display:flex;gap:6px">
-        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', 'rgba(30,16,64,0.06)', v1, '#1e1040', 'зараз')}
-        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="20" y1="4" x2="4" y2="20"/></svg>', 'rgba(30,16,64,0.06)', v2, '#d97706', '-25% витрат')}
-        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>', 'rgba(22,163,74,0.1)', v3, '#16a34a', 'оптимально', true)}
-      </div>
-      ${warnHtml}
-    </div>`;
-  } else {
-    // Тільки бюджет — показуємо прогноз витрат відносно бюджету
-    const budgetTotal = budget.total;
-    const v1 = formatMoney(proj);
-    const pctOfBudget = Math.round(proj / budgetTotal * 100);
-    const overColor = proj > budgetTotal ? '#c2410c' : '#16a34a';
-    return `<div class="card-glass-blur">
-      <div class="fin-section-label" style="margin-bottom:10px">Прогноз витрат на місяць</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div>
-          <div style="font-size:22px;font-weight:900;color:${overColor}">${v1}</div>
-          <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">при поточному темпі · бюджет ${formatMoney(budgetTotal)}</div>
-        </div>
-        <div style="font-size:28px;font-weight:900;color:${overColor}">${pctOfBudget}%</div>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${Math.min(pctOfBudget,100)}%;background:${overColor};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      ${warnHtml}
-    </div>`;
-  }
-}
-
-function _finCoachBlock() {
-  const cached = localStorage.getItem('nm_fin_coach_' + currentFinPeriod);
-  let coachText = 'OWL аналізує твої витрати…';
-  if (cached) { try { coachText = JSON.parse(cached).text || coachText; } catch(e) {} }
-  return `<div id="fin-coach-block" style="background:rgba(12,6,28,0.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:13px 15px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-      <div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em">OWL · порада</div>
-    </div>
-    <div id="fin-coach-text" style="font-size:13px;font-weight:600;color:white;line-height:1.6">${escapeHtml(coachText)}</div>
-  </div>`;
-}
-
-async function _refreshFinCoach(totalExp, totalInc, expenses) {
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return;
-  const cacheKey = 'nm_fin_coach_' + currentFinPeriod;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    try { if (Date.now() - JSON.parse(cached).ts < 24*60*60*1000) return; } catch(e) {}
-  }
-  const catMap = {};
-  expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
-  const top3 = Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,3).map(([c,a]) => `${c}: ${formatMoney(a)}`).join(', ');
-  const savedPct = totalInc > 0 ? Math.round((totalInc - totalExp) / totalInc * 100) : 0;
-  const aiContext = getAIContext();
-  const prompt = `${getOWLPersonality()}
-
-Дай ОДНУ конкретну фінансову пораду. ОБОВ'ЯЗКОВО з реальними числами з даних нижче.
-Формат: "Бачу: [факт з числами]. Означає: [що це значить]. Зробити: [конкретна дія і результат в числах]."
-Максимум 3 речення. Тільки українською.
-
-Дані: витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}, заощаджено ${savedPct}%.
-Топ категорії: ${top3 || 'немає даних'}.${aiContext ? '\n\n' + aiContext : ''}`;
-
-  try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 130, temperature: 0.6 })
-    });
-    const data = await res.json();
-    const text = data.choices?.[0]?.message?.content?.trim();
-    if (!text) return;
-    localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now() }));
-    const el = document.getElementById('fin-coach-text');
-    if (el) el.textContent = text;
-  } catch(e) {}
-}
-
-function _finWeekChart() {
-  // Завжди показуємо поточний тиждень Пн–Нд
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Нд, 1=Пн, ...
-  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-
-  const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-  const allTxs = getFinance();
-  const groups = DAY_LABELS.map((label, i) => {
-    const d = new Date(monday); d.setDate(monday.getDate() + i);
-    const nextD = new Date(d); nextD.setDate(d.getDate() + 1);
-    const from = d.getTime(), to = nextD.getTime();
-    return {
-      label,
-      isToday: d.toDateString() === now.toDateString(),
-      isFuture: d > now,
-      exp: allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).reduce((s,t) => s+t.amount, 0),
-      inc: allTxs.filter(t => t.type === 'income'  && t.ts >= from && t.ts < to).reduce((s,t) => s+t.amount, 0),
-    };
-  });
-
-  const maxVal = Math.max(1, ...groups.map(g => Math.max(g.exp, g.inc)));
-  const bars = groups.map(g => {
-    const expH = g.exp > 0 ? Math.max(4, Math.round(g.exp / maxVal * 52)) : 0;
-    const incH = g.inc > 0 ? Math.max(4, Math.round(g.inc / maxVal * 52)) : 0;
-    const opacity = g.isFuture ? '0.25' : '1';
-    const labelCol = g.isToday ? '#c2410c' : 'rgba(30,16,64,0.35)';
-    const labelW = g.isToday ? '700' : '600';
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0">
-      <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
-        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0;opacity:${opacity}${g.exp===0?';visibility:hidden':''}"></div>
-        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0;opacity:${opacity}${g.inc===0?';visibility:hidden':''}"></div>
-      </div>
-      <div style="font-size:10px;font-weight:${labelW};color:${labelCol};margin-top:4px;letter-spacing:0.01em">${g.label}</div>
-    </div>`;
-  }).join('');
-
-  return `<div class="card-glass-blur">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="fin-section-label">За тиждень</div>
-      <div style="display:flex;gap:10px">
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Витрати</span></div>
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Доходи</span></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:4px;align-items:flex-end;height:72px">${bars}</div>
-  </div>`;
-}
-
 function _finCatsBlock(expenses, totalExp) {
   if (expenses.length === 0) return '';
-  const benchmark = getFinAdaptiveBenchmark();
   const catMap = {};
   expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
   const sorted = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
@@ -567,7 +218,6 @@ function _finCatsBlock(expenses, totalExp) {
       <button onclick="openFinBudgetModal()" style="font-size:12px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:inherit">Ліміти ✎</button>
     </div>
     ${rows}
-    <div style="padding-top:8px;border-top:1px solid rgba(30,16,64,0.06);font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${benchmark.note}</div>
   </div>`;
 }
 

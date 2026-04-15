@@ -264,8 +264,7 @@ export const NM_KEYS = {
          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],
   // Кеш/тимчасове (не потребує Supabase)
   cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
-          'nm_owl_schedule_pending','nm_error_log',
-          'nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'],
+          'nm_owl_schedule_pending','nm_error_log'],
   // Динамічні патерни (видаляти через startsWith)
   patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_'],
 };
@@ -280,7 +279,12 @@ function runMigrations() {
     if (t.priority === undefined) { t.priority = 'normal'; changed = true; }
   });
   if (changed) localStorage.setItem('nm_tasks', JSON.stringify(tasks));
-  // v2: нові міграції додавати тут
+  // v2 (Фаза 1 Фінансів, 15.04.2026): прибрати застарілі ключі кешу OWL-коуча
+  // Блок прибрано з вкладки у переробці концепції v2, кеш-ключі більше не використовуються.
+  ['nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'].forEach(k => {
+    localStorage.removeItem(k);
+  });
+  // v3: нові міграції додавати тут
 }
 
 // === INIT ===

@@ -162,7 +162,6 @@ graph LR
         NFI["nm_finance"]
         NFB["nm_finance_budget"]
         NFC["nm_finance_cats"]
-        NFCO["nm_fin_coach_PERIOD<br/>(кеш AI, TTL 24h)"]
     end
 
     subgraph "Health"
