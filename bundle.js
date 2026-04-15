@@ -7546,46 +7546,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const periodEl = document.getElementById("fin-period-week");
     if (periodEl && periodEl.parentElement) periodEl.parentElement.style.display = "none";
   }
-  function getFinAdaptiveBenchmark() {
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    const factText = getFacts().filter((f) => f.category === "work" || f.category === "context").map((f) => (f.text || "").toLowerCase()).join(" ");
-    const legacyMem = (localStorage.getItem("nm_memory") || "").toLowerCase();
-    const combinedMem = factText + " " + legacyMem;
-    const age = parseInt(settings.age) || 0;
-    const hasDebt = combinedMem.includes("\u0431\u043E\u0440\u0433") || combinedMem.includes("\u043A\u0440\u0435\u0434\u0438\u0442") || combinedMem.includes("\u043F\u043E\u0437\u0438\u043A");
-    const from3m = getFinPeriodRange("3months");
-    const recentTxs = getFinance().filter((t) => t.ts >= from3m);
-    const hasFewData = recentTxs.length < 5;
-    let needs = 50, wants = 30, savings = 20;
-    let note = "\u041E\u0440\u0456\u0454\u043D\u0442\u043E\u0432\u043D\u0438\u0439 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 50/30/20)";
-    if (hasDebt) {
-      needs = 50;
-      wants = 20;
-      savings = 30;
-      note = "\u0411\u0456\u043B\u044C\u0448\u0435 \u043D\u0430 \u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F \u043F\u043E\u043A\u0438 \u0454 \u0431\u043E\u0440\u0433\u0438";
-    } else if (age >= 35) {
-      needs = 45;
-      wants = 25;
-      savings = 30;
-      note = "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u0438\u0439 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043B\u044F \u0442\u0432\u043E\u0433\u043E \u0432\u0456\u043A\u0443";
-    } else if (age > 0 && age < 25) {
-      needs = 50;
-      wants = 30;
-      savings = 20;
-      note = "\u0421\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0438\u0439 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u2014 \u0449\u0435 \u0454 \u0447\u0430\u0441 \u043D\u0430\u0440\u043E\u0449\u0443\u0432\u0430\u0442\u0438";
-    }
-    if (!hasFewData) {
-      const incomes = recentTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0) / 3;
-      const housing = recentTxs.filter((t) => t.category === "\u0416\u0438\u0442\u043B\u043E").reduce((s, t) => s + t.amount, 0) / 3;
-      if (incomes > 0 && housing / incomes > 0.4) {
-        needs = 60;
-        wants = 20;
-        savings = 20;
-        note = "\u0421\u043A\u043E\u0440\u0438\u0433\u043E\u0432\u0430\u043D\u043E \u2014 \u0436\u0438\u0442\u043B\u043E \u0437\u0430\u0431\u0438\u0440\u0430\u0454 \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u043E\u0433\u043E";
-      }
-    }
-    return { needs, wants, savings, note };
-  }
   function renderFinance() {
     _hideOldFinBlocks();
     let wrap = document.getElementById("fin-v2-wrap");
@@ -7603,17 +7563,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const from = getFinPeriodRange(currentFinPeriod);
     const allTxs = getFinance().filter((t) => t.ts >= from);
     const expenses = allTxs.filter((t) => t.type === "expense");
-    const incomes = allTxs.filter((t) => t.type === "income");
     const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
-    const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
-    const savedAmt = Math.max(0, totalInc - totalExp);
-    const savedPct = totalInc > 0 ? Math.round(savedAmt / totalInc * 100) : 0;
     if (allTxs.length === 0) {
       wrap.innerHTML = _finEmptyState();
       return;
     }
-    wrap.innerHTML = _finHeroCard(totalInc, totalExp, savedPct, savedAmt) + _finInsightCards(allTxs, totalExp, totalInc) + _finForecast(totalExp, totalInc) + _finCoachBlock() + _finWeekChart() + _finCatsBlock(expenses, totalExp) + _finTxsBlock(allTxs);
-    _refreshFinCoach(totalExp, totalInc, expenses);
+    wrap.innerHTML = _finCatsBlock(expenses, totalExp) + _finTxsBlock(allTxs);
   }
   function _finEmptyState() {
     return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:28px 20px;text-align:center;margin-bottom:12px">
@@ -7625,286 +7580,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     <button onclick="openAddTransaction()" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E</button>
   </div>`;
   }
-  function _finHeroCard(totalInc, totalExp, savedPct, savedAmt) {
-    const budget = getFinBudget();
-    const periodLabels = { week: "\u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u0446\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F", "3months": "\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456" };
-    const periodLbl = periodLabels[currentFinPeriod] || "\u0437\u0430 \u043F\u0435\u0440\u0456\u043E\u0434";
-    let trendHtml = "";
-    try {
-      const periodMs = { week: 7 * 24 * 60 * 60 * 1e3, month: 30 * 24 * 60 * 60 * 1e3, "3months": 90 * 24 * 60 * 60 * 1e3 };
-      const pMs = periodMs[currentFinPeriod] || periodMs.month;
-      const prevFrom = Date.now() - pMs * 2;
-      const prevTo = Date.now() - pMs;
-      const prevTxs = getFinance().filter((t) => t.ts >= prevFrom && t.ts < prevTo);
-      const prevExp = prevTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-      const prevInc = prevTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-      const prevSaved = prevInc > 0 ? Math.round((prevInc - prevExp) / prevInc * 100) : null;
-      if (prevSaved !== null) {
-        const diff = savedPct - prevSaved;
-        const col = diff >= 0 ? "#16a34a" : "#c2410c";
-        const bg = diff >= 0 ? "rgba(22,163,74,0.1)" : "rgba(194,65,12,0.08)";
-        const arrowPts = diff >= 0 ? "18 15 12 9 6 15" : "6 9 12 15 18 9";
-        trendHtml = `<div style="display:inline-flex;align-items:center;gap:4px;background:${bg};border-radius:20px;padding:4px 10px;margin-bottom:14px">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="${arrowPts}"/></svg>
-        <span style="font-size:12px;font-weight:700;color:${col}">${diff >= 0 ? "+" : ""}${diff}% vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434</span>
-      </div>`;
-      }
-    } catch (e) {
-    }
-    let budgetHtml = "";
-    if (budget.total > 0) {
-      const pct = Math.min(100, Math.round(totalExp / budget.total * 100));
-      const remain = budget.total - totalExp;
-      const barCol = pct >= 100 ? "#dc2626" : pct >= 80 ? "#f97316" : "#c2410c";
-      budgetHtml = `<div style="margin-top:14px">
-      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:6px;overflow:hidden;margin-bottom:5px">
-        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,${barCol});border-radius:6px;transition:width 0.5s"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">
-        <span>${getCurrency()}0</span>
-        <span>${pct}% \u0431\u044E\u0434\u0436\u0435\u0442\u0443 \xB7 ${remain >= 0 ? "\u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C " + formatMoney(remain) : "\u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E \u043D\u0430 " + formatMoney(-remain)}</span>
-        <span>${formatMoney(budget.total)}</span>
-      </div>
-    </div>`;
-    }
-    const savedCol = savedPct >= 20 ? "#16a34a" : savedPct >= 10 ? "#d97706" : "#c2410c";
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:24px;padding:18px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:4px">\u0424\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442</div>
-    <div style="font-size:44px;font-weight:900;line-height:1;margin-bottom:4px;background:linear-gradient(135deg,#c2410c,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${savedPct}%</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:500;margin-bottom:12px">\u0434\u043E\u0445\u043E\u0434\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${periodLbl}</div>
-    ${trendHtml}
-    <div style="display:flex;border-top:1px solid rgba(30,16,64,0.06);padding-top:12px">
-      <div style="flex:1;text-align:center;border-right:1px solid rgba(30,16,64,0.06)">
-        <div style="font-size:15px;font-weight:800;color:#16a34a">+${formatMoney(totalInc)}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">\u043F\u0440\u0438\u0439\u0448\u043B\u043E</div>
-      </div>
-      <div style="flex:1;text-align:center;border-right:1px solid rgba(30,16,64,0.06)">
-        <div style="font-size:15px;font-weight:800;color:#c2410c">-${formatMoney(totalExp)}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">\u043F\u0456\u0448\u043B\u043E</div>
-      </div>
-      <div style="flex:1;text-align:center">
-        <div style="font-size:15px;font-weight:800;color:${savedCol}">${formatMoney(savedAmt)}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">\u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C</div>
-      </div>
-    </div>
-    ${budgetHtml}
-  </div>`;
-  }
-  function _finInsightCards(allTxs, totalExp, totalInc) {
-    let expChangePct = null;
-    try {
-      const periodMs = { week: 7 * 24 * 60 * 60 * 1e3, month: 30 * 24 * 60 * 60 * 1e3, "3months": 90 * 24 * 60 * 60 * 1e3 };
-      const pMs = periodMs[currentFinPeriod] || periodMs.month;
-      const prevFrom = Date.now() - pMs * 2;
-      const prevTo = Date.now() - pMs;
-      const prevExp = getFinance().filter((t) => t.ts >= prevFrom && t.ts < prevTo && t.type === "expense").reduce((s, t) => s + t.amount, 0);
-      if (prevExp > 0 && totalExp > 0) expChangePct = Math.round((totalExp - prevExp) / prevExp * 100);
-    } catch (e) {
-    }
-    const c1col = expChangePct !== null ? expChangePct <= 0 ? "#16a34a" : "#c2410c" : "rgba(30,16,64,0.4)";
-    const c1bg = expChangePct !== null ? expChangePct <= 0 ? "rgba(22,163,74,0.1)" : "rgba(194,65,12,0.1)" : "rgba(30,16,64,0.06)";
-    const c1pts = expChangePct !== null && expChangePct <= 0 ? "22 17 13 8 8 13 2 7" : "2 17 13 8 8 13 22 7";
-    const c1v = expChangePct !== null ? `${expChangePct > 0 ? "+" : ""}${expChangePct}%` : "\u2014";
-    const savedPct = totalInc > 0 ? Math.round((totalInc - totalExp) / totalInc * 100) : 0;
-    const c2col = savedPct >= 20 ? "#16a34a" : savedPct >= 10 ? "#d97706" : "#c2410c";
-    const c2bg = savedPct >= 20 ? "rgba(22,163,74,0.1)" : savedPct >= 10 ? "rgba(217,119,6,0.1)" : "rgba(194,65,12,0.1)";
-    const daysPassed = currentFinPeriod === "week" ? 7 : currentFinPeriod === "month" ? (/* @__PURE__ */ new Date()).getDate() : 90;
-    const avgDay = daysPassed > 0 ? Math.round(totalExp / daysPassed) : 0;
-    const budget = getFinBudget();
-    const daysInPeriod = currentFinPeriod === "week" ? 7 : currentFinPeriod === "month" ? 30 : 90;
-    const normDay = budget.total > 0 ? Math.round(budget.total / daysInPeriod) : 0;
-    const card = (iconSvg, iconBg, val, valCol, lbl) => `<div style="flex:1;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:12px 8px;text-align:center">
-      <div style="width:28px;height:28px;border-radius:9px;background:${iconBg};display:flex;align-items:center;justify-content:center;margin:0 auto 6px">${iconSvg}</div>
-      <div style="font-size:15px;font-weight:900;color:${valCol};margin-bottom:3px">${val}</div>
-      <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);line-height:1.3">${lbl}</div>
-    </div>`;
-    return `<div style="display:flex;gap:8px;margin-bottom:12px">
-    ${card(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c1col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${c1pts}"/><polyline points="${expChangePct !== null && expChangePct <= 0 ? "16 17 22 17 22 11" : "16 7 22 7 22 13"}"/></svg>`, c1bg, c1v, c1col, "\u0432\u0438\u0442\u0440\u0430\u0442\u0438<br>vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439")}
-    ${card(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c2col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>`, c2bg, savedPct + "%", c2col, "\u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u044C<br>\u0432\u0456\u0434 \u0434\u043E\u0445\u043E\u0434\u0443")}
-    ${card('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', "rgba(99,102,241,0.1)", formatMoney(avgDay), "#6366f1", normDay > 0 ? "\u0432 \u0434\u0435\u043D\u044C<br>\u043D\u043E\u0440\u043C\u0430 " + formatMoney(normDay) : "\u0432 \u0434\u0435\u043D\u044C<br>\u0441\u0435\u0440\u0435\u0434\u043D\u0454")}
-  </div>`;
-  }
-  function _finForecast(totalExp, totalInc) {
-    if (currentFinPeriod !== "month") return "";
-    const now = /* @__PURE__ */ new Date();
-    const daysPassed = now.getDate();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = daysInMonth - daysPassed;
-    if (daysPassed < 5) return "";
-    if (totalExp === 0) return "";
-    const rate = totalExp / daysPassed;
-    const proj = Math.round(totalExp + rate * daysLeft);
-    const proj2 = Math.round(totalExp + rate * 0.75 * daysLeft);
-    const proj3 = Math.round(totalExp + rate * 0.55 * daysLeft);
-    const budget = getFinBudget();
-    if (totalInc === 0 && budget.total === 0) {
-      return `<div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:13px 16px;margin-bottom:12px">
-      <div class="fin-section-label" style="margin-bottom:8px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437</div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-weight:600">\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0430\u0431\u043E \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u2014 OWL \u043F\u043E\u0440\u0430\u0445\u0443\u0454 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0437\u0430\u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F</div>
-    </div>`;
-    }
-    const showBalance = totalInc > 0;
-    let warnHtml = "";
-    if (budget.total > 0 && proj > budget.total) {
-      warnHtml = `<div style="display:flex;align-items:flex-start;gap:6px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:9px 10px;margin-top:10px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span style="font-size:12px;color:#c2410c;font-weight:600;line-height:1.4">\u041F\u0440\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0438\u0448 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 ${formatMoney(proj - budget.total)}</span>
-    </div>`;
-    } else if (showBalance && Math.max(0, totalInc - proj) < totalInc * 0.1) {
-      warnHtml = `<div style="display:flex;align-items:flex-start;gap:6px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:9px 10px;margin-top:10px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span style="font-size:12px;color:#c2410c;font-weight:600;line-height:1.4">\u041F\u0440\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456 \u0437\u0430\u043B\u0438\u0448\u0438\u0448\u0441\u044F \u0437 ${formatMoney(Math.max(0, totalInc - proj))} \u2014 \u043C\u0435\u043D\u0448\u0435 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u043E\u0457 \u043F\u043E\u0434\u0443\u0448\u043A\u0438</span>
-    </div>`;
-    }
-    const sc = (iconSvg, iconBg, val, valCol, lbl, good = false) => `<div style="flex:1;border-radius:12px;padding:10px 8px;text-align:center;background:${good ? "rgba(22,163,74,0.06)" : "rgba(30,16,64,0.03)"};border:1px solid ${good ? "rgba(22,163,74,0.2)" : "rgba(30,16,64,0.06)"}">
-      <div style="width:28px;height:28px;border-radius:8px;background:${iconBg};display:flex;align-items:center;justify-content:center;margin:0 auto 5px">${iconSvg}</div>
-      <div style="font-size:13px;font-weight:800;color:${valCol};margin-bottom:2px">${val}</div>
-      <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);line-height:1.3">${lbl}</div>
-    </div>`;
-    if (showBalance) {
-      const v1 = formatMoney(Math.max(0, totalInc - proj));
-      const v2 = formatMoney(Math.max(0, totalInc - proj2));
-      const v3 = formatMoney(Math.max(0, totalInc - proj3));
-      return `<div class="card-glass-blur">
-      <div class="fin-section-label" style="margin-bottom:12px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \xB7 \u0437\u0430\u043B\u0438\u0448\u043E\u043A \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F</div>
-      <div style="display:flex;gap:6px">
-        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', "rgba(30,16,64,0.06)", v1, "#1e1040", "\u0437\u0430\u0440\u0430\u0437")}
-        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2.5" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="20" y1="4" x2="4" y2="20"/></svg>', "rgba(30,16,64,0.06)", v2, "#d97706", "-25% \u0432\u0438\u0442\u0440\u0430\u0442")}
-        ${sc('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>', "rgba(22,163,74,0.1)", v3, "#16a34a", "\u043E\u043F\u0442\u0438\u043C\u0430\u043B\u044C\u043D\u043E", true)}
-      </div>
-      ${warnHtml}
-    </div>`;
-    } else {
-      const budgetTotal = budget.total;
-      const v1 = formatMoney(proj);
-      const pctOfBudget = Math.round(proj / budgetTotal * 100);
-      const overColor = proj > budgetTotal ? "#c2410c" : "#16a34a";
-      return `<div class="card-glass-blur">
-      <div class="fin-section-label" style="margin-bottom:10px">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div>
-          <div style="font-size:22px;font-weight:900;color:${overColor}">${v1}</div>
-          <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">\u043F\u0440\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456 \xB7 \u0431\u044E\u0434\u0436\u0435\u0442 ${formatMoney(budgetTotal)}</div>
-        </div>
-        <div style="font-size:28px;font-weight:900;color:${overColor}">${pctOfBudget}%</div>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${Math.min(pctOfBudget, 100)}%;background:${overColor};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      ${warnHtml}
-    </div>`;
-    }
-  }
-  function _finCoachBlock() {
-    const cached = localStorage.getItem("nm_fin_coach_" + currentFinPeriod);
-    let coachText = "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0442\u0432\u043E\u0457 \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u2026";
-    if (cached) {
-      try {
-        coachText = JSON.parse(cached).text || coachText;
-      } catch (e) {
-      }
-    }
-    return `<div id="fin-coach-block" style="background:rgba(12,6,28,0.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:13px 15px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-      <div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0"></div>
-      <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em">OWL \xB7 \u043F\u043E\u0440\u0430\u0434\u0430</div>
-    </div>
-    <div id="fin-coach-text" style="font-size:13px;font-weight:600;color:white;line-height:1.6">${escapeHtml(coachText)}</div>
-  </div>`;
-  }
-  async function _refreshFinCoach(totalExp, totalInc, expenses) {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return;
-    const cacheKey = "nm_fin_coach_" + currentFinPeriod;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        if (Date.now() - JSON.parse(cached).ts < 24 * 60 * 60 * 1e3) return;
-      } catch (e) {
-      }
-    }
-    const catMap = {};
-    expenses.forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
-    });
-    const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(", ");
-    const savedPct = totalInc > 0 ? Math.round((totalInc - totalExp) / totalInc * 100) : 0;
-    const aiContext = getAIContext();
-    const prompt2 = `${getOWLPersonality()}
-
-\u0414\u0430\u0439 \u041E\u0414\u041D\u0423 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043F\u043E\u0440\u0430\u0434\u0443. \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0437 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438 \u0437 \u0434\u0430\u043D\u0438\u0445 \u043D\u0438\u0436\u0447\u0435.
-\u0424\u043E\u0440\u043C\u0430\u0442: "\u0411\u0430\u0447\u0443: [\u0444\u0430\u043A\u0442 \u0437 \u0447\u0438\u0441\u043B\u0430\u043C\u0438]. \u041E\u0437\u043D\u0430\u0447\u0430\u0454: [\u0449\u043E \u0446\u0435 \u0437\u043D\u0430\u0447\u0438\u0442\u044C]. \u0417\u0440\u043E\u0431\u0438\u0442\u0438: [\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0434\u0456\u044F \u0456 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0432 \u0447\u0438\u0441\u043B\u0430\u0445]."
-\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u0422\u0456\u043B\u044C\u043A\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0414\u0430\u043D\u0456: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(totalExp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(totalInc)}, \u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E ${savedPct}%.
-\u0422\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: ${top3 || "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"}.${aiContext ? "\n\n" + aiContext : ""}`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 130, temperature: 0.6 })
-      });
-      const data = await res.json();
-      const text = data.choices?.[0]?.message?.content?.trim();
-      if (!text) return;
-      localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now() }));
-      const el = document.getElementById("fin-coach-text");
-      if (el) el.textContent = text;
-    } catch (e) {
-    }
-  }
-  function _finWeekChart() {
-    const now = /* @__PURE__ */ new Date();
-    const dayOfWeek = now.getDay();
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diffToMonday);
-    monday.setHours(0, 0, 0, 0);
-    const DAY_LABELS2 = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-    const allTxs = getFinance();
-    const groups = DAY_LABELS2.map((label, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const nextD = new Date(d);
-      nextD.setDate(d.getDate() + 1);
-      const from = d.getTime(), to = nextD.getTime();
-      return {
-        label,
-        isToday: d.toDateString() === now.toDateString(),
-        isFuture: d > now,
-        exp: allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0),
-        inc: allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0)
-      };
-    });
-    const maxVal = Math.max(1, ...groups.map((g) => Math.max(g.exp, g.inc)));
-    const bars = groups.map((g) => {
-      const expH = g.exp > 0 ? Math.max(4, Math.round(g.exp / maxVal * 52)) : 0;
-      const incH = g.inc > 0 ? Math.max(4, Math.round(g.inc / maxVal * 52)) : 0;
-      const opacity = g.isFuture ? "0.25" : "1";
-      const labelCol = g.isToday ? "#c2410c" : "rgba(30,16,64,0.35)";
-      const labelW = g.isToday ? "700" : "600";
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0">
-      <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
-        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0;opacity:${opacity}${g.exp === 0 ? ";visibility:hidden" : ""}"></div>
-        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0;opacity:${opacity}${g.inc === 0 ? ";visibility:hidden" : ""}"></div>
-      </div>
-      <div style="font-size:10px;font-weight:${labelW};color:${labelCol};margin-top:4px;letter-spacing:0.01em">${g.label}</div>
-    </div>`;
-    }).join("");
-    return `<div class="card-glass-blur">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="fin-section-label">\u0417\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>
-      <div style="display:flex;gap:10px">
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0412\u0438\u0442\u0440\u0430\u0442\u0438</span></div>
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0414\u043E\u0445\u043E\u0434\u0438</span></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:4px;align-items:flex-end;height:72px">${bars}</div>
-  </div>`;
-  }
   function _finCatsBlock(expenses, totalExp) {
     if (expenses.length === 0) return "";
-    const benchmark = getFinAdaptiveBenchmark();
     const catMap = {};
     expenses.forEach((t) => {
       catMap[t.category] = (catMap[t.category] || 0) + t.amount;
@@ -7935,7 +7612,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       <button onclick="openFinBudgetModal()" style="font-size:12px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:inherit">\u041B\u0456\u043C\u0456\u0442\u0438 \u270E</button>
     </div>
     ${rows}
-    <div style="padding-top:8px;border-top:1px solid rgba(30,16,64,0.06);font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${benchmark.note}</div>
   </div>`;
   }
   function _finTxsBlock(allTxs) {
@@ -8512,7 +8188,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_utils();
       init_trash();
       init_core();
-      init_memory();
       init_proactive();
       init_inbox();
       init_habits();
@@ -13832,6 +13507,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     });
     if (changed) localStorage.setItem("nm_tasks", JSON.stringify(tasks));
+    ["nm_fin_coach_week", "nm_fin_coach_month", "nm_fin_coach_3months"].forEach((k) => {
+      localStorage.removeItem(k);
+    });
   }
   function init() {
     try {
@@ -14046,10 +13724,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           "nm_owl_cooldowns",
           "nm_owl_schedule_asked",
           "nm_owl_schedule_pending",
-          "nm_error_log",
-          "nm_fin_coach_week",
-          "nm_fin_coach_month",
-          "nm_fin_coach_3months"
+          "nm_error_log"
         ],
         // Динамічні патерни (видаляти через startsWith)
         patterns: ["nm_task_chat_", "nm_visited_", "nm_owl_tab_"]
