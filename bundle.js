@@ -3095,8 +3095,76 @@ ${aiContext}` : "");
   });
 
   // src/tabs/health.js
+  function _migrateHealthCard(card) {
+    let changed = false;
+    if (card.doctor === void 0) {
+      card.doctor = "";
+      changed = true;
+    }
+    if (card.doctorRecommendations === void 0) {
+      card.doctorRecommendations = "";
+      changed = true;
+    }
+    if (card.doctorConclusion === void 0) {
+      card.doctorConclusion = "";
+      changed = true;
+    }
+    if (card.startDate === void 0) {
+      card.startDate = "";
+      changed = true;
+    }
+    if (card.nextAppointment === void 0) {
+      card.nextAppointment = null;
+      changed = true;
+    }
+    if (!Array.isArray(card.history)) {
+      card.history = [];
+      changed = true;
+    }
+    if (Array.isArray(card.doctorNotes) && card.doctorNotes.length > 0) {
+      card.doctorNotes.forEach((n) => {
+        let ts = Date.now();
+        if (typeof n.ts === "number") ts = n.ts;
+        else if (n.date) {
+          const d = new Date(n.date);
+          if (!isNaN(d)) ts = d.getTime();
+        }
+        const prefix = n.doctor ? n.doctor + ": " : "";
+        card.history.push({ ts, type: "doctor_visit", text: prefix + (n.text || "") });
+      });
+      delete card.doctorNotes;
+      changed = true;
+    }
+    if (Array.isArray(card.medications)) {
+      card.medications = card.medications.map((m) => {
+        if (m.dosage !== void 0) return m;
+        changed = true;
+        return {
+          id: m.id || Date.now() + Math.floor(Math.random() * 1e3),
+          name: m.name || "",
+          dosage: m.dose || "",
+          schedule: m.time ? [m.time] : [],
+          courseDuration: "",
+          log: m.taken ? [m.takenAt || Date.now()] : [],
+          createTasks: false
+        };
+      });
+    }
+    return { card, changed };
+  }
   function getHealthCards() {
-    return JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
+    const raw = JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
+    if (raw.length === 0) return raw;
+    if (localStorage.getItem("nm_health_migrated_v2") === "1") return raw;
+    let anyChanged = false;
+    const result = raw.map((c) => {
+      const { card, changed } = _migrateHealthCard(c);
+      if (changed) anyChanged = true;
+      return card;
+    });
+    if (anyChanged) localStorage.setItem("nm_health_cards", JSON.stringify(result));
+    localStorage.setItem("nm_health_migrated_v2", "1");
+    return result;
   }
   function saveHealthCards(arr) {
     localStorage.setItem("nm_health_cards", JSON.stringify(arr));
@@ -3109,6 +3177,31 @@ ${aiContext}` : "");
     localStorage.setItem("nm_health_log", JSON.stringify(obj));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "health" }));
   }
+  function getAllergies() {
+    return JSON.parse(localStorage.getItem("nm_allergies") || "[]");
+  }
+  function saveAllergies(arr) {
+    localStorage.setItem("nm_allergies", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "allergies" }));
+  }
+  function addAllergy(name, notes = "") {
+    const clean = (name || "").trim();
+    if (!clean) return null;
+    const allergies = getAllergies();
+    if (allergies.some((a) => a.name.toLowerCase() === clean.toLowerCase())) return null;
+    const entry = { id: Date.now(), name: clean, notes: (notes || "").trim(), createdAt: Date.now() };
+    allergies.push(entry);
+    saveAllergies(allergies);
+    return entry;
+  }
+  function deleteAllergy(id) {
+    const allergies = getAllergies();
+    const idx = allergies.findIndex((a) => a.id === id);
+    if (idx === -1) return false;
+    allergies.splice(idx, 1);
+    saveAllergies(allergies);
+    return true;
+  }
   function renderHealth() {
     if (activeHealthCardId !== null) {
       renderHealthWorkspace(activeHealthCardId);
@@ -3117,6 +3210,7 @@ ${aiContext}` : "");
     renderHealthList();
   }
   function renderHealthList() {
+    _renderAllergiesCard();
     _renderHealthWeekBars();
     _renderHealthTodayScales();
     const cards = getHealthCards();
@@ -3259,9 +3353,12 @@ ${aiContext}` : "");
     const st = statusColors[card.status] || statusColors.active;
     const pct = card.progress || 0;
     const meds = card.medications || [];
-    const doctorNotes = card.doctorNotes || [];
+    const doctorVisits = (card.history || []).filter((h) => h.type === "doctor_visit").sort((a, b) => (b.ts || 0) - (a.ts || 0));
     const analyses = card.analyses || [];
     const owlAnalysis = card.owlAnalysis || "";
+    const todayStart = /* @__PURE__ */ new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const isMedTakenToday = (m) => Array.isArray(m.log) && m.log.some((ts) => ts >= todayStart.getTime());
     const scrollEl = document.getElementById("health-scroll");
     if (scrollEl) scrollEl.innerHTML = `
     <!-- \u041D\u0430\u0437\u0430\u0434 -->
@@ -3305,28 +3402,46 @@ ${aiContext}` : "");
       </div>
     </div>
 
-    <!-- \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438 -->
+    <!-- \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438 (\u0424\u0430\u0437\u0430 1: \u043D\u043E\u0432\u0430 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430 \u2014 dosage, schedule[], log[]) -->
     ${meds.length > 0 ? `<div class="card-glass">
       <div class="section-label">\u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
-      ${meds.map((m, i) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.06)" : ""}">
+      ${meds.map((m, i) => {
+      const takenToday = isMedTakenToday(m);
+      const schedStr = Array.isArray(m.schedule) && m.schedule.length ? m.schedule.join(", ") : "";
+      const course = m.courseDuration ? " \xB7 " + escapeHtml(m.courseDuration) : "";
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.06)" : ""}">
         <div class="icon-circle" style="width:28px;height:28px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
         </div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dose || "")}</div>
+          <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || "")}${course}</div>
         </div>
-        <div style="font-size:11px;font-weight:800;color:${m.taken ? "#16a34a" : "#ea580c"}">${m.taken ? "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E" : m.time || ""}</div>
-      </div>`).join("")}
+        <div style="font-size:11px;font-weight:800;color:${takenToday ? "#16a34a" : "#ea580c"}">${takenToday ? "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E" : escapeHtml(schedStr)}</div>
+      </div>`;
+    }).join("")}
     </div>` : ""}
 
-    <!-- \u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F -->
-    ${doctorNotes.length > 0 ? `<div class="card-glass">
+    <!-- \u041B\u0456\u043A\u0430\u0440 + \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 + \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C (\u0424\u0430\u0437\u0430 1 \u043D\u043E\u0432\u0456 \u043F\u043E\u043B\u044F) -->
+    ${card.doctor || card.doctorRecommendations || card.doctorConclusion || card.nextAppointment && card.nextAppointment.date ? `<div class="card-glass">
+      <div class="section-label">\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F</div>
+      ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">\u041B\u0456\u043A\u0430\u0440:</b> ${escapeHtml(card.doctor)}</div>` : ""}
+      ${card.doctorRecommendations ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457:</b> ${escapeHtml(card.doctorRecommendations)}</div>` : ""}
+      ${card.doctorConclusion ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A:</b> ${escapeHtml(card.doctorConclusion)}</div>` : ""}
+      ${card.nextAppointment && card.nextAppointment.date ? `<div style="font-size:11px;color:#ea580c;font-weight:700;margin-top:6px">\u{1F4C5} \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${escapeHtml(card.nextAppointment.date)}${card.nextAppointment.time ? " \u043E " + escapeHtml(card.nextAppointment.time) : ""}</div>` : ""}
+    </div>` : ""}
+
+    <!-- \u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F (\u0424\u0430\u0437\u0430 1: \u0442\u0435\u043F\u0435\u0440 \u0437 card.history filter(type=doctor_visit)) -->
+    ${doctorVisits.length > 0 ? `<div class="card-glass">
       <div class="section-label">\u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F</div>
-      ${doctorNotes.map((n) => `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(n.date || "")} \xB7 ${escapeHtml(n.doctor || "")}</div>
-        <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(n.text || "")}</div>
-      </div>`).join("")}
+      ${doctorVisits.map((h) => {
+      const d = new Date(h.ts);
+      const dateStr = isNaN(d) ? "" : d.toLocaleDateString("uk-UA");
+      return `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(dateStr)}</div>
+        <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(h.text || "")}</div>
+      </div>`;
+    }).join("")}
     </div>` : ""}
 
     <!-- OWL \u0430\u043D\u0430\u043B\u0456\u0437 -->
@@ -3378,9 +3493,15 @@ ${aiContext}` : "");
       nextStep: "",
       treatments: [],
       medications: [],
-      doctorNotes: [],
       analyses: [],
       owlAnalysis: "",
+      // Нові поля Фази 1
+      doctor: "",
+      doctorRecommendations: "",
+      doctorConclusion: "",
+      startDate: "",
+      nextAppointment: null,
+      history: [],
       createdAt: Date.now()
     };
     cards.unshift(newCard);
@@ -3388,16 +3509,102 @@ ${aiContext}` : "");
     showToast("\u2713 \u041A\u0430\u0440\u0442\u043A\u0443 \u0434\u043E\u0434\u0430\u043D\u043E");
     renderHealth();
   }
+  function openAddAllergy() {
+    const name = prompt("\u041D\u0430\u0437\u0432\u0430 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0433\u043E\u0440\u0456\u0445\u0438, \u043F\u0435\u043D\u0456\u0446\u0438\u043B\u0456\u043D, \u043B\u0430\u043A\u0442\u043E\u0437\u0430):");
+    if (!name || !name.trim()) return;
+    const notes = prompt("\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457):") || "";
+    const added = addAllergy(name, notes);
+    if (added) {
+      showToast("\u2713 \u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0434\u043E\u0434\u0430\u043D\u043E");
+      renderHealth();
+    } else {
+      showToast("\u0422\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454");
+    }
+  }
+  function deleteAllergyById(id) {
+    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E?")) return;
+    if (deleteAllergy(id)) {
+      showToast("\u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
+      renderHealth();
+    }
+  }
+  function _renderAllergiesCard() {
+    const el = document.getElementById("health-allergies-card");
+    if (!el) return;
+    const allergies = getAllergies();
+    const coralBg = "rgba(255,120,117,0.08)";
+    const coralBorder = "rgba(255,120,117,0.28)";
+    const coralText = "#d9534f";
+    if (allergies.length === 0) {
+      el.innerHTML = `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">\u0410\u043B\u0435\u0440\u0433\u0456\u0457</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u0438\u0445. OWL \u043D\u0435 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u0449\u043E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0442\u0438.</div>
+      </div>
+      <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">+ \u0414\u043E\u0434\u0430\u0442\u0438</button>
+    </div>`;
+      return;
+    }
+    el.innerHTML = `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">\u{1F6A8} \u0410\u043B\u0435\u0440\u0433\u0456\u0457 (${allergies.length})</div>
+      <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">+ \u0414\u043E\u0434\u0430\u0442\u0438</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${allergies.map((a) => `<div style="background:white;border:1.5px solid ${coralBorder};border-radius:8px;padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px">
+        <div>
+          <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
+          ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ""}
+        </div>
+        <div onclick="deleteAllergyById(${a.id})" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438">\xD7</div>
+      </div>`).join("")}
+    </div>
+  </div>`;
+  }
   function getHealthContext() {
+    const parts = [];
+    const allergies = getAllergies();
+    if (allergies.length > 0) {
+      const list = allergies.map((a) => a.notes ? `${a.name} (${a.notes})` : a.name).join(", ");
+      parts.push(`\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 (\u0423\u0412\u0410\u0413\u0410 \u2014 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0440\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0456\u0439 \u0437\u0433\u0430\u0434\u0446\u0456 \u0446\u0438\u0445 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0456\u0432 \u0443 \u0437\u0430\u043F\u0438\u0441\u0430\u0445 Inbox/\u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432/\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${list})`);
+    }
     const cards = getHealthCards();
-    if (cards.length === 0) return "";
+    const active = cards.filter((c) => c.status === "active" || c.status === "controlled");
+    if (active.length > 0) {
+      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F (${active.length}):`);
+      active.slice(0, 5).forEach((card) => {
+        const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? " \u2014 " + card.subtitle : ""} [${card.status}, \u043F\u0440\u043E\u0433\u0440\u0435\u0441: ${card.progress || 0}%]`];
+        if (card.startDate) {
+          const d = new Date(card.startDate);
+          if (!isNaN(d)) {
+            const daysSince = Math.round((Date.now() - d.getTime()) / 864e5);
+            if (daysSince >= 0) lines.push(`  \u043A\u0443\u0440\u0441: ${daysSince} \u0434\u043D \u0432\u0456\u0434 ${card.startDate}`);
+          }
+        }
+        if (card.doctor) lines.push(`  \u043B\u0456\u043A\u0430\u0440: ${card.doctor}`);
+        if (card.doctorRecommendations) lines.push(`  \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${card.doctorRecommendations}`);
+        if (card.nextAppointment && card.nextAppointment.date) {
+          const t = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
+          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${t}`);
+        }
+        if (Array.isArray(card.medications) && card.medications.length > 0) {
+          const meds = card.medications.map((m) => {
+            const sched = Array.isArray(m.schedule) && m.schedule.length ? " (" + m.schedule.join(", ") + ")" : "";
+            const course = m.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + m.courseDuration : "";
+            return `${m.name}${m.dosage ? " " + m.dosage : ""}${sched}${course}`;
+          }).join("; ");
+          lines.push(`  \u043B\u0456\u043A\u0438: ${meds}`);
+        }
+        if (card.nextStep) lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: ${card.nextStep}`);
+        parts.push(lines.join("\n"));
+      });
+    }
     const log = getHealthLog();
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const entry = log[today] || {};
-    const parts = [`\u0417\u0434\u043E\u0440\u043E\u0432'\u044F: ${cards.filter((c) => c.status !== "done").length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043A\u0430\u0440\u0442\u043E\u043A`];
-    const active = cards.filter((c) => c.status === "active").slice(0, 3);
-    if (active.length) parts.push("\u0410\u043A\u0442\u0438\u0432\u043D\u0456: " + active.map((c) => c.name + (c.nextStep ? " \u2192 " + c.nextStep : "")).join("; "));
-    if (entry.energy || entry.sleep || entry.pain) parts.push(`\u0421\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: \u0415\u043D\u0435\u0440\u0433\u0456\u044F ${entry.energy || "\u2014"}/10, \u0421\u043E\u043D ${entry.sleep || "\u2014"}/10, \u0411\u0456\u043B\u044C ${entry.pain || "\u2014"}/10`);
+    if (entry.energy || entry.sleep || entry.pain) {
+      parts.push(`\u0421\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (legacy \u0448\u043A\u0430\u043B\u0438 1-10): \u0415\u043D\u0435\u0440\u0433\u0456\u044F ${entry.energy || "\u2014"}, \u0421\u043E\u043D ${entry.sleep || "\u2014"}, \u0411\u0456\u043B\u044C ${entry.pain || "\u2014"}`);
+    }
     return parts.join("\n");
   }
   function addHealthChatMsg(role, text, _noSave = false) {
@@ -3448,12 +3655,10 @@ ${aiContext}` : "");
     addHealthChatMsg("typing", "");
     const cards = getHealthCards();
     const activeCard = activeHealthCardId ? cards.find((c) => c.id === activeHealthCardId) : null;
-    const healthCtx = getHealthContext();
     const aiContext = getAIContext();
     const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454\u0448 \u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u043E\u044E \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0432 NeverMind.
 \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0422\u0438 \u041D\u0415 \u043B\u0456\u043A\u0430\u0440 \u0456 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0448 \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438. \u0422\u0456\u043B\u044C\u043A\u0438 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454\u0448 \u0432\u0456\u0434\u0441\u043B\u0456\u0434\u043A\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0456 \u0441\u0438\u0441\u0442\u0435\u043C\u0430\u0442\u0438\u0437\u0443\u0432\u0430\u0442\u0438.
 ${activeCard ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430: "${activeCard.name}" \u2014 ${activeCard.subtitle || ""}. \u0421\u0442\u0430\u0442\u0443\u0441: ${activeCard.status}. \u041F\u0440\u043E\u0433\u0440\u0435\u0441: ${activeCard.progress}%.` : ""}
-${healthCtx ? healthCtx : ""}
 ${aiContext ? "\n\n" + aiContext : ""}
 
 \u0422\u0438 \u043C\u043E\u0436\u0435\u0448 (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON \u044F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0434\u0456\u044F):
@@ -3560,7 +3765,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
         openHealthCard,
         closeHealthCard,
         setHealthScale,
-        setHealthCardStatus
+        setHealthCardStatus,
+        openAddAllergy,
+        deleteAllergyById
       });
     }
   });
@@ -9071,6 +9278,11 @@ ${inboxList}`);
     } catch (e) {
     }
     try {
+      const healthCtx = getHealthContext();
+      if (healthCtx) parts.push(healthCtx);
+    } catch (e) {
+    }
+    try {
       const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
       if (trash.length > 0) {
         const trashByType = {};
@@ -9511,6 +9723,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       init_finance();
       init_calendar();
       init_evening();
+      init_health();
       init_inbox_board();
       init_proactive();
       init_chips();
