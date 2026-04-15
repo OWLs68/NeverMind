@@ -186,6 +186,179 @@ function renderHealthList() {
 // OWL класифікує текст користувача у тренд (покращення/стабільно/погіршення).
 // Дані nm_health_log лишаються у localStorage як fallback до Фази 4 (класифікація OWL).
 
+// === ФАЗА 2 (15.04 6v2eR): API для AI tool calling ===
+//
+// Helper-функції що використовуються з inbox.js handlers для tools:
+// create_health_card, edit_health_card, delete_health_card, add_medication,
+// edit_medication, log_medication_dose, add_health_history_entry.
+// Алергії (add_allergy/delete_allergy) використовують вже існуючі addAllergy/deleteAllergy з ai/memory.js.
+
+// Створити картку програмно (для tool call). Повертає створену картку або null.
+// nextAppointment синкається з nm_events автоматично.
+export function createHealthCardProgrammatic(opts) {
+  const { name, subtitle, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment, status, medications, initialHistoryEntry } = opts || {};
+  if (!name || !name.trim()) return null;
+
+  const cards = getHealthCards();
+  const newCard = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    name: name.trim(),
+    subtitle: (subtitle || '').trim(),
+    status: status || 'active',
+    progress: 0,
+    nextStep: '',
+    treatments: [],
+    medications: Array.isArray(medications) ? medications.map(m => ({
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      name: m.name || '',
+      dosage: m.dosage || '',
+      schedule: Array.isArray(m.schedule) ? m.schedule : (m.schedule ? String(m.schedule).split(/[,;]\s*/).filter(Boolean) : []),
+      courseDuration: m.courseDuration || '',
+      log: [],
+      createTasks: !!m.createTasks,
+    })) : [],
+    analyses: [],
+    owlAnalysis: '',
+    doctor: doctor || '',
+    doctorRecommendations: doctorRecommendations || '',
+    doctorConclusion: doctorConclusion || '',
+    startDate: startDate || '',
+    nextAppointment: null, // встановиться через _syncCardAppointmentToEvent нижче
+    history: initialHistoryEntry ? [{ ts: Date.now(), type: 'manual', text: String(initialHistoryEntry) }] : [],
+    createdAt: Date.now(),
+  };
+  newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, newCard.name, nextAppointment, null);
+  cards.unshift(newCard);
+  saveHealthCards(cards);
+  return newCard;
+}
+
+// Оновити поля існуючої картки. updates — об'єкт з частковими полями.
+// Якщо updates.nextAppointment передано — синкається з nm_events.
+export function editHealthCardProgrammatic(cardId, updates) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return null;
+  const old = cards[idx];
+  const next = { ...old };
+  ['name', 'subtitle', 'doctor', 'doctorRecommendations', 'doctorConclusion', 'startDate', 'status', 'progress', 'nextStep'].forEach(k => {
+    if (updates[k] !== undefined) next[k] = updates[k];
+  });
+  // nextAppointment: синк з подією
+  if (updates.nextAppointment !== undefined) {
+    const oldEventId = old.nextAppointment && old.nextAppointment.eventId;
+    next.nextAppointment = _syncCardAppointmentToEvent(cardId, next.name, updates.nextAppointment, oldEventId);
+  }
+  cards[idx] = next;
+  saveHealthCards(cards);
+  return next;
+}
+
+// Видалити картку (з trash + синком події у trash).
+export function deleteHealthCardProgrammatic(cardId) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return false;
+  const removed = cards[idx];
+  const eventId = removed.nextAppointment && removed.nextAppointment.eventId;
+  if (eventId) {
+    const events = getEvents();
+    const eIdx = events.findIndex(e => e.id === eventId);
+    if (eIdx !== -1) {
+      const removedEvent = events.splice(eIdx, 1)[0];
+      saveEvents(events);
+      addToTrash('event', removedEvent);
+    }
+  }
+  cards.splice(idx, 1);
+  saveHealthCards(cards);
+  addToTrash('health_card', removed);
+  return true;
+}
+
+// Додати препарат до картки. med — { name, dosage, schedule, courseDuration, createTasks? }
+export function addMedicationToCard(cardId, med) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1 || !med || !med.name) return null;
+  if (!Array.isArray(cards[idx].medications)) cards[idx].medications = [];
+  const newMed = {
+    id: Date.now() + Math.floor(Math.random() * 10000),
+    name: String(med.name),
+    dosage: med.dosage || '',
+    schedule: Array.isArray(med.schedule) ? med.schedule : (med.schedule ? String(med.schedule).split(/[,;]\s*/).filter(Boolean) : []),
+    courseDuration: med.courseDuration || '',
+    log: [],
+    createTasks: !!med.createTasks,
+  };
+  cards[idx].medications.push(newMed);
+  saveHealthCards(cards);
+  return newMed;
+}
+
+// Редагувати препарат у картці.
+export function editMedicationInCard(cardId, medId, updates) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return null;
+  const meds = cards[idx].medications || [];
+  const mIdx = meds.findIndex(m => m.id === medId);
+  if (mIdx === -1) return null;
+  ['name', 'dosage', 'courseDuration'].forEach(k => {
+    if (updates[k] !== undefined) meds[mIdx][k] = updates[k];
+  });
+  if (updates.schedule !== undefined) {
+    meds[mIdx].schedule = Array.isArray(updates.schedule)
+      ? updates.schedule
+      : String(updates.schedule).split(/[,;]\s*/).filter(Boolean);
+  }
+  saveHealthCards(cards);
+  return meds[mIdx];
+}
+
+// Записати дозу прийому препарату (Date.now() у med.log[]).
+// medQuery — назва препарату (fuzzy match — нечіткий пошук) АБО medId.
+export function logMedicationDose(cardId, medQuery) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return null;
+  const meds = cards[idx].medications || [];
+  let med = null;
+  if (typeof medQuery === 'number') {
+    med = meds.find(m => m.id === medQuery);
+  } else if (typeof medQuery === 'string') {
+    const q = medQuery.toLowerCase().trim();
+    med = meds.find(m => (m.name || '').toLowerCase().includes(q));
+  } else if (meds.length === 1) {
+    med = meds[0]; // якщо препарат тільки один — без уточнення
+  }
+  if (!med) return null;
+  if (!Array.isArray(med.log)) med.log = [];
+  med.log.push(Date.now());
+  // Дублюємо у history картки для timeline
+  if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
+  cards[idx].history.unshift({ ts: Date.now(), type: 'dose_log', text: `Прийняв ${med.name}` });
+  saveHealthCards(cards);
+  return med;
+}
+
+// Додати запис у history картки.
+// type: 'manual' | 'doctor_visit' | 'status_change' | 'auto'
+export function addHealthHistoryEntry(cardId, type, text) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1 || !text) return null;
+  if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
+  const entry = {
+    ts: Date.now(),
+    type: type || 'manual',
+    text: String(text),
+  };
+  cards[idx].history.unshift(entry);
+  saveHealthCards(cards);
+  return entry;
+}
+
 // === ВІДКРИТИ КАРТКУ (воркспейс) ===
 function openHealthCard(id) {
   activeHealthCardId = id;
@@ -786,9 +959,10 @@ export function getHealthContext() {
   const parts = [];
 
   // Алергії — ЗАВЖДИ зверху. Активні правила для OWL у всіх чатах.
+  // Фаза 2 (15.04 6v2eR): id видно у контексті — для tools delete_allergy + 4.12 антидублювання.
   const allergies = getAllergies();
   if (allergies.length > 0) {
-    const list = allergies.map(a => a.notes ? `${a.name} (${a.notes})` : a.name).join(', ');
+    const list = allergies.map(a => `[ID:${a.id}] ${a.name}${a.notes ? ' (' + a.notes + ')' : ''}`).join(', ');
     parts.push(`🚨 АЛЕРГІЇ (УВАГА — попереджай юзера при будь-якій згадці цих алергенів у записах Inbox/Фінансів/Нотаток: ${list})`);
   }
 
@@ -816,7 +990,8 @@ export function getHealthContext() {
         const meds = card.medications.map(m => {
           const sched = Array.isArray(m.schedule) && m.schedule.length ? ' (' + m.schedule.join(', ') + ')' : '';
           const course = m.courseDuration ? ' · курс ' + m.courseDuration : '';
-          return `${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched}${course}`;
+          // Фаза 2: med id у контексті — для tools edit_medication + log_medication_dose
+          return `[medID:${m.id}] ${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched}${course}`;
         }).join('; ');
         lines.push(`  ліки: ${meds}`);
       }

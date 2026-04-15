@@ -6,6 +6,63 @@
 
 ---
 
+## 2026-04-15 — 🤖 Фаза 2 Здоров'я: AI tool calling + 4.12 антидублювання (сесія 6v2eR)
+
+**Контекст:** Після Фази 1.5 (синк з календарем) — реалізована Фаза 2: створення/редагування/видалення карток Здоров'я через Inbox AI з 9 новими tools (інструментами, які OpenAI може викликати замість тексту). Юзер пише природньо ("у мене вже 4 день свербіння на руках") → AI створює картку. Принцип "один мозок" — OWL знає всі картки/алергії і не дублює.
+
+**9 нових tools у `INBOX_TOOLS` (`src/ai/core.js`):**
+1. `create_health_card` — нова картка стану + опційно перші препарати/лікар/прийом
+2. `edit_health_card` — оновити поля існуючої картки
+3. `delete_health_card` — видалити картку (з кошика 7 днів)
+4. `add_medication` — додати препарат до картки
+5. `edit_medication` — змінити препарат (дозування/графік/курс)
+6. `log_medication_dose` — позначити прийом препарату ЗАРАЗ (fuzzy match по назві)
+7. `add_allergy` — додати алергію (з 4.12 перевіркою існуючих)
+8. `delete_allergy` — видалити алергію за id
+9. `add_health_history_entry` — запис у timeline картки (тренд/коментар/візит)
+
+**Prompt-правила (`INBOX_SYSTEM_PROMPT`, нова секція ЗДОРОВ'Я):**
+- АЛЕРГІЯ → `add_allergy` + перевірка дублів у контексті 🚨 АЛЕРГІЇ (правило 4.12)
+- СИМПТОМ що ТРИВАЄ 3+ дні / ДІАГНОЗ → перевір "Активні стани" → `add_health_history_entry` (якщо є) або `create_health_card` (якщо ні)
+- РАЗОВА скарга ('болить голова сьогодні') → `save_moment`/`save_note`, НЕ картка
+- ПРИЙОМ ЛІКІВ ('прийняв Омез') → `log_medication_dose` з card_id (якщо у активних картках є цей препарат)
+- ЛІКАР ПРОПИСАВ → `add_medication` (існуючий стан) або `create_health_card` (новий)
+- ВІЗИТ ДО ЛІКАРЯ → `create_event` (НЕ картка)
+- МЕДИЧНІ ПИТАННЯ → текст "я не лікар, звернись до твого лікаря"
+
+**4.12 Антидублювання реалізовано:** `getHealthContext()` у промпті AI віддає `[ID:X]` для карток, `[medID:X]` для медикаментів, `[ID:X]` для алергій. AI ОБОВ'ЯЗКОВО перевіряє контекст перед `create_health_card`/`add_allergy` — якщо схоже вже є, використовує `edit_*` або `add_health_history_entry` замість дублювання.
+
+**Helper-функції з `health.js` (експортовано для inbox.js handlers):**
+- `createHealthCardProgrammatic(opts)` — з синком nm_events через `_syncCardAppointmentToEvent`
+- `editHealthCardProgrammatic(cardId, updates)` — з синком події якщо `nextAppointment` змінено
+- `deleteHealthCardProgrammatic(cardId)` — у кошик + видаляє прив'язану подію
+- `addMedicationToCard(cardId, med)`
+- `editMedicationInCard(cardId, medId, updates)`
+- `logMedicationDose(cardId, medQuery)` — fuzzy match (нечіткий пошук) по назві + автозапис у `history` типу `dose_log`
+- `addHealthHistoryEntry(cardId, type, text)` — `manual`/`status_change`/`doctor_visit`/`auto`
+
+**Handlers у `src/tabs/inbox.js`:** 9 нових `else if` блоків у `sendToAI` після `save_memory_fact`. Кожен викликає helper з health.js, оновлює UI (`renderHealth()` якщо активна вкладка), додає user-friendly chat-повідомлення.
+
+**Чат-інтерв'ю при створенні** (3-4 питання) — НЕ реалізовано (перенесено у `💡 Ideas`). Поточна реалізація: AI читає текст і одразу створює картку з усіма зрозумілими полями. `initial_history_text` зберігає сирий текст юзера. Для редагування — модалка "Ред." (B-27).
+
+**Розширення на чат-бари інших вкладок** (Notes/Finance/Health) — НЕ зроблено в цій сесії. Tools поки доступні тільки з Inbox. Чат-бари використовують `INBOX_TOOLS` через `callAIWithTools`, але tools-handlers додані тільки у `inbox.js sendToAI`. Окрема невелика задача.
+
+**Файли:**
+- `src/ai/core.js` — +9 tools у INBOX_TOOLS, prompt-правила секція ЗДОРОВ'Я (~13 рядків)
+- `src/tabs/health.js` — 7 нових export-helper функцій (~155 рядків)
+- `src/tabs/inbox.js` — 9 нових `_toolCallToAction` cases + 9 handlers + import з health.js
+- `src/tabs/health.js getHealthContext` — додано `[ID:X]` у алергії і `[medID:X]` у медикаменти (для 4.12)
+- `sw.js` — CACHE_NAME `nm-20260415-1254` → `nm-20260415-1308`
+- `ROADMAP.md` — Фаза 2 → "✅ Виконано", Active секція оновлена (Фаза 3 — наступна)
+- `_ai-tools/SESSION_STATE.md` — оновлено
+- `docs/CHANGES.md` — цей запис
+
+**Вкладка Здоров'я:** ~65% → ~80%. Лишилось 3 фази (3: UI переробка карток, 4: супровід OWL пасивні нагадування, 5: експорт медкартки).
+
+**Наступний крок:** Фаза 3 — UI переробка картки (новий блок алергій зверху, картка стану з усіма полями + timeline історії + ліки з логом прийому, чат-бар з preloaded контекстом конкретної картки, індикатор "Курс 71% · покращення").
+
+---
+
 ## 2026-04-15 — 🔄 Фаза 1.5 Здоров'я: синк картка ↔ календар (сесія 6v2eR)
 
 **Контекст:** Після закриття 5 багів вкладки Здоров'я (попередній блок цієї ж сесії, див. нижче) — реалізований двосторонній синк (sync — синхронізація) `card.nextAppointment` ↔ `nm_events`. Концептуально: коли юзер виставляє наступний прийом у картці хвороби, він автоматично з'являється у Календарі як подія "Прийом: {назва}". І навпаки — зміни/видалення події у Календарі впливають на картку.
