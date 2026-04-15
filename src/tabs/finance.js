@@ -397,109 +397,24 @@ function _finEmptyTxsHint() {
   </div>`;
 }
 
-// Фаза 2 крок Б: touch-обробники для свайп-гортання періодів + крок В.2: drag-n-drop категорій
-let _finHandlersAttached = false;
-const _DRAG_LONG_PRESS_MS = 350;
-const _DRAG_CANCEL_THRESHOLD = 10;
-let _dragCatId = null;       // id категорії що зараз перетягується (null = не drag)
-let _dragLongPressTimer = null;
-let _dragOriginCell = null;  // DOM-елемент origin-cell (для відновлення стилю)
-let _dragLastTarget = null;  // DOM-елемент cell під пальцем (для підсвітки)
-
+// Фаза 2 крок Б: touch-обробники для свайп-гортання періодів
+// (Drag-n-drop через long-press прибрано 15.04.2026 — переміщення тепер через
+// кнопки ↑/↓ у модалці редагування категорії, див. moveFinCategory)
+let _finSwipeAttached = false;
 function _attachFinSwipe() {
-  if (_finHandlersAttached) return;
+  if (_finSwipeAttached) return;
   const wrap = document.getElementById('fin-v2-wrap');
   if (!wrap) return;
-
-  // ===== Свайп періодів (тільки коли НЕ edit-mode) =====
   let startX = 0, startY = 0, onGrid = false;
-
   wrap.addEventListener('touchstart', (e) => {
-    const target = e.target.closest('#fin-cats-grid-wrap');
-    if (!target) { onGrid = false; return; }
-    onGrid = true;
+    onGrid = !_finEditMode && !!e.target.closest('#fin-cats-grid-wrap'); // у edit-режимі свайп вимкнено
+    if (!onGrid) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-
-    // Drag long-press: тільки у edit-mode і тільки якщо тач почався на категорії
-    if (_finEditMode) {
-      const cell = e.target.closest('[data-cat-id]');
-      if (cell) {
-        _dragOriginCell = cell;
-        _dragLongPressTimer = setTimeout(() => {
-          _dragCatId = cell.dataset.catId;
-          cell.style.opacity = '0.4';
-          cell.style.transform = 'scale(0.9)';
-          // Тактильна віддача (якщо доступна)
-          if (navigator.vibrate) try { navigator.vibrate(20); } catch(e) {}
-        }, _DRAG_LONG_PRESS_MS);
-      }
-    }
   }, { passive: true });
-
-  wrap.addEventListener('touchmove', (e) => {
-    if (!onGrid) return;
-
-    // Якщо палець пішов > порогу ДО спрацювання long-press → скасувати drag
-    if (_dragLongPressTimer && _dragCatId === null) {
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-      if (Math.hypot(dx, dy) > _DRAG_CANCEL_THRESHOLD) {
-        clearTimeout(_dragLongPressTimer);
-        _dragLongPressTimer = null;
-        _dragOriginCell = null;
-      }
-    }
-
-    // Активний drag — підсвічуємо ціль під пальцем
-    if (_dragCatId !== null) {
-      e.preventDefault?.(); // блокуємо вертикальний скрол сторінки під час drag
-      const x = e.touches[0].clientX;
-      const y = e.touches[0].clientY;
-      const elBelow = document.elementFromPoint(x, y);
-      const targetCell = elBelow?.closest('[data-cat-id]');
-      if (targetCell !== _dragLastTarget) {
-        if (_dragLastTarget) _dragLastTarget.style.background = '';
-        if (targetCell && targetCell !== _dragOriginCell) {
-          targetCell.style.background = 'rgba(194,65,12,0.08)';
-          targetCell.style.borderRadius = '12px';
-        }
-        _dragLastTarget = targetCell;
-      }
-    }
-  }, { passive: false });
-
   wrap.addEventListener('touchend', (e) => {
-    // Активний drag — переставити і скинути
-    if (_dragCatId !== null) {
-      const fromId = _dragCatId;
-      const toCell = _dragLastTarget;
-      // Reset візуал
-      if (_dragOriginCell) { _dragOriginCell.style.opacity = ''; _dragOriginCell.style.transform = ''; }
-      if (_dragLastTarget) { _dragLastTarget.style.background = ''; _dragLastTarget.style.borderRadius = ''; }
-      const toId = toCell?.dataset?.catId;
-      _dragCatId = null;
-      _dragOriginCell = null;
-      _dragLastTarget = null;
-      if (fromId && toId && fromId !== toId) {
-        _swapFinCategoryOrder(fromId, toId);
-        renderFinance();
-      }
-      return;
-    }
-
-    // Скасувати long-press якщо він не встиг спрацювати (це звичайний тап)
-    if (_dragLongPressTimer) {
-      clearTimeout(_dragLongPressTimer);
-      _dragLongPressTimer = null;
-      _dragOriginCell = null;
-    }
-
     if (!onGrid) return;
     onGrid = false;
-
-    // Свайп періодів — тільки коли НЕ edit-mode
-    if (_finEditMode) return;
     const dx = e.changedTouches[0].clientX - startX;
     const dy = e.changedTouches[0].clientY - startY;
     if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
@@ -507,38 +422,26 @@ function _attachFinSwipe() {
     else currentFinPeriodOffset--;
     renderFinance();
   }, { passive: true });
-
-  // touchcancel — теж скидаємо
-  wrap.addEventListener('touchcancel', () => {
-    if (_dragLongPressTimer) { clearTimeout(_dragLongPressTimer); _dragLongPressTimer = null; }
-    if (_dragOriginCell) { _dragOriginCell.style.opacity = ''; _dragOriginCell.style.transform = ''; _dragOriginCell = null; }
-    if (_dragLastTarget) { _dragLastTarget.style.background = ''; _dragLastTarget.style.borderRadius = ''; _dragLastTarget = null; }
-    _dragCatId = null;
-    onGrid = false;
-  }, { passive: true });
-
-  _finHandlersAttached = true;
+  _finSwipeAttached = true;
 }
 
-// Переставити категорію fromId на місце toId (insert before)
-// Зберігає порядок інших, оновлює .order, зберігає у localStorage
-function _swapFinCategoryOrder(fromId, toId) {
+// Переміщення категорії на delta позицій (вгору -1 / вниз +1).
+// Викликається з модалки редагування — кнопки ↑/↓.
+export function moveFinCategory(id, delta) {
   const cats = getFinCats();
   for (const type of ['expense', 'income']) {
     const arr = cats[type];
-    const fromIdx = arr.findIndex(c => c.id === fromId);
-    const toIdx = arr.findIndex(c => c.id === toId);
-    if (fromIdx === -1 || toIdx === -1) continue;
-    if (arr[fromIdx] && arr[toIdx]) {
-      // Реалізую як move: вирізати from і вставити перед to
-      const [moved] = arr.splice(fromIdx, 1);
-      const newToIdx = arr.findIndex(c => c.id === toId);
-      arr.splice(newToIdx, 0, moved);
-      arr.forEach((c, i) => c.order = i);
-      saveFinCats(cats);
-      return;
-    }
+    const idx = arr.findIndex(c => c.id === id);
+    if (idx === -1) continue;
+    const newIdx = Math.max(0, Math.min(arr.length - 1, idx + delta));
+    if (newIdx === idx) return false;
+    const [moved] = arr.splice(idx, 1);
+    arr.splice(newIdx, 0, moved);
+    arr.forEach((c, i) => c.order = i);
+    saveFinCats(cats);
+    return true;
   }
+  return false;
 }
 
 // Сітка категорій з кругом-Hero посередині.
@@ -576,12 +479,12 @@ function _finCatsGrid(allTxs, win) {
       : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})`;
     // У edit-режимі кружечок підсвічений (легка border-shimmer) щоб юзер бачив що тап = редагування
     const editStyle = _finEditMode ? 'box-shadow:0 0 0 2px ' + cat.color + '55;' : '';
-    return `<div onclick="${onClick}" data-cat-id="${escapeHtml(cat.id)}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;transition:transform 0.15s,opacity 0.15s">
-      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escapeHtml(cat.name)}</div>
-      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle};pointer-events:none">
+    return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
+      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle}">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
-      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px;pointer-events:none">${sumStr}</div>
+      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
     </div>`;
   };
 
@@ -1352,6 +1255,18 @@ function _renderCatEditModalBody() {
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
     <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ підкатегорія</button>
 
+    <!-- Переміщення (тільки для існуючих) -->
+    ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06)">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">Позиція в сітці</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${(_finCatModalPositionInfo() || '')}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="moveCatModalUp()" aria-label="Вгору" style="width:34px;height:34px;border-radius:10px;border:none;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.65);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+        <button onclick="moveCatModalDown()" aria-label="Вниз" style="width:34px;height:34px;border-radius:10px;border:none;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.65);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      </div>
+    </div>` : ''}
+
     <!-- Архівувати (toggle) -->
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
@@ -1384,6 +1299,18 @@ function toggleCatModalArchive()  { _finCatModalDraft.archived = !_finCatModalDr
 function addCatModalSubcat()      { _finCatModalDraft.subcategories.push(''); _refreshCatEditModal(); }
 function removeCatModalSubcat(i)  { _finCatModalDraft.subcategories.splice(i, 1); _refreshCatEditModal(); }
 function updateCatModalSubcat(i, v) { _finCatModalDraft.subcategories[i] = v; }
+
+// Підпис позиції у сітці (для модалки) — "позиція 3 з 8"
+function _finCatModalPositionInfo() {
+  if (_finEditingCatId === 'new' || !_finEditingCatId) return '';
+  const found = findFinCatById(_finEditingCatId);
+  if (!found) return '';
+  const list = getFinCats()[found.type];
+  return `позиція ${found.idx + 1} з ${list.length}`;
+}
+
+function moveCatModalUp()   { if (_finEditingCatId && _finEditingCatId !== 'new') { moveFinCategory(_finEditingCatId, -1); _refreshCatEditModal(); renderFinance(); } }
+function moveCatModalDown() { if (_finEditingCatId && _finEditingCatId !== 'new') { moveFinCategory(_finEditingCatId, +1); _refreshCatEditModal(); renderFinance(); } }
 
 function saveCategoryFromModal() {
   const d = _finCatModalDraft;
@@ -1432,6 +1359,7 @@ Object.assign(window, {
   saveCategoryFromModal, deleteCategoryFromModal,
   selectCatModalIcon, selectCatModalColor, setCatModalType, toggleCatModalArchive,
   addCatModalSubcat, removeCatModalSubcat, updateCatModalSubcat,
+  moveCatModalUp, moveCatModalDown, // Фаза 2 крок В.2: переміщення категорій (замість drag)
 });
 // Експортуємо drafт у window для inline oninput у модалці
 Object.defineProperty(window, '_finCatModalDraft', {
