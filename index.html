@@ -804,6 +804,9 @@
             <button class="icon-btn" onclick="openAddHealthCard()" title="Нова картка">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
+            <button class="icon-btn" onclick="openHealthExport()" title="Медична картка для лікаря">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M12 12v2"/><path d="M10 14h4"/></svg>
+            </button>
             <button class="icon-btn" onclick="openHelp('health')">?</button>
             <button class="icon-btn" onclick="openSettings()">⚙️</button>
           </div>
@@ -1639,6 +1642,27 @@
   <div id="log-panel-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:monospace"></div>
   <!-- Bottom safe area -->
   <div style="height:env(safe-area-inset-bottom);min-height:16px;flex-shrink:0"></div>
+</div>
+
+<!-- HEALTH EXPORT MODAL (Фаза 5, 15.04 6v2eR) — fullscreen "Медична картка" для лікаря -->
+<div id="health-export-modal" style="display:none;position:fixed;inset:0;z-index:300;background:#f5f4f2">
+  <div style="display:flex;flex-direction:column;height:100%;max-width:600px;margin:0 auto">
+    <!-- Header -->
+    <div style="flex-shrink:0;padding:calc(env(safe-area-inset-top)+12px) 16px 12px;background:#1a5c2a;color:white;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="font-family:var(--font-display);font-size:17px;font-weight:900">Медична картка</div>
+        <div style="font-size:10px;font-weight:600;opacity:0.8;margin-top:1px">Експорт для лікаря · NeverMind</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="copyHealthExport()" id="health-export-copy-btn" style="background:white;color:#1a5c2a;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">📋 Скопіювати</button>
+        <button onclick="closeHealthExport()" style="background:rgba(255,255,255,0.2);color:white;border:none;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✕</button>
+      </div>
+    </div>
+    <!-- Content (plain-text preview, rendered via JS) -->
+    <div style="flex:1;overflow-y:auto;padding:16px 18px calc(env(safe-area-inset-bottom)+20px)">
+      <pre id="health-export-text" style="margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:13px;line-height:1.55;color:#1e1040;white-space:pre-wrap;word-break:break-word"></pre>
+    </div>
+  </div>
 </div>
 
 <!-- HEALTH CARD EDIT/CREATE MODAL (B-27 + B-30, 15.04 6v2eR).
