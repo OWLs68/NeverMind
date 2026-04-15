@@ -1272,8 +1272,9 @@ body {
   padding: 6px 2px 10px;
   overflow-x: auto; scrollbar-width: none;
   flex: 1;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  /* 15.04 jMR6m: прибрано mask-image fade. Він візуально "обрізав" чіпи на правому/лівому краях
+     (кнопка "Поговорити" виглядала як пів-кнопки коли була в правій zone fade). Стрілки
+     .owl-chips-arrow вже виконують функцію індикатора скролу — fade був дублюючим. */
 }
 .owl-speech-chips::-webkit-scrollbar { display: none; }
 .owl-chips-arrow {
