@@ -29,18 +29,94 @@ export function getFinance() { return JSON.parse(localStorage.getItem('nm_financ
 export function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'finance' })); }
 export function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
 export function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); }
-export function getFinCats() {
-  const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
-  if (saved) return saved;
-  return {
-    expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Інше'],
-    income:  ['Зарплата','Надходження','Повернення','Інше'],
-  };
-}
-export function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
 
-// Підкатегорії — показуються після вибору головної
-const FIN_SUBCATS = {
+// ===== Категорії (v2 структура, Фаза 2 K-01, 15.04.2026 3229b) =====
+// Об'єкт категорії: { id, name, icon, color, subcategories: [], archived, order }
+
+// SVG-бібліотека іконок (inline, 20 базових). Додавати за потребою.
+const FIN_CAT_ICONS = {
+  food:          '<path d="M3 11h18M5 11V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/>',
+  car:           '<path d="M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M3 17h18M5 17V9l2-4h10l2 4v8M7 13h10"/>',
+  subscription:  '<path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/>',
+  heart:         '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+  home:          '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/>',
+  shopping:      '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/>',
+  wallet:        '<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4M20 12v4H6a2 2 0 0 0 0 4h12v-4M20 12h-4"/>',
+  gift:          '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+  refund:        '<polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/>',
+  coffee:        '<path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/>',
+  cigarette:     '<rect x="2" y="11" width="16" height="4"/><path d="M17 8h1v4h-1zM21 8h1v4h-1z"/>',
+  fuel:          '<line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9l-3-3"/>',
+  sport:         '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
+  entertainment: '<polygon points="10 8 16 12 10 16 10 8"/><circle cx="12" cy="12" r="10"/>',
+  education:     '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  travel:        '<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.2.6-.6.5-1.1z"/>',
+  phone:         '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/>',
+  grass:         '<path d="M12 22V8M8 18c-1-2-2-4-2-6a6 6 0 0 1 6-6 6 6 0 0 1 6 6c0 2-1 4-2 6"/>',
+  anchor:        '<circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>',
+  briefcase:     '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  other:         '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+};
+
+// Повертає SVG рядок за назвою іконки (fallback 'other')
+export function finCatIcon(name, color = 'currentColor', size = 24) {
+  const p = FIN_CAT_ICONS[name] || FIN_CAT_ICONS.other;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+}
+
+// Список доступних іконок (для picker'а у режимі редагування — Фаза 2 крок Б)
+export const FIN_CAT_ICON_NAMES = Object.keys(FIN_CAT_ICONS);
+
+// Пастельна палітра (БЕЗ фіолетового — Роман не любить)
+const FIN_CAT_PALETTE = [
+  '#f97316', // оранжевий
+  '#f59e0b', // бурштиновий
+  '#eab308', // жовтий
+  '#84cc16', // лайм
+  '#22c55e', // зелений
+  '#14b8a6', // бірюзовий
+  '#06b6d4', // циан
+  '#0ea5e9', // блакитний
+  '#3b82f6', // синій
+  '#ef4444', // червоний
+  '#f43f5e', // малиновий
+  '#ec4899', // рожевий
+  '#78716c', // кам'яний сірий
+  '#a16207', // темний бурштин
+];
+
+export function pickRandomCatColor(seed) {
+  const idx = seed != null ? (seed % FIN_CAT_PALETTE.length) : Math.floor(Math.random() * FIN_CAT_PALETTE.length);
+  return FIN_CAT_PALETTE[idx];
+}
+
+// Мапа відомих імен → дефолтна іконка (для міграції і створення дефолтних)
+const FIN_DEFAULT_ICONS = {
+  'Їжа': 'food', 'Їда': 'food',
+  'Транспорт': 'car', 'Авто': 'car',
+  'Підписки': 'subscription',
+  'Здоровʼя': 'heart', "Здоров'я": 'heart', 'Здоровя': 'heart',
+  'Житло': 'home',
+  'Покупки': 'shopping',
+  'Зарплата': 'wallet',
+  'Надходження': 'gift',
+  'Повернення': 'refund',
+  'Інше': 'other',
+  'Курево': 'cigarette', 'Сигарети': 'cigarette',
+  'Кафе': 'coffee',
+  'Паливо': 'fuel', 'Бензин': 'fuel',
+  'Спорт': 'sport', 'Спортзал': 'sport',
+  'Розваги': 'entertainment', 'Дозвілля': 'entertainment',
+  'Освіта': 'education',
+  'Подорожі': 'travel',
+  'Зв\'язок': 'phone', 'Звязок': 'phone', 'Інтернет': 'phone',
+  'Трава': 'grass',
+  'Борги': 'anchor',
+  'Робота': 'briefcase',
+};
+
+// Базові підкатегорії для дефолтних категорій (використовується при міграції і створенні дефолтів)
+const FIN_DEFAULT_SUBCATS = {
   'Їжа':       ['Продукти','Ресторан','Кафе','Доставка','Фастфуд'],
   'Транспорт': ['Паливо','Таксі','Парковка','Громадський','Ремонт авто'],
   'Підписки':  ['Стрімінг','Музика','Хмара','Додатки','Ігри'],
@@ -48,6 +124,48 @@ const FIN_SUBCATS = {
   'Житло':     ['Оренда','Комунальні','Інтернет','Ремонт','Меблі'],
   'Покупки':   ['Одяг','Техніка','Книги','Подарунки','Дім'],
 };
+
+function _makeCatObj(name, idx) {
+  const safeSlug = name.toLowerCase().replace(/[^\wа-яґєії]/gi, '_').slice(0, 20);
+  return {
+    id: 'cat_' + safeSlug + '_' + Date.now().toString(36) + idx,
+    name,
+    icon: FIN_DEFAULT_ICONS[name] || 'other',
+    color: pickRandomCatColor(idx),
+    subcategories: (FIN_DEFAULT_SUBCATS[name] || []).slice(),
+    archived: false,
+    order: idx,
+  };
+}
+
+function _migrateFinCats(saved) {
+  // Перший запуск — дефолтний набір об'єктів
+  if (!saved) {
+    const fresh = {
+      expense: ['Їжа','Транспорт','Підписки','Здоровʼя','Житло','Покупки','Інше'].map((n, i) => _makeCatObj(n, i)),
+      income:  ['Зарплата','Надходження','Повернення','Інше'].map((n, i) => _makeCatObj(n, i)),
+    };
+    localStorage.setItem('nm_finance_cats', JSON.stringify(fresh));
+    return fresh;
+  }
+  // Вже нова структура — повертаємо як є
+  if (Array.isArray(saved.expense) && saved.expense.length > 0 && typeof saved.expense[0] === 'object' && saved.expense[0].id) {
+    return saved;
+  }
+  // Стара структура (масив рядків) — мігруємо lazy, зберігаємо у localStorage
+  const migrated = {
+    expense: (saved.expense || []).map((n, i) => typeof n === 'string' ? _makeCatObj(n, i) : n),
+    income:  (saved.income  || []).map((n, i) => typeof n === 'string' ? _makeCatObj(n, i) : n),
+  };
+  localStorage.setItem('nm_finance_cats', JSON.stringify(migrated));
+  return migrated;
+}
+
+export function getFinCats() {
+  const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
+  return _migrateFinCats(saved);
+}
+export function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
 
 // State
 let currentFinTab = 'expense';
@@ -168,11 +286,91 @@ export function renderFinance() {
     return;
   }
 
-  // Фаза 1 чистки: Hero, Інсайт-картки, Прогноз, Коуч, Графік — прибрано.
-  // У Фазі 2 (K-01) з'явиться сітка категорій + круг посередині (Hero) замість _finCatsBlock.
+  // Фаза 2 (K-01): сітка категорій + круг посередині (Hero).
+  // currentFinTab визначає тип (expense/income), круг = перемикач (тап).
   wrap.innerHTML =
-    _finCatsBlock(expenses, totalExp) +
+    _finCatsGrid(allTxs) +
     _finTxsBlock(allTxs);
+}
+
+// Сітка категорій з кругом-Hero посередині.
+// Layout: 4 колонки × N рядів, центральні 2 колонки × 2 ряди займає круг (absolute).
+function _finCatsGrid(allTxs) {
+  const cats = getFinCats();
+  const isExpense = currentFinTab === 'expense';
+  const catList = (isExpense ? cats.expense : cats.income).filter(c => !c.archived);
+  const txs = allTxs.filter(t => t.type === (isExpense ? 'expense' : 'income'));
+  const totalSum = txs.reduce((s, t) => s + t.amount, 0);
+
+  // Сума по кожній категорії
+  const catMap = {};
+  txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+
+  // Сортуємо: спочатку категорії з порядком (з .order), потім решта
+  const sorted = [...catList].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Розміщення сітки: круг займає позиції 5,6,9,10 (індекси в сітці 4×N — центральні 2 колонки 2-го і 3-го рядів)
+  // Щоб лишити простір для круга, додаємо placeholder-комірки на цих позиціях.
+  // 12 базових слотів: 4 у 1-му ряді + 2 (по краях) у 2-му + 2 у 3-му + 4 у 4-му = 12.
+  // Центр (8 слотів = 2×4) займає круг через `grid-area`.
+  const slots = [];
+  let catIdx = 0;
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 4; col++) {
+      const isCircleArea = (row === 1 || row === 2) && (col === 1 || col === 2);
+      if (isCircleArea) continue; // ці комірки займає круг
+      const cat = sorted[catIdx++];
+      slots.push(cat || null); // null = пуста комірка (підтримуємо сітку якщо мало категорій)
+    }
+  }
+
+  // Якщо категорій більше 12 — додаємо ряди знизу (4 на ряд)
+  const overflow = sorted.slice(catIdx);
+
+  const renderCell = (cat) => {
+    if (!cat) return '<div></div>'; // пустий слот
+    const sum = catMap[cat.name] || 0;
+    const sumStr = sum > 0 ? formatMoney(sum) : '0 ' + getCurrency();
+    const sumCol = sum > 0 ? cat.color : 'rgba(30,16,64,0.25)';
+    return `<div onclick="openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
+      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center">
+        ${finCatIcon(cat.icon, cat.color, 22)}
+      </div>
+      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
+    </div>`;
+  };
+
+  const mainGridCells = slots.map(renderCell).join('');
+  const overflowGridCells = overflow.map(renderCell).join('');
+
+  // Центральний круг (Hero мінімум: тільки тип + сума)
+  const periodLbl = { week: 'тиждень', month: 'місяць', '3months': '3 місяці' }[currentFinPeriod] || 'період';
+  const heroLabel = isExpense ? 'Витрати' : 'Доходи';
+  const heroCol = isExpense ? '#c2410c' : '#16a34a';
+
+  return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="position:relative;padding:18px 14px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,auto);gap:10px;position:relative">
+      ${mainGridCells}
+      <!-- Круг-Hero у центрі (займає 2×2 центральних слотів) -->
+      <div onclick="toggleFinTabType()" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none">
+        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
+        <div style="font-size:26px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
+        <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">за ${periodLbl}</div>
+        <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.3);margin-top:6px;display:flex;align-items:center;gap:3px">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="17 1 21 5 17 9"/><polyline points="7 23 3 19 7 15"/><line x1="21" y1="5" x2="9" y2="5"/><line x1="3" y1="19" x2="15" y2="19"/></svg>
+          тап = перемикач
+        </div>
+      </div>
+    </div>
+    ${overflow.length > 0 ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">${overflowGridCells}</div>` : ''}
+  </div>`;
+}
+
+// Перемикач Витрати ⇄ Доходи (тап на круг)
+function toggleFinTabType() {
+  currentFinTab = currentFinTab === 'expense' ? 'income' : 'expense';
+  renderFinance();
 }
 
 function _finEmptyState() {
@@ -183,41 +381,6 @@ function _finEmptyState() {
     <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:6px">Поки порожньо</div>
     <div style="font-size:14px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:16px">Додай перші транзакції через Inbox або кнопку нижче</div>
     <button onclick="openAddTransaction()" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">+ Додати транзакцію</button>
-  </div>`;
-}
-
-function _finCatsBlock(expenses, totalExp) {
-  if (expenses.length === 0) return '';
-  const catMap = {};
-  expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
-  const sorted = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
-  const maxAmt = sorted[0]?.[1] || 1;
-  const budget = getFinBudget();
-
-  const rows = sorted.map(([cat, amt]) => {
-    const barPct = Math.round(amt / maxAmt * 100);
-    const catLimit = budget.categories?.[cat];
-    let dotCol = 'rgba(30,16,64,0.25)';
-    if (catLimit > 0) {
-      const r = amt / catLimit;
-      dotCol = r >= 1 ? '#ef4444' : r >= 0.8 ? '#f59e0b' : '#16a34a';
-    }
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0"></div>
-      <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.65);min-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat)}</div>
-      <div style="flex:1;height:5px;background:rgba(30,16,64,0.06);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${barPct}%;background:${dotCol};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.5);min-width:52px;text-align:right">${formatMoney(amt)}</div>
-    </div>`;
-  }).join('');
-
-  return `<div class="card-glass-blur">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="fin-section-label">Категорії витрат</div>
-      <button onclick="openFinBudgetModal()" style="font-size:12px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:inherit">Ліміти ✎</button>
-    </div>
-    ${rows}
   </div>`;
 }
 
@@ -334,11 +497,14 @@ function _showTransactionModal(data) {
       <div id="fntx-cats-wrap" style="margin-bottom:10px">
         <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Категорія</div>
         <div id="fntx-cats" style="display:flex;flex-wrap:wrap;gap:6px">
-          ${catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${c === data.category ? 'rgba(194,65,12,0.08)' : 'white'};color:${c === data.category ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(c)}</button>`).join('')}
+          ${catList.filter(c => !c.archived).map(c => {
+            const active = c.name === data.category;
+            return `<button onclick="selectFinTxCat('${escapeHtml(c.name)}')" id="fntx-cat-${escapeHtml(c.name)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${active ? 'rgba(194,65,12,0.08)' : 'white'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(c.name)}</button>`;
+          }).join('')}
         </div>
         <input id="fntx-cat-custom" type="text" placeholder="або своя категорія…"
           style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-top:8px;box-sizing:border-box"
-          value="${catList.includes(data.category) ? '' : (data.category || '')}">
+          value="${catList.some(c => c.name === data.category) ? '' : (data.category || '')}">
       </div>
 
       <!-- Коментар -->
@@ -355,7 +521,7 @@ function _showTransactionModal(data) {
   document.body.appendChild(modal);
   setupModalSwipeClose(modal.querySelector('div:last-child'), closeFinTxModal);
   // Якщо категорія вже вибрана — показуємо підкатегорії
-  if (data.category && catList.includes(data.category)) {
+  if (data.category && catList.some(c => c.name === data.category)) {
     setTimeout(() => selectFinTxCat(data.category), 50);
   }
   setTimeout(() => { document.getElementById('fntx-amount')?.focus(); }, 300);
@@ -379,14 +545,17 @@ function toggleFinTxType(type) {
 
   _finTxSelectedCat = '';
   const catsEl = document.getElementById('fntx-cats');
-  if (catsEl) catsEl.innerHTML = catList.map(c => `<button onclick="selectFinTxCat('${escapeHtml(c)}')" id="fntx-cat-${escapeHtml(c)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:rgba(30,16,64,0.5)">${escapeHtml(c)}</button>`).join('');
+  if (catsEl) catsEl.innerHTML = catList.filter(c => !c.archived).map(c =>
+    `<button onclick="selectFinTxCat('${escapeHtml(c.name)}')" id="fntx-cat-${escapeHtml(c.name)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:rgba(30,16,64,0.5)">${escapeHtml(c.name)}</button>`
+  ).join('');
 }
 
 function selectFinTxCat(cat) {
   // Якщо це підкатегорія — просто зберігаємо
   const cats = getFinCats();
   const catList = _finTxCurrentType === 'expense' ? cats.expense : cats.income;
-  const isSubcat = !catList.includes(cat);
+  const matchedCat = catList.find(c => c.name === cat);
+  const isSubcat = !matchedCat;
 
   if (isSubcat) {
     _finTxSelectedCat = cat;
@@ -414,10 +583,10 @@ function selectFinTxCat(cat) {
     btn.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
   });
 
-  // Показуємо підкатегорії якщо є
-  const subcats = FIN_SUBCATS[cat];
+  // Показуємо підкатегорії якщо є (з самої категорії-об'єкта, v2 структура)
+  const subcats = matchedCat?.subcategories || [];
   let subEl = document.getElementById('fntx-subcats');
-  if (subcats && subcats.length > 0) {
+  if (subcats.length > 0) {
     if (!subEl) {
       subEl = document.createElement('div');
       subEl.id = 'fntx-subcats';
@@ -513,12 +682,12 @@ function openFinBudgetModal() {
 
       <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">По категоріях</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-        ${cats.expense.map(cat => `
+        ${cats.expense.filter(c => !c.archived).map(cat => `
           <div style="display:flex;align-items:center;gap:10px">
-            <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat)}</div>
-            <input type="number" id="finbdg-cat-${escapeHtml(cat)}" placeholder="без ліміту" inputmode="decimal"
+            <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat.name)}</div>
+            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="без ліміту" inputmode="decimal"
               style="width:100px;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;text-align:right"
-              value="${budget.categories?.[cat] || ''}">
+              value="${budget.categories?.[cat.name] || ''}">
           </div>`).join('')}
       </div>
 
@@ -535,8 +704,8 @@ function saveFinBudgetFromModal() {
   const total = parseFloat(document.getElementById('finbdg-total')?.value || '0') || 0;
   const categories = {};
   cats.expense.forEach(cat => {
-    const val = parseFloat(document.getElementById(`finbdg-cat-${cat}`)?.value || '0') || 0;
-    if (val > 0) categories[cat] = val;
+    const val = parseFloat(document.getElementById(`finbdg-cat-${cat.name}`)?.value || '0') || 0;
+    if (val > 0) categories[cat.name] = val;
   });
   saveFinBudget({ total, categories });
   closeFinBudgetModal();
@@ -824,4 +993,5 @@ Object.assign(window, {
   openEditTransaction, closeFinTxModal, toggleFinTxType,
   selectFinTxCat, saveFinTransaction, deleteFinTransaction,
   closeFinBudgetModal, saveFinBudgetFromModal, openAllTransactions,
+  toggleFinTabType, // Фаза 2 (K-01): тап на круг = перемикач Витрати⇄Доходи
 });
