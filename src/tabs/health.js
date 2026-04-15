@@ -106,6 +106,14 @@ let activeHealthCardId = null; // null = список, id = воркспейс
 let healthBarLoading = false;
 let healthBarHistory = [];
 let _healthTypingEl = null;
+// Фаза 3 (15.04 6v2eR): focus-картка для чат-бару Здоров'я.
+// Коли юзер тапає "Запитати OWL про цей стан" у workspace — id фокусу зберігається тут,
+// і getHealthContext() додає деталі цієї картки на ВЕРХ контексту з префіксом "ФОКУС".
+// Скидається при закритті чат-бару Здоров'я або переході в інший workspace.
+let _focusedHealthCardId = null;
+export function setFocusedHealthCard(id) { _focusedHealthCardId = id; }
+export function getFocusedHealthCard() { return _focusedHealthCardId; }
+export function clearFocusedHealthCard() { _focusedHealthCardId = null; }
 
 // === RENDER HEALTH (головний екран — список) ===
 export function renderHealth() {
@@ -397,6 +405,19 @@ function renderHealthWorkspace(id) {
   // Фаза 1: помічник для відображення останньої відмітки ліки (з log[])
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const isMedTakenToday = m => Array.isArray(m.log) && m.log.some(ts => ts >= todayStart.getTime());
+  // Фаза 3 (15.04 6v2eR): тренд із останнього status_change запису history.
+  // Використовується у бейджі "Курс {pct}% · {тренд}".
+  const lastTrend = (card.history || []).find(h => h.type === 'status_change');
+  let trendLabel = '', trendColor = 'rgba(30,16,64,0.4)';
+  if (lastTrend && lastTrend.text) {
+    const t = lastTrend.text.toLowerCase();
+    if (t.includes('покращ')) { trendLabel = 'покращення'; trendColor = '#16a34a'; }
+    else if (t.includes('погірш')) { trendLabel = 'погіршення'; trendColor = '#ef4444'; }
+    else if (t.includes('стабіл')) { trendLabel = 'стабільно'; trendColor = '#d97706'; }
+  }
+  // Фаза 3: повна історія всіх типів (manual/dose_log/status_change/doctor_visit/auto)
+  // Сортована за ts (свіжіше зверху). Іконки за типом.
+  const historyAll = (card.history || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
   const scrollEl = document.getElementById('health-scroll');
   if (scrollEl) scrollEl.innerHTML = `
@@ -406,7 +427,7 @@ function renderHealthWorkspace(id) {
       <span style="font-size:13px;font-weight:700;color:#1a5c2a">Назад</span>
     </div>
 
-    <!-- Прогрес + статус -->
+    <!-- Прогрес + статус (Фаза 3: + бейдж "Курс X% · тренд") -->
     <div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px">
         <div style="flex:1;min-width:0">
@@ -421,6 +442,10 @@ function renderHealthWorkspace(id) {
       <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:6px">
         <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:4px;transition:width 0.5s"></div>
       </div>
+      <!-- Бейдж "Курс X% · тренд" -->
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5);margin-bottom:8px">
+        Курс ${pct}%${trendLabel ? ` · <span style="color:${trendColor};font-weight:800">${trendLabel}</span>` : ''}
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color}">${st.label}</div>
         <div style="display:flex;gap:6px">
@@ -429,30 +454,55 @@ function renderHealthWorkspace(id) {
       </div>
     </div>
 
-    <!-- B-31 (15.04 6v2eR): блок "Самопочуття сьогодні" (шкали 1-10) прибрано.
-         Замінить у Фазі 4 — OWL класифікує текст у тренд покращення/стабільно/погіршення. -->
+    <!-- "Запитати OWL про цей стан" (Фаза 3 — preloaded контекст у чат-бар) -->
+    <div onclick="askOwlAboutHealthCard(${id})" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(26,92,42,0.08),rgba(74,222,128,0.05));border:1.5px solid rgba(26,92,42,0.18);border-radius:14px;padding:11px 14px;margin-bottom:10px;cursor:pointer">
+      <div class="icon-circle" style="width:32px;height:32px;background:rgba(26,92,42,0.12)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:#1a5c2a">Запитати OWL про цей стан</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">OWL знає всі деталі картки → пиши питання</div>
+      </div>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(26,92,42,0.4)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
 
-    <!-- Препарати (Фаза 1: нова структура — dosage, schedule[], log[]) -->
+    <!-- Препарати (Фаза 3: лог прийому + кнопка "Прийняти зараз") -->
     ${meds.length > 0 ? `<div class="card-glass">
       <div class="section-label">Препарати</div>
       ${meds.map((m,i) => {
         const takenToday = isMedTakenToday(m);
-        const schedStr = Array.isArray(m.schedule) && m.schedule.length ? m.schedule.join(', ') : '';
+        const schedArr = Array.isArray(m.schedule) ? m.schedule : [];
+        const schedStr = schedArr.length ? schedArr.join(', ') : '';
         const course = m.courseDuration ? ' · ' + escapeHtml(m.courseDuration) : '';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.06)' : ''}">
-        <div class="icon-circle" style="width:28px;height:28px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || '')}${course}</div>
-        </div>
-        <div style="font-size:11px;font-weight:800;color:${takenToday ? '#16a34a' : '#ea580c'}">${takenToday ? '✓ прийнято' : escapeHtml(schedStr)}</div>
-      </div>`;
+        // Фаза 3: показуємо точки прийому за сьогодні (по schedule)
+        const todayDoses = Array.isArray(m.log) ? m.log.filter(ts => ts >= todayStart.getTime()) : [];
+        const todayDosesCount = todayDoses.length;
+        const expectedToday = schedArr.length || 1;
+        const dotsHtml = schedArr.length > 0 ? schedArr.map((time, di) => {
+          const taken = di < todayDosesCount;
+          return `<span title="${escapeHtml(time)}" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${taken ? '#16a34a' : 'rgba(30,16,64,0.12)'};margin-right:3px"></span>`;
+        }).join('') : '';
+        return `<div style="padding:8px 0;${i < meds.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.06)' : ''}">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <div class="icon-circle" style="width:28px;height:28px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
+              <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || '')}${course}${schedStr ? ' · ' + escapeHtml(schedStr) : ''}</div>
+            </div>
+            <button onclick="logHealthMedDose(${id},${m.id})" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.3)' : '#1a5c2a'};background:${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.08)' : '#1a5c2a'};color:${takenToday && todayDosesCount >= expectedToday ? '#16a34a' : 'white'};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? '✓ прийнято' : '+ Прийняти'}</button>
+          </div>
+          ${schedArr.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;padding-left:38px">
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">Сьогодні:</div>
+            <div>${dotsHtml}</div>
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${todayDosesCount}/${expectedToday}</div>
+          </div>` : ''}
+        </div>`;
       }).join('')}
     </div>` : ''}
 
-    <!-- Лікар + рекомендації + наступний прийом (Фаза 1 нові поля) -->
+    <!-- Лікар + рекомендації + наступний прийом -->
     ${(card.doctor || card.doctorRecommendations || card.doctorConclusion || (card.nextAppointment && card.nextAppointment.date)) ? `<div class="card-glass">
       <div class="section-label">Лікування</div>
       ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">Лікар:</b> ${escapeHtml(card.doctor)}</div>` : ''}
@@ -461,17 +511,31 @@ function renderHealthWorkspace(id) {
       ${(card.nextAppointment && card.nextAppointment.date) ? `<div style="font-size:11px;color:#ea580c;font-weight:700;margin-top:6px">📅 Наступний прийом: ${escapeHtml(card.nextAppointment.date)}${card.nextAppointment.time ? ' о ' + escapeHtml(card.nextAppointment.time) : ''}</div>` : ''}
     </div>` : ''}
 
-    <!-- Записи лікаря (Фаза 1: тепер з card.history filter(type=doctor_visit)) -->
-    ${doctorVisits.length > 0 ? `<div class="card-glass">
-      <div class="section-label">Записи лікаря</div>
-      ${doctorVisits.map(h => {
+    <!-- Історія (Фаза 3: повний timeline всіх типів з іконками — замінює "Записи лікаря") -->
+    ${historyAll.length > 0 ? `<div class="card-glass">
+      <div class="section-label">Історія</div>
+      ${historyAll.slice(0, 15).map(h => {
         const d = new Date(h.ts);
-        const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA');
-        return `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(dateStr)}</div>
-        <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(h.text || '')}</div>
-      </div>`;
+        const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+        const typeMeta = {
+          'manual':         { icon: '📝', color: '#6366f1', label: 'Запис' },
+          'dose_log':       { icon: '💊', color: '#16a34a', label: 'Прийом' },
+          'status_change':  { icon: '📈', color: '#d97706', label: 'Стан' },
+          'doctor_visit':   { icon: '🩺', color: '#0891b2', label: 'Візит' },
+          'auto':           { icon: '🤖', color: 'rgba(30,16,64,0.5)', label: 'Авто' },
+        }[h.type] || { icon: '•', color: 'rgba(30,16,64,0.5)', label: '' };
+        return `<div style="display:flex;gap:10px;padding:7px 0;${historyAll.indexOf(h) < Math.min(historyAll.length, 15) - 1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
+          <div style="font-size:14px;line-height:1.3;flex-shrink:0">${typeMeta.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px">
+              <div style="font-size:10px;font-weight:800;color:${typeMeta.color};text-transform:uppercase;letter-spacing:0.05em">${typeMeta.label}</div>
+              <div style="font-size:9px;color:rgba(30,16,64,0.35);font-weight:600;flex-shrink:0">${escapeHtml(dateStr)}</div>
+            </div>
+            <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(h.text || '')}</div>
+          </div>
+        </div>`;
       }).join('')}
+      ${historyAll.length > 15 ? `<div style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600;text-align:center;margin-top:6px">+ ще ${historyAll.length - 15} записів</div>` : ''}
     </div>` : ''}
 
     <!-- OWL аналіз -->
@@ -498,6 +562,29 @@ function renderHealthWorkspace(id) {
       <div style="font-size:10px;color:rgba(234,88,12,0.7);font-weight:600;line-height:1.45">Для діагностики і лікування консультуйся з лікарем.</div>
     </div>
   `;
+}
+
+// Фаза 3 (15.04 6v2eR): "Запитати OWL про цей стан".
+// Встановлює focused-картку, відкриває чат-бар з preloaded повідомленням від OWL.
+// getHealthContext бачить _focusedHealthCardId і додає деталі картки на ВЕРХ контексту.
+function askOwlAboutHealthCard(id) {
+  const card = getHealthCards().find(c => c.id === id);
+  if (!card) return;
+  setFocusedHealthCard(id);
+  try { openChatBar('health'); } catch (e) {}
+  // Pre-loaded повідомлення (без виклику AI) — щоб юзер бачив що OWL "у контексті"
+  setTimeout(() => {
+    addHealthChatMsg('agent', `OWL у контексті стану "${card.name}". Що хочеш дізнатись?`);
+  }, 200);
+}
+
+// Фаза 3: позначити прийом дози ліків з UI (тап на кнопку "+ Прийняти").
+function logHealthMedDose(cardId, medId) {
+  const med = logMedicationDose(cardId, medId);
+  if (med) {
+    showToast(`💊 ${med.name} прийнято`);
+    if (activeHealthCardId === cardId) renderHealthWorkspace(cardId);
+  }
 }
 
 function setHealthCardStatus(id, status) {
@@ -958,6 +1045,39 @@ function _buildAllergiesCardHtml() {
 export function getHealthContext() {
   const parts = [];
 
+  // Фаза 3 (15.04 6v2eR): focused-картка на ВЕРХ контексту.
+  // Коли юзер тапнув "Запитати OWL про цей стан" — OWL у відповіді концентрується на цій картці.
+  if (_focusedHealthCardId) {
+    const focused = getHealthCards().find(c => c.id === _focusedHealthCardId);
+    if (focused) {
+      const lines = [`🎯 ФОКУС РОЗМОВИ — стан "${focused.name}"${focused.subtitle ? ' (' + focused.subtitle + ')' : ''}`];
+      lines.push(`  Статус: ${focused.status}, прогрес: ${focused.progress || 0}%`);
+      if (focused.startDate) lines.push(`  Початок курсу: ${focused.startDate}`);
+      if (focused.doctor) lines.push(`  Лікар: ${focused.doctor}`);
+      if (focused.doctorRecommendations) lines.push(`  Рекомендації: ${focused.doctorRecommendations}`);
+      if (focused.doctorConclusion) lines.push(`  Висновок: ${focused.doctorConclusion}`);
+      if (focused.nextAppointment && focused.nextAppointment.date) {
+        lines.push(`  Наступний прийом: ${focused.nextAppointment.date}${focused.nextAppointment.time ? ' ' + focused.nextAppointment.time : ''}`);
+      }
+      if (Array.isArray(focused.medications) && focused.medications.length > 0) {
+        const meds = focused.medications.map(m => `${m.name}${m.dosage ? ' ' + m.dosage : ''}`).join('; ');
+        lines.push(`  Препарати: ${meds}`);
+      }
+      // Останні 5 записів історії — щоб OWL знав контекст
+      const recentHistory = (focused.history || []).slice(0, 5);
+      if (recentHistory.length > 0) {
+        lines.push(`  Останні записи історії:`);
+        recentHistory.forEach(h => {
+          const d = new Date(h.ts);
+          const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA');
+          lines.push(`    - [${h.type}, ${dateStr}] ${h.text}`);
+        });
+      }
+      lines.push(`  ВАЖЛИВО: відповідай ПРО ЦЕЙ СТАН. Якщо юзер питає загальне — повертай тему до цього стану. Якщо новий запис стосується цієї картки — використай add_health_history_entry з card_id:${focused.id}.`);
+      parts.push(lines.join('\n'));
+    }
+  }
+
   // Алергії — ЗАВЖДИ зверху. Активні правила для OWL у всіх чатах.
   // Фаза 2 (15.04 6v2eR): id видно у контексті — для tools delete_allergy + 4.12 антидублювання.
   const allergies = getAllergies();
@@ -1144,6 +1264,12 @@ ${aiContext ? '\n\n' + aiContext : ''}
   healthBarLoading = false;
 }
 
+// Фаза 3 (15.04 6v2eR): автоскид focused-картки при закритті чат-бару Здоров'я.
+// Інакше OWL продовжить "тримати фокус" на старому стані у наступному відкритті чату.
+window.addEventListener('nm-chat-closed', (e) => {
+  if (e.detail === 'health') clearFocusedHealthCard();
+});
+
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddHealthCard, sendHealthBarMessage,
@@ -1153,4 +1279,6 @@ Object.assign(window, {
   // B-27 + B-30 (15.04 6v2eR): модалка створення/редагування
   openEditHealthCard, closeHealthCardModal, saveHealthCardFromModal,
   deleteHealthCardFromModal, addHealthMedicationRow,
+  // Фаза 3 (15.04 6v2eR): focused-режим + лог дози з UI
+  askOwlAboutHealthCard, logHealthMedDose,
 });
