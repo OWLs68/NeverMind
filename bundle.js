@@ -7684,92 +7684,19 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   </div>`;
   }
   function _attachFinSwipe() {
-    if (_finHandlersAttached) return;
+    if (_finSwipeAttached) return;
     const wrap = document.getElementById("fin-v2-wrap");
     if (!wrap) return;
     let startX = 0, startY = 0, onGrid = false;
     wrap.addEventListener("touchstart", (e) => {
-      const target = e.target.closest("#fin-cats-grid-wrap");
-      if (!target) {
-        onGrid = false;
-        return;
-      }
-      onGrid = true;
+      onGrid = !_finEditMode && !!e.target.closest("#fin-cats-grid-wrap");
+      if (!onGrid) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
-      if (_finEditMode) {
-        const cell = e.target.closest("[data-cat-id]");
-        if (cell) {
-          _dragOriginCell = cell;
-          _dragLongPressTimer = setTimeout(() => {
-            _dragCatId = cell.dataset.catId;
-            cell.style.opacity = "0.4";
-            cell.style.transform = "scale(0.9)";
-            if (navigator.vibrate) try {
-              navigator.vibrate(20);
-            } catch (e2) {
-            }
-          }, _DRAG_LONG_PRESS_MS);
-        }
-      }
     }, { passive: true });
-    wrap.addEventListener("touchmove", (e) => {
-      if (!onGrid) return;
-      if (_dragLongPressTimer && _dragCatId === null) {
-        const dx = e.touches[0].clientX - startX;
-        const dy = e.touches[0].clientY - startY;
-        if (Math.hypot(dx, dy) > _DRAG_CANCEL_THRESHOLD) {
-          clearTimeout(_dragLongPressTimer);
-          _dragLongPressTimer = null;
-          _dragOriginCell = null;
-        }
-      }
-      if (_dragCatId !== null) {
-        e.preventDefault?.();
-        const x = e.touches[0].clientX;
-        const y = e.touches[0].clientY;
-        const elBelow = document.elementFromPoint(x, y);
-        const targetCell = elBelow?.closest("[data-cat-id]");
-        if (targetCell !== _dragLastTarget) {
-          if (_dragLastTarget) _dragLastTarget.style.background = "";
-          if (targetCell && targetCell !== _dragOriginCell) {
-            targetCell.style.background = "rgba(194,65,12,0.08)";
-            targetCell.style.borderRadius = "12px";
-          }
-          _dragLastTarget = targetCell;
-        }
-      }
-    }, { passive: false });
     wrap.addEventListener("touchend", (e) => {
-      if (_dragCatId !== null) {
-        const fromId = _dragCatId;
-        const toCell = _dragLastTarget;
-        if (_dragOriginCell) {
-          _dragOriginCell.style.opacity = "";
-          _dragOriginCell.style.transform = "";
-        }
-        if (_dragLastTarget) {
-          _dragLastTarget.style.background = "";
-          _dragLastTarget.style.borderRadius = "";
-        }
-        const toId = toCell?.dataset?.catId;
-        _dragCatId = null;
-        _dragOriginCell = null;
-        _dragLastTarget = null;
-        if (fromId && toId && fromId !== toId) {
-          _swapFinCategoryOrder(fromId, toId);
-          renderFinance();
-        }
-        return;
-      }
-      if (_dragLongPressTimer) {
-        clearTimeout(_dragLongPressTimer);
-        _dragLongPressTimer = null;
-        _dragOriginCell = null;
-      }
       if (!onGrid) return;
       onGrid = false;
-      if (_finEditMode) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
@@ -7777,42 +7704,23 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       else currentFinPeriodOffset--;
       renderFinance();
     }, { passive: true });
-    wrap.addEventListener("touchcancel", () => {
-      if (_dragLongPressTimer) {
-        clearTimeout(_dragLongPressTimer);
-        _dragLongPressTimer = null;
-      }
-      if (_dragOriginCell) {
-        _dragOriginCell.style.opacity = "";
-        _dragOriginCell.style.transform = "";
-        _dragOriginCell = null;
-      }
-      if (_dragLastTarget) {
-        _dragLastTarget.style.background = "";
-        _dragLastTarget.style.borderRadius = "";
-        _dragLastTarget = null;
-      }
-      _dragCatId = null;
-      onGrid = false;
-    }, { passive: true });
-    _finHandlersAttached = true;
+    _finSwipeAttached = true;
   }
-  function _swapFinCategoryOrder(fromId, toId) {
+  function moveFinCategory(id, delta) {
     const cats = getFinCats();
     for (const type of ["expense", "income"]) {
       const arr = cats[type];
-      const fromIdx = arr.findIndex((c) => c.id === fromId);
-      const toIdx = arr.findIndex((c) => c.id === toId);
-      if (fromIdx === -1 || toIdx === -1) continue;
-      if (arr[fromIdx] && arr[toIdx]) {
-        const [moved] = arr.splice(fromIdx, 1);
-        const newToIdx = arr.findIndex((c) => c.id === toId);
-        arr.splice(newToIdx, 0, moved);
-        arr.forEach((c, i) => c.order = i);
-        saveFinCats(cats);
-        return;
-      }
+      const idx = arr.findIndex((c) => c.id === id);
+      if (idx === -1) continue;
+      const newIdx = Math.max(0, Math.min(arr.length - 1, idx + delta));
+      if (newIdx === idx) return false;
+      const [moved] = arr.splice(idx, 1);
+      arr.splice(newIdx, 0, moved);
+      arr.forEach((c, i) => c.order = i);
+      saveFinCats(cats);
+      return true;
     }
+    return false;
   }
   function _finCatsGrid(allTxs, win) {
     const cats = getFinCats();
@@ -7834,12 +7742,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
       const onClick = _finEditMode ? `openCategoryEditModal('${escapeHtml(cat.id)}')` : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
       const editStyle = _finEditMode ? "box-shadow:0 0 0 2px " + cat.color + "55;" : "";
-      return `<div onclick="${onClick}" data-cat-id="${escapeHtml(cat.id)}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;transition:transform 0.15s,opacity 0.15s">
-      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escapeHtml(cat.name)}</div>
-      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle};pointer-events:none">
+      return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
+      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle}">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
-      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px;pointer-events:none">${sumStr}</div>
+      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
     </div>`;
     };
     const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
@@ -8539,6 +8447,18 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
     <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</button>
 
+    <!-- \u041F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F (\u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u0456\u0441\u043D\u0443\u044E\u0447\u0438\u0445) -->
+    ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06)">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">\u041F\u043E\u0437\u0438\u0446\u0456\u044F \u0432 \u0441\u0456\u0442\u0446\u0456</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${_finCatModalPositionInfo() || ""}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="moveCatModalUp()" aria-label="\u0412\u0433\u043E\u0440\u0443" style="width:34px;height:34px;border-radius:10px;border:none;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.65);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+        <button onclick="moveCatModalDown()" aria-label="\u0412\u043D\u0438\u0437" style="width:34px;height:34px;border-radius:10px;border:none;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.65);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      </div>
+    </div>` : ""}
+
     <!-- \u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438 (toggle) -->
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
@@ -8589,6 +8509,27 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function updateCatModalSubcat(i, v) {
     _finCatModalDraft.subcategories[i] = v;
   }
+  function _finCatModalPositionInfo() {
+    if (_finEditingCatId === "new" || !_finEditingCatId) return "";
+    const found = findFinCatById(_finEditingCatId);
+    if (!found) return "";
+    const list = getFinCats()[found.type];
+    return `\u043F\u043E\u0437\u0438\u0446\u0456\u044F ${found.idx + 1} \u0437 ${list.length}`;
+  }
+  function moveCatModalUp() {
+    if (_finEditingCatId && _finEditingCatId !== "new") {
+      moveFinCategory(_finEditingCatId, -1);
+      _refreshCatEditModal();
+      renderFinance();
+    }
+  }
+  function moveCatModalDown() {
+    if (_finEditingCatId && _finEditingCatId !== "new") {
+      moveFinCategory(_finEditingCatId, 1);
+      _refreshCatEditModal();
+      renderFinance();
+    }
+  }
   function saveCategoryFromModal() {
     const d = _finCatModalDraft;
     const subs = (d.subcategories || []).map((s) => (s || "").trim()).filter(Boolean);
@@ -8620,7 +8561,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _finEditingCatId = null;
     _finCatModalDraft = null;
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finHandlersAttached, _DRAG_LONG_PRESS_MS, _DRAG_CANCEL_THRESHOLD, _dragCatId, _dragLongPressTimer, _dragOriginCell, _dragLastTarget, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading, _finCatModalDraft;
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading, _finCatModalDraft;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -8734,13 +8675,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _finEditMode = false;
       _finEditingCatId = null;
       _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
-      _finHandlersAttached = false;
-      _DRAG_LONG_PRESS_MS = 350;
-      _DRAG_CANCEL_THRESHOLD = 10;
-      _dragCatId = null;
-      _dragLongPressTimer = null;
-      _dragOriginCell = null;
-      _dragLastTarget = null;
+      _finSwipeAttached = false;
       _finEditId = null;
       _finTxCurrentType = "expense";
       _finTxSelectedCat = "";
@@ -8779,7 +8714,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         toggleCatModalArchive,
         addCatModalSubcat,
         removeCatModalSubcat,
-        updateCatModalSubcat
+        updateCatModalSubcat,
+        moveCatModalUp,
+        moveCatModalDown
+        // Фаза 2 крок В.2: переміщення категорій (замість drag)
       });
       Object.defineProperty(window, "_finCatModalDraft", {
         get() {
