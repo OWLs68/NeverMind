@@ -385,7 +385,8 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `nm_finance_cats` | `{expense:[], income:[]}` | `src/tabs/finance.js` |
 | `nm_health_cards` | `[]` — розширена структура з Фази 1 (15.04 план jMR6m): `{id, name, subtitle, status, progress, nextStep, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment:{date,time}, history:[{ts,type,text}], medications:[{id,name,dosage,schedule,courseDuration,log:[ts],createTasks}], treatments, owlAnalysis, createdAt}` | `src/tabs/health.js` |
 | `nm_health_log` | `{date: {energy, sleep, pain}}` — **legacy** з ранньої ітерації Здоров'я (шкали). Не чіпаємо до Фази 3 переробки UI — дані не видаляються | `src/tabs/health.js` |
-| `nm_allergies` | `[{id, name, notes, createdAt}]` — фіксовані правила для AI. Проста структура (Фаза 1 план jMR6m). Розширення з `severity` → `ROADMAP.md` секція `💡 Ideas`. Додаються у `getAIContext()` — OWL попереджає про алергени скрізь у застосунку (Inbox, Фінанси, Нотатки) | `src/tabs/health.js` |
+| `nm_allergies` | `[{id, name, notes, createdAt}]` — фіксовані правила для AI (Фаза 1 імплементовано 15.04 jMR6m коміт `fab3865`). Розширення з `severity` → `ROADMAP.md` секція `💡 Ideas`. Додаються у `getAIContext()` — OWL попереджає про алергени скрізь у застосунку (Inbox, Фінанси, Нотатки) | `src/tabs/health.js` |
+| `nm_health_migrated_v2` | `'1'` — прапор що lazy-міграція карток `nm_health_cards` у нову структуру Фази 1 пройдена (одноразово при першому `getHealthCards()` коли прапор не встановлений). Конвертує `doctorNotes` → `history` type=`doctor_visit`, старі медикаменти `{dose,time,taken}` → `{dosage,schedule[],log[]}` | `src/tabs/health.js` |
 | `nm_projects` | `[]` | `src/tabs/projects.js` |
 | `nm_events` | `[]` | `src/tabs/calendar.js` |
 | `nm_moments` | `[]` | `src/tabs/evening.js` |
