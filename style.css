@@ -1272,9 +1272,13 @@ body {
   padding: 6px 2px 10px;
   overflow-x: auto; scrollbar-width: none;
   flex: 1;
-  /* 15.04 jMR6m: прибрано mask-image fade. Він візуально "обрізав" чіпи на правому/лівому краях
-     (кнопка "Поговорити" виглядала як пів-кнопки коли була в правій zone fade). Стрілки
-     .owl-chips-arrow вже виконують функцію індикатора скролу — fade був дублюючим. */
+  /* 15.04 jMR6m: маска зменшена з 14px до 4px на краях.
+     14px з'їдала ~13% ширини кнопки "Поговорити" якщо вона потрапляла у fade-зону
+     (баг B-26 — кнопка виглядала як "пів-кнопки"). 4px дає ледь помітне розмиття на самих
+     краях, не "обрізаючи" вмісту. Стрілки .owl-chips-arrow вже виконують функцію індикатора
+     скролу — маска тепер тільки естетична деталь. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 4px, black calc(100% - 4px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 4px, black calc(100% - 4px), transparent 100%);
 }
 .owl-speech-chips::-webkit-scrollbar { display: none; }
 .owl-chips-arrow {
