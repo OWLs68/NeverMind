@@ -813,49 +813,8 @@
         <div id="owl-tab-board-health" style="display:none"></div>
       </div>
 
-      <!-- SCROLL -->
-      <div id="health-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 34px)">
-
-        <!-- Алергії (Фаза 1, 15.04 jMR6m) — фіксована коралова картка зверху -->
-        <div id="health-allergies-card"></div>
-
-        <!-- Трекер самопочуття тижня -->
-        <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em">Самопочуття тижня</div>
-            <div style="display:flex;gap:8px">
-              <div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:2px;background:#16a34a"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">Енергія</span></div>
-              <div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:2px;background:#6366f1"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">Сон</span></div>
-              <div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:2px;background:#ef4444"></div><span style="font-size:9px;color:rgba(30,16,64,0.4);font-weight:600">Біль</span></div>
-            </div>
-          </div>
-          <div id="health-week-bars" style="display:flex;gap:3px;align-items:flex-end;height:44px"></div>
-
-          <!-- Відмітити сьогодні -->
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(30,16,64,0.07)">
-            <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Відмітити сьогодні</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="health-today-scales"></div>
-          </div>
-        </div>
-
-        <!-- Дисклеймер -->
-        <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:12px;padding:8px 12px;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">NeverMind не є медичним сервісом. OWL не ставить діагнози. Завжди консультуйся з лікарем.</div>
-        </div>
-
-        <!-- Картки хвороб/станів -->
-        <div id="health-cards-list"></div>
-
-        <!-- Порожній стан -->
-        <div id="health-empty" style="display:none;text-align:center;padding:32px 0">
-          <div style="font-size:36px;margin-bottom:10px">🫀</div>
-          <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">Немає карток здоров'я</div>
-          <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">Додай першу — хворобу, стан або мету</div>
-          <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Додати картку</button>
-        </div>
-
-      </div>
+      <!-- SCROLL (вміст рендериться повністю у JS — renderHealthList() для списку, renderHealthWorkspace() для картки) -->
+      <div id="health-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 34px)"></div>
     </div>
 
     <!-- PAGE: PROJECTS -->
@@ -1680,6 +1639,80 @@
   <div id="log-panel-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:monospace"></div>
   <!-- Bottom safe area -->
   <div style="height:env(safe-area-inset-bottom);min-height:16px;flex-shrink:0"></div>
+</div>
+
+<!-- HEALTH CARD EDIT/CREATE MODAL (B-27 + B-30, 15.04 6v2eR).
+     Одна модалка у двох режимах: create (новий стан) / edit (редагування існуючого).
+     Замінює рідний prompt() + додає UI редагування полів Фази 1. -->
+<div id="health-card-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+  <div onclick="closeHealthCardModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:88vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
+    <div style="overflow-y:auto;max-height:88vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div id="health-card-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Новий стан</div>
+        <button id="health-card-delete-btn" onclick="deleteHealthCardFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+      </div>
+
+      <!-- Назва -->
+      <input id="health-card-name" type="text" placeholder="Назва (напр. Шкіра, Тиск, Алергічний риніт)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+
+      <!-- Опис -->
+      <input id="health-card-subtitle" type="text" placeholder="Короткий опис (напр. Висип, Підвищений)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+
+      <!-- Лікар -->
+      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Лікар</div>
+      <input id="health-card-doctor" type="text" placeholder="Ім'я + спеціальність (напр. Др. Петренко · дерматолог)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+
+      <!-- Рекомендації -->
+      <textarea id="health-card-recommendations" rows="2" placeholder="Рекомендації лікаря (дієта, режим, що робити/не робити)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;resize:none;min-height:60px;box-sizing:border-box;background:rgba(255,255,255,0.7)"></textarea>
+
+      <!-- Висновок -->
+      <textarea id="health-card-conclusion" rows="2" placeholder="Висновок лікаря"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;resize:none;min-height:60px;box-sizing:border-box;background:rgba(255,255,255,0.7)"></textarea>
+
+      <!-- Дати -->
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Початок</div>
+          <input id="health-card-start-date" type="date"
+            style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Наст. прийом</div>
+          <input id="health-card-appt-date" type="date"
+            style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7);margin-bottom:6px">
+          <input id="health-card-appt-time" type="time"
+            style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+        </div>
+      </div>
+
+      <!-- Препарати -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Препарати</div>
+        <button onclick="addHealthMedicationRow()" style="font-size:11px;font-weight:800;padding:4px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:#1a5c2a;cursor:pointer">+ Додати</button>
+      </div>
+      <div id="health-card-meds-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px"></div>
+
+      <!-- Статус -->
+      <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Статус</div>
+      <div style="display:flex;gap:6px;margin-bottom:20px" id="health-card-status-row">
+        <button type="button" data-status="active" class="health-status-btn" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(30,16,64,0.12);background:white;font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Активне</button>
+        <button type="button" data-status="controlled" class="health-status-btn" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(30,16,64,0.12);background:white;font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Контроль</button>
+        <button type="button" data-status="done" class="health-status-btn" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(30,16,64,0.12);background:white;font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Завершено</button>
+      </div>
+
+      <!-- Кнопки -->
+      <div style="display:flex;gap:10px">
+        <button onclick="closeHealthCardModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+        <button onclick="saveHealthCardFromModal()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- CLARIFY MODAL — вікно уточнення від Агента -->

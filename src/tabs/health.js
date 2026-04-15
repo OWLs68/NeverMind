@@ -4,7 +4,7 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
-import { showToast } from '../core/nav.js';
+import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { processUniversalAction } from './habits.js';
@@ -114,22 +114,18 @@ export function renderHealth() {
   renderHealthList();
 }
 
+// B-28 fix (15.04 6v2eR): renderHealthList тепер сам генерує ВЕСЬ контент #health-scroll
+// з нуля. Раніше покладався на статичний DOM у index.html — коли renderHealthWorkspace
+// перезаписував innerHTML, статичні елементи (#health-allergies-card, #health-cards-list)
+// зникали, і renderHealthList мовчки виходив через `if (!listEl) return`.
+// B-31 (15.04 6v2eR): legacy блоки "Самопочуття тижня" + "Відмітити сьогодні" прибрано
+// (не вписуються у нову концепцію — OWL класифікує текст у тренд замість шкал 1-10).
 function renderHealthList() {
-  _renderAllergiesCard();
-  _renderHealthWeekBars();
-  _renderHealthTodayScales();
+  const scrollEl = document.getElementById('health-scroll');
+  if (!scrollEl) return;
 
   const cards = getHealthCards();
-  const listEl = document.getElementById('health-cards-list');
-  const emptyEl = document.getElementById('health-empty');
-  if (!listEl) return;
-
-  if (cards.length === 0) {
-    listEl.innerHTML = '';
-    if (emptyEl) emptyEl.style.display = 'block';
-    return;
-  }
-  if (emptyEl) emptyEl.style.display = 'none';
+  const allergiesHtml = _buildAllergiesCardHtml();
 
   const statusColors = {
     active: { bg: 'rgba(234,88,12,0.1)', color: '#ea580c', label: 'Активне', bar: '#ea580c', opacity: 1 },
@@ -137,113 +133,47 @@ function renderHealthList() {
     done: { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', label: 'Завершено ✓', bar: '#16a34a', opacity: 0.5 },
   };
 
-  listEl.innerHTML = cards.map(card => {
-    const st = statusColors[card.status] || statusColors.active;
-    const pct = card.progress || 0;
-    const nextStep = card.nextStep || '';
-    const pills = (card.treatments || []).slice(0, 4);
-    const isDone = card.status === 'done';
-    return `<div onclick="openHealthCard(${card.id})" class="card-glass" style="cursor:pointer;opacity:${st.opacity}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
+  const cardsHtml = cards.length === 0
+    ? `<div style="text-align:center;padding:32px 0">
+        <div style="font-size:36px;margin-bottom:10px">🫀</div>
+        <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">Немає карток здоров'я</div>
+        <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">Додай першу — хворобу, стан або мету</div>
+        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Додати картку</button>
+      </div>`
+    : cards.map(card => {
+      const st = statusColors[card.status] || statusColors.active;
+      const pct = card.progress || 0;
+      const nextStep = card.nextStep || '';
+      const pills = (card.treatments || []).slice(0, 4);
+      const isDone = card.status === 'done';
+      return `<div onclick="openHealthCard(${card.id})" class="card-glass" style="cursor:pointer;opacity:${st.opacity}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
+          </div>
+          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.label}</div>
         </div>
-        <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.label}</div>
-      </div>
-      <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
-        <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      ${!isDone && nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:${pills.length ? 7 : 0}px">→ ${escapeHtml(nextStep)}</div>` : ''}
-      ${pills.length > 0 && !isDone ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${pills.map(p => `<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(30,16,64,0.07);color:rgba(30,16,64,0.5)">${escapeHtml(p)}</div>`).join('')}</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-// Трекер тижня — три шкали (Енергія/Сон/Біль)
-function _renderHealthWeekBars() {
-  const el = document.getElementById('health-week-bars');
-  if (!el) return;
-  const log = getHealthLog();
-  const now = new Date();
-  const todayDow = (now.getDay() + 6) % 7;
-  const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-  const maxH = 36;
-
-  el.innerHTML = days.map((d, i) => {
-    const daysAgo = todayDow - i;
-    const future = daysAgo < 0;
-    if (future) {
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
-        <div style="display:flex;gap:1px;align-items:flex-end;height:${maxH}px">
-          <div style="width:5px;height:3px;background:rgba(30,16,64,0.05);border-radius:2px 2px 0 0"></div>
-          <div style="width:5px;height:3px;background:rgba(30,16,64,0.05);border-radius:2px 2px 0 0"></div>
-          <div style="width:5px;height:3px;background:rgba(30,16,64,0.04);border-radius:2px 2px 0 0"></div>
+        <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
+          <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
         </div>
-        <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.25)">${d}</div>
+        ${!isDone && nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:${pills.length ? 7 : 0}px">→ ${escapeHtml(nextStep)}</div>` : ''}
+        ${pills.length > 0 && !isDone ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${pills.map(p => `<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(30,16,64,0.07);color:rgba(30,16,64,0.5)">${escapeHtml(p)}</div>`).join('')}</div>` : ''}
       </div>`;
-    }
-    const date = new Date(now); date.setDate(now.getDate() - daysAgo);
-    const ds = date.toDateString();
-    const entry = log[ds] || {};
-    const energy = entry.energy || 0;
-    const sleep = entry.sleep || 0;
-    const pain = entry.pain || 0;
-    const eH = energy > 0 ? Math.max(3, Math.round(energy / 10 * maxH)) : 3;
-    const sH = sleep > 0 ? Math.max(3, Math.round(sleep / 10 * maxH)) : 3;
-    const pHraw = pain > 0 ? Math.max(3, Math.round(pain / 10 * maxH)) : 3;
-    const eColor = energy > 0 ? (energy >= 7 ? '#16a34a' : energy >= 4 ? '#d97706' : '#ef4444') : 'rgba(30,16,64,0.07)';
-    const sColor = sleep > 0 ? '#6366f1' : 'rgba(30,16,64,0.07)';
-    const pColor = pain > 0 ? (pain <= 3 ? 'rgba(239,68,68,0.3)' : pain <= 6 ? '#f97316' : '#ef4444') : 'rgba(30,16,64,0.05)';
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
-      <div style="display:flex;gap:1px;align-items:flex-end;height:${maxH}px">
-        <div style="width:5px;height:${eH}px;background:${eColor};border-radius:2px 2px 0 0"></div>
-        <div style="width:5px;height:${sH}px;background:${sColor};border-radius:2px 2px 0 0"></div>
-        <div style="width:5px;height:${pHraw}px;background:${pColor};border-radius:2px 2px 0 0"></div>
-      </div>
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35)">${d}</div>
-    </div>`;
-  }).join('');
-}
-
-// Шкали сьогодні — тап щоб виставити значення
-function _renderHealthTodayScales() {
-  const el = document.getElementById('health-today-scales');
-  if (!el) return;
-  const log = getHealthLog();
-  const today = new Date().toDateString();
-  const entry = log[today] || {};
-
-  const scales = [
-    { key: 'energy', label: 'Енергія', color: '#16a34a' },
-    { key: 'sleep', label: 'Сон', color: '#6366f1' },
-    { key: 'pain', label: 'Біль', color: '#ef4444' },
-  ];
-
-  el.innerHTML = scales.map(s => {
-    const val = entry[s.key] || 0;
-    const dots = Array.from({length: 10}, (_, i) => {
-      const filled = i < val;
-      return `<div onclick="setHealthScale('${s.key}',${i+1})" style="width:11px;height:11px;border-radius:3px;background:${filled ? s.color : 'rgba(30,16,64,0.08)'};cursor:pointer;transition:background 0.15s"></div>`;
     }).join('');
-    return `<div style="text-align:center">
-      <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:5px">${s.label}</div>
-      <div style="display:flex;gap:1px;flex-wrap:wrap;justify-content:center">${dots}</div>
-      <div style="font-size:9px;color:rgba(30,16,64,0.35);font-weight:600;margin-top:3px">${val > 0 ? val + '/10' : '—'}</div>
-    </div>`;
-  }).join('');
+
+  const disclaimerHtml = `<div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:12px;padding:8px 12px;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">NeverMind не є медичним сервісом. OWL не ставить діагнози. Завжди консультуйся з лікарем.</div>
+  </div>`;
+
+  scrollEl.innerHTML = allergiesHtml + disclaimerHtml + cardsHtml;
 }
 
-function setHealthScale(key, val) {
-  const log = getHealthLog();
-  const today = new Date().toDateString();
-  if (!log[today]) log[today] = {};
-  // Тап на вже виставлене значення — скидає до 0
-  log[today][key] = log[today][key] === val ? 0 : val;
-  saveHealthLog(log);
-  _renderHealthTodayScales();
-  _renderHealthWeekBars();
-}
+// B-31 (15.04 6v2eR): функції _renderHealthWeekBars / _renderHealthTodayScales / setHealthScale
+// видалені. Legacy шкали 1-10 (Енергія/Сон/Біль) не вписуються у нову концепцію —
+// OWL класифікує текст користувача у тренд (покращення/стабільно/погіршення).
+// Дані nm_health_log лишаються у localStorage як fallback до Фази 4 (класифікація OWL).
 
 // === ВІДКРИТИ КАРТКУ (воркспейс) ===
 function openHealthCard(id) {
@@ -256,14 +186,17 @@ function closeHealthCard() {
   renderHealthList();
 }
 
+// B-29 fix: перемкнути вкладку + відкрити папку (аналог як у Проектах).
+// openNotesFolder сам по собі тільки рендерить, але не перемикає tab.
+function openHealthNotesFolder(folderName) {
+  switchTab('notes');
+  setTimeout(() => openNotesFolder(folderName), 150);
+}
+
 function renderHealthWorkspace(id) {
   const cards = getHealthCards();
   const card = cards.find(c => c.id === id);
   if (!card) { closeHealthCard(); return; }
-
-  const log = getHealthLog();
-  const today = new Date().toDateString();
-  const entry = log[today] || {};
 
   const statusColors = {
     active: { bg: 'rgba(234,88,12,0.1)', color: '#ea580c', label: 'Активне', bar: '#ea580c' },
@@ -291,12 +224,15 @@ function renderHealthWorkspace(id) {
 
     <!-- Прогрес + статус -->
     <div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div style="flex:1">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px">
+        <div style="flex:1;min-width:0">
           <div style="font-size:18px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
         </div>
-        <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1;margin-left:8px">${pct}%</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <button onclick="openEditHealthCard(${id})" title="Редагувати" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">Ред.</button>
+          <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
+        </div>
       </div>
       <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:6px">
         <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:4px;transition:width 0.5s"></div>
@@ -309,20 +245,8 @@ function renderHealthWorkspace(id) {
       </div>
     </div>
 
-    <!-- Динаміка самопочуття сьогодні -->
-    <div class="card-glass">
-      <div class="section-label">Самопочуття сьогодні</div>
-      <div style="display:flex;gap:8px">
-        ${[
-          {k:'energy', l:'Енергія', c:'#16a34a'},
-          {k:'sleep', l:'Сон', c:'#6366f1'},
-          {k:'pain', l:'Біль', c:'#ef4444'}
-        ].map(s => `<div style="flex:1;text-align:center;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 4px">
-          <div style="font-size:22px;font-weight:900;color:${s.c};line-height:1">${entry[s.k] || '—'}</div>
-          <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:3px">${s.l}</div>
-        </div>`).join('')}
-      </div>
-    </div>
+    <!-- B-31 (15.04 6v2eR): блок "Самопочуття сьогодні" (шкали 1-10) прибрано.
+         Замінить у Фазі 4 — OWL класифікує текст у тренд покращення/стабільно/погіршення. -->
 
     <!-- Препарати (Фаза 1: нова структура — dosage, schedule[], log[]) -->
     ${meds.length > 0 ? `<div class="card-glass">
@@ -372,8 +296,8 @@ function renderHealthWorkspace(id) {
       <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(owlAnalysis)}</div>
     </div>` : ''}
 
-    <!-- Нотатки → папка -->
-    <div onclick="openNotesFolder('${escapeHtml(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <!-- Нотатки → папка (B-29 fix: switchTab + delayed openNotesFolder) -->
+    <div onclick="openHealthNotesFolder('${escapeHtml(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -406,34 +330,218 @@ function setHealthCardStatus(id, status) {
 // === ДОДАТИ НОВУ КАРТКУ ===
 // Створює картку у НОВІЙ структурі (Фаза 1, 15.04 jMR6m).
 // Нормальний флоу створення через Inbox + чат-бари + tool calling — Фаза 2.
+// B-30 (15.04 6v2eR): prompt() замінено на стилізовану модалку #health-card-modal.
+// B-27 (15.04 6v2eR): та сама модалка використовується для редагування існуючих карток
+// (UI доступу до нових полів Фази 1 — лікар, рекомендації, висновок, препарати, дати).
+// Режими: 'create' (новий стан) / 'edit' (редагування). Id активної картки у _editingHealthCardId.
+let _editingHealthCardId = null;
+
 function openAddHealthCard() {
-  const name = prompt('Назва (хвороба, стан або мета):');
-  if (!name || !name.trim()) return;
-  const subtitle = prompt('Підзаголовок (необов\'язково):') || '';
+  _editingHealthCardId = null;
+  _fillHealthCardModal(null);
+  _showHealthCardModal('Новий стан', false);
+}
+
+function openEditHealthCard(id) {
+  const card = getHealthCards().find(c => c.id === id);
+  if (!card) return;
+  _editingHealthCardId = id;
+  _fillHealthCardModal(card);
+  _showHealthCardModal('Редагувати стан', true);
+}
+
+function _showHealthCardModal(title, showDelete) {
+  const modal = document.getElementById('health-card-modal');
+  if (!modal) return;
+  const titleEl = document.getElementById('health-card-modal-title');
+  const delBtn = document.getElementById('health-card-delete-btn');
+  if (titleEl) titleEl.textContent = title;
+  if (delBtn) delBtn.style.display = showDelete ? 'block' : 'none';
+  modal.style.display = 'flex';
+  // iOS fix — фокус на перше поле з затримкою
+  setTimeout(() => {
+    const nameEl = document.getElementById('health-card-name');
+    if (nameEl && !showDelete) nameEl.focus();
+  }, 100);
+}
+
+function closeHealthCardModal() {
+  const modal = document.getElementById('health-card-modal');
+  if (modal) modal.style.display = 'none';
+  _editingHealthCardId = null;
+}
+
+// Заповнити поля модалки. Якщо card=null — порожня форма (режим create).
+function _fillHealthCardModal(card) {
+  const c = card || {};
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setVal('health-card-name', c.name);
+  setVal('health-card-subtitle', c.subtitle);
+  setVal('health-card-doctor', c.doctor);
+  setVal('health-card-recommendations', c.doctorRecommendations);
+  setVal('health-card-conclusion', c.doctorConclusion);
+  setVal('health-card-start-date', c.startDate);
+  setVal('health-card-appt-date', c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : '');
+  setVal('health-card-appt-time', c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : '');
+
+  // Статус
+  const status = c.status || 'active';
+  document.querySelectorAll('.health-status-btn').forEach(btn => {
+    const isActive = btn.dataset.status === status;
+    btn.dataset.active = isActive ? '1' : '0';
+    btn.style.background = isActive ? '#1a5c2a' : 'white';
+    btn.style.color = isActive ? 'white' : 'rgba(30,16,64,0.5)';
+    btn.style.borderColor = isActive ? '#1a5c2a' : 'rgba(30,16,64,0.12)';
+    btn.onclick = () => _setHealthCardModalStatus(btn.dataset.status);
+  });
+
+  // Препарати
+  const medsList = document.getElementById('health-card-meds-list');
+  if (medsList) {
+    medsList.innerHTML = '';
+    const meds = c.medications || [];
+    meds.forEach(m => _appendMedicationRow(m));
+  }
+}
+
+function _setHealthCardModalStatus(status) {
+  document.querySelectorAll('.health-status-btn').forEach(btn => {
+    const isActive = btn.dataset.status === status;
+    btn.dataset.active = isActive ? '1' : '0';
+    btn.style.background = isActive ? '#1a5c2a' : 'white';
+    btn.style.color = isActive ? 'white' : 'rgba(30,16,64,0.5)';
+    btn.style.borderColor = isActive ? '#1a5c2a' : 'rgba(30,16,64,0.12)';
+  });
+}
+
+function _getHealthCardModalStatus() {
+  for (const btn of document.querySelectorAll('.health-status-btn')) {
+    if (btn.dataset.active === '1') return btn.dataset.status;
+  }
+  return 'active';
+}
+
+function addHealthMedicationRow() {
+  _appendMedicationRow({ name: '', dosage: '', schedule: [], courseDuration: '' });
+}
+
+function _appendMedicationRow(m) {
+  const list = document.getElementById('health-card-meds-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'health-med-row';
+  row.style.cssText = 'display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,0.55);border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;padding:10px';
+  const schedStr = Array.isArray(m.schedule) ? m.schedule.join(', ') : (m.schedule || '');
+  row.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="text" class="med-name" placeholder="Назва (Омез)" value="${escapeHtml(m.name || '')}"
+        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+      <button type="button" onclick="this.closest('.health-med-row').remove()" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">×</button>
+    </div>
+    <div style="display:flex;gap:6px">
+      <input type="text" class="med-dosage" placeholder="Дозування (20мг)" value="${escapeHtml(m.dosage || '')}"
+        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+      <input type="text" class="med-course" placeholder="Курс (14 днів)" value="${escapeHtml(m.courseDuration || '')}"
+        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+    </div>
+    <input type="text" class="med-schedule" placeholder="Графік (08:00, 20:00)" value="${escapeHtml(schedStr)}"
+      style="width:100%;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
+  `;
+  list.appendChild(row);
+}
+
+function saveHealthCardFromModal() {
+  const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const name = getVal('health-card-name');
+  if (!name) { showToast('Потрібна назва'); return; }
+
+  const subtitle = getVal('health-card-subtitle');
+  const doctor = getVal('health-card-doctor');
+  const doctorRecommendations = getVal('health-card-recommendations');
+  const doctorConclusion = getVal('health-card-conclusion');
+  const startDate = getVal('health-card-start-date');
+  const apptDate = getVal('health-card-appt-date');
+  const apptTime = getVal('health-card-appt-time');
+  const nextAppointment = apptDate ? { date: apptDate, time: apptTime } : null;
+  const status = _getHealthCardModalStatus();
+
+  // Препарати
+  const meds = [];
+  document.querySelectorAll('.health-med-row').forEach(row => {
+    const mName = row.querySelector('.med-name')?.value.trim() || '';
+    if (!mName) return;
+    const dosage = row.querySelector('.med-dosage')?.value.trim() || '';
+    const courseDuration = row.querySelector('.med-course')?.value.trim() || '';
+    const schedStr = row.querySelector('.med-schedule')?.value.trim() || '';
+    const schedule = schedStr ? schedStr.split(/[,;]\s*/).filter(Boolean) : [];
+    meds.push({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      name: mName,
+      dosage,
+      schedule,
+      courseDuration,
+      log: [],
+      createTasks: false,
+    });
+  });
+
   const cards = getHealthCards();
-  const newCard = {
-    id: Date.now(),
-    name: name.trim(),
-    subtitle: subtitle.trim(),
-    status: 'active',
-    progress: 0,
-    nextStep: '',
-    treatments: [],
-    medications: [],
-    analyses: [],
-    owlAnalysis: '',
-    // Нові поля Фази 1
-    doctor: '',
-    doctorRecommendations: '',
-    doctorConclusion: '',
-    startDate: '',
-    nextAppointment: null,
-    history: [],
-    createdAt: Date.now(),
-  };
-  cards.unshift(newCard);
-  saveHealthCards(cards);
-  showToast('✓ Картку додано');
+  if (_editingHealthCardId) {
+    // Edit режим
+    const idx = cards.findIndex(c => c.id === _editingHealthCardId);
+    if (idx !== -1) {
+      // Зберегти старі log[] для медикаментів з тим же ім'ям
+      const oldMeds = cards[idx].medications || [];
+      meds.forEach(newMed => {
+        const old = oldMeds.find(o => o.name === newMed.name);
+        if (old && Array.isArray(old.log)) newMed.log = old.log;
+      });
+      cards[idx] = {
+        ...cards[idx],
+        name, subtitle, doctor, doctorRecommendations, doctorConclusion,
+        startDate, nextAppointment, status, medications: meds,
+      };
+      saveHealthCards(cards);
+      showToast('✓ Збережено');
+    }
+  } else {
+    // Create режим
+    const newCard = {
+      id: Date.now(),
+      name, subtitle,
+      status,
+      progress: 0,
+      nextStep: '',
+      treatments: [],
+      medications: meds,
+      analyses: [],
+      owlAnalysis: '',
+      doctor, doctorRecommendations, doctorConclusion,
+      startDate, nextAppointment,
+      history: [],
+      createdAt: Date.now(),
+    };
+    cards.unshift(newCard);
+    saveHealthCards(cards);
+    showToast('✓ Картку додано');
+  }
+
+  closeHealthCardModal();
+  renderHealth();
+}
+
+function deleteHealthCardFromModal() {
+  if (!_editingHealthCardId) return;
+  if (!confirm('Видалити картку назавжди?')) return;
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === _editingHealthCardId);
+  if (idx !== -1) {
+    cards.splice(idx, 1);
+    saveHealthCards(cards);
+    showToast('Картку видалено');
+  }
+  closeHealthCardModal();
+  activeHealthCardId = null;
   renderHealth();
 }
 
@@ -459,27 +567,26 @@ function deleteAllergyById(id) {
   }
 }
 
-// Рендер картки алергій — фіксована зверху вкладки Здоров'я (коралова)
-function _renderAllergiesCard() {
-  const el = document.getElementById('health-allergies-card');
-  if (!el) return;
+// Білдер HTML картки алергій — повертає рядок (вставляється з renderHealthList).
+// Раніше писав напряму в #health-allergies-card, але після видалення статичного DOM
+// в index.html (B-28 fix) — все рендериться через innerHTML #health-scroll.
+function _buildAllergiesCardHtml() {
   const allergies = getAllergies();
   const coralBg = 'rgba(255,120,117,0.08)';
   const coralBorder = 'rgba(255,120,117,0.28)';
   const coralText = '#d9534f';
 
   if (allergies.length === 0) {
-    el.innerHTML = `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+    return `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
       <div style="flex:1;min-width:0">
         <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Алергії</div>
         <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">Немає записаних. OWL не знає про що попереджати.</div>
       </div>
       <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">+ Додати</button>
     </div>`;
-    return;
   }
 
-  el.innerHTML = `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
+  return `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
       <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">🚨 Алергії (${allergies.length})</div>
       <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">+ Додати</button>
@@ -644,6 +751,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
       const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
 
       if (parsed.action === 'log_health') {
+        // B-31 (15.04 6v2eR): legacy action — шкали 1-10 прибрано з UI.
+        // Запис даних лишаємо (fallback для старих AI відповідей), але без рендеру.
+        // Буде повністю замінено у Фазі 4 — класифікація тексту у тренд.
         const log = getHealthLog();
         const today = new Date().toDateString();
         if (!log[today]) log[today] = {};
@@ -651,9 +761,7 @@ ${aiContext ? '\n\n' + aiContext : ''}
         if (parsed.sleep) log[today].sleep = parseInt(parsed.sleep);
         if (parsed.pain !== undefined) log[today].pain = parseInt(parsed.pain);
         saveHealthLog(log);
-        _renderHealthTodayScales();
-        _renderHealthWeekBars();
-        addHealthChatMsg('agent', `✓ Записав: Енергія ${log[today].energy || '—'}/10, Сон ${log[today].sleep || '—'}/10, Біль ${log[today].pain || '—'}/10`);
+        addHealthChatMsg('agent', `✓ Записав самопочуття.`);
       } else if (parsed.action === 'update_health_progress' && parsed.card_id) {
         const cards = getHealthCards();
         const idx = cards.findIndex(c => c.id === parsed.card_id);
@@ -688,6 +796,10 @@ ${aiContext ? '\n\n' + aiContext : ''}
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddHealthCard, sendHealthBarMessage,
-  openHealthCard, closeHealthCard, setHealthScale, setHealthCardStatus,
+  openHealthCard, closeHealthCard, setHealthCardStatus,
   openAddAllergy, deleteAllergyById,
+  openHealthNotesFolder,
+  // B-27 + B-30 (15.04 6v2eR): модалка створення/редагування
+  openEditHealthCard, closeHealthCardModal, saveHealthCardFromModal,
+  deleteHealthCardFromModal, addHealthMedicationRow,
 });
