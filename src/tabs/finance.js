@@ -294,7 +294,10 @@ export function renderFinance() {
 }
 
 // Сітка категорій з кругом-Hero посередині.
-// Layout: 4 колонки × N рядів, центральні 2 колонки × 2 ряди займає круг (absolute).
+// Layout: 4 колонки × 4 ряди. Круг = grid-item що займає колонки 2-3 і ряди 2-3 (центр).
+// Інші категорії автоматично обтікають круг (grid auto-flow).
+// Помістяться 8 категорій навколо круга (4 у ряді 1 + 1+1 у рядах 2-3 + 4 у ряді 4 = 12)
+// Зачекайте: 4 + 2 + 2 + 4 = 12. Правильно. Додаткові — у overflow-ряди знизу.
 function _finCatsGrid(allTxs) {
   const cats = getFinCats();
   const isExpense = currentFinTab === 'expense';
@@ -306,34 +309,20 @@ function _finCatsGrid(allTxs) {
   const catMap = {};
   txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
 
-  // Сортуємо: спочатку категорії з порядком (з .order), потім решта
+  // Сортуємо: за полем .order (з міграції)
   const sorted = [...catList].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Розміщення сітки: круг займає позиції 5,6,9,10 (індекси в сітці 4×N — центральні 2 колонки 2-го і 3-го рядів)
-  // Щоб лишити простір для круга, додаємо placeholder-комірки на цих позиціях.
-  // 12 базових слотів: 4 у 1-му ряді + 2 (по краях) у 2-му + 2 у 3-му + 4 у 4-му = 12.
-  // Центр (8 слотів = 2×4) займає круг через `grid-area`.
-  const slots = [];
-  let catIdx = 0;
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 4; col++) {
-      const isCircleArea = (row === 1 || row === 2) && (col === 1 || col === 2);
-      if (isCircleArea) continue; // ці комірки займає круг
-      const cat = sorted[catIdx++];
-      slots.push(cat || null); // null = пуста комірка (підтримуємо сітку якщо мало категорій)
-    }
-  }
-
-  // Якщо категорій більше 12 — додаємо ряди знизу (4 на ряд)
-  const overflow = sorted.slice(catIdx);
+  // Перші 12 категорій ідуть у grid-сітку 4×4 з кругом 2×2 у центрі.
+  // Решта — у overflow-ряд знизу.
+  const inGrid = sorted.slice(0, 12);
+  const overflow = sorted.slice(12);
 
   const renderCell = (cat) => {
-    if (!cat) return '<div></div>'; // пустий слот
     const sum = catMap[cat.name] || 0;
     const sumStr = sum > 0 ? formatMoney(sum) : '0 ' + getCurrency();
     const sumCol = sum > 0 ? cat.color : 'rgba(30,16,64,0.25)';
-    return `<div onclick="openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0">
-      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
+    return `<div onclick="openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
@@ -341,29 +330,27 @@ function _finCatsGrid(allTxs) {
     </div>`;
   };
 
-  const mainGridCells = slots.map(renderCell).join('');
-  const overflowGridCells = overflow.map(renderCell).join('');
+  const gridCells = inGrid.map(renderCell).join('');
+  const overflowCells = overflow.map(renderCell).join('');
 
-  // Центральний круг (Hero мінімум: тільки тип + сума)
+  // Центральний круг-Hero (grid-item, займає колонки 2-3 і ряди 2-3)
   const periodLbl = { week: 'тиждень', month: 'місяць', '3months': '3 місяці' }[currentFinPeriod] || 'період';
   const heroLabel = isExpense ? 'Витрати' : 'Доходи';
   const heroCol = isExpense ? '#c2410c' : '#16a34a';
+  const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
+    <div style="font-size:24px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
+    <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">за ${periodLbl}</div>
+  </div>`;
 
-  return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="position:relative;padding:18px 14px;margin-bottom:12px">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,auto);gap:10px;position:relative">
-      ${mainGridCells}
-      <!-- Круг-Hero у центрі (займає 2×2 центральних слотів) -->
-      <div onclick="toggleFinTabType()" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none">
-        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
-        <div style="font-size:26px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
-        <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">за ${periodLbl}</div>
-        <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.3);margin-top:6px;display:flex;align-items:center;gap:3px">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="17 1 21 5 17 9"/><polyline points="7 23 3 19 7 15"/><line x1="21" y1="5" x2="9" y2="5"/><line x1="3" y1="19" x2="15" y2="19"/></svg>
-          тап = перемикач
-        </div>
-      </div>
+  // Круг ПЕРШИМ у DOM щоб grid знав про зайняті 2×2 і обтікав ним.
+  // grid-auto-flow:dense додатково дозволяє заповнити дірки якщо є.
+  return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:18px 14px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:10px;grid-auto-flow:row dense">
+      ${heroCircle}
+      ${gridCells}
     </div>
-    ${overflow.length > 0 ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">${overflowGridCells}</div>` : ''}
+    ${overflow.length > 0 ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">${overflowCells}</div>` : ''}
   </div>`;
 }
 
