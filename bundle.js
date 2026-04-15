@@ -583,65 +583,6 @@ ${folderList.join(", ")}
       showToast(`\u2713 \u041F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043E \u0432 "${newFolder.trim()}"`);
     }
   }
-  async function checkAndSuggestFolders() {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return;
-    const lastTs = localStorage.getItem("nm_notes_folders_ts");
-    if (lastTs) {
-      const last = new Date(parseInt(lastTs));
-      if (last.toDateString() === (/* @__PURE__ */ new Date()).toDateString()) return;
-    }
-    const notes = getNotes();
-    if (notes.length < 5) return;
-    await suggestNoteFolders();
-  }
-  async function suggestNoteFolders() {
-    const notes = getNotes();
-    if (notes.length === 0) return;
-    const sample = notes.slice(0, 40).map((n) => `"${n.text.substring(0, 60)}"`).join("\n");
-    const systemPrompt = `\u0422\u0438 \u2014 \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0442\u043E\u0440 \u043D\u043E\u0442\u0430\u0442\u043E\u043A. \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0437\u0430\u043F\u0438\u0441\u0438 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u043E\u043F\u0442\u0438\u043C\u0430\u043B\u044C\u043D\u0443 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0443 \u043F\u0430\u043F\u043E\u043A (3-6 \u043F\u0430\u043F\u043E\u043A). \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON \u043C\u0430\u0441\u0438\u0432\u043E\u043C: [{"folder":"\u041D\u0430\u0437\u0432\u0430","description":"\u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0449\u043E \u0441\u044E\u0434\u0438 \u0432\u0445\u043E\u0434\u0438\u0442\u044C"}]. \u0411\u0435\u0437 markdown, \u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443 \u043F\u043E\u0437\u0430 JSON. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 "\u0427\u0435\u0440\u043D\u0435\u0442\u043A\u0438".`;
-    const reply = await callAI(systemPrompt, `\u041D\u043E\u0442\u0430\u0442\u043A\u0438:
-${sample}`, {});
-    if (!reply) return;
-    try {
-      const clean = reply.replace(/```json|```/g, "").trim();
-      const folders = JSON.parse(clean);
-      pendingFolderSuggestion = folders;
-      localStorage.setItem("nm_notes_folders_ts", Date.now().toString());
-      const banner = document.getElementById("notes-ai-banner");
-      const textEl = document.getElementById("notes-ai-text");
-      if (banner && textEl) {
-        const names = folders.map((f) => `\u{1F4C1} ${f.folder} \u2014 ${f.description}`).join("\n");
-        textEl.textContent = `\u041F\u0440\u043E\u043F\u043E\u043D\u0443\u044E \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0443:
-${names}`;
-        banner.style.display = "block";
-      }
-    } catch {
-    }
-  }
-  function applyFolderSuggestion() {
-    if (!pendingFolderSuggestion) return;
-    const notes = getNotes();
-    let changed = 0;
-    notes.forEach((n) => {
-      if (!n.folder || n.folder === "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") {
-        for (const f of pendingFolderSuggestion) {
-          const keywords = f.description.toLowerCase().split(/[\s,]+/);
-          const noteText = n.text.toLowerCase();
-          if (keywords.some((kw) => kw.length > 3 && noteText.includes(kw))) {
-            n.folder = f.folder;
-            changed++;
-            break;
-          }
-        }
-      }
-    });
-    saveNotes(notes);
-    renderNotes();
-    updateFolderSuggestions();
-    document.getElementById("notes-ai-banner").style.display = "none";
-    showToast(changed > 0 ? `\u2713 \u0420\u043E\u0437\u043A\u043B\u0430\u0434\u0435\u043D\u043E ${changed} \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445` : "\u2713 \u041F\u0430\u043F\u043A\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u044F\u043A \u043E\u0440\u0456\u0454\u043D\u0442\u0438\u0440");
-  }
   function getFolderColor(folder) {
     if (!folder) return DEFAULT_NOTE_FOLDER;
     if (FOLDER_COLORS[folder]) return FOLDER_COLORS[folder];
@@ -1208,7 +1149,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
     notesBarLoading = false;
   }
-  var editingNoteId, pendingFolderSuggestion, currentNotesFolder, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_COLORS, DEFAULT_NOTE_FOLDER, noteSwipeState, activeNoteMenuId, activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote, folderSwipeState, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
+  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_COLORS, DEFAULT_NOTE_FOLDER, noteSwipeState, activeNoteMenuId, activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote, folderSwipeState, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
   var init_notes = __esm({
     "src/tabs/notes.js"() {
       init_nav();
@@ -1218,7 +1159,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       init_swipe_delete();
       init_habits();
       editingNoteId = null;
-      pendingFolderSuggestion = null;
       currentNotesFolder = null;
       ICON_SVG = {
         folder: _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
@@ -1331,7 +1271,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         noteMenuMove,
         saveFolderEdit,
         closeFolderEditModal,
-        applyFolderSuggestion,
         sendNoteChatMessage,
         sendNotesBarMessage,
         openNotesFolder,
@@ -13095,8 +13034,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           "nm_active_tabs",
           "nm_onboarding_done",
           "nm_evening_mood",
-          "nm_evening_summary",
-          "nm_notes_folders_ts"
+          "nm_evening_summary"
         ],
         // Чат-историки (→ Supabase chat_messages)
         chat: [
@@ -13178,7 +13116,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (tab === "notes") {
       setCurrentNotesFolder(null);
       renderNotes();
-      checkAndSuggestFolders();
     }
     if (tab === "me") {
       renderMe();
