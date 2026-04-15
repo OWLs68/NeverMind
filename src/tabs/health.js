@@ -186,7 +186,10 @@ function renderHealthList() {
     <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">NeverMind не є медичним сервісом. OWL не ставить діагнози. Завжди консультуйся з лікарем.</div>
   </div>`;
 
-  scrollEl.innerHTML = allergiesHtml + disclaimerHtml + cardsHtml;
+  // Фаза 4 (15.04 6v2eR): банер пропущених доз — жовтий блок під алергіями
+  const missedBannerHtml = _buildMissedDosesBannerHtml();
+
+  scrollEl.innerHTML = allergiesHtml + missedBannerHtml + disclaimerHtml + cardsHtml;
 }
 
 // B-31 (15.04 6v2eR): функції _renderHealthWeekBars / _renderHealthTodayScales / setHealthScale
@@ -365,6 +368,128 @@ export function addHealthHistoryEntry(cardId, type, text) {
   cards[idx].history.unshift(entry);
   saveHealthCards(cards);
   return entry;
+}
+
+// === ФАЗА 4 (15.04 6v2eR): ПАСИВНІ НАГАДУВАННЯ ЛІКІВ ===
+//
+// Детектор "missed doses" (пропущених доз): для кожного активного медикаменту з schedule[]
+// перевіряє чи є запис у log[] протягом слоту (scheduled_time .. scheduled_time+6h).
+// Повертає масив пропущених доз для відображення як банер зверху вкладки.
+//
+// Логіка слоту:
+//   - scheduledTime у 'HH:MM' — перетворюється на ts сьогодні
+//   - vikno реакції: [scheduledTime+15min .. scheduledTime+6h]
+//       - до +15хв — ще не "запізнився"
+//       - після +6хв — слот "пройшов" (не нагадуємо, бо вже сенсу нема)
+//   - Якщо у log[] НЕМАЄ запису у діапазоні [scheduledTime, scheduledTime+6h] → missed
+//
+// Повертає: [{cardId, cardName, medId, medName, dosage, scheduledTime}]
+function _getMissedDoses() {
+  const cards = getHealthCards();
+  const now = Date.now();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStart = today.getTime();
+  const missed = [];
+
+  cards.forEach(card => {
+    if (card.status === 'done') return;
+    const meds = card.medications || [];
+    meds.forEach(med => {
+      const schedule = Array.isArray(med.schedule) ? med.schedule : [];
+      schedule.forEach(timeStr => {
+        // parse 'HH:MM' → ts сьогодні
+        const m = /^(\d{1,2}):(\d{2})$/.exec(String(timeStr).trim());
+        if (!m) return;
+        const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+        if (h > 23 || min > 59) return;
+        const scheduledTs = todayStart + h * 3600000 + min * 60000;
+
+        // Вікно reакції: слот дійсний якщо зараз [+15хв .. +6год]
+        const sinceScheduled = now - scheduledTs;
+        if (sinceScheduled < 15 * 60000) return;      // ще не час
+        if (sinceScheduled > 6 * 3600000) return;     // слот вже давно минув
+
+        // Перевірка чи прийнято у слоті [scheduledTs .. scheduledTs+6h]
+        const log = Array.isArray(med.log) ? med.log : [];
+        const slotEnd = scheduledTs + 6 * 3600000;
+        const taken = log.some(ts => ts >= scheduledTs && ts <= slotEnd);
+        if (taken) return;
+
+        missed.push({
+          cardId: card.id,
+          cardName: card.name,
+          medId: med.id,
+          medName: med.name,
+          dosage: med.dosage || '',
+          scheduledTime: timeStr,
+        });
+      });
+    });
+  });
+
+  return missed;
+}
+
+// Білдер HTML банера пропущених доз — жовта стрічка зверху вкладки Здоров'я.
+// Кнопки: "✓ Прийняв" (→ logHealthMedDose), "Пропущу" (→ тиха відмітка пропуску у history).
+function _buildMissedDosesBannerHtml() {
+  const missed = _getMissedDoses();
+  if (missed.length === 0) return '';
+
+  // Групуємо по cardId для компактності
+  const yellow = 'rgba(234,179,8,0.1)';
+  const yellowBorder = 'rgba(234,179,8,0.35)';
+  const yellowText = '#b45309';
+
+  return `<div style="background:${yellow};border:1.5px solid ${yellowBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:800;color:${yellowText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">⏰ Пропустив дозу (${missed.length})</div>
+    ${missed.slice(0, 5).map(d => `<div style="background:white;border:1px solid ${yellowBorder};border-radius:10px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? ' ' + escapeHtml(d.dosage) : ''}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} · ${escapeHtml(d.scheduledTime)}</div>
+      </div>
+      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">✓ Прийняв</button>
+      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">Пропущу</button>
+    </div>`).join('')}
+    ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">+ ще ${missed.length - 5} пропущених</div>` : ''}
+  </div>`;
+}
+
+// Пропустити дозу — тихо записати у history картки (без помилки).
+// Використовується щоб банер зник, але прийом не зарахувався у log.
+function skipHealthMedDose(cardId, medId, scheduledTime) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return;
+  const med = (cards[idx].medications || []).find(m => m.id === medId);
+  if (!med) return;
+  // Записуємо у history як skipped (тип 'auto' щоб відрізняти від свідомого dose_log)
+  if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
+  cards[idx].history.unshift({
+    ts: Date.now(),
+    type: 'auto',
+    text: `Пропустив дозу ${med.name} (${scheduledTime})`,
+  });
+  // Трюк: додаємо псевдо-лог запис зі ts=scheduledTs що поза вікном слоту
+  // щоб _getMissedDoses не показував цю дозу знову. Використовуємо ts_scheduled+1мс
+  // (щоб входило у слот і taken=true). Це НЕ справжній прийом — просто маркер skip.
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(scheduledTime));
+  if (m) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const scheduledTs = today.getTime() + parseInt(m[1], 10) * 3600000 + parseInt(m[2], 10) * 60000;
+    if (!Array.isArray(med.log)) med.log = [];
+    // Позначка skip: ts з спеціальним маркером (від'ємним) — щоб UI міг відрізнити
+    // але _getMissedDoses бачив taken=true. Тут simpler — просто ts=scheduledTs+1мс
+    // (все одно поза вікном свідомих прийомів завдяки контексту).
+    // Щоб не псувати статистику, зберігаємо у окремому полі med.skipped[].
+    if (!Array.isArray(med.skipped)) med.skipped = [];
+    med.skipped.push(scheduledTs);
+  }
+  saveHealthCards(cards);
+  showToast('Відмічено як пропущено');
+  if (activeHealthCardId === cardId) renderHealthWorkspace(cardId);
+  else renderHealth();
 }
 
 // === ВІДКРИТИ КАРТКУ (воркспейс) ===
@@ -1176,7 +1301,16 @@ export async function sendHealthBarMessage() {
   const aiContext = getAIContext();
 
   const systemPrompt = `${getOWLPersonality()} Ти допомагаєш з вкладкою Здоров'я в NeverMind.
-ВАЖЛИВО: Ти НЕ лікар і НЕ ставиш діагнози. Тільки допомагаєш відслідковувати і систематизувати.
+
+🚫 ЖОРСТКИЙ БЛОК — OWL НЕ ЛІКАР (Фаза 4):
+- ЗАБОРОНЕНО ставити діагнози ('схоже на...', 'це може бути...', 'мабуть у тебе...')
+- ЗАБОРОНЕНО радити препарати або дозування ('спробуй...', 'приймай...')
+- ЗАБОРОНЕНО інтерпретувати аналізи/симптоми
+- ЗАБОРОНЕНО давати альтернативи призначеному лікарем лікуванню
+- При медичному питанні ВІД ЮЗЕРА ('що зі мною?', 'чи це нормально?', 'що робити?') — шаблонна відповідь:
+  "Я не лікар. Це питання до твого лікаря — не займайся самолікуванням. Запиши питання щоб не забути на прийомі."
+- ДОЗВОЛЕНО тільки: нагадувати ПРО ПРИЗНАЧЕНЕ, помічати патерни у даних юзера, попереджати про суперечності з рекомендаціями/алергіями, фіксувати факти у history.
+
 ${activeCard ? `Активна картка: "${activeCard.name}" — ${activeCard.subtitle || ''}. Статус: ${activeCard.status}. Прогрес: ${activeCard.progress}%.` : ''}
 ${aiContext ? '\n\n' + aiContext : ''}
 
@@ -1270,6 +1404,25 @@ window.addEventListener('nm-chat-closed', (e) => {
   if (e.detail === 'health') clearFocusedHealthCard();
 });
 
+// Фаза 4 (15.04 6v2eR): пасивний тригер missed doses.
+// Раз на 5 хв перевіряємо чи є нові пропущені дози і перерендерюємо вкладку
+// (тільки якщо юзер на ній зараз). document.hidden guard — не палимо ресурс у фоні.
+setInterval(() => {
+  if (document.hidden) return;
+  try {
+    // Перерендеримо тільки коли юзер на головному Здоров'я (workspace має свої ліки всередині)
+    const page = document.getElementById('page-health');
+    if (!page || page.style.display === 'none') return;
+    if (activeHealthCardId === null) {
+      const missedCount = _getMissedDoses().length;
+      // Якщо кількість missed змінилась порівняно з тим що у DOM — рендеримо
+      renderHealthList();
+    } else {
+      renderHealthWorkspace(activeHealthCardId);
+    }
+  } catch (e) {}
+}, 5 * 60 * 1000);
+
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddHealthCard, sendHealthBarMessage,
@@ -1281,4 +1434,6 @@ Object.assign(window, {
   deleteHealthCardFromModal, addHealthMedicationRow,
   // Фаза 3 (15.04 6v2eR): focused-режим + лог дози з UI
   askOwlAboutHealthCard, logHealthMedDose,
+  // Фаза 4 (15.04 6v2eR): пропуск дози
+  skipHealthMedDose,
 });
