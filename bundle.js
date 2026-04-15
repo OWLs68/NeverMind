@@ -3876,6 +3876,150 @@ ${aiContext}` : "");
   </div>`;
     scrollEl.innerHTML = allergiesHtml + disclaimerHtml + cardsHtml;
   }
+  function createHealthCardProgrammatic(opts) {
+    const { name, subtitle, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment, status, medications, initialHistoryEntry } = opts || {};
+    if (!name || !name.trim()) return null;
+    const cards = getHealthCards();
+    const newCard = {
+      id: Date.now() + Math.floor(Math.random() * 1e3),
+      name: name.trim(),
+      subtitle: (subtitle || "").trim(),
+      status: status || "active",
+      progress: 0,
+      nextStep: "",
+      treatments: [],
+      medications: Array.isArray(medications) ? medications.map((m) => ({
+        id: Date.now() + Math.floor(Math.random() * 1e4),
+        name: m.name || "",
+        dosage: m.dosage || "",
+        schedule: Array.isArray(m.schedule) ? m.schedule : m.schedule ? String(m.schedule).split(/[,;]\s*/).filter(Boolean) : [],
+        courseDuration: m.courseDuration || "",
+        log: [],
+        createTasks: !!m.createTasks
+      })) : [],
+      analyses: [],
+      owlAnalysis: "",
+      doctor: doctor || "",
+      doctorRecommendations: doctorRecommendations || "",
+      doctorConclusion: doctorConclusion || "",
+      startDate: startDate || "",
+      nextAppointment: null,
+      // встановиться через _syncCardAppointmentToEvent нижче
+      history: initialHistoryEntry ? [{ ts: Date.now(), type: "manual", text: String(initialHistoryEntry) }] : [],
+      createdAt: Date.now()
+    };
+    newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, newCard.name, nextAppointment, null);
+    cards.unshift(newCard);
+    saveHealthCards(cards);
+    return newCard;
+  }
+  function editHealthCardProgrammatic(cardId, updates) {
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1) return null;
+    const old = cards[idx];
+    const next = { ...old };
+    ["name", "subtitle", "doctor", "doctorRecommendations", "doctorConclusion", "startDate", "status", "progress", "nextStep"].forEach((k) => {
+      if (updates[k] !== void 0) next[k] = updates[k];
+    });
+    if (updates.nextAppointment !== void 0) {
+      const oldEventId = old.nextAppointment && old.nextAppointment.eventId;
+      next.nextAppointment = _syncCardAppointmentToEvent(cardId, next.name, updates.nextAppointment, oldEventId);
+    }
+    cards[idx] = next;
+    saveHealthCards(cards);
+    return next;
+  }
+  function deleteHealthCardProgrammatic(cardId) {
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1) return false;
+    const removed = cards[idx];
+    const eventId = removed.nextAppointment && removed.nextAppointment.eventId;
+    if (eventId) {
+      const events = getEvents();
+      const eIdx = events.findIndex((e) => e.id === eventId);
+      if (eIdx !== -1) {
+        const removedEvent = events.splice(eIdx, 1)[0];
+        saveEvents(events);
+        addToTrash("event", removedEvent);
+      }
+    }
+    cards.splice(idx, 1);
+    saveHealthCards(cards);
+    addToTrash("health_card", removed);
+    return true;
+  }
+  function addMedicationToCard(cardId, med) {
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1 || !med || !med.name) return null;
+    if (!Array.isArray(cards[idx].medications)) cards[idx].medications = [];
+    const newMed = {
+      id: Date.now() + Math.floor(Math.random() * 1e4),
+      name: String(med.name),
+      dosage: med.dosage || "",
+      schedule: Array.isArray(med.schedule) ? med.schedule : med.schedule ? String(med.schedule).split(/[,;]\s*/).filter(Boolean) : [],
+      courseDuration: med.courseDuration || "",
+      log: [],
+      createTasks: !!med.createTasks
+    };
+    cards[idx].medications.push(newMed);
+    saveHealthCards(cards);
+    return newMed;
+  }
+  function editMedicationInCard(cardId, medId, updates) {
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1) return null;
+    const meds = cards[idx].medications || [];
+    const mIdx = meds.findIndex((m) => m.id === medId);
+    if (mIdx === -1) return null;
+    ["name", "dosage", "courseDuration"].forEach((k) => {
+      if (updates[k] !== void 0) meds[mIdx][k] = updates[k];
+    });
+    if (updates.schedule !== void 0) {
+      meds[mIdx].schedule = Array.isArray(updates.schedule) ? updates.schedule : String(updates.schedule).split(/[,;]\s*/).filter(Boolean);
+    }
+    saveHealthCards(cards);
+    return meds[mIdx];
+  }
+  function logMedicationDose(cardId, medQuery) {
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1) return null;
+    const meds = cards[idx].medications || [];
+    let med = null;
+    if (typeof medQuery === "number") {
+      med = meds.find((m) => m.id === medQuery);
+    } else if (typeof medQuery === "string") {
+      const q = medQuery.toLowerCase().trim();
+      med = meds.find((m) => (m.name || "").toLowerCase().includes(q));
+    } else if (meds.length === 1) {
+      med = meds[0];
+    }
+    if (!med) return null;
+    if (!Array.isArray(med.log)) med.log = [];
+    med.log.push(Date.now());
+    if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
+    cards[idx].history.unshift({ ts: Date.now(), type: "dose_log", text: `\u041F\u0440\u0438\u0439\u043D\u044F\u0432 ${med.name}` });
+    saveHealthCards(cards);
+    return med;
+  }
+  function addHealthHistoryEntry(cardId, type, text) {
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1 || !text) return null;
+    if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
+    const entry = {
+      ts: Date.now(),
+      type: type || "manual",
+      text: String(text)
+    };
+    cards[idx].history.unshift(entry);
+    saveHealthCards(cards);
+    return entry;
+  }
   function openHealthCard(id) {
     activeHealthCardId = id;
     renderHealthWorkspace(id);
@@ -4392,7 +4536,7 @@ ${aiContext}` : "");
     const parts = [];
     const allergies = getAllergies();
     if (allergies.length > 0) {
-      const list = allergies.map((a) => a.notes ? `${a.name} (${a.notes})` : a.name).join(", ");
+      const list = allergies.map((a) => `[ID:${a.id}] ${a.name}${a.notes ? " (" + a.notes + ")" : ""}`).join(", ");
       parts.push(`\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 (\u0423\u0412\u0410\u0413\u0410 \u2014 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0440\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0456\u0439 \u0437\u0433\u0430\u0434\u0446\u0456 \u0446\u0438\u0445 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0456\u0432 \u0443 \u0437\u0430\u043F\u0438\u0441\u0430\u0445 Inbox/\u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432/\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${list})`);
     }
     const cards = getHealthCards();
@@ -4418,7 +4562,7 @@ ${aiContext}` : "");
           const meds = card.medications.map((m) => {
             const sched = Array.isArray(m.schedule) && m.schedule.length ? " (" + m.schedule.join(", ") + ")" : "";
             const course = m.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + m.courseDuration : "";
-            return `${m.name}${m.dosage ? " " + m.dosage : ""}${sched}${course}`;
+            return `[medID:${m.id}] ${m.name}${m.dosage ? " " + m.dosage : ""}${sched}${course}`;
           }).join("; ");
           lines.push(`  \u043B\u0456\u043A\u0438: ${meds}`);
         }
@@ -9930,6 +10074,17 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
 
 \u0423\u0422\u041E\u0427\u041D\u0415\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0434\u043E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E ("\u0442\u0430\u043A", "\u043D\u0456", "\u0432\u0438\u0434\u0430\u043B\u0438") \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C, \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0437\u0430\u043F\u0438\u0441.
 
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F (\u0424\u0430\u0437\u0430 2):
+- \u0410\u041B\u0415\u0420\u0413\u0406\u042F ('\u0443 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 X') \u2192 add_allergy. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E \u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u044F\u043A\u0449\u043E \u0442\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454 \u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E, \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12 \u0430\u043D\u0442\u0438\u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F). \u0421\u043A\u0430\u0436\u0438 \u044E\u0437\u0435\u0440\u0443 "\u0432\u0436\u0435 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443".
+- \u0421\u0418\u041C\u041F\u0422\u041E\u041C \u0449\u043E \u0422\u0420\u0418\u0412\u0410\u0404 3+ \u0434\u043D\u0456 \u0430\u0431\u043E \u0414\u0406\u0410\u0413\u041D\u041E\u0417 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F \u2192 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456:
+  - \u044F\u043A\u0449\u043E \u0441\u0445\u043E\u0436\u0430 \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454 (\u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E \u0430\u0431\u043E \u0442\u0435\u043C\u043E\u044E) \u2192 add_health_history_entry \u0434\u043E \u043D\u0435\u0457 (\u041D\u0415 create_health_card)
+  - \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430 \u2192 create_health_card
+- \u0420\u0410\u0417\u041E\u0412\u0410 \u0441\u043A\u0430\u0440\u0433\u0430 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456', '\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F') \u0411\u0415\u0417 \u0437\u0433\u0430\u0434\u043A\u0438 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u2192 save_moment \u0430\u0431\u043E save_note, \u041D\u0415 create_health_card.
+- \u041F\u0420\u0418\u0419\u041E\u041C \u041B\u0406\u041A\u0406\u0412 ('\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443') \u2014 \u044F\u043A\u0449\u043E \u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043A\u0430\u0440\u0442\u043A\u0430\u0445 \u0454 \u0446\u0435\u0439 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2192 log_medication_dose \u0437 card_id. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0443 \u0436\u043E\u0434\u043D\u0456\u0439 \u043A\u0430\u0440\u0442\u0446\u0456 \u2192 save_moment.
+- \u041B\u0406\u041A\u0410\u0420 \u041F\u0420\u041E\u041F\u0418\u0421\u0410\u0412 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u043C\u0443 \u0441\u0442\u0430\u043D\u0456 \u2192 add_medication \u0434\u043E \u043A\u0430\u0440\u0442\u043A\u0438. \u0423 \u041D\u041E\u0412\u041E\u041C\u0423 \u0441\u0442\u0430\u043D\u0456 \u2192 create_health_card \u0437 \u043F\u043E\u043B\u0435\u043C initial_history_text.
+- \u0412\u0406\u0417\u0418\u0422 \u0414\u041E \u041B\u0406\u041A\u0410\u0420\u042F \u044F\u043A \u043F\u043E\u0434\u0456\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443 \u2192 create_event (\u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043A\u0430\u0440\u0442\u043A\u0443 \u043B\u0438\u0448\u0435 \u0447\u0435\u0440\u0435\u0437 \u0432\u0456\u0437\u0438\u0442). \u041A\u0430\u0440\u0442\u043A\u0438 \u0441\u0442\u0432\u043E\u0440\u044E\u044E\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u0441\u0438\u043C\u043F\u0442\u043E\u043C/\u0434\u0456\u0430\u0433\u043D\u043E\u0437.
+- \u041C\u0415\u0414\u0418\u0427\u041D\u0406 \u041F\u0418\u0422\u0410\u041D\u041D\u042F ('\u0449\u043E \u0437 \u043C\u043E\u0457\u043C...', '\u0447\u0438 \u0446\u0435 \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E', '\u044F\u043A\u0438\u0439 \u0434\u0456\u0430\u0433\u043D\u043E\u0437') \u2192 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C: "\u042F \u043D\u0435 \u043B\u0456\u043A\u0430\u0440. \u0426\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0434\u043E \u0442\u0432\u043E\u0433\u043E \u043B\u0456\u043A\u0430\u0440\u044F \u2014 \u043D\u0435 \u0437\u0430\u0439\u043C\u0430\u0439\u0441\u044F \u0441\u0430\u043C\u043E\u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F\u043C." \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0440\u0430\u0434\u044C \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438.
+
 \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0431\u044E\u0434\u0436\u0435\u0442\u0438 \u0430\u0431\u043E \u043F\u043B\u0430\u043D\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.`;
       INBOX_TOOLS = [
         // --- СТВОРЕННЯ ---
@@ -9962,6 +10117,19 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
         { type: "function", function: { name: "restore_deleted", description: "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437 \u043A\u043E\u0448\u0438\u043A\u0430.", parameters: { type: "object", properties: { query: { type: "string", description: "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u0441\u043B\u043E\u0432\u0430, 'all' (\u0432\u0441\u0456) \u0430\u0431\u043E 'last' (\u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439)" }, type: { type: "string", enum: ["task", "note", "habit", "inbox", "folder", "finance"], description: "\u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443" } }, required: ["query"], additionalProperties: false } } },
         { type: "function", function: { name: "save_routine", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "default"] }, description: "\u0414\u043D\u0456. default=\u0431\u0443\u0434\u043D\u0456. \u041C\u0430\u0441\u0438\u0432: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time", "activity"] }, description: "\u0411\u043B\u043E\u043A\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043A\u0443" } }, required: ["day", "blocks"], additionalProperties: false } } },
         { type: "function", function: { name: "clarify", description: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 2+ \u0440\u0456\u0437\u043D\u0438\u0445 \u0442\u0438\u043F\u0456\u0432 \u0456 \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E, \u0430\u0431\u043E \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u0440\u043E\u0435\u043A\u0442. \u042F\u043A\u0449\u043E 80%+ \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E\u0441\u0442\u0456 \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.", parameters: { type: "object", properties: { question: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0437 \u0432\u0431\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u043C\u0438 \u0434\u0456\u044F\u043C\u0438" } }, required: ["question", "options"], additionalProperties: false } } },
+        // --- ЗДОРОВ'Я (Фаза 2, 15.04 6v2eR) ---
+        // Картки хвороб/станів. Перед create_health_card ОБОВ'ЯЗКОВО глянь "ЗДОРОВ'Я" контекст —
+        // якщо схожа картка вже існує (за назвою або симптомом), використай edit_health_card
+        // або add_health_history_entry до існуючої замість дублювання (правило 4.12 антидублювання).
+        { type: "function", function: { name: "create_health_card", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0445\u0432\u043E\u0440\u043E\u0431\u0438/\u0441\u0442\u0430\u043D\u0443/\u043C\u0435\u0442\u0438 \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0438\u043C\u043F\u0442\u043E\u043C \u044F\u043A\u0438\u0439 \u0442\u0440\u0438\u0432\u0430\u0454 (3+ \u0434\u043D\u0456), \u0434\u0456\u0430\u0433\u043D\u043E\u0437 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u043E\u0432\u0443 \u043C\u0435\u0442\u0443 \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0434\u043B\u044F \u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0441\u043A\u0430\u0440\u0433 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456' \u2192 save_moment) \u0430\u0431\u043E \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u043F\u0440\u0438\u0439\u043E\u043C\u0456\u0432 \u043B\u0456\u043A\u0456\u0432. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0417\u0414\u041E\u0420\u041E\u0412'\u042F' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u043A\u0430\u0440\u0442\u043A\u0430 \u0437 \u0442\u043E\u044E \u0436 \u043D\u0430\u0437\u0432\u043E\u044E/\u0442\u0435\u043C\u043E\u044E \u2014 \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439, \u043A\u0440\u0430\u0449\u0435 edit_health_card \u0430\u0431\u043E add_health_history_entry.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0441\u0442\u0430\u043D\u0443 1-3 \u0441\u043B\u043E\u0432\u0430: '\u0428\u043A\u0456\u0440\u0430', '\u0422\u0438\u0441\u043A', '\u0421\u043F\u0438\u043D\u0430', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F'. \u041D\u0415 \u0434\u0456\u0430\u0433\u043D\u043E\u0437 ('\u0430\u0442\u043E\u043F\u0456\u0447\u043D\u0438\u0439 \u0434\u0435\u0440\u043C\u0430\u0442\u0438\u0442') \u2014 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438" }, subtitle: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0443: '\u0412\u0438\u0441\u0438\u043F \u043D\u0430 \u0440\u0443\u043A\u0430\u0445', '\u041F\u0456\u0434\u0432\u0438\u0449\u0435\u043D\u0438\u0439 140/90'" }, doctor: { type: "string", description: "\u0406\u043C'\u044F + \u0441\u043F\u0435\u0446\u0456\u0430\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u043E: '\u0414\u0440. \u041F\u0435\u0442\u0440\u0435\u043D\u043A\u043E \xB7 \u0434\u0435\u0440\u043C\u0430\u0442\u043E\u043B\u043E\u0433'" }, doctor_recommendations: { type: "string", description: "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0456" }, doctor_conclusion: { type: "string", description: "\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439" }, start_date: { type: "string", description: "YYYY-MM-DD \u043A\u043E\u043B\u0438 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C, \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, next_appointment_time: { type: "string", description: "HH:MM \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, status: { type: "string", enum: ["active", "controlled", "done"] }, initial_history_text: { type: "string", description: "\u041F\u0435\u0440\u0448\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u044E\u0437\u0435\u0440 \u0441\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_health_card", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: \u0441\u0442\u0430\u0442\u0443\u0441, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C, \u043E\u043F\u0438\u0441. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C create_health_card \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, name: { type: "string" }, subtitle: { type: "string" }, doctor: { type: "string" }, doctor_recommendations: { type: "string" }, doctor_conclusion: { type: "string" }, start_date: { type: "string", description: "YYYY-MM-DD" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD. \u041F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 null \u0449\u043E\u0431 \u041E\u0427\u0418\u0421\u0422\u0418\u0422\u0418" }, next_appointment_time: { type: "string", description: "HH:MM" }, status: { type: "string", enum: ["active", "controlled", "done"] }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_health_card", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F (\u0437 \u043A\u043E\u0448\u0438\u043A\u0430 7 \u0434\u043D\u0456\u0432). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u044F\u043C\u043E \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0441\u0442\u0430\u043D.", parameters: { type: "object", properties: { card_id: { type: "integer" }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_medication", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u043E\u043F\u0438\u0441\u0430\u0432 X' \u0430\u0431\u043E '\u043F\u043E\u0447\u0430\u0432 \u043F\u0440\u0438\u0439\u043C\u0430\u0442\u0438 X'.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443" }, dosage: { type: "string", description: "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F: '20\u043C\u0433', '1 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430'" }, schedule: { type: "string", description: "\u0413\u0440\u0430\u0444\u0456\u043A \u043F\u0440\u0438\u0439\u043E\u043C\u0443: '08:00, 20:00' \u0430\u0431\u043E '\u0432\u0440\u0430\u043D\u0446\u0456, \u0432\u0432\u0435\u0447\u0435\u0440\u0456'" }, course_duration: { type: "string", description: "\u041A\u0443\u0440\u0441: '14 \u0434\u043D\u0456\u0432', '1 \u043C\u0456\u0441\u044F\u0446\u044C'" }, comment: { type: "string" } }, required: ["card_id", "med_name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_medication", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456: \u0434\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F, \u0433\u0440\u0430\u0444\u0456\u043A, \u043A\u0443\u0440\u0441. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u0437\u043C\u0456\u043D\u0438\u0432 \u0434\u043E\u0437\u0443 X \u043D\u0430 Y'.", parameters: { type: "object", properties: { card_id: { type: "integer" }, med_id: { type: "integer", description: "ID \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string" }, dosage: { type: "string" }, schedule: { type: "string" }, course_duration: { type: "string" }, comment: { type: "string" } }, required: ["card_id", "med_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "log_medication_dose", description: "\u041F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0449\u043E \u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u0434\u043E\u0437\u0443 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0417\u0410\u0420\u0410\u0417. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443', '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u043B\u0456\u043A\u0438'. \u042F\u043A\u0449\u043E med_name \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439 \u2014 \u0442\u043E\u0447\u043D\u0456\u0448\u0435; \u044F\u043A\u0449\u043E \u0443 \u043A\u0430\u0440\u0442\u0446\u0456 \u0442\u0456\u043B\u044C\u043A\u0438 1 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2014 \u043C\u043E\u0436\u043D\u0430 \u0431\u0435\u0437 med_name.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0430 (fuzzy match \u2014 \u043D\u0435\u0447\u0456\u0442\u043A\u0438\u0439 \u043F\u043E\u0448\u0443\u043A)" }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_allergy", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0443 nm_allergies (\u0432\u0438\u0434\u043D\u043E \u0441\u043A\u0440\u0456\u0437\u044C \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0443 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 X'. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0410\u041B\u0415\u0420\u0413\u0406\u0407' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u2014 \u043D\u0435 \u0434\u0443\u0431\u043B\u044E\u0439 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12).", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443: '\u0433\u043E\u0440\u0456\u0445\u0438', '\u043F\u0435\u043D\u0456\u0446\u0438\u043B\u0456\u043D', '\u043B\u0430\u043A\u0442\u043E\u0437\u0430'" }, notes: { type: "string", description: "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438/\u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u0456" }, comment: { type: "string" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_allergy", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0443 \u043C\u0435\u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u043D\u0430 X'.", parameters: { type: "object", properties: { allergy_id: { type: "integer", description: "ID \u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, comment: { type: "string" } }, required: ["allergy_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_health_history_entry", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u0456\u0441\u0442\u043E\u0440\u0456\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0441\u0442\u0430\u043D\u0443 ('\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C', '\u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F'), \u043F\u0440\u043E\u043F\u0443\u0441\u043A \u0434\u043E\u0437\u0438, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044E \u2014 \u0456 \u0446\u0435 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, entry_type: { type: "string", enum: ["manual", "status_change", "doctor_visit", "auto"], description: "manual = \u0434\u043E\u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u044E\u0437\u0435\u0440\u0430; status_change = \u0442\u0440\u0435\u043D\u0434 (\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F/\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F); doctor_visit = \u0432\u0456\u0437\u0438\u0442 \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F; auto = \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0434\u043E\u0437\u0443" }, text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u0437\u0430\u043F\u0438\u0441\u0443" }, comment: { type: "string" } }, required: ["card_id", "entry_type", "text", "comment"], additionalProperties: false } } },
         // --- ПАМ'ЯТЬ ---
         { type: "function", function: { name: "save_memory_fact", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0421\u0422\u0406\u0419\u041A\u0418\u0419 \u0424\u0410\u041A\u0422 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0443 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0443 \u043F\u0430\u043C'\u044F\u0442\u044C.\n\n\u2705 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u041F\u0420\u042F\u041C\u041E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0441\u0442\u0456\u0439\u043A\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0438\u0441\u0442\u0438\u043A\u0443 \u041F\u0420\u041E \u0421\u0415\u0411\u0415:\n  - '\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438' \u2192 health\n  - '\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F' \u2192 relationships\n  - '\u041F\u0440\u0430\u0446\u044E\u044E \u0432 Kyivstar \u0437 9 \u0434\u043E 18' \u2192 work\n  - '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0441\u044C \u043E 6 \u0449\u043E\u0434\u043D\u044F' \u2192 preferences (\u0441\u0442\u0456\u0439\u043A\u0430 \u0437\u0432\u0438\u0447\u043A\u0430)\n  - '\u0425\u043E\u0447\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0445\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0443 \u0434\u043E \u043B\u0456\u0442\u0430' \u2192 goals\n  - '\u0417\u0430\u0440\u0430\u0437 \u0432 \u0410\u043C\u0441\u0442\u0435\u0440\u0434\u0430\u043C\u0456 \u043D\u0430 2 \u0442\u0438\u0436\u043D\u0456' \u2192 context (\u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E, ttl_days=14)\n\n\u274C \u041D\u0415 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u0434\u043B\u044F:\n  - \u0420\u0430\u0437\u043E\u0432\u0438\u0445 \u0437\u0430\u0434\u0430\u0447 \u0447\u0438 \u0434\u0456\u0439: '\u043F\u043E\u043F\u0440\u0430\u0442\u0438 \u043E\u0434\u044F\u0433', '\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431', '\u0432\u0438\u043C\u043A\u043D\u0443\u0432 \u0441\u0432\u0456\u0442\u043B\u043E' \u2192 \u0446\u0435 save_task / save_moment, \u0430 \u041D\u0415 \u0444\u0430\u043A\u0442 '\u0437\u0430\u0439\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u043F\u0440\u0430\u043D\u043D\u044F\u043C' / '\u0432\u0438\u043C\u0438\u043A\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u043E'\n  - \u0421\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u044C \u0437\u0430 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u043E\u043C: '\u0441\u043A\u043B\u0430\u0434\u0430\u0454\u0448 \u0441\u043F\u0438\u0441\u043A\u0438 \u0441\u043F\u0440\u0430\u0432', '\u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0448 \u0456\u043D\u0431\u043E\u043A\u0441' \u2192 \u0442\u0430\u0432\u0442\u043E\u043B\u043E\u0433\u0456\u044F, \u041D\u0415 \u0444\u0430\u043A\u0442\n  - \u0412\u0438\u0433\u0430\u0434\u0430\u043D\u0438\u0445 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0445 \u0440\u0438\u0441: '\u0434\u043E\u0431\u0440\u0438\u0439', '\u043A\u0440\u0435\u0430\u0442\u0438\u0432\u043D\u0438\u0439', '\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0439 \u0434\u043E \u043D\u043E\u0432\u043E\u0433\u043E', '\u043F\u0440\u0430\u0433\u043D\u0435 \u043F\u043E\u0440\u044F\u0434\u043A\u0443', '\u043F\u0440\u043E\u044F\u0432\u043B\u044F\u0454...', '\u0446\u0456\u043B\u0435\u0441\u043F\u0440\u044F\u043C\u043E\u0432\u0430\u043D\u0438\u0439' \u2192 \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E, \u0442\u0438 \u043D\u0435 \u043F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\n  - \u041E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0435\u043C\u043E\u0446\u0456\u0439/\u0441\u0442\u0430\u043D\u0456\u0432: '\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F', '\u0440\u0430\u0434\u0456\u044E' \u2192 save_moment/save_note, \u043D\u0435 \u0444\u0430\u043A\u0442\n  - \u041D\u0435\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u0444\u0440\u0430\u0437: '\u0437\u0430\u0439\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u0447\u0438\u043C\u043E\u0441\u044C', '\u043F\u0440\u0430\u0446\u044E\u0454 \u043D\u0430\u0434 \u0447\u0438\u043C\u043E\u0441\u044C', '\u043B\u044E\u0431\u0438\u0442\u044C \u0449\u043E\u0441\u044C' \u2192 \u0432\u0456\u0434\u0445\u0438\u043B\u0438\u0442\u0438\n\n\u041F\u0420\u0410\u0412\u0418\u041B\u041E: \u044F\u043A\u0449\u043E \u0444\u0430\u043A\u0442 \u041D\u0415 \u043C\u043E\u0436\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u0434\u0435\u0442\u0430\u043B\u044C (\u0456\u043C'\u044F, \u043C\u0456\u0441\u0446\u0435, \u0434\u0456\u0430\u0433\u043D\u043E\u0437, \u0447\u0430\u0441, \u0441\u0443\u043C\u0430, \u043F\u0440\u043E\u0435\u043A\u0442) \u2014 \u041D\u0415 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438.\n\n\u0424\u043E\u0440\u043C\u0430\u0442 fact: 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. '\u041C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E', '\u041F\u0440\u0430\u0446\u044E\u0454 \u0432 Kyivstar', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438', '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043E 7'.\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 text content ('\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 ...') \u0449\u043E\u0431 \u044E\u0437\u0435\u0440 \u043F\u043E\u0431\u0430\u0447\u0438\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.", parameters: { type: "object", properties: { fact: { type: "string", description: "\u0424\u0430\u043A\u0442 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E \u0437 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u041E\u042E \u0434\u0435\u0442\u0430\u043B\u043B\u044E (\u0456\u043C'\u044F, \u043C\u0456\u0441\u0446\u0435, \u0434\u0456\u0430\u0433\u043D\u043E\u0437, \u0447\u0430\u0441, \u0441\u0443\u043C\u0430, \u043F\u0440\u043E\u0435\u043A\u0442). \u0411\u0435\u0437 \u0441\u0443\u0431'\u0454\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043F\u0440\u0438\u043A\u043C\u0435\u0442\u043D\u0438\u043A\u0456\u0432 ('\u0434\u043E\u0431\u0440\u0438\u0439', '\u043A\u0440\u0435\u0430\u0442\u0438\u0432\u043D\u0438\u0439')." }, category: { type: "string", enum: ["preferences", "health", "work", "relationships", "context", "goals"], description: "preferences=\u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F/\u0437\u0432\u0438\u0447\u043A\u0438 \u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u043E\u044E; health=\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u0430\u043B\u0435\u0440\u0433\u0456\u0457/\u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438; work=\u0440\u043E\u0431\u043E\u0442\u0430/\u043A\u0430\u0440'\u0454\u0440\u0430/\u0444\u0456\u043D\u0430\u043D\u0441\u0438; relationships=\u0441\u0456\u043C'\u044F/\u0434\u0440\u0443\u0437\u0456/\u043A\u043E\u043B\u0435\u0433\u0438 \u0437 \u0456\u043C\u0435\u043D\u0430\u043C\u0438; context=\u043B\u043E\u043A\u0430\u0446\u0456\u044F/\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A/\u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0456 \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438; goals=\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0446\u0456\u043B\u0456 \u0437 \u043D\u0430\u0437\u0432\u043E\u044E" }, ttl_days: { type: "integer", description: "\u0427\u0435\u0440\u0435\u0437 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0434\u043D\u0456\u0432 \u0444\u0430\u043A\u0442 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0454 \u0456 \u0437\u043D\u0438\u043A\u043D\u0435. \u041D\u0415 \u0432\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0438\u0445 (\u0441\u0456\u043C'\u044F, \u0430\u043B\u0435\u0440\u0433\u0456\u044F, \u0432\u0456\u043A, \u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F). \u0412\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0438\u0445: \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438=7-14; \u0432\u0456\u0434\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F/\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442=30-60" } }, required: ["fact", "category"], additionalProperties: false } } }
       ];
@@ -11812,6 +11980,25 @@ ${userText}
         return { action: "move_note", query: args.query, folder: args.folder };
       case "reopen_task":
         return { action: "reopen_task", task_id: args.task_id };
+      // Здоров'я (Фаза 2, 15.04 6v2eR)
+      case "create_health_card":
+        return { action: "create_health_card", name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, initial_history_text: args.initial_history_text, comment: args.comment };
+      case "edit_health_card":
+        return { action: "edit_health_card", card_id: args.card_id, name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, comment: args.comment };
+      case "delete_health_card":
+        return { action: "delete_health_card", card_id: args.card_id, comment: args.comment };
+      case "add_medication":
+        return { action: "add_medication", card_id: args.card_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
+      case "edit_medication":
+        return { action: "edit_medication", card_id: args.card_id, med_id: args.med_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
+      case "log_medication_dose":
+        return { action: "log_medication_dose", card_id: args.card_id, med_name: args.med_name, comment: args.comment };
+      case "add_allergy":
+        return { action: "add_allergy", name: args.name, notes: args.notes, comment: args.comment };
+      case "delete_allergy":
+        return { action: "delete_allergy", allergy_id: args.allergy_id, comment: args.comment };
+      case "add_health_history_entry":
+        return { action: "add_health_history_entry", card_id: args.card_id, entry_type: args.entry_type, text: args.text, comment: args.comment };
       default:
         return null;
     }
@@ -12036,6 +12223,113 @@ ${list}
               });
             } catch (e) {
               console.warn("[memory] addFact failed:", e);
+            }
+          } else if (action.action === "create_health_card") {
+            const created = createHealthCardProgrammatic({
+              name: action.name,
+              subtitle: action.subtitle,
+              doctor: action.doctor,
+              doctorRecommendations: action.doctor_recommendations,
+              doctorConclusion: action.doctor_conclusion,
+              startDate: action.start_date,
+              nextAppointment: action.next_appointment_date ? { date: action.next_appointment_date, time: action.next_appointment_time || "" } : null,
+              status: action.status,
+              initialHistoryEntry: action.initial_history_text
+            });
+            if (created) {
+              if (currentTab === "health") renderHealth();
+              const items = getInbox();
+              items.unshift({ id: Date.now() + 1, text: `\u{1F3E5} \u0421\u0442\u0430\u043D: ${created.name}`, category: "note", ts: Date.now(), processed: true });
+              saveInbox(items);
+              renderInbox();
+              addInboxChatMsg("agent", `\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${created.name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u0457. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u2014 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0430\u0437\u0432\u0430.");
+            }
+          } else if (action.action === "edit_health_card") {
+            const updates = {};
+            if (action.name !== void 0) updates.name = action.name;
+            if (action.subtitle !== void 0) updates.subtitle = action.subtitle;
+            if (action.doctor !== void 0) updates.doctor = action.doctor;
+            if (action.doctor_recommendations !== void 0) updates.doctorRecommendations = action.doctor_recommendations;
+            if (action.doctor_conclusion !== void 0) updates.doctorConclusion = action.doctor_conclusion;
+            if (action.start_date !== void 0) updates.startDate = action.start_date;
+            if (action.status !== void 0) updates.status = action.status;
+            if (action.next_appointment_date !== void 0) {
+              updates.nextAppointment = action.next_appointment_date ? { date: action.next_appointment_date, time: action.next_appointment_time || "" } : null;
+            }
+            const updated = editHealthCardProgrammatic(action.card_id, updates);
+            if (updated) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${updated.name}". ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+            }
+          } else if (action.action === "delete_health_card") {
+            const ok = deleteHealthCardProgrammatic(action.card_id);
+            if (ok) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u{1F5D1}\uFE0F \u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (7 \u0434\u043D\u0456\u0432 \u0443 \u043A\u043E\u0448\u0438\u043A\u0443). ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
+            }
+          } else if (action.action === "add_medication") {
+            const med = addMedicationToCard(action.card_id, {
+              name: action.med_name,
+              dosage: action.dosage,
+              schedule: action.schedule,
+              courseDuration: action.course_duration
+            });
+            if (med) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u{1F48A} \u0414\u043E\u0434\u0430\u0432 ${med.name}${med.dosage ? " (" + med.dosage + ")" : ""}. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u0442\u0432\u043E\u0440\u0438 \u0457\u0457 \u0441\u043F\u043E\u0447\u0430\u0442\u043A\u0443.");
+            }
+          } else if (action.action === "edit_medication") {
+            const updates = {};
+            if (action.med_name !== void 0) updates.name = action.med_name;
+            if (action.dosage !== void 0) updates.dosage = action.dosage;
+            if (action.schedule !== void 0) updates.schedule = action.schedule;
+            if (action.course_duration !== void 0) updates.courseDuration = action.course_duration;
+            const med = editMedicationInCard(action.card_id, action.med_id, updates);
+            if (med) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u0438\u0432 ${med.name}. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456.");
+            }
+          } else if (action.action === "log_medication_dose") {
+            const med = logMedicationDose(action.card_id, action.med_name);
+            if (med) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u{1F48A}\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432 ${med.name}. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456. \u0423\u0442\u043E\u0447\u043D\u0438 \u043D\u0430\u0437\u0432\u0443.");
+            }
+          } else if (action.action === "add_allergy") {
+            const added = addAllergy(action.name, action.notes || "");
+            if (added) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u{1F6A8} \u0414\u043E\u0434\u0430\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E: ${action.name}. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", `\u0410\u043B\u0435\u0440\u0433\u0456\u044F "${action.name}" \u0432\u0436\u0435 \u0454 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443.`);
+            }
+          } else if (action.action === "delete_allergy") {
+            const ok = deleteAllergy(action.allergy_id);
+            if (ok) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u{1F5D1}\uFE0F \u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
+            }
+          } else if (action.action === "add_health_history_entry") {
+            const entry = addHealthHistoryEntry(action.card_id, action.entry_type, action.text);
+            if (entry) {
+              if (currentTab === "health") renderHealth();
+              addInboxChatMsg("agent", `\u{1F4DD} \u0414\u043E\u0434\u0430\u0432 \u0437\u0430\u043F\u0438\u0441 \u0443 \u0456\u0441\u0442\u043E\u0440\u0456\u044E. ${action.comment || ""}`);
+            } else {
+              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443.");
             }
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
@@ -12406,6 +12700,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_projects();
       init_calendar();
       init_onboarding();
+      init_health();
       _inboxTypingEl = null;
       _inboxUnreadCount = 0;
       CAT_DOT_SOLID = {
