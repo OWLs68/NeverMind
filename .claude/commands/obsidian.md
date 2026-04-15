@@ -41,7 +41,7 @@
 
 Після код-блоку написати:
 
-> **Скопіюй блок вище і встав у brain сесію (roman-brain).** Claude збереже у daily файл, Obsidian підтягне при наступному pull.
+> **Скопіюй блок вище і встав у brain сесію (roman-brain).** Claude у brain-сесії сам класифікує підсумок і покладе у правильний файл (для NeverMind — `projects/nevermind/nm-YYYY-MM-DD.md`, для особистих записів — `daily/`). Obsidian підтягне при наступному pull.
 
 ## Важливо
 
