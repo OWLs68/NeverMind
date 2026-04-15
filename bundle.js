@@ -7684,19 +7684,92 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   </div>`;
   }
   function _attachFinSwipe() {
-    if (_finSwipeAttached) return;
+    if (_finHandlersAttached) return;
     const wrap = document.getElementById("fin-v2-wrap");
     if (!wrap) return;
     let startX = 0, startY = 0, onGrid = false;
     wrap.addEventListener("touchstart", (e) => {
-      onGrid = !_finEditMode && !!e.target.closest("#fin-cats-grid-wrap");
-      if (!onGrid) return;
+      const target = e.target.closest("#fin-cats-grid-wrap");
+      if (!target) {
+        onGrid = false;
+        return;
+      }
+      onGrid = true;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
+      if (_finEditMode) {
+        const cell = e.target.closest("[data-cat-id]");
+        if (cell) {
+          _dragOriginCell = cell;
+          _dragLongPressTimer = setTimeout(() => {
+            _dragCatId = cell.dataset.catId;
+            cell.style.opacity = "0.4";
+            cell.style.transform = "scale(0.9)";
+            if (navigator.vibrate) try {
+              navigator.vibrate(20);
+            } catch (e2) {
+            }
+          }, _DRAG_LONG_PRESS_MS);
+        }
+      }
     }, { passive: true });
+    wrap.addEventListener("touchmove", (e) => {
+      if (!onGrid) return;
+      if (_dragLongPressTimer && _dragCatId === null) {
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        if (Math.hypot(dx, dy) > _DRAG_CANCEL_THRESHOLD) {
+          clearTimeout(_dragLongPressTimer);
+          _dragLongPressTimer = null;
+          _dragOriginCell = null;
+        }
+      }
+      if (_dragCatId !== null) {
+        e.preventDefault?.();
+        const x = e.touches[0].clientX;
+        const y = e.touches[0].clientY;
+        const elBelow = document.elementFromPoint(x, y);
+        const targetCell = elBelow?.closest("[data-cat-id]");
+        if (targetCell !== _dragLastTarget) {
+          if (_dragLastTarget) _dragLastTarget.style.background = "";
+          if (targetCell && targetCell !== _dragOriginCell) {
+            targetCell.style.background = "rgba(194,65,12,0.08)";
+            targetCell.style.borderRadius = "12px";
+          }
+          _dragLastTarget = targetCell;
+        }
+      }
+    }, { passive: false });
     wrap.addEventListener("touchend", (e) => {
+      if (_dragCatId !== null) {
+        const fromId = _dragCatId;
+        const toCell = _dragLastTarget;
+        if (_dragOriginCell) {
+          _dragOriginCell.style.opacity = "";
+          _dragOriginCell.style.transform = "";
+        }
+        if (_dragLastTarget) {
+          _dragLastTarget.style.background = "";
+          _dragLastTarget.style.borderRadius = "";
+        }
+        const toId = toCell?.dataset?.catId;
+        _dragCatId = null;
+        _dragOriginCell = null;
+        _dragLastTarget = null;
+        if (fromId && toId && fromId !== toId) {
+          _swapFinCategoryOrder(fromId, toId);
+          renderFinance();
+        }
+        return;
+      }
+      if (_dragLongPressTimer) {
+        clearTimeout(_dragLongPressTimer);
+        _dragLongPressTimer = null;
+        _dragOriginCell = null;
+      }
       if (!onGrid) return;
       onGrid = false;
+      if (_finEditMode) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
@@ -7704,7 +7777,42 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       else currentFinPeriodOffset--;
       renderFinance();
     }, { passive: true });
-    _finSwipeAttached = true;
+    wrap.addEventListener("touchcancel", () => {
+      if (_dragLongPressTimer) {
+        clearTimeout(_dragLongPressTimer);
+        _dragLongPressTimer = null;
+      }
+      if (_dragOriginCell) {
+        _dragOriginCell.style.opacity = "";
+        _dragOriginCell.style.transform = "";
+        _dragOriginCell = null;
+      }
+      if (_dragLastTarget) {
+        _dragLastTarget.style.background = "";
+        _dragLastTarget.style.borderRadius = "";
+        _dragLastTarget = null;
+      }
+      _dragCatId = null;
+      onGrid = false;
+    }, { passive: true });
+    _finHandlersAttached = true;
+  }
+  function _swapFinCategoryOrder(fromId, toId) {
+    const cats = getFinCats();
+    for (const type of ["expense", "income"]) {
+      const arr = cats[type];
+      const fromIdx = arr.findIndex((c) => c.id === fromId);
+      const toIdx = arr.findIndex((c) => c.id === toId);
+      if (fromIdx === -1 || toIdx === -1) continue;
+      if (arr[fromIdx] && arr[toIdx]) {
+        const [moved] = arr.splice(fromIdx, 1);
+        const newToIdx = arr.findIndex((c) => c.id === toId);
+        arr.splice(newToIdx, 0, moved);
+        arr.forEach((c, i) => c.order = i);
+        saveFinCats(cats);
+        return;
+      }
+    }
   }
   function _finCatsGrid(allTxs, win) {
     const cats = getFinCats();
@@ -7726,12 +7834,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
       const onClick = _finEditMode ? `openCategoryEditModal('${escapeHtml(cat.id)}')` : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
       const editStyle = _finEditMode ? "box-shadow:0 0 0 2px " + cat.color + "55;" : "";
-      return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
-      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
-      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle}">
+      return `<div onclick="${onClick}" data-cat-id="${escapeHtml(cat.id)}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;transition:transform 0.15s,opacity 0.15s">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escapeHtml(cat.name)}</div>
+      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle};pointer-events:none">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
-      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
+      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px;pointer-events:none">${sumStr}</div>
     </div>`;
     };
     const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
@@ -8512,7 +8620,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _finEditingCatId = null;
     _finCatModalDraft = null;
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading, _finCatModalDraft;
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finHandlersAttached, _DRAG_LONG_PRESS_MS, _DRAG_CANCEL_THRESHOLD, _dragCatId, _dragLongPressTimer, _dragOriginCell, _dragLastTarget, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading, _finCatModalDraft;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -8626,7 +8734,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _finEditMode = false;
       _finEditingCatId = null;
       _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
-      _finSwipeAttached = false;
+      _finHandlersAttached = false;
+      _DRAG_LONG_PRESS_MS = 350;
+      _DRAG_CANCEL_THRESHOLD = 10;
+      _dragCatId = null;
+      _dragLongPressTimer = null;
+      _dragOriginCell = null;
+      _dragLastTarget = null;
       _finEditId = null;
       _finTxCurrentType = "expense";
       _finTxSelectedCat = "";
