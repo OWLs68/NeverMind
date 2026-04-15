@@ -15,7 +15,8 @@ import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks
 import { getEvents, saveEvents } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
 import { addNoteFromInbox } from './notes.js';
-import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction } from './finance.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
+  createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
 import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
 import { getProjects, saveProjects, startProjectInboxInterview } from './projects.js';
 import { getRoutine, saveRoutine } from './calendar.js';
@@ -391,6 +392,12 @@ function _toolCallToAction(name, args) {
     case 'add_allergy': return { action: 'add_allergy', name: args.name, notes: args.notes, comment: args.comment };
     case 'delete_allergy': return { action: 'delete_allergy', allergy_id: args.allergy_id, comment: args.comment };
     case 'add_health_history_entry': return { action: 'add_health_history_entry', card_id: args.card_id, entry_type: args.entry_type, text: args.text, comment: args.comment };
+    // Фаза 4 (K-02): CRUD категорій Фінансів через агента
+    case 'create_finance_category': return { action: 'create_finance_category', name: args.name, cat_type: args.type || 'expense', icon: args.icon, color: args.color, subcategories: args.subcategories, comment: args.comment };
+    case 'edit_finance_category': return { action: 'edit_finance_category', current_name: args.current_name, new_name: args.new_name, icon: args.icon, color: args.color, subcategories: args.subcategories, archived: args.archived, comment: args.comment };
+    case 'delete_finance_category': return { action: 'delete_finance_category', name: args.name, comment: args.comment };
+    case 'merge_finance_categories': return { action: 'merge_finance_categories', from_name: args.from_name, to_name: args.to_name, comment: args.comment };
+    case 'add_finance_subcategory': return { action: 'add_finance_subcategory', category_name: args.category_name, subcategory: args.subcategory, comment: args.comment };
     default: return null;
   }
 }
@@ -734,6 +741,74 @@ export async function sendToAI(fromChip = false) {
             addInboxChatMsg('agent', `📝 Додав запис у історію. ${action.comment || ''}`);
           } else {
             addInboxChatMsg('agent', 'Не знайшов картку для запису.');
+          }
+        } else if (action.action === 'create_finance_category') {
+          // Фаза 4 (K-02): створити нову категорію
+          const existing = findFinCatByName(action.name);
+          if (existing) {
+            addInboxChatMsg('agent', `Категорія "${action.name}" вже існує у ${existing.type === 'expense' ? 'витратах' : 'доходах'}.`);
+          } else {
+            const type = action.cat_type === 'income' ? 'income' : 'expense';
+            createFinCategory(type, { name: action.name, icon: action.icon, color: action.color, subcategories: action.subcategories });
+            if (currentTab === 'finance') renderFinance();
+            addInboxChatMsg('agent', `✓ Категорію "${action.name}" (${type === 'expense' ? 'витрата' : 'дохід'}) створено. ${action.comment || ''}`);
+          }
+        } else if (action.action === 'edit_finance_category') {
+          const found = findFinCatByName(action.current_name);
+          if (!found) {
+            addInboxChatMsg('agent', `Не знайшов категорію "${action.current_name}".`);
+          } else {
+            const updates = {};
+            if (action.new_name) updates.name = action.new_name;
+            if (action.icon) updates.icon = action.icon;
+            if (action.color) updates.color = action.color;
+            if (action.subcategories) updates.subcategories = action.subcategories;
+            if (action.archived !== undefined) updates.archived = action.archived;
+            updateFinCategory(found.cat.id, updates);
+            // Якщо перейменовано — оновити транзакції (перенести з старого імені на нове)
+            if (action.new_name && action.new_name !== found.cat.name) {
+              const txs = getFinance();
+              let changed = 0;
+              txs.forEach(t => { if (t.category === found.cat.name) { t.category = action.new_name; changed++; } });
+              if (changed > 0) saveFinance(txs);
+            }
+            if (currentTab === 'finance') renderFinance();
+            addInboxChatMsg('agent', `✓ Категорію "${action.current_name}" оновлено. ${action.comment || ''}`);
+          }
+        } else if (action.action === 'delete_finance_category') {
+          const found = findFinCatByName(action.name);
+          if (!found) {
+            addInboxChatMsg('agent', `Не знайшов категорію "${action.name}".`);
+          } else {
+            deleteFinCategory(found.cat.id);
+            if (currentTab === 'finance') renderFinance();
+            addInboxChatMsg('agent', `✓ Категорію "${action.name}" видалено. Старі транзакції збережено з цим ім'ям. ${action.comment || ''}`);
+          }
+        } else if (action.action === 'merge_finance_categories') {
+          const from = findFinCatByName(action.from_name);
+          const to = findFinCatByName(action.to_name);
+          if (!from || !to) {
+            addInboxChatMsg('agent', `Не знайшов категорії "${action.from_name}" або "${action.to_name}".`);
+          } else if (from.type !== to.type) {
+            addInboxChatMsg('agent', `"${action.from_name}" і "${action.to_name}" мають різні типи (витрата/дохід) — не можу об'єднати.`);
+          } else {
+            const res = mergeFinCategories(from.cat.id, to.cat.id);
+            if (res.ok) {
+              if (currentTab === 'finance') renderFinance();
+              addInboxChatMsg('agent', `✓ Об'єднав "${res.from}" → "${res.to}". Перенесено ${res.txsMoved} транзакцій. ${action.comment || ''}`);
+            } else {
+              addInboxChatMsg('agent', `Не вдалось об'єднати: ${res.reason}`);
+            }
+          }
+        } else if (action.action === 'add_finance_subcategory') {
+          const res = addFinSubcategory(action.category_name, action.subcategory);
+          if (!res || !res.ok) {
+            addInboxChatMsg('agent', `Не знайшов категорію "${action.category_name}".`);
+          } else if (res.alreadyExists) {
+            addInboxChatMsg('agent', `Підкатегорія "${action.subcategory}" вже є у "${action.category_name}".`);
+          } else {
+            if (currentTab === 'finance') renderFinance();
+            addInboxChatMsg('agent', `✓ Додав "${action.subcategory}" у "${action.category_name}". ${action.comment || ''}`);
           }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // edit_event, delete_event, edit_note, edit_task, set_reminder, etc.

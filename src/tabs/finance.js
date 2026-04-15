@@ -226,6 +226,60 @@ export function deleteFinCategory(id) {
   return true;
 }
 
+// Фаза 4 (K-02): merge категорій — переносить транзакції з fromId у toId і видаляє from
+export function mergeFinCategories(fromId, toId) {
+  const fromCat = findFinCatById(fromId);
+  const toCat = findFinCatById(toId);
+  if (!fromCat || !toCat) return { ok: false, reason: 'Категорію не знайдено' };
+  if (fromCat.type !== toCat.type) return { ok: false, reason: 'Різні типи (expense/income)' };
+  // Перейменувати транзакції з fromCat.cat.name на toCat.cat.name
+  const txs = getFinance();
+  let changed = 0;
+  txs.forEach(t => {
+    if (t.category === fromCat.cat.name) { t.category = toCat.cat.name; changed++; }
+  });
+  if (changed > 0) saveFinance(txs);
+  // Перенести підкатегорії у to (унікально)
+  const toCats = getFinCats();
+  const toObj = toCats[toCat.type][toCat.idx];
+  const fromObj = toCats[fromCat.type][fromCat.idx];
+  fromObj.subcategories.forEach(s => { if (!toObj.subcategories.includes(s)) toObj.subcategories.push(s); });
+  // Видалити from
+  toCats[fromCat.type].splice(fromCat.idx, 1);
+  toCats[fromCat.type].forEach((c, i) => c.order = i);
+  saveFinCats(toCats);
+  return { ok: true, txsMoved: changed, from: fromCat.cat.name, to: toCat.cat.name };
+}
+
+// Фаза 4: додати підкатегорію до існуючої категорії (по ID або назві)
+export function addFinSubcategory(catIdOrName, subcatName) {
+  const sub = (subcatName || '').trim();
+  if (!sub) return false;
+  const cats = getFinCats();
+  for (const type of ['expense', 'income']) {
+    const cat = cats[type].find(c => c.id === catIdOrName || c.name === catIdOrName);
+    if (cat) {
+      if (cat.subcategories.includes(sub)) return { ok: true, alreadyExists: true };
+      cat.subcategories.push(sub);
+      saveFinCats(cats);
+      return { ok: true };
+    }
+  }
+  return { ok: false, reason: 'Категорію не знайдено' };
+}
+
+// Фаза 4: знайти категорію по назві (у будь-якому з типів). Повертає { cat, type, idx } або null
+export function findFinCatByName(name) {
+  if (!name) return null;
+  const cats = getFinCats();
+  const lower = name.toLowerCase();
+  for (const type of ['expense', 'income']) {
+    const idx = cats[type].findIndex(c => c.name.toLowerCase() === lower);
+    if (idx !== -1) return { cat: cats[type][idx], type, idx };
+  }
+  return null;
+}
+
 // State
 let currentFinTab = 'expense';
 let currentFinPeriod = 'month';
