@@ -7538,18 +7538,42 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     return getCurrency() + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
   }
   function getFinPeriodRange(period) {
+    return _getFinPeriodWindow(period, 0).from;
+  }
+  function _getFinPeriodWindow(period, offset) {
     const now = /* @__PURE__ */ new Date();
-    let from;
+    let from, to, label;
     if (period === "week") {
-      from = new Date(now);
-      from.setDate(now.getDate() - 6);
-      from.setHours(0, 0, 0, 0);
+      const dayOfWeek = now.getDay() || 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (dayOfWeek - 1) + offset * 7);
+      monday.setHours(0, 0, 0, 0);
+      const nextMonday = new Date(monday);
+      nextMonday.setDate(monday.getDate() + 7);
+      from = monday.getTime();
+      to = nextMonday.getTime();
+      if (offset === 0) label = "\u0426\u0435\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C";
+      else if (offset === -1) label = "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C";
+      else if (offset === 1) label = "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C";
+      else label = offset < 0 ? `${-offset} \u0442\u0438\u0436\u043D\u0456\u0432 \u0442\u043E\u043C\u0443` : `+${offset} \u0442\u0438\u0436\u043D\u0456\u0432`;
     } else if (period === "month") {
-      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const baseMonth = now.getMonth() + offset;
+      const start = new Date(now.getFullYear(), baseMonth, 1);
+      const end = new Date(now.getFullYear(), baseMonth + 1, 1);
+      from = start.getTime();
+      to = end.getTime();
+      label = `${_MONTH_NAMES[start.getMonth()]} ${start.getFullYear()}`;
     } else {
-      from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      const startMonth = now.getMonth() - 2 + offset * 3;
+      const start = new Date(now.getFullYear(), startMonth, 1);
+      const end = new Date(now.getFullYear(), startMonth + 3, 1);
+      from = start.getTime();
+      to = end.getTime();
+      if (offset === 0) label = "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 3 \u043C\u0456\u0441\u044F\u0446\u0456";
+      else if (offset === -1) label = "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 3 \u043C\u0456\u0441\u044F\u0446\u0456";
+      else label = offset < 0 ? `${-offset * 3} \u043C\u0456\u0441\u044F\u0446\u0456\u0432 \u0442\u043E\u043C\u0443` : `+${offset * 3} \u043C\u0456\u0441\u044F\u0446\u0456\u0432`;
     }
-    return from.getTime();
+    return { from, to, label };
   }
   function switchFinTab(tab) {
     currentFinTab = tab;
@@ -7557,6 +7581,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   }
   function setFinPeriod(period) {
     currentFinPeriod = period;
+    currentFinPeriodOffset = 0;
     ["week", "month", "3months"].forEach((p) => {
       const el = document.getElementById("fin-period-" + p);
       if (!el) return;
@@ -7565,6 +7590,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       el.style.background = active ? "rgba(194,65,12,0.1)" : "rgba(194,65,12,0.05)";
       el.style.color = active ? "#c2410c" : "rgba(30,16,64,0.5)";
     });
+    renderFinance();
+  }
+  function shiftFinPeriod(delta) {
+    currentFinPeriodOffset += delta;
     renderFinance();
   }
   function _hideOldFinBlocks() {
@@ -7595,22 +7624,47 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(wrap, anchor);
       }
     }
-    const from = getFinPeriodRange(currentFinPeriod);
-    const allTxs = getFinance().filter((t) => t.ts >= from);
-    const expenses = allTxs.filter((t) => t.type === "expense");
-    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
-    if (allTxs.length === 0) {
-      wrap.innerHTML = _finEmptyState();
-      return;
-    }
-    wrap.innerHTML = _finCatsGrid(allTxs) + _finTxsBlock(allTxs);
+    const win = _getFinPeriodWindow(currentFinPeriod, currentFinPeriodOffset);
+    const allTxs = getFinance().filter((t) => t.ts >= win.from && t.ts < win.to);
+    wrap.innerHTML = _finCatsGrid(allTxs, win) + (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
+    _attachFinSwipe();
   }
-  function _finCatsGrid(allTxs) {
+  function _finEmptyTxsHint() {
+    return `<div style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(30,16,64,0.12);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px">
+    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">\u0423 \u0446\u044C\u043E\u043C\u0443 \u043F\u0435\u0440\u0456\u043E\u0434\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0439 \u043D\u0435\u043C\u0430\u0454</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438 \u0430\u0431\u043E \u0441\u0432\u0430\u0439\u043F\u043D\u0438 \u2190\u2192 \u0434\u043B\u044F \u0456\u043D\u0448\u043E\u0433\u043E \u043F\u0435\u0440\u0456\u043E\u0434\u0443</div>
+  </div>`;
+  }
+  function _attachFinSwipe() {
+    if (_finSwipeAttached) return;
+    const wrap = document.getElementById("fin-v2-wrap");
+    if (!wrap) return;
+    let startX = 0, startY = 0, onGrid = false;
+    wrap.addEventListener("touchstart", (e) => {
+      onGrid = !!e.target.closest("#fin-cats-grid-wrap");
+      if (!onGrid) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    wrap.addEventListener("touchend", (e) => {
+      if (!onGrid) return;
+      onGrid = false;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      if (dx < 0) currentFinPeriodOffset++;
+      else currentFinPeriodOffset--;
+      renderFinance();
+    }, { passive: true });
+    _finSwipeAttached = true;
+  }
+  function _finCatsGrid(allTxs, win) {
     const cats = getFinCats();
     const isExpense = currentFinTab === "expense";
     const catList = (isExpense ? cats.expense : cats.income).filter((c) => !c.archived);
     const txs = allTxs.filter((t) => t.type === (isExpense ? "expense" : "income"));
     const totalSum = txs.reduce((s, t) => s + t.amount, 0);
+    const periodLabel = win?.label || "";
     const catMap = {};
     txs.forEach((t) => {
       catMap[t.category] = (catMap[t.category] || 0) + t.amount;
@@ -7632,15 +7686,23 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     };
     const gridCells = inGrid.map(renderCell).join("");
     const overflowCells = overflow.map(renderCell).join("");
-    const periodLbl = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[currentFinPeriod] || "\u043F\u0435\u0440\u0456\u043E\u0434";
     const heroLabel = isExpense ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0438" : "\u0414\u043E\u0445\u043E\u0434\u0438";
     const heroCol = isExpense ? "#c2410c" : "#16a34a";
     const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
     <div style="font-size:24px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
-    <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">\u0437\u0430 ${periodLbl}</div>
   </div>`;
-    return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:18px 14px;margin-bottom:12px">
+    const isCurrent = currentFinPeriodOffset === 0;
+    const headerHtml = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
+    <button onclick="shiftFinPeriod(-1)" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+      <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
+      ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457</div>`}
+    </div>
+    <button onclick="shiftFinPeriod(1)" aria-label="\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
+  </div>`;
+    return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:14px;margin-bottom:12px">
+    ${headerHtml}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:10px;grid-auto-flow:row dense">
       ${heroCircle}
       ${gridCells}
@@ -7651,16 +7713,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function toggleFinTabType() {
     currentFinTab = currentFinTab === "expense" ? "income" : "expense";
     renderFinance();
-  }
-  function _finEmptyState() {
-    return `<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:20px;padding:28px 20px;text-align:center;margin-bottom:12px">
-    <div style="width:48px;height:48px;border-radius:16px;background:rgba(194,65,12,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>
-    </div>
-    <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:6px">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>
-    <div style="font-size:14px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:16px">\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0447\u0435\u0440\u0435\u0437 Inbox \u0430\u0431\u043E \u043A\u043D\u043E\u043F\u043A\u0443 \u043D\u0438\u0436\u0447\u0435</div>
-    <button onclick="openAddTransaction()" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E</button>
-  </div>`;
   }
   function _finTxsBlock(allTxs) {
     const sorted = [...allTxs].sort((a, b) => b.ts - a.ts).slice(0, 8);
@@ -8235,7 +8287,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     financeBarLoading = false;
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading;
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -8345,6 +8397,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       };
       currentFinTab = "expense";
       currentFinPeriod = "month";
+      currentFinPeriodOffset = 0;
+      _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
+      _finSwipeAttached = false;
       _finEditId = null;
       _finTxCurrentType = "expense";
       _finTxSelectedCat = "";
@@ -8366,8 +8421,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         closeFinBudgetModal,
         saveFinBudgetFromModal,
         openAllTransactions,
-        toggleFinTabType
+        toggleFinTabType,
         // Фаза 2 (K-01): тап на круг = перемикач Витрати⇄Доходи
+        shiftFinPeriod
+        // Фаза 2 крок Б: стрілки навігації періоду
       });
     }
   });
