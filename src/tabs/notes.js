@@ -1,6 +1,6 @@
 // ============================================================
 // app-notes.js — Нотатки, папки, note view, note chat, notes AI bar
-// Функції: getNotes, renderNotes, openNoteView, addNoteFromInbox, getFolderIcon, checkAndSuggestFolders, sendNotesBarMessage
+// Функції: getNotes, renderNotes, openNoteView, addNoteFromInbox, getFolderIcon, sendNotesBarMessage
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
@@ -13,7 +13,6 @@ import { processUniversalAction } from './habits.js';
 
 // === NOTES ===
 let editingNoteId = null;
-let pendingFolderSuggestion = null;
 
 export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
 export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
@@ -458,65 +457,14 @@ function noteMenuMove() {
     showToast(`✓ Переміщено в "${newFolder.trim()}"`);
   }
 }
-export async function checkAndSuggestFolders() {
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return;
-  const lastTs = localStorage.getItem('nm_notes_folders_ts');
-  if (lastTs) {
-    const last = new Date(parseInt(lastTs));
-    if (last.toDateString() === new Date().toDateString()) return;
-  }
-  const notes = getNotes();
-  if (notes.length < 5) return;
-  await suggestNoteFolders();
-}
-
-async function suggestNoteFolders() {
-  const notes = getNotes();
-  if (notes.length === 0) return;
-  const sample = notes.slice(0, 40).map(n => `"${n.text.substring(0, 60)}"`).join('\n');
-  const systemPrompt = `Ти — організатор нотаток. Проаналізуй записи і запропонуй оптимальну структуру папок (3-6 папок). Відповідай ТІЛЬКИ JSON масивом: [{"folder":"Назва","description":"коротко що сюди входить"}]. Без markdown, без тексту поза JSON. ЗАБОРОНЕНО пропонувати папку "Чернетки".`;
-  const reply = await callAI(systemPrompt, `Нотатки:\n${sample}`, {});
-  if (!reply) return;
-  try {
-    const clean = reply.replace(/```json|```/g, '').trim();
-    const folders = JSON.parse(clean);
-    pendingFolderSuggestion = folders;
-    localStorage.setItem('nm_notes_folders_ts', Date.now().toString());
-    const banner = document.getElementById('notes-ai-banner');
-    const textEl = document.getElementById('notes-ai-text');
-    if (banner && textEl) {
-      const names = folders.map(f => `📁 ${f.folder} — ${f.description}`).join('\n');
-      textEl.textContent = `Пропоную структуру:\n${names}`;
-      banner.style.display = 'block';
-    }
-  } catch { /* ігноруємо */ }
-}
-
-function applyFolderSuggestion() {
-  if (!pendingFolderSuggestion) return;
-  const notes = getNotes();
-  let changed = 0;
-  notes.forEach(n => {
-    if (!n.folder || n.folder === 'Загальне') {
-      // Знаходимо найближчу папку по ключовим словам з опису
-      for (const f of pendingFolderSuggestion) {
-        const keywords = f.description.toLowerCase().split(/[\s,]+/);
-        const noteText = n.text.toLowerCase();
-        if (keywords.some(kw => kw.length > 3 && noteText.includes(kw))) {
-          n.folder = f.folder;
-          changed++;
-          break;
-        }
-      }
-    }
-  });
-  saveNotes(notes);
-  renderNotes();
-  updateFolderSuggestions();
-  document.getElementById('notes-ai-banner').style.display = 'none';
-  showToast(changed > 0 ? `✓ Розкладено ${changed} нотаток по папках` : '✓ Папки збережено як орієнтир');
-}
+// 15.04 jMR6m: фічу "OWL пропонує структуру папок" прибрано —
+// banner notes-ai-banner у index.html видалений, функції checkAndSuggestFolders/
+// suggestNoteFolders/applyFolderSuggestion та змінна pendingFolderSuggestion
+// видалені, виклик з core/nav.js прибрано, ключ nm_notes_folders_ts більше
+// не використовується. Причина: AI повертав ту саму структуру день у день
+// (нотатки не сильно змінюються між днями), auto-assignment по includes()
+// був примітивним, юзери частіше створювали папки самі. Якщо у майбутньому
+// потрібно — можна повернути як on-demand кнопку у налаштуваннях.
 
 // === NOTE VIEW MODAL (F2) ===
 let activeNoteViewId = null;
@@ -1168,7 +1116,7 @@ Object.assign(window, {
   openAddNote, saveNote, closeNoteModal, openNoteView, closeNoteView,
   switchNoteViewTab, openNoteViewMenu, closeNoteMenu,
   noteMenuCopy, noteMenuEdit, noteMenuDelete, noteMenuMove,
-  saveFolderEdit, closeFolderEditModal, applyFolderSuggestion,
+  saveFolderEdit, closeFolderEditModal,
   sendNoteChatMessage, sendNotesBarMessage,
   openNotesFolder, closeNotesFolder, openFolderEditModal,
   selectFolderIcon, selectFolderColor,

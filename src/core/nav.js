@@ -23,7 +23,7 @@ import { getFinBudget, renderFinance, saveFinBudget, setCurrency } from '../tabs
 import { currentProdTab, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
 import { renderHealth } from '../tabs/health.js';
 import { renderInbox } from '../tabs/inbox.js';
-import { checkAndSuggestFolders, currentNotesFolder, getNotes, renderNotes, setCurrentNotesFolder } from '../tabs/notes.js';
+import { currentNotesFolder, getNotes, renderNotes, setCurrentNotesFolder } from '../tabs/notes.js';
 import { showFirstVisitTip } from '../tabs/onboarding.js';
 import { renderProjects } from '../tabs/projects.js';
 import { renderTasks } from '../tabs/tasks.js';
@@ -126,7 +126,7 @@ export function switchTab(tab) {
   // Tab-specific render
   if (tab === 'inbox') { try { renderInbox(); } catch(e) {} }
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
-  if (tab === 'notes') { setCurrentNotesFolder(null); renderNotes(); checkAndSuggestFolders(); }
+  if (tab === 'notes') { setCurrentNotesFolder(null); renderNotes(); }
   if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
   if (tab === 'evening') { renderEvening(); }
   if (tab === 'finance') { try { renderFinance(); } catch(e) { console.error('renderFinance error:', e); } }
