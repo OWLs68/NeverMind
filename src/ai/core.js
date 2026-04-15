@@ -13,6 +13,7 @@ import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
 import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
+import { getHealthContext } from '../tabs/health.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
 import { getBoardContext } from '../owl/proactive.js';
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
@@ -196,6 +197,14 @@ export function getAIContext() {
   try {
     const finCtx = getFinanceContext();
     if (finCtx) parts.push(finCtx);
+  } catch(e) {}
+
+  // === Здоров'я (Фаза 1, 15.04 jMR6m) — алергії + картки + ліки + прийоми ===
+  // Принцип "один мозок": OWL бачить здоров'я у ВСІХ чатах (Inbox, Нотатки, Фінанси тощо),
+  // а не лише у чат-барі Здоров'я. Алергії всередині — критичні правила попередження.
+  try {
+    const healthCtx = getHealthContext();
+    if (healthCtx) parts.push(healthCtx);
   } catch(e) {}
 
   // === Кеш видалених (для restore_deleted) ===
