@@ -7616,50 +7616,36 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       catMap[t.category] = (catMap[t.category] || 0) + t.amount;
     });
     const sorted = [...catList].sort((a, b) => (a.order || 0) - (b.order || 0));
-    const slots = [];
-    let catIdx = 0;
-    for (let row = 0; row < 4; row++) {
-      for (let col = 0; col < 4; col++) {
-        const isCircleArea = (row === 1 || row === 2) && (col === 1 || col === 2);
-        if (isCircleArea) continue;
-        const cat = sorted[catIdx++];
-        slots.push(cat || null);
-      }
-    }
-    const overflow = sorted.slice(catIdx);
+    const inGrid = sorted.slice(0, 12);
+    const overflow = sorted.slice(12);
     const renderCell = (cat) => {
-      if (!cat) return "<div></div>";
       const sum = catMap[cat.name] || 0;
       const sumStr = sum > 0 ? formatMoney(sum) : "0 " + getCurrency();
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
-      return `<div onclick="openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0">
-      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
+      return `<div onclick="openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
       <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
     </div>`;
     };
-    const mainGridCells = slots.map(renderCell).join("");
-    const overflowGridCells = overflow.map(renderCell).join("");
+    const gridCells = inGrid.map(renderCell).join("");
+    const overflowCells = overflow.map(renderCell).join("");
     const periodLbl = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[currentFinPeriod] || "\u043F\u0435\u0440\u0456\u043E\u0434";
     const heroLabel = isExpense ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0438" : "\u0414\u043E\u0445\u043E\u0434\u0438";
     const heroCol = isExpense ? "#c2410c" : "#16a34a";
-    return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="position:relative;padding:18px 14px;margin-bottom:12px">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,auto);gap:10px;position:relative">
-      ${mainGridCells}
-      <!-- \u041A\u0440\u0443\u0433-Hero \u0443 \u0446\u0435\u043D\u0442\u0440\u0456 (\u0437\u0430\u0439\u043C\u0430\u0454 2\xD72 \u0446\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0438\u0445 \u0441\u043B\u043E\u0442\u0456\u0432) -->
-      <div onclick="toggleFinTabType()" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none">
-        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
-        <div style="font-size:26px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
-        <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">\u0437\u0430 ${periodLbl}</div>
-        <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.3);margin-top:6px;display:flex;align-items:center;gap:3px">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="17 1 21 5 17 9"/><polyline points="7 23 3 19 7 15"/><line x1="21" y1="5" x2="9" y2="5"/><line x1="3" y1="19" x2="15" y2="19"/></svg>
-          \u0442\u0430\u043F = \u043F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447
-        </div>
-      </div>
+    const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
+    <div style="font-size:24px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
+    <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">\u0437\u0430 ${periodLbl}</div>
+  </div>`;
+    return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:18px 14px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:10px;grid-auto-flow:row dense">
+      ${heroCircle}
+      ${gridCells}
     </div>
-    ${overflow.length > 0 ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">${overflowGridCells}</div>` : ""}
+    ${overflow.length > 0 ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">${overflowCells}</div>` : ""}
   </div>`;
   }
   function toggleFinTabType() {
