@@ -11,10 +11,93 @@ import { processUniversalAction } from './habits.js';
 import { openNotesFolder } from './notes.js';
 
 // === STORAGE ===
-export function getHealthCards() { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
+
+// Lazy-міграція старої структури картки у нову (Фаза 1, 15.04 jMR6m).
+// Додає нові поля якщо відсутні, конвертує doctorNotes → history, медикаменти у новий формат.
+function _migrateHealthCard(card) {
+  let changed = false;
+  if (card.doctor === undefined) { card.doctor = ''; changed = true; }
+  if (card.doctorRecommendations === undefined) { card.doctorRecommendations = ''; changed = true; }
+  if (card.doctorConclusion === undefined) { card.doctorConclusion = ''; changed = true; }
+  if (card.startDate === undefined) { card.startDate = ''; changed = true; }
+  if (card.nextAppointment === undefined) { card.nextAppointment = null; changed = true; }
+  if (!Array.isArray(card.history)) { card.history = []; changed = true; }
+
+  // Конвертація doctorNotes у history
+  if (Array.isArray(card.doctorNotes) && card.doctorNotes.length > 0) {
+    card.doctorNotes.forEach(n => {
+      let ts = Date.now();
+      if (typeof n.ts === 'number') ts = n.ts;
+      else if (n.date) { const d = new Date(n.date); if (!isNaN(d)) ts = d.getTime(); }
+      const prefix = n.doctor ? n.doctor + ': ' : '';
+      card.history.push({ ts, type: 'doctor_visit', text: prefix + (n.text || '') });
+    });
+    delete card.doctorNotes;
+    changed = true;
+  }
+
+  // Конвертація старих медикаментів {name, dose, time, taken} у нову структуру
+  if (Array.isArray(card.medications)) {
+    card.medications = card.medications.map(m => {
+      if (m.dosage !== undefined) return m; // вже нова структура
+      changed = true;
+      return {
+        id: m.id || (Date.now() + Math.floor(Math.random() * 1000)),
+        name: m.name || '',
+        dosage: m.dose || '',
+        schedule: m.time ? [m.time] : [],
+        courseDuration: '',
+        log: m.taken ? [m.takenAt || Date.now()] : [],
+        createTasks: false,
+      };
+    });
+  }
+
+  return { card, changed };
+}
+
+export function getHealthCards() {
+  const raw = JSON.parse(localStorage.getItem('nm_health_cards') || '[]');
+  if (raw.length === 0) return raw;
+  if (localStorage.getItem('nm_health_migrated_v2') === '1') return raw;
+  // Одноразова міграція
+  let anyChanged = false;
+  const result = raw.map(c => {
+    const { card, changed } = _migrateHealthCard(c);
+    if (changed) anyChanged = true;
+    return card;
+  });
+  if (anyChanged) localStorage.setItem('nm_health_cards', JSON.stringify(result));
+  localStorage.setItem('nm_health_migrated_v2', '1');
+  return result;
+}
 function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
 export function getHealthLog() { return JSON.parse(localStorage.getItem('nm_health_log') || '{}'); }
 function saveHealthLog(obj) { localStorage.setItem('nm_health_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
+
+// === АЛЕРГІЇ (Фаза 1, 15.04 jMR6m) ===
+// Проста структура: {id, name, notes, createdAt}. Розширення з severity → ROADMAP.md Ideas.
+export function getAllergies() { return JSON.parse(localStorage.getItem('nm_allergies') || '[]'); }
+function saveAllergies(arr) { localStorage.setItem('nm_allergies', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'allergies' })); }
+export function addAllergy(name, notes = '') {
+  const clean = (name || '').trim();
+  if (!clean) return null;
+  const allergies = getAllergies();
+  // Уникнути дублікату по назві (case-insensitive)
+  if (allergies.some(a => a.name.toLowerCase() === clean.toLowerCase())) return null;
+  const entry = { id: Date.now(), name: clean, notes: (notes || '').trim(), createdAt: Date.now() };
+  allergies.push(entry);
+  saveAllergies(allergies);
+  return entry;
+}
+export function deleteAllergy(id) {
+  const allergies = getAllergies();
+  const idx = allergies.findIndex(a => a.id === id);
+  if (idx === -1) return false;
+  allergies.splice(idx, 1);
+  saveAllergies(allergies);
+  return true;
+}
 
 // State
 let activeHealthCardId = null; // null = список, id = воркспейс
@@ -32,6 +115,7 @@ export function renderHealth() {
 }
 
 function renderHealthList() {
+  _renderAllergiesCard();
   _renderHealthWeekBars();
   _renderHealthTodayScales();
 
@@ -189,9 +273,13 @@ function renderHealthWorkspace(id) {
   const st = statusColors[card.status] || statusColors.active;
   const pct = card.progress || 0;
   const meds = card.medications || [];
-  const doctorNotes = card.doctorNotes || [];
+  // Фаза 1 (15.04 jMR6m): doctorNotes мігровано в history. Читаємо записи лікаря з history.
+  const doctorVisits = (card.history || []).filter(h => h.type === 'doctor_visit').sort((a, b) => (b.ts || 0) - (a.ts || 0));
   const analyses = card.analyses || [];
   const owlAnalysis = card.owlAnalysis || '';
+  // Фаза 1: помічник для відображення останньої відмітки ліки (з log[])
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const isMedTakenToday = m => Array.isArray(m.log) && m.log.some(ts => ts >= todayStart.getTime());
 
   const scrollEl = document.getElementById('health-scroll');
   if (scrollEl) scrollEl.innerHTML = `
@@ -236,28 +324,46 @@ function renderHealthWorkspace(id) {
       </div>
     </div>
 
-    <!-- Препарати -->
+    <!-- Препарати (Фаза 1: нова структура — dosage, schedule[], log[]) -->
     ${meds.length > 0 ? `<div class="card-glass">
       <div class="section-label">Препарати</div>
-      ${meds.map((m,i) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.06)' : ''}">
+      ${meds.map((m,i) => {
+        const takenToday = isMedTakenToday(m);
+        const schedStr = Array.isArray(m.schedule) && m.schedule.length ? m.schedule.join(', ') : '';
+        const course = m.courseDuration ? ' · ' + escapeHtml(m.courseDuration) : '';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i < meds.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.06)' : ''}">
         <div class="icon-circle" style="width:28px;height:28px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
         </div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dose || '')}</div>
+          <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || '')}${course}</div>
         </div>
-        <div style="font-size:11px;font-weight:800;color:${m.taken ? '#16a34a' : '#ea580c'}">${m.taken ? '✓ прийнято' : (m.time || '')}</div>
-      </div>`).join('')}
+        <div style="font-size:11px;font-weight:800;color:${takenToday ? '#16a34a' : '#ea580c'}">${takenToday ? '✓ прийнято' : escapeHtml(schedStr)}</div>
+      </div>`;
+      }).join('')}
     </div>` : ''}
 
-    <!-- Записи лікаря -->
-    ${doctorNotes.length > 0 ? `<div class="card-glass">
+    <!-- Лікар + рекомендації + наступний прийом (Фаза 1 нові поля) -->
+    ${(card.doctor || card.doctorRecommendations || card.doctorConclusion || (card.nextAppointment && card.nextAppointment.date)) ? `<div class="card-glass">
+      <div class="section-label">Лікування</div>
+      ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">Лікар:</b> ${escapeHtml(card.doctor)}</div>` : ''}
+      ${card.doctorRecommendations ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">Рекомендації:</b> ${escapeHtml(card.doctorRecommendations)}</div>` : ''}
+      ${card.doctorConclusion ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">Висновок:</b> ${escapeHtml(card.doctorConclusion)}</div>` : ''}
+      ${(card.nextAppointment && card.nextAppointment.date) ? `<div style="font-size:11px;color:#ea580c;font-weight:700;margin-top:6px">📅 Наступний прийом: ${escapeHtml(card.nextAppointment.date)}${card.nextAppointment.time ? ' о ' + escapeHtml(card.nextAppointment.time) : ''}</div>` : ''}
+    </div>` : ''}
+
+    <!-- Записи лікаря (Фаза 1: тепер з card.history filter(type=doctor_visit)) -->
+    ${doctorVisits.length > 0 ? `<div class="card-glass">
       <div class="section-label">Записи лікаря</div>
-      ${doctorNotes.map(n => `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(n.date || '')} · ${escapeHtml(n.doctor || '')}</div>
-        <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(n.text || '')}</div>
-      </div>`).join('')}
+      ${doctorVisits.map(h => {
+        const d = new Date(h.ts);
+        const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA');
+        return `<div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.35);margin-bottom:4px">${escapeHtml(dateStr)}</div>
+        <div style="font-size:12px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(h.text || '')}</div>
+      </div>`;
+      }).join('')}
     </div>` : ''}
 
     <!-- OWL аналіз -->
@@ -298,6 +404,8 @@ function setHealthCardStatus(id, status) {
 }
 
 // === ДОДАТИ НОВУ КАРТКУ ===
+// Створює картку у НОВІЙ структурі (Фаза 1, 15.04 jMR6m).
+// Нормальний флоу створення через Inbox + чат-бари + tool calling — Фаза 2.
 function openAddHealthCard() {
   const name = prompt('Назва (хвороба, стан або мета):');
   if (!name || !name.trim()) return;
@@ -312,9 +420,15 @@ function openAddHealthCard() {
     nextStep: '',
     treatments: [],
     medications: [],
-    doctorNotes: [],
     analyses: [],
     owlAnalysis: '',
+    // Нові поля Фази 1
+    doctor: '',
+    doctorRecommendations: '',
+    doctorConclusion: '',
+    startDate: '',
+    nextAppointment: null,
+    history: [],
     createdAt: Date.now(),
   };
   cards.unshift(newCard);
@@ -323,17 +437,119 @@ function openAddHealthCard() {
   renderHealth();
 }
 
-// Контекст здоров'я для AI
-function getHealthContext() {
+// === ДОДАТИ АЛЕРГІЮ (Фаза 1, простий UI з prompt — розширити у Фазі 3) ===
+function openAddAllergy() {
+  const name = prompt('Назва алергену (наприклад: горіхи, пеніцилін, лактоза):');
+  if (!name || !name.trim()) return;
+  const notes = prompt('Нотатки (необов\'язково — симптоми, деталі реакції):') || '';
+  const added = addAllergy(name, notes);
+  if (added) {
+    showToast('✓ Алергію додано');
+    renderHealth();
+  } else {
+    showToast('Така алергія вже є');
+  }
+}
+
+function deleteAllergyById(id) {
+  if (!confirm('Видалити алергію?')) return;
+  if (deleteAllergy(id)) {
+    showToast('Алергію видалено');
+    renderHealth();
+  }
+}
+
+// Рендер картки алергій — фіксована зверху вкладки Здоров'я (коралова)
+function _renderAllergiesCard() {
+  const el = document.getElementById('health-allergies-card');
+  if (!el) return;
+  const allergies = getAllergies();
+  const coralBg = 'rgba(255,120,117,0.08)';
+  const coralBorder = 'rgba(255,120,117,0.28)';
+  const coralText = '#d9534f';
+
+  if (allergies.length === 0) {
+    el.innerHTML = `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Алергії</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">Немає записаних. OWL не знає про що попереджати.</div>
+      </div>
+      <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">+ Додати</button>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">🚨 Алергії (${allergies.length})</div>
+      <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">+ Додати</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${allergies.map(a => `<div style="background:white;border:1.5px solid ${coralBorder};border-radius:8px;padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px">
+        <div>
+          <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
+          ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ''}
+        </div>
+        <div onclick="deleteAllergyById(${a.id})" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="Видалити">×</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// Контекст здоров'я для AI (Фаза 1 переписано 15.04 jMR6m — експортується і підключається у getAIContext)
+// Включає: алергії (завжди зверху, УВАГА-попередження), активні/контрольовані картки з усіма полями,
+// ліки з графіком, наступні прийоми, legacy-шкали (fallback до Фази 3).
+export function getHealthContext() {
+  const parts = [];
+
+  // Алергії — ЗАВЖДИ зверху. Активні правила для OWL у всіх чатах.
+  const allergies = getAllergies();
+  if (allergies.length > 0) {
+    const list = allergies.map(a => a.notes ? `${a.name} (${a.notes})` : a.name).join(', ');
+    parts.push(`🚨 АЛЕРГІЇ (УВАГА — попереджай юзера при будь-якій згадці цих алергенів у записах Inbox/Фінансів/Нотаток: ${list})`);
+  }
+
+  // Картки стану
   const cards = getHealthCards();
-  if (cards.length === 0) return '';
+  const active = cards.filter(c => c.status === 'active' || c.status === 'controlled');
+  if (active.length > 0) {
+    parts.push(`Активні стани здоров'я (${active.length}):`);
+    active.slice(0, 5).forEach(card => {
+      const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? ' — ' + card.subtitle : ''} [${card.status}, прогрес: ${card.progress || 0}%]`];
+      if (card.startDate) {
+        const d = new Date(card.startDate);
+        if (!isNaN(d)) {
+          const daysSince = Math.round((Date.now() - d.getTime()) / 86400000);
+          if (daysSince >= 0) lines.push(`  курс: ${daysSince} дн від ${card.startDate}`);
+        }
+      }
+      if (card.doctor) lines.push(`  лікар: ${card.doctor}`);
+      if (card.doctorRecommendations) lines.push(`  рекомендації: ${card.doctorRecommendations}`);
+      if (card.nextAppointment && card.nextAppointment.date) {
+        const t = card.nextAppointment.time ? ' ' + card.nextAppointment.time : '';
+        lines.push(`  наступний прийом: ${card.nextAppointment.date}${t}`);
+      }
+      if (Array.isArray(card.medications) && card.medications.length > 0) {
+        const meds = card.medications.map(m => {
+          const sched = Array.isArray(m.schedule) && m.schedule.length ? ' (' + m.schedule.join(', ') + ')' : '';
+          const course = m.courseDuration ? ' · курс ' + m.courseDuration : '';
+          return `${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched}${course}`;
+        }).join('; ');
+        lines.push(`  ліки: ${meds}`);
+      }
+      if (card.nextStep) lines.push(`  наступний крок: ${card.nextStep}`);
+      parts.push(lines.join('\n'));
+    });
+  }
+
+  // Legacy шкали (fallback — живуть до Фази 3)
   const log = getHealthLog();
   const today = new Date().toDateString();
   const entry = log[today] || {};
-  const parts = [`Здоров'я: ${cards.filter(c=>c.status!=='done').length} активних карток`];
-  const active = cards.filter(c => c.status === 'active').slice(0,3);
-  if (active.length) parts.push('Активні: ' + active.map(c => c.name + (c.nextStep ? ' → ' + c.nextStep : '')).join('; '));
-  if (entry.energy || entry.sleep || entry.pain) parts.push(`Самопочуття сьогодні: Енергія ${entry.energy||'—'}/10, Сон ${entry.sleep||'—'}/10, Біль ${entry.pain||'—'}/10`);
+  if (entry.energy || entry.sleep || entry.pain) {
+    parts.push(`Самопочуття сьогодні (legacy шкали 1-10): Енергія ${entry.energy||'—'}, Сон ${entry.sleep||'—'}, Біль ${entry.pain||'—'}`);
+  }
+
   return parts.join('\n');
 }
 
@@ -378,13 +594,12 @@ export async function sendHealthBarMessage() {
 
   const cards = getHealthCards();
   const activeCard = activeHealthCardId ? cards.find(c => c.id === activeHealthCardId) : null;
-  const healthCtx = getHealthContext();
+  // Фаза 1 (15.04 jMR6m): getHealthContext() тепер включений у getAIContext() — локальний виклик прибрано (уникнути дублювання токенів).
   const aiContext = getAIContext();
 
   const systemPrompt = `${getOWLPersonality()} Ти допомагаєш з вкладкою Здоров'я в NeverMind.
 ВАЖЛИВО: Ти НЕ лікар і НЕ ставиш діагнози. Тільки допомагаєш відслідковувати і систематизувати.
 ${activeCard ? `Активна картка: "${activeCard.name}" — ${activeCard.subtitle || ''}. Статус: ${activeCard.status}. Прогрес: ${activeCard.progress}%.` : ''}
-${healthCtx ? healthCtx : ''}
 ${aiContext ? '\n\n' + aiContext : ''}
 
 Ти можеш (відповідай JSON якщо потрібна дія):
@@ -474,4 +689,5 @@ ${aiContext ? '\n\n' + aiContext : ''}
 Object.assign(window, {
   openAddHealthCard, sendHealthBarMessage,
   openHealthCard, closeHealthCard, setHealthScale, setHealthCardStatus,
+  openAddAllergy, deleteAllergyById,
 });
