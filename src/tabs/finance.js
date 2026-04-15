@@ -170,6 +170,7 @@ export function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.
 // State
 let currentFinTab = 'expense';
 let currentFinPeriod = 'month';
+let currentFinPeriodOffset = 0; // 0 = поточний, -1 = попередній, +1 = майбутній (Фаза 2 крок Б, свайп місяців)
 export function getCurrency() {
   const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   return s.currency || '₴';
@@ -199,18 +200,50 @@ const FIN_CAT_COLORS = ['#f97316','#0ea5e9','#a855f7','#22c55e','#ef4444','#eab3
 
 function getFinColor(idx) { return FIN_CAT_COLORS[idx % FIN_CAT_COLORS.length]; }
 
-// Фільтр транзакцій по періоду
+// Фільтр транзакцій по періоду (legacy: тільки from, для зворотної сумісності з getFinanceContext тощо)
 export function getFinPeriodRange(period) {
+  return _getFinPeriodWindow(period, 0).from;
+}
+
+// Фаза 2 крок Б: вікно з offset для свайп-навігації місяців.
+// Повертає {from, to, label}. offset=0 — поточний, -1 — попередній, +1 — наступний.
+const _MONTH_NAMES = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+function _getFinPeriodWindow(period, offset) {
   const now = new Date();
-  let from;
+  let from, to, label;
   if (period === 'week') {
-    from = new Date(now); from.setDate(now.getDate() - 6); from.setHours(0,0,0,0);
+    // Поточний тиждень Пн-Нд + offset тижнів
+    const dayOfWeek = now.getDay() || 7; // 1-7 (1=Пн, 7=Нд)
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (dayOfWeek - 1) + (offset * 7));
+    monday.setHours(0,0,0,0);
+    const nextMonday = new Date(monday);
+    nextMonday.setDate(monday.getDate() + 7);
+    from = monday.getTime();
+    to = nextMonday.getTime();
+    if (offset === 0) label = 'Цей тиждень';
+    else if (offset === -1) label = 'Минулий тиждень';
+    else if (offset === 1) label = 'Наступний тиждень';
+    else label = offset < 0 ? `${-offset} тижнів тому` : `+${offset} тижнів`;
   } else if (period === 'month') {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else {
-    from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    const baseMonth = now.getMonth() + offset;
+    const start = new Date(now.getFullYear(), baseMonth, 1);
+    const end   = new Date(now.getFullYear(), baseMonth + 1, 1);
+    from = start.getTime();
+    to = end.getTime();
+    label = `${_MONTH_NAMES[start.getMonth()]} ${start.getFullYear()}`;
+  } else { // 3months
+    // Поточний 3-місячний блок: останні 3 місяці включаючи поточний (offset=0)
+    const startMonth = now.getMonth() - 2 + (offset * 3);
+    const start = new Date(now.getFullYear(), startMonth, 1);
+    const end   = new Date(now.getFullYear(), startMonth + 3, 1);
+    from = start.getTime();
+    to = end.getTime();
+    if (offset === 0) label = 'Останні 3 місяці';
+    else if (offset === -1) label = 'Попередні 3 місяці';
+    else label = offset < 0 ? `${-offset * 3} місяців тому` : `+${offset * 3} місяців`;
   }
-  return from.getTime();
+  return { from, to, label };
 }
 
 function getFilteredTransactions(type, period) {
@@ -227,6 +260,7 @@ function switchFinTab(tab) {
 
 function setFinPeriod(period) {
   currentFinPeriod = period;
+  currentFinPeriodOffset = 0; // ресет offset при зміні типу періоду
   ['week','month','3months'].forEach(p => {
     const el = document.getElementById('fin-period-' + p);
     if (!el) return;
@@ -235,6 +269,12 @@ function setFinPeriod(period) {
     el.style.background = active ? 'rgba(194,65,12,0.1)' : 'rgba(194,65,12,0.05)';
     el.style.color = active ? '#c2410c' : 'rgba(30,16,64,0.5)';
   });
+  renderFinance();
+}
+
+// Фаза 2 крок Б: навігація стрілками (альтернатива свайпу)
+function shiftFinPeriod(delta) {
+  currentFinPeriodOffset += delta;
   renderFinance();
 }
 
@@ -276,21 +316,51 @@ export function renderFinance() {
     }
   }
 
-  const from = getFinPeriodRange(currentFinPeriod);
-  const allTxs = getFinance().filter(t => t.ts >= from);
-  const expenses = allTxs.filter(t => t.type === 'expense');
-  const totalExp = expenses.reduce((s,t) => s+t.amount, 0);
+  // Фаза 2 крок Б: вікно з offset (свайп навігація місяців)
+  const win = _getFinPeriodWindow(currentFinPeriod, currentFinPeriodOffset);
+  const allTxs = getFinance().filter(t => t.ts >= win.from && t.ts < win.to);
 
-  if (allTxs.length === 0) {
-    wrap.innerHTML = _finEmptyState();
-    return;
-  }
-
-  // Фаза 2 (K-01): сітка категорій + круг посередині (Hero).
-  // currentFinTab визначає тип (expense/income), круг = перемикач (тап).
+  // Сітка категорій рендериться завжди (навіть якщо порожньо) — щоб юзер міг тапнути категорію
+  // і додати першу транзакцію + щоб свайп працював коли немає даних у періоді.
   wrap.innerHTML =
-    _finCatsGrid(allTxs) +
-    _finTxsBlock(allTxs);
+    _finCatsGrid(allTxs, win) +
+    (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
+
+  _attachFinSwipe();
+}
+
+function _finEmptyTxsHint() {
+  return `<div style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(30,16,64,0.12);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px">
+    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">У цьому періоді транзакцій немає</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">Тапни категорію щоб додати або свайпни ←→ для іншого періоду</div>
+  </div>`;
+}
+
+// Фаза 2 крок Б: touch-обробники для свайп-гортання періодів
+let _finSwipeAttached = false;
+function _attachFinSwipe() {
+  if (_finSwipeAttached) return;
+  const wrap = document.getElementById('fin-v2-wrap');
+  if (!wrap) return;
+  let startX = 0, startY = 0, onGrid = false;
+  wrap.addEventListener('touchstart', (e) => {
+    onGrid = !!e.target.closest('#fin-cats-grid-wrap');
+    if (!onGrid) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  wrap.addEventListener('touchend', (e) => {
+    if (!onGrid) return;
+    onGrid = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    // Поріг 50px по X, |dx| > |dy| × 1.2 — щоб не плутати з вертикальним скролом
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    if (dx < 0) currentFinPeriodOffset++; // свайп вліво → майбутнє
+    else currentFinPeriodOffset--;        // свайп вправо → минуле
+    renderFinance();
+  }, { passive: true });
+  _finSwipeAttached = true;
 }
 
 // Сітка категорій з кругом-Hero посередині.
@@ -298,12 +368,13 @@ export function renderFinance() {
 // Інші категорії автоматично обтікають круг (grid auto-flow).
 // Помістяться 8 категорій навколо круга (4 у ряді 1 + 1+1 у рядах 2-3 + 4 у ряді 4 = 12)
 // Зачекайте: 4 + 2 + 2 + 4 = 12. Правильно. Додаткові — у overflow-ряди знизу.
-function _finCatsGrid(allTxs) {
+function _finCatsGrid(allTxs, win) {
   const cats = getFinCats();
   const isExpense = currentFinTab === 'expense';
   const catList = (isExpense ? cats.expense : cats.income).filter(c => !c.archived);
   const txs = allTxs.filter(t => t.type === (isExpense ? 'expense' : 'income'));
   const totalSum = txs.reduce((s, t) => s + t.amount, 0);
+  const periodLabel = win?.label || '';
 
   // Сума по кожній категорії
   const catMap = {};
@@ -334,18 +405,28 @@ function _finCatsGrid(allTxs) {
   const overflowCells = overflow.map(renderCell).join('');
 
   // Центральний круг-Hero (grid-item, займає колонки 2-3 і ряди 2-3)
-  const periodLbl = { week: 'тиждень', month: 'місяць', '3months': '3 місяці' }[currentFinPeriod] || 'період';
   const heroLabel = isExpense ? 'Витрати' : 'Доходи';
   const heroCol = isExpense ? '#c2410c' : '#16a34a';
   const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
     <div style="font-size:24px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
-    <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:4px">за ${periodLbl}</div>
+  </div>`;
+
+  // Хедер блоку: стрілки навігації + лейбл періоду (Фаза 2 крок Б)
+  const isCurrent = currentFinPeriodOffset === 0;
+  const headerHtml = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
+    <button onclick="shiftFinPeriod(-1)" aria-label="Попередній період" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">‹</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+      <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
+      ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">↺ до сьогодні</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">свайп ←→ для навігації</div>`}
+    </div>
+    <button onclick="shiftFinPeriod(1)" aria-label="Наступний період" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">›</button>
   </div>`;
 
   // Круг ПЕРШИМ у DOM щоб grid знав про зайняті 2×2 і обтікав ним.
   // grid-auto-flow:dense додатково дозволяє заповнити дірки якщо є.
-  return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:18px 14px;margin-bottom:12px">
+  return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:14px;margin-bottom:12px">
+    ${headerHtml}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:10px;grid-auto-flow:row dense">
       ${heroCircle}
       ${gridCells}
@@ -981,4 +1062,5 @@ Object.assign(window, {
   selectFinTxCat, saveFinTransaction, deleteFinTransaction,
   closeFinBudgetModal, saveFinBudgetFromModal, openAllTransactions,
   toggleFinTabType, // Фаза 2 (K-01): тап на круг = перемикач Витрати⇄Доходи
+  shiftFinPeriod,   // Фаза 2 крок Б: стрілки навігації періоду
 });
