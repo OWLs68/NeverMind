@@ -7858,180 +7858,304 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   }
   function openAddTransaction(prefill = {}) {
     _finEditId = null;
-    const cats = getFinCats();
+    _finTxComment = prefill.comment || "";
     const type = prefill.type || (currentFinTab === "income" ? "income" : "expense");
-    _showTransactionModal({ type, amount: prefill.amount || "", category: prefill.category || "", comment: prefill.comment || "" });
+    _showTransactionModal({ type, amount: prefill.amount || "", category: prefill.category || "", comment: prefill.comment || "", ts: prefill.ts });
   }
   function openEditTransaction(id) {
     const txs = getFinance();
     const t = txs.find((x) => x.id === id);
     if (!t) return;
     _finEditId = id;
+    _finTxComment = t.comment || "";
     _showTransactionModal(t);
   }
   function _showTransactionModal(data) {
     const cats = getFinCats();
-    const isExpense = data.type !== "income";
-    const catList = isExpense ? cats.expense : cats.income;
+    _finTxCurrentType = data.type === "income" ? "income" : "expense";
+    _finTxCategory = data.category || "";
+    _finTxSubcategory = data.subcategory || "";
+    _finTxExpression = data.amount ? String(data.amount) : "";
+    _finTxDate = data.ts || Date.now();
     const existing = document.getElementById("fin-tx-modal");
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-tx-modal";
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
-    modal.innerHTML = `
-    <div onclick="closeFinTxModal()" class="modal-backdrop"></div>
-    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);box-sizing:border-box">
-      <div class="modal-handle"></div>
-      <div class="modal-title">${_finEditId ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" : "\u041D\u043E\u0432\u0430"} ${isExpense ? "\u0432\u0438\u0442\u0440\u0430\u0442\u0430" : "\u0434\u043E\u0445\u0456\u0434"}</div>
-
-      <!-- \u0422\u0438\u043F -->
-      <div style="display:flex;gap:6px;margin-bottom:12px">
-        <button id="fntx-btn-expense" onclick="toggleFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${isExpense ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${isExpense ? "rgba(194,65,12,0.08)" : "white"};color:${isExpense ? "#c2410c" : "rgba(30,16,64,0.4)"}">\u0412\u0438\u0442\u0440\u0430\u0442\u0430</button>
-        <button id="fntx-btn-income" onclick="toggleFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${!isExpense ? "#16a34a" : "rgba(30,16,64,0.1)"};background:${!isExpense ? "rgba(22,163,74,0.08)" : "white"};color:${!isExpense ? "#16a34a" : "rgba(30,16,64,0.4)"}">\u0414\u043E\u0445\u0456\u0434</button>
-      </div>
-
-      <!-- \u0421\u0443\u043C\u0430 -->
-      <input id="fntx-amount" type="number" placeholder="\u0421\u0443\u043C\u0430 (\u20AC)" inputmode="decimal"
-        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:20px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box"
-        value="${data.amount || ""}">
-
-      <!-- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F -->
-      <div id="fntx-cats-wrap" style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</div>
-        <div id="fntx-cats" style="display:flex;flex-wrap:wrap;gap:6px">
-          ${catList.filter((c) => !c.archived).map((c) => {
-      const active = c.name === data.category;
-      return `<button onclick="selectFinTxCat('${escapeHtml(c.name)}')" id="fntx-cat-${escapeHtml(c.name)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${active ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${active ? "rgba(194,65,12,0.08)" : "white"};color:${active ? "#c2410c" : "rgba(30,16,64,0.5)"}">${escapeHtml(c.name)}</button>`;
-    }).join("")}
-        </div>
-        <input id="fntx-cat-custom" type="text" placeholder="\u0430\u0431\u043E \u0441\u0432\u043E\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u2026"
-          style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-top:8px;box-sizing:border-box"
-          value="${catList.some((c) => c.name === data.category) ? "" : data.category || ""}">
-      </div>
-
-      <!-- \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 -->
-      <input id="fntx-comment" type="text" placeholder="\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)"
-        style="width:100%;border:1.5px solid rgba(30,16,64,0.1);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
-        value="${data.comment || ""}">
-
-      <div style="display:flex;gap:8px">
-        ${_finEditId ? `<button onclick="deleteFinTransaction()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:15px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">\u{1F5D1}</button>` : ""}
-        <button onclick="closeFinTxModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-        <button onclick="saveFinTransaction()" class="btn-save-primary">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
-      </div>
-    </div>`;
+    modal.innerHTML = _renderTransactionModalBody();
     document.body.appendChild(modal);
     setupModalSwipeClose(modal.querySelector("div:last-child"), closeFinTxModal);
-    if (data.category && catList.some((c) => c.name === data.category)) {
-      setTimeout(() => selectFinTxCat(data.category), 50);
-    }
-    setTimeout(() => {
-      document.getElementById("fntx-amount")?.focus();
-    }, 300);
-    _finTxCurrentType = isExpense ? "expense" : "income";
-    _finTxSelectedCat = data.category || "";
   }
-  function toggleFinTxType(type) {
-    _finTxCurrentType = type;
-    const isExpense = type === "expense";
+  function _renderTransactionModalBody() {
     const cats = getFinCats();
-    const catList = isExpense ? cats.expense : cats.income;
-    const btnE = document.getElementById("fntx-btn-expense");
-    const btnI = document.getElementById("fntx-btn-income");
-    if (btnE) {
-      btnE.style.borderColor = isExpense ? "#c2410c" : "rgba(30,16,64,0.1)";
-      btnE.style.background = isExpense ? "rgba(194,65,12,0.08)" : "white";
-      btnE.style.color = isExpense ? "#c2410c" : "rgba(30,16,64,0.4)";
-    }
-    if (btnI) {
-      btnI.style.borderColor = !isExpense ? "#16a34a" : "rgba(30,16,64,0.1)";
-      btnI.style.background = !isExpense ? "rgba(22,163,74,0.08)" : "white";
-      btnI.style.color = !isExpense ? "#16a34a" : "rgba(30,16,64,0.4)";
-    }
-    _finTxSelectedCat = "";
-    const catsEl = document.getElementById("fntx-cats");
-    if (catsEl) catsEl.innerHTML = catList.filter((c) => !c.archived).map(
-      (c) => `<button onclick="selectFinTxCat('${escapeHtml(c.name)}')" id="fntx-cat-${escapeHtml(c.name)}" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.1);background:white;color:rgba(30,16,64,0.5)">${escapeHtml(c.name)}</button>`
-    ).join("");
-  }
-  function selectFinTxCat(cat) {
-    const cats = getFinCats();
-    const catList = _finTxCurrentType === "expense" ? cats.expense : cats.income;
-    const matchedCat = catList.find((c) => c.name === cat);
-    const isSubcat = !matchedCat;
-    if (isSubcat) {
-      _finTxSelectedCat = cat;
-      const subEl2 = document.getElementById("fntx-subcats");
-      if (subEl2) subEl2.querySelectorAll("button").forEach((btn) => {
-        const active = btn.textContent === cat;
-        btn.style.borderColor = active ? "#c2410c" : "rgba(30,16,64,0.08)";
-        btn.style.background = active ? "rgba(194,65,12,0.08)" : "rgba(30,16,64,0.03)";
-        btn.style.color = active ? "#c2410c" : "rgba(30,16,64,0.45)";
-      });
-      const customInput2 = document.getElementById("fntx-cat-custom");
-      if (customInput2) customInput2.value = "";
-      return;
-    }
-    _finTxSelectedCat = cat;
-    const catsEl = document.getElementById("fntx-cats");
-    if (catsEl) catsEl.querySelectorAll("button").forEach((btn) => {
-      const active = btn.textContent === cat;
-      btn.style.borderColor = active ? "#c2410c" : "rgba(30,16,64,0.1)";
-      btn.style.background = active ? "rgba(194,65,12,0.08)" : "white";
-      btn.style.color = active ? "#c2410c" : "rgba(30,16,64,0.5)";
-    });
+    const isExpense = _finTxCurrentType !== "income";
+    const isEdit = _finEditId !== null;
+    const catList = (isExpense ? cats.expense : cats.income).filter((c) => !c.archived);
+    const matchedCat = catList.find((c) => c.name === _finTxCategory);
     const subcats = matchedCat?.subcategories || [];
-    let subEl = document.getElementById("fntx-subcats");
-    if (subcats.length > 0) {
-      if (!subEl) {
-        subEl = document.createElement("div");
-        subEl.id = "fntx-subcats";
-        subEl.style.cssText = "display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(30,16,64,0.06)";
-        const catsWrapper = document.getElementById("fntx-cats-wrap");
-        if (catsWrapper) catsWrapper.appendChild(subEl);
-        else catsEl?.parentNode?.insertBefore(subEl, catsEl?.nextSibling);
-      }
-      subEl.innerHTML = subcats.map(
-        (s) => `<button onclick="selectFinTxCat('${escapeHtml(s)}')" style="padding:5px 11px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid rgba(30,16,64,0.08);background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.45);transition:all 0.15s">${escapeHtml(s)}</button>`
-      ).join("");
-      subEl.style.display = "flex";
-    } else if (subEl) {
-      subEl.style.display = "none";
+    let title;
+    if (_finTxCategory) {
+      title = isEdit ? isExpense ? `\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438: ${_finTxCategory}` : `\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: ${_finTxCategory}` : _finTxCategory;
+    } else {
+      title = isEdit ? isExpense ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443" : "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434" : isExpense ? "\u041D\u043E\u0432\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430" : "\u041D\u043E\u0432\u0438\u0439 \u0434\u043E\u0445\u0456\u0434";
     }
-    const customInput = document.getElementById("fntx-cat-custom");
-    if (customInput) customInput.value = "";
+    const calcResult = _safeFinCalc(_finTxExpression);
+    const displayAmount = _finTxExpression || "0";
+    const calcCol = isExpense ? "#c2410c" : "#16a34a";
+    const dateLabel = _finTxDateLabel(_finTxDate);
+    const showCatPicker = !_finTxCategory || isEdit;
+    const catPickerHtml = showCatPicker ? `
+    <div id="fntx-cats-wrap" style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${catList.map((c) => {
+      const active = c.name === _finTxCategory;
+      return `<button onclick="selectFinTxMainCat('${escapeHtml(c.name)}')" style="padding:5px 11px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${active ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${active ? "rgba(194,65,12,0.08)" : "white"};color:${active ? "#c2410c" : "rgba(30,16,64,0.5)"}">${escapeHtml(c.name)}</button>`;
+    }).join("")}
+      </div>
+    </div>` : "";
+    const subcatsHtml = subcats.length > 0 ? `
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">
+      ${subcats.map((s) => {
+      const active = s === _finTxSubcategory;
+      return `<button onclick="selectFinTxSubcat('${escapeHtml(s)}')" style="padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${active ? "#c2410c" : "rgba(30,16,64,0.08)"};background:${active ? "rgba(194,65,12,0.08)" : "rgba(30,16,64,0.03)"};color:${active ? "#c2410c" : "rgba(30,16,64,0.45)"}">${escapeHtml(s)}</button>`;
+    }).join("")}
+    </div>` : "";
+    const calcBtn = (label, action, opts = {}) => {
+      const bg = opts.bg || "rgba(30,16,64,0.04)";
+      const col = opts.col || "#1e1040";
+      const fontSize = opts.fontSize || "20px";
+      const fontWeight = opts.fontWeight || "600";
+      return `<button onclick="${action}" style="padding:14px 0;border-radius:12px;border:none;background:${bg};color:${col};font-size:${fontSize};font-weight:${fontWeight};cursor:pointer;font-family:inherit;touch-action:manipulation">${label}</button>`;
+    };
+    const opStyle = { bg: "rgba(194,65,12,0.06)", col: "#c2410c", fontWeight: "700" };
+    const calcGrid = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+    ${calcBtn("7", "finCalcAppend('7')")}
+    ${calcBtn("8", "finCalcAppend('8')")}
+    ${calcBtn("9", "finCalcAppend('9')")}
+    ${calcBtn("\xF7", "finCalcAppend('\xF7')", opStyle)}
+    ${calcBtn("4", "finCalcAppend('4')")}
+    ${calcBtn("5", "finCalcAppend('5')")}
+    ${calcBtn("6", "finCalcAppend('6')")}
+    ${calcBtn("\xD7", "finCalcAppend('\xD7')", opStyle)}
+    ${calcBtn("1", "finCalcAppend('1')")}
+    ${calcBtn("2", "finCalcAppend('2')")}
+    ${calcBtn("3", "finCalcAppend('3')")}
+    ${calcBtn("\u2212", "finCalcAppend('-')", opStyle)}
+    ${calcBtn(",", "finCalcAppend('.')")}
+    ${calcBtn("0", "finCalcAppend('0')")}
+    ${calcBtn("\u232B", "finCalcBackspace()", { bg: "rgba(239,68,68,0.06)", col: "#dc2626", fontSize: "18px" })}
+    ${calcBtn("+", "finCalcAppend('+')", opStyle)}
+  </div>`;
+    return `<div onclick="closeFinTxModal()" class="modal-backdrop"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:14px 18px calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box;max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+
+    <!-- \u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A -->
+    <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
+
+    <!-- \u0412\u0435\u043B\u0438\u043A\u0430 \u0441\u0443\u043C\u0430 -->
+    <div style="text-align:center;margin-bottom:10px">
+      <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
+      ${_finTxExpression && /[+\-*/×÷]/.test(_finTxExpression) ? `<div style="font-size:13px;color:rgba(30,16,64,0.45);margin-top:4px">= ${formatMoney(calcResult)}</div>` : ""}
+    </div>
+
+    ${catPickerHtml}
+    ${subcatsHtml}
+
+    <!-- \u0414\u0430\u0442\u0430 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(30,16,64,0.03);border-radius:12px;margin-bottom:10px;cursor:pointer" onclick="openFinDateModal()">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span style="font-size:13px;font-weight:600;color:#1e1040">${escapeHtml(dateLabel)}</span>
+      </div>
+      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">\u0437\u043C\u0456\u043D\u0438\u0442\u0438</span>
+    </div>
+
+    <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430 -->
+    <input id="fntx-comment" type="text" placeholder="\u041D\u043E\u0442\u0430\u0442\u043A\u0430 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)" value="${escapeHtml(_finTxComment || "")}"
+      oninput="_finTxComment = this.value"
+      style="width:100%;border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box">
+
+    ${calcGrid}
+
+    <!-- \u041A\u043D\u043E\u043F\u043A\u0438 \u0434\u0456\u0439 -->
+    <div style="display:flex;gap:6px">
+      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
+      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u2713 \u0414\u043E\u0434\u0430\u0442\u0438"}</button>
+    </div>
+  </div>`;
+  }
+  function _refreshTransactionModal() {
+    const modal = document.getElementById("fin-tx-modal");
+    if (modal) modal.innerHTML = _renderTransactionModalBody();
+  }
+  function _safeFinCalc(expr) {
+    if (!expr) return 0;
+    const norm = String(expr).replace(/×/g, "*").replace(/÷/g, "/").replace(/,/g, ".").replace(/\s+/g, "");
+    const tokens = norm.match(/(\d+\.?\d*|\.\d+|[+\-*/])/g);
+    if (!tokens || tokens.length === 0) return 0;
+    let nums = [];
+    let ops = [];
+    let i = 0;
+    if (tokens[0] === "-" && tokens.length > 1) {
+      nums.push(-parseFloat(tokens[1]));
+      i = 2;
+    } else {
+      nums.push(parseFloat(tokens[0]));
+      i = 1;
+    }
+    while (i < tokens.length) {
+      const op = tokens[i];
+      const num = parseFloat(tokens[i + 1]);
+      if (isNaN(num)) break;
+      ops.push(op);
+      nums.push(num);
+      i += 2;
+    }
+    for (let j = 0; j < ops.length; j++) {
+      if (ops[j] === "*" || ops[j] === "/") {
+        const result2 = ops[j] === "*" ? nums[j] * nums[j + 1] : nums[j + 1] !== 0 ? nums[j] / nums[j + 1] : 0;
+        nums[j] = result2;
+        nums.splice(j + 1, 1);
+        ops.splice(j, 1);
+        j--;
+      }
+    }
+    let result = nums[0];
+    for (let j = 0; j < ops.length; j++) {
+      result = ops[j] === "+" ? result + nums[j + 1] : result - nums[j + 1];
+    }
+    return Math.round(result * 100) / 100;
+  }
+  function finCalcAppend(token) {
+    const last = _finTxExpression.slice(-1);
+    const isOp = (c) => "+-*/\xD7\xF7".includes(c);
+    if (isOp(token) && isOp(last)) {
+      _finTxExpression = _finTxExpression.slice(0, -1) + token;
+    } else if (token === ".") {
+      const lastNum = _finTxExpression.split(/[+\-*/×÷]/).pop();
+      if (lastNum.includes(".")) return;
+      if (!lastNum) _finTxExpression += "0";
+      _finTxExpression += token;
+    } else {
+      _finTxExpression += token;
+    }
+    _refreshTransactionModal();
+  }
+  function finCalcBackspace() {
+    if (!_finTxExpression) return;
+    _finTxExpression = _finTxExpression.slice(0, -1);
+    _refreshTransactionModal();
+  }
+  function selectFinTxMainCat(name) {
+    _finTxCategory = name;
+    _finTxSubcategory = "";
+    _refreshTransactionModal();
+  }
+  function selectFinTxSubcat(name) {
+    _finTxSubcategory = _finTxSubcategory === name ? "" : name;
+    _refreshTransactionModal();
+  }
+  function _finTxDateLabel(ts) {
+    const d = new Date(ts);
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    const yest = new Date(today);
+    yest.setDate(today.getDate() - 1);
+    const day2 = new Date(today);
+    day2.setDate(today.getDate() - 2);
+    const dDate = new Date(d);
+    dDate.setHours(0, 0, 0, 0);
+    if (dDate.getTime() === today.getTime()) return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (dDate.getTime() === yest.getTime()) return "\u0412\u0447\u043E\u0440\u0430";
+    if (dDate.getTime() === day2.getTime()) return "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430";
+    return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? void 0 : "numeric" });
+  }
+  function openFinDateModal() {
+    const existing = document.getElementById("fin-date-modal");
+    if (existing) existing.remove();
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    const fmt = (offset) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + offset);
+      return d.toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+    };
+    const currentYmd = new Date(_finTxDate).toISOString().slice(0, 10);
+    const modal = document.createElement("div");
+    modal.id = "fin-date-modal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center";
+    modal.innerHTML = `
+    <div onclick="closeFinDateModal()" class="modal-backdrop"></div>
+    <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:14px 18px calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box">
+      <div class="modal-handle"></div>
+      <div class="modal-title">\u0414\u0430\u0442\u0430 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 ${fmt(0)}</button>
+        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0412\u0447\u043E\u0440\u0430 \xB7 ${fmt(-1)}</button>
+        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430 \xB7 ${fmt(-2)}</button>
+        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443 \xB7 ${fmt(-7)}</button>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C</div>
+      <input id="fin-date-input" type="date" value="${currentYmd}" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}"
+        onchange="setFinTxDateFromInput(this.value)"
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box">
+      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">\u0417\u0430\u043A\u0440\u0438\u0442\u0438</button>
+    </div>`;
+    document.body.appendChild(modal);
+  }
+  function closeFinDateModal() {
+    document.getElementById("fin-date-modal")?.remove();
+  }
+  function setFinTxDateOffset(offset) {
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(d.getDate() + offset);
+    d.setHours(12, 0, 0, 0);
+    _finTxDate = d.getTime();
+    closeFinDateModal();
+    _refreshTransactionModal();
+  }
+  function setFinTxDateFromInput(ymd) {
+    if (!ymd) return;
+    const d = /* @__PURE__ */ new Date(ymd + "T12:00:00");
+    if (isNaN(d.getTime())) return;
+    _finTxDate = d.getTime();
+    closeFinDateModal();
+    _refreshTransactionModal();
   }
   function saveFinTransaction() {
-    const amountRaw = parseFloat(document.getElementById("fntx-amount")?.value || "0");
-    if (!amountRaw || amountRaw <= 0) {
+    const amount = _safeFinCalc(_finTxExpression);
+    if (!amount || amount <= 0) {
       showToast("\u0412\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u0443");
       return;
     }
-    const customCat = document.getElementById("fntx-cat-custom")?.value.trim();
-    const category = customCat || _finTxSelectedCat;
-    if (!category) {
+    if (!_finTxCategory) {
       showToast("\u0412\u0438\u0431\u0435\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E");
       return;
     }
-    const comment = document.getElementById("fntx-comment")?.value.trim() || "";
     const txs = getFinance();
-    const cats = getFinCats();
-    const catList = _finTxCurrentType === "expense" ? cats.expense : cats.income;
-    if (customCat && !catList.includes(customCat)) {
-      cats[_finTxCurrentType].push(customCat);
-      saveFinCats(cats);
-    }
+    const baseFields = {
+      type: _finTxCurrentType,
+      amount,
+      category: _finTxCategory,
+      subcategory: _finTxSubcategory || void 0,
+      comment: _finTxComment || "",
+      ts: _finTxDate
+    };
     if (_finEditId) {
       const idx = txs.findIndex((x) => x.id === _finEditId);
-      if (idx !== -1) txs[idx] = { ...txs[idx], amount: amountRaw, category, comment, type: _finTxCurrentType };
+      if (idx !== -1) txs[idx] = { ...txs[idx], ...baseFields };
     } else {
-      txs.unshift({ id: Date.now(), type: _finTxCurrentType, amount: amountRaw, category, comment, ts: Date.now() });
+      txs.unshift({ id: Date.now(), ...baseFields });
     }
     saveFinance(txs);
     closeFinTxModal();
     renderFinance();
-    showToast(_finEditId ? "\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E" : `\u2713 ${_finTxCurrentType === "expense" ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0443" : "\u0414\u043E\u0445\u0456\u0434"} \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E`);
+    showToast(_finEditId ? "\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E" : `\u2713 ${_finTxCurrentType === "expense" ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0443" : "\u0414\u043E\u0445\u0456\u0434"} \u0434\u043E\u0434\u0430\u043D\u043E`);
     _finEditId = null;
+    _finTxComment = "";
     try {
       localStorage.setItem("nm_owl_tab_ts_finance", "0");
       tryBoardUpdate("finance");
@@ -8561,7 +8685,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _finEditingCatId = null;
     _finCatModalDraft = null;
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxSelectedCat, financeBarHistory, financeBarLoading, _finCatModalDraft;
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -8678,7 +8802,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _finSwipeAttached = false;
       _finEditId = null;
       _finTxCurrentType = "expense";
-      _finTxSelectedCat = "";
+      _finTxCategory = "";
+      _finTxSubcategory = "";
+      _finTxExpression = "";
+      _finTxDate = Date.now();
+      _finTxComment = "";
       financeBarHistory = [];
       financeBarLoading = false;
       _finCatModalDraft = null;
@@ -8691,8 +8819,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         openFinBudgetModal,
         openEditTransaction,
         closeFinTxModal,
-        toggleFinTxType,
-        selectFinTxCat,
         saveFinTransaction,
         deleteFinTransaction,
         closeFinBudgetModal,
@@ -8716,8 +8842,26 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         removeCatModalSubcat,
         updateCatModalSubcat,
         moveCatModalUp,
-        moveCatModalDown
-        // Фаза 2 крок В.2: переміщення категорій (замість drag)
+        moveCatModalDown,
+        // переміщення категорій (замість drag)
+        // Фаза 3: модалка транзакції з калькулятором
+        finCalcAppend,
+        finCalcBackspace,
+        selectFinTxMainCat,
+        selectFinTxSubcat,
+        openFinDateModal,
+        closeFinDateModal,
+        setFinTxDateOffset,
+        setFinTxDateFromInput
+      });
+      Object.defineProperty(window, "_finTxComment", {
+        get() {
+          return _finTxComment;
+        },
+        set(v) {
+          _finTxComment = v;
+        },
+        configurable: true
       });
       Object.defineProperty(window, "_finCatModalDraft", {
         get() {
