@@ -402,7 +402,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `nm_owl_last_board_ts` | string (ts) — таймстемп останнього згенерованого повідомлення табло (для детекції ігнору в 4.40) | `src/owl/proactive.js` |
 | `nm_owl_last_chip_click_ts` | string (ts) — таймстемп останнього кліку будь-якого чіпа (для детекції ігнору в 4.40) | `src/owl/chips.js` |
 
-**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`, `nm_fin_coach_{period}`
+**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`
 
 ---
 
