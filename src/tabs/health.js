@@ -6,9 +6,11 @@
 
 import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
+import { addToTrash } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { processUniversalAction } from './habits.js';
 import { openNotesFolder } from './notes.js';
+import { getEvents, saveEvents } from './calendar.js';
 
 // === STORAGE ===
 
@@ -107,6 +109,15 @@ let _healthTypingEl = null;
 
 // === RENDER HEALTH (головний екран — список) ===
 export function renderHealth() {
+  // Фаза 1.5 (15.04 6v2eR): lazy-housekeeping синку картка ↔ nm_events.
+  // Викликаємо тільки на головному екрані щоб не блокувати workspace-рендер.
+  // Порядок важливий: спочатку синкнути дати (event → card), потім архівувати,
+  // потім orphan-detection (якщо подію видалили з Календаря).
+  if (activeHealthCardId === null) {
+    try { _syncEventDatesToCards(); } catch (e) {}
+    try { _archivePastAppointments(); } catch (e) {}
+    try { _detectOrphanAppointments(); } catch (e) {}
+  }
   if (activeHealthCardId !== null) {
     renderHealthWorkspace(activeHealthCardId);
     return;
@@ -450,6 +461,153 @@ function _appendMedicationRow(m) {
   list.appendChild(row);
 }
 
+// === ФАЗА 1.5 (15.04 6v2eR): СИНК КАРТКА ↔ ПОДІЯ ===
+//
+// Синхронізує `card.nextAppointment` з подією у nm_events.
+// Викликається після save картки.
+//
+// Логіка:
+//   appt є + eventId є  → оновити подію (title/date/time)
+//   appt є + eventId нема → створити нову подію, повернути її id для запису в картку
+//   appt нема + eventId є → видалити стару подію (через trash)
+//   appt нема + eventId нема → нічого не робити
+//
+// Поверне oновлену структуру nextAppointment (з eventId якщо створена нова подія).
+// Структура події розширена: sourceCardId (id картки-джерела), archived (для минулих прийомів).
+function _syncCardAppointmentToEvent(cardId, cardName, newAppointment, oldEventId) {
+  const events = getEvents();
+  const hasNewAppt = newAppointment && newAppointment.date;
+
+  // appt прибрано — видалити стару подію якщо була
+  if (!hasNewAppt && oldEventId) {
+    const idx = events.findIndex(e => e.id === oldEventId);
+    if (idx !== -1) {
+      const removed = events.splice(idx, 1)[0];
+      saveEvents(events);
+      addToTrash('event', removed);
+    }
+    return null;
+  }
+  if (!hasNewAppt) return null;
+
+  const title = `Прийом: ${cardName}`;
+
+  // Оновити існуючу
+  if (oldEventId) {
+    const idx = events.findIndex(e => e.id === oldEventId);
+    if (idx !== -1) {
+      events[idx].title = title;
+      events[idx].date = newAppointment.date;
+      events[idx].time = newAppointment.time || '';
+      events[idx].priority = 'important';
+      events[idx].sourceCardId = cardId;
+      // Якщо подія раніше була архівована (минулий прийом), а юзер виставив нову дату — реактивувати
+      if (events[idx].archived && newAppointment.date >= new Date().toISOString().slice(0, 10)) {
+        events[idx].archived = false;
+      }
+      saveEvents(events);
+      return { date: newAppointment.date, time: newAppointment.time || '', eventId: oldEventId };
+    }
+    // eventId був, але події нема (видалили з Календаря) → fall through на create
+  }
+
+  // Створити нову
+  const newEvent = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    title,
+    date: newAppointment.date,
+    time: newAppointment.time || '',
+    priority: 'important',
+    sourceCardId: cardId,
+    createdAt: Date.now(),
+  };
+  events.push(newEvent);
+  saveEvents(events);
+  return { date: newAppointment.date, time: newAppointment.time || '', eventId: newEvent.id };
+}
+
+// Архівація минулих прийомів. Викликається lazy у renderHealth().
+// Для кожної картки з nextAppointment у минулому:
+//   - подія у nm_events позначається archived:true (не видаляється — лишається у Календарі як історія)
+//   - у card.history додається запис типу 'doctor_visit' ("Прийом відбувся {date}")
+//   - card.nextAppointment очищається щоб звільнити слот
+function _archivePastAppointments() {
+  const cards = getHealthCards();
+  const todayISO = new Date().toISOString().slice(0, 10);
+  let cardsChanged = false;
+  let eventsChanged = false;
+  const events = getEvents();
+
+  cards.forEach(card => {
+    const appt = card.nextAppointment;
+    if (!appt || !appt.date || appt.date >= todayISO) return;
+
+    // Минула — архівуємо
+    if (appt.eventId) {
+      const ev = events.find(e => e.id === appt.eventId);
+      if (ev && !ev.archived) {
+        ev.archived = true;
+        eventsChanged = true;
+      }
+    }
+    // Запис у history
+    if (!Array.isArray(card.history)) card.history = [];
+    card.history.unshift({
+      ts: Date.now(),
+      type: 'doctor_visit',
+      text: `Прийом відбувся ${appt.date}${appt.time ? ' о ' + appt.time : ''}`,
+    });
+    card.nextAppointment = null;
+    cardsChanged = true;
+  });
+
+  if (eventsChanged) saveEvents(events);
+  if (cardsChanged) saveHealthCards(cards);
+}
+
+// Перевірка orphan-карток: якщо card.nextAppointment.eventId вказує на подію якої більше нема
+// (видалена з Календаря) — лишаємо nextAppointment але прибираємо eventId, щоб при наступному
+// save картки створилась нова подія замість пошуку видаленої.
+function _detectOrphanAppointments() {
+  const cards = getHealthCards();
+  const eventIds = new Set(getEvents().map(e => e.id));
+  let changed = false;
+
+  cards.forEach(card => {
+    const appt = card.nextAppointment;
+    if (appt && appt.eventId && !eventIds.has(appt.eventId)) {
+      delete appt.eventId;
+      changed = true;
+    }
+  });
+
+  if (changed) saveHealthCards(cards);
+}
+
+// Зворотний синк дат: якщо подія була змінена у Календарі (нова дата/час), оновити
+// відповідне card.nextAppointment. Робимо lazy щоб не імпортувати health у calendar.js
+// (уникнення circular dependency — циклічної залежності між модулями).
+function _syncEventDatesToCards() {
+  const cards = getHealthCards();
+  const events = getEvents();
+  let changed = false;
+
+  cards.forEach(card => {
+    const appt = card.nextAppointment;
+    if (!appt || !appt.eventId) return;
+    const ev = events.find(e => e.id === appt.eventId);
+    if (!ev) return; // orphan — обробить _detectOrphanAppointments
+    const evTime = ev.time || '';
+    if (ev.date !== appt.date || evTime !== (appt.time || '')) {
+      appt.date = ev.date;
+      appt.time = evTime;
+      changed = true;
+    }
+  });
+
+  if (changed) saveHealthCards(cards);
+}
+
 function saveHealthCardFromModal() {
   const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const name = getVal('health-card-name');
@@ -496,10 +654,14 @@ function saveHealthCardFromModal() {
         const old = oldMeds.find(o => o.name === newMed.name);
         if (old && Array.isArray(old.log)) newMed.log = old.log;
       });
+      // Фаза 1.5: синк nextAppointment ↔ nm_events.
+      // Передаємо старий eventId з картки, отримуємо оновлений nextAppointment з eventId.
+      const oldEventId = cards[idx].nextAppointment && cards[idx].nextAppointment.eventId;
+      const syncedAppt = _syncCardAppointmentToEvent(cards[idx].id, name, nextAppointment, oldEventId);
       cards[idx] = {
         ...cards[idx],
         name, subtitle, doctor, doctorRecommendations, doctorConclusion,
-        startDate, nextAppointment, status, medications: meds,
+        startDate, nextAppointment: syncedAppt, status, medications: meds,
       };
       saveHealthCards(cards);
       showToast('✓ Збережено');
@@ -521,6 +683,8 @@ function saveHealthCardFromModal() {
       history: [],
       createdAt: Date.now(),
     };
+    // Фаза 1.5: синк — створює подію якщо є nextAppointment.date, повертає nextAppointment з eventId.
+    newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, name, nextAppointment, null);
     cards.unshift(newCard);
     saveHealthCards(cards);
     showToast('✓ Картку додано');
@@ -536,6 +700,18 @@ function deleteHealthCardFromModal() {
   const cards = getHealthCards();
   const idx = cards.findIndex(c => c.id === _editingHealthCardId);
   if (idx !== -1) {
+    // Фаза 1.5: видалити прив'язану подію (через trash, не назавжди)
+    const removed = cards[idx];
+    const eventId = removed.nextAppointment && removed.nextAppointment.eventId;
+    if (eventId) {
+      const events = getEvents();
+      const eIdx = events.findIndex(e => e.id === eventId);
+      if (eIdx !== -1) {
+        const removedEvent = events.splice(eIdx, 1)[0];
+        saveEvents(events);
+        addToTrash('event', removedEvent);
+      }
+    }
     cards.splice(idx, 1);
     saveHealthCards(cards);
     showToast('Картку видалено');
