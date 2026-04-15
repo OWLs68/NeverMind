@@ -397,31 +397,148 @@ function _finEmptyTxsHint() {
   </div>`;
 }
 
-// Фаза 2 крок Б: touch-обробники для свайп-гортання періодів
-let _finSwipeAttached = false;
+// Фаза 2 крок Б: touch-обробники для свайп-гортання періодів + крок В.2: drag-n-drop категорій
+let _finHandlersAttached = false;
+const _DRAG_LONG_PRESS_MS = 350;
+const _DRAG_CANCEL_THRESHOLD = 10;
+let _dragCatId = null;       // id категорії що зараз перетягується (null = не drag)
+let _dragLongPressTimer = null;
+let _dragOriginCell = null;  // DOM-елемент origin-cell (для відновлення стилю)
+let _dragLastTarget = null;  // DOM-елемент cell під пальцем (для підсвітки)
+
 function _attachFinSwipe() {
-  if (_finSwipeAttached) return;
+  if (_finHandlersAttached) return;
   const wrap = document.getElementById('fin-v2-wrap');
   if (!wrap) return;
+
+  // ===== Свайп періодів (тільки коли НЕ edit-mode) =====
   let startX = 0, startY = 0, onGrid = false;
+
   wrap.addEventListener('touchstart', (e) => {
-    onGrid = !_finEditMode && !!e.target.closest('#fin-cats-grid-wrap'); // у edit-режимі свайп вимкнено
-    if (!onGrid) return;
+    const target = e.target.closest('#fin-cats-grid-wrap');
+    if (!target) { onGrid = false; return; }
+    onGrid = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
+
+    // Drag long-press: тільки у edit-mode і тільки якщо тач почався на категорії
+    if (_finEditMode) {
+      const cell = e.target.closest('[data-cat-id]');
+      if (cell) {
+        _dragOriginCell = cell;
+        _dragLongPressTimer = setTimeout(() => {
+          _dragCatId = cell.dataset.catId;
+          cell.style.opacity = '0.4';
+          cell.style.transform = 'scale(0.9)';
+          // Тактильна віддача (якщо доступна)
+          if (navigator.vibrate) try { navigator.vibrate(20); } catch(e) {}
+        }, _DRAG_LONG_PRESS_MS);
+      }
+    }
   }, { passive: true });
+
+  wrap.addEventListener('touchmove', (e) => {
+    if (!onGrid) return;
+
+    // Якщо палець пішов > порогу ДО спрацювання long-press → скасувати drag
+    if (_dragLongPressTimer && _dragCatId === null) {
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.hypot(dx, dy) > _DRAG_CANCEL_THRESHOLD) {
+        clearTimeout(_dragLongPressTimer);
+        _dragLongPressTimer = null;
+        _dragOriginCell = null;
+      }
+    }
+
+    // Активний drag — підсвічуємо ціль під пальцем
+    if (_dragCatId !== null) {
+      e.preventDefault?.(); // блокуємо вертикальний скрол сторінки під час drag
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+      const elBelow = document.elementFromPoint(x, y);
+      const targetCell = elBelow?.closest('[data-cat-id]');
+      if (targetCell !== _dragLastTarget) {
+        if (_dragLastTarget) _dragLastTarget.style.background = '';
+        if (targetCell && targetCell !== _dragOriginCell) {
+          targetCell.style.background = 'rgba(194,65,12,0.08)';
+          targetCell.style.borderRadius = '12px';
+        }
+        _dragLastTarget = targetCell;
+      }
+    }
+  }, { passive: false });
+
   wrap.addEventListener('touchend', (e) => {
+    // Активний drag — переставити і скинути
+    if (_dragCatId !== null) {
+      const fromId = _dragCatId;
+      const toCell = _dragLastTarget;
+      // Reset візуал
+      if (_dragOriginCell) { _dragOriginCell.style.opacity = ''; _dragOriginCell.style.transform = ''; }
+      if (_dragLastTarget) { _dragLastTarget.style.background = ''; _dragLastTarget.style.borderRadius = ''; }
+      const toId = toCell?.dataset?.catId;
+      _dragCatId = null;
+      _dragOriginCell = null;
+      _dragLastTarget = null;
+      if (fromId && toId && fromId !== toId) {
+        _swapFinCategoryOrder(fromId, toId);
+        renderFinance();
+      }
+      return;
+    }
+
+    // Скасувати long-press якщо він не встиг спрацювати (це звичайний тап)
+    if (_dragLongPressTimer) {
+      clearTimeout(_dragLongPressTimer);
+      _dragLongPressTimer = null;
+      _dragOriginCell = null;
+    }
+
     if (!onGrid) return;
     onGrid = false;
+
+    // Свайп періодів — тільки коли НЕ edit-mode
+    if (_finEditMode) return;
     const dx = e.changedTouches[0].clientX - startX;
     const dy = e.changedTouches[0].clientY - startY;
-    // Поріг 50px по X, |dx| > |dy| × 1.2 — щоб не плутати з вертикальним скролом
     if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-    if (dx < 0) currentFinPeriodOffset++; // свайп вліво → майбутнє
-    else currentFinPeriodOffset--;        // свайп вправо → минуле
+    if (dx < 0) currentFinPeriodOffset++;
+    else currentFinPeriodOffset--;
     renderFinance();
   }, { passive: true });
-  _finSwipeAttached = true;
+
+  // touchcancel — теж скидаємо
+  wrap.addEventListener('touchcancel', () => {
+    if (_dragLongPressTimer) { clearTimeout(_dragLongPressTimer); _dragLongPressTimer = null; }
+    if (_dragOriginCell) { _dragOriginCell.style.opacity = ''; _dragOriginCell.style.transform = ''; _dragOriginCell = null; }
+    if (_dragLastTarget) { _dragLastTarget.style.background = ''; _dragLastTarget.style.borderRadius = ''; _dragLastTarget = null; }
+    _dragCatId = null;
+    onGrid = false;
+  }, { passive: true });
+
+  _finHandlersAttached = true;
+}
+
+// Переставити категорію fromId на місце toId (insert before)
+// Зберігає порядок інших, оновлює .order, зберігає у localStorage
+function _swapFinCategoryOrder(fromId, toId) {
+  const cats = getFinCats();
+  for (const type of ['expense', 'income']) {
+    const arr = cats[type];
+    const fromIdx = arr.findIndex(c => c.id === fromId);
+    const toIdx = arr.findIndex(c => c.id === toId);
+    if (fromIdx === -1 || toIdx === -1) continue;
+    if (arr[fromIdx] && arr[toIdx]) {
+      // Реалізую як move: вирізати from і вставити перед to
+      const [moved] = arr.splice(fromIdx, 1);
+      const newToIdx = arr.findIndex(c => c.id === toId);
+      arr.splice(newToIdx, 0, moved);
+      arr.forEach((c, i) => c.order = i);
+      saveFinCats(cats);
+      return;
+    }
+  }
 }
 
 // Сітка категорій з кругом-Hero посередині.
@@ -459,12 +576,12 @@ function _finCatsGrid(allTxs, win) {
       : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})`;
     // У edit-режимі кружечок підсвічений (легка border-shimmer) щоб юзер бачив що тап = редагування
     const editStyle = _finEditMode ? 'box-shadow:0 0 0 2px ' + cat.color + '55;' : '';
-    return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
-      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
-      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle}">
+    return `<div onclick="${onClick}" data-cat-id="${escapeHtml(cat.id)}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;transition:transform 0.15s,opacity 0.15s">
+      <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escapeHtml(cat.name)}</div>
+      <div style="width:48px;height:48px;border-radius:50%;background:${cat.color}20;display:flex;align-items:center;justify-content:center;${editStyle};pointer-events:none">
         ${finCatIcon(cat.icon, cat.color, 22)}
       </div>
-      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
+      <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px;pointer-events:none">${sumStr}</div>
     </div>`;
   };
 
