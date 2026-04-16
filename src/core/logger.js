@@ -4,6 +4,16 @@ import { currentTab, showToast } from './nav.js';
 const NM_LOG_KEY = 'nm_error_log';
 const NM_LOG_MAX = 200;
 
+// Ring buffer останніх юзер-дій (у пам'яті, не localStorage) — додається до помилок
+// як контекст "що юзер робив перед помилкою".
+const _recentActions = [];
+const ACTIONS_MAX = 10;
+
+export function trackUserAction(action) {
+  _recentActions.push({ action: String(action).slice(0, 80), tab: currentTab || '?', ts: Date.now() });
+  if (_recentActions.length > ACTIONS_MAX) _recentActions.shift();
+}
+
 function getErrorLog() {
   try { return JSON.parse(localStorage.getItem(NM_LOG_KEY) || '[]'); } catch { return []; }
 }
@@ -28,14 +38,16 @@ function _groupConsecutive(log) {
   return out;
 }
 
-export function logError(type, message, source) {
+export function logError(type, message, source, stack) {
   const log = getErrorLog();
   log.push({
     ts: Date.now(),
     type,
     msg: String(message).slice(0, 500),
     src: source || '',
-    tab: currentTab || '?'
+    tab: currentTab || '?',
+    stack: stack ? String(stack).slice(0, 1500) : null,
+    actions: _recentActions.slice(-3),
   });
   saveErrorLog(log);
   updateErrorLogBtn();
@@ -43,10 +55,21 @@ export function logError(type, message, source) {
 
 // Перехоплюємо JS помилки і promise rejections
 window.addEventListener('error', e => {
-  logError('error', e.message, (e.filename || '').replace(/.*\//, '') + ':' + e.lineno);
+  logError(
+    'error',
+    e.error?.message || e.message,
+    (e.filename || '').replace(/.*\//, '') + ':' + e.lineno,
+    e.error?.stack
+  );
 });
 window.addEventListener('unhandledrejection', e => {
-  logError('promise', e.reason ? (e.reason.message || String(e.reason)) : 'Promise rejected', '');
+  const r = e.reason;
+  logError(
+    'promise',
+    r ? (r.message || String(r)) : 'Promise rejected',
+    '',
+    r?.stack
+  );
 });
 
 // Перехоплюємо console.log / warn / error
@@ -78,23 +101,41 @@ function showErrorLog() {
     list.innerHTML = '<div style="text-align:center;padding:48px 20px;color:rgba(30,16,64,0.35);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
   } else {
     const grouped = _groupConsecutive(log);
-    list.innerHTML = [...grouped].reverse().map(e => {
+    list.innerHTML = [...grouped].reverse().map((e, idx) => {
       const d = new Date(e.lastTs || e.ts);
       const time = d.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
       const date = d.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'});
-      const s = typeStyle[e.type] || { bg: 'rgba(30,16,64,0.06)', color: 'rgba(30,16,64,0.5)' };
+      const s = typeStyle[e.type] || { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' };
       const countBadge = e.count > 1
-        ? `<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(194,121,10,0.15);color:#7a4e05">×${e.count}</span>`
+        ? `<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(194,121,10,0.18);color:#fbbf24">×${e.count}</span>`
         : '';
-      return `<div style="padding:10px 14px;border-bottom:1px solid rgba(30,16,64,0.06)">
+      const hasDetails = !!(e.stack || (e.actions && e.actions.length));
+      const actionsHtml = (e.actions && e.actions.length)
+        ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px">
+             <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Останні дії перед помилкою</div>
+             ${e.actions.map(a => {
+               const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+               return `<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">[${at}] [${a.tab}] ${a.action}</div>`;
+             }).join('')}
+           </div>`
+        : '';
+      const stackHtml = e.stack
+        ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(239,68,68,0.08);border-radius:8px;border-left:2px solid rgba(239,68,68,0.4)">
+             <div style="font-size:10px;font-weight:700;color:rgba(252,165,165,0.85);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Stack trace</div>
+             <div style="font-size:10.5px;color:rgba(255,255,255,0.7);white-space:pre-wrap;line-height:1.5;font-family:monospace">${escapeLog(e.stack)}</div>
+           </div>`
+        : '';
+      return `<div class="log-entry" data-idx="${idx}" onclick="toggleLogEntry(${idx})" style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:${hasDetails ? 'pointer' : 'default'}">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:${s.bg};color:${s.color};text-transform:uppercase">${e.type}</span>
           ${countBadge}
-          <span style="font-size:11px;color:rgba(30,16,64,0.35)">${date} ${time}</span>
-          <span style="font-size:11px;color:rgba(30,16,64,0.25);margin-left:auto">${e.tab}</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.35)">${date} ${time}</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-left:auto">${e.tab}</span>
+          ${hasDetails ? `<span class="log-expand-${idx}" style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:4px">▸</span>` : ''}
         </div>
-        <div style="font-size:13px;color:#1e1040;line-height:1.45;word-break:break-all">${e.msg}</div>
-        ${e.src ? `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:3px;font-family:monospace">${e.src}</div>` : ''}
+        <div style="font-size:13px;color:rgba(255,255,255,0.92);line-height:1.45;word-break:break-all">${escapeLog(e.msg)}</div>
+        ${e.src ? `<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;font-family:monospace">${escapeLog(e.src)}</div>` : ''}
+        <div class="log-details-${idx}" style="display:none">${actionsHtml}${stackHtml}</div>
       </div>`;
     }).join('');
   }
@@ -122,7 +163,17 @@ function copyLogForClaude() {
   const lines = lastGroups.map(e => {
     const time = new Date(e.lastTs || e.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
     const cnt = e.count > 1 ? ` ×${e.count}` : '';
-    return `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? ' @ ' + e.src : ''}`;
+    let block = `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? ' @ ' + e.src : ''}`;
+    if (e.actions && e.actions.length) {
+      block += '\n  actions: ' + e.actions.map(a => {
+        const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        return `[${at}][${a.tab}] ${a.action}`;
+      }).join(' → ');
+    }
+    if (e.stack) {
+      block += '\n  stack: ' + e.stack.split('\n').slice(0, 6).join(' | ');
+    }
+    return block;
   }).join('\n');
   // Додаємо deploy info з бейджа щоб я бачив яка версія на телефоні
   const badge = document.getElementById('deploy-version');
@@ -171,5 +222,24 @@ export function updateErrorLogBtn() {
 }
 
 
+function escapeLog(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toggleLogEntry(idx) {
+  const details = document.querySelector(`.log-details-${idx}`);
+  const arrow = document.querySelector(`.log-expand-${idx}`);
+  if (!details) return;
+  const isOpen = details.style.display === 'block';
+  details.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
+}
+
+// Автотрекінг дій через подію nm-data-changed (dispatchається з save-функцій).
+// Майже безкоштовне покриття найважливіших операцій (задачі, звички, нотатки, фінанси).
+window.addEventListener('nm-data-changed', e => {
+  trackUserAction('data-changed:' + (e?.detail || 'unknown'));
+});
+
 // Functions called from HTML event handlers
-Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog });
+Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog, toggleLogEntry });
