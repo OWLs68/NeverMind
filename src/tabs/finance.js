@@ -1686,19 +1686,19 @@ function openFinAnalytics() {
 
   const modal = document.createElement('div');
   modal.id = 'fin-analytics-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(255,255,255,0.98);display:flex;flex-direction:column;overflow:hidden';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:#faf5ef;display:flex;flex-direction:column;overflow:hidden';
 
   // Дані
   const allTxs = getFinance();
   const content = _buildAnalyticsContent(allTxs);
 
   modal.innerHTML = `
-    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:16px 20px calc(env(safe-area-inset-top, 0px) + 8px);border-bottom:1px solid rgba(30,16,64,0.06)">
-      <button onclick="closeFinAnalytics()" style="padding:6px 14px;border-radius:12px;border:none;background:rgba(30,16,64,0.06);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit">← Назад</button>
-      <div style="font-size:16px;font-weight:800;color:#1e1040">Аналітика</div>
-      <div style="width:70px"></div>
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,44px) + 8px) 16px 12px;background:#faf5ef;border-bottom:1px solid rgba(30,16,64,0.08)">
+      <button onclick="closeFinAnalytics()" style="padding:8px 16px;border-radius:14px;border:none;background:rgba(30,16,64,0.08);font-size:14px;font-weight:700;color:#1e1040;cursor:pointer;font-family:inherit">← Назад</button>
+      <div style="font-size:17px;font-weight:800;color:#1e1040">📊 Аналітика</div>
+      <div style="width:80px"></div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px)">
+    <div style="flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 20px)">
       ${content}
     </div>`;
   document.body.appendChild(modal);
@@ -1761,7 +1761,7 @@ function _analyticsWeeklyTrend(allTxs) {
     </div>`;
   }).join('');
 
-  return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+  return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="fin-section-label">Тренд за 8 тижнів</div>
       <div style="display:flex;gap:10px">
@@ -1825,7 +1825,7 @@ function _analyticsInsightCards(allTxs) {
     <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">в день (середнє)</div>
     <div style="font-size:11px;color:${savedCol};font-weight:700;margin-top:2px">${curInc > 0 ? 'Заощаджено ' + savedPct + '%' : ''}</div>`;
 
-  const cardStyle = 'flex:1;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:14px 10px;text-align:center';
+  const cardStyle = 'flex:1;background:white;border-radius:16px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px 10px;text-align:center';
   return `<div style="display:flex;gap:8px;margin-bottom:12px">
     <div style="${cardStyle}">${card1}</div>
     <div style="${cardStyle}">${card2}</div>
@@ -1842,7 +1842,7 @@ function _analyticsBenchmark(allTxs) {
   const curExp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
 
   if (curInc <= 0) {
-    return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div class="fin-section-label" style="margin-bottom:8px">Розподіл 50/30/20</div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">Додай дохід щоб побачити розподіл</div>
     </div>`;
@@ -1878,7 +1878,7 @@ function _analyticsBenchmark(allTxs) {
     </div>`;
   };
 
-  return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+  return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div class="fin-section-label" style="margin-bottom:14px">Розподіл доходу</div>
     ${bar('Потреби', needsPct, 50, '#f97316')}
     ${bar('Бажання', wantsPct, 30, '#0ea5e9')}

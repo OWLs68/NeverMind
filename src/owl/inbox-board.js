@@ -978,9 +978,8 @@ export function startOwlBoardCycle() {
 }
 
 export function tryOwlBoardUpdate() {
-  // Показуємо що є зараз (кешоване повідомлення)
-  const msgs = getOwlBoardMessages();
-  if (msgs.length > 0) renderOwlBoard();
+  // Показуємо що є зараз (кешоване повідомлення) — ЗАВЖДИ, навіть якщо порожньо (сова лишається)
+  renderOwlBoard();
 
   // G9 (ROADMAP Блок 1) — Page Visibility: коли вкладка прихована,
   // не генерувати ніяких табло (юзер не побачить, API палиться даремно).
