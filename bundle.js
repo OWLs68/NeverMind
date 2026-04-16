@@ -8938,14 +8938,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   function _buildAnalyticsContent(allTxs) {
     const sections = [];
     sections.push(_analyticsWeeklyTrend(allTxs));
-    sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:8px">\u0406\u043D\u0441\u0430\u0439\u0442\u0438</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0414\u0435\u0442\u0430\u043B\u044C\u043D\u0456 \u0456\u043D\u0441\u0430\u0439\u0442-\u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0443 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u043A\u0440\u043E\u0446\u0456</div>
-  </div>`);
-    sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:8px">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B 50/30/20</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0412\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u0438\u0439 benchmark \u2014 \u0443 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u043A\u0440\u043E\u0446\u0456</div>
-  </div>`);
+    sections.push(_analyticsInsightCards(allTxs));
+    sections.push(_analyticsBenchmark(allTxs));
     return sections.join("");
   }
   function _analyticsWeeklyTrend(allTxs) {
@@ -8990,6 +8984,104 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       </div>
     </div>
     <div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+  </div>`;
+  }
+  function _analyticsInsightCards(allTxs) {
+    const now = /* @__PURE__ */ new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+    const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    const prevTo = from;
+    const curExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+    const prevExp = allTxs.filter((t) => t.type === "expense" && t.ts >= prevFrom && t.ts < prevTo).reduce((s, t) => s + t.amount, 0);
+    const curInc = allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+    let card1;
+    if (prevExp > 0 && curExp > 0) {
+      const pct = Math.round((curExp - prevExp) / prevExp * 100);
+      const col = pct <= 0 ? "#16a34a" : "#c2410c";
+      const arrow = pct <= 0 ? "\u2193" : "\u2191";
+      card1 = `<div style="font-size:24px;font-weight:900;color:${col}">${pct > 0 ? "+" : ""}${pct}%</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">\u0432\u0438\u0442\u0440\u0430\u0442\u0438 vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C</div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">${arrow} ${formatMoney(curExp)} vs ${formatMoney(prevExp)}</div>`;
+    } else {
+      card1 = `<div style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3)">\u2014</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:4px">\u0432\u0438\u0442\u0440\u0430\u0442\u0438 vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439</div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">\u043D\u0435\u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u0434\u0430\u043D\u0438\u0445</div>`;
+    }
+    const catMap = {};
+    allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to).forEach((t) => {
+      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    });
+    const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+    let card2;
+    if (topCats.length > 0 && curExp > 0) {
+      const [topName, topAmt] = topCats[0];
+      const topPct = Math.round(topAmt / curExp * 100);
+      card2 = `<div style="font-size:24px;font-weight:900;color:#c2410c">${topPct}%</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">${escapeHtml(topName)}</div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">${formatMoney(topAmt)} \xB7 \u0442\u043E\u043F-\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</div>`;
+    } else {
+      card2 = `<div style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3)">\u2014</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:4px">\u0442\u043E\u043F-\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</div>`;
+    }
+    const daysPassed = Math.max(1, now.getDate());
+    const avgDay = Math.round(curExp / daysPassed);
+    const savedPct = curInc > 0 ? Math.round((curInc - curExp) / curInc * 100) : 0;
+    const savedCol = savedPct >= 20 ? "#16a34a" : savedPct >= 10 ? "#d97706" : "#c2410c";
+    const card3 = `<div style="font-size:24px;font-weight:900;color:#1e1040">${formatMoney(avgDay)}</div>
+    <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">\u0432 \u0434\u0435\u043D\u044C (\u0441\u0435\u0440\u0435\u0434\u043D\u0454)</div>
+    <div style="font-size:11px;color:${savedCol};font-weight:700;margin-top:2px">${curInc > 0 ? "\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E " + savedPct + "%" : ""}</div>`;
+    const cardStyle = "flex:1;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:14px 10px;text-align:center";
+    return `<div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="${cardStyle}">${card1}</div>
+    <div style="${cardStyle}">${card2}</div>
+    <div style="${cardStyle}">${card3}</div>
+  </div>`;
+  }
+  function _analyticsBenchmark(allTxs) {
+    const now = /* @__PURE__ */ new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+    const curInc = allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+    const curExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+    if (curInc <= 0) {
+      return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+      <div class="fin-section-label" style="margin-bottom:8px">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B 50/30/20</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B</div>
+    </div>`;
+    }
+    const spent = curExp;
+    const saved = curInc - curExp;
+    const spentPct = Math.round(spent / curInc * 100);
+    const savedPct = Math.round(saved / curInc * 100);
+    const needsCats = ["\u0457\u0436\u0430", "\u0436\u0438\u0442\u043B\u043E", "\u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442", "\u0437\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F", "\u0437\u0434\u043E\u0440\u043E\u0432\u044F"];
+    const monthExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to);
+    const needsAmt = monthExp.filter((t) => needsCats.includes(t.category.toLowerCase())).reduce((s, t) => s + t.amount, 0);
+    const wantsAmt = spent - needsAmt;
+    const needsPct = Math.round(needsAmt / curInc * 100);
+    const wantsPct = Math.round(wantsAmt / curInc * 100);
+    const bar = (label, pct, target, color) => {
+      const w = Math.max(2, Math.min(100, pct));
+      const isOver = pct > target;
+      return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px">
+        <span style="color:#1e1040">${label}</span>
+        <span style="color:${isOver ? "#c2410c" : color};font-weight:700">${pct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">(\u0446\u0456\u043B\u044C ${target}%)</span></span>
+      </div>
+      <div style="height:8px;background:rgba(30,16,64,0.06);border-radius:4px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${w}%;background:${color};border-radius:4px;transition:width 0.5s"></div>
+        <div style="position:absolute;top:0;bottom:0;left:${target}%;width:2px;background:rgba(30,16,64,0.25)"></div>
+      </div>
+    </div>`;
+    };
+    return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div class="fin-section-label" style="margin-bottom:14px">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443</div>
+    ${bar("\u041F\u043E\u0442\u0440\u0435\u0431\u0438", needsPct, 50, "#f97316")}
+    ${bar("\u0411\u0430\u0436\u0430\u043D\u043D\u044F", wantsPct, 30, "#0ea5e9")}
+    ${bar("\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F", savedPct, 20, "#22c55e")}
+    <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:8px;border-top:1px solid rgba(30,16,64,0.06);padding-top:8px">
+      \u041F\u0440\u0430\u0432\u0438\u043B\u043E 50/30/20: 50% \u043F\u043E\u0442\u0440\u0435\u0431\u0438 (\u0457\u0436\u0430, \u0436\u0438\u0442\u043B\u043E, \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442), 30% \u0431\u0430\u0436\u0430\u043D\u043D\u044F (\u0440\u0435\u0448\u0442\u0430), 20% \u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F
+    </div>
   </div>`;
   }
   var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, FIN_INSIGHT_TTL, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft;
