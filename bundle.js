@@ -5330,8 +5330,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
   }
   function handleChipClick(tab, text, action, target) {
     if (action === "nav" && VALID_NAV_TARGETS.includes(target)) {
+      if (target === currentTab) return;
       switchTab(target);
-      showToast("\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0436\u0443 \u0434\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0438");
       return;
     }
     if (text.includes("\u2714\uFE0F")) {
@@ -7227,7 +7227,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _boardGenerating[tab] = false;
   }
   function _tryLocalFallback(tab) {
-    if (tab !== "inbox") return;
+    if (tab !== "inbox") {
+      _tryTabLocalFallback(tab);
+      return;
+    }
     const msgs = getOwlBoardMessages();
     const visibleTs = msgs[0]?.ts || 0;
     if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
@@ -7286,6 +7289,41 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     saveOwlBoardMessages(all.slice(0, 3));
     renderOwlBoard();
     console.warn("[OWL board] smart fallback:", text);
+  }
+  function _tryTabLocalFallback(tab) {
+    const msgs = getTabBoardMsgs(tab);
+    const visibleTs = msgs[0]?.ts || 0;
+    if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
+    let text = "";
+    const chips = [];
+    try {
+      if (tab === "finance") {
+        const txs = getFinance();
+        const from = getFinPeriodRange("month");
+        const monthTxs = txs.filter((t) => t.ts >= from);
+        const exp = monthTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+        const inc = monthTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+        if (monthTxs.length === 0) {
+          text = "\u0426\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0439 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0432\u0438\u0442\u0440\u0430\u0442\u0443!";
+        } else {
+          text = `\u0417\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(exp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(inc)}.${inc > 0 ? ` \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${Math.round((inc - exp) / inc * 100)}%.` : ""}`;
+        }
+      } else if (tab === "tasks") {
+        const tasks = getTasks().filter((t) => t.status === "active");
+        text = tasks.length > 0 ? `${tasks.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438?` : "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C!";
+      } else if (tab === "health") {
+        text = "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?";
+      } else {
+        text = "\u0427\u0438\u043C \u043C\u043E\u0436\u0443 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438?";
+      }
+    } catch (e) {
+      text = "\u0427\u0438\u043C \u043C\u043E\u0436\u0443 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438?";
+    }
+    if (!text) return;
+    const newMsg = { text, priority: "normal", chips, ts: Date.now(), id: Date.now() };
+    saveTabBoardMsg(tab, newMsg);
+    renderTabBoard(tab);
+    console.warn(`[OWL ${tab} board] tab fallback:`, text);
   }
   function _showFirstVisitHint(tab) {
     if (!TAB_HINTS[tab]) return false;
@@ -7825,6 +7863,44 @@ ${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: 
       else currentFinPeriodOffset--;
       renderFinance();
     }, { passive: true });
+    let swState = null;
+    wrap.addEventListener("touchstart", (e) => {
+      const sw = e.target.closest(".fin-tx-swipe-wrap");
+      if (!sw) return;
+      swState = { wrap: sw, el: sw.querySelector(".tx-row"), startX: e.touches[0].clientX, startY: e.touches[0].clientY, txId: parseInt(sw.dataset.txId), dx: 0 };
+    }, { passive: true });
+    wrap.addEventListener("touchmove", (e) => {
+      if (!swState) return;
+      const dx = e.touches[0].clientX - swState.startX;
+      const dy = e.touches[0].clientY - swState.startY;
+      if (Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(swState.dx) < 10) {
+        swState = null;
+        return;
+      }
+      swState.dx = dx;
+      if (dx < 0) applySwipeTrail(swState.el, swState.wrap, dx);
+    }, { passive: true });
+    wrap.addEventListener("touchend", () => {
+      if (!swState) return;
+      if (swState.dx < -SWIPE_DELETE_THRESHOLD) {
+        const txId = swState.txId;
+        const item = getFinance().find((t) => t.id === txId);
+        saveFinance(getFinance().filter((t) => t.id !== txId));
+        if (item) addToTrash("finance", item);
+        clearSwipeTrail(swState.el, swState.wrap);
+        swState = null;
+        renderFinance();
+        if (item) showUndoToast("\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+          const txs = getFinance();
+          txs.unshift(item);
+          saveFinance(txs);
+          renderFinance();
+        });
+      } else {
+        if (swState.el && swState.wrap) clearSwipeTrail(swState.el, swState.wrap);
+        swState = null;
+      }
+    }, { passive: true });
     _finSwipeAttached = true;
   }
   function moveFinCategory(id, delta) {
@@ -7925,14 +8001,16 @@ ${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: 
     const rows = sorted.map((t) => {
       const isExp = t.type === "expense";
       const dateStr = new Date(t.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      return `<div class="tx-row" onclick="openEditTransaction(${t.id})">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
-        ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ""}
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t.amount)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+      return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
+      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:rgba(255,255,255,0.95)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
+          ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ""}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t.amount)}</div>
+          <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+        </div>
       </div>
     </div>`;
     }).join("");
@@ -8458,10 +8536,11 @@ ${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: 
     const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(", ");
     const todayTxs = txs.filter((t) => new Date(t.ts).toDateString() === today);
     const todaySum = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    let parts = [`\u0424\u0456\u043D\u0430\u043D\u0441\u0438 (\u043C\u0456\u0441\u044F\u0446\u044C): \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(totalExp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(totalInc)}`];
-    if (budget.total > 0) parts.push(`\u0431\u044E\u0434\u0436\u0435\u0442 ${formatMoney(budget.total)}, \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(budget.total - totalExp)}`);
+    let parts = [`[MONTH_EXPENSES:${formatMoney(totalExp)}] [MONTH_INCOME:${formatMoney(totalInc)}] \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(totalExp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(totalInc)}`];
+    if (budget.total > 0) parts.push(`[BUDGET:${formatMoney(budget.total)}] \u0431\u044E\u0434\u0436\u0435\u0442 ${formatMoney(budget.total)}, \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(budget.total - totalExp)}`);
     if (top3) parts.push(`\u0442\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: ${top3}`);
-    if (todaySum > 0) parts.push(`\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(todaySum)}`);
+    if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(todaySum)}`);
+    else parts.push("[TODAY_EXPENSES:0] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0435 \u0431\u0443\u043B\u043E");
     const recentTxs = txs.slice(0, 5).map((t) => `[ID:${t.id}] ${t.type === "expense" ? "-" : "+"}${t.amount}${getCurrency()} ${t.category}${t.comment ? " (" + t.comment + ")" : ""}`).join("; ");
     if (recentTxs) parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F update_transaction): ${recentTxs}`);
     return parts.join("\n");
@@ -8812,6 +8891,7 @@ ${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: 
       init_nav();
       init_utils();
       init_trash();
+      init_swipe_delete();
       init_core();
       init_proactive();
       init_inbox();
@@ -14379,6 +14459,20 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     ["nm_fin_coach_week", "nm_fin_coach_month", "nm_fin_coach_3months"].forEach((k) => {
       localStorage.removeItem(k);
     });
+    if (!localStorage.getItem("nm_owl_cache_cleared_v3")) {
+      [
+        "nm_owl_board",
+        "nm_owl_tab_finance",
+        "nm_owl_tab_tasks",
+        "nm_owl_tab_notes",
+        "nm_owl_tab_health",
+        "nm_owl_tab_projects",
+        "nm_owl_tab_evening",
+        "nm_owl_tab_me",
+        "nm_owl_board_ts"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_owl_cache_cleared_v3", "1");
+    }
   }
   function init() {
     try {
