@@ -109,8 +109,21 @@ export function renderTabBoard(tab) {
   const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
   const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
   if (!board) return;
-  if (!msgs.length) { board.style.display = 'none'; return; }
   board.style.display = 'block';
+  // Якщо немає повідомлень — показуємо тільки сову без бабла
+  if (!msgs.length) {
+    if (!board._owlReady) {
+      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
+      board._owlReady = true;
+      _owlTabStates[tab] = 'speech';
+    }
+    // Ховаємо бабл і чіпи, залишаємо сову
+    const bubble = document.getElementById('owl-tab-bubble-' + tab);
+    const chipsWrap = document.getElementById('owl-tab-chips-wrap-' + tab);
+    if (bubble) bubble.style.display = 'none';
+    if (chipsWrap) chipsWrap.style.display = 'none';
+    return;
+  }
 
   // Ініціалізація структури — один раз (inbox вже має HTML в index.html)
   if (!board._owlReady) {
@@ -121,6 +134,10 @@ export function renderTabBoard(tab) {
   }
 
   const msg = msgs[0];
+
+  // Показуємо бабл назад (якщо раніше ховали через пустий msgs)
+  const bubble = document.getElementById('owl-tab-bubble-' + tab);
+  if (bubble) bubble.style.display = '';
 
   const tEl = document.getElementById('owl-tab-text-' + tab);
   const cEl = document.getElementById('owl-tab-ctext-' + tab);
