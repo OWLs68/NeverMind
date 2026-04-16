@@ -7764,7 +7764,57 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const allTxs = getFinance().filter((t) => t.ts >= win.from && t.ts < win.to);
     wrap.innerHTML = _finCatsGrid(allTxs, win) + _finDailyInsight(allTxs, win) + (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
     _attachFinSwipe();
+    _attachFinTxSwipeDelete();
     _refreshFinInsight(allTxs, win);
+  }
+  function _attachFinTxSwipeDelete() {
+    const wraps = document.querySelectorAll(".fin-tx-swipe-wrap");
+    wraps.forEach((sw) => {
+      let startX = 0, startY = 0, dx = 0, locked = false;
+      const card = sw.querySelector(".tx-row");
+      if (!card) return;
+      sw.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        dx = 0;
+        locked = false;
+      }, { passive: true });
+      sw.addEventListener("touchmove", (e) => {
+        if (locked) return;
+        const curX = e.touches[0].clientX;
+        const curY = e.touches[0].clientY;
+        const ddx = curX - startX;
+        const ddy = curY - startY;
+        if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) {
+          locked = true;
+          return;
+        }
+        dx = ddx;
+        if (dx < 0) applySwipeTrail(card, sw, dx);
+      }, { passive: true });
+      sw.addEventListener("touchend", () => {
+        if (locked) {
+          clearSwipeTrail(card, sw);
+          return;
+        }
+        if (dx < -SWIPE_DELETE_THRESHOLD) {
+          const txId = parseInt(sw.dataset.txId);
+          const item = getFinance().find((t) => t.id === txId);
+          saveFinance(getFinance().filter((t) => t.id !== txId));
+          if (item) addToTrash("finance", item);
+          clearSwipeTrail(card, sw);
+          renderFinance();
+          if (item) showUndoToast("\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+            const txs = getFinance();
+            txs.unshift(item);
+            saveFinance(txs);
+            renderFinance();
+          });
+        } else {
+          clearSwipeTrail(card, sw);
+        }
+      }, { passive: true });
+    });
   }
   function _finEmptyTxsHint() {
     return `<div style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(30,16,64,0.12);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px">
@@ -7813,20 +7863,20 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(", ");
     const budget = getFinBudget();
     const prompt2 = `${getOWLPersonality()}
-\u0414\u0430\u0439 \u041E\u0414\u0418\u041D \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0438\u0439 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0456\u043D\u0441\u0430\u0439\u0442. \u041E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456\u0448\u0435 \u0437\u0430\u0440\u0430\u0437:
-- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F \u0440\u0456\u0437\u043A\u043E \u0440\u043E\u0441\u0442\u0435 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0438\u043B\u0430 \u043B\u0456\u043C\u0456\u0442
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u0437\u0440\u043E\u0441\u043B\u0438/\u0437\u043D\u0438\u0437\u0438\u043B\u0438\u0441\u044C vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0430\u043D\u0430\u043B\u043E\u0433\u0456\u0447\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434
-- \u0420\u0456\u0447\u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0446\u0456\u044F ("\u20ACX/\u0442\u0438\u0436\u0434\u0435\u043D\u044C = \u20ACY/\u0440\u0456\u043A" \u0434\u043B\u044F \u043F\u043E\u043C\u0456\u0442\u043D\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457)
-- \u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F \u0432\u0438\u0449\u0435/\u043D\u0438\u0436\u0447\u0435 20%
-- \u041D\u0435\u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C (\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u0431\u0430\u0433\u0430\u0442\u043E \u0437\u0430 \u0440\u0430\u0437 \u0430\u0431\u043E \u043D\u0430\u0432\u043F\u0430\u043A\u0438)
+\u0414\u0430\u0439 \u041E\u0414\u041D\u0423 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u041A\u041E\u0420\u0418\u0421\u041D\u0423 \u043F\u043E\u0440\u0430\u0434\u0443 \u043F\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0441\u0443\u043C\u0438 (\u044E\u0437\u0435\u0440 \u0432\u0436\u0435 \u0431\u0430\u0447\u0438\u0442\u044C \u0457\u0445 \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456).
 
-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u041C\u0410\u041A\u0421\u0418\u041C\u0423\u041C. \u0427\u0438\u0441\u043B\u0430 \u0422\u0406\u041B\u042C\u041A\u0418 \u0437 \u0434\u0430\u043D\u0438\u0445 \u043D\u0438\u0436\u0447\u0435. \u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+\u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u0441\u043A\u043B\u0430\u043B\u0438 \u20ACX" \u2014 \u0434\u0430\u0439 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u0423 \u0434\u0456\u044E \u0430\u0431\u043E \u0446\u0456\u043A\u0430\u0432\u0438\u0439 \u0444\u0430\u043A\u0442:
+- \u0420\u0456\u0447\u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0446\u0456\u044F: "${top3.split(":")[0] || "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"} \u043A\u043E\u0448\u0442\u0443\u0454 ~\u20ACY/\u0440\u0456\u043A \u2014 \u0432\u0438\u0441\u0442\u0430\u0447\u0438\u0442\u044C \u043D\u0430 Z"
+- \u041F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F: "\u0412\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u043D\u0430 X \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0456\u0436 \u043D\u0430 Y \u2014 \u0442\u0430\u043A \u0456 \u0437\u0430\u0434\u0443\u043C\u0430\u043D\u043E?"
+- \u041F\u043E\u0440\u0430\u0434\u0430: "\u042F\u043A\u0449\u043E \u0441\u043A\u043E\u0440\u043E\u0442\u0438\u0442\u0438 X \u043D\u0430 \u20AC20/\u043C\u0456\u0441 \u2014 \u0437\u0430 \u0440\u0456\u043A \u0437\u0435\u043A\u043E\u043D\u043E\u043C\u0438\u0448 \u20AC240"
+- \u0422\u0440\u0435\u043D\u0434: "\u0426\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F \u0440\u043E\u0441\u0442\u0435 3 \u043C\u0456\u0441\u044F\u0446\u0456 \u043F\u043E\u0441\u043F\u0456\u043B\u044C"
+
+1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0447\u0438\u0441\u043B\u0430 \u0437 \u0434\u0430\u043D\u0438\u0445 \u043D\u0438\u0436\u0447\u0435. \u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0443 \u0441\u0443\u043C\u0443 \u0432\u0438\u0442\u0440\u0430\u0442.
 
 \u0414\u0430\u043D\u0456 (${win.label}):
-\u0412\u0438\u0442\u0440\u0430\u0442\u0438: ${formatMoney(totalExp)}, \u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
-\u0422\u043E\u043F: ${top3 || "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"}
-${budget.total > 0 ? `\u0411\u044E\u0434\u0436\u0435\u0442: ${formatMoney(budget.total)}` : "\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"}
-${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ""}`;
+\u0422\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: ${top3 || "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"}
+${budget.total > 0 ? `\u0411\u044E\u0434\u0436\u0435\u0442: ${formatMoney(budget.total)}` : ""}
+${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}, \u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ""}`;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -7862,44 +7912,6 @@ ${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: 
       if (dx < 0) currentFinPeriodOffset++;
       else currentFinPeriodOffset--;
       renderFinance();
-    }, { passive: true });
-    let swState = null;
-    wrap.addEventListener("touchstart", (e) => {
-      const sw = e.target.closest(".fin-tx-swipe-wrap");
-      if (!sw) return;
-      swState = { wrap: sw, el: sw.querySelector(".tx-row"), startX: e.touches[0].clientX, startY: e.touches[0].clientY, txId: parseInt(sw.dataset.txId), dx: 0 };
-    }, { passive: true });
-    wrap.addEventListener("touchmove", (e) => {
-      if (!swState) return;
-      const dx = e.touches[0].clientX - swState.startX;
-      const dy = e.touches[0].clientY - swState.startY;
-      if (Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(swState.dx) < 10) {
-        swState = null;
-        return;
-      }
-      swState.dx = dx;
-      if (dx < 0) applySwipeTrail(swState.el, swState.wrap, dx);
-    }, { passive: true });
-    wrap.addEventListener("touchend", () => {
-      if (!swState) return;
-      if (swState.dx < -SWIPE_DELETE_THRESHOLD) {
-        const txId = swState.txId;
-        const item = getFinance().find((t) => t.id === txId);
-        saveFinance(getFinance().filter((t) => t.id !== txId));
-        if (item) addToTrash("finance", item);
-        clearSwipeTrail(swState.el, swState.wrap);
-        swState = null;
-        renderFinance();
-        if (item) showUndoToast("\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-          const txs = getFinance();
-          txs.unshift(item);
-          saveFinance(txs);
-          renderFinance();
-        });
-      } else {
-        if (swState.el && swState.wrap) clearSwipeTrail(swState.el, swState.wrap);
-        swState = null;
-      }
     }, { passive: true });
     _finSwipeAttached = true;
   }
@@ -14473,6 +14485,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       ].forEach((k) => localStorage.removeItem(k));
       localStorage.setItem("nm_owl_cache_cleared_v3", "1");
     }
+    ["nm_fin_insight_week_0", "nm_fin_insight_month_0", "nm_fin_insight_3months_0"].forEach((k) => localStorage.removeItem(k));
   }
   function init() {
     try {
