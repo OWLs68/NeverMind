@@ -469,7 +469,25 @@ src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
 - Проактивні підказки: агент помічає закономірності ("щопонеділка ти додаєш багато задач — може розпланувати тиждень?")
 
 ### Анімація OWL (TODO)
-SVG/Lottie анімація створюється іншою нейромережею (не Claude). Роман створить анімацію окремо, потім Claude вставить у файли. Ідеї: кивок, поворот голови, крила.
+**Оновлено 16.04.2026 (сесія W6MDn) — обрано варіант 2:** готова SVG з вільного ресурсу (Flaticon/unDraw/iconify/svgrepo) + анімаційний скіл `freshtechbro/claudedesignskills` (рушій Anime.js). Детально → [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md) секція "Скіл для анімації OWL".
+
+Кроки: (1) Роман знаходить багатошарову SVG сову з окремими path для голови/тіла/крил/очей. (2) Claude встановлює `freshtechbro/claudedesignskills`. (3) Пише 5 станів: `idle` / `talking` / `listening` / `error` / `celebration`. (4) Інтеграція у `nm-data-changed`.
+
+Варіант 3 (Gemini SVG Creator) — відкладено, об'єднати з B-56 (40 іконок категорій).
+
+Ідеї анімацій: кивок, поворот голови, опущені крила при помилці, змах крилом при вітанні, idle-ходіння коли нема що сказати.
+
+### Скіли Claude Code (інструменти розробки, НЕ фічі NeverMind)
+**Створено 16.04.2026 (сесія W6MDn):** детальний план 6 скілів + формат SKILL.md → [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md).
+
+- 🟢 **UX-UI адаптований** (блокує "дефолтні" модалки, читає DESIGN_SYSTEM.md)
+- 🟢 **Prompt Engineer** (єдиний формат 7+ промптів OWL)
+- 🟢 **iOS Safari PWA Debugger** (bfcache / SW / keyboard / localStorage eviction)
+- 🟡 **Supabase Prep** — міграції+perf+retry+offline (перед Supabase)
+- 🔴 **A11y-Enforcer** (перед публічним релізом)
+- 🔵 **Gamification-Engine** (Блок 3)
+
+Відкинуто: Remotion Master (ми без React/відео), Social Carousel (не маркетинговий продукт).
 
 **Анімація табло (додано 16.04.2026 3229b):** коли табло з'являється — анімація розширення вправо (від аватара). Коли зникає — згортається вліво (до аватара). CSS transitions: `transform: scaleX(0) → scaleX(1)` з `transform-origin: left`. Потребує SVG-персонажа для повної реалізації.
 
