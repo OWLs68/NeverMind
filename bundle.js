@@ -6411,11 +6411,19 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
     if (!board) return;
+    board.style.display = "block";
     if (!msgs.length) {
-      board.style.display = "none";
+      if (!board._owlReady) {
+        if (!isInbox) board.innerHTML = _owlTabHTML(tab);
+        board._owlReady = true;
+        _owlTabStates[tab] = "speech";
+      }
+      const bubble2 = document.getElementById("owl-tab-bubble-" + tab);
+      const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
+      if (bubble2) bubble2.style.display = "none";
+      if (chipsWrap) chipsWrap.style.display = "none";
       return;
     }
-    board.style.display = "block";
     if (!board._owlReady) {
       if (!isInbox) board.innerHTML = _owlTabHTML(tab);
       board._owlReady = true;
@@ -6423,6 +6431,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
       _owlTabApplyState(tab);
     }
     const msg = msgs[0];
+    const bubble = document.getElementById("owl-tab-bubble-" + tab);
+    if (bubble) bubble.style.display = "";
     const tEl = document.getElementById("owl-tab-text-" + tab);
     const cEl = document.getElementById("owl-tab-ctext-" + tab);
     const tmEl = document.getElementById("owl-tab-time-" + tab);
