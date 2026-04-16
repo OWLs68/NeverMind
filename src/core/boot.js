@@ -2,7 +2,7 @@ import { applyTheme, autoRefreshMemory, closeSettings, currentTab, setupDrumTabb
 import { cleanupTrash } from './trash.js';
 import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
-import { renderOwlBoard, setupChatBarSwipe, startOwlBoardCycle } from '../owl/inbox-board.js';
+import { renderOwlBoard, setupChatBarSwipe, startOwlBoardCycle, clearStaleBoards } from '../owl/inbox-board.js';
 import { startFollowupsCycle } from '../owl/followups.js';
 import { setupKeyboardAvoiding } from '../ui/keyboard.js';
 import { renderInbox } from '../tabs/inbox.js';
@@ -347,6 +347,8 @@ function init() {
   } catch(e) {}
   try { updateKeyStatus(!!localStorage.getItem('nm_gemini_key')); } catch(e) {}
   try { renderInbox(); } catch(e) {}
+  // Інвалідація табло зі вчора і раніше (AI пише "завтра/вчора" — стають неправдою при зміні дня)
+  try { clearStaleBoards(); } catch(e) {}
   // Рендеримо всі табло одразу — показуємо збережені дані без очікування switchTab
   try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
   // Відновлюємо чат Inbox якщо є збережені повідомлення
