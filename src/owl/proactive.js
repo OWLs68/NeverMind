@@ -859,7 +859,9 @@ function _tryLocalFallback(tab) {
   }
   const msgs = getOwlBoardMessages();
   const visibleTs = msgs[0]?.ts || 0;
-  if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return;
+  // Якщо кеш порожній (visibleTs=0) — ДОЗВОЛИТИ генерацію (не блокувати).
+  // Блокуємо тільки якщо є свіже повідомлення (менше 30 хв).
+  if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1000) return;
 
   const mode = (JSON.parse(localStorage.getItem('nm_settings') || '{}').owl_mode) || 'partner';
   let text = '';
@@ -941,7 +943,7 @@ function _tryLocalFallback(tab) {
 function _tryTabLocalFallback(tab) {
   const msgs = getTabBoardMsgs(tab);
   const visibleTs = msgs[0]?.ts || 0;
-  if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return;
+  if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1000) return;
   let text = '';
   const chips = [];
   try {
