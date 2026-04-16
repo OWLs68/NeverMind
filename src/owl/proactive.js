@@ -664,7 +664,11 @@ function _getBannedTopics(msgs) {
 export async function generateBoardMessage(tab) {
   if (_boardGenerating[tab]) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return;
+  if (!key) {
+    // Навіть без API key — показати fallback з реальних даних
+    _tryLocalFallback(tab);
+    return;
+  }
   _boardGenerating[tab] = true;
 
   const isInbox = tab === 'inbox';
@@ -963,8 +967,14 @@ function _tryTabLocalFallback(tab) {
       text = tasks.length > 0 ? `${tasks.length} активних задач. Що будемо закривати?` : 'Немає активних задач. Вільний день!';
     } else if (tab === 'health') {
       text = 'Як самопочуття сьогодні?';
+    } else if (tab === 'notes') {
+      text = 'Запиши думку або ідею — я збережу у нотатки 📝';
+    } else if (tab === 'evening' || tab === 'me') {
+      text = 'Як пройшов день? Є що записати?';
+    } else if (tab === 'projects') {
+      text = 'Працюємо над проектами. Що нового?';
     } else {
-      text = 'Чим можу допомогти?';
+      text = 'Привіт! Напиши або тапни "Поговорити" 💬';
     }
   } catch(e) { text = 'Чим можу допомогти?'; }
   if (!text) return;
