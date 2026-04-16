@@ -109,9 +109,16 @@ export function renderTabBoard(tab) {
   const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
   const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
   if (!board) return;
-  // Табло або повне, або зникає повністю. Порожня сова без бабла — не показуємо.
-  if (!msgs.length) { board.style.display = 'none'; return; }
   board.style.display = 'block';
+
+  // Якщо кеш порожній — дефолтне повідомлення одразу (синхронно, без API)
+  if (!msgs.length) {
+    const defaults = { inbox:'Привіт! Напиши що завгодно — я допоможу.', tasks:'Що будемо робити сьогодні?', finance:'Тапни категорію щоб записати витрату.', notes:'Запиши думку або ідею 📝', health:'Як самопочуття?', evening:'Як пройшов день?', me:'Подивимось на тиждень.', projects:'Працюємо над проектами.' };
+    const defMsg = { text: defaults[tab] || 'Привіт!', priority:'normal', chips:[], ts: Date.now(), id: Date.now() };
+    msgs.push(defMsg);
+    if (isInbox) { try { const all = [defMsg]; localStorage.setItem('nm_owl_board', JSON.stringify(all)); } catch {} }
+    else { saveTabBoardMsg(tab, defMsg); }
+  }
 
   // Ініціалізація структури — один раз (inbox вже має HTML в index.html)
   if (!board._owlReady) {
