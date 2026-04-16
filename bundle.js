@@ -10,6 +10,10 @@
   };
 
   // src/core/logger.js
+  function trackUserAction(action) {
+    _recentActions.push({ action: String(action).slice(0, 80), tab: currentTab || "?", ts: Date.now() });
+    if (_recentActions.length > ACTIONS_MAX) _recentActions.shift();
+  }
   function getErrorLog() {
     try {
       return JSON.parse(localStorage.getItem(NM_LOG_KEY) || "[]");
@@ -36,14 +40,16 @@
     }
     return out;
   }
-  function logError(type, message, source) {
+  function logError(type, message, source, stack) {
     const log = getErrorLog();
     log.push({
       ts: Date.now(),
       type,
       msg: String(message).slice(0, 500),
       src: source || "",
-      tab: currentTab || "?"
+      tab: currentTab || "?",
+      stack: stack ? String(stack).slice(0, 1500) : null,
+      actions: _recentActions.slice(-3)
     });
     saveErrorLog(log);
     updateErrorLogBtn();
@@ -54,33 +60,47 @@
     const list = document.getElementById("log-panel-list");
     if (!panel || !list) return;
     const typeStyle = {
-      error: { bg: "rgba(239,68,68,0.15)", color: "#dc2626" },
-      promise: { bg: "rgba(239,68,68,0.15)", color: "#dc2626" },
-      err: { bg: "rgba(239,68,68,0.12)", color: "#dc2626" },
-      warn: { bg: "rgba(251,191,36,0.15)", color: "#b45309" },
-      log: { bg: "rgba(99,102,241,0.10)", color: "#4338ca" }
+      error: { bg: "rgba(239,68,68,0.22)", color: "#fca5a5", label: "ERR" },
+      promise: { bg: "rgba(239,68,68,0.22)", color: "#fca5a5", label: "PROMISE" },
+      err: { bg: "rgba(239,68,68,0.22)", color: "#fca5a5", label: "ERR" },
+      warn: { bg: "rgba(251,191,36,0.22)", color: "#fcd34d", label: "WARN" },
+      log: { bg: "rgba(129,140,248,0.22)", color: "#c7d2fe", label: "LOG" }
     };
     if (log.length === 0) {
-      list.innerHTML = '<div style="text-align:center;padding:48px 20px;color:rgba(30,16,64,0.35);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
+      list.innerHTML = '<div style="text-align:center;padding:64px 20px;color:rgba(255,255,255,0.35);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
     } else {
       const grouped = _groupConsecutive(log);
-      list.innerHTML = [...grouped].reverse().map((e) => {
+      list.innerHTML = '<div style="padding:12px 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
         const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         const date = d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
-        const s = typeStyle[e.type] || { bg: "rgba(30,16,64,0.06)", color: "rgba(30,16,64,0.5)" };
-        const countBadge = e.count > 1 ? `<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(194,121,10,0.15);color:#7a4e05">\xD7${e.count}</span>` : "";
-        return `<div style="padding:10px 14px;border-bottom:1px solid rgba(30,16,64,0.06)">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:${s.bg};color:${s.color};text-transform:uppercase">${e.type}</span>
-          ${countBadge}
-          <span style="font-size:11px;color:rgba(30,16,64,0.35)">${date} ${time}</span>
-          <span style="font-size:11px;color:rgba(30,16,64,0.25);margin-left:auto">${e.tab}</span>
-        </div>
-        <div style="font-size:13px;color:#1e1040;line-height:1.45;word-break:break-all">${e.msg}</div>
-        ${e.src ? `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:3px;font-family:monospace">${e.src}</div>` : ""}
-      </div>`;
-      }).join("");
+        const s = typeStyle[e.type] || { bg: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", label: e.type.toUpperCase() };
+        const countBadge = e.count > 1 ? `<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.22);color:#fcd34d">\xD7${e.count}</span>` : "";
+        const hasDetails = !!(e.stack || e.actions && e.actions.length);
+        const actionsHtml = e.actions && e.actions.length ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px">
+               <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0434\u0456\u0457 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E</div>
+               ${e.actions.map((a) => {
+          const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+          return `<div style="font-size:12px;color:rgba(255,255,255,0.82);line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">[${at}] [${escapeLog(a.tab)}] ${escapeLog(a.action)}</div>`;
+        }).join("")}
+             </div>` : "";
+        const stackHtml = e.stack ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.1);border-radius:10px;border-left:3px solid rgba(252,165,165,0.5)">
+               <div style="font-size:10px;font-weight:800;color:#fca5a5;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Stack trace</div>
+               <div style="font-size:11px;color:rgba(255,255,255,0.85);white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.stack)}</div>
+             </div>` : "";
+        return `<div class="log-entry" data-idx="${idx}" ${hasDetails ? `onclick="toggleLogEntry(${idx})"` : ""} style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 14px;cursor:${hasDetails ? "pointer" : "default"};-webkit-tap-highlight-color:transparent">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:${s.bg};color:${s.color};letter-spacing:0.3px">${s.label}</span>
+            ${countBadge}
+            <span style="font-size:11px;color:rgba(255,255,255,0.5);font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${date} ${time}</span>
+            <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);margin-left:auto;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,0.06);text-transform:uppercase;letter-spacing:0.3px">${escapeLog(e.tab)}</span>
+            ${hasDetails ? `<span class="log-expand-${idx}" style="font-size:13px;color:rgba(255,255,255,0.55);flex-shrink:0">\u25B8</span>` : ""}
+          </div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.96);line-height:1.5;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${escapeLog(e.msg)}</div>
+          ${e.src ? `<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.src)}</div>` : ""}
+          <div class="log-details-${idx}" style="display:none">${actionsHtml}${stackHtml}</div>
+        </div>`;
+      }).join("") + "</div>";
     }
     const countEl = document.getElementById("log-panel-count");
     if (countEl) {
@@ -103,7 +123,17 @@
     const lines = lastGroups.map((e) => {
       const time = new Date(e.lastTs || e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       const cnt = e.count > 1 ? ` \xD7${e.count}` : "";
-      return `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? " @ " + e.src : ""}`;
+      let block = `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? " @ " + e.src : ""}`;
+      if (e.actions && e.actions.length) {
+        block += "\n  actions: " + e.actions.map((a) => {
+          const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+          return `[${at}][${a.tab}] ${a.action}`;
+        }).join(" \u2192 ");
+      }
+      if (e.stack) {
+        block += "\n  stack: " + e.stack.split("\n").slice(0, 6).join(" | ");
+      }
+      return block;
     }).join("\n");
     const badge = document.getElementById("deploy-version");
     const deployLine = badge ? `
@@ -138,17 +168,41 @@ ${lines}
     btn.style.background = count > 0 ? "rgba(234,88,12,0.12)" : "";
     btn.style.color = count > 0 ? "#ea580c" : "";
   }
-  var NM_LOG_KEY, NM_LOG_MAX;
+  function escapeLog(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+  function toggleLogEntry(idx) {
+    const details = document.querySelector(`.log-details-${idx}`);
+    const arrow = document.querySelector(`.log-expand-${idx}`);
+    if (!details) return;
+    const isOpen = details.style.display === "block";
+    details.style.display = isOpen ? "none" : "block";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  var NM_LOG_KEY, NM_LOG_MAX, _recentActions, ACTIONS_MAX;
   var init_logger = __esm({
     "src/core/logger.js"() {
       init_nav();
       NM_LOG_KEY = "nm_error_log";
       NM_LOG_MAX = 200;
+      _recentActions = [];
+      ACTIONS_MAX = 10;
       window.addEventListener("error", (e) => {
-        logError("error", e.message, (e.filename || "").replace(/.*\//, "") + ":" + e.lineno);
+        logError(
+          "error",
+          e.error?.message || e.message,
+          (e.filename || "").replace(/.*\//, "") + ":" + e.lineno,
+          e.error?.stack
+        );
       });
       window.addEventListener("unhandledrejection", (e) => {
-        logError("promise", e.reason ? e.reason.message || String(e.reason) : "Promise rejected", "");
+        const r = e.reason;
+        logError(
+          "promise",
+          r ? r.message || String(r) : "Promise rejected",
+          "",
+          r?.stack
+        );
       });
       (function() {
         const _log = console.log.bind(console);
@@ -167,7 +221,10 @@ ${lines}
           logError("err", a.map(String).join(" "), "");
         };
       })();
-      Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog });
+      window.addEventListener("nm-data-changed", (e) => {
+        trackUserAction("data-changed:" + (e?.detail || "unknown"));
+      });
+      Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog, toggleLogEntry });
     }
   });
 
