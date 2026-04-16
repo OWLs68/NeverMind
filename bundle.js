@@ -64,7 +64,7 @@
       promise: { bg: "rgba(239,68,68,0.22)", color: "#fca5a5", label: "PROMISE" },
       err: { bg: "rgba(239,68,68,0.22)", color: "#fca5a5", label: "ERR" },
       warn: { bg: "rgba(251,191,36,0.22)", color: "#fcd34d", label: "WARN" },
-      log: { bg: "rgba(129,140,248,0.22)", color: "#c7d2fe", label: "LOG" }
+      log: { bg: "rgba(96,165,250,0.22)", color: "#93c5fd", label: "LOG" }
     };
     if (log.length === 0) {
       list.innerHTML = '<div style="text-align:center;padding:64px 20px;color:rgba(255,255,255,0.35);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
