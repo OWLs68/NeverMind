@@ -8495,9 +8495,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       return;
     }
     const catList = type === "expense" ? cats.expense : cats.income;
-    if (!catList.includes(category)) {
-      catList.push(category);
-      saveFinCats(cats);
+    if (!catList.some((c) => c.name === category)) {
+      createFinCategory(type, { name: category });
     }
     const ts = _resolveFinanceDate(parsed.date, originalText);
     const txs = getFinance();
