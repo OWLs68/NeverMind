@@ -1678,6 +1678,107 @@ function closeCategoryEditModal() {
   _finCatModalDraft = null;
 }
 
+// ===== Аналітика (окремий fullscreen екран) =====
+
+function openFinAnalytics() {
+  const existing = document.getElementById('fin-analytics-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fin-analytics-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(255,255,255,0.98);display:flex;flex-direction:column;overflow:hidden';
+
+  // Дані
+  const allTxs = getFinance();
+  const content = _buildAnalyticsContent(allTxs);
+
+  modal.innerHTML = `
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:16px 20px calc(env(safe-area-inset-top, 0px) + 8px);border-bottom:1px solid rgba(30,16,64,0.06)">
+      <button onclick="closeFinAnalytics()" style="padding:6px 14px;border-radius:12px;border:none;background:rgba(30,16,64,0.06);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit">← Назад</button>
+      <div style="font-size:16px;font-weight:800;color:#1e1040">Аналітика</div>
+      <div style="width:70px"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px)">
+      ${content}
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function closeFinAnalytics() {
+  document.getElementById('fin-analytics-modal')?.remove();
+}
+
+function _buildAnalyticsContent(allTxs) {
+  // Крок 2+: тут з'являтимуться графіки, інсайти, benchmark, прогноз.
+  // Поки — placeholder з описом що буде.
+  const sections = [];
+
+  // Секція 1: Графік тренду 8 тижнів
+  sections.push(_analyticsWeeklyTrend(allTxs));
+
+  // Секція 2: Інсайт-картки (поки placeholder)
+  sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div class="fin-section-label" style="margin-bottom:8px">Інсайти</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45)">Детальні інсайт-картки — у наступному кроці</div>
+  </div>`);
+
+  // Секція 3: 50/30/20 (placeholder)
+  sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div class="fin-section-label" style="margin-bottom:8px">Розподіл 50/30/20</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45)">Візуальний benchmark — у наступному кроці</div>
+  </div>`);
+
+  return sections.join('');
+}
+
+// Крок 2: графік тренду 8 тижнів
+function _analyticsWeeklyTrend(allTxs) {
+  const now = new Date();
+  const WEEKS = 8;
+  const bars = [];
+  for (let w = WEEKS - 1; w >= 0; w--) {
+    const weekEnd = new Date(now);
+    weekEnd.setDate(now.getDate() - w * 7);
+    weekEnd.setHours(23, 59, 59, 999);
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+    const from = weekStart.getTime();
+    const to = weekEnd.getTime();
+    const exp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts <= to).reduce((s, t) => s + t.amount, 0);
+    const inc = allTxs.filter(t => t.type === 'income' && t.ts >= from && t.ts <= to).reduce((s, t) => s + t.amount, 0);
+    const label = `${weekStart.getDate()}.${String(weekStart.getMonth() + 1).padStart(2, '0')}`;
+    bars.push({ label, exp, inc, isCurrent: w === 0 });
+  }
+
+  const maxVal = Math.max(1, ...bars.map(b => Math.max(b.exp, b.inc)));
+  const barsHtml = bars.map(b => {
+    const expH = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
+    const incH = b.inc > 0 ? Math.max(4, Math.round(b.inc / maxVal * 80)) : 0;
+    const labelCol = b.isCurrent ? '#c2410c' : 'rgba(30,16,64,0.35)';
+    const labelW = b.isCurrent ? '700' : '500';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
+      <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
+        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
+        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
+      </div>
+      <div style="font-size:9px;font-weight:${labelW};color:${labelCol};margin-top:4px">${b.label}</div>
+      ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:1px">${formatMoney(b.exp)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="fin-section-label">Тренд за 8 тижнів</div>
+      <div style="display:flex;gap:10px">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Витрати</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Доходи</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+  </div>`;
+}
+
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddTransaction, setCurrency, setFinPeriod, switchFinTab,
@@ -1697,6 +1798,8 @@ Object.assign(window, {
   finCalcAppend, finCalcBackspace,
   selectFinTxMainCat, selectFinTxSubcat,
   openFinDateModal, closeFinDateModal, setFinTxDateOffset, setFinTxDateFromInput,
+  // Аналітика
+  openFinAnalytics, closeFinAnalytics,
 });
 // _finTxComment мусить бути доступний з inline oninput
 Object.defineProperty(window, '_finTxComment', {
