@@ -978,8 +978,14 @@ export function startOwlBoardCycle() {
 }
 
 export function tryOwlBoardUpdate() {
-  // Показуємо що є зараз (кешоване повідомлення) — ЗАВЖДИ, навіть якщо порожньо (сова лишається)
-  renderOwlBoard();
+  const msgs = getOwlBoardMessages();
+  if (msgs.length > 0) renderOwlBoard();
+
+  // Якщо кеш порожній — примусово генерувати одразу (наприклад після очищення міграцією)
+  if (msgs.length === 0) {
+    import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
+    return;
+  }
 
   // G9 (ROADMAP Блок 1) — Page Visibility: коли вкладка прихована,
   // не генерувати ніяких табло (юзер не побачить, API палиться даремно).
