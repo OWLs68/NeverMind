@@ -104,7 +104,16 @@ export function getAIContext() {
   parts.push(`Зараз: ${dateStr}`);
 
   // === Профіль і пам'ять ===
-  if (profile) parts.push(`Профіль: ${profile}`);
+  if (profile) parts.push(`Профіль (з анкети налаштувань — ти вже це знаєш, НЕ перепитуй): ${profile}`);
+
+  // === Розклад дня (з налаштувань — єдине джерело правди для ритму) ===
+  try {
+    const sRaw = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    const sc = sRaw.schedule || {};
+    if (sc.wakeUp || sc.workStart || sc.workEnd || sc.bedTime) {
+      parts.push(`Розклад дня (з налаштувань): прокидається о ${sc.wakeUp || '?'}, починає активний день о ${sc.workStart || '?'}, завершує роботу о ${sc.workEnd || '?'}, лягає спати о ${sc.bedTime || '?'}. НЕ питай цей розклад — він уже заданий. Якщо юзер хоче змінити — сам скаже.`);
+    }
+  } catch(e) {}
 
   // Структуровані факти (nm_facts) — нова пам'ять з часовими мітками
   const factsStr = formatFactsForContext(30);

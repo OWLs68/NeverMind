@@ -305,11 +305,16 @@ export function getSchedule() {
     const h = parseInt(str.split(':')[0]);
     return isNaN(h) ? def : h;
   };
+  const pickStr = (str, def) => (str && /^\d{1,2}:\d{2}$/.test(str)) ? str : def;
   return {
     wakeUp:    parseH(sc.wakeUp,    7),
     workStart: parseH(sc.workStart, 9),
     workEnd:   parseH(sc.workEnd,   18),
     bedTime:   parseH(sc.bedTime,   23),
+    wakeUpStr:    pickStr(sc.wakeUp,    '07:00'),
+    workStartStr: pickStr(sc.workStart, '09:00'),
+    workEndStr:   pickStr(sc.workEnd,   '18:00'),
+    bedTimeStr:   pickStr(sc.bedTime,   '23:00'),
   };
 }
 

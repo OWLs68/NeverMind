@@ -1025,6 +1025,11 @@ export function getProfile() {
   if (s.weight) parts.push(`Вага: ${s.weight} кг`);
   if (s.height) parts.push(`Зріст: ${s.height} см`);
   if (s.profileNotes) parts.push(`Про себе: ${s.profileNotes}`);
+  if (s.currency) parts.push(`Валюта: ${s.currency}`);
+  if (s.language) {
+    const langMap = { uk: 'українська', en: 'English', nl: 'Nederlands' };
+    parts.push(`Мова: ${langMap[s.language] || s.language}`);
+  }
   return parts.join(', ');
 }
 
