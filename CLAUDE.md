@@ -203,7 +203,8 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/core/boot.js` | bootApp, PWA setup, cross-tab sync, NM_KEYS, init |
 | `src/core/trash.js` | Кошик (7 днів TTL), showUndoToast, undoDelete |
 | `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml |
-| `src/core/logger.js` | Error logging, console override |
+| `src/core/logger.js` | Error logging, console override, UI панель логу, ring buffer юзер-дій (trackUserAction), автолистенер nm-data-changed, stack trace у записах |
+| `src/core/diagnostics.js` | **Діагностична система (B-67 acZEu):** Health Check (9 перевірок стану систем), Smoke Tests (9 авто-тестів), Performance monitor (startup/longtask/fetch monkey-patch). Рендерить 3 блоки у панелі логу. Експорти: runHealthCheck, runSmokeTests, getPerformanceData |
 | `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість, "НАГАДАЙ=set_reminder" правило, 26 INBOX_TOOLS (включно з save_memory_fact) |
 | `src/ai/memory.js` | **Структурована пам'ять фактів** — `nm_facts` з часовими мітками (11.04). CRUD, дедуплікація, TTL, категорії (preferences/health/work/relationships/context/goals), formatFactsForContext/Board, міграція legacy nm_memory |
 | `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
