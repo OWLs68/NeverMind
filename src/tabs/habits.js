@@ -1120,7 +1120,15 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveEvents(events);
     const dateObj = new Date(events[idx].date);
     const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
-    addMsg('agent', `✓ Подію "${events[idx].title}" змінено → ${dayStr}${events[idx].time ? ' о ' + events[idx].time : ''}`);
+    const editText = `✏️ Змінено: "${events[idx].title}" → ${dayStr}${events[idx].time ? ' о ' + events[idx].time : ''}`;
+    addMsg('agent', editText);
+    // Карточка в Inbox стрічку щоб юзер бачив що було змінено
+    try {
+      const inbox = getInbox();
+      inbox.unshift({ id: Date.now(), text: editText, type: 'edit', category: 'event', ts: Date.now() });
+      saveInbox(inbox);
+      if (typeof renderInbox === 'function') renderInbox();
+    } catch(e) {}
     return true;
   }
 
@@ -1339,6 +1347,7 @@ export async function sendTasksBarMessage() {
     + '16. Видалити звичку — JSON: {"action":"delete_habit","habit_id":ID}\n'
     + '17. Перевідкрити закриту задачу — JSON: {"action":"reopen_task","task_id":ID}\n'
     + '18. Записати момент дня — JSON: {"action":"add_moment","text":"що сталося"}\n'
+    + 'КРИТИЧНЕ ПРАВИЛО: коли юзер просить ЗРОБИТИ дію (створити задачу/подію/звичку/нотатку, закрити, видалити, записати витрату) — відповідай ТІЛЬКИ чистим JSON. НЕ кажи "зараз створю", "зачекай", "готово" — ОДРАЗУ повертай JSON об\'єкт з action. Текст тільки якщо це відповідь на ПИТАННЯ або обговорення.\n'
     + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.'
     + (aiContext ? '\n\n' + aiContext : '');
 
