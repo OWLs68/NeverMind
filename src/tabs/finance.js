@@ -311,10 +311,6 @@ export function formatMoney(n) {
   return getCurrency() + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
 }
 
-// Категорії кольори
-const FIN_CAT_COLORS = ['#f97316','#0ea5e9','#a855f7','#22c55e','#ef4444','#eab308','#14b8a6','#f43f5e','#6366f1','#84cc16','#fb923c','#38bdf8'];
-
-function getFinColor(idx) { return FIN_CAT_COLORS[idx % FIN_CAT_COLORS.length]; }
 
 // Фільтр транзакцій по періоду (legacy: тільки from, для зворотної сумісності з getFinanceContext тощо)
 export function getFinPeriodRange(period) {
@@ -1270,11 +1266,10 @@ export function processFinanceAction(parsed, originalText) {
     return;
   }
 
-  // Нова категорія — зберігаємо без запиту (агент вже підтвердив)
+  // Нова категорія — створюємо об'єкт (v2 структура), не рядок
   const catList = type === 'expense' ? cats.expense : cats.income;
-  if (!catList.includes(category)) {
-    catList.push(category);
-    saveFinCats(cats);
+  if (!catList.some(c => c.name === category)) {
+    createFinCategory(type, { name: category });
   }
 
   // Визначення дати: AI date → fallback "вчора/позавчора" → поточний час
