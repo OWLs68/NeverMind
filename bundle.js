@@ -5637,8 +5637,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
           chatWin.style.maxHeight = bH + "px";
           chatWin.style.transform = "";
           chatWin.style.opacity = "1";
-          const msgs = chatWin.querySelector(".ai-bar-messages");
-          if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
+          const msgs2 = chatWin.querySelector(".ai-bar-messages");
+          if (msgs2) setTimeout(() => msgs2.scrollTop = msgs2.scrollHeight, 380);
           setTimeout(() => chatWin.style.transition = "", 380);
         } else if (finalDy > 80 || velocity > 0.5) {
           chatWin.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
@@ -5810,8 +5810,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const phase = getDayPhase();
     const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
     const sinceLastAttempt = Date.now() - lastAttemptTs;
-    const msgs = getOwlBoardMessages();
-    const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+    const msgs2 = getOwlBoardMessages();
+    const lastVisibleTs = msgs2[0]?.ts || msgs2[0]?.id || 0;
     const sinceLastVisible = Date.now() - lastVisibleTs;
     if (trigger === "first-time" || trigger === "new-day") {
       score += 5;
@@ -5947,10 +5947,10 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   }
   function saveOwlChatMsg(role, text) {
-    const msgs = getOwlChatHistory();
-    msgs.push({ role, text, ts: Date.now() });
-    if (msgs.length > OWL_CHAT_MAX) msgs.splice(0, msgs.length - OWL_CHAT_MAX);
-    localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
+    const msgs2 = getOwlChatHistory();
+    msgs2.push({ role, text, ts: Date.now() });
+    if (msgs2.length > OWL_CHAT_MAX) msgs2.splice(0, msgs2.length - OWL_CHAT_MAX);
+    localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs2));
   }
   function _getOwlState() {
     return _owlTabStates["inbox"] || _owlState || "speech";
@@ -6201,8 +6201,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
   }
   function tryOwlBoardUpdate() {
-    const msgs = getOwlBoardMessages();
-    if (msgs.length > 0) renderOwlBoard();
+    renderOwlBoard();
     if (typeof document !== "undefined" && document.hidden) return;
     const phase = getDayPhase();
     if (phase === "silent") return;
@@ -6323,11 +6322,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   }
   function saveTabBoardMsg(tab, newMsg) {
-    const msgs = getTabBoardMsgs(tab);
-    msgs.unshift(newMsg);
-    if (msgs.length > 30) msgs.length = 30;
+    const msgs2 = getTabBoardMsgs(tab);
+    msgs2.unshift(newMsg);
+    if (msgs2.length > 30) msgs2.length = 30;
     try {
-      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs));
+      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs2));
     } catch {
     }
   }
@@ -6408,11 +6407,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
   }
   function renderTabBoard(tab) {
     const isInbox = tab === "inbox";
-    const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
+    const msgs2 = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
     if (!board) return;
     board.style.display = "block";
-    if (!msgs.length) {
+    if (!msgs2.length) {
       if (!board._owlReady) {
         if (!isInbox) board.innerHTML = _owlTabHTML(tab);
         board._owlReady = true;
@@ -6430,7 +6429,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       _owlTabStates[tab] = _owlTabStates[tab] || "speech";
       _owlTabApplyState(tab);
     }
-    const msg = msgs[0];
+    const msg = msgs2[0];
     const bubble = document.getElementById("owl-tab-bubble-" + tab);
     if (bubble) bubble.style.display = "";
     const tEl = document.getElementById("owl-tab-text-" + tab);
@@ -7063,10 +7062,10 @@ ${pulseParts.join("\n")}
     const err = localStorage.getItem("nm_owl_api_error");
     dot.style.display = err ? "block" : "none";
   }
-  function _getBannedTopics(msgs) {
-    if (!msgs || msgs.length === 0) return "";
+  function _getBannedTopics(msgs2) {
+    if (!msgs2 || msgs2.length === 0) return "";
     const topics = [];
-    for (const m of msgs.slice(0, 5)) {
+    for (const m of msgs2.slice(0, 5)) {
       if (m.topic && !owlCdExpired("topic_" + m.topic, TOPIC_CD_MS)) {
         topics.push(m.topic);
       }
@@ -7218,9 +7217,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (parsed.topic) setOwlCd("topic_" + parsed.topic);
       if (isInbox) {
         newMsg.id = Date.now();
-        const msgs = getOwlBoardMessages();
-        msgs.unshift(newMsg);
-        saveOwlBoardMessages(msgs.slice(0, 3));
+        const msgs2 = getOwlBoardMessages();
+        msgs2.unshift(newMsg);
+        saveOwlBoardMessages(msgs2.slice(0, 3));
         localStorage.setItem("nm_owl_board_ts", Date.now().toString());
         setOwlCd("phase_pulse");
       } else {
@@ -7242,8 +7241,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _tryTabLocalFallback(tab);
       return;
     }
-    const msgs = getOwlBoardMessages();
-    const visibleTs = msgs[0]?.ts || 0;
+    const msgs2 = getOwlBoardMessages();
+    const visibleTs = msgs2[0]?.ts || 0;
     if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
     const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
     let text = "";
@@ -7302,8 +7301,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     console.warn("[OWL board] smart fallback:", text);
   }
   function _tryTabLocalFallback(tab) {
-    const msgs = getTabBoardMsgs(tab);
-    const visibleTs = msgs[0]?.ts || 0;
+    const msgs2 = getTabBoardMsgs(tab);
+    const visibleTs = msgs2[0]?.ts || 0;
     if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
     let text = "";
     const chips = [];
@@ -7387,9 +7386,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const newMsg = { text, priority: "normal", chips: [], ts: now };
     if (isInbox) {
       newMsg.id = now;
-      const msgs = getOwlBoardMessages();
-      msgs.unshift(newMsg);
-      saveOwlBoardMessages(msgs.slice(0, 3));
+      const msgs2 = getOwlBoardMessages();
+      msgs2.unshift(newMsg);
+      saveOwlBoardMessages(msgs2.slice(0, 3));
       renderOwlBoard();
     } else {
       saveTabBoardMsg(tab, newMsg);
@@ -8918,16 +8917,16 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-analytics-modal";
-    modal.style.cssText = "position:fixed;inset:0;z-index:500;background:rgba(255,255,255,0.98);display:flex;flex-direction:column;overflow:hidden";
+    modal.style.cssText = "position:fixed;inset:0;z-index:500;background:#faf5ef;display:flex;flex-direction:column;overflow:hidden";
     const allTxs = getFinance();
     const content = _buildAnalyticsContent(allTxs);
     modal.innerHTML = `
-    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:16px 20px calc(env(safe-area-inset-top, 0px) + 8px);border-bottom:1px solid rgba(30,16,64,0.06)">
-      <button onclick="closeFinAnalytics()" style="padding:6px 14px;border-radius:12px;border:none;background:rgba(30,16,64,0.06);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit">\u2190 \u041D\u0430\u0437\u0430\u0434</button>
-      <div style="font-size:16px;font-weight:800;color:#1e1040">\u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430</div>
-      <div style="width:70px"></div>
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,44px) + 8px) 16px 12px;background:#faf5ef;border-bottom:1px solid rgba(30,16,64,0.08)">
+      <button onclick="closeFinAnalytics()" style="padding:8px 16px;border-radius:14px;border:none;background:rgba(30,16,64,0.08);font-size:14px;font-weight:700;color:#1e1040;cursor:pointer;font-family:inherit">\u2190 \u041D\u0430\u0437\u0430\u0434</button>
+      <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430</div>
+      <div style="width:80px"></div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px)">
+    <div style="flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 20px)">
       ${content}
     </div>`;
     document.body.appendChild(modal);
@@ -8975,7 +8974,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:1px">${formatMoney(b.exp)}</div>` : ""}
     </div>`;
     }).join("");
-    return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="fin-section-label">\u0422\u0440\u0435\u043D\u0434 \u0437\u0430 8 \u0442\u0438\u0436\u043D\u0456\u0432</div>
       <div style="display:flex;gap:10px">
@@ -9031,7 +9030,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const card3 = `<div style="font-size:24px;font-weight:900;color:#1e1040">${formatMoney(avgDay)}</div>
     <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">\u0432 \u0434\u0435\u043D\u044C (\u0441\u0435\u0440\u0435\u0434\u043D\u0454)</div>
     <div style="font-size:11px;color:${savedCol};font-weight:700;margin-top:2px">${curInc > 0 ? "\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E " + savedPct + "%" : ""}</div>`;
-    const cardStyle = "flex:1;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:14px 10px;text-align:center";
+    const cardStyle = "flex:1;background:white;border-radius:16px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px 10px;text-align:center";
     return `<div style="display:flex;gap:8px;margin-bottom:12px">
     <div style="${cardStyle}">${card1}</div>
     <div style="${cardStyle}">${card2}</div>
@@ -9045,7 +9044,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const curInc = allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
     const curExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
     if (curInc <= 0) {
-      return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+      return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div class="fin-section-label" style="margin-bottom:8px">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B 50/30/20</div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B</div>
     </div>`;
@@ -9074,7 +9073,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       </div>
     </div>`;
     };
-    return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div class="fin-section-label" style="margin-bottom:14px">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443</div>
     ${bar("\u041F\u043E\u0442\u0440\u0435\u0431\u0438", needsPct, 50, "#f97316")}
     ${bar("\u0411\u0430\u0436\u0430\u043D\u043D\u044F", wantsPct, 30, "#0ea5e9")}
@@ -10822,15 +10821,15 @@ ${inboxList}`);
     }
     try {
       const tab = typeof currentTab !== "undefined" ? currentTab : "inbox";
-      let msgs = [];
+      let msgs2 = [];
       if (tab === "inbox") {
-        msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+        msgs2 = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
       } else {
         const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "[]");
-        if (Array.isArray(raw)) msgs = raw;
-        else if (raw && raw.text) msgs = [raw];
+        if (Array.isArray(raw)) msgs2 = raw;
+        else if (raw && raw.text) msgs2 = [raw];
       }
-      const recent = msgs.slice(0, 3).filter((m) => m && m.text);
+      const recent = msgs2.slice(0, 3).filter((m) => m && m.text);
       if (recent.length > 0) {
         const formatted = recent.map((m) => {
           const ago = Date.now() - (m.ts || m.id || 0);
@@ -11068,10 +11067,10 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     const key = CHAT_STORE_KEYS[tab];
     if (!key) return;
     try {
-      const msgs = JSON.parse(localStorage.getItem(key) || "[]");
-      msgs.push({ role, text, ts: Date.now() });
-      if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
-      localStorage.setItem(key, JSON.stringify(msgs));
+      const msgs2 = JSON.parse(localStorage.getItem(key) || "[]");
+      msgs2.push({ role, text, ts: Date.now() });
+      if (msgs2.length > CHAT_STORE_MAX) msgs2.splice(0, msgs2.length - CHAT_STORE_MAX);
+      localStorage.setItem(key, JSON.stringify(msgs2));
       if (role === "user") window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "chat" }));
     } catch (e) {
     }
@@ -11131,8 +11130,8 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     const el = document.getElementById(containerId);
     if (!el || el.dataset.restored) return;
     el.dataset.restored = "1";
-    const msgs = loadChatMsgs(tab);
-    if (msgs.length === 0) {
+    const msgs2 = loadChatMsgs(tab);
+    if (msgs2.length === 0) {
       if (tab === "inbox") {
         const div = document.createElement("div");
         div.style.cssText = "display:flex";
@@ -11146,9 +11145,9 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F \u0440\u043E\u0437\u043C\u043E\u0432\u0430</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
     el.appendChild(sep);
     if (tab === "inbox") {
-      msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
+      msgs2.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
     } else if (addMsgMap[tab]) {
-      msgs.forEach((m) => addMsgMap[tab](m.role, m.text));
+      msgs2.forEach((m) => addMsgMap[tab](m.role, m.text));
     }
   }
   function _renderInboxChatMsg(role, text, el) {
@@ -11198,9 +11197,9 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       chatWin.style.maxHeight = h + "px";
       chatWin.classList.add("open");
       _tabChatState[tab] = "a";
-      const msgs = chatWin.querySelector(".ai-bar-messages");
-      if (msgs) setTimeout(() => {
-        msgs.scrollTop = msgs.scrollHeight;
+      const msgs2 = chatWin.querySelector(".ai-bar-messages");
+      if (msgs2) setTimeout(() => {
+        msgs2.scrollTop = msgs2.scrollHeight;
       }, 50);
     });
   }
