@@ -718,6 +718,7 @@ export async function generateBoardMessage(tab) {
   const systemPrompt = getOWLPersonality() + `
 
 Зараз: ${timeStr}. ${phaseInstr[phase] || ''}
+${sc ? 'РОЗКЛАД ЮЗЕРА: прокидається ' + (sc.wakeUp || '?') + ', починає день ' + (sc.workStart || '?') + ', завершує роботу ' + (sc.workEnd || '?') + ', лягає ' + (sc.sleep || '?') + '.\nВАЖЛИВО: звіряй з розкладом. Зараз ДО workStart = юзер щойно прокинувся, м\'яке привітання. Між workStart і workEnd = НА РОБОТІ, не пропонуй біг/зал/спорт. Після workEnd = можна нагадати про звички/спорт.' : ''}
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло${isInbox ? ' в Inbox' : ' у вкладці "' + (tabLabels[tab] || tab) + '"'}. Це НЕ відповідь на запит — це твоя ініціатива.
 

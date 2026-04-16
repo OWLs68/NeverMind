@@ -438,8 +438,10 @@ export function renderFinance() {
 
   // Сітка категорій рендериться завжди (навіть якщо порожньо) — щоб юзер міг тапнути категорію
   // і додати першу транзакцію + щоб свайп працював коли немає даних у періоді.
+  let gridHtml = '';
+  try { gridHtml = _finCatsGrid(allTxs, win); } catch(e) { console.error('[finance] _finCatsGrid error:', e); }
   wrap.innerHTML =
-    _finCatsGrid(allTxs, win) +
+    gridHtml +
     _finDailyInsight(allTxs, win) +
     (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
 
