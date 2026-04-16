@@ -444,8 +444,52 @@ export function renderFinance() {
     (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
 
   _attachFinSwipe();
+  _attachFinTxSwipeDelete(); // B-37: свайп-видалення транзакцій
   // Async: оновити інсайт дня через AI якщо кеш застарілий
   _refreshFinInsight(allTxs, win);
+}
+
+// B-37: свайп-видалення транзакцій — прив'язуємо touch listeners напряму
+// на кожен .fin-tx-swipe-wrap після кожного рендеру (бо innerHTML переписується).
+function _attachFinTxSwipeDelete() {
+  const wraps = document.querySelectorAll('.fin-tx-swipe-wrap');
+  wraps.forEach(sw => {
+    let startX = 0, startY = 0, dx = 0, locked = false;
+    const card = sw.querySelector('.tx-row');
+    if (!card) return;
+    sw.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0; locked = false;
+    }, { passive: true });
+    sw.addEventListener('touchmove', (e) => {
+      if (locked) return;
+      const curX = e.touches[0].clientX;
+      const curY = e.touches[0].clientY;
+      const ddx = curX - startX;
+      const ddy = curY - startY;
+      // Якщо вертикальний рух > горизонтальний — це скрол, відпускаємо
+      if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) { locked = true; return; }
+      dx = ddx;
+      if (dx < 0) applySwipeTrail(card, sw, dx);
+    }, { passive: true });
+    sw.addEventListener('touchend', () => {
+      if (locked) { clearSwipeTrail(card, sw); return; }
+      if (dx < -SWIPE_DELETE_THRESHOLD) {
+        const txId = parseInt(sw.dataset.txId);
+        const item = getFinance().find(t => t.id === txId);
+        saveFinance(getFinance().filter(t => t.id !== txId));
+        if (item) addToTrash('finance', item);
+        clearSwipeTrail(card, sw);
+        renderFinance();
+        if (item) showUndoToast('Транзакцію видалено', () => {
+          const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
+        });
+      } else {
+        clearSwipeTrail(card, sw);
+      }
+    }, { passive: true });
+  });
 }
 
 function _finEmptyTxsHint() {
@@ -493,20 +537,20 @@ async function _refreshFinInsight(allTxs, win) {
   const budget = getFinBudget();
 
   const prompt = `${getOWLPersonality()}
-Дай ОДИН найважливіший фінансовий інсайт. Обери найрелевантніше зараз:
-- Категорія різко росте або перевищила ліміт
-- Витрати зросли/знизились vs минулий аналогічний період
-- Річна проекція ("€X/тиждень = €Y/рік" для помітної категорії)
-- Заощадження вище/нижче 20%
-- Нетиповий день (витратив багато за раз або навпаки)
+Дай ОДНУ коротку КОРИСНУ пораду по фінансах. НЕ повторюй загальні суми (юзер вже бачить їх на екрані).
 
-2 речення МАКСИМУМ. Числа ТІЛЬКИ з даних нижче. Українською.
+Замість "Витрати склали €X" — дай КОНКРЕТНУ дію або цікавий факт:
+- Річна проекція: "${top3.split(':')[0] || 'Категорія'} коштує ~€Y/рік — вистачить на Z"
+- Порівняння: "Витрачаєш на X більше ніж на Y — так і задумано?"
+- Порада: "Якщо скоротити X на €20/міс — за рік зекономиш €240"
+- Тренд: "Ця категорія росте 3 місяці поспіль"
+
+1-2 речення. Конкретні числа з даних нижче. Українською. Не згадуй загальну суму витрат.
 
 Дані (${win.label}):
-Витрати: ${formatMoney(totalExp)}, Доходи: ${formatMoney(totalInc)}
-Топ: ${top3 || 'немає даних'}
-${budget.total > 0 ? `Бюджет: ${formatMoney(budget.total)}` : 'Бюджет не встановлено'}
-${totalInc > 0 ? `Заощаджено: ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ''}`;
+Топ категорії: ${top3 || 'немає даних'}
+${budget.total > 0 ? `Бюджет: ${formatMoney(budget.total)}` : ''}
+${totalInc > 0 ? `Доходи: ${formatMoney(totalInc)}, заощаджено ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -548,40 +592,6 @@ function _attachFinSwipe() {
     else currentFinPeriodOffset--;
     renderFinance();
   }, { passive: true });
-  // B-37: свайп-видалення транзакцій (делегований на wrap)
-  let swState = null; // {el, wrap, startX, startY, txId}
-  wrap.addEventListener('touchstart', (e) => {
-    const sw = e.target.closest('.fin-tx-swipe-wrap');
-    if (!sw) return;
-    swState = { wrap: sw, el: sw.querySelector('.tx-row'), startX: e.touches[0].clientX, startY: e.touches[0].clientY, txId: parseInt(sw.dataset.txId), dx: 0 };
-  }, { passive: true });
-  wrap.addEventListener('touchmove', (e) => {
-    if (!swState) return;
-    const dx = e.touches[0].clientX - swState.startX;
-    const dy = e.touches[0].clientY - swState.startY;
-    if (Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(swState.dx) < 10) { swState = null; return; } // вертикальний скрол
-    swState.dx = dx;
-    if (dx < 0) applySwipeTrail(swState.el, swState.wrap, dx);
-  }, { passive: true });
-  wrap.addEventListener('touchend', () => {
-    if (!swState) return;
-    if (swState.dx < -SWIPE_DELETE_THRESHOLD) {
-      const txId = swState.txId;
-      const item = getFinance().find(t => t.id === txId);
-      saveFinance(getFinance().filter(t => t.id !== txId));
-      if (item) addToTrash('finance', item);
-      clearSwipeTrail(swState.el, swState.wrap);
-      swState = null;
-      renderFinance();
-      if (item) showUndoToast('Транзакцію видалено', () => {
-        const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
-      });
-    } else {
-      if (swState.el && swState.wrap) clearSwipeTrail(swState.el, swState.wrap);
-      swState = null;
-    }
-  }, { passive: true });
-
   _finSwipeAttached = true;
 }
 

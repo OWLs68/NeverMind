@@ -293,7 +293,9 @@ function runMigrations() {
      'nm_owl_board_ts'].forEach(k => localStorage.removeItem(k));
     localStorage.setItem('nm_owl_cache_cleared_v3', '1');
   }
-  // v4: нові міграції додавати тут
+  // v4 (16.04.2026): очистити кеш інсайту фінансів (промпт змінився — потрібна re-generation)
+  ['nm_fin_insight_week_0','nm_fin_insight_month_0','nm_fin_insight_3months_0'].forEach(k => localStorage.removeItem(k));
+  // v5: нові міграції додавати тут
 }
 
 // === INIT ===
