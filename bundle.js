@@ -8903,6 +8903,85 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     _finEditingCatId = null;
     _finCatModalDraft = null;
   }
+  function openFinAnalytics() {
+    const existing = document.getElementById("fin-analytics-modal");
+    if (existing) existing.remove();
+    const modal = document.createElement("div");
+    modal.id = "fin-analytics-modal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:500;background:rgba(255,255,255,0.98);display:flex;flex-direction:column;overflow:hidden";
+    const allTxs = getFinance();
+    const content = _buildAnalyticsContent(allTxs);
+    modal.innerHTML = `
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:16px 20px calc(env(safe-area-inset-top, 0px) + 8px);border-bottom:1px solid rgba(30,16,64,0.06)">
+      <button onclick="closeFinAnalytics()" style="padding:6px 14px;border-radius:12px;border:none;background:rgba(30,16,64,0.06);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit">\u2190 \u041D\u0430\u0437\u0430\u0434</button>
+      <div style="font-size:16px;font-weight:800;color:#1e1040">\u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430</div>
+      <div style="width:70px"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px)">
+      ${content}
+    </div>`;
+    document.body.appendChild(modal);
+  }
+  function closeFinAnalytics() {
+    document.getElementById("fin-analytics-modal")?.remove();
+  }
+  function _buildAnalyticsContent(allTxs) {
+    const sections = [];
+    sections.push(_analyticsWeeklyTrend(allTxs));
+    sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div class="fin-section-label" style="margin-bottom:8px">\u0406\u043D\u0441\u0430\u0439\u0442\u0438</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0414\u0435\u0442\u0430\u043B\u044C\u043D\u0456 \u0456\u043D\u0441\u0430\u0439\u0442-\u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0443 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u043A\u0440\u043E\u0446\u0456</div>
+  </div>`);
+    sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div class="fin-section-label" style="margin-bottom:8px">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B 50/30/20</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0412\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u0438\u0439 benchmark \u2014 \u0443 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u043A\u0440\u043E\u0446\u0456</div>
+  </div>`);
+    return sections.join("");
+  }
+  function _analyticsWeeklyTrend(allTxs) {
+    const now = /* @__PURE__ */ new Date();
+    const WEEKS = 8;
+    const bars = [];
+    for (let w = WEEKS - 1; w >= 0; w--) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(now.getDate() - w * 7);
+      weekEnd.setHours(23, 59, 59, 999);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+      const from = weekStart.getTime();
+      const to = weekEnd.getTime();
+      const exp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts <= to).reduce((s, t) => s + t.amount, 0);
+      const inc = allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts <= to).reduce((s, t) => s + t.amount, 0);
+      const label = `${weekStart.getDate()}.${String(weekStart.getMonth() + 1).padStart(2, "0")}`;
+      bars.push({ label, exp, inc, isCurrent: w === 0 });
+    }
+    const maxVal = Math.max(1, ...bars.map((b) => Math.max(b.exp, b.inc)));
+    const barsHtml = bars.map((b) => {
+      const expH = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
+      const incH = b.inc > 0 ? Math.max(4, Math.round(b.inc / maxVal * 80)) : 0;
+      const labelCol = b.isCurrent ? "#c2410c" : "rgba(30,16,64,0.35)";
+      const labelW = b.isCurrent ? "700" : "500";
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
+      <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
+        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
+        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
+      </div>
+      <div style="font-size:9px;font-weight:${labelW};color:${labelCol};margin-top:4px">${b.label}</div>
+      ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:1px">${formatMoney(b.exp)}</div>` : ""}
+    </div>`;
+    }).join("");
+    return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="fin-section-label">\u0422\u0440\u0435\u043D\u0434 \u0437\u0430 8 \u0442\u0438\u0436\u043D\u0456\u0432</div>
+      <div style="display:flex;gap:10px">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">\u0412\u0438\u0442\u0440\u0430\u0442\u0438</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">\u0414\u043E\u0445\u043E\u0434\u0438</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+  </div>`;
+  }
   var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, FIN_INSIGHT_TTL, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
@@ -9072,7 +9151,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         openFinDateModal,
         closeFinDateModal,
         setFinTxDateOffset,
-        setFinTxDateFromInput
+        setFinTxDateFromInput,
+        // Аналітика
+        openFinAnalytics,
+        closeFinAnalytics
       });
       Object.defineProperty(window, "_finTxComment", {
         get() {
@@ -14517,11 +14599,20 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         "nm_owl_tab_projects",
         "nm_owl_tab_evening",
         "nm_owl_tab_me",
-        "nm_owl_board_ts"
+        "nm_owl_board_ts",
+        // Скидаємо Auto-silence щоб OWL заговорив одразу після очищення кешу
+        "nm_owl_silence_until",
+        "nm_owl_ignored_msgs",
+        "nm_owl_last_board_ts",
+        "nm_owl_last_chip_click_ts"
       ].forEach((k) => localStorage.removeItem(k));
       localStorage.setItem("nm_owl_cache_cleared_v3", "1");
     }
     ["nm_fin_insight_week_0", "nm_fin_insight_month_0", "nm_fin_insight_3months_0"].forEach((k) => localStorage.removeItem(k));
+    if (!localStorage.getItem("nm_owl_silence_reset_v5")) {
+      ["nm_owl_silence_until", "nm_owl_ignored_msgs", "nm_owl_last_board_ts", "nm_owl_last_chip_click_ts"].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_owl_silence_reset_v5", "1");
+    }
   }
   function init() {
     try {
