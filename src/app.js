@@ -6,6 +6,7 @@ import './core/nav.js';
 import './core/utils.js';
 import './core/trash.js';
 import './core/logger.js';
+import './core/diagnostics.js';
 
 // UI (інтерфейс)
 import './ui/keyboard.js';

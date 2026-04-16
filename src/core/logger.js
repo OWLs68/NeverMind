@@ -1,4 +1,5 @@
 import { currentTab, showToast } from './nav.js';
+import { runHealthCheck, renderHealthCheck } from './diagnostics.js';
 
 // === LOGGER ===
 const NM_LOG_KEY = 'nm_error_log';
@@ -98,11 +99,17 @@ function showErrorLog() {
     log:     { bg: 'rgba(59,130,246,0.12)',  color: '#2563eb', label: 'LOG' },
   };
 
+  // Health Check зверху панелі — завжди рендеримо
+  const healthHtml = renderHealthCheck();
+  const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">Логи помилок</div>';
+
   if (log.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:64px 20px;color:rgba(30,16,64,0.45);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
+    list.innerHTML = healthHtml + logsHeader +
+      '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
   } else {
     const grouped = _groupConsecutive(log);
-    list.innerHTML = '<div style="padding:12px 14px 32px;display:flex;flex-direction:column;gap:10px">' +
+    list.innerHTML = healthHtml + logsHeader +
+      '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' +
       [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
         const time = d.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
@@ -159,34 +166,62 @@ function showErrorLog() {
 
 function copyLogForClaude() {
   const log = getErrorLog();
-  if (!log.length) { showToast('Лог порожній'); return; }
   // Групуємо послідовні дублі щоб Claude не гортав 8 однакових TypeError
   const grouped = _groupConsecutive(log);
   const lastGroups = grouped.slice(-50);
-  const lines = lastGroups.map(e => {
-    const time = new Date(e.lastTs || e.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    const cnt = e.count > 1 ? ` ×${e.count}` : '';
-    let block = `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? ' @ ' + e.src : ''}`;
-    if (e.actions && e.actions.length) {
-      block += '\n  actions: ' + e.actions.map(a => {
-        const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-        return `[${at}][${a.tab}] ${a.action}`;
-      }).join(' → ');
-    }
-    if (e.stack) {
-      block += '\n  stack: ' + e.stack.split('\n').slice(0, 6).join(' | ');
-    }
-    return block;
-  }).join('\n');
-  // Додаємо deploy info з бейджа щоб я бачив яка версія на телефоні
+
+  // Deploy info
   const badge = document.getElementById('deploy-version');
   const deployLine = badge
-    ? `\nВерсія: ${badge.textContent || '?'} · коміт: ${badge.dataset.commit || 'local'} · з гілки: ${badge.dataset.source || 'dev'}`
-    : '';
-  const header = `NeverMind Logs (${lastGroups.length} груп з ${grouped.length}, всього ${log.length} записів):${deployLine}`;
-  const text = `${header}\n\`\`\`\n${lines}\n\`\`\``;
+    ? `Версія: ${badge.textContent || '?'} · коміт: ${badge.dataset.commit || 'local'} · гілка: ${badge.dataset.source || 'dev'}`
+    : 'Версія: невідома';
+
+  // Health Check текстом
+  const checks = runHealthCheck();
+  const fails = checks.filter(c => c.status === 'fail').length;
+  const warns = checks.filter(c => c.status === 'warn').length;
+  const overallText = fails > 0
+    ? `${fails} критичних проблем`
+    : warns > 0 ? `${warns} попереджень` : 'Усе гаразд';
+  const icon = { ok: '✓', warn: '⚠', fail: '✗' };
+  const healthLines = checks.map(c => {
+    let line = `${icon[c.status]} ${c.name}: ${c.message}`;
+    if (c.hint) line += `\n    → ${c.hint}`;
+    return line;
+  }).join('\n');
+
+  // Логи
+  const logLines = lastGroups.length === 0
+    ? '(помилок не знайдено)'
+    : lastGroups.map(e => {
+        const time = new Date(e.lastTs || e.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        const cnt = e.count > 1 ? ` ×${e.count}` : '';
+        let block = `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? ' @ ' + e.src : ''}`;
+        if (e.actions && e.actions.length) {
+          block += '\n  actions: ' + e.actions.map(a => {
+            const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            return `[${at}][${a.tab}] ${a.action}`;
+          }).join(' → ');
+        }
+        if (e.stack) {
+          block += '\n  stack: ' + e.stack.split('\n').slice(0, 6).join(' | ');
+        }
+        return block;
+      }).join('\n');
+
+  const text = `NeverMind діагностика
+${deployLine}
+
+━━━ СТАН СИСТЕМ: ${overallText} ━━━
+${healthLines}
+
+━━━ ЛОГИ (${lastGroups.length} груп з ${grouped.length}, всього ${log.length} записів) ━━━
+\`\`\`
+${logLines}
+\`\`\``;
+
   navigator.clipboard?.writeText(text)
-    .then(() => showToast('✓ Скопійовано — вставляй в чат з Claude'));
+    .then(() => showToast('✓ Скопійовано — вставляй мені в чат'));
 }
 
 function closeLogPanel() {
@@ -211,8 +246,8 @@ function clearErrorLog() {
   localStorage.removeItem(NM_LOG_KEY);
   showToast('✓ Лог очищено');
   updateErrorLogBtn();
-  const list = document.getElementById('log-panel-list');
-  if (list) list.innerHTML = '<div style="text-align:center;padding:48px 20px;color:rgba(30,16,64,0.35);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
+  // Перерендерити панель щоб Health Check залишився
+  showErrorLog();
 }
 
 export function updateErrorLogBtn() {
