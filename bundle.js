@@ -8788,7 +8788,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-tx-modal";
-    modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
+    modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 16px";
     modal.innerHTML = _renderTransactionModalBody();
     document.body.appendChild(modal);
     setupModalSwipeClose(modal.querySelector("div:last-child"), closeFinTxModal);
@@ -8854,9 +8854,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     ${calcBtn("\u232B", "finCalcBackspace()", { bg: "rgba(239,68,68,0.06)", col: "#dc2626", fontSize: "18px" })}
     ${calcBtn("+", "finCalcAppend('+')", opStyle)}
   </div>`;
-    return `<div onclick="closeFinTxModal()" class="modal-backdrop"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:14px 18px calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box;max-height:90vh;overflow-y:auto">
-    <div class="modal-handle"></div>
+    return `<div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
+    <div style="overflow-y:auto;max-height:85vh;padding:18px 0 calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
 
     <!-- \u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A -->
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
@@ -8871,7 +8872,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     ${subcatsHtml}
 
     <!-- \u0414\u0430\u0442\u0430 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(30,16,64,0.03);border-radius:12px;margin-bottom:10px;cursor:pointer" onclick="openFinDateModal()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.5);border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;margin-bottom:10px;cursor:pointer" onclick="openFinDateModal()">
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span style="font-size:13px;font-weight:600;color:#1e1040">${escapeHtml(dateLabel)}</span>
@@ -8882,7 +8883,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430 -->
     <input id="fntx-comment" type="text" placeholder="\u041D\u043E\u0442\u0430\u0442\u043A\u0430 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)" value="${escapeHtml(_finTxComment || "")}"
       oninput="_finTxComment = this.value"
-      style="width:100%;border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box">
+      style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
 
     ${calcGrid}
 
@@ -8891,6 +8892,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
       <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
       <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u2713 \u0414\u043E\u0434\u0430\u0442\u0438"}</button>
+    </div>
     </div>
   </div>`;
   }
@@ -8993,25 +8995,28 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const currentYmd = new Date(_finTxDate).toISOString().slice(0, 10);
     const modal = document.createElement("div");
     modal.id = "fin-date-modal";
-    modal.style.cssText = "position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center";
+    modal.style.cssText = "position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 16px";
     modal.innerHTML = `
-    <div onclick="closeFinDateModal()" class="modal-backdrop"></div>
-    <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:14px 18px calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box">
-      <div class="modal-handle"></div>
-      <div class="modal-title">\u0414\u0430\u0442\u0430 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457</div>
+    <div onclick="closeFinDateModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+    <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
+      <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">\u0414\u0430\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 ${fmt(0)}</button>
-        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0412\u0447\u043E\u0440\u0430 \xB7 ${fmt(-1)}</button>
-        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430 \xB7 ${fmt(-2)}</button>
-        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:white;font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443 \xB7 ${fmt(-7)}</button>
+        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 ${fmt(0)}</button>
+        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0412\u0447\u043E\u0440\u0430 \xB7 ${fmt(-1)}</button>
+        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430 \xB7 ${fmt(-2)}</button>
+        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443 \xB7 ${fmt(-7)}</button>
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}"
         onchange="setFinTxDateFromInput(this.value)"
-        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box">
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
       <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">\u0417\u0430\u043A\u0440\u0438\u0442\u0438</button>
+      </div>
     </div>`;
     document.body.appendChild(modal);
+    setupModalSwipeClose(modal.querySelector("div:last-child"), closeFinDateModal);
   }
   function closeFinDateModal() {
     document.getElementById("fin-date-modal")?.remove();
@@ -9427,7 +9432,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-cat-edit-modal";
-    modal.style.cssText = "position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center";
+    modal.style.cssText = "position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 16px";
     modal.innerHTML = _renderCatEditModalBody();
     document.body.appendChild(modal);
     setupModalSwipeClose(modal.querySelector("div:last-child"), closeCategoryEditModal);
@@ -9445,14 +9450,15 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }).join("");
     const subcatsHtml = d.subcategories.map(
       (s, i) => `<div style="display:flex;align-items:center;gap:6px">
-      <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none">
+      <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
       <button onclick="removeCatModalSubcat(${i})" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:14px;cursor:pointer;font-family:inherit">\xD7</button>
     </div>`
     ).join("");
-    return `<div onclick="closeCategoryEditModal()" class="modal-backdrop"></div>
-  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:85vh;overflow-y:auto;box-sizing:border-box">
-    <div class="modal-handle"></div>
-    <div class="modal-title">${isNew ? "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F" : "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"}</div>
+    return `<div onclick="closeCategoryEditModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
+    <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F" : "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"}</div>
 
     <!-- \u0422\u0438\u043F (\u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u043D\u043E\u0432\u043E\u0457 \u2014 \u0434\u043B\u044F \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043D\u0435 \u043C\u0456\u043D\u044F\u0454\u043C\u043E \u0449\u043E\u0431 \u043D\u0435 \u043F\u043B\u0443\u0442\u0430\u0442\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457) -->
     ${isNew ? `<div style="display:flex;gap:6px;margin-bottom:12px">
@@ -9463,7 +9469,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     <!-- \u041D\u0430\u0437\u0432\u0430 -->
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041D\u0430\u0437\u0432\u0430</div>
     <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456"
-      style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box">
+      style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
 
     <!-- \u0406\u043A\u043E\u043D\u043A\u0430 -->
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0406\u043A\u043E\u043D\u043A\u0430</div>
@@ -9506,6 +9512,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
       <button onclick="closeCategoryEditModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
       <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438"}</button>
+    </div>
     </div>
   </div>`;
   }
