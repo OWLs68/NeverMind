@@ -89,55 +89,58 @@ function showErrorLog() {
   const list = document.getElementById('log-panel-list');
   if (!panel || !list) return;
 
+  // Кольори бейджів під темне тло #0f0a1e — яскраві і читабельні
   const typeStyle = {
-    error:   { bg: 'rgba(239,68,68,0.15)',   color: '#dc2626' },
-    promise: { bg: 'rgba(239,68,68,0.15)',   color: '#dc2626' },
-    err:     { bg: 'rgba(239,68,68,0.12)',   color: '#dc2626' },
-    warn:    { bg: 'rgba(251,191,36,0.15)',  color: '#b45309' },
-    log:     { bg: 'rgba(99,102,241,0.10)',  color: '#4338ca' },
+    error:   { bg: 'rgba(239,68,68,0.22)',   color: '#fca5a5', label: 'ERR' },
+    promise: { bg: 'rgba(239,68,68,0.22)',   color: '#fca5a5', label: 'PROMISE' },
+    err:     { bg: 'rgba(239,68,68,0.22)',   color: '#fca5a5', label: 'ERR' },
+    warn:    { bg: 'rgba(251,191,36,0.22)',  color: '#fcd34d', label: 'WARN' },
+    log:     { bg: 'rgba(129,140,248,0.22)', color: '#c7d2fe', label: 'LOG' },
   };
 
   if (log.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:48px 20px;color:rgba(30,16,64,0.35);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
+    list.innerHTML = '<div style="text-align:center;padding:64px 20px;color:rgba(255,255,255,0.35);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
   } else {
     const grouped = _groupConsecutive(log);
-    list.innerHTML = [...grouped].reverse().map((e, idx) => {
-      const d = new Date(e.lastTs || e.ts);
-      const time = d.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-      const date = d.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'});
-      const s = typeStyle[e.type] || { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' };
-      const countBadge = e.count > 1
-        ? `<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(194,121,10,0.18);color:#fbbf24">×${e.count}</span>`
-        : '';
-      const hasDetails = !!(e.stack || (e.actions && e.actions.length));
-      const actionsHtml = (e.actions && e.actions.length)
-        ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px">
-             <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Останні дії перед помилкою</div>
-             ${e.actions.map(a => {
-               const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-               return `<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">[${at}] [${a.tab}] ${a.action}</div>`;
-             }).join('')}
-           </div>`
-        : '';
-      const stackHtml = e.stack
-        ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(239,68,68,0.08);border-radius:8px;border-left:2px solid rgba(239,68,68,0.4)">
-             <div style="font-size:10px;font-weight:700;color:rgba(252,165,165,0.85);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Stack trace</div>
-             <div style="font-size:10.5px;color:rgba(255,255,255,0.7);white-space:pre-wrap;line-height:1.5;font-family:monospace">${escapeLog(e.stack)}</div>
-           </div>`
-        : '';
-      return `<div class="log-entry" data-idx="${idx}" onclick="toggleLogEntry(${idx})" style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:${hasDetails ? 'pointer' : 'default'}">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;background:${s.bg};color:${s.color};text-transform:uppercase">${e.type}</span>
-          ${countBadge}
-          <span style="font-size:11px;color:rgba(255,255,255,0.35)">${date} ${time}</span>
-          <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-left:auto">${e.tab}</span>
-          ${hasDetails ? `<span class="log-expand-${idx}" style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:4px">▸</span>` : ''}
-        </div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.92);line-height:1.45;word-break:break-all">${escapeLog(e.msg)}</div>
-        ${e.src ? `<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;font-family:monospace">${escapeLog(e.src)}</div>` : ''}
-        <div class="log-details-${idx}" style="display:none">${actionsHtml}${stackHtml}</div>
-      </div>`;
-    }).join('');
+    list.innerHTML = '<div style="padding:12px 14px 32px;display:flex;flex-direction:column;gap:10px">' +
+      [...grouped].reverse().map((e, idx) => {
+        const d = new Date(e.lastTs || e.ts);
+        const time = d.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        const date = d.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'});
+        const s = typeStyle[e.type] || { bg: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', label: e.type.toUpperCase() };
+        const countBadge = e.count > 1
+          ? `<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.22);color:#fcd34d">×${e.count}</span>`
+          : '';
+        const hasDetails = !!(e.stack || (e.actions && e.actions.length));
+        const actionsHtml = (e.actions && e.actions.length)
+          ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px">
+               <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Останні дії перед помилкою</div>
+               ${e.actions.map(a => {
+                 const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+                 return `<div style="font-size:12px;color:rgba(255,255,255,0.82);line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">[${at}] [${escapeLog(a.tab)}] ${escapeLog(a.action)}</div>`;
+               }).join('')}
+             </div>`
+          : '';
+        const stackHtml = e.stack
+          ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.1);border-radius:10px;border-left:3px solid rgba(252,165,165,0.5)">
+               <div style="font-size:10px;font-weight:800;color:#fca5a5;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Stack trace</div>
+               <div style="font-size:11px;color:rgba(255,255,255,0.85);white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.stack)}</div>
+             </div>`
+          : '';
+        return `<div class="log-entry" data-idx="${idx}" ${hasDetails ? `onclick="toggleLogEntry(${idx})"` : ''} style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 14px;cursor:${hasDetails ? 'pointer' : 'default'};-webkit-tap-highlight-color:transparent">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:${s.bg};color:${s.color};letter-spacing:0.3px">${s.label}</span>
+            ${countBadge}
+            <span style="font-size:11px;color:rgba(255,255,255,0.5);font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${date} ${time}</span>
+            <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);margin-left:auto;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,0.06);text-transform:uppercase;letter-spacing:0.3px">${escapeLog(e.tab)}</span>
+            ${hasDetails ? `<span class="log-expand-${idx}" style="font-size:13px;color:rgba(255,255,255,0.55);flex-shrink:0">▸</span>` : ''}
+          </div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.96);line-height:1.5;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${escapeLog(e.msg)}</div>
+          ${e.src ? `<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.src)}</div>` : ''}
+          <div class="log-details-${idx}" style="display:none">${actionsHtml}${stackHtml}</div>
+        </div>`;
+      }).join('') +
+      '</div>';
   }
 
   const countEl = document.getElementById('log-panel-count');
