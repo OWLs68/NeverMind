@@ -341,11 +341,199 @@
     details.style.display = isOpen ? "none" : "flex";
     if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
   }
-  var SMOKE_TEST_KEY;
+  function _initPerformanceMonitor() {
+    try {
+      const nav = performance.getEntriesByType?.("navigation")?.[0];
+      if (nav) {
+        const dcl = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+        _perfData.startupMs = dcl > 0 ? dcl : null;
+      }
+    } catch (e) {
+    }
+    if (!_perfData.startupMs) {
+      window.addEventListener("DOMContentLoaded", () => {
+        try {
+          const nav = performance.getEntriesByType("navigation")[0];
+          if (nav) _perfData.startupMs = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+        } catch (e) {
+        }
+      }, { once: true });
+    }
+    try {
+      const supported = typeof PerformanceObserver !== "undefined" && PerformanceObserver.supportedEntryTypes?.includes("longtask");
+      if (supported) {
+        _perfData.longTaskSupported = true;
+        const obs = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            _perfData.longTasks.push({
+              duration: Math.round(entry.duration),
+              startTime: Math.round(entry.startTime),
+              ts: Date.now()
+            });
+            if (_perfData.longTasks.length > MAX_LONGTASKS) _perfData.longTasks.shift();
+          }
+        });
+        obs.observe({ entryTypes: ["longtask"] });
+      }
+    } catch (e) {
+    }
+    try {
+      const origFetch = window.fetch.bind(window);
+      window.fetch = function(input, init2) {
+        const start = performance.now();
+        const url = typeof input === "string" ? input : input?.url || "";
+        const method = (init2?.method || typeof input === "object" && input?.method || "GET").toUpperCase();
+        const record = (status, error) => {
+          const duration = Math.round(performance.now() - start);
+          _perfData.fetches.push({
+            url: _shortenUrl(url),
+            method,
+            duration,
+            status,
+            error: error || null,
+            ts: Date.now()
+          });
+          if (_perfData.fetches.length > MAX_FETCHES) _perfData.fetches.shift();
+        };
+        return origFetch(input, init2).then(
+          (res) => {
+            record(res.status);
+            return res;
+          },
+          (err) => {
+            record(0, err?.message || "Network error");
+            throw err;
+          }
+        );
+      };
+    } catch (e) {
+    }
+  }
+  function _shortenUrl(url) {
+    try {
+      const u = new URL(url, window.location.href);
+      const path = u.pathname.length > 40 ? u.pathname.slice(0, 37) + "..." : u.pathname;
+      return u.host + path;
+    } catch {
+      return String(url).slice(0, 60);
+    }
+  }
+  function getPerformanceData() {
+    return {
+      longTasks: _perfData.longTasks.slice(),
+      fetches: _perfData.fetches.slice(),
+      startupMs: _perfData.startupMs,
+      longTaskSupported: _perfData.longTaskSupported
+    };
+  }
+  function renderPerformance() {
+    const data = getPerformanceData();
+    const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E";
+    const startupStatus = data.startupMs == null ? "unknown" : data.startupMs < 1500 ? "ok" : data.startupMs < 3e3 ? "warn" : "fail";
+    const longTasksCount = data.longTasks.length;
+    const worstLongTask = data.longTasks.reduce((max, t) => t.duration > max ? t.duration : max, 0);
+    const longTasksStatus = !data.longTaskSupported ? "unknown" : longTasksCount === 0 ? "ok" : worstLongTask > 200 ? "warn" : "ok";
+    const okFetches = data.fetches.filter((f) => f.status >= 200 && f.status < 400);
+    const failedFetches = data.fetches.filter((f) => f.status === 0 || f.status >= 400);
+    const avgFetchMs = okFetches.length > 0 ? Math.round(okFetches.reduce((s, f) => s + f.duration, 0) / okFetches.length) : 0;
+    const slowFetches = data.fetches.filter((f) => f.duration > 3e3);
+    const fetchStatus = failedFetches.length > 0 ? "fail" : slowFetches.length > 0 ? "warn" : "ok";
+    const statuses = [startupStatus, longTasksStatus, fetchStatus].filter((s) => s !== "unknown");
+    const overall = statuses.includes("fail") ? "fail" : statuses.includes("warn") ? "warn" : "ok";
+    const overallIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" }[overall];
+    const overallColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" }[overall];
+    const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
+    const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
+    const summaryParts = [];
+    summaryParts.push(`\u0421\u0442\u0430\u0440\u0442 ${startupStr}`);
+    if (data.longTaskSupported) summaryParts.push(`${longTasksCount} \u043B\u0430\u0433\u0456\u0432`);
+    summaryParts.push(`${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432`);
+    if (failedFetches.length > 0) summaryParts.push(`${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E`);
+    const overallText = summaryParts.join(" \xB7 ");
+    const statusIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717", unknown: "\xB7" };
+    const statusColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626", unknown: "rgba(30,16,64,0.45)" };
+    const rows = [];
+    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+    <span style="color:${statusColor[startupStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[startupStatus]}</span>
+    <div style="flex:1;min-width:0">
+      <span style="color:#1e1040;font-weight:600">\u0427\u0430\u0441 \u0437\u0430\u043F\u0443\u0441\u043A\u0443</span>
+      <span style="color:rgba(30,16,64,0.7)">: ${startupStr}</span>
+    </div>
+  </div>`);
+    if (data.longTaskSupported) {
+      const msg = longTasksCount === 0 ? "\u043D\u0435\u043C\u0430\u0454" : `${longTasksCount} (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worstLongTask}\u043C\u0441)`;
+      rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+      <span style="color:${statusColor[longTasksStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[longTasksStatus]}</span>
+      <div style="flex:1;min-width:0">
+        <span style="color:#1e1040;font-weight:600">\u041B\u0430\u0433\u0438 UI >50\u043C\u0441</span>
+        <span style="color:rgba(30,16,64,0.7)">: ${msg}</span>
+      </div>
+    </div>`);
+    } else {
+      rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+      <span style="color:${statusColor.unknown};font-weight:800;flex-shrink:0;width:14px">\xB7</span>
+      <div style="flex:1;min-width:0">
+        <span style="color:rgba(30,16,64,0.6);font-weight:600">\u041B\u0430\u0433\u0438 UI</span>
+        <span style="color:rgba(30,16,64,0.55);font-style:italic">: Safari \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454 \u0446\u0435\u0439 API</span>
+      </div>
+    </div>`);
+    }
+    const fetchMsg = data.fetches.length === 0 ? "\u0449\u0435 \u043D\u0435 \u0431\u0443\u043B\u043E" : `${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432 \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgFetchMs}\u043C\u0441` + (failedFetches.length > 0 ? ` \xB7 ${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : "");
+    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+    <span style="color:${statusColor[fetchStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[fetchStatus]}</span>
+    <div style="flex:1;min-width:0">
+      <span style="color:#1e1040;font-weight:600">HTTP \u0437\u0430\u043F\u0438\u0442\u0438</span>
+      <span style="color:rgba(30,16,64,0.7)">: ${fetchMsg}</span>
+    </div>
+  </div>`);
+    if (data.fetches.length > 0) {
+      const recent = data.fetches.slice(-5).reverse();
+      rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438</div>' + recent.map((f) => {
+        const col = f.status === 0 || f.status >= 400 ? "#dc2626" : f.duration > 3e3 ? "#b45309" : "#16a34a";
+        const statusStr = f.status === 0 ? "FAIL" : String(f.status);
+        return `<div style="font-size:11px;line-height:1.5;font-family:ui-monospace,Menlo,monospace;color:rgba(30,16,64,0.85);display:flex;gap:8px;align-items:baseline">
+          <span style="color:${col};font-weight:700;flex-shrink:0;width:44px">${statusStr}</span>
+          <span style="color:rgba(30,16,64,0.55);flex-shrink:0;width:48px">${f.duration}\u043C\u0441</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.method} ${f.url}</span>
+        </div>`;
+      }).join("") + "</div>");
+    }
+    return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="togglePerfDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Performance</div>
+        <div style="font-size:13px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="perf-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
+    </div>
+    <div id="perf-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
+      ${rows.join("")}
+    </div>
+  </div>`;
+  }
+  function togglePerfDetails() {
+    const details = document.getElementById("perf-details");
+    const arrow = document.getElementById("perf-expand-arrow");
+    if (!details) return;
+    const isOpen = details.style.display === "flex";
+    details.style.display = isOpen ? "none" : "flex";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  var SMOKE_TEST_KEY, _perfData, MAX_FETCHES, MAX_LONGTASKS;
   var init_diagnostics = __esm({
     "src/core/diagnostics.js"() {
       SMOKE_TEST_KEY = "__nm_smoke_test__";
-      Object.assign(window, { toggleHealthDetails, toggleSmokeDetails });
+      _perfData = {
+        longTasks: [],
+        fetches: [],
+        startupMs: null,
+        longTaskSupported: false
+      };
+      MAX_FETCHES = 30;
+      MAX_LONGTASKS = 20;
+      _initPerformanceMonitor();
+      Object.assign(window, { toggleHealthDetails, toggleSmokeDetails, togglePerfDetails });
     }
   });
 
@@ -408,12 +596,13 @@
     };
     const healthHtml = renderHealthCheck();
     const smokeHtml = renderSmokeTests();
+    const perfHtml = renderPerformance();
     const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">\u041B\u043E\u0433\u0438 \u043F\u043E\u043C\u0438\u043B\u043E\u043A</div>';
     if (log.length === 0) {
-      list.innerHTML = healthHtml + smokeHtml + logsHeader + '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
+      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
     } else {
       const grouped = _groupConsecutive(log);
-      list.innerHTML = healthHtml + smokeHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
+      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
         const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         const date = d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
@@ -480,6 +669,25 @@
       const ic = t.status === "pass" ? "\u2713" : "\u2717";
       return `${ic} ${t.name}${t.status === "fail" ? ` \u2014 ${t.message}` : ""} (${t.ms}\u043C\u0441)`;
     }).join("\n");
+    const perf = getPerformanceData();
+    const perfLines = [];
+    perfLines.push(`\u0421\u0442\u0430\u0440\u0442: ${perf.startupMs != null ? perf.startupMs + "\u043C\u0441" : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"}`);
+    if (perf.longTaskSupported) {
+      const worst = perf.longTasks.reduce((m, t) => t.duration > m ? t.duration : m, 0);
+      perfLines.push(`\u041B\u0430\u0433\u0438 UI: ${perf.longTasks.length}${worst > 0 ? ` (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worst}\u043C\u0441)` : ""}`);
+    } else {
+      perfLines.push("\u041B\u0430\u0433\u0438 UI: \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043E\u043C");
+    }
+    const okF = perf.fetches.filter((f) => f.status >= 200 && f.status < 400);
+    const failF = perf.fetches.filter((f) => f.status === 0 || f.status >= 400);
+    const avgF = okF.length > 0 ? Math.round(okF.reduce((s, f) => s + f.duration, 0) / okF.length) : 0;
+    perfLines.push(`\u0417\u0430\u043F\u0438\u0442\u0456\u0432: ${perf.fetches.length}${avgF > 0 ? ` \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgF}\u043C\u0441` : ""}${failF.length > 0 ? ` \xB7 ${failF.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : ""}`);
+    if (perf.fetches.length > 0) {
+      perfLines.push("\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438:");
+      perf.fetches.slice(-5).reverse().forEach((f) => {
+        perfLines.push(`  ${f.status === 0 ? "FAIL" : f.status} ${f.duration}\u043C\u0441 ${f.method} ${f.url}${f.error ? " \u2014 " + f.error : ""}`);
+      });
+    }
     const logLines = lastGroups.length === 0 ? "(\u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E)" : lastGroups.map((e) => {
       const time = new Date(e.lastTs || e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       const cnt = e.count > 1 ? ` \xD7${e.count}` : "";
@@ -503,6 +711,9 @@ ${healthLines}
 
 \u2501\u2501\u2501 SMOKE \u0422\u0415\u0421\u0422\u0418: ${smokeSummary} \u2501\u2501\u2501
 ${smokeLines}
+
+\u2501\u2501\u2501 PERFORMANCE \u2501\u2501\u2501
+${perfLines.join("\n")}
 
 \u2501\u2501\u2501 \u041B\u041E\u0413\u0418 (${lastGroups.length} \u0433\u0440\u0443\u043F \u0437 ${grouped.length}, \u0432\u0441\u044C\u043E\u0433\u043E ${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432) \u2501\u2501\u2501
 \`\`\`
