@@ -7724,14 +7724,85 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     const win = _getFinPeriodWindow(currentFinPeriod, currentFinPeriodOffset);
     const allTxs = getFinance().filter((t) => t.ts >= win.from && t.ts < win.to);
-    wrap.innerHTML = _finCatsGrid(allTxs, win) + (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
+    wrap.innerHTML = _finCatsGrid(allTxs, win) + _finDailyInsight(allTxs, win) + (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
     _attachFinSwipe();
+    _refreshFinInsight(allTxs, win);
   }
   function _finEmptyTxsHint() {
     return `<div style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(30,16,64,0.12);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px">
     <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">\u0423 \u0446\u044C\u043E\u043C\u0443 \u043F\u0435\u0440\u0456\u043E\u0434\u0456 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0439 \u043D\u0435\u043C\u0430\u0454</div>
     <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438 \u0430\u0431\u043E \u0441\u0432\u0430\u0439\u043F\u043D\u0438 \u2190\u2192 \u0434\u043B\u044F \u0456\u043D\u0448\u043E\u0433\u043E \u043F\u0435\u0440\u0456\u043E\u0434\u0443</div>
   </div>`;
+  }
+  function _finDailyInsight(allTxs) {
+    if (allTxs.length === 0) return "";
+    const cacheKey = `nm_fin_insight_${currentFinPeriod}_${currentFinPeriodOffset}`;
+    const cached = localStorage.getItem(cacheKey);
+    let text = "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026";
+    if (cached) {
+      try {
+        text = JSON.parse(cached).text || text;
+      } catch (e) {
+      }
+    }
+    return `<div id="fin-insight-card" style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:12px 14px;margin-bottom:12px">
+    <div style="width:28px;height:28px;border-radius:10px;background:rgba(194,65,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#1e1040;line-height:1.5" id="fin-insight-text">${escapeHtml(text)}</div>
+  </div>`;
+  }
+  async function _refreshFinInsight(allTxs, win) {
+    if (allTxs.length < 2) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) return;
+    const cacheKey = `nm_fin_insight_${currentFinPeriod}_${currentFinPeriodOffset}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        if (Date.now() - JSON.parse(cached).ts < FIN_INSIGHT_TTL) return;
+      } catch (e) {
+      }
+    }
+    const expenses = allTxs.filter((t) => t.type === "expense");
+    const incomes = allTxs.filter((t) => t.type === "income");
+    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+    const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+    const catMap = {};
+    expenses.forEach((t) => {
+      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    });
+    const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(", ");
+    const budget = getFinBudget();
+    const prompt2 = `${getOWLPersonality()}
+\u0414\u0430\u0439 \u041E\u0414\u0418\u041D \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0438\u0439 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0456\u043D\u0441\u0430\u0439\u0442. \u041E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456\u0448\u0435 \u0437\u0430\u0440\u0430\u0437:
+- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F \u0440\u0456\u0437\u043A\u043E \u0440\u043E\u0441\u0442\u0435 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0438\u043B\u0430 \u043B\u0456\u043C\u0456\u0442
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u0437\u0440\u043E\u0441\u043B\u0438/\u0437\u043D\u0438\u0437\u0438\u043B\u0438\u0441\u044C vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0430\u043D\u0430\u043B\u043E\u0433\u0456\u0447\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434
+- \u0420\u0456\u0447\u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0446\u0456\u044F ("\u20ACX/\u0442\u0438\u0436\u0434\u0435\u043D\u044C = \u20ACY/\u0440\u0456\u043A" \u0434\u043B\u044F \u043F\u043E\u043C\u0456\u0442\u043D\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457)
+- \u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F \u0432\u0438\u0449\u0435/\u043D\u0438\u0436\u0447\u0435 20%
+- \u041D\u0435\u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C (\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u0431\u0430\u0433\u0430\u0442\u043E \u0437\u0430 \u0440\u0430\u0437 \u0430\u0431\u043E \u043D\u0430\u0432\u043F\u0430\u043A\u0438)
+
+2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u041C\u0410\u041A\u0421\u0418\u041C\u0423\u041C. \u0427\u0438\u0441\u043B\u0430 \u0422\u0406\u041B\u042C\u041A\u0418 \u0437 \u0434\u0430\u043D\u0438\u0445 \u043D\u0438\u0436\u0447\u0435. \u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0414\u0430\u043D\u0456 (${win.label}):
+\u0412\u0438\u0442\u0440\u0430\u0442\u0438: ${formatMoney(totalExp)}, \u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
+\u0422\u043E\u043F: ${top3 || "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"}
+${budget.total > 0 ? `\u0411\u044E\u0434\u0436\u0435\u0442: ${formatMoney(budget.total)}` : "\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"}
+${totalInc > 0 ? `\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E: ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ""}`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 100, temperature: 0.5 })
+      });
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content?.trim();
+      if (!text) return;
+      localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now() }));
+      const el = document.getElementById("fin-insight-text");
+      if (el) el.textContent = text;
+    } catch (e) {
+    }
   }
   function _attachFinSwipe() {
     if (_finSwipeAttached) return;
@@ -8735,7 +8806,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     _finEditingCatId = null;
     _finCatModalDraft = null;
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft;
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, FIN_INSIGHT_TTL, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -8849,6 +8920,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _finEditMode = false;
       _finEditingCatId = null;
       _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
+      FIN_INSIGHT_TTL = 12 * 60 * 60 * 1e3;
       _finSwipeAttached = false;
       _finEditId = null;
       _finTxCurrentType = "expense";
