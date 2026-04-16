@@ -370,5 +370,241 @@ function toggleSmokeDetails() {
   if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
 }
 
+// ============================================================
+// Performance Monitor — автоматично моніторить:
+//   - Startup time (від старту до domContentLoadedEnd)
+//   - Long tasks (>50мс — блокування UI, Safari не підтримує longtask API)
+//   - Fetch calls (monkey-patch window.fetch — API latency, помилки)
+// Запускається одразу при імпорті модуля.
+// ============================================================
+
+const _perfData = {
+  longTasks: [],
+  fetches: [],
+  startupMs: null,
+  longTaskSupported: false,
+};
+const MAX_FETCHES = 30;
+const MAX_LONGTASKS = 20;
+
+function _initPerformanceMonitor() {
+  // Startup time з Navigation Timing API
+  try {
+    const nav = performance.getEntriesByType?.('navigation')?.[0];
+    if (nav) {
+      const dcl = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+      _perfData.startupMs = dcl > 0 ? dcl : null;
+    }
+  } catch (e) {}
+  // Якщо DCL ще не наступив — дочекатись
+  if (!_perfData.startupMs) {
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav) _perfData.startupMs = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+      } catch (e) {}
+    }, { once: true });
+  }
+
+  // Long tasks (>50мс блокують головний потік)
+  try {
+    const supported = typeof PerformanceObserver !== 'undefined'
+      && PerformanceObserver.supportedEntryTypes?.includes('longtask');
+    if (supported) {
+      _perfData.longTaskSupported = true;
+      const obs = new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) {
+          _perfData.longTasks.push({
+            duration: Math.round(entry.duration),
+            startTime: Math.round(entry.startTime),
+            ts: Date.now(),
+          });
+          if (_perfData.longTasks.length > MAX_LONGTASKS) _perfData.longTasks.shift();
+        }
+      });
+      obs.observe({ entryTypes: ['longtask'] });
+    }
+  } catch (e) {}
+
+  // Monkey-patch window.fetch — ловимо всі HTTP-запити
+  try {
+    const origFetch = window.fetch.bind(window);
+    window.fetch = function(input, init) {
+      const start = performance.now();
+      const url = typeof input === 'string' ? input : (input?.url || '');
+      const method = (init?.method || (typeof input === 'object' && input?.method) || 'GET').toUpperCase();
+      const record = (status, error) => {
+        const duration = Math.round(performance.now() - start);
+        _perfData.fetches.push({
+          url: _shortenUrl(url),
+          method,
+          duration,
+          status,
+          error: error || null,
+          ts: Date.now(),
+        });
+        if (_perfData.fetches.length > MAX_FETCHES) _perfData.fetches.shift();
+      };
+      return origFetch(input, init).then(
+        res => { record(res.status); return res; },
+        err => { record(0, err?.message || 'Network error'); throw err; }
+      );
+    };
+  } catch (e) {}
+}
+
+function _shortenUrl(url) {
+  try {
+    const u = new URL(url, window.location.href);
+    const path = u.pathname.length > 40 ? u.pathname.slice(0, 37) + '...' : u.pathname;
+    return u.host + path;
+  } catch {
+    return String(url).slice(0, 60);
+  }
+}
+
+// Ініціалізуємо одразу при імпорті
+_initPerformanceMonitor();
+
+export function getPerformanceData() {
+  return {
+    longTasks: _perfData.longTasks.slice(),
+    fetches: _perfData.fetches.slice(),
+    startupMs: _perfData.startupMs,
+    longTaskSupported: _perfData.longTaskSupported,
+  };
+}
+
+export function renderPerformance() {
+  const data = getPerformanceData();
+
+  // Startup
+  const startupStr = data.startupMs != null ? `${data.startupMs}мс` : 'невідомо';
+  const startupStatus = data.startupMs == null ? 'unknown'
+    : data.startupMs < 1500 ? 'ok'
+    : data.startupMs < 3000 ? 'warn' : 'fail';
+
+  // Long tasks
+  const longTasksCount = data.longTasks.length;
+  const worstLongTask = data.longTasks.reduce((max, t) => t.duration > max ? t.duration : max, 0);
+  const longTasksStatus = !data.longTaskSupported ? 'unknown'
+    : longTasksCount === 0 ? 'ok'
+    : worstLongTask > 200 ? 'warn' : 'ok';
+
+  // Fetches
+  const okFetches = data.fetches.filter(f => f.status >= 200 && f.status < 400);
+  const failedFetches = data.fetches.filter(f => f.status === 0 || f.status >= 400);
+  const avgFetchMs = okFetches.length > 0
+    ? Math.round(okFetches.reduce((s, f) => s + f.duration, 0) / okFetches.length)
+    : 0;
+  const slowFetches = data.fetches.filter(f => f.duration > 3000);
+  const fetchStatus = failedFetches.length > 0 ? 'fail'
+    : slowFetches.length > 0 ? 'warn' : 'ok';
+
+  // Overall
+  const statuses = [startupStatus, longTasksStatus, fetchStatus].filter(s => s !== 'unknown');
+  const overall = statuses.includes('fail') ? 'fail'
+    : statuses.includes('warn') ? 'warn' : 'ok';
+
+  const overallIcon = { ok: '✓', warn: '⚠', fail: '✗' }[overall];
+  const overallColor = { ok: '#16a34a', warn: '#b45309', fail: '#dc2626' }[overall];
+  const overallBg = { ok: 'rgba(34,197,94,0.08)', warn: 'rgba(251,191,36,0.12)', fail: 'rgba(239,68,68,0.08)' }[overall];
+  const overallBorder = { ok: 'rgba(34,197,94,0.25)', warn: 'rgba(251,191,36,0.35)', fail: 'rgba(239,68,68,0.3)' }[overall];
+
+  const summaryParts = [];
+  summaryParts.push(`Старт ${startupStr}`);
+  if (data.longTaskSupported) summaryParts.push(`${longTasksCount} лагів`);
+  summaryParts.push(`${data.fetches.length} запитів`);
+  if (failedFetches.length > 0) summaryParts.push(`${failedFetches.length} з помилкою`);
+  const overallText = summaryParts.join(' · ');
+
+  const statusIcon = { ok: '✓', warn: '⚠', fail: '✗', unknown: '·' };
+  const statusColor = { ok: '#16a34a', warn: '#b45309', fail: '#dc2626', unknown: 'rgba(30,16,64,0.45)' };
+
+  const rows = [];
+
+  // Startup
+  rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+    <span style="color:${statusColor[startupStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[startupStatus]}</span>
+    <div style="flex:1;min-width:0">
+      <span style="color:#1e1040;font-weight:600">Час запуску</span>
+      <span style="color:rgba(30,16,64,0.7)">: ${startupStr}</span>
+    </div>
+  </div>`);
+
+  // Long tasks
+  if (data.longTaskSupported) {
+    const msg = longTasksCount === 0
+      ? 'немає'
+      : `${longTasksCount} (найдовший ${worstLongTask}мс)`;
+    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+      <span style="color:${statusColor[longTasksStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[longTasksStatus]}</span>
+      <div style="flex:1;min-width:0">
+        <span style="color:#1e1040;font-weight:600">Лаги UI >50мс</span>
+        <span style="color:rgba(30,16,64,0.7)">: ${msg}</span>
+      </div>
+    </div>`);
+  } else {
+    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+      <span style="color:${statusColor.unknown};font-weight:800;flex-shrink:0;width:14px">·</span>
+      <div style="flex:1;min-width:0">
+        <span style="color:rgba(30,16,64,0.6);font-weight:600">Лаги UI</span>
+        <span style="color:rgba(30,16,64,0.55);font-style:italic">: Safari не підтримує цей API</span>
+      </div>
+    </div>`);
+  }
+
+  // Fetches summary
+  const fetchMsg = data.fetches.length === 0
+    ? 'ще не було'
+    : `${data.fetches.length} запитів · середній ${avgFetchMs}мс` + (failedFetches.length > 0 ? ` · ${failedFetches.length} з помилкою` : '');
+  rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+    <span style="color:${statusColor[fetchStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[fetchStatus]}</span>
+    <div style="flex:1;min-width:0">
+      <span style="color:#1e1040;font-weight:600">HTTP запити</span>
+      <span style="color:rgba(30,16,64,0.7)">: ${fetchMsg}</span>
+    </div>
+  </div>`);
+
+  // Останні 5 запитів (детально)
+  if (data.fetches.length > 0) {
+    const recent = data.fetches.slice(-5).reverse();
+    rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Останні запити</div>' +
+      recent.map(f => {
+        const col = f.status === 0 || f.status >= 400 ? '#dc2626' : f.duration > 3000 ? '#b45309' : '#16a34a';
+        const statusStr = f.status === 0 ? 'FAIL' : String(f.status);
+        return `<div style="font-size:11px;line-height:1.5;font-family:ui-monospace,Menlo,monospace;color:rgba(30,16,64,0.85);display:flex;gap:8px;align-items:baseline">
+          <span style="color:${col};font-weight:700;flex-shrink:0;width:44px">${statusStr}</span>
+          <span style="color:rgba(30,16,64,0.55);flex-shrink:0;width:48px">${f.duration}мс</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.method} ${f.url}</span>
+        </div>`;
+      }).join('') +
+      '</div>');
+  }
+
+  return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="togglePerfDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Performance</div>
+        <div style="font-size:13px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="perf-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">▸</span>
+    </div>
+    <div id="perf-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
+      ${rows.join('')}
+    </div>
+  </div>`;
+}
+
+function togglePerfDetails() {
+  const details = document.getElementById('perf-details');
+  const arrow = document.getElementById('perf-expand-arrow');
+  if (!details) return;
+  const isOpen = details.style.display === 'flex';
+  details.style.display = isOpen ? 'none' : 'flex';
+  if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
+}
+
 // Functions called from HTML event handlers
-Object.assign(window, { toggleHealthDetails, toggleSmokeDetails });
+Object.assign(window, { toggleHealthDetails, toggleSmokeDetails, togglePerfDetails });
