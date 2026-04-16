@@ -177,7 +177,7 @@ export function renderHealthCheck() {
       </div>
       <span id="health-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">▸</span>
     </div>
-    <div id="health-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};display:none;flex-direction:column;gap:8px">
+    <div id="health-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
       ${checks.map(c => `
         <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.4">
           <span style="color:${statusColor[c.status]};font-weight:800;flex-shrink:0;width:14px;font-size:13px">${statusIcon[c.status]}</span>
