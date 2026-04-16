@@ -182,9 +182,170 @@
     details.style.display = isOpen ? "none" : "flex";
     if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
   }
+  function runSmokeTests() {
+    const tests = [];
+    const start = performance.now();
+    tests.push(_runTest("\u0421\u0445\u043E\u0432\u0438\u0449\u0435 write/read", () => {
+      const payload = { v: "ok", ts: Date.now() };
+      localStorage.setItem(SMOKE_TEST_KEY, JSON.stringify(payload));
+      const read = JSON.parse(localStorage.getItem(SMOKE_TEST_KEY));
+      if (read.v !== "ok") throw new Error("Read value mismatch");
+      localStorage.removeItem(SMOKE_TEST_KEY);
+      if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error("Remove \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0432");
+    }));
+    const arrayKeys = [
+      "nm_tasks",
+      "nm_notes",
+      "nm_habits2",
+      "nm_finance",
+      "nm_trash",
+      "nm_moments",
+      "nm_projects",
+      "nm_events",
+      "nm_health_cards",
+      "nm_inbox"
+    ];
+    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043C\u0430\u0441\u0438\u0432\u0438)", () => {
+      const broken = [];
+      for (const k of arrayKeys) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const v = JSON.parse(raw);
+          if (!Array.isArray(v)) broken.push(`${k}:\u043D\u0435-\u043C\u0430\u0441\u0438\u0432`);
+        } catch (e) {
+          broken.push(`${k}:invalid`);
+        }
+      }
+      if (broken.length) throw new Error(broken.join(", "));
+    }));
+    const objectKeys = [
+      "nm_settings",
+      "nm_habit_log2",
+      "nm_quit_log",
+      "nm_finance_budget",
+      "nm_finance_cats",
+      "nm_folders_meta"
+    ];
+    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043E\u0431'\u0454\u043A\u0442\u0438)", () => {
+      const broken = [];
+      for (const k of objectKeys) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const v = JSON.parse(raw);
+          if (typeof v !== "object" || v === null) broken.push(`${k}:\u043D\u0435-\u043E\u0431'\u0454\u043A\u0442`);
+        } catch (e) {
+          broken.push(`${k}:invalid`);
+        }
+      }
+      if (broken.length) throw new Error(broken.join(", "));
+    }));
+    tests.push(_runTest("\u0424\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442", () => {
+      const iso = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`ISO date broken: ${iso}`);
+      const utc = (/* @__PURE__ */ new Date()).toDateString();
+      if (!utc || utc.length < 10) throw new Error(`toDateString broken: ${utc}`);
+    }));
+    tests.push(_runTest("DOM \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430", () => {
+      const required = ["log-panel", "toast", "tab-bar", "onboarding", "splash"];
+      const missing = required.filter((id) => !document.getElementById(id));
+      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
+    }));
+    tests.push(_runTest("\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457", () => {
+      const required = [
+        "switchTab",
+        "showErrorLog",
+        "sendOwlReply",
+        "toggleOwlTabChat",
+        "scrollOwlTabChips",
+        "closeLogPanel",
+        "copyLogForClaude"
+      ];
+      const missing = required.filter((g) => typeof window[g] !== "function");
+      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
+    }));
+    tests.push(_runTest("CSS --tabbar-h", () => {
+      const val = getComputedStyle(document.documentElement).getPropertyValue("--tabbar-h");
+      if (!val || val.trim() === "") throw new Error("\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430");
+    }));
+    tests.push(_runTest("Event \u0441\u0438\u0441\u0442\u0435\u043C\u0430", () => {
+      let received = false;
+      const handler = (e) => {
+        if (e.detail === "smoke-test") received = true;
+      };
+      window.addEventListener("nm-data-changed", handler);
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "smoke-test" }));
+      window.removeEventListener("nm-data-changed", handler);
+      if (!received) throw new Error("nm-data-changed \u043D\u0435 \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E");
+    }));
+    tests.push(_runTest("Clipboard API", () => {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+        throw new Error("\u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439");
+      }
+    }));
+    const totalMs = Math.round(performance.now() - start);
+    return { tests, totalMs };
+  }
+  function _runTest(name, fn) {
+    const start = performance.now();
+    try {
+      fn();
+      const ms = Math.round((performance.now() - start) * 10) / 10;
+      return { name, status: "pass", message: "ok", ms };
+    } catch (e) {
+      const ms = Math.round((performance.now() - start) * 10) / 10;
+      return { name, status: "fail", message: e.message || String(e), ms };
+    }
+  }
+  function renderSmokeTests() {
+    const { tests, totalMs } = runSmokeTests();
+    const fails = tests.filter((t) => t.status === "fail").length;
+    const passes = tests.length - fails;
+    const overall = fails > 0 ? "fail" : "ok";
+    const overallIcon = fails > 0 ? "\u2717" : "\u2713";
+    const overallText = fails > 0 ? `${passes}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${fails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${tests.length}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${totalMs}\u043C\u0441`;
+    const overallColor = fails > 0 ? "#dc2626" : "#16a34a";
+    const overallBg = fails > 0 ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)";
+    const overallBorder = fails > 0 ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.25)";
+    const statusIcon = { pass: "\u2713", fail: "\u2717" };
+    const statusColor = { pass: "#16a34a", fail: "#dc2626" };
+    return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="toggleSmokeDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Smoke \u0442\u0435\u0441\u0442\u0438</div>
+        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
+    </div>
+    <div id="smoke-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:6px">
+      ${tests.map((t) => `
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+          <span style="color:${statusColor[t.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t.status]}</span>
+          <div style="flex:1;min-width:0">
+            <span style="color:#1e1040;font-weight:600">${t.name}</span>
+            ${t.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t.message}</span>` : ""}
+          </div>
+          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t.ms}\u043C\u0441</span>
+        </div>
+      `).join("")}
+    </div>
+  </div>`;
+  }
+  function toggleSmokeDetails() {
+    const details = document.getElementById("smoke-details");
+    const arrow = document.getElementById("smoke-expand-arrow");
+    if (!details) return;
+    const isOpen = details.style.display === "flex";
+    details.style.display = isOpen ? "none" : "flex";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  var SMOKE_TEST_KEY;
   var init_diagnostics = __esm({
     "src/core/diagnostics.js"() {
-      Object.assign(window, { toggleHealthDetails });
+      SMOKE_TEST_KEY = "__nm_smoke_test__";
+      Object.assign(window, { toggleHealthDetails, toggleSmokeDetails });
     }
   });
 
@@ -246,12 +407,13 @@
       log: { bg: "rgba(59,130,246,0.12)", color: "#2563eb", label: "LOG" }
     };
     const healthHtml = renderHealthCheck();
+    const smokeHtml = renderSmokeTests();
     const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">\u041B\u043E\u0433\u0438 \u043F\u043E\u043C\u0438\u043B\u043E\u043A</div>';
     if (log.length === 0) {
-      list.innerHTML = healthHtml + logsHeader + '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
+      list.innerHTML = healthHtml + smokeHtml + logsHeader + '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
     } else {
       const grouped = _groupConsecutive(log);
-      list.innerHTML = healthHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
+      list.innerHTML = healthHtml + smokeHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
         const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         const date = d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
@@ -310,6 +472,14 @@
     \u2192 ${c.hint}`;
       return line;
     }).join("\n");
+    const { tests: smokeTests, totalMs: smokeMs } = runSmokeTests();
+    const smokeFails = smokeTests.filter((t) => t.status === "fail").length;
+    const smokePasses = smokeTests.length - smokeFails;
+    const smokeSummary = smokeFails > 0 ? `${smokePasses}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeFails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${smokeTests.length}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeMs}\u043C\u0441`;
+    const smokeLines = smokeTests.map((t) => {
+      const ic = t.status === "pass" ? "\u2713" : "\u2717";
+      return `${ic} ${t.name}${t.status === "fail" ? ` \u2014 ${t.message}` : ""} (${t.ms}\u043C\u0441)`;
+    }).join("\n");
     const logLines = lastGroups.length === 0 ? "(\u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E)" : lastGroups.map((e) => {
       const time = new Date(e.lastTs || e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       const cnt = e.count > 1 ? ` \xD7${e.count}` : "";
@@ -330,6 +500,9 @@ ${deployLine}
 
 \u2501\u2501\u2501 \u0421\u0422\u0410\u041D \u0421\u0418\u0421\u0422\u0415\u041C: ${overallText} \u2501\u2501\u2501
 ${healthLines}
+
+\u2501\u2501\u2501 SMOKE \u0422\u0415\u0421\u0422\u0418: ${smokeSummary} \u2501\u2501\u2501
+${smokeLines}
 
 \u2501\u2501\u2501 \u041B\u041E\u0413\u0418 (${lastGroups.length} \u0433\u0440\u0443\u043F \u0437 ${grouped.length}, \u0432\u0441\u044C\u043E\u0433\u043E ${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432) \u2501\u2501\u2501
 \`\`\`
