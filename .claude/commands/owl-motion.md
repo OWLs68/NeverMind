@@ -1,0 +1,106 @@
+# /owl-motion — Система анімації OWL-сови
+
+Цей скіл генерує або оновлює SVG-структуру і CSS-анімації для OWL-персонажа (сови) у NeverMind.
+
+## Технічне рішення
+
+SVG + CSS keyframes (кадри анімації). Без Lottie (важкий), без SMIL (застарілий). Працює на iOS Safari.
+
+## Структура яку треба створити/оновити
+
+### HTML (в index.html)
+```html
+<div id="owl-container" class="owl--idle">
+  <svg class="owl-svg"><!-- SVG-персонаж --></svg>
+  <div class="owl-bubble"><!-- текст табло --></div>
+</div>
+```
+
+### CSS стани (в style.css)
+```css
+/* idle — повільне левітування коли нема повідомлення */
+.owl--idle .owl-svg { animation: owlLevitate 3s ease-in-out infinite; }
+
+/* alert — кивок коли з'явилось нове повідомлення */
+.owl--alert .owl-svg { animation: owlNod 0.4s ease-in-out; }
+
+/* thinking — анімація очей поки AI думає */
+.owl--thinking .owl-svg { animation: owlThink 1s ease-in-out infinite; }
+
+/* error — опущені крила при помилці */
+.owl--error .owl-svg { animation: owlDrop 0.3s ease-out; }
+
+/* greeting — змах крилом при вітанні */
+.owl--greeting .owl-svg { animation: owlWave 0.6s ease-in-out; }
+
+/* розгортання бабла від сови вправо */
+.owl-bubble { transform-origin: left center; }
+.owl-bubble.visible { animation: bubbleOpen 0.3s ease-out forwards; }
+.owl-bubble.hidden { animation: bubbleClose 0.2s ease-in forwards; }
+
+@keyframes owlLevitate {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes owlNod {
+  0% { transform: rotate(0deg); }
+  30% { transform: rotate(-8deg); }
+  70% { transform: rotate(4deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes bubbleOpen {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@keyframes bubbleClose {
+  from { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(0); opacity: 0; }
+}
+```
+
+### JS клас OwlController (новий файл src/owl/owl-controller.js)
+```javascript
+class OwlController {
+  constructor() {
+    this.container = document.getElementById('owl-container');
+    this.bubble = document.querySelector('.owl-bubble');
+  }
+
+  setState(mood) {
+    // mood: 'idle' | 'alert' | 'thinking' | 'error' | 'greeting'
+    this.container.className = `owl--${mood}`;
+  }
+
+  showBubble(text) {
+    this.bubble.textContent = text;
+    this.bubble.classList.add('visible');
+    this.bubble.classList.remove('hidden');
+    this.setState('alert');
+    setTimeout(() => this.setState('idle'), 600);
+  }
+
+  hideBubble() {
+    this.bubble.classList.add('hidden');
+    this.bubble.classList.remove('visible');
+  }
+}
+
+export const owl = new OwlController();
+```
+
+## Як використовувати
+
+```javascript
+import { owl } from './owl/owl-controller.js';
+
+owl.showBubble('Нове повідомлення від OWL');  // показати + кивнути
+owl.setState('thinking');                       // AI думає
+owl.setState('idle');                           // спокій
+owl.hideBubble();                               // сховати бабл, сова левітує
+```
+
+## Важливо
+
+- `transform-origin: left center` на `.owl-bubble` — бабл розгортається від сови вправо
+- SVG-персонаж малює НЕ Claude — окремий AI або Роман. Скіл готує структуру під будь-який SVG
+- До появи SVG — анімації застосовуються до placeholder (тимчасовий замінник)
