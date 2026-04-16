@@ -1716,17 +1716,11 @@ function _buildAnalyticsContent(allTxs) {
   // Секція 1: Графік тренду 8 тижнів
   sections.push(_analyticsWeeklyTrend(allTxs));
 
-  // Секція 2: Інсайт-картки (поки placeholder)
-  sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:8px">Інсайти</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45)">Детальні інсайт-картки — у наступному кроці</div>
-  </div>`);
+  // Секція 2: 3 інсайт-картки
+  sections.push(_analyticsInsightCards(allTxs));
 
-  // Секція 3: 50/30/20 (placeholder)
-  sections.push(`<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:8px">Розподіл 50/30/20</div>
-    <div style="font-size:13px;color:rgba(30,16,64,0.45)">Візуальний benchmark — у наступному кроці</div>
-  </div>`);
+  // Секція 3: 50/30/20 benchmark
+  sections.push(_analyticsBenchmark(allTxs));
 
   return sections.join('');
 }
@@ -1776,6 +1770,122 @@ function _analyticsWeeklyTrend(allTxs) {
       </div>
     </div>
     <div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+  </div>`;
+}
+
+// Крок 3: 3 інсайт-картки (витрати vs минулий, динаміка топ-категорії, середній день)
+function _analyticsInsightCards(allTxs) {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+  const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+  const prevTo = from;
+
+  const curExp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+  const prevExp = allTxs.filter(t => t.type === 'expense' && t.ts >= prevFrom && t.ts < prevTo).reduce((s, t) => s + t.amount, 0);
+  const curInc = allTxs.filter(t => t.type === 'income' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+
+  // Картка 1: витрати vs минулий місяць
+  let card1;
+  if (prevExp > 0 && curExp > 0) {
+    const pct = Math.round((curExp - prevExp) / prevExp * 100);
+    const col = pct <= 0 ? '#16a34a' : '#c2410c';
+    const arrow = pct <= 0 ? '↓' : '↑';
+    card1 = `<div style="font-size:24px;font-weight:900;color:${col}">${pct > 0 ? '+' : ''}${pct}%</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">витрати vs минулий місяць</div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">${arrow} ${formatMoney(curExp)} vs ${formatMoney(prevExp)}</div>`;
+  } else {
+    card1 = `<div style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3)">—</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:4px">витрати vs минулий</div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">недостатньо даних</div>`;
+  }
+
+  // Картка 2: топ-категорія + % від витрат
+  const catMap = {};
+  allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  let card2;
+  if (topCats.length > 0 && curExp > 0) {
+    const [topName, topAmt] = topCats[0];
+    const topPct = Math.round(topAmt / curExp * 100);
+    card2 = `<div style="font-size:24px;font-weight:900;color:#c2410c">${topPct}%</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">${escapeHtml(topName)}</div>
+      <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px">${formatMoney(topAmt)} · топ-категорія</div>`;
+  } else {
+    card2 = `<div style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3)">—</div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4);margin-top:4px">топ-категорія</div>`;
+  }
+
+  // Картка 3: середній день
+  const daysPassed = Math.max(1, now.getDate());
+  const avgDay = Math.round(curExp / daysPassed);
+  const savedPct = curInc > 0 ? Math.round((curInc - curExp) / curInc * 100) : 0;
+  const savedCol = savedPct >= 20 ? '#16a34a' : savedPct >= 10 ? '#d97706' : '#c2410c';
+  const card3 = `<div style="font-size:24px;font-weight:900;color:#1e1040">${formatMoney(avgDay)}</div>
+    <div style="font-size:12px;color:rgba(30,16,64,0.5);margin-top:4px">в день (середнє)</div>
+    <div style="font-size:11px;color:${savedCol};font-weight:700;margin-top:2px">${curInc > 0 ? 'Заощаджено ' + savedPct + '%' : ''}</div>`;
+
+  const cardStyle = 'flex:1;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:14px 10px;text-align:center';
+  return `<div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="${cardStyle}">${card1}</div>
+    <div style="${cardStyle}">${card2}</div>
+    <div style="${cardStyle}">${card3}</div>
+  </div>`;
+}
+
+// Крок 4: 50/30/20 benchmark (візуальний 3-сектор бар)
+function _analyticsBenchmark(allTxs) {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+  const curInc = allTxs.filter(t => t.type === 'income' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+  const curExp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+
+  if (curInc <= 0) {
+    return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+      <div class="fin-section-label" style="margin-bottom:8px">Розподіл 50/30/20</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.45)">Додай дохід щоб побачити розподіл</div>
+    </div>`;
+  }
+
+  const spent = curExp;
+  const saved = curInc - curExp;
+  const spentPct = Math.round(spent / curInc * 100);
+  const savedPct = Math.round(saved / curInc * 100);
+
+  // Категоризація витрат: потреби (Їжа, Житло, Транспорт, Здоров'я) vs бажання (решта)
+  const needsCats = ['їжа', 'житло', 'транспорт', "здоров'я", 'здоровʼя', 'здоровя'];
+  const monthExp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to);
+  const needsAmt = monthExp.filter(t => needsCats.includes(t.category.toLowerCase())).reduce((s, t) => s + t.amount, 0);
+  const wantsAmt = spent - needsAmt;
+
+  const needsPct = Math.round(needsAmt / curInc * 100);
+  const wantsPct = Math.round(wantsAmt / curInc * 100);
+
+  // Бар-діаграма
+  const bar = (label, pct, target, color) => {
+    const w = Math.max(2, Math.min(100, pct));
+    const isOver = pct > target;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px">
+        <span style="color:#1e1040">${label}</span>
+        <span style="color:${isOver ? '#c2410c' : color};font-weight:700">${pct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">(ціль ${target}%)</span></span>
+      </div>
+      <div style="height:8px;background:rgba(30,16,64,0.06);border-radius:4px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${w}%;background:${color};border-radius:4px;transition:width 0.5s"></div>
+        <div style="position:absolute;top:0;bottom:0;left:${target}%;width:2px;background:rgba(30,16,64,0.25)"></div>
+      </div>
+    </div>`;
+  };
+
+  return `<div class="card-glass-blur" style="padding:16px;margin-bottom:12px">
+    <div class="fin-section-label" style="margin-bottom:14px">Розподіл доходу</div>
+    ${bar('Потреби', needsPct, 50, '#f97316')}
+    ${bar('Бажання', wantsPct, 30, '#0ea5e9')}
+    ${bar('Заощадження', savedPct, 20, '#22c55e')}
+    <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:8px;border-top:1px solid rgba(30,16,64,0.06);padding-top:8px">
+      Правило 50/30/20: 50% потреби (їжа, житло, транспорт), 30% бажання (решта), 20% заощадження
+    </div>
   </div>`;
 }
 
