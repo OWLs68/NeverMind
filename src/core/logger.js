@@ -95,7 +95,7 @@ function showErrorLog() {
     promise: { bg: 'rgba(239,68,68,0.22)',   color: '#fca5a5', label: 'PROMISE' },
     err:     { bg: 'rgba(239,68,68,0.22)',   color: '#fca5a5', label: 'ERR' },
     warn:    { bg: 'rgba(251,191,36,0.22)',  color: '#fcd34d', label: 'WARN' },
-    log:     { bg: 'rgba(129,140,248,0.22)', color: '#c7d2fe', label: 'LOG' },
+    log:     { bg: 'rgba(96,165,250,0.22)',  color: '#93c5fd', label: 'LOG' },
   };
 
   if (log.length === 0) {
