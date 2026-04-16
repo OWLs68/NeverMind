@@ -7238,7 +7238,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     const msgs = getOwlBoardMessages();
     const visibleTs = msgs[0]?.ts || 0;
-    if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
+    if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
     const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
     let text = "";
     const chips = [];
@@ -7298,7 +7298,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   function _tryTabLocalFallback(tab) {
     const msgs = getTabBoardMsgs(tab);
     const visibleTs = msgs[0]?.ts || 0;
-    if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
+    if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
     let text = "";
     const chips = [];
     try {
@@ -8912,19 +8912,22 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-analytics-modal";
-    modal.style.cssText = "position:fixed;inset:0;z-index:500;background:#faf5ef;display:flex;flex-direction:column;overflow:hidden";
+    modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
     const allTxs = getFinance();
     const content = _buildAnalyticsContent(allTxs);
     modal.innerHTML = `
-    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,44px) + 8px) 16px 12px;background:#faf5ef;border-bottom:1px solid rgba(30,16,64,0.08)">
-      <button onclick="closeFinAnalytics()" style="padding:8px 16px;border-radius:14px;border:none;background:rgba(30,16,64,0.08);font-size:14px;font-weight:700;color:#1e1040;cursor:pointer;font-family:inherit">\u2190 \u041D\u0430\u0437\u0430\u0434</button>
-      <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430</div>
-      <div style="width:80px"></div>
-    </div>
-    <div style="flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 20px)">
-      ${content}
+    <div onclick="closeFinAnalytics()" class="modal-backdrop"></div>
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out">
+      <div class="modal-handle" style="margin:8px auto"></div>
+      <div style="padding:0 16px 8px;text-align:center">
+        <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom,0px) + 16px)">
+        ${content}
+      </div>
     </div>`;
     document.body.appendChild(modal);
+    setupModalSwipeClose(modal.querySelector("div:nth-child(2)"), closeFinAnalytics);
   }
   function closeFinAnalytics() {
     document.getElementById("fin-analytics-modal")?.remove();
