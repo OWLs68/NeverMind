@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-16 (сесія W6MDn — **🛠️ 6 фіксів + план скілів + об'єднання з сесією VAP6z + аудит скілів**)
+**Оновлено:** 2026-04-17 (сесія hHIlZ — **📝 5 нових скілів написано: /ux-ui, /prompt-engineer, /supabase-prep, /a11y-enforcer, /gamification-engine**)
 
 ---
 
@@ -11,8 +11,8 @@
 | **Версія** | v40+ (після деплоїв сесії W6MDn) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (31 tools) |
-| **Гілка** | `claude/start-session-W6MDn` |
-| **CACHE_NAME** | `nm-20260416-2001` |
+| **Гілка** | `claude/complete-skills-exercises-hHIlZ` |
+| **CACHE_NAME** | `nm-20260416-2001` (не чіпали — зміни тільки у `.claude/commands/` і `_ai-tools/`, без коду) |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -24,6 +24,34 @@
 **Поточний Active:** Блок 2 — Концепції вкладок. ✅ Фінанси v2 майже завершені (залишились 🟡/🟢 баги і B-62 Аналітика).
 
 **Нове після W6MDn:** Додано план **Скілів Claude Code** — інструменти самої розробки, не фічі NeverMind → [`_ai-tools/SKILLS_PLAN.md`](SKILLS_PLAN.md).
+
+---
+
+## ⚠️ Для нового чату — що зроблено (сесія hHIlZ, 17.04)
+
+### 📝 5 нових скілів — початкові версії написано
+
+Всі 5 скілів з плану `/start` пункт 3 створено у `.claude/commands/` за патерном `/owl-motion` і `/pwa-ios-fix` (сесія VAP6z) — блок "⚠️ Перед виконанням — обов'язкові перевірки" зверху + основне тіло.
+
+| Скіл | Файл | Основне |
+|------|------|---------|
+| `/ux-ui` | `.claude/commands/ux-ui.md` | 6 перевірок: читання DESIGN_SYSTEM.md повністю, пошук існуючого аналога, заборона фіолета, жорсткі правила padding для модалок, опис у числах перед пушем |
+| `/prompt-engineer` | `.claude/commands/prompt-engineer.md` | Карта 12 промптів (файл:рядок), Єдиний Шаблон (Роль → Контекст → Правила → Антигал → Приклади → Формат), чек-ліст якості, антипатерни |
+| `/supabase-prep` | `.claude/commands/supabase-prep.md` | 5 зон: Міграції / Performance / Retry / Offline Queue / Error Handling. Стандартний патерн міграції з прикладами з `health.js`/`finance.js`/`nav.js`. Заборона централізованої `db.js` |
+| `/a11y-enforcer` | `.claude/commands/a11y-enforcer.md` | WCAG 2.1 AA чек-лист 🔴/🟡/🟢, патерни для модалок/чіпів/tab nav/live region, тест VoiceOver на iPhone. Блокування — тільки після стрес-тесту |
+| `/gamification-engine` | `.claude/commands/gamification-engine.md` | Філософія "м'які підкріплення, не змагання". Табу: бали/XP, рейтинги, push "ти втратив стрік!", блокуючі модалки. Прогрес-бари + streak + тихі ачівки + мікро-анімації |
+
+### Файли що торкнулись (сесія hHIlZ)
+
+- `.claude/commands/ux-ui.md` — новий
+- `.claude/commands/prompt-engineer.md` — новий
+- `.claude/commands/supabase-prep.md` — новий
+- `.claude/commands/a11y-enforcer.md` — новий
+- `.claude/commands/gamification-engine.md` — новий
+- `_ai-tools/SKILLS_PLAN.md` — всі 5 скілів позначено як ✅ "Початкова версія реалізована", оновлено черговість впровадження (пункт 1 — всі 7 скілів готові, пункт 2 — імплементація за пріоритетами)
+- `_ai-tools/SESSION_STATE.md` — цей файл
+
+**Деплой НЕ потрібен** — зміни тільки у `.claude/commands/` і `_ai-tools/`, код проекту не чіпали. CACHE_NAME не бампаємо (правило з CLAUDE.md: чисто документаційні зміни — CACHE_NAME не чіпати).
 
 ---
 
