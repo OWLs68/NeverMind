@@ -1,6 +1,6 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-16 (сесія acZEu — **🛠️ B-42+B-63 виправлено (один баг) + B-67 повністю (Ф1-Ф4 діагностика)**)
+**Оновлено:** 2026-04-16 (сесія W6MDn — **🛠️ 6 фіксів + план скілів Claude Code + анімація сови**)
 
 ---
 
@@ -8,11 +8,11 @@
 
 | | |
 |--|--|
-| **Версія** | v37+ (після деплоїв сесії acZEu) |
+| **Версія** | v40+ (після деплоїв сесії W6MDn) |
 | **URL** | owls68.github.io/NeverMind |
-| **AI модель** | OpenAI GPT-4o-mini з **Tool Calling** (31 tools: 26 base + 5 finance category) |
-| **Гілка** | `claude/start-session-acZEu` |
-| **CACHE_NAME** | `nm-20260416-1751` |
+| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (31 tools) |
+| **Гілка** | `claude/start-session-W6MDn` |
+| **CACHE_NAME** | `nm-20260416-2001` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -21,97 +21,115 @@
 
 **Дорожня карта — єдине місце:** [`ROADMAP.md`](../ROADMAP.md) у корені репо.
 
-**Поточний Active:** Блок 2 — Концепції вкладок. ✅ Фінанси v2 завершені (3229b). Залишилось виправити 25 з 26 багів Фінансів з тестування (B-67 закрито) або рухатись далі по Блоку 2.
+**Поточний Active:** Блок 2 — Концепції вкладок. ✅ Фінанси v2 майже завершені (залишились 🟡/🟢 баги і B-62 Аналітика).
+
+**Нове після W6MDn:** Додано план **Скілів Claude Code** — інструменти самої розробки, не фічі NeverMind → [`_ai-tools/SKILLS_PLAN.md`](SKILLS_PLAN.md).
 
 ---
 
-## ⚠️ Для нового чату — що зроблено (сесія acZEu, 16.04)
+## ⚠️ Для нового чату — що зроблено (сесія W6MDn, 16.04)
 
-### 🔴 B-42 + B-63 виправлено — це ОДИН баг, не два
+### 🛠️ 6 багів закрито
 
-**Корінь:** у `src/owl/proactive.js:725` змінна `sc` використовувалась у template literal без оголошення у функції `generateBoardMessage()`. `const sc = getSchedule()` існував тільки у сусідній `_getInboxBoardContext()` — інший scope.
+**B-68 — Агент не бачив анкету налаштувань (новий)**
+- Корінь: `getAIContext()` (`src/ai/core.js`) читав тільки `nm_routine` (блоки часу), але НЕ читав `nm_settings.schedule` (базовий розклад). Тому OWL у чаті питав "о котрій прокидаєшся" попри те що розклад уже заданий у налаштуваннях.
+- Додатково: `getSchedule()` (`src/owl/inbox-board.js`) парсила години без хвилин (`06:30` → `6`) — промпт табло бачив неточно.
+- Фікс: (1) новий блок "Розклад дня" у `getAIContext()` з явним правилом "НЕ питай цей розклад". (2) `getSchedule()` повертає додатково `wakeUpStr/workStartStr/workEndStr/bedTimeStr` з точними HH:MM. (3) `proactive.js:726` використовує нові `*Str` поля. (4) `getProfile()` (`src/core/nav.js`) включає currency і language з налаштувань.
 
-**Чому ламало все табло:**
-1. `_boardGenerating[tab] = true` ставилось на рядку 672
-2. ReferenceError `sc is not defined` (Safari: `Can't find variable: sc`) вилітав на 725 — **ДО** try/catch блоку (try починається з рядка 766)
-3. Exception → `_boardGenerating[tab] = false` не виконувалось → прапорець застрягав у `true`
-4. Усі наступні виклики одразу return на рядку 665 → **табло більше ніколи не оновлюється на жодній вкладці**
+**B-69 — Застарілі повідомлення табло OWL зі вчора (новий)**
+- Корінь: AI природно пише "завтра/вчора" у повідомленнях табло. Коли день змінюється — ці слова стають неправдою, але кеш `nm_owl_board` і `nm_owl_tab_*` живе у localStorage без прив'язки до дати.
+- Приклад: табло Нотаток показувало "Завтра мама приїжджає" а реально приїзд через 8 днів.
+- Фікс: нова функція `clearStaleBoards()` у `src/owl/inbox-board.js` — перевіряє `toDateString()` першого (найсвіжішого) повідомлення, якщо не сьогодні — очищує кеш і скидає `*_ts` у 0. Виклик у `bootApp()` перед рендером табло. Наступний рендер показує дефолт, `tryTabBoardUpdate` генерує свіже.
+- Рішення Романа: залишити природну мову "завтра/вчора", фіксувати кеш, не промпт.
 
-**Фікс:** `const sc = getSchedule();` у `generateBoardMessage()` + `sc.sleep` → `sc.bedTime` (`getSchedule()` повертає `bedTime`, не `sleep`).
+**B-43 + B-51 — Модалка операції (glass-стиль)**
+- B-43/B-51 — одна функція `_renderTransactionModalBody` обслуговує і створення і редагування, тому два баги закриваються одним фіксом.
+- Корінь: біле тіло `rgba(255,255,255,0.96)` + горизонтальний і вертикальний padding на одному елементі, немає outer+scroll архітектури.
+- Фікс: glass-стиль за `docs/DESIGN_SYSTEM.md` — outer panel `rgba(255,255,255,0.30)` + `blur(32px)` + `overflow:hidden` + `padding:0 20px`, scroll container всередині з `padding:28px 0 calc(env(safe-area-inset-bottom)+28px)`. Overlay тепер з `padding:0 16px 16px`.
 
-**Походження:** сесія 3229b додала "розклад юзера у промпт табло" — але забула оголосити змінну у функції.
+**B-49 — Модалка "Дата операції"**
+- Той самий glass-патерн. Додано `setupModalSwipeClose` (раніше не було свайпу для закриття).
 
-### ✅ B-67 Система автодіагностики — 4 фази повністю
+**B-55 — Модалка редагування категорії**
+- Той самий glass-патерн. Input'и назви і підкатегорій отримали `rgba(255,255,255,0.7)` фон для читабельності на glass-тлі.
 
-**Ф1 — Error Boundary + покращений логер** (`src/core/logger.js`)
-- Stack trace у кожному записі помилки (до 1500 символів)
-- Ring buffer останніх 10 юзер-дій у пам'яті (`trackUserAction` — експорт)
-- Автолистенер `nm-data-changed` — безкоштовне покриття save-функцій
-- `logError()` приймає stack + 3 останні дії
-- `window.onerror` / `onunhandledrejection` тепер ловлять `e.error.stack` / `e.reason.stack`
-- UI панель: клік на запис розгортає stack + actions
-- `copyLogForClaude()` включає stack і actions у текст
+### 🗂 План скілів Claude Code — новий документ
 
-**Ф2 — Health Check** (`src/core/diagnostics.js` новий файл)
-- 9 перевірок: сховище, обсяг (>4МБ warn), API ключ, SW, онбординг, цілісність JSON (10 масивів, 6 об'єктів), Auto-silence, застаріле табло, критичні модулі
-- Блок зверху панелі з сумарним статусом (✓/⚠/✗) + розгортання деталей з підказками
+Створено [`_ai-tools/SKILLS_PLAN.md`](SKILLS_PLAN.md) з детальним планом 6 скілів:
 
-**Ф3 — Smoke Tests** (`src/core/diagnostics.js`)
-- 9 тестів з часом виконання: storage write/read/delete, JSON цілісність, формат дат, DOM структура, глобальні функції, CSS --tabbar-h, event система, clipboard
-- Ізольований тимчасовий ключ `__nm_smoke_test__` — юзерські дані не чіпаються
-- Блок між Health і логами з розгортанням
+| Скіл | Пріоритет | Коли робити |
+|------|-----------|-------------|
+| UX-UI (адаптований під нашу систему) | 🟢 Найближчим часом | Після обговорення з Романом |
+| Prompt Engineer | 🟢 Найближчим часом | Після обговорення з Романом |
+| iOS Safari PWA Debugger | 🟢 Найближчим часом | Після обговорення з Романом |
+| Supabase Prep (Migration+Perf+retry+offline) | 🟡 Перед міграцією | Коли буде готовий перехід на Supabase |
+| A11y-Enforcer | 🔴 Перед публічним релізом | Коли готуємось до публічного запуску |
+| Gamification-Engine | 🔵 Блок 3 | Коли дійдемо у ROADMAP до геймифікації |
 
-**Ф4 — Performance monitor** (`src/core/diagnostics.js`)
-- Автоматично без правок інших файлів: monkey-patch `window.fetch`, PerformanceObserver для longtask, Navigation Timing для startup
-- Метрики: startup time, long tasks >50мс, fetch calls (буфер 30 останніх з URL/method/duration/status/error)
-- Safari не підтримує longtask API — показуємо "не підтримується" без фалсепоз
-- Останні 5 запитів видно у деталях
+Формат SKILL.md задокументований: YAML-шапка + Markdown тіло (<500 рядків) + supporting files у reference.md/scripts/.
 
-**Діагностична панель тепер має 4 блоки** зверху перед логами помилок. Кнопка "Копіювати" тягне повний текстовий звіт з усіма 4 секціями + версія/коміт.
+### 🦉 Анімація сови — обрано варіант 2
 
-### 🎨 Редизайн панелі логу
+**Рішення:** готова SVG + анімаційний скіл Anime.js (через `freshtechbro/claudedesignskills` пакет).
 
-- Спочатку темна тема (#0d0d10) — Роман не хотів фіолетовий підтон
-- Потім переведено на **світле тло #f5f0e8** (як Inbox) + темний текст `#1e1040`
-- Кнопка `Надіслати Claude` → `Копіювати` (бурштинова #c2790a, не фіолетова)
-- Картки записів з `rgba(255,255,255,0.75)` фоном і темним border
-- Бейджі: ERR #dc2626, WARN #b45309, LOG #2563eb (синій, не indigo-фіолет)
-- Виправлено word-break — не ріже слова як "l oad"
-- Toast z-index 600 → 1000 щоб видно поверх панелі
+**Статус:** Роман знаходить багатошарову SVG сову (з окремими path для голови/тіла/крил/очей) на Flaticon / unDraw / iconify / svgrepo. Після цього Claude встановлює скіл і пише 5 станів (idle/talking/listening/error/celebration).
 
-### Відомі зауваження що НЕ мої:
+**Варіант 3 (Gemini SVG Creator)** — відкладено до окремої сесії, об'єднати з B-56 (40 іконок категорій Фінансів). Use-cases: вкладки, empty states, онбординг, ачівки, графіки аналітики, маркетинг.
 
-- **Скидання localStorage в Safari** — Роман відкрив застосунок і побачив онбординг. Перевірка показала що мої зміни НЕ чіпали `boot.js`/`onboarding.js`/`nm_onboarding_done`. Ймовірно Safari iOS PWA обмеження (7+ днів бездіяльності, брак пам'яті, SW race). Це одна з причин міграції на Supabase у майбутньому.
+### 📚 Знайдені ресурси (вивчені цієї сесії)
+
+- [code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) — офіційний формат SKILL.md
+- [hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code) — офіційний awesome-list
+- [sickn33/antigravity-awesome-skills](https://github.com/sickn33/antigravity-awesome-skills) — 1400+ скілів
+- [freshtechbro/claudedesignskills](https://github.com/freshtechbro/claudedesignskills) — 22 скіли анімацій (Anime.js, Lottie, Rive, GSAP)
+- [htuzel/gemini-svg-creator](https://github.com/htuzel/gemini-svg-creator) — делегація SVG до Gemini 3.1 Pro через MCP
+
+### 🆕 Нові контекстні факти проекту (для будь-якого майбутнього чату)
+
+- **Стрес-тест 20-30 юзерів** після Supabase-міграції запланований Романом
+- **Публічний реліз** без жорсткого дедлайну ("роблю щодня скільки можу")
+- **A11y не пріоритет зараз** — Роман єдиний користувач, зрячий, на iPhone
 
 ### Файли що торкнулись
 
-- `src/owl/proactive.js` — B-42+B-63 fix (const sc + sc.bedTime)
-- `src/core/logger.js` — Ф1 stack trace + actions + UI редизайн + імпорти diagnostics
-- `src/core/diagnostics.js` — **новий файл** (550+ рядків): Health Check, Smoke Tests, Performance monitor
-- `src/app.js` — + import diagnostics.js
-- `style.css` — toast z-index 600→1000
-- `index.html` — панель логу на світле тло, кнопка бурштинова
+- `src/ai/core.js` — блок "Розклад дня" у `getAIContext()`
+- `src/core/nav.js` — `getProfile()` + currency/language
+- `src/owl/inbox-board.js` — розширена `getSchedule()`, нова `clearStaleBoards()`
+- `src/owl/proactive.js` — промпт табло використовує HH:MM
+- `src/core/boot.js` — виклик `clearStaleBoards()` перед рендером табло
+- `src/tabs/finance.js` — переписано 3 модалки у glass-стиль
 - `sw.js` — CACHE_NAME багато разів
-- `NEVERMIND_BUGS.md` — B-42+B-63, B-67 → Закриті
+- `NEVERMIND_BUGS.md` — B-43/B-49/B-51/B-55 + B-68/B-69 → Закриті
+- `_ai-tools/SKILLS_PLAN.md` — **новий файл** (детальний план 6 скілів)
+- `CLAUDE.md` — секція "Плани на розвиток" + оновлено анімацію OWL
+- `ROADMAP.md` — посилання на SKILLS_PLAN.md
 
 ---
 
 ## 🎯 Наступний крок у новому чаті
 
-### Варіанти пріоритету
+### Що чекає на Романа
 
-1. **Продовжити фікс 25 багів Фінансів** (з 26 одразу виправили B-67):
-   - Критичних більше нема — решта 🟡 і 🟢
-   - Стилізація 4 модалок (B-43/B-49/B-51/B-55) одним блоком
-   - UX (B-52/B-53/B-54/B-56/B-59/B-60/B-61) по одному
-   - B-62 Аналітика редизайн — велика задача, окрема сесія
-2. **Нова ідея від Романа (обговорювали 16.04 acZEu):** Агент відкриває будь-яку вкладку через чат на будь-якій вкладці (tool `switch_tab`). Не записано у ROADMAP — чекає узгодження місця. Обговорення → лог сесії.
-3. **Далі по Блоку 2** — Вечір / Я / Проекти / Здоров'я (наступні фази)
+1. **Знайти багатошарову SVG сову** (з окремими path для голови/тіла/крил/очей) на одному з ресурсів:
+   - [flaticon.com/free-icons/owl](https://www.flaticon.com/free-icons/owl)
+   - [undraw.co](https://undraw.co)
+   - [iconify.design](https://iconify.design)
+   - [svgrepo.com](https://www.svgrepo.com/vectors/owl)
 
-### Відомі технічні проблеми
+2. **Вирішити коли стартуємо скіли** — зараз починаємо з UX-UI/Prompt Engineer/iOS Debugger чи відкладаємо на кілька сесій.
+
+### Варіанти робити далі
+
+1. **Продовжити закривати баги Фінансів** — залишилось 🟡 B-44, B-46, B-47, B-48, B-52, B-53, B-54, B-56, B-59, B-60, B-62, B-64 + 🟢 B-45, B-50, B-57, B-58, B-61, B-65 (18 багів).
+2. **Стартувати анімацію сови** — коли Роман знайде SVG, встановлюємо `freshtechbro/claudedesignskills` і пишемо 5 станів.
+3. **Стартувати перші 3 скіли** — UX-UI адаптований, Prompt Engineer, iOS Safari PWA Debugger.
+4. **B-62 Аналітика Фінансів — повний редизайн** — велика задача на окрему сесію.
+5. **Далі по Блоку 2** — Вечір / Я / Проекти (наступні фази концепцій).
+
+### Відомі технічні проблеми (не вирішені)
 
 1. **⚠️ `finance.js` — 1928 рядків** (>1500, розбити на `finance.js` + `finance-analytics.js` + `finance-cats.js`)
-2. **⚠️ Circular dependencies**: `finance.js ↔ inbox.js`, `finance.js ↔ habits.js`
+2. **⚠️ Circular dependencies:** `finance.js ↔ inbox.js`, `finance.js ↔ habits.js`
 3. **⚠️ ~150 рядків закоментованого коду** по проекту
 4. **Tool calling тільки в Inbox** — 4.10 з ROADMAP
 5. **Monobank інтеграція** — відкладено до Supabase
@@ -121,6 +139,7 @@
 
 ## 📦 Попередні сесії
 
+- **acZEu (16.04):** 🛠 B-42+B-63 (один баг зі змінною `sc`) + B-67 (4 фази діагностики)
 - **E5O3I (16.04):** ручне тестування Фінансів → знайдено 26 багів B-42..B-67
 - **3229b (15-16.04):** повна переробка Фінансів v2 (6 фаз, 20 комітів)
 - **6v2eR (15.04):** повна переробка Здоров'я (6 фаз + 5 багів за один день)

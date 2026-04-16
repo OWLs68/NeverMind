@@ -6,6 +6,55 @@
 
 ---
 
+## 2026-04-16 — 🛠 6 фіксів + план скілів Claude Code + анімація сови (сесія W6MDn)
+
+**Контекст:** Сесія з 4 блоків роботи: (1) виправлення двох помічених Романом багів (агент не бачить анкету + застаріле табло "завтра"), (2) стилізація 4 модалок Фінансів у glass-стиль, (3) обговорення і планування скілів Claude Code для проекту, (4) вибір підходу для анімації OWL-сови.
+
+**6 багів закрито:**
+
+- **B-68 — Агент не бачив анкету налаштувань (новий).** `getAIContext()` (`src/ai/core.js`) читав `nm_routine` (блоки Календаря), НЕ читав `nm_settings.schedule`. Фікс: блок "Розклад дня" + правило "НЕ питай". Додатково: `getSchedule()` у `src/owl/inbox-board.js` повертає HH:MM рядки, `getProfile()` у `src/core/nav.js` включає currency і language.
+- **B-69 — Застарілі повідомлення табло зі вчора (новий).** AI природно пише "завтра/вчора", кеш не скидався при зміні дня → "Завтра мама приїжджає" коли реально через 8 днів. Фікс: `clearStaleBoards()` у `src/owl/inbox-board.js` — при старті перевіряє `toDateString()` першого повідомлення, очищує якщо не сьогодні. Виклик у `bootApp()` перед рендером табло.
+- **B-43 + B-51 — Модалка операції (glass-стиль).** Одна функція `_renderTransactionModalBody` обслуговує створення+редагування. Фікс за `docs/DESIGN_SYSTEM.md`: outer panel `rgba(255,255,255,0.30)` + `blur(32px)` + `overflow:hidden` + `padding:0 20px`, scroll container з `padding:28px 0 calc(env(safe-area-inset-bottom)+28px)`.
+- **B-49 — Модалка "Дата операції".** Той самий glass-патерн + додано `setupModalSwipeClose`.
+- **B-55 — Модалка редагування категорії.** Glass-патерн + input'и з `rgba(255,255,255,0.7)` фоном для читабельності.
+
+**План скілів Claude Code (новий документ):**
+
+Створено [`_ai-tools/SKILLS_PLAN.md`](../_ai-tools/SKILLS_PLAN.md) з 6 скілами за пріоритетами:
+- 🟢 UX-UI (адаптований), Prompt Engineer, iOS Safari PWA Debugger — найближчим часом
+- 🟡 Supabase Prep (Migration+Perf+retry+offline) — перед Supabase
+- 🔴 A11y-Enforcer — перед публічним релізом
+- 🔵 Gamification-Engine — Блок 3 ROADMAP
+
+Відкинуто: Remotion Master (ми без React/відео), Social Carousel Builder (не маркетинговий продукт). Формат SKILL.md зафіксовано: YAML frontmatter + Markdown body <500 рядків + supporting files.
+
+**Анімація OWL — обрано варіант 2:**
+
+Готова багатошарова SVG сова (Flaticon/unDraw/iconify/svgrepo) + `freshtechbro/claudedesignskills` плагін скілів (Anime.js рушій). Роман знаходить SVG, Claude пише 5 станів: `idle` / `talking` / `listening` / `error` / `celebration`. Варіант 3 (Gemini SVG Creator) відкладено — об'єднати з B-56 (40 іконок категорій).
+
+**Нові контекстні факти проекту (для будь-якого майбутнього чату):**
+- Роман планує стрес-тест з 20-30 юзерами після Supabase
+- Публічний реліз без жорсткого дедлайну ("роблю щодня скільки можу")
+- A11y не пріоритет зараз — Роман єдиний користувач, зрячий, iPhone
+
+**Файли:**
+- `src/ai/core.js` — блок "Розклад дня" у `getAIContext()`
+- `src/core/nav.js` — `getProfile()` включає currency/language
+- `src/owl/inbox-board.js` — розширена `getSchedule()` + нова `clearStaleBoards()`
+- `src/owl/proactive.js` — промпт табло використовує HH:MM
+- `src/core/boot.js` — виклик `clearStaleBoards()`
+- `src/tabs/finance.js` — 3 модалки переписано у glass
+- `sw.js` — CACHE_NAME bumps
+- `NEVERMIND_BUGS.md` — 6 багів → Закриті (B-43/B-49/B-51/B-55/B-68/B-69)
+- `_ai-tools/SESSION_STATE.md` — повний перезапис на W6MDn
+- `_ai-tools/SKILLS_PLAN.md` — **новий файл**
+- `CLAUDE.md` — оновлено "Плани на розвиток" (анімація OWL + скіли)
+- `ROADMAP.md` — посилання на SKILLS_PLAN.md
+
+**Відкриті проблеми:** 18 багів Фінансів не закрито (🟡 B-44, B-46, B-47, B-48, B-52, B-53, B-54, B-56, B-59, B-60, B-62, B-64 + 🟢 B-45, B-50, B-57, B-58, B-61, B-65). Здоров'я ще не тестувалось.
+
+---
+
 ## 2026-04-15 — 🩺 Фаза 5 Здоров'я: експорт медкартки + інтеграції (сесія 6v2eR)
 
 **Контекст:** Остання Фаза 5 — завершає переробку вкладки Здоров'я (~100% концепції). Три блоки роботи: медична картка fullscreen для лікаря, синк ліки→задачі і витрати→history, інтеграція з Вечір і Я через промпти.
