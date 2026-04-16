@@ -5637,8 +5637,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
           chatWin.style.maxHeight = bH + "px";
           chatWin.style.transform = "";
           chatWin.style.opacity = "1";
-          const msgs2 = chatWin.querySelector(".ai-bar-messages");
-          if (msgs2) setTimeout(() => msgs2.scrollTop = msgs2.scrollHeight, 380);
+          const msgs = chatWin.querySelector(".ai-bar-messages");
+          if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
           setTimeout(() => chatWin.style.transition = "", 380);
         } else if (finalDy > 80 || velocity > 0.5) {
           chatWin.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
@@ -5810,8 +5810,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const phase = getDayPhase();
     const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
     const sinceLastAttempt = Date.now() - lastAttemptTs;
-    const msgs2 = getOwlBoardMessages();
-    const lastVisibleTs = msgs2[0]?.ts || msgs2[0]?.id || 0;
+    const msgs = getOwlBoardMessages();
+    const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
     const sinceLastVisible = Date.now() - lastVisibleTs;
     if (trigger === "first-time" || trigger === "new-day") {
       score += 5;
@@ -5947,10 +5947,10 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   }
   function saveOwlChatMsg(role, text) {
-    const msgs2 = getOwlChatHistory();
-    msgs2.push({ role, text, ts: Date.now() });
-    if (msgs2.length > OWL_CHAT_MAX) msgs2.splice(0, msgs2.length - OWL_CHAT_MAX);
-    localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs2));
+    const msgs = getOwlChatHistory();
+    msgs.push({ role, text, ts: Date.now() });
+    if (msgs.length > OWL_CHAT_MAX) msgs.splice(0, msgs.length - OWL_CHAT_MAX);
+    localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
   }
   function _getOwlState() {
     return _owlTabStates["inbox"] || _owlState || "speech";
@@ -6201,7 +6201,12 @@ ${aiContext ? "\n\n" + aiContext : ""}
     _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
   }
   function tryOwlBoardUpdate() {
-    renderOwlBoard();
+    const msgs = getOwlBoardMessages();
+    if (msgs.length > 0) renderOwlBoard();
+    if (msgs.length === 0) {
+      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+      return;
+    }
     if (typeof document !== "undefined" && document.hidden) return;
     const phase = getDayPhase();
     if (phase === "silent") return;
@@ -6322,11 +6327,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   }
   function saveTabBoardMsg(tab, newMsg) {
-    const msgs2 = getTabBoardMsgs(tab);
-    msgs2.unshift(newMsg);
-    if (msgs2.length > 30) msgs2.length = 30;
+    const msgs = getTabBoardMsgs(tab);
+    msgs.unshift(newMsg);
+    if (msgs.length > 30) msgs.length = 30;
     try {
-      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs2));
+      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs));
     } catch {
     }
   }
@@ -6407,31 +6412,21 @@ ${aiContext ? "\n\n" + aiContext : ""}
   }
   function renderTabBoard(tab) {
     const isInbox = tab === "inbox";
-    const msgs2 = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
+    const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
     if (!board) return;
-    board.style.display = "block";
-    if (!msgs2.length) {
-      if (!board._owlReady) {
-        if (!isInbox) board.innerHTML = _owlTabHTML(tab);
-        board._owlReady = true;
-        _owlTabStates[tab] = "speech";
-      }
-      const bubble2 = document.getElementById("owl-tab-bubble-" + tab);
-      const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
-      if (bubble2) bubble2.style.display = "none";
-      if (chipsWrap) chipsWrap.style.display = "none";
+    if (!msgs.length) {
+      board.style.display = "none";
       return;
     }
+    board.style.display = "block";
     if (!board._owlReady) {
       if (!isInbox) board.innerHTML = _owlTabHTML(tab);
       board._owlReady = true;
       _owlTabStates[tab] = _owlTabStates[tab] || "speech";
       _owlTabApplyState(tab);
     }
-    const msg = msgs2[0];
-    const bubble = document.getElementById("owl-tab-bubble-" + tab);
-    if (bubble) bubble.style.display = "";
+    const msg = msgs[0];
     const tEl = document.getElementById("owl-tab-text-" + tab);
     const cEl = document.getElementById("owl-tab-ctext-" + tab);
     const tmEl = document.getElementById("owl-tab-time-" + tab);
@@ -7062,10 +7057,10 @@ ${pulseParts.join("\n")}
     const err = localStorage.getItem("nm_owl_api_error");
     dot.style.display = err ? "block" : "none";
   }
-  function _getBannedTopics(msgs2) {
-    if (!msgs2 || msgs2.length === 0) return "";
+  function _getBannedTopics(msgs) {
+    if (!msgs || msgs.length === 0) return "";
     const topics = [];
-    for (const m of msgs2.slice(0, 5)) {
+    for (const m of msgs.slice(0, 5)) {
       if (m.topic && !owlCdExpired("topic_" + m.topic, TOPIC_CD_MS)) {
         topics.push(m.topic);
       }
@@ -7217,9 +7212,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (parsed.topic) setOwlCd("topic_" + parsed.topic);
       if (isInbox) {
         newMsg.id = Date.now();
-        const msgs2 = getOwlBoardMessages();
-        msgs2.unshift(newMsg);
-        saveOwlBoardMessages(msgs2.slice(0, 3));
+        const msgs = getOwlBoardMessages();
+        msgs.unshift(newMsg);
+        saveOwlBoardMessages(msgs.slice(0, 3));
         localStorage.setItem("nm_owl_board_ts", Date.now().toString());
         setOwlCd("phase_pulse");
       } else {
@@ -7241,8 +7236,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       _tryTabLocalFallback(tab);
       return;
     }
-    const msgs2 = getOwlBoardMessages();
-    const visibleTs = msgs2[0]?.ts || 0;
+    const msgs = getOwlBoardMessages();
+    const visibleTs = msgs[0]?.ts || 0;
     if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
     const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
     let text = "";
@@ -7301,8 +7296,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     console.warn("[OWL board] smart fallback:", text);
   }
   function _tryTabLocalFallback(tab) {
-    const msgs2 = getTabBoardMsgs(tab);
-    const visibleTs = msgs2[0]?.ts || 0;
+    const msgs = getTabBoardMsgs(tab);
+    const visibleTs = msgs[0]?.ts || 0;
     if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1e3) return;
     let text = "";
     const chips = [];
@@ -7386,9 +7381,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const newMsg = { text, priority: "normal", chips: [], ts: now };
     if (isInbox) {
       newMsg.id = now;
-      const msgs2 = getOwlBoardMessages();
-      msgs2.unshift(newMsg);
-      saveOwlBoardMessages(msgs2.slice(0, 3));
+      const msgs = getOwlBoardMessages();
+      msgs.unshift(newMsg);
+      saveOwlBoardMessages(msgs.slice(0, 3));
       renderOwlBoard();
     } else {
       saveTabBoardMsg(tab, newMsg);
@@ -10821,15 +10816,15 @@ ${inboxList}`);
     }
     try {
       const tab = typeof currentTab !== "undefined" ? currentTab : "inbox";
-      let msgs2 = [];
+      let msgs = [];
       if (tab === "inbox") {
-        msgs2 = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+        msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
       } else {
         const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "[]");
-        if (Array.isArray(raw)) msgs2 = raw;
-        else if (raw && raw.text) msgs2 = [raw];
+        if (Array.isArray(raw)) msgs = raw;
+        else if (raw && raw.text) msgs = [raw];
       }
-      const recent = msgs2.slice(0, 3).filter((m) => m && m.text);
+      const recent = msgs.slice(0, 3).filter((m) => m && m.text);
       if (recent.length > 0) {
         const formatted = recent.map((m) => {
           const ago = Date.now() - (m.ts || m.id || 0);
@@ -11067,10 +11062,10 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     const key = CHAT_STORE_KEYS[tab];
     if (!key) return;
     try {
-      const msgs2 = JSON.parse(localStorage.getItem(key) || "[]");
-      msgs2.push({ role, text, ts: Date.now() });
-      if (msgs2.length > CHAT_STORE_MAX) msgs2.splice(0, msgs2.length - CHAT_STORE_MAX);
-      localStorage.setItem(key, JSON.stringify(msgs2));
+      const msgs = JSON.parse(localStorage.getItem(key) || "[]");
+      msgs.push({ role, text, ts: Date.now() });
+      if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
+      localStorage.setItem(key, JSON.stringify(msgs));
       if (role === "user") window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "chat" }));
     } catch (e) {
     }
@@ -11130,8 +11125,8 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     const el = document.getElementById(containerId);
     if (!el || el.dataset.restored) return;
     el.dataset.restored = "1";
-    const msgs2 = loadChatMsgs(tab);
-    if (msgs2.length === 0) {
+    const msgs = loadChatMsgs(tab);
+    if (msgs.length === 0) {
       if (tab === "inbox") {
         const div = document.createElement("div");
         div.style.cssText = "display:flex";
@@ -11145,9 +11140,9 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
     sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F \u0440\u043E\u0437\u043C\u043E\u0432\u0430</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
     el.appendChild(sep);
     if (tab === "inbox") {
-      msgs2.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
+      msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
     } else if (addMsgMap[tab]) {
-      msgs2.forEach((m) => addMsgMap[tab](m.role, m.text));
+      msgs.forEach((m) => addMsgMap[tab](m.role, m.text));
     }
   }
   function _renderInboxChatMsg(role, text, el) {
@@ -11197,9 +11192,9 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
       chatWin.style.maxHeight = h + "px";
       chatWin.classList.add("open");
       _tabChatState[tab] = "a";
-      const msgs2 = chatWin.querySelector(".ai-bar-messages");
-      if (msgs2) setTimeout(() => {
-        msgs2.scrollTop = msgs2.scrollHeight;
+      const msgs = chatWin.querySelector(".ai-bar-messages");
+      if (msgs) setTimeout(() => {
+        msgs.scrollTop = msgs.scrollHeight;
       }, 50);
     });
   }
