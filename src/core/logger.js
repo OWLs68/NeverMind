@@ -1,5 +1,5 @@
 import { currentTab, showToast } from './nav.js';
-import { runHealthCheck, renderHealthCheck } from './diagnostics.js';
+import { runHealthCheck, renderHealthCheck, runSmokeTests, renderSmokeTests } from './diagnostics.js';
 
 // === LOGGER ===
 const NM_LOG_KEY = 'nm_error_log';
@@ -99,16 +99,17 @@ function showErrorLog() {
     log:     { bg: 'rgba(59,130,246,0.12)',  color: '#2563eb', label: 'LOG' },
   };
 
-  // Health Check зверху панелі — завжди рендеримо
+  // Health Check + Smoke Tests зверху панелі — завжди рендеримо
   const healthHtml = renderHealthCheck();
+  const smokeHtml = renderSmokeTests();
   const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">Логи помилок</div>';
 
   if (log.length === 0) {
-    list.innerHTML = healthHtml + logsHeader +
+    list.innerHTML = healthHtml + smokeHtml + logsHeader +
       '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
   } else {
     const grouped = _groupConsecutive(log);
-    list.innerHTML = healthHtml + logsHeader +
+    list.innerHTML = healthHtml + smokeHtml + logsHeader +
       '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' +
       [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
@@ -190,6 +191,18 @@ function copyLogForClaude() {
     return line;
   }).join('\n');
 
+  // Smoke Tests текстом
+  const { tests: smokeTests, totalMs: smokeMs } = runSmokeTests();
+  const smokeFails = smokeTests.filter(t => t.status === 'fail').length;
+  const smokePasses = smokeTests.length - smokeFails;
+  const smokeSummary = smokeFails > 0
+    ? `${smokePasses}/${smokeTests.length} пройшли · ${smokeFails} провал`
+    : `${smokeTests.length}/${smokeTests.length} пройшли · ${smokeMs}мс`;
+  const smokeLines = smokeTests.map(t => {
+    const ic = t.status === 'pass' ? '✓' : '✗';
+    return `${ic} ${t.name}${t.status === 'fail' ? ` — ${t.message}` : ''} (${t.ms}мс)`;
+  }).join('\n');
+
   // Логи
   const logLines = lastGroups.length === 0
     ? '(помилок не знайдено)'
@@ -214,6 +227,9 @@ ${deployLine}
 
 ━━━ СТАН СИСТЕМ: ${overallText} ━━━
 ${healthLines}
+
+━━━ SMOKE ТЕСТИ: ${smokeSummary} ━━━
+${smokeLines}
 
 ━━━ ЛОГИ (${lastGroups.length} груп з ${grouped.length}, всього ${log.length} записів) ━━━
 \`\`\`

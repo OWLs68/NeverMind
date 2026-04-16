@@ -200,5 +200,175 @@ function toggleHealthDetails() {
   if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
 }
 
+// ============================================================
+// Smoke Tests — базові авто-тести що застосунок коректно працює
+// Виконуються при рендері діагностики або вручну.
+// Тимчасовий ключ __nm_smoke_test__ ізольований від юзерських даних.
+// ============================================================
+
+const SMOKE_TEST_KEY = '__nm_smoke_test__';
+
+export function runSmokeTests() {
+  const tests = [];
+  const start = performance.now();
+
+  // 1. localStorage write/read/delete
+  tests.push(_runTest('Сховище write/read', () => {
+    const payload = { v: 'ok', ts: Date.now() };
+    localStorage.setItem(SMOKE_TEST_KEY, JSON.stringify(payload));
+    const read = JSON.parse(localStorage.getItem(SMOKE_TEST_KEY));
+    if (read.v !== 'ok') throw new Error('Read value mismatch');
+    localStorage.removeItem(SMOKE_TEST_KEY);
+    if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error('Remove не спрацював');
+  }));
+
+  // 2. JSON парсинг критичних ключів — має бути масивом
+  const arrayKeys = ['nm_tasks', 'nm_notes', 'nm_habits2', 'nm_finance', 'nm_trash',
+                     'nm_moments', 'nm_projects', 'nm_events', 'nm_health_cards', 'nm_inbox'];
+  tests.push(_runTest('JSON цілісність (масиви)', () => {
+    const broken = [];
+    for (const k of arrayKeys) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      try {
+        const v = JSON.parse(raw);
+        if (!Array.isArray(v)) broken.push(`${k}:не-масив`);
+      } catch (e) {
+        broken.push(`${k}:invalid`);
+      }
+    }
+    if (broken.length) throw new Error(broken.join(', '));
+  }));
+
+  // 3. JSON парсинг об'єктних ключів
+  const objectKeys = ['nm_settings', 'nm_habit_log2', 'nm_quit_log', 'nm_finance_budget',
+                      'nm_finance_cats', 'nm_folders_meta'];
+  tests.push(_runTest('JSON цілісність (об\'єкти)', () => {
+    const broken = [];
+    for (const k of objectKeys) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      try {
+        const v = JSON.parse(raw);
+        if (typeof v !== 'object' || v === null) broken.push(`${k}:не-об'єкт`);
+      } catch (e) {
+        broken.push(`${k}:invalid`);
+      }
+    }
+    if (broken.length) throw new Error(broken.join(', '));
+  }));
+
+  // 4. Date формати
+  tests.push(_runTest('Формат дат', () => {
+    const iso = new Date().toISOString().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`ISO date broken: ${iso}`);
+    const utc = new Date().toDateString();
+    if (!utc || utc.length < 10) throw new Error(`toDateString broken: ${utc}`);
+  }));
+
+  // 5. Критичні DOM елементи
+  tests.push(_runTest('DOM структура', () => {
+    const required = ['log-panel', 'toast', 'tab-bar', 'onboarding', 'splash'];
+    const missing = required.filter(id => !document.getElementById(id));
+    if (missing.length) throw new Error('відсутні: ' + missing.join(', '));
+  }));
+
+  // 6. Критичні глобальні функції у window
+  tests.push(_runTest('Глобальні функції', () => {
+    const required = ['switchTab', 'showErrorLog', 'sendOwlReply', 'toggleOwlTabChat',
+                      'scrollOwlTabChips', 'closeLogPanel', 'copyLogForClaude'];
+    const missing = required.filter(g => typeof window[g] !== 'function');
+    if (missing.length) throw new Error('відсутні: ' + missing.join(', '));
+  }));
+
+  // 7. CSS-змінна висоти таббару
+  tests.push(_runTest('CSS --tabbar-h', () => {
+    const val = getComputedStyle(document.documentElement).getPropertyValue('--tabbar-h');
+    if (!val || val.trim() === '') throw new Error('не встановлена');
+  }));
+
+  // 8. Event dispatcher (nm-data-changed)
+  tests.push(_runTest('Event система', () => {
+    let received = false;
+    const handler = e => { if (e.detail === 'smoke-test') received = true; };
+    window.addEventListener('nm-data-changed', handler);
+    window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'smoke-test' }));
+    window.removeEventListener('nm-data-changed', handler);
+    if (!received) throw new Error('nm-data-changed не отримано');
+  }));
+
+  // 9. Clipboard API (не критично, але хочемо знати)
+  tests.push(_runTest('Clipboard API', () => {
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+      throw new Error('недоступний');
+    }
+  }));
+
+  const totalMs = Math.round(performance.now() - start);
+  return { tests, totalMs };
+}
+
+function _runTest(name, fn) {
+  const start = performance.now();
+  try {
+    fn();
+    const ms = Math.round((performance.now() - start) * 10) / 10;
+    return { name, status: 'pass', message: 'ok', ms };
+  } catch (e) {
+    const ms = Math.round((performance.now() - start) * 10) / 10;
+    return { name, status: 'fail', message: e.message || String(e), ms };
+  }
+}
+
+export function renderSmokeTests() {
+  const { tests, totalMs } = runSmokeTests();
+  const fails = tests.filter(t => t.status === 'fail').length;
+  const passes = tests.length - fails;
+
+  const overall = fails > 0 ? 'fail' : 'ok';
+  const overallIcon = fails > 0 ? '✗' : '✓';
+  const overallText = fails > 0
+    ? `${passes}/${tests.length} пройшли · ${fails} провал`
+    : `${tests.length}/${tests.length} пройшли · ${totalMs}мс`;
+  const overallColor = fails > 0 ? '#dc2626' : '#16a34a';
+  const overallBg = fails > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)';
+  const overallBorder = fails > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.25)';
+
+  const statusIcon = { pass: '✓', fail: '✗' };
+  const statusColor = { pass: '#16a34a', fail: '#dc2626' };
+
+  return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="toggleSmokeDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Smoke тести</div>
+        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">▸</span>
+    </div>
+    <div id="smoke-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:6px">
+      ${tests.map(t => `
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+          <span style="color:${statusColor[t.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t.status]}</span>
+          <div style="flex:1;min-width:0">
+            <span style="color:#1e1040;font-weight:600">${t.name}</span>
+            ${t.status === 'fail' ? `<span style="color:#dc2626"> — ${t.message}</span>` : ''}
+          </div>
+          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t.ms}мс</span>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+function toggleSmokeDetails() {
+  const details = document.getElementById('smoke-details');
+  const arrow = document.getElementById('smoke-expand-arrow');
+  if (!details) return;
+  const isOpen = details.style.display === 'flex';
+  details.style.display = isOpen ? 'none' : 'flex';
+  if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
+}
+
 // Functions called from HTML event handlers
-Object.assign(window, { toggleHealthDetails });
+Object.assign(window, { toggleHealthDetails, toggleSmokeDetails });
