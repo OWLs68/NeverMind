@@ -290,12 +290,21 @@ function runMigrations() {
   if (!localStorage.getItem('nm_owl_cache_cleared_v3')) {
     ['nm_owl_board','nm_owl_tab_finance','nm_owl_tab_tasks','nm_owl_tab_notes',
      'nm_owl_tab_health','nm_owl_tab_projects','nm_owl_tab_evening','nm_owl_tab_me',
-     'nm_owl_board_ts'].forEach(k => localStorage.removeItem(k));
+     'nm_owl_board_ts',
+     // Скидаємо Auto-silence щоб OWL заговорив одразу після очищення кешу
+     'nm_owl_silence_until','nm_owl_ignored_msgs','nm_owl_last_board_ts','nm_owl_last_chip_click_ts'
+    ].forEach(k => localStorage.removeItem(k));
     localStorage.setItem('nm_owl_cache_cleared_v3', '1');
   }
   // v4 (16.04.2026): очистити кеш інсайту фінансів (промпт змінився — потрібна re-generation)
   ['nm_fin_insight_week_0','nm_fin_insight_month_0','nm_fin_insight_3months_0'].forEach(k => localStorage.removeItem(k));
-  // v5: нові міграції додавати тут
+  // v5 (16.04.2026): скинути Auto-silence OWL — табло зникло бо v3 очистив кеш але НЕ скинув silence.
+  // OWL замовк і нового не генерує → порожнє табло на всіх вкладках.
+  if (!localStorage.getItem('nm_owl_silence_reset_v5')) {
+    ['nm_owl_silence_until','nm_owl_ignored_msgs','nm_owl_last_board_ts','nm_owl_last_chip_click_ts'].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('nm_owl_silence_reset_v5', '1');
+  }
+  // v6: нові міграції додавати тут
 }
 
 // === INIT ===
