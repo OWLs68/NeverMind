@@ -284,7 +284,16 @@ function runMigrations() {
   ['nm_fin_coach_week','nm_fin_coach_month','nm_fin_coach_3months'].forEach(k => {
     localStorage.removeItem(k);
   });
-  // v3: нові міграції додавати тут
+  // v3 (B-32 Фаза 6, 16.04.2026): одноразове очищення кешу OWL-табло
+  // щоб прибрати галюциновані повідомлення (€824 на їжу при €58 реальних).
+  // getFinanceContext тепер має явні маркери [MONTH_EXPENSES], [TODAY_EXPENSES].
+  if (!localStorage.getItem('nm_owl_cache_cleared_v3')) {
+    ['nm_owl_board','nm_owl_tab_finance','nm_owl_tab_tasks','nm_owl_tab_notes',
+     'nm_owl_tab_health','nm_owl_tab_projects','nm_owl_tab_evening','nm_owl_tab_me',
+     'nm_owl_board_ts'].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('nm_owl_cache_cleared_v3', '1');
+  }
+  // v4: нові міграції додавати тут
 }
 
 // === INIT ===

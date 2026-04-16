@@ -3,7 +3,7 @@
 // Рендер, обробка кліку, fuzzy match, правила промптів
 // ============================================================
 
-import { switchTab, showToast } from '../core/nav.js';
+import { switchTab, showToast, currentTab } from '../core/nav.js';
 import { openChatBar, saveChatMsg } from '../ai/core.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { sendToAI } from '../tabs/inbox.js';
@@ -233,10 +233,10 @@ export function renderChips(containerEl, chips, tab, options = {}) {
 // handleChipClick — головна логіка обробки кліку на чіп
 // ============================================================
 export function handleChipClick(tab, text, action, target) {
-  // 1. Навігаційний чіп
+  // 1. Навігаційний чіп — B-40 fix: ігнорувати якщо юзер вже на цільовій вкладці
   if (action === 'nav' && VALID_NAV_TARGETS.includes(target)) {
+    if (target === currentTab) return; // вже на цій вкладці — не переходити
     switchTab(target);
-    showToast('Переходжу до вкладки');
     return;
   }
 

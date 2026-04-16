@@ -849,8 +849,13 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
 }
 
 // Розумне fallback-повідомлення з РЕАЛЬНИХ даних коли API не працює
+// B-41 fix: працює на ВСІХ вкладках (не тільки inbox). Для finance — фінансові дані.
 function _tryLocalFallback(tab) {
-  if (tab !== 'inbox') return;
+  // Для tab-boards (не inbox) — окрема логіка
+  if (tab !== 'inbox') {
+    _tryTabLocalFallback(tab);
+    return;
+  }
   const msgs = getOwlBoardMessages();
   const visibleTs = msgs[0]?.ts || 0;
   if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return;
@@ -929,6 +934,41 @@ function _tryLocalFallback(tab) {
   // інакше Judge Layer штрафує наступну спробу API
   renderOwlBoard();
   console.warn('[OWL board] smart fallback:', text);
+}
+
+// B-41: fallback для tab-boards (finance, tasks, health тощо)
+function _tryTabLocalFallback(tab) {
+  const msgs = getTabBoardMsgs(tab);
+  const visibleTs = msgs[0]?.ts || 0;
+  if (!visibleTs || Date.now() - visibleTs < 30 * 60 * 1000) return;
+  let text = '';
+  const chips = [];
+  try {
+    if (tab === 'finance') {
+      const txs = getFinance();
+      const from = getFinPeriodRange('month');
+      const monthTxs = txs.filter(t => t.ts >= from);
+      const exp = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      const inc = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      if (monthTxs.length === 0) {
+        text = 'Цього місяця транзакцій ще немає. Додай першу витрату!';
+      } else {
+        text = `За місяць: витрати ${formatMoney(exp)}, доходи ${formatMoney(inc)}.${inc > 0 ? ` Збережено ${Math.round((inc - exp) / inc * 100)}%.` : ''}`;
+      }
+    } else if (tab === 'tasks') {
+      const tasks = getTasks().filter(t => t.status === 'active');
+      text = tasks.length > 0 ? `${tasks.length} активних задач. Що будемо закривати?` : 'Немає активних задач. Вільний день!';
+    } else if (tab === 'health') {
+      text = 'Як самопочуття сьогодні?';
+    } else {
+      text = 'Чим можу допомогти?';
+    }
+  } catch(e) { text = 'Чим можу допомогти?'; }
+  if (!text) return;
+  const newMsg = { text, priority: 'normal', chips, ts: Date.now(), id: Date.now() };
+  saveTabBoardMsg(tab, newMsg);
+  renderTabBoard(tab);
+  console.warn(`[OWL ${tab} board] tab fallback:`, text);
 }
 
 // === Контекстні підказки при першому відвідуванні вкладки ===

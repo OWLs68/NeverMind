@@ -12,6 +12,7 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
+import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
@@ -547,6 +548,40 @@ function _attachFinSwipe() {
     else currentFinPeriodOffset--;
     renderFinance();
   }, { passive: true });
+  // B-37: свайп-видалення транзакцій (делегований на wrap)
+  let swState = null; // {el, wrap, startX, startY, txId}
+  wrap.addEventListener('touchstart', (e) => {
+    const sw = e.target.closest('.fin-tx-swipe-wrap');
+    if (!sw) return;
+    swState = { wrap: sw, el: sw.querySelector('.tx-row'), startX: e.touches[0].clientX, startY: e.touches[0].clientY, txId: parseInt(sw.dataset.txId), dx: 0 };
+  }, { passive: true });
+  wrap.addEventListener('touchmove', (e) => {
+    if (!swState) return;
+    const dx = e.touches[0].clientX - swState.startX;
+    const dy = e.touches[0].clientY - swState.startY;
+    if (Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(swState.dx) < 10) { swState = null; return; } // вертикальний скрол
+    swState.dx = dx;
+    if (dx < 0) applySwipeTrail(swState.el, swState.wrap, dx);
+  }, { passive: true });
+  wrap.addEventListener('touchend', () => {
+    if (!swState) return;
+    if (swState.dx < -SWIPE_DELETE_THRESHOLD) {
+      const txId = swState.txId;
+      const item = getFinance().find(t => t.id === txId);
+      saveFinance(getFinance().filter(t => t.id !== txId));
+      if (item) addToTrash('finance', item);
+      clearSwipeTrail(swState.el, swState.wrap);
+      swState = null;
+      renderFinance();
+      if (item) showUndoToast('Транзакцію видалено', () => {
+        const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
+      });
+    } else {
+      if (swState.el && swState.wrap) clearSwipeTrail(swState.el, swState.wrap);
+      swState = null;
+    }
+  }, { passive: true });
+
   _finSwipeAttached = true;
 }
 
@@ -693,14 +728,17 @@ function _finTxsBlock(allTxs) {
   const rows = sorted.map(t => {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
-    return `<div class="tx-row" onclick="openEditTransaction(${t.id})">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
-        ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:${isExp?'#c2410c':'#16a34a'}">${isExp?'-':'+'}${formatMoney(t.amount)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+    // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
+    return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
+      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:rgba(255,255,255,0.95)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
+          ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:${isExp?'#c2410c':'#16a34a'}">${isExp?'-':'+'}${formatMoney(t.amount)}</div>
+          <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1281,6 +1319,7 @@ function checkFinBudgetWarning(type, category, amount) {
 }
 
 // Finance контекст для getAIContext
+// B-32 fix: явні маркери [MONTH_TOTAL], [TODAY_TOTAL] щоб AI не вигадував числа
 export function getFinanceContext() {
   const today = new Date().toDateString();
   const from = getFinPeriodRange('month');
@@ -1300,10 +1339,11 @@ export function getFinanceContext() {
   const todayTxs = txs.filter(t => new Date(t.ts).toDateString() === today);
   const todaySum = todayTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
 
-  let parts = [`Фінанси (місяць): витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}`];
-  if (budget.total > 0) parts.push(`бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
+  let parts = [`[MONTH_EXPENSES:${formatMoney(totalExp)}] [MONTH_INCOME:${formatMoney(totalInc)}] Фінанси за місяць: витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}`];
+  if (budget.total > 0) parts.push(`[BUDGET:${formatMoney(budget.total)}] бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
   if (top3) parts.push(`топ категорії: ${top3}`);
-  if (todaySum > 0) parts.push(`сьогодні витрачено ${formatMoney(todaySum)}`);
+  if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] сьогодні витрачено ${formatMoney(todaySum)}`);
+  else parts.push('[TODAY_EXPENSES:0] сьогодні витрат не було');
 
   // Останні 5 транзакцій з ID — для update_transaction з Inbox
   const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}${getCurrency()} ${t.category}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
