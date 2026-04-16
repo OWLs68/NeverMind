@@ -439,9 +439,12 @@ export function renderFinance() {
   // і додати першу транзакцію + щоб свайп працював коли немає даних у періоді.
   wrap.innerHTML =
     _finCatsGrid(allTxs, win) +
+    _finDailyInsight(allTxs, win) +
     (allTxs.length > 0 ? _finTxsBlock(allTxs) : _finEmptyTxsHint());
 
   _attachFinSwipe();
+  // Async: оновити інсайт дня через AI якщо кеш застарілий
+  _refreshFinInsight(allTxs, win);
 }
 
 function _finEmptyTxsHint() {
@@ -449,6 +452,74 @@ function _finEmptyTxsHint() {
     <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">У цьому періоді транзакцій немає</div>
     <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">Тапни категорію щоб додати або свайпни ←→ для іншого періоду</div>
   </div>`;
+}
+
+// ===== Фаза 5: Динамічна "Інсайт дня" картка =====
+// Одна картка з AI-обраним найрелевантнішим фактом (замість 3 статичних карток).
+// Кеш 12 год у localStorage. Тригер: renderFinance після змін.
+const FIN_INSIGHT_TTL = 12 * 60 * 60 * 1000; // 12 год
+
+function _finDailyInsight(allTxs) {
+  if (allTxs.length === 0) return '';
+  // Кешований текст для поточного періоду+offset
+  const cacheKey = `nm_fin_insight_${currentFinPeriod}_${currentFinPeriodOffset}`;
+  const cached = localStorage.getItem(cacheKey);
+  let text = 'OWL аналізує фінанси…';
+  if (cached) { try { text = JSON.parse(cached).text || text; } catch(e) {} }
+  return `<div id="fin-insight-card" style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:12px 14px;margin-bottom:12px">
+    <div style="width:28px;height:28px;border-radius:10px;background:rgba(194,65,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#1e1040;line-height:1.5" id="fin-insight-text">${escapeHtml(text)}</div>
+  </div>`;
+}
+
+async function _refreshFinInsight(allTxs, win) {
+  if (allTxs.length < 2) return; // недостатньо даних
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) return;
+  const cacheKey = `nm_fin_insight_${currentFinPeriod}_${currentFinPeriodOffset}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) { try { if (Date.now() - JSON.parse(cached).ts < FIN_INSIGHT_TTL) return; } catch(e) {} }
+
+  const expenses = allTxs.filter(t => t.type === 'expense');
+  const incomes = allTxs.filter(t => t.type === 'income');
+  const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+  const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+  const catMap = {};
+  expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(', ');
+  const budget = getFinBudget();
+
+  const prompt = `${getOWLPersonality()}
+Дай ОДИН найважливіший фінансовий інсайт. Обери найрелевантніше зараз:
+- Категорія різко росте або перевищила ліміт
+- Витрати зросли/знизились vs минулий аналогічний період
+- Річна проекція ("€X/тиждень = €Y/рік" для помітної категорії)
+- Заощадження вище/нижче 20%
+- Нетиповий день (витратив багато за раз або навпаки)
+
+2 речення МАКСИМУМ. Числа ТІЛЬКИ з даних нижче. Українською.
+
+Дані (${win.label}):
+Витрати: ${formatMoney(totalExp)}, Доходи: ${formatMoney(totalInc)}
+Топ: ${top3 || 'немає даних'}
+${budget.total > 0 ? `Бюджет: ${formatMoney(budget.total)}` : 'Бюджет не встановлено'}
+${totalInc > 0 ? `Заощаджено: ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 100, temperature: 0.5 })
+    });
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content?.trim();
+    if (!text) return;
+    localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now() }));
+    const el = document.getElementById('fin-insight-text');
+    if (el) el.textContent = text;
+  } catch(e) {}
 }
 
 // Фаза 2 крок Б: touch-обробники для свайп-гортання періодів
