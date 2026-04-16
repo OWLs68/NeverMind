@@ -6350,6 +6350,33 @@ ${aiContext ? "\n\n" + aiContext : ""}
   function saveOwlBoardMessages(arr) {
     localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
   }
+  function clearStaleBoards() {
+    try {
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const isStale = (msg) => {
+        if (!msg) return false;
+        const ts = msg.ts || msg.id;
+        if (!ts) return false;
+        return new Date(ts).toDateString() !== today;
+      };
+      const inboxMsgs = JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
+      if (inboxMsgs.length > 0 && isStale(inboxMsgs[0])) {
+        localStorage.setItem(OWL_BOARD_KEY, "[]");
+        localStorage.setItem(OWL_BOARD_TS_KEY, "0");
+      }
+      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
+        const key = "nm_owl_tab_" + tab;
+        const raw = JSON.parse(localStorage.getItem(key) || "null");
+        if (!raw) return;
+        const msgs = Array.isArray(raw) ? raw : [raw];
+        if (msgs.length > 0 && isStale(msgs[0])) {
+          localStorage.setItem(key, "[]");
+          localStorage.setItem("nm_owl_tab_ts_" + tab, "0");
+        }
+      });
+    } catch (e) {
+    }
+  }
   function getSchedule() {
     const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
     const sc = s.schedule || {};
@@ -15443,6 +15470,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     }
     try {
       renderInbox();
+    } catch (e) {
+    }
+    try {
+      clearStaleBoards();
     } catch (e) {
     }
     try {
