@@ -294,6 +294,41 @@ export function saveOwlBoardMessages(arr) {
   localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
 }
 
+// Інвалідація застарілих повідомлень табло з іншого дня.
+// Причина: AI пише природно ("завтра", "вчора") — ці слова стають неправдою коли день змінився,
+// а кеш табло живе у localStorage без прив'язки до дати. Запускається на старті застосунку.
+// Торкаємось тільки першого (найсвіжішого) повідомлення — вся історія лишається.
+export function clearStaleBoards() {
+  try {
+    const today = new Date().toDateString();
+    const isStale = (msg) => {
+      if (!msg) return false;
+      const ts = msg.ts || msg.id;
+      if (!ts) return false;
+      return new Date(ts).toDateString() !== today;
+    };
+
+    // Inbox board
+    const inboxMsgs = JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]');
+    if (inboxMsgs.length > 0 && isStale(inboxMsgs[0])) {
+      localStorage.setItem(OWL_BOARD_KEY, '[]');
+      localStorage.setItem(OWL_BOARD_TS_KEY, '0');
+    }
+
+    // Tab boards (tasks, notes, me, evening, finance, health, projects)
+    ['tasks','notes','me','evening','finance','health','projects'].forEach(tab => {
+      const key = 'nm_owl_tab_' + tab;
+      const raw = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!raw) return;
+      const msgs = Array.isArray(raw) ? raw : [raw];
+      if (msgs.length > 0 && isStale(msgs[0])) {
+        localStorage.setItem(key, '[]');
+        localStorage.setItem('nm_owl_tab_ts_' + tab, '0');
+      }
+    });
+  } catch(e) {}
+}
+
 // === OWL BOARD — повний розумний цикл ===
 
 // === РОЗКЛАД ДНЯ ===
