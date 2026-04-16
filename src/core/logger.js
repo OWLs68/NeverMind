@@ -1,5 +1,5 @@
 import { currentTab, showToast } from './nav.js';
-import { runHealthCheck, renderHealthCheck, runSmokeTests, renderSmokeTests } from './diagnostics.js';
+import { runHealthCheck, renderHealthCheck, runSmokeTests, renderSmokeTests, getPerformanceData, renderPerformance } from './diagnostics.js';
 
 // === LOGGER ===
 const NM_LOG_KEY = 'nm_error_log';
@@ -99,17 +99,18 @@ function showErrorLog() {
     log:     { bg: 'rgba(59,130,246,0.12)',  color: '#2563eb', label: 'LOG' },
   };
 
-  // Health Check + Smoke Tests зверху панелі — завжди рендеримо
+  // Health Check + Smoke Tests + Performance зверху панелі — завжди рендеримо
   const healthHtml = renderHealthCheck();
   const smokeHtml = renderSmokeTests();
+  const perfHtml = renderPerformance();
   const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">Логи помилок</div>';
 
   if (log.length === 0) {
-    list.innerHTML = healthHtml + smokeHtml + logsHeader +
+    list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader +
       '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
   } else {
     const grouped = _groupConsecutive(log);
-    list.innerHTML = healthHtml + smokeHtml + logsHeader +
+    list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader +
       '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' +
       [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
@@ -203,6 +204,27 @@ function copyLogForClaude() {
     return `${ic} ${t.name}${t.status === 'fail' ? ` — ${t.message}` : ''} (${t.ms}мс)`;
   }).join('\n');
 
+  // Performance текстом
+  const perf = getPerformanceData();
+  const perfLines = [];
+  perfLines.push(`Старт: ${perf.startupMs != null ? perf.startupMs + 'мс' : 'невідомо'}`);
+  if (perf.longTaskSupported) {
+    const worst = perf.longTasks.reduce((m, t) => t.duration > m ? t.duration : m, 0);
+    perfLines.push(`Лаги UI: ${perf.longTasks.length}${worst > 0 ? ` (найдовший ${worst}мс)` : ''}`);
+  } else {
+    perfLines.push('Лаги UI: не підтримується браузером');
+  }
+  const okF = perf.fetches.filter(f => f.status >= 200 && f.status < 400);
+  const failF = perf.fetches.filter(f => f.status === 0 || f.status >= 400);
+  const avgF = okF.length > 0 ? Math.round(okF.reduce((s, f) => s + f.duration, 0) / okF.length) : 0;
+  perfLines.push(`Запитів: ${perf.fetches.length}${avgF > 0 ? ` · середній ${avgF}мс` : ''}${failF.length > 0 ? ` · ${failF.length} з помилкою` : ''}`);
+  if (perf.fetches.length > 0) {
+    perfLines.push('Останні запити:');
+    perf.fetches.slice(-5).reverse().forEach(f => {
+      perfLines.push(`  ${f.status === 0 ? 'FAIL' : f.status} ${f.duration}мс ${f.method} ${f.url}${f.error ? ' — ' + f.error : ''}`);
+    });
+  }
+
   // Логи
   const logLines = lastGroups.length === 0
     ? '(помилок не знайдено)'
@@ -230,6 +252,9 @@ ${healthLines}
 
 ━━━ SMOKE ТЕСТИ: ${smokeSummary} ━━━
 ${smokeLines}
+
+━━━ PERFORMANCE ━━━
+${perfLines.join('\n')}
 
 ━━━ ЛОГИ (${lastGroups.length} груп з ${grouped.length}, всього ${log.length} записів) ━━━
 \`\`\`
