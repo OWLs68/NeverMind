@@ -476,27 +476,48 @@ export function openCategoryEditModal(catId) {
 function _renderCatEditModalBody() {
   const d = _finCatModalDraft;
   const isNew = _finEditingCatId === 'new';
-  const chev = (expanded) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform 0.2s;transform:rotate(${expanded ? 180 : 0}deg)"><polyline points="6 9 12 15 18 9"/></svg>`;
-  // Preview-тригер для ІКОНКИ — показує поточну іконку у поточному кольорі + шеврон.
-  const iconTrigger = `<button onclick="toggleCatModalIcons()" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit">
-    <div style="width:36px;height:36px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 20)}</div>
-    <div style="flex:1;text-align:left;font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(d.icon)}</div>
-    <div style="color:rgba(30,16,64,0.45)">${chev(_catModalIconExpanded)}</div>
+  const chev = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>`;
+  // Два компактних inline-тригери поряд (замість двох повних рядків з inline-grid).
+  const iconTrigger = `<button onclick="toggleCatModalIcons()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
+    <div style="width:32px;height:32px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 18)}</div>
+    <div style="flex:1;text-align:left;min-width:0">
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Іконка</div>
+      <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.icon)}</div>
+    </div>
+    <div style="color:rgba(30,16,64,0.45)">${chev}</div>
   </button>`;
-  const iconsGrid = !_catModalIconExpanded ? '' : `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px;padding:10px;background:rgba(255,255,255,0.4);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">${FIN_CAT_ICON_NAMES.map(name => {
-    const active = name === d.icon;
-    return `<button data-cat-icon="${name}" onclick="selectCatModalIcon('${name}')" style="width:42px;height:42px;border-radius:50%;border:2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'};background:${active ? d.color + '20' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : 'rgba(30,16,64,0.55)', 20)}</button>`;
-  }).join('')}</div>`;
-  // Preview-тригер для КОЛЬОРУ — кружечок поточного кольору + шеврон.
-  const colorTrigger = `<button onclick="toggleCatModalColors()" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit">
-    <div style="width:36px;height:36px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
-    <div style="flex:1;text-align:left;font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(d.color)}</div>
-    <div style="color:rgba(30,16,64,0.45)">${chev(_catModalColorExpanded)}</div>
+  const colorTrigger = `<button onclick="toggleCatModalColors()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
+    <div style="width:32px;height:32px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
+    <div style="flex:1;text-align:left;min-width:0">
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Колір</div>
+      <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.color)}</div>
+    </div>
+    <div style="color:rgba(30,16,64,0.45)">${chev}</div>
   </button>`;
-  const colorsPalette = !_catModalColorExpanded ? '' : `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:10px;background:rgba(255,255,255,0.4);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">${FIN_CAT_PALETTE.map(c => {
-    const active = c === d.color;
-    return `<button data-cat-color="${c}" onclick="selectCatModalColor('${c}')" style="width:32px;height:32px;border-radius:50%;border:3px solid ${active ? '#1e1040' : 'transparent'};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
-  }).join('')}</div>`;
+  // Nested popup — маленька модалка поверх (position:fixed). Тап на backdrop закриває.
+  const pickerPopup = (_catModalIconExpanded || _catModalColorExpanded) ? `
+    <div onclick="closeCatPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onclick="event.stopPropagation()" style="width:100%;max-width:340px;background:rgba(255,255,255,0.95);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:22px;padding:18px;max-height:70vh;overflow-y:auto;border:1.5px solid rgba(255,255,255,0.6);box-shadow:0 20px 60px rgba(0,0,0,0.18);box-sizing:border-box">
+        ${_catModalIconExpanded ? `
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">Обери іконку</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+            ${FIN_CAT_ICON_NAMES.map(name => {
+              const active = name === d.icon;
+              return `<button onclick="selectCatModalIcon('${name}')" style="aspect-ratio:1;border-radius:50%;border:2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'};background:${active ? d.color + '20' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : 'rgba(30,16,64,0.55)', 20)}</button>`;
+            }).join('')}
+          </div>
+        ` : ''}
+        ${_catModalColorExpanded ? `
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">Обери колір</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;justify-items:center">
+            ${FIN_CAT_PALETTE.map(c => {
+              const active = c === d.color;
+              return `<button onclick="selectCatModalColor('${c}')" style="width:42px;height:42px;border-radius:50%;border:3px solid ${active ? '#1e1040' : 'transparent'};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
+            }).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>` : '';
   const subcatsHtml = d.subcategories.map((s, i) =>
     `<div style="display:flex;align-items:center;gap:6px">
       <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
@@ -516,23 +537,11 @@ function _renderCatEditModalBody() {
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Назва</div>
     <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="напр. Подорожі"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Іконка</div>
-    <div style="margin-bottom:14px">${iconTrigger}${iconsGrid}</div>
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Колір</div>
-    <div style="margin-bottom:14px">${colorTrigger}${colorsPalette}</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Вигляд</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">${iconTrigger}${colorTrigger}</div>
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Підкатегорії</div>
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
     <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ підкатегорія</button>
-    ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06)">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:#1e1040">Позиція в сітці</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${(_finCatModalPositionInfo() || '')}</div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="moveCatModalUp()" aria-label="Вгору" style="width:34px;height:34px;border-radius:10px;border:none;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.65);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg></button>
-        <button onclick="moveCatModalDown()" aria-label="Вниз" style="width:34px;height:34px;border-radius:10px;border:none;background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.65);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-      </div>
-    </div>` : ''}
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
         <div style="font-size:13px;font-weight:700;color:#1e1040">Архівувати</div>
@@ -548,7 +557,8 @@ function _renderCatEditModalBody() {
       <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? 'Створити' : 'Зберегти'}</button>
     </div>
     </div>
-  </div>`;
+  </div>
+  ${pickerPopup}`;
 }
 
 // B-59: зберігаємо scrollTop і focus + точкові оновлення
@@ -605,6 +615,7 @@ export function selectCatModalIcon(name) { _finCatModalDraft.icon = name; _catMo
 export function selectCatModalColor(c)   { _finCatModalDraft.color = c; _catModalColorExpanded = false; _refreshCatEditModal(); }
 export function toggleCatModalIcons()    { _catModalIconExpanded = !_catModalIconExpanded; if (_catModalIconExpanded) _catModalColorExpanded = false; _refreshCatEditModal(); }
 export function toggleCatModalColors()   { _catModalColorExpanded = !_catModalColorExpanded; if (_catModalColorExpanded) _catModalIconExpanded = false; _refreshCatEditModal(); }
+export function closeCatPicker()         { _catModalIconExpanded = false; _catModalColorExpanded = false; _refreshCatEditModal(); }
 export function setCatModalType(t)       { _finCatModalDraft.type = t; _refreshCatEditModal(); }
 export function toggleCatModalArchive()  { _finCatModalDraft.archived = !_finCatModalDraft.archived; _refreshCatEditModal(); }
 export function addCatModalSubcat()      { _finCatModalDraft.subcategories.push(''); _refreshCatEditModal(); }
@@ -657,7 +668,7 @@ Object.assign(window, {
   openFinBudgetModal, saveFinBudgetFromModal, closeFinBudgetModal,
   toggleFinEditMode, openCategoryEditModal, closeCategoryEditModal,
   saveCategoryFromModal, deleteCategoryFromModal,
-  selectCatModalIcon, selectCatModalColor, toggleCatModalIcons, toggleCatModalColors, setCatModalType, toggleCatModalArchive,
+  selectCatModalIcon, selectCatModalColor, toggleCatModalIcons, toggleCatModalColors, closeCatPicker, setCatModalType, toggleCatModalArchive,
   addCatModalSubcat, removeCatModalSubcat, updateCatModalSubcat,
   moveCatModalUp, moveCatModalDown,
 });
