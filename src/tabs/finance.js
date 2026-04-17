@@ -476,12 +476,11 @@ export function renderFinance() {
   _refreshFinInsight(allTxs, win);
 }
 
-// B-54: переробка свайп-видалення транзакцій.
-// Нова механіка: свайп вліво >135px → картка застрягає на -80px → з'являється кнопка кошика справа.
-// Тап на кошик = видалення з undo. Свайп вправо >30px = скасування (повернення в 0).
-// +50% зона видалення (threshold * 1.5) щоб випадково не тригерити.
-const SWIPE_BIN_WIDTH = 80;
-const SWIPE_BIN_THRESHOLD = SWIPE_DELETE_THRESHOLD * 1.5; // 135px (+50% vs стандарт)
+// B-54: свайп-видалення транзакцій.
+// Картка свайпається до СЕРЕДИНИ (50% ширини) → за нею градієнт від прозорого до червоного,
+// SVG-іконка кошика справа поверх градієнта. Тап на кошик = видалення з undo.
+// Свайп вправо >30px = скасування. Кнопка кошика створюється LAZY (тільки під час свайпу).
+const SWIPE_OPEN_RATIO = 0.5; // картка зсувається на 50% власної ширини
 
 function _deleteFinTxById(txId) {
   const item = getFinance().find(t => t.id === txId);
@@ -503,31 +502,42 @@ function _attachFinTxSwipeDelete() {
     const card = sw.querySelector('.tx-row');
     if (!card) return;
 
-    // Створюємо SVG-кнопку кошика (під карткою, поки картка переносить її)
-    let bin = sw.querySelector('.fin-tx-bin');
-    if (!bin) {
+    // LAZY: bin створюється лише коли почався свайп. Прибирається після закриття.
+    let bin = null;
+    const ensureBin = () => {
+      if (bin) return;
+      const w = Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
       bin = document.createElement('button');
       bin.className = 'fin-tx-bin';
       bin.setAttribute('aria-label', 'Видалити');
-      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${SWIPE_BIN_WIDTH}px;display:flex;align-items:center;justify-content:center;background:#ef4444;border:none;cursor:pointer;padding:0;z-index:0;font-family:inherit`;
-      bin.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      // Градієнт від прозорого зліва → червоний справа. Кошик-іконка по правому краю.
+      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(239,68,68,0) 0%, rgba(239,68,68,0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
+      bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
       bin.addEventListener('click', (e) => {
         e.stopPropagation();
         const txId = parseInt(sw.dataset.txId);
         if (!isNaN(txId)) _deleteFinTxById(txId);
       });
       sw.appendChild(bin);
-    }
+    };
+    const removeBin = () => {
+      if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
+      bin = null;
+    };
 
+    const getOpenOffset = () => -Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
     const setOffset = (offset, animate = false) => {
       card.style.transition = animate ? 'transform 0.25s ease' : '';
       card.style.transform = `translateX(${offset}px)`;
     };
-    const openSwipe = () => { sw._open = true; setOffset(-SWIPE_BIN_WIDTH, true); };
-    const closeSwipe = () => { sw._open = false; setOffset(0, true); };
+    const openSwipe = () => { sw._open = true; ensureBin(); setOffset(getOpenOffset(), true); };
+    const closeSwipe = () => {
+      sw._open = false;
+      setOffset(0, true);
+      setTimeout(() => { if (!sw._open) removeBin(); }, 280); // після завершення transition
+    };
 
-    // Якщо тап на картку коли свайп відкритий → закриваємо замість openEdit
-    // Перехоплюємо click у capture щоб блокувати оригінальний onclick
+    // Тап на картку при відкритому свайпі → закриваємо (не відкриваємо редагування)
     card.addEventListener('click', (e) => {
       if (sw._open) { e.stopPropagation(); e.preventDefault(); closeSwipe(); }
     }, true);
@@ -536,32 +546,30 @@ function _attachFinTxSwipeDelete() {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       dx = 0; locked = false;
-      card.style.transition = ''; // вимикаємо transition під час руху
+      card.style.transition = '';
     }, { passive: true });
 
     sw.addEventListener('touchmove', (e) => {
       if (locked) return;
-      const curX = e.touches[0].clientX;
-      const curY = e.touches[0].clientY;
-      const ddx = curX - startX;
-      const ddy = curY - startY;
-      // Вертикальний рух перевищує горизонтальний → це скрол, відпускаємо
+      const ddx = e.touches[0].clientX - startX;
+      const ddy = e.touches[0].clientY - startY;
       if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) { locked = true; return; }
       dx = ddx;
-      const baseOffset = sw._open ? -SWIPE_BIN_WIDTH : 0;
-      // Дозволяємо тільки від'ємний offset (не дає свайпити вправо за 0)
+      // Перший свайп вліво створює bin (lazy)
+      if (dx < 0 && !sw._open && !bin) ensureBin();
+      const baseOffset = sw._open ? getOpenOffset() : 0;
       const newOffset = Math.min(0, baseOffset + dx);
       setOffset(newOffset);
     }, { passive: true });
 
     sw.addEventListener('touchend', () => {
       if (locked) { if (sw._open) openSwipe(); else closeSwipe(); return; }
+      // Поріг = 50% від цільового offset (тобто чверть ширини картки)
+      const threshold = sw.offsetWidth * SWIPE_OPEN_RATIO * 0.5;
       if (sw._open) {
-        // Свайп вправо >30px → закрити, інакше залишити відкритим
         if (dx > 30) closeSwipe(); else openSwipe();
       } else {
-        // Новий свайп вліво: поріг 135px (+50% vs стандарт)
-        if (dx < -SWIPE_BIN_THRESHOLD) openSwipe(); else closeSwipe();
+        if (dx < -threshold) openSwipe(); else closeSwipe();
       }
     }, { passive: true });
   });
@@ -877,7 +885,7 @@ function _finTxsBlock(allTxs) {
       : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
     // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
     return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:rgba(255,255,255,0.95)">
+      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
           ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
