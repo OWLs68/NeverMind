@@ -2871,17 +2871,13 @@ ${aiContext ? "\n\n" + aiContext : ""}
     const loadEl = document.getElementById(loadId);
     let handled = false;
     if (reply) {
-      try {
-        const jsonMatch = reply.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
-            if (loadEl) loadEl.textContent = "\u2705";
-            handled = true;
-          }
+      const blocks = extractJsonBlocks(reply);
+      for (const parsed of blocks) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
+          handled = true;
         }
-      } catch (e) {
       }
+      if (handled && loadEl) loadEl.textContent = "\u2705";
     }
     if (!handled && loadEl) loadEl.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.";
     if (reply) meChatHistory.push({ role: "assistant", content: reply });
@@ -3619,15 +3615,12 @@ ${aiContext}` : "");
         eveningBarLoading = false;
         return;
       }
-      try {
-        const jsonMatch = reply.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g, "").trim());
-        if (!processUniversalAction(parsed, text, addEveningBarMsg)) {
-          safeAgentReply(reply, addEveningBarMsg);
-        }
-      } catch {
-        safeAgentReply(reply, addEveningBarMsg);
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (processUniversalAction(parsed, text, addEveningBarMsg)) handled = true;
       }
+      if (!handled) safeAgentReply(reply, addEveningBarMsg);
     } catch {
       addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
