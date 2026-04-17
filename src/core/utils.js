@@ -59,6 +59,38 @@ export function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// Розбиває AI-відповідь на окремі JSON-об'єкти (17.04.2026 сесія 14zLe).
+// Причина: AI на запит "видали X, Y, Z, додай A" повертає кілька {...} блоків
+// один за одним. Стара логіка з /\{[\s\S]*\}/ жадібно захоплювала все як один
+// блок — JSON.parse падав, юзер бачив сирий JSON у чаті.
+// Балансує фігурні дужки з урахуванням рядків у лапках (щоб { у value не ламав
+// парсер). Повертає масив розпарсених об'єктів. Використовується у всіх chat-
+// барах: tasks, habits, evening, health, projects, finance. Inbox на
+// tool calling — не потребує цієї утиліти.
+export function extractJsonBlocks(text) {
+  if (!text) return [];
+  const blocks = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { blocks.push(JSON.parse(text.slice(start, i + 1))); } catch {}
+        start = -1;
+      }
+    }
+  }
+  return blocks;
+}
+
 // === Міні-лог останніх дій для крос-контексту OWL ===
 const NM_RECENT_ACTIONS_KEY = 'nm_recent_actions';
 const NM_RECENT_ACTIONS_MAX = 20;
