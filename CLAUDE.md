@@ -226,7 +226,12 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat, setupModalSwipeClose (з drum-col guard) |
 | `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки, processUniversalAction (_splitReply) |
 | `src/tabs/notes.js` | Нотатки, папки, note view з чатом, пошук |
-| `src/tabs/finance.js` | Фінанси, бюджет, категорії, AI-коуч (кешований) |
+| `src/tabs/finance.js` | Фінанси — ядро (~700 рядків після рефакторингу 17.04 gHCOh): renderFinance, state, getFinanceContext, processFinanceAction, getFinEditMode/setFinEditMode. Re-exports з 5 модулів для backward compat |
+| `src/tabs/finance-cats.js` | Категорії Фінансів — CRUD, 41 SVG-іконка, палітра 14 кольорів, міграція v2, mergeFinCategories, moveFinCategory |
+| `src/tabs/finance-modals.js` | Модалки Фінансів — транзакція з калькулятором, datepicker, бюджет, категорія (icon/color picker, subcategories) |
+| `src/tabs/finance-analytics.js` | Аналітика 📊 — 3 режими графіка (Капітал/Витрати/Доходи), 9 метрик у 3 міні-блоках, 50/30/20 benchmark з кастомними % |
+| `src/tabs/finance-insight.js` | Інсайт дня (AI) — кеш 1год + hash-інвалідація, жорсткі правила точності чисел, temperature 0.3 |
+| `src/tabs/finance-chat.js` | Chat bar Фінансів — AI-бот для фінансових команд (save_expense/income/delete/update/budget/category) |
 | `src/tabs/health.js` | Карточки здоров'я, денні шкали (енергія/сон/біль) |
 | `src/tabs/projects.js` | Проекти, воркспейс, кроки, метрики, темп |
 | `src/tabs/calendar.js` | Календар, події (nm_events), блок "Найближче", Calendar/Routine/Day-schedule модалки, Event-edit modal з drum picker, zoom-анімації, навігаційний стек, SVG іконка з динамічною датою |

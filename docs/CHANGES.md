@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-04-17 — 🔧 Рефакторинг finance.js (сесія gHCOh)
+
+**Контекст:** Роман попросив у кінці cnTkD: _"Файл фінанси занадто великий, все легко ламається"_. План: `_ai-tools/REFACTORING_FINANCE.md` — розбити 2443 рядки на 6 файлів.
+
+**Виконано всі 6 фаз. Результат:**
+
+| Файл | Рядки | Що всередині |
+|------|-------|--------------|
+| `src/tabs/finance.js` (ядро) | 714 (-71%) | renderFinance, state, getFinanceContext, processFinanceAction, getFinEditMode/setFinEditMode + re-exports |
+| `src/tabs/finance-cats.js` | 292 | 41 SVG-іконка, палітра, CRUD категорій, mergeFinCategories, moveFinCategory, міграція v2 |
+| `src/tabs/finance-modals.js` | 644 | Модалка транзакції з калькулятором, datepicker, бюджет, категорія |
+| `src/tabs/finance-analytics.js` | 382 | Аналітика 📊 з 3 режимами графіка, 9 метрик, benchmark 50/30/20 |
+| `src/tabs/finance-insight.js` | 107 | Інсайт дня (AI) з кешем 1год |
+| `src/tabs/finance-chat.js` | 190 | Chat bar Фінансів — AI-бот |
+
+**Стратегія backward compat:** `finance.js` робить re-export з `finance-cats.js` і `finance-chat.js` — інші модулі (habits.js, inbox.js, nav.js, owl/*) **не міняли імпортів**. Це важливо бо їх ~7 файлів імпортують з finance.js.
+
+**Циркулярні імпорти контрольовані:** finance.js ↔ finance-cats.js (mergeFinCategories), finance.js ↔ finance-modals.js (getFinEditMode), finance.js ↔ finance-chat.js (renderFinance), finance.js ↔ finance-analytics.js (getFinance). ES modules розв'язують при відкладеному виклику.
+
+**Файли:** `src/tabs/finance*.js` (6 файлів), `src/app.js` (5 нових імпортів), `sw.js` (CACHE_NAME → `nm-20260417-1431`), `CLAUDE.md` (файлова структура), `_ai-tools/SESSION_STATE.md`, `docs/CHANGES.md`.
+
+**Особливості процесу:** Stream idle timeout у Claude Code Web кілька разів обривав довгі відповіді. Перейшов на стратегію "skeleton + дрібні Edit": Write створює файл-скелет з заглушками, Edit додає кожен блок окремо. Завдяки цьому вдалось довести 6 фаз до кінця за одну сесію без втрати прогресу.
+
+**Тестування у браузері — обов'язкове перед деплоєм:** додати/редагувати/видалити транзакцію (свайп), категорія (icon picker, колір, підкатегорії), бюджет, аналітика (3 режими графіка + 9 метрик + benchmark редагування), чат-бар (save_expense), Inbox → finance.
+
+---
+
 ## 2026-04-17 — 📦 Підсумок сесії cnTkD + підготовка до рефакторингу finance.js
 
 **Контекст:** кінець сесії cnTkD (~5-6 годин роботи). Роман замовив рефакторинг `finance.js` на наступну сесію бо файл 2443 рядки — "все легко ламається".

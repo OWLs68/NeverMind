@@ -1,6 +1,47 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-17 (сесія cnTkD — **🔥 18 багів закрито + PWA iOS fix + deploy counter fix + Claude-induced incident зафіксовано + `/obsidian` покращено**)
+**Оновлено:** 2026-04-17 (сесія gHCOh — **🔧 Рефакторинг finance.js завершений: 2443 → 714 рядків (-71%) + 5 нових модулів**)
+
+---
+
+## 🔧 Сесія gHCOh — рефакторинг finance.js (17.04.2026)
+
+**Виконано все 6 фаз:**
+
+| Файл | Рядки | Що всередині |
+|------|-------|--------------|
+| `src/tabs/finance.js` (ядро) | **714** (було 2443) | renderFinance, state, getFinanceContext, processFinanceAction, getFinEditMode/setFinEditMode + re-exports |
+| `src/tabs/finance-cats.js` | 292 | 41 SVG-іконка, палітра, CRUD категорій, mergeFinCategories, moveFinCategory, міграція v2 |
+| `src/tabs/finance-modals.js` | 644 | Модалка транзакції з калькулятором, datepicker, бюджет, категорія |
+| `src/tabs/finance-analytics.js` | 382 | Аналітика 📊 з 3 режимами графіка, 9 метрик, benchmark 50/30/20 |
+| `src/tabs/finance-insight.js` | 107 | Інсайт дня (AI) з кешем 1год, hash-інвалідацією, жорсткими правилами точності |
+| `src/tabs/finance-chat.js` | 190 | Chat bar Фінансів — AI-бот для фінансових команд |
+
+**Стратегія backward compat:** `finance.js` робить `export {...} from './finance-cats.js'` (і так само для інших). Усі зовнішні модулі (habits.js, inbox.js, nav.js, owl/*) **продовжують імпортувати `from './finance.js'`** — без змін.
+
+**Циркулярні імпорти (контрольовані):**
+- `finance.js ↔ finance-cats.js` (mergeFinCategories використовує getFinance/saveFinance)
+- `finance.js ↔ finance-modals.js` (getFinEditMode/setFinEditMode)
+- `finance.js ↔ finance-chat.js` (renderFinance, getFinance)
+- `finance.js ↔ finance-analytics.js` (getFinance, formatMoney)
+- `finance.js ↔ finance-insight.js` (getCurrency, formatMoney, getFinBudget)
+
+ES modules ці цикли коректно розв'язують при відкладеному виклику (функції викликаються після завантаження всіх модулів).
+
+**CACHE_NAME:** `nm-20260417-1431`. **Build чистий** (`node build.js`). **Тестування у браузері — обов'язкове** перед деплоєм у продакшен.
+
+**Що треба тестувати:**
+1. Відкрити Фінанси → бачити сітку категорій + Hero donut + Інсайт дня + транзакції
+2. Тапнути категорію → відкривається модалка транзакції з калькулятором
+3. Свайп місяця ← → працює (для перегляду періодів)
+4. Тапнути ✎ (олівець) → режим редагування → тапнути категорію → модалка категорії з іконками/кольорами/підкатегоріями
+5. Тапнути 📊 у вкладці → аналітика з 3 режимами графіка + перемикачі метрик + benchmark
+6. Чат-бар Фінансів → "кава 10" → транзакція + Inbox картка
+7. Inbox → "вечеря 50 на їжу" → processFinanceAction працює
+
+---
+
+**Попередня сесія:** cnTkD — 18 багів закрито + PWA iOS fix + deploy counter fix + Claude-induced incident зафіксовано + `/obsidian` покращено
 
 ---
 
