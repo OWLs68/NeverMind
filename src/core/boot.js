@@ -46,11 +46,14 @@ function setupSW() {
   const hadController = !!navigator.serviceWorker.controller;
   let _reloading = false;
 
+  // B-73 fix: iOS PWA standalone іноді не пробиває кеш page. Додаємо cache-bust query
+  // щоб URL змінився і браузер не взяв з pages cache.
   const doReload = () => {
     if (_reloading) return;
     _reloading = true;
-    // location.replace надійніше ніж reload() в iOS PWA standalone режимі
-    window.location.replace(window.location.href);
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', Date.now());
+    window.location.replace(url.toString());
   };
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -80,12 +83,21 @@ function setupSW() {
       _swReg = reg;
       reg.update();
 
-      // Резервний механізм: якщо controllerchange не спрацює —
-      // ловимо updatefound → installing → activated → reload
+      // B-73: якщо вже є waiting SW (попередня сесія не активувала) — форсуємо skipWaiting
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      // updatefound → installing → installed → (SKIP_WAITING) → activated → controllerchange → reload
       reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
         if (!sw) return;
         sw.addEventListener('statechange', () => {
+          // B-73: щойно новий SW installed і є старий controller → просимо активуватись зараз
+          // (не чекаємо природного переходу який iOS PWA іноді пропускає)
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            sw.postMessage({ type: 'SKIP_WAITING' });
+          }
           if (sw.state === 'activated' && hadController) doReload();
         });
       });
