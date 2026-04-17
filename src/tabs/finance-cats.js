@@ -122,6 +122,50 @@ const FIN_DEFAULT_SUBCATS = {
   'Покупки':   ['Одяг','Техніка','Книги','Подарунки','Дім'],
 };
 
+// B-78: виразні дефолтні кольори для всіх відомих назв (expense+income).
+// Коли AI або юзер створюють категорію з відомою назвою — колір береться звідси
+// замість випадкового (`pickRandomCatColor` іноді видавав сірий #78716c що виглядає як archived).
+const FIN_DEFAULT_COLORS = {
+  // Витрати — головні
+  'Їжа':        '#f97316', // оранжевий — апетитний
+  'Їда':        '#f97316',
+  'Транспорт':  '#22c55e', // зелений — рух
+  'Авто':       '#22c55e',
+  'Підписки':   '#a16207', // темний бурштин — підписний сервіс
+  'Здоровʼя':   '#ec4899', // рожевий — серце
+  "Здоров'я":   '#ec4899',
+  'Здоровя':    '#ec4899',
+  'Житло':      '#ef4444', // червоний — дім
+  'Покупки':    '#14b8a6', // бірюзовий
+  'Інше':       '#78716c', // сірий — єдине допустиме місце сірого (Інше-як-інше)
+  // Витрати — типові назви що AI генерує
+  'Курево':     '#0ea5e9', // блакитний
+  'Сигарети':   '#0ea5e9',
+  'Кафе':       '#f59e0b', // бурштиновий
+  'Паливо':     '#eab308', // жовтий
+  'Бензин':     '#eab308',
+  'Спорт':      '#84cc16', // лайм
+  'Спортзал':   '#84cc16',
+  'Розваги':    '#f43f5e', // малиновий
+  'Дозвілля':   '#f43f5e',
+  'Освіта':     '#3b82f6', // синій
+  'Подорожі':   '#06b6d4', // циан
+  'Зв\'язок':   '#6366f1', // індиго
+  'Звязок':     '#6366f1',
+  'Інтернет':   '#6366f1',
+  'Трава':      '#22c55e',
+  'Борги':      '#ef4444',
+  'Робота':     '#a16207',
+  // Доходи
+  'Зарплата':   '#22c55e', // зелений — основний дохід
+  'Надходження':'#16a34a', // темно-зелений
+  'Повернення': '#14b8a6', // бірюзовий
+};
+
+// "Зламаний" сірий який pickRandomCatColor видавав випадково для відомих категорій.
+// Міграція: якщо у відомій категорії цей колір — замінюємо на FIN_DEFAULT_COLORS.
+const FIN_BROKEN_DEFAULT_COLOR = '#78716c';
+
 // ===== CRUD =====
 function _makeCatObj(name, idx) {
   const safeSlug = name.toLowerCase().replace(/[^\wа-яґєії]/gi, '_').slice(0, 20);
@@ -129,7 +173,7 @@ function _makeCatObj(name, idx) {
     id: 'cat_' + safeSlug + '_' + Date.now().toString(36) + idx,
     name,
     icon: FIN_DEFAULT_ICONS[name] || 'other',
-    color: pickRandomCatColor(idx),
+    color: FIN_DEFAULT_COLORS[name] || pickRandomCatColor(idx),
     subcategories: (FIN_DEFAULT_SUBCATS[name] || []).slice(),
     archived: false,
     order: idx,
@@ -146,13 +190,19 @@ function _migrateFinCats(saved) {
     return fresh;
   }
   // B-70 fix (17.04): перевіряємо КОЖЕН елемент, не тільки перший.
+  // B-78 fix (17.04 KTQZA): ремап "зламаного" сірого у відомих категорій +
+  // дефолтна іконка/підкатегорії для відомих назв якщо порожні.
   const normalize = (list, startIdx) => (list || []).map((c, i) => {
     if (typeof c === 'string') return _makeCatObj(c, startIdx + i);
     if (!c || typeof c !== 'object') return _makeCatObj('Невідомо', startIdx + i);
     if (!c.id || !c.name) return _makeCatObj(c.name || 'Без назви', startIdx + i);
-    if (!c.icon) c.icon = 'other';
-    if (!c.color) c.color = pickRandomCatColor(i);
+    const known = FIN_DEFAULT_COLORS[c.name];
+    if (!c.icon || c.icon === 'other') c.icon = FIN_DEFAULT_ICONS[c.name] || c.icon || 'other';
+    if (!c.color) c.color = known || pickRandomCatColor(i);
+    // Ремап зламаного сірого: якщо категорія з відомою назвою має #78716c (не "Інше" — там сірий легальний) — замінити.
+    else if (c.color.toLowerCase() === FIN_BROKEN_DEFAULT_COLOR && known && known !== FIN_BROKEN_DEFAULT_COLOR) c.color = known;
     if (!Array.isArray(c.subcategories)) c.subcategories = [];
+    if (c.subcategories.length === 0 && FIN_DEFAULT_SUBCATS[c.name]) c.subcategories = FIN_DEFAULT_SUBCATS[c.name].slice();
     if (typeof c.archived !== 'boolean') c.archived = false;
     if (typeof c.order !== 'number') c.order = i;
     return c;
@@ -210,9 +260,9 @@ export function createFinCategory(type, data) {
   const newCat = {
     id: 'cat_' + (data.name || 'new').toLowerCase().replace(/[^\wа-яґєії]/gi, '_').slice(0, 20) + '_' + Date.now().toString(36),
     name: data.name || 'Без назви',
-    icon: data.icon || 'other',
-    color: data.color || pickRandomCatColor(order),
-    subcategories: data.subcategories || [],
+    icon: data.icon || FIN_DEFAULT_ICONS[data.name] || 'other',
+    color: data.color || FIN_DEFAULT_COLORS[data.name] || pickRandomCatColor(order),
+    subcategories: data.subcategories && data.subcategories.length ? data.subcategories : (FIN_DEFAULT_SUBCATS[data.name] || []).slice(),
     archived: false,
     order,
   };
