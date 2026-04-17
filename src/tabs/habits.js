@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
@@ -1380,38 +1380,36 @@ export async function sendTasksBarMessage() {
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); setTaskBarLoading(false); return; }
 
-    // Спробуємо розпарсити JSON дію
-    try {
-      // Шукаємо JSON навіть якщо є текст перед ним
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim();
-      const parsed = JSON.parse(jsonStr);
-
-      // Спочатку пробуємо універсальні дії (нотатки, фінанси, задачі, звички)
-      if (processUniversalAction(parsed, text, addTaskBarMsg)) {
-        // оброблено
-      } else if (parsed.action === 'complete_step') {
+    // Обробка одного JSON блоку. Повертає true якщо дія оброблена.
+    const _processOne = (parsed) => {
+      if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
+      if (parsed.action === 'complete_step') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
         if (t) {
           const step = t.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
           if (step) {
             step.done = true;
-            // Якщо всі кроки виконані або немає кроків — виконати задачу
             if (t.steps.every(s => s.done)) t.status = 'done';
             saveTasks(allTasks); renderTasks();
             addTaskBarMsg('agent', `✅ Відмітив "${step.text}" як виконано`);
           } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
         }
-      } else if (parsed.action === 'complete_task') {
+        return true;
+      }
+      if (parsed.action === 'complete_task') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
         if (t) { t.status = 'done'; t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
-      } else if (parsed.action === 'add_step') {
+        return true;
+      }
+      if (parsed.action === 'add_step') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
         if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
-      } else if (parsed.action === 'complete_habit') {
+        return true;
+      }
+      if (parsed.action === 'complete_habit') {
         const habits = getHabits();
         const h = habits.find(x => x.name.toLowerCase().includes((parsed.habit_name || '').toLowerCase().substring(0,6)));
         if (h) {
@@ -1423,8 +1421,11 @@ export async function sendTasksBarMessage() {
           renderProdHabits();
           renderHabits();
           addTaskBarMsg('agent', '✅ Відмітив звичку "' + h.name + '" як виконану сьогодні');
-        } else { safeAgentReply(reply, addTaskBarMsg); }
-      } else if (parsed.action === 'create_habit') {
+          return true;
+        }
+        return false;
+      }
+      if (parsed.action === 'create_habit') {
         const habits = getHabits();
         const name = (parsed.name || '').trim();
         if (name) {
@@ -1434,16 +1435,20 @@ export async function sendTasksBarMessage() {
           renderProdHabits(); renderHabits();
           addTaskBarMsg('agent', '🌱 Звичку "' + name + '" створено!');
         }
-      } else if (parsed.action === 'create_task') {
+        return true;
+      }
+      if (parsed.action === 'create_task') {
         const tasks = getTasks();
         const title = (parsed.title || '').trim();
         if (title) {
           const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-          tasks.unshift({ id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+          tasks.unshift({ id: Date.now() + Math.floor(Math.random() * 1000), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
           saveTasks(tasks); renderTasks();
           addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
         }
-      } else if (parsed.action === 'undo_step') {
+        return true;
+      }
+      if (parsed.action === 'undo_step') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
         if (t) {
@@ -1455,8 +1460,18 @@ export async function sendTasksBarMessage() {
             addTaskBarMsg('agent', `↩️ Скасував виконання "${step.text}"`);
           } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
         }
-      } else { safeAgentReply(reply, addTaskBarMsg); }
-    } catch { safeAgentReply(reply, addTaskBarMsg); }
+        return true;
+      }
+      return false;
+    };
+
+    // Розбиваємо AI-відповідь на окремі JSON блоки (може бути кілька дій одразу).
+    const blocks = extractJsonBlocks(reply);
+    let handled = false;
+    for (const parsed of blocks) {
+      if (_processOne(parsed)) handled = true;
+    }
+    if (!handled) safeAgentReply(reply, addTaskBarMsg);
   } catch { addTaskBarMsg('agent', 'Мережева помилка.'); }
   setTaskBarLoading(false);
 }
