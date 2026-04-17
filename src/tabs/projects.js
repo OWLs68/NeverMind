@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
@@ -530,11 +530,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) { addProjectsChatMsg('agent', 'Щось пішло не так.'); projectsBarLoading = false; return; }
 
-    try {
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
+    // Обробка одного JSON блоку. Повертає true якщо оброблено.
+    const _processOne = (parsed) => {
       const pid = parsed.project_id;
-
       if (parsed.action === 'complete_project_step' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
@@ -548,9 +546,12 @@ ${aiContext ? '\n\n' + aiContext : ''}
             saveProjects(projs);
             renderProjects();
             addProjectsChatMsg('agent', `✅ Крок "${step.text}" виконано! Прогрес: ${p.progress}%`);
-          } else { safeAgentReply(reply, addProjectsChatMsg); }
-        } else { safeAgentReply(reply, addProjectsChatMsg); }
-      } else if (parsed.action === 'add_project_step' && pid) {
+            return true;
+          }
+        }
+        return false;
+      }
+      if (parsed.action === 'add_project_step' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -560,8 +561,11 @@ ${aiContext ? '\n\n' + aiContext : ''}
           saveProjects(projs);
           renderProjects();
           addProjectsChatMsg('agent', `✓ Додав крок: "${parsed.step}"`);
-        } else { safeAgentReply(reply, addProjectsChatMsg); }
-      } else if (parsed.action === 'update_project_progress' && pid) {
+          return true;
+        }
+        return false;
+      }
+      if (parsed.action === 'update_project_progress' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -571,7 +575,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderProjects();
           addProjectsChatMsg('agent', `✓ Прогрес оновлено: ${p.progress}%`);
         }
-      } else if (parsed.action === 'add_project_decision' && pid) {
+        return true;
+      }
+      if (parsed.action === 'add_project_decision' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -581,7 +587,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderProjects();
           addProjectsChatMsg('agent', `✓ Рішення записано: "${parsed.title}"`);
         }
-      } else if (parsed.action === 'add_project_metric' && pid) {
+        return true;
+      }
+      if (parsed.action === 'add_project_metric' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -591,7 +599,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderProjects();
           addProjectsChatMsg('agent', `✓ Метрику "${parsed.label}: ${parsed.value}" додано`);
         }
-      } else if (parsed.action === 'add_project_resource' && pid) {
+        return true;
+      }
+      if (parsed.action === 'add_project_resource' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -601,7 +611,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderProjects();
           addProjectsChatMsg('agent', `✓ Ресурс "${parsed.title}" додано`);
         }
-      } else if (parsed.action === 'update_project_tempo' && pid) {
+        return true;
+      }
+      if (parsed.action === 'update_project_tempo' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -612,7 +624,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderProjects();
           addProjectsChatMsg('agent', `✓ Темп оновлено`);
         }
-      } else if (parsed.action === 'update_project_risks' && pid) {
+        return true;
+      }
+      if (parsed.action === 'update_project_risks' && pid) {
         const projs = getProjects();
         const p = projs.find(pr => pr.id === pid);
         if (p) {
@@ -621,12 +635,19 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderProjects();
           addProjectsChatMsg('agent', `✓ Ризики записано`);
         }
-      } else if (processUniversalAction(parsed, text, addProjectsChatMsg)) {
-        // handled
-      } else {
-        safeAgentReply(reply, addProjectsChatMsg);
+        return true;
       }
-    } catch { safeAgentReply(reply, addProjectsChatMsg); }
+      if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
+      return false;
+    };
+
+    // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
+    const blocks = extractJsonBlocks(reply);
+    let handled = false;
+    for (const parsed of blocks) {
+      if (_processOne(parsed)) handled = true;
+    }
+    if (!handled) safeAgentReply(reply, addProjectsChatMsg);
   } catch { addProjectsChatMsg('agent', 'Мережева помилка.'); }
   projectsBarLoading = false;
 }
