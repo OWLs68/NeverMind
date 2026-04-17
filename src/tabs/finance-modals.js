@@ -117,6 +117,13 @@ export function selectFinTxMainCat(name) {
   _refreshTransactionModal();
 }
 
+export function setFinTxType(type) {
+  _finTxCurrentType = type === 'income' ? 'income' : 'expense';
+  _finTxCategory = '';
+  _finTxSubcategory = '';
+  _refreshTransactionModal();
+}
+
 export function selectFinTxSubcat(name) {
   _finTxSubcategory = (_finTxSubcategory === name) ? '' : name;
   _refreshTransactionModal();
@@ -254,6 +261,10 @@ function _renderTransactionModalBody() {
     <div style="overflow-y:auto;max-height:85vh;padding:18px 0 calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
+    ${isEdit ? '' : `<div style="display:flex;gap:6px;margin-bottom:10px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px">
+      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? 'white' : 'transparent'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.5)'};box-shadow:${isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">Витрата</button>
+      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? 'white' : 'transparent'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.5)'};box-shadow:${!isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">Дохід</button>
+    </div>`}
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
       ${(_finTxExpression && /[+\-*/×÷]/.test(_finTxExpression)) ? `<div style="font-size:13px;color:rgba(30,16,64,0.45);margin-top:4px">= ${formatMoney(calcResult)}</div>` : ''}
@@ -622,7 +633,7 @@ Object.assign(window, {
   openAddTransaction, openEditTransaction, closeFinTxModal,
   saveFinTransaction, deleteFinTransaction,
   finCalcAppend, finCalcBackspace,
-  selectFinTxMainCat, selectFinTxSubcat,
+  selectFinTxMainCat, selectFinTxSubcat, setFinTxType,
   openFinDateModal, closeFinDateModal, setFinTxDateOffset, setFinTxDateFromInput,
   openFinBudgetModal, saveFinBudgetFromModal, closeFinBudgetModal,
   toggleFinEditMode, openCategoryEditModal, closeCategoryEditModal,

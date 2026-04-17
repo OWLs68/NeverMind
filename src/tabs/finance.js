@@ -85,7 +85,9 @@ export function setCurrency(symbol) {
 }
 
 export function formatMoney(n) {
-  return getCurrency() + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
+  const abs = Math.abs(n);
+  const str = abs % 1 === 0 ? String(abs) : abs.toFixed(2).replace('.', ',');
+  return getCurrency() + str;
 }
 
 
