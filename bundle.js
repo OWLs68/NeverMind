@@ -15812,8 +15812,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const el = document.getElementById("set-owl-" + m);
       if (!el) return;
       if (m === mode) {
-        el.style.border = "1.5px solid #7c3aed";
-        el.style.background = "rgba(124,58,237,0.07)";
+        el.style.border = "1.5px solid #c2790a";
+        el.style.background = "rgba(194,121,10,0.07)";
       } else {
         el.style.border = "1.5px solid rgba(30,16,64,0.08)";
         el.style.background = "rgba(255,255,255,0.5)";
