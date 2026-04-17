@@ -8761,40 +8761,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       else if (pct >= 0.8) addFinanceChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
     }
   }
-  function _extractJsonBlocks(text) {
-    const blocks = [];
-    let depth = 0, start = -1, inStr = false, esc = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (esc) {
-        esc = false;
-        continue;
-      }
-      if (c === "\\" && inStr) {
-        esc = true;
-        continue;
-      }
-      if (c === '"') {
-        inStr = !inStr;
-        continue;
-      }
-      if (inStr) continue;
-      if (c === "{") {
-        if (depth === 0) start = i;
-        depth++;
-      } else if (c === "}") {
-        depth--;
-        if (depth === 0 && start !== -1) {
-          try {
-            blocks.push(JSON.parse(text.slice(start, i + 1)));
-          } catch {
-          }
-          start = -1;
-        }
-      }
-    }
-    return blocks;
-  }
   async function sendFinanceBarMessage() {
     if (financeBarLoading) return;
     const input = document.getElementById("finance-bar-input");
@@ -8922,7 +8888,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         }
         return false;
       };
-      const blocks = _extractJsonBlocks(reply);
+      const blocks = extractJsonBlocks(reply);
       let handled = false;
       for (const parsed of blocks) {
         if (_processOne(parsed)) handled = true;
@@ -14418,6 +14384,41 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function escapeHtml(s) {
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function extractJsonBlocks(text) {
+    if (!text) return [];
+    const blocks = [];
+    let depth = 0, start = -1, inStr = false, esc = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (c === "\\" && inStr) {
+        esc = true;
+        continue;
+      }
+      if (c === '"') {
+        inStr = !inStr;
+        continue;
+      }
+      if (inStr) continue;
+      if (c === "{") {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (c === "}") {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          try {
+            blocks.push(JSON.parse(text.slice(start, i + 1)));
+          } catch {
+          }
+          start = -1;
+        }
+      }
+    }
+    return blocks;
   }
   function logRecentAction(action, title, tab) {
     try {
