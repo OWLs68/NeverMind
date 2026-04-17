@@ -3,7 +3,7 @@
 // Винесено з finance.js у рефакторингу 17.04.2026 (сесія gHCOh).
 // ============================================================
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
@@ -63,34 +63,6 @@ function checkFinBudgetWarning(type, category, amount) {
     if (pct >= 1) addFinanceChatMsg('agent', `⚠️ Ліміт по "${category}" перевищено: ${formatMoney(catSpent)} з ${formatMoney(catLimit)}.`);
     else if (pct >= 0.8) addFinanceChatMsg('agent', `💡 По "${category}" залишилось ${formatMoney(catLimit - catSpent)}.`);
   }
-}
-
-// Розбиває AI-відповідь на окремі JSON об'єкти.
-// Потрібно бо AI може повернути кілька дій одразу ("видали А,Б,В, додай Г" →
-// 4 JSON-блоки один за одним). Стара логіка з /\{[\s\S]*\}/ брала все як один
-// блок і парсинг падав → юзер бачив сирий JSON замість виконаних дій.
-// Балансує {} із урахуванням рядків у лапках (щоб { у value не ламав парсер).
-function _extractJsonBlocks(text) {
-  const blocks = [];
-  let depth = 0, start = -1, inStr = false, esc = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (esc) { esc = false; continue; }
-    if (c === '\\' && inStr) { esc = true; continue; }
-    if (c === '"') { inStr = !inStr; continue; }
-    if (inStr) continue;
-    if (c === '{') {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (c === '}') {
-      depth--;
-      if (depth === 0 && start !== -1) {
-        try { blocks.push(JSON.parse(text.slice(start, i + 1))); } catch {}
-        start = -1;
-      }
-    }
-  }
-  return blocks;
 }
 
 export async function sendFinanceBarMessage() {
@@ -216,7 +188,7 @@ export async function sendFinanceBarMessage() {
 
     // Витягуємо всі JSON-блоки з відповіді (може бути кілька — "видали А,Б,В, додай Г").
     // Якщо блоків немає або жоден не вдалось обробити — показуємо reply як текст.
-    const blocks = _extractJsonBlocks(reply);
+    const blocks = extractJsonBlocks(reply);
     let handled = false;
     for (const parsed of blocks) {
       if (_processOne(parsed)) handled = true;
