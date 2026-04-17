@@ -398,10 +398,11 @@ function _finCatsGrid(allTxs, win) {
     const onClick = _finEditMode
       ? `openCategoryEditModal('${escapeHtml(cat.id)}')`
       : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})`;
-    // B-61: тінь-левітація кольором категорії — натяк що інтерактивне.
-    // У edit-режимі ще додатковий outline.
-    const levitShadow = `box-shadow:0 6px 14px ${cat.color}35, 0 2px 4px ${cat.color}20;`;
-    const editStyle = _finEditMode ? `box-shadow:0 6px 14px ${cat.color}35, 0 2px 4px ${cat.color}20, 0 0 0 2px ${cat.color}55;` : levitShadow;
+    // B-61: тінь-левітація. Оновлено 17.04.2026 (14zLe) — тіні чорні замість
+    // кольору категорії: виразніше "висить" над фоном, контрастніше.
+    // У edit-режимі ще додатковий outline кольором категорії (вибраний стан).
+    const levitShadow = `box-shadow:0 8px 18px rgba(0,0,0,0.22), 0 3px 6px rgba(0,0,0,0.14);`;
+    const editStyle = _finEditMode ? `box-shadow:0 8px 18px rgba(0,0,0,0.22), 0 3px 6px rgba(0,0,0,0.14), 0 0 0 2px ${cat.color}55;` : levitShadow;
     // B-57: стрілки ‹ › у edit-режимі для переміщення категорії.
     const arrows = _finEditMode ? `
       <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="Вліво" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
