@@ -1478,9 +1478,9 @@ body {
    кнопках. Input/textarea/select/.drum-col не зачеплені (немає onclick). */
 button,
 [onclick] {
-  transition: transform 0.1s ease-out;
+  transition: transform 0.3s ease-out;
 }
 button:active,
 [onclick]:active {
-  transform: scale(0.96);
+  transform: scale(0.87);
 }
