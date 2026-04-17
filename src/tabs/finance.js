@@ -1240,9 +1240,10 @@ function openFinDateModal() {
         <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">Тиждень тому · ${fmt(-7)}</button>
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Виберіть день</div>
+      <!-- B-DATE-CLIP fix: padding-right:40px щоб помістився нативний iOS date indicator -->
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${new Date().toISOString().slice(0,10)}"
         onchange="setFinTxDateFromInput(this.value)"
-        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+        style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
       <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">Закрити</button>
       </div>
     </div>`;
