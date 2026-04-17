@@ -1471,3 +1471,16 @@ body {
 
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* Анімація натискання клікабельних елементів (17.04.2026 14zLe).
+   Застосовується до всіх <button> і елементів з onclick. При натисканні
+   масштаб 96% з плавним поверненням — ефект "клацання" як на фізичних
+   кнопках. Input/textarea/select/.drum-col не зачеплені (немає onclick). */
+button,
+[onclick] {
+  transition: transform 0.1s ease-out;
+}
+button:active,
+[onclick]:active {
+  transform: scale(0.96);
+}
