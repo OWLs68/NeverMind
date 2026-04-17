@@ -34,8 +34,10 @@ export function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', J
 // ===== Категорії (v2 структура, Фаза 2 K-01, 15.04.2026 3229b) =====
 // Об'єкт категорії: { id, name, icon, color, subcategories: [], archived, order }
 
-// SVG-бібліотека іконок (inline, 20 базових). Додавати за потребою.
+// SVG-бібліотека іконок (inline, 40 якісних). B-56: розширено з 20 до 40.
+// Стиль: Lucide/Heroicons — stroke-based, 24×24 viewBox, заокруглені краї.
 const FIN_CAT_ICONS = {
+  // Базові (Фаза 2)
   food:          '<path d="M3 11h18M5 11V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/>',
   car:           '<path d="M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M3 17h18M5 17V9l2-4h10l2 4v8M7 13h10"/>',
   subscription:  '<path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/>',
@@ -57,6 +59,33 @@ const FIN_CAT_ICONS = {
   anchor:        '<circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>',
   briefcase:     '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
   other:         '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  // Нові (B-56) — +20 до 40 загалом
+  pet:           '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><circle cx="4" cy="8" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.8 1.2l-0.9-2.3a3.5 3.5 0 0 1 2.2-4.5z"/>',
+  baby:          '<path d="M9 12h.01M15 12h.01M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/>',
+  gym:           '<path d="M6.5 6.5L17.5 17.5M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/><path d="M7 17L3 21l1 1 4-4M17 7l4-4-1-1-4 4"/>',
+  music:         '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  book:          '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  camera:        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  gaming:        '<line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/>',
+  bus:           '<path d="M8 6v6m8-6v6m-8 6h.01M16 18h.01M3 10h18M5 17v1a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-1m6 0v1a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-1"/><rect x="3" y="3" width="18" height="15" rx="2"/>',
+  flight:        '<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.2.6-.6.5-1.1z"/>',
+  hotel:         '<rect x="2" y="4" width="20" height="17" rx="2"/><path d="M2 10h20M7 4v4m5-4v4m5-4v4"/>',
+  restaurant:    '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>',
+  pharmacy:      '<path d="M12 2v8m-4-4h8"/><path d="M19 14a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/>',
+  doctor:        '<path d="M8 2v4m0 0a3 3 0 0 0 0 6v3a5 5 0 0 0 10 0"/><path d="M18 15a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/>',
+  investment:    '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  savings:       '<path d="M19 7c1.1 0 2 .9 2 2v3l-2 1v3a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-8c0-3.3 2.7-6 6-6h4a3 3 0 0 1 3 3v2h1z"/><circle cx="15" cy="11" r="1"/>',
+  tax:           '<circle cx="12" cy="12" r="10"/><line x1="8" y1="16" x2="16" y2="8"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/>',
+  bill:          '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>',
+  alcohol:       '<path d="M8 22h8M12 15v7M6 3l1 12a5 5 0 0 0 10 0l1-12z"/>',
+  tech:          '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+  movies:        '<rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>',
+  hair:          '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
+  charity:       '<path d="M18 8h1a4 4 0 0 1 4 4 4 4 0 0 1-4 4h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  bank:          '<line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="5 6 12 3 19 6"/><line x1="4" y1="10" x2="4" y2="21"/><line x1="20" y1="10" x2="20" y2="21"/><line x1="8" y1="14" x2="8" y2="17"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="16" y1="14" x2="16" y2="17"/>',
+  dumbbell:      '<path d="M6 5v14M18 5v14M6 10h12M6 14h12M3 8v8M21 8v8"/>',
+  crown:         '<path d="M2 20h20M3 7l4 5 5-8 5 8 4-5v13H3z"/>',
+  briefcase2:    '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="14" x2="22" y2="14"/>',
 };
 
 // Повертає SVG рядок за назвою іконки (fallback 'other')
@@ -447,44 +476,92 @@ export function renderFinance() {
   _refreshFinInsight(allTxs, win);
 }
 
-// B-37: свайп-видалення транзакцій — прив'язуємо touch listeners напряму
-// на кожен .fin-tx-swipe-wrap після кожного рендеру (бо innerHTML переписується).
+// B-54: переробка свайп-видалення транзакцій.
+// Нова механіка: свайп вліво >135px → картка застрягає на -80px → з'являється кнопка кошика справа.
+// Тап на кошик = видалення з undo. Свайп вправо >30px = скасування (повернення в 0).
+// +50% зона видалення (threshold * 1.5) щоб випадково не тригерити.
+const SWIPE_BIN_WIDTH = 80;
+const SWIPE_BIN_THRESHOLD = SWIPE_DELETE_THRESHOLD * 1.5; // 135px (+50% vs стандарт)
+
+function _deleteFinTxById(txId) {
+  const item = getFinance().find(t => t.id === txId);
+  saveFinance(getFinance().filter(t => t.id !== txId));
+  if (item) addToTrash('finance', item);
+  renderFinance();
+  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+  if (item) showUndoToast('Операцію видалено', () => {
+    const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
+  });
+}
+
 function _attachFinTxSwipeDelete() {
   const wraps = document.querySelectorAll('.fin-tx-swipe-wrap');
   wraps.forEach(sw => {
+    if (sw._swipeBound) return;
+    sw._swipeBound = true;
     let startX = 0, startY = 0, dx = 0, locked = false;
     const card = sw.querySelector('.tx-row');
     if (!card) return;
+
+    // Створюємо SVG-кнопку кошика (під карткою, поки картка переносить її)
+    let bin = sw.querySelector('.fin-tx-bin');
+    if (!bin) {
+      bin = document.createElement('button');
+      bin.className = 'fin-tx-bin';
+      bin.setAttribute('aria-label', 'Видалити');
+      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${SWIPE_BIN_WIDTH}px;display:flex;align-items:center;justify-content:center;background:#ef4444;border:none;cursor:pointer;padding:0;z-index:0;font-family:inherit`;
+      bin.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      bin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const txId = parseInt(sw.dataset.txId);
+        if (!isNaN(txId)) _deleteFinTxById(txId);
+      });
+      sw.appendChild(bin);
+    }
+
+    const setOffset = (offset, animate = false) => {
+      card.style.transition = animate ? 'transform 0.25s ease' : '';
+      card.style.transform = `translateX(${offset}px)`;
+    };
+    const openSwipe = () => { sw._open = true; setOffset(-SWIPE_BIN_WIDTH, true); };
+    const closeSwipe = () => { sw._open = false; setOffset(0, true); };
+
+    // Якщо тап на картку коли свайп відкритий → закриваємо замість openEdit
+    // Перехоплюємо click у capture щоб блокувати оригінальний onclick
+    card.addEventListener('click', (e) => {
+      if (sw._open) { e.stopPropagation(); e.preventDefault(); closeSwipe(); }
+    }, true);
+
     sw.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       dx = 0; locked = false;
+      card.style.transition = ''; // вимикаємо transition під час руху
     }, { passive: true });
+
     sw.addEventListener('touchmove', (e) => {
       if (locked) return;
       const curX = e.touches[0].clientX;
       const curY = e.touches[0].clientY;
       const ddx = curX - startX;
       const ddy = curY - startY;
-      // Якщо вертикальний рух > горизонтальний — це скрол, відпускаємо
+      // Вертикальний рух перевищує горизонтальний → це скрол, відпускаємо
       if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) { locked = true; return; }
       dx = ddx;
-      if (dx < 0) applySwipeTrail(card, sw, dx);
+      const baseOffset = sw._open ? -SWIPE_BIN_WIDTH : 0;
+      // Дозволяємо тільки від'ємний offset (не дає свайпити вправо за 0)
+      const newOffset = Math.min(0, baseOffset + dx);
+      setOffset(newOffset);
     }, { passive: true });
+
     sw.addEventListener('touchend', () => {
-      if (locked) { clearSwipeTrail(card, sw); return; }
-      if (dx < -SWIPE_DELETE_THRESHOLD) {
-        const txId = parseInt(sw.dataset.txId);
-        const item = getFinance().find(t => t.id === txId);
-        saveFinance(getFinance().filter(t => t.id !== txId));
-        if (item) addToTrash('finance', item);
-        clearSwipeTrail(card, sw);
-        renderFinance();
-        if (item) showUndoToast('Транзакцію видалено', () => {
-          const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
-        });
+      if (locked) { if (sw._open) openSwipe(); else closeSwipe(); return; }
+      if (sw._open) {
+        // Свайп вправо >30px → закрити, інакше залишити відкритим
+        if (dx > 30) closeSwipe(); else openSwipe();
       } else {
-        clearSwipeTrail(card, sw);
+        // Новий свайп вліво: поріг 135px (+50% vs стандарт)
+        if (dx < -SWIPE_BIN_THRESHOLD) openSwipe(); else closeSwipe();
       }
     }, { passive: true });
   });
@@ -499,8 +576,20 @@ function _finEmptyTxsHint() {
 
 // ===== Фаза 5: Динамічна "Інсайт дня" картка =====
 // Одна картка з AI-обраним найрелевантнішим фактом (замість 3 статичних карток).
-// Кеш 12 год у localStorage. Тригер: renderFinance після змін.
-const FIN_INSIGHT_TTL = 12 * 60 * 60 * 1000; // 12 год
+// B-46: кеш скорочено 12 год → 1 год + інвалідація по хешу транзакцій.
+// Hash враховує кількість + суми + категорії → будь-яка зміна → перегенерація.
+const FIN_INSIGHT_TTL = 60 * 60 * 1000; // 1 год
+
+function _finInsightHash(allTxs) {
+  // Компактний хеш стану: кількість + сума експенсів + сума доходів + топ-3 категорії
+  // Будь-яка зміна даних → новий хеш → кеш стає невалідним
+  const exp = allTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+  const inc = allTxs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+  const catMap = {};
+  allTxs.filter(t => t.type === 'expense').forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const top = Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,3).map(([c,a]) => `${c}:${Math.round(a)}`).join('|');
+  return `${allTxs.length}_${Math.round(exp)}_${Math.round(inc)}_${top}`;
+}
 
 function _finDailyInsight(allTxs) {
   if (allTxs.length === 0) return '';
@@ -522,8 +611,15 @@ async function _refreshFinInsight(allTxs, win) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const cacheKey = `nm_fin_insight_${currentFinPeriod}_${currentFinPeriodOffset}`;
+  const currentHash = _finInsightHash(allTxs);
   const cached = localStorage.getItem(cacheKey);
-  if (cached) { try { if (Date.now() - JSON.parse(cached).ts < FIN_INSIGHT_TTL) return; } catch(e) {} }
+  // B-46: кеш валідний тільки якщо (а) свіжий (1 год) І (б) хеш даних не змінився
+  if (cached) {
+    try {
+      const c = JSON.parse(cached);
+      if (Date.now() - c.ts < FIN_INSIGHT_TTL && c.hash === currentHash) return;
+    } catch(e) {}
+  }
 
   const expenses = allTxs.filter(t => t.type === 'expense');
   const incomes = allTxs.filter(t => t.type === 'income');
@@ -531,35 +627,45 @@ async function _refreshFinInsight(allTxs, win) {
   const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
   const catMap = {};
   expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
-  const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(', ');
+  const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const top3 = topCats.slice(0,3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(', ');
   const budget = getFinBudget();
+  const currency = getCurrency();
 
+  // B-46: конкретний промпт з числами, заборона шаблонних фраз
   const prompt = `${getOWLPersonality()}
-Дай ОДНУ коротку КОРИСНУ пораду по фінансах. НЕ повторюй загальні суми (юзер вже бачить їх на екрані).
+Ти — фінансовий тренер. Дай ОДНУ коротку конкретну пораду з числами. 1-2 речення, українською.
 
-Замість "Витрати склали €X" — дай КОНКРЕТНУ дію або цікавий факт:
-- Річна проекція: "${top3.split(':')[0] || 'Категорія'} коштує ~€Y/рік — вистачить на Z"
-- Порівняння: "Витрачаєш на X більше ніж на Y — так і задумано?"
-- Порада: "Якщо скоротити X на €20/міс — за рік зекономиш €240"
-- Тренд: "Ця категорія росте 3 місяці поспіль"
+ЗАБОРОНЕНО:
+- повторювати загальні суми які юзер бачить на екрані ("Витрати склали €X")
+- загальні фрази ("стеж за витратами", "плануй бюджет", "розподіляй кошти")
+- згадувати "загалом" / "в цілому" / "варто задуматись"
 
-1-2 речення. Конкретні числа з даних нижче. Українською. Не згадуй загальну суму витрат.
+ОБОВ'ЯЗКОВО: конкретне число + конкретна дія або порівняння.
+
+Шаблони (вибери НАЙРЕЛЕВАНТНІШИЙ для цих даних):
+1. Річна проекція: "{Категорія} ${currency}X/міс = ${currency}Y за рік — це {конкретна ціль}"
+2. Відхилення: "На {категорія} в {N}x більше ніж на {інша}"
+3. Економія: "Скоротити {категорія} на ${currency}X/тиждень = ${currency}Y за рік"
+4. Перевищення ліміту: "Категорія {X} перевищила ліміт на {N%}"
+5. Тренд: "Топ-категорія {X} — ${currency}Y, наступна у 2 рази менша"
 
 Дані (${win.label}):
-Топ категорії: ${top3 || 'немає даних'}
-${budget.total > 0 ? `Бюджет: ${formatMoney(budget.total)}` : ''}
+Топ-5 категорій: ${topCats.map(([c,a]) => `${c}=${formatMoney(a)}`).join(', ') || 'немає'}
+Всього витрат за період: ${formatMoney(totalExp)}
+${budget.total > 0 ? `Бюджет на місяць: ${formatMoney(budget.total)}, витрачено ${formatMoney(totalExp)} (${Math.round(totalExp/budget.total*100)}%)` : 'Бюджет не встановлено'}
 ${totalInc > 0 ? `Доходи: ${formatMoney(totalInc)}, заощаджено ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 100, temperature: 0.5 })
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 120, temperature: 0.7 })
     });
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) return;
-    localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now() }));
+    localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now(), hash: currentHash }));
     const el = document.getElementById('fin-insight-text');
     if (el) el.textContent = text;
   } catch(e) {}
@@ -669,11 +775,40 @@ function _finCatsGrid(allTxs, win) {
   const overflowCells = overflow.map(renderCell).join('') + (_finEditMode && inGrid.length >= 12 ? renderAddCell() : '');
 
   // Центральний круг-Hero (grid-item, займає колонки 2-3 і ряди 2-3)
+  // B-60: товстий donut-chart з кольоровими сегментами по категоріях (пропорційно витратам)
   const heroLabel = isExpense ? 'Витрати' : 'Доходи';
   const heroCol = isExpense ? '#c2410c' : '#16a34a';
-  const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.85);border:3px solid ${heroCol}22;cursor:pointer;box-shadow:0 4px 16px rgba(30,16,64,0.06);user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${heroLabel}</div>
-    <div style="font-size:24px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
+  const donutR = 42;
+  const donutCirc = 2 * Math.PI * donutR; // ~263.9
+  // Рахуємо сегменти: категорії з сумами > 0, відсортовані за сумою desc
+  const donutSegs = [];
+  if (totalSum > 0) {
+    const withSums = sorted.map(c => ({ c, sum: catMap[c.name] || 0 })).filter(s => s.sum > 0).sort((a,b) => b.sum - a.sum);
+    let offset = 0;
+    withSums.forEach(({ c, sum }) => {
+      const pct = sum / totalSum;
+      const segLen = pct * donutCirc;
+      donutSegs.push({ color: c.color, segLen, offset });
+      offset += segLen;
+    });
+  }
+  const donutRings = donutSegs.map(s =>
+    `<circle cx="50" cy="50" r="${donutR}" fill="none" stroke="${s.color}" stroke-width="9"
+             stroke-dasharray="${s.segLen.toFixed(2)} ${donutCirc.toFixed(2)}"
+             stroke-dashoffset="${(-s.offset).toFixed(2)}"
+             transform="rotate(-90 50 50)"/>`
+  ).join('');
+  // Базове сіре кільце (видно якщо totalSum=0 або якщо сегменти не покривають 100%)
+  const donutBase = `<circle cx="50" cy="50" r="${donutR}" fill="none" stroke="rgba(30,16,64,0.06)" stroke-width="9"/>`;
+  const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
+    <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 4px 12px rgba(30,16,64,0.08))">
+      ${donutBase}${donutRings}
+      <circle cx="50" cy="50" r="${donutR - 5}" fill="rgba(255,255,255,0.95)"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+      <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">${heroLabel}</div>
+      <div style="font-size:20px;font-weight:900;color:${heroCol};line-height:1">${formatMoney(totalSum)}</div>
+    </div>
   </div>`;
 
   // Хедер блоку: у звичайному режимі — стрілки навігації + лейбл + олівець ✎.
@@ -736,11 +871,15 @@ function _finTxsBlock(allTxs) {
   const rows = sorted.map(t => {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+    // B-53: показуємо підкатегорію дрібним текстом після категорії через · розділювач
+    const categoryLine = t.subcategory
+      ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">· ${escapeHtml(t.subcategory)}</span>`
+      : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
     // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
     return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
       <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:rgba(255,255,255,0.95)">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
+          <div style="font-size:13px">${categoryLine}</div>
           ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -776,9 +915,13 @@ function openAllTransactions() {
   const rows = allTxs.map(t => {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day:'numeric', month:'short' });
+    // B-53: підкатегорія дрібним текстом поруч
+    const categoryLine = t.subcategory
+      ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">· ${escapeHtml(t.subcategory)}</span>`
+      : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
     return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(t.category)}</div>
+        <div style="font-size:13px">${categoryLine}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ''}
       </div>
       <div style="text-align:right;flex-shrink:0">
@@ -872,25 +1015,29 @@ function _renderTransactionModalBody() {
   const dateLabel = _finTxDateLabel(_finTxDate);
 
   // Категорія (тільки коли НЕ передано — наприклад edit без категорії або з Inbox-pre-fill)
+  // B-52: категорії — більші/жирніші (primary), підкатегорії — менші/легші (secondary)
   const showCatPicker = !_finTxCategory || isEdit;
   const catPickerHtml = showCatPicker ? `
-    <div id="fntx-cats-wrap" style="margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Категорія</div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">
+    <div id="fntx-cats-wrap" style="margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Категорія</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map(c => {
           const active = c.name === _finTxCategory;
-          return `<button onclick="selectFinTxMainCat('${escapeHtml(c.name)}')" style="padding:5px 11px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${active ? 'rgba(194,65,12,0.08)' : 'white'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(c.name)}</button>`;
+          return `<button onclick="selectFinTxMainCat('${escapeHtml(c.name)}')" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.12)'};background:${active ? 'rgba(194,65,12,0.14)' : 'white'};color:${active ? '#c2410c' : '#1e1040'}">${escapeHtml(c.name)}</button>`;
         }).join('')}
       </div>
     </div>` : '';
 
-  // Підкатегорії — чіпи з cat.subcategories
+  // Підкатегорії — чіпи з cat.subcategories. Стиль: менші, легші, з лейблом "Підкатегорія"
   const subcatsHtml = subcats.length > 0 ? `
-    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">
-      ${subcats.map(s => {
-        const active = s === _finTxSubcategory;
-        return `<button onclick="selectFinTxSubcat('${escapeHtml(s)}')" style="padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.08)'};background:${active ? 'rgba(194,65,12,0.08)' : 'rgba(30,16,64,0.03)'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.45)'}">${escapeHtml(s)}</button>`;
-      }).join('')}
+    <div style="margin-bottom:12px;padding-left:10px;border-left:2px solid rgba(194,65,12,0.18)">
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Підкатегорія</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${subcats.map(s => {
+          const active = s === _finTxSubcategory;
+          return `<button onclick="selectFinTxSubcat('${escapeHtml(s)}')" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.08)'};background:${active ? 'rgba(194,65,12,0.06)' : 'rgba(30,16,64,0.02)'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(s)}</button>`;
+        }).join('')}
+      </div>
     </div>` : '';
 
   // Калькулятор: 4 ряди × 4 кнопки (числа + операції + ⌫ + 📅)
@@ -1452,13 +1599,26 @@ export async function sendFinanceBarMessage() {
         // оброблено універсально
       } else if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
         const type = parsed.action === 'save_expense' ? 'expense' : 'income';
+        const amount = parseFloat(parsed.amount);
+        const category = parsed.category || 'Інше';
+        const comment = parsed.comment || '';
+        const ts = Date.now();
         const txs2 = getFinance();
-        txs2.unshift({ id: Date.now(), type, amount: parseFloat(parsed.amount), category: parsed.category || 'Інше', comment: parsed.comment || '', ts: Date.now() });
+        txs2.unshift({ id: ts, type, amount, category, comment, ts });
         saveFinance(txs2);
+        // B-48: створюємо картку у стрічці Inbox (раніше тільки при створенні через Inbox)
+        // Це підтримує принцип "одного джерела правди" — будь-яка операція видима у стрічці
+        try {
+          const items = getInbox();
+          const inboxText = `${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}${comment ? ' — ' + comment : ''}`;
+          items.unshift({ id: ts, text: inboxText, category: 'finance', ts, processed: true });
+          saveInbox(items);
+          renderInbox();
+        } catch(e) {}
         renderFinance();
         try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
-        addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(parsed.amount)} · ${parsed.category}`);
-        checkFinBudgetWarning(type, parsed.category, parseFloat(parsed.amount));
+        addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}`);
+        checkFinBudgetWarning(type, category, amount);
       } else if (parsed.action === 'delete_transaction') {
         const item = getFinance().find(t => t.id === parsed.id);
         const _item = getFinance().find(t => t.id === parsed.id);
@@ -1551,11 +1711,13 @@ function _renderCatEditModalBody() {
   const isNew = _finEditingCatId === 'new';
   const iconsHtml = FIN_CAT_ICON_NAMES.map(name => {
     const active = name === d.icon;
-    return `<button onclick="selectCatModalIcon('${name}')" style="width:42px;height:42px;border-radius:50%;border:2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'};background:${active ? d.color + '20' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : 'rgba(30,16,64,0.55)', 20)}</button>`;
+    // B-59: data-cat-icon дозволяє точкове оновлення без re-render
+    return `<button data-cat-icon="${name}" onclick="selectCatModalIcon('${name}')" style="width:42px;height:42px;border-radius:50%;border:2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'};background:${active ? d.color + '20' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : 'rgba(30,16,64,0.55)', 20)}</button>`;
   }).join('');
   const colorsHtml = FIN_CAT_PALETTE.map(c => {
     const active = c === d.color;
-    return `<button onclick="selectCatModalColor('${c}')" style="width:32px;height:32px;border-radius:50%;border:3px solid ${active ? '#1e1040' : 'transparent'};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
+    // B-59: data-cat-color дозволяє точкове оновлення без re-render
+    return `<button data-cat-color="${c}" onclick="selectCatModalColor('${c}')" style="width:32px;height:32px;border-radius:50%;border:3px solid ${active ? '#1e1040' : 'transparent'};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
   }).join('');
   const subcatsHtml = d.subcategories.map((s, i) =>
     `<div style="display:flex;align-items:center;gap:6px">
@@ -1627,13 +1789,63 @@ function _renderCatEditModalBody() {
   </div>`;
 }
 
-function _refreshCatEditModal() {
+// B-59: зберігаємо scrollTop і focus перед re-render + точкові оновлення для частих дій
+// (колір / іконка / видалення підкатегорії — без re-render всієї модалки)
+function _refreshCatEditModal(options = {}) {
   const modal = document.getElementById('fin-cat-edit-modal');
-  if (modal) modal.innerHTML = _renderCatEditModalBody();
+  if (!modal) return;
+  const scrollEl = modal.querySelector('div[style*="overflow-y:auto"]');
+  const prevScroll = scrollEl ? scrollEl.scrollTop : 0;
+  const activeId = document.activeElement?.id || '';
+  const activeSelStart = document.activeElement?.selectionStart;
+  const activeSelEnd = document.activeElement?.selectionEnd;
+  modal.innerHTML = _renderCatEditModalBody();
+  // Відновлюємо scrollTop
+  const newScroll = modal.querySelector('div[style*="overflow-y:auto"]');
+  if (newScroll && prevScroll > 0) newScroll.scrollTop = prevScroll;
+  // Відновлюємо focus на тому ж полі
+  if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el && typeof el.focus === 'function') {
+      el.focus();
+      if (el.setSelectionRange && activeSelStart != null) {
+        try { el.setSelectionRange(activeSelStart, activeSelEnd); } catch(e) {}
+      }
+    }
+  }
 }
 
-function selectCatModalIcon(name) { _finCatModalDraft.icon = name; _refreshCatEditModal(); }
-function selectCatModalColor(c)   { _finCatModalDraft.color = c; _refreshCatEditModal(); }
+// Точкові updates — міняють тільки стилі існуючих кнопок, без re-render (B-59)
+function _updateCatModalIconHighlight() {
+  const modal = document.getElementById('fin-cat-edit-modal');
+  if (!modal) return;
+  const d = _finCatModalDraft;
+  const btns = modal.querySelectorAll('button[data-cat-icon]');
+  btns.forEach(b => {
+    const name = b.dataset.catIcon;
+    const active = name === d.icon;
+    b.style.border = `2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'}`;
+    b.style.background = active ? d.color + '20' : 'white';
+    const svg = b.querySelector('svg');
+    if (svg) svg.setAttribute('stroke', active ? d.color : 'rgba(30,16,64,0.55)');
+  });
+}
+function _updateCatModalColorHighlight() {
+  const modal = document.getElementById('fin-cat-edit-modal');
+  if (!modal) return;
+  const d = _finCatModalDraft;
+  const btns = modal.querySelectorAll('button[data-cat-color]');
+  btns.forEach(b => {
+    const c = b.dataset.catColor;
+    const active = c === d.color;
+    b.style.border = `3px solid ${active ? '#1e1040' : 'transparent'}`;
+  });
+  // Іконки теж оновлюємо — вони підсвічуються активним кольором
+  _updateCatModalIconHighlight();
+}
+
+function selectCatModalIcon(name) { _finCatModalDraft.icon = name; _updateCatModalIconHighlight(); }
+function selectCatModalColor(c)   { _finCatModalDraft.color = c; _updateCatModalColorHighlight(); }
 function setCatModalType(t)       { _finCatModalDraft.type = t; _refreshCatEditModal(); }
 function toggleCatModalArchive()  { _finCatModalDraft.archived = !_finCatModalDraft.archived; _refreshCatEditModal(); }
 function addCatModalSubcat()      { _finCatModalDraft.subcategories.push(''); _refreshCatEditModal(); }
@@ -1718,28 +1930,25 @@ function closeFinAnalytics() {
   document.getElementById('fin-analytics-modal')?.remove();
 }
 
+// B-62: State аналітики (режим графіка + індекси міні-метрик)
+let _analyticsChartMode = 'expenses-weekly'; // 'balance' | 'expenses-weekly' | 'income-vs-expense'
+let _analyticsMiniIdx = [0, 0, 0]; // 3 незалежні блоки, кожен у своєму індексі метрики
+let _analyticsBenchmarkEdit = false; // режим редагування benchmark (кастомні %)
+
 function _buildAnalyticsContent(allTxs) {
-  // Крок 2+: тут з'являтимуться графіки, інсайти, benchmark, прогноз.
-  // Поки — placeholder з описом що буде.
   const sections = [];
-
-  // Секція 1: Графік тренду 8 тижнів
-  sections.push(_analyticsWeeklyTrend(allTxs));
-
-  // Секція 2: 3 інсайт-картки
-  sections.push(_analyticsInsightCards(allTxs));
-
-  // Секція 3: 50/30/20 benchmark
+  sections.push(_analyticsChart(allTxs));
+  sections.push(_analyticsMiniMetrics(allTxs));
   sections.push(_analyticsBenchmark(allTxs));
-
   return sections.join('');
 }
 
-// Крок 2: графік тренду 8 тижнів
-function _analyticsWeeklyTrend(allTxs) {
+// B-62 Крок 1: Головний графік з 3 метриками на вибір.
+// Toggle-перемикач над графіком: Капітал / Витрати по тижнях / Доходи vs Витрати
+function _analyticsChart(allTxs) {
   const now = new Date();
   const WEEKS = 8;
-  const bars = [];
+  const weeks = [];
   for (let w = WEEKS - 1; w >= 0; w--) {
     const weekEnd = new Date(now);
     weekEnd.setDate(now.getDate() - w * 7);
@@ -1747,43 +1956,212 @@ function _analyticsWeeklyTrend(allTxs) {
     const weekStart = new Date(weekEnd);
     weekStart.setDate(weekEnd.getDate() - 6);
     weekStart.setHours(0, 0, 0, 0);
-    const from = weekStart.getTime();
-    const to = weekEnd.getTime();
-    const exp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts <= to).reduce((s, t) => s + t.amount, 0);
-    const inc = allTxs.filter(t => t.type === 'income' && t.ts >= from && t.ts <= to).reduce((s, t) => s + t.amount, 0);
+    const exp = allTxs.filter(t => t.type === 'expense' && t.ts >= weekStart.getTime() && t.ts <= weekEnd.getTime()).reduce((s, t) => s + t.amount, 0);
+    const inc = allTxs.filter(t => t.type === 'income' && t.ts >= weekStart.getTime() && t.ts <= weekEnd.getTime()).reduce((s, t) => s + t.amount, 0);
     const label = `${weekStart.getDate()}.${String(weekStart.getMonth() + 1).padStart(2, '0')}`;
-    bars.push({ label, exp, inc, isCurrent: w === 0 });
+    weeks.push({ label, exp, inc, isCurrent: w === 0 });
   }
 
-  const maxVal = Math.max(1, ...bars.map(b => Math.max(b.exp, b.inc)));
-  const barsHtml = bars.map(b => {
-    const expH = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
-    const incH = b.inc > 0 ? Math.max(4, Math.round(b.inc / maxVal * 80)) : 0;
-    const labelCol = b.isCurrent ? '#c2410c' : 'rgba(30,16,64,0.35)';
-    const labelW = b.isCurrent ? '700' : '500';
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
-      <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
-        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
-        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
-      </div>
-      <div style="font-size:9px;font-weight:${labelW};color:${labelCol};margin-top:4px">${b.label}</div>
-      ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.35);margin-top:1px">${formatMoney(b.exp)}</div>` : ''}
-    </div>`;
-  }).join('');
+  // Капітал = накопичувальний баланс (сума доходів мінус витрат на цей тиждень від всіх часів)
+  const balances = [];
+  let cumBalance = 0;
+  // Початкове значення — сума всіх операцій до найраннішого тижня
+  const firstWeekStart = new Date(now);
+  firstWeekStart.setDate(now.getDate() - (WEEKS - 1) * 7 - 6);
+  firstWeekStart.setHours(0, 0, 0, 0);
+  allTxs.filter(t => t.ts < firstWeekStart.getTime()).forEach(t => {
+    cumBalance += (t.type === 'income' ? t.amount : -t.amount);
+  });
+  weeks.forEach(w => { cumBalance += w.inc - w.exp; balances.push(cumBalance); });
 
-  return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="fin-section-label">Тренд за 8 тижнів</div>
-      <div style="display:flex;gap:10px">
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Витрати</span></div>
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Доходи</span></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+  // Toggle кнопки
+  const modes = [
+    { id: 'balance',          label: 'Капітал',  desc: 'Накопичувальний баланс' },
+    { id: 'expenses-weekly',  label: 'Витрати',  desc: 'Сума витрат по тижнях' },
+    { id: 'income-vs-expense',label: 'Доходи',   desc: 'Доходи vs витрати' },
+  ];
+  const toggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:10px">
+    ${modes.map(m => {
+      const active = m.id === _analyticsChartMode;
+      return `<button onclick="setAnalyticsChartMode('${m.id}')" style="flex:1;padding:6px;border-radius:8px;border:none;background:${active ? 'white' : 'transparent'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:${active ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${m.label}</button>`;
+    }).join('')}
+  </div>`;
+  const modeObj = modes.find(m => m.id === _analyticsChartMode) || modes[1];
+
+  // Рендер графіка залежно від режиму
+  let chartHtml = '';
+  if (_analyticsChartMode === 'balance') {
+    // Лінія балансу (polyline)
+    const minB = Math.min(0, ...balances);
+    const maxB = Math.max(1, ...balances);
+    const range = maxB - minB || 1;
+    const pts = balances.map((b, i) => {
+      const x = (i / (WEEKS - 1)) * 100;
+      const y = 100 - ((b - minB) / range) * 100;
+      return `${x},${y}`;
+    }).join(' ');
+    const zeroY = 100 - ((0 - minB) / range) * 100;
+    chartHtml = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+      <line x1="0" y1="${zeroY}" x2="100" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="0.3" stroke-dasharray="1,1"/>
+      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      ${balances.map((b, i) => {
+        const x = (i / (WEEKS - 1)) * 100;
+        const y = 100 - ((b - minB) / range) * 100;
+        return `<circle cx="${x}" cy="${y}" r="1.2" fill="#0ea5e9"/>`;
+      }).join('')}
+    </svg>
+    <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
+    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">Поточний: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
+  } else if (_analyticsChartMode === 'expenses-weekly') {
+    const maxVal = Math.max(1, ...weeks.map(w => w.exp));
+    const barsHtml = weeks.map(w => {
+      const h = w.exp > 0 ? Math.max(4, Math.round(w.exp / maxVal * 80)) : 0;
+      const col = w.isCurrent ? '#c2410c' : '#f97316';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:0">
+        <div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">
+          <div style="width:70%;height:${h}px;background:${col};border-radius:3px 3px 0 0"></div>
+        </div>
+        <div style="font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${w.label}</div>
+        ${w.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.4);margin-top:1px">${formatMoney(w.exp)}</div>` : ''}
+      </div>`;
+    }).join('');
+    chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px">${barsHtml}</div>`;
+  } else {
+    // income-vs-expense — двоколірні бари як було
+    const maxVal = Math.max(1, ...weeks.map(w => Math.max(w.exp, w.inc)));
+    const barsHtml = weeks.map(w => {
+      const expH = w.exp > 0 ? Math.max(4, Math.round(w.exp / maxVal * 80)) : 0;
+      const incH = w.inc > 0 ? Math.max(4, Math.round(w.inc / maxVal * 80)) : 0;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
+        <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
+          <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
+          <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
+        </div>
+        <div style="font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${w.label}</div>
+      </div>`;
+    }).join('');
+    chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Витрати</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Доходи</span></div>
+    </div>`;
+  }
+
+  return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px;margin-bottom:12px">
+    ${toggleHtml}
+    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} · 8 тижнів</div>
+    ${chartHtml}
   </div>`;
 }
 
-// Крок 3: 3 інсайт-картки (витрати vs минулий, динаміка топ-категорії, середній день)
+// B-62 Крок 2: 9 метрик у 3 перемиканих міні-блоках.
+// Кожен блок має стрілки ‹ › для перемикання метрики. Коротка назва + велике число + опис.
+function _analyticsMiniMetrics(allTxs) {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+  const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+  const prevTo = from;
+  const monthExp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to);
+  const monthInc = allTxs.filter(t => t.type === 'income' && t.ts >= from && t.ts < to);
+  const prevMonthExp = allTxs.filter(t => t.type === 'expense' && t.ts >= prevFrom && t.ts < prevTo);
+  const curExp = monthExp.reduce((s, t) => s + t.amount, 0);
+  const prevExp = prevMonthExp.reduce((s, t) => s + t.amount, 0);
+  const curInc = monthInc.reduce((s, t) => s + t.amount, 0);
+  const daysPassed = Math.max(1, now.getDate());
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+  // Топ категорія
+  const catMap = {};
+  monthExp.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+  // Середній чек + діапазон
+  const amounts = monthExp.map(t => t.amount);
+  const avgTx = amounts.length > 0 ? amounts.reduce((s, a) => s + a, 0) / amounts.length : 0;
+  const maxTx = amounts.length > 0 ? Math.max(...amounts) : 0;
+
+  // Витрати по днях
+  const dayMap = {};
+  monthExp.forEach(t => {
+    const d = new Date(t.ts).toDateString();
+    dayMap[d] = (dayMap[d] || 0) + t.amount;
+  });
+  const dayTotals = Object.values(dayMap);
+  const maxDay = dayTotals.length > 0 ? Math.max(...dayTotals) : 0;
+
+  // Прогноз до кінця місяця: поточний темп × днів у місяці
+  const forecastEnd = daysPassed > 0 ? (curExp / daysPassed) * daysInMonth : 0;
+
+  const metrics = [
+    {
+      label: 'Витрати місяця', value: formatMoney(curExp),
+      desc: prevExp > 0 ? `${curExp >= prevExp ? '+' : ''}${Math.round((curExp - prevExp) / prevExp * 100)}% vs минулий місяць` : 'перший місяць з даними',
+      color: '#c2410c',
+    },
+    {
+      label: 'В середньому/день', value: formatMoney(Math.round(curExp / daysPassed)),
+      desc: `за ${daysPassed} ${daysPassed === 1 ? 'день' : daysPassed < 5 ? 'дні' : 'днів'} місяця`,
+      color: '#1e1040',
+    },
+    {
+      label: 'Топ категорія', value: topCats.length > 0 ? topCats[0][0] : '—',
+      desc: topCats.length > 0 ? `${formatMoney(topCats[0][1])} · ${Math.round(topCats[0][1] / curExp * 100)}% витрат` : 'немає даних',
+      color: '#c2410c',
+    },
+    {
+      label: 'Заощадження', value: curInc > 0 ? Math.round((curInc - curExp) / curInc * 100) + '%' : '—',
+      desc: curInc > 0 ? `${formatMoney(curInc - curExp)} з ${formatMoney(curInc)}` : 'додай дохід',
+      color: curInc > 0 && curInc > curExp ? '#16a34a' : '#c2410c',
+    },
+    {
+      label: 'Операцій', value: monthExp.length,
+      desc: `середня ${formatMoney(Math.round(avgTx))}`,
+      color: '#0ea5e9',
+    },
+    {
+      label: 'Максимум за день', value: formatMoney(Math.round(maxDay)),
+      desc: dayTotals.length > 0 ? `найдорожчий з ${dayTotals.length} активних днів` : 'немає даних',
+      color: '#c2410c',
+    },
+    {
+      label: 'Найбільша операція', value: formatMoney(Math.round(maxTx)),
+      desc: amounts.length > 0 ? `з ${amounts.length} операцій` : 'немає даних',
+      color: '#c2410c',
+    },
+    {
+      label: 'Прогноз місяця', value: formatMoney(Math.round(forecastEnd)),
+      desc: `за поточним темпом до ${daysInMonth}.${String(now.getMonth() + 1).padStart(2, '0')}`,
+      color: '#0ea5e9',
+    },
+    {
+      label: 'Доходи місяця', value: formatMoney(curInc),
+      desc: monthInc.length > 0 ? `${monthInc.length} надходжень` : 'доходів не було',
+      color: '#16a34a',
+    },
+  ];
+
+  const renderMini = (blockIdx) => {
+    const idx = _analyticsMiniIdx[blockIdx] % metrics.length;
+    const m = metrics[idx];
+    return `<div style="flex:1;background:white;border-radius:14px;box-shadow:0 2px 8px rgba(30,16,64,0.05);padding:10px 8px;text-align:center;min-width:0;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.label)}</div>
+      <div style="font-size:${typeof m.value === 'string' && m.value.length > 6 ? '15px' : '19px'};font-weight:900;color:${m.color};line-height:1.1;margin:6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(String(m.value))}</div>
+      <div style="font-size:9px;color:rgba(30,16,64,0.45);line-height:1.3;min-height:24px">${escapeHtml(m.desc)}</div>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button onclick="shiftAnalyticsMini(${blockIdx}, -1)" aria-label="Попередня" style="flex:1;padding:3px;border-radius:6px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);font-size:10px;cursor:pointer;font-family:inherit">‹</button>
+        <div style="font-size:9px;color:rgba(30,16,64,0.3);align-self:center">${idx + 1}/${metrics.length}</div>
+        <button onclick="shiftAnalyticsMini(${blockIdx}, 1)" aria-label="Наступна" style="flex:1;padding:3px;border-radius:6px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);font-size:10px;cursor:pointer;font-family:inherit">›</button>
+      </div>
+    </div>`;
+  };
+
+  return `<div style="display:flex;gap:8px;margin-bottom:12px">
+    ${renderMini(0)}${renderMini(1)}${renderMini(2)}
+  </div>`;
+}
+
+// Крок 3: 3 інсайт-картки (legacy, не використовуємо після B-62 — залишаємо для сумісності)
 function _analyticsInsightCards(allTxs) {
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -1843,25 +2221,41 @@ function _analyticsInsightCards(allTxs) {
   </div>`;
 }
 
-// Крок 4: 50/30/20 benchmark (візуальний 3-сектор бар)
+// Крок 4: 50/30/20 benchmark з кастомними % і назвами (B-62).
+// Кнопка ✎ у хедері → режим редагування (input'и для % і назв).
+// Збереження у localStorage key 'nm_fin_benchmark' = { needs:{pct,name}, wants:{pct,name}, savings:{pct,name} }
+function _getBenchmarkConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('nm_fin_benchmark') || 'null');
+    if (saved && saved.needs && saved.wants && saved.savings) return saved;
+  } catch(e) {}
+  return {
+    needs:   { pct: 50, name: 'Потреби' },
+    wants:   { pct: 30, name: 'Бажання' },
+    savings: { pct: 20, name: 'Заощадження' },
+  };
+}
+
 function _analyticsBenchmark(allTxs) {
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
   const curInc = allTxs.filter(t => t.type === 'income' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
   const curExp = allTxs.filter(t => t.type === 'expense' && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+  const cfg = _getBenchmarkConfig();
 
-  if (curInc <= 0) {
+  if (curInc <= 0 && !_analyticsBenchmarkEdit) {
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
-      <div class="fin-section-label" style="margin-bottom:8px">Розподіл 50/30/20</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="fin-section-label">Розподіл доходу</div>
+        <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+      </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">Додай дохід щоб побачити розподіл</div>
     </div>`;
   }
 
   const spent = curExp;
-  const saved = curInc - curExp;
-  const spentPct = Math.round(spent / curInc * 100);
-  const savedPct = Math.round(saved / curInc * 100);
+  const saved = Math.max(0, curInc - curExp);
 
   // Категоризація витрат: потреби (Їжа, Житло, Транспорт, Здоров'я) vs бажання (решта)
   const needsCats = ['їжа', 'житло', 'транспорт', "здоров'я", 'здоровʼя', 'здоровя'];
@@ -1869,17 +2263,49 @@ function _analyticsBenchmark(allTxs) {
   const needsAmt = monthExp.filter(t => needsCats.includes(t.category.toLowerCase())).reduce((s, t) => s + t.amount, 0);
   const wantsAmt = spent - needsAmt;
 
-  const needsPct = Math.round(needsAmt / curInc * 100);
-  const wantsPct = Math.round(wantsAmt / curInc * 100);
+  const denom = curInc > 0 ? curInc : 1;
+  const needsPct = Math.round(needsAmt / denom * 100);
+  const wantsPct = Math.round(wantsAmt / denom * 100);
+  const savedPct = Math.round(saved / denom * 100);
 
-  // Бар-діаграма
-  const bar = (label, pct, target, color) => {
-    const w = Math.max(2, Math.min(100, pct));
-    const isOver = pct > target;
+  // Режим редагування: input'и для кастомних % і назв
+  if (_analyticsBenchmarkEdit) {
+    const editRow = (key, real, color) => {
+      const item = cfg[key];
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+          <input type="text" value="${escapeHtml(item.name)}" oninput="setBenchmarkField('${key}','name',this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.95)">
+          <input type="number" min="0" max="100" value="${item.pct}" oninput="setBenchmarkField('${key}','pct',parseInt(this.value)||0)" style="width:55px;border:1.5px solid rgba(30,16,64,0.12);border-radius:8px;padding:5px 8px;font-size:13px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;text-align:right">
+          <span style="font-size:12px;color:rgba(30,16,64,0.4)">%</span>
+        </div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4)">фактично: ${real}%</div>
+      </div>`;
+    };
+    const totalPct = cfg.needs.pct + cfg.wants.pct + cfg.savings.pct;
+    const sumWarning = totalPct !== 100 ? `<div style="font-size:11px;color:#c2410c;margin-bottom:8px">⚠️ Сума ${totalPct}% — рекомендовано 100%</div>` : '';
+    return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="fin-section-label">Розподіл доходу · редагування</div>
+        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Готово</button>
+      </div>
+      ${sumWarning}
+      ${editRow('needs', needsPct, '#f97316')}
+      ${editRow('wants', wantsPct, '#0ea5e9')}
+      ${editRow('savings', savedPct, '#22c55e')}
+      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Скинути до 50/30/20</button>
+    </div>`;
+  }
+
+  // Звичайний режим (перегляд)
+  const bar = (cfgItem, realPct, color) => {
+    const target = cfgItem.pct;
+    const w = Math.max(2, Math.min(100, realPct));
+    const isOver = realPct > target;
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px">
-        <span style="color:#1e1040">${label}</span>
-        <span style="color:${isOver ? '#c2410c' : color};font-weight:700">${pct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">(ціль ${target}%)</span></span>
+        <span style="color:#1e1040">${escapeHtml(cfgItem.name)}</span>
+        <span style="color:${isOver ? '#c2410c' : color};font-weight:700">${realPct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">(ціль ${target}%)</span></span>
       </div>
       <div style="height:8px;background:rgba(30,16,64,0.06);border-radius:4px;overflow:hidden;position:relative">
         <div style="height:100%;width:${w}%;background:${color};border-radius:4px;transition:width 0.5s"></div>
@@ -1889,14 +2315,56 @@ function _analyticsBenchmark(allTxs) {
   };
 
   return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
-    <div class="fin-section-label" style="margin-bottom:14px">Розподіл доходу</div>
-    ${bar('Потреби', needsPct, 50, '#f97316')}
-    ${bar('Бажання', wantsPct, 30, '#0ea5e9')}
-    ${bar('Заощадження', savedPct, 20, '#22c55e')}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="fin-section-label">Розподіл доходу</div>
+      <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+    </div>
+    ${bar(cfg.needs, needsPct, '#f97316')}
+    ${bar(cfg.wants, wantsPct, '#0ea5e9')}
+    ${bar(cfg.savings, savedPct, '#22c55e')}
     <div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:8px;border-top:1px solid rgba(30,16,64,0.06);padding-top:8px">
-      Правило 50/30/20: 50% потреби (їжа, житло, транспорт), 30% бажання (решта), 20% заощадження
+      ${escapeHtml(cfg.needs.name)} ${cfg.needs.pct}% · ${escapeHtml(cfg.wants.name)} ${cfg.wants.pct}% · ${escapeHtml(cfg.savings.name)} ${cfg.savings.pct}%. Тап ✎ щоб змінити % або назви.
     </div>
   </div>`;
+}
+
+// B-62 обробники
+function setAnalyticsChartMode(mode) { _analyticsChartMode = mode; _refreshAnalyticsContent(); }
+function shiftAnalyticsMini(blockIdx, delta) {
+  _analyticsMiniIdx[blockIdx] = (_analyticsMiniIdx[blockIdx] + delta + 999) % 9;
+  _refreshAnalyticsContent();
+}
+function toggleAnalyticsBenchmarkEdit() { _analyticsBenchmarkEdit = !_analyticsBenchmarkEdit; _refreshAnalyticsContent(); }
+function setBenchmarkField(key, field, value) {
+  const cfg = _getBenchmarkConfig();
+  if (!cfg[key]) return;
+  cfg[key][field] = value;
+  localStorage.setItem('nm_fin_benchmark', JSON.stringify(cfg));
+  // Не рендеримо зараз — користувач пише, перерендер лише коли вийде з edit
+}
+function resetBenchmarkConfig() {
+  localStorage.removeItem('nm_fin_benchmark');
+  _refreshAnalyticsContent();
+}
+function _refreshAnalyticsContent() {
+  const modal = document.getElementById('fin-analytics-modal');
+  if (!modal) return;
+  const scrollEl = modal.querySelector('div[style*="overflow-y:auto"]');
+  if (!scrollEl) return;
+  const prevScroll = scrollEl.scrollTop;
+  const activeId = document.activeElement?.id || '';
+  const activeSelStart = document.activeElement?.selectionStart;
+  scrollEl.innerHTML = _buildAnalyticsContent(getFinance());
+  scrollEl.scrollTop = prevScroll;
+  if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el && typeof el.focus === 'function') {
+      el.focus();
+      if (el.setSelectionRange && activeSelStart != null) {
+        try { el.setSelectionRange(activeSelStart, activeSelStart); } catch(e) {}
+      }
+    }
+  }
 }
 
 // === WINDOW EXPORTS (HTML handlers only) ===
@@ -1920,6 +2388,9 @@ Object.assign(window, {
   openFinDateModal, closeFinDateModal, setFinTxDateOffset, setFinTxDateFromInput,
   // Аналітика
   openFinAnalytics, closeFinAnalytics,
+  // B-62 Аналітика v2: режим графіка, міні-метрики, benchmark edit
+  setAnalyticsChartMode, shiftAnalyticsMini, toggleAnalyticsBenchmarkEdit,
+  setBenchmarkField, resetBenchmarkConfig,
 });
 // _finTxComment мусить бути доступний з inline oninput
 Object.defineProperty(window, '_finTxComment', {

@@ -386,10 +386,11 @@
 
 
     <!-- PAGE: NOTES -->
-    <div class="page" id="page-notes">
-      <!-- Sticky header: заголовок + табло -->
-      <div style="position:sticky;top:0;z-index:10;background:#fed7aa">
-        <div class="page-header" style="position:relative;top:auto">
+    <div class="page" id="page-notes" style="display:flex;flex-direction:column;height:100%">
+
+      <!-- FIXED TOP: header + OWL board (B-45: єдина структура як у Фінансах) -->
+      <div id="notes-fixed-top" style="flex-shrink:0;padding:0 14px">
+        <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title">Нотатки</span>
           <div class="header-actions">
             <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
@@ -401,23 +402,24 @@
         </div>
 
         <!-- OWL TAB BOARD: NOTES -->
-        <div id="owl-tab-board-notes" style="display:none;padding:0 14px"></div>
-      </div><!-- /sticky header -->
+        <div id="owl-tab-board-notes" style="display:none"></div>
+      </div><!-- /notes-fixed-top -->
 
-      <!-- 15.04 jMR6m: AI suggestion banner #notes-ai-banner прибрано (фіча "OWL пропонує
-           структуру папок" прибрана повністю — деталі у src/tabs/notes.js і ROADMAP.md). -->
+      <div id="notes-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(var(--tabbar-h,83px) + 34px)">
+        <!-- 15.04 jMR6m: AI suggestion banner #notes-ai-banner прибрано -->
 
-      <!-- Folder header (назад + назва папки) -->
-      <div id="notes-folder-header" style="display:none;align-items:center;justify-content:space-between;padding:4px 14px 10px;gap:8px"></div>
-      <!-- Folders + notes list -->
-      <div id="notes-content" style="padding:0 0 calc(var(--tabbar-h,83px) + 34px)"></div>
+        <!-- Folder header (назад + назва папки) -->
+        <div id="notes-folder-header" style="display:none;align-items:center;justify-content:space-between;padding:4px 0 10px;gap:8px"></div>
+        <!-- Folders + notes list -->
+        <div id="notes-content"></div>
 
-      <!-- Empty state -->
-      <div id="notes-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
-        <div style="font-size:46px;margin-bottom:12px;opacity:0.3">◫</div>
-        <div style="font-weight:700;font-size:17px;margin-bottom:6px">Нотатки порожні</div>
-        <div style="font-size:15px">Записи з Inbox або натисни +</div>
-      </div>
+        <!-- Empty state -->
+        <div id="notes-empty" style="display:none;text-align:center;padding:80px 32px;color:rgba(30,16,64,0.35)">
+          <div style="font-size:46px;margin-bottom:12px;opacity:0.3">◫</div>
+          <div style="font-weight:700;font-size:17px;margin-bottom:6px">Нотатки порожні</div>
+          <div style="font-size:15px">Записи з Inbox або натисни +</div>
+        </div>
+      </div><!-- /notes-scroll -->
     </div>
 
     <!-- PAGE: ME -->
