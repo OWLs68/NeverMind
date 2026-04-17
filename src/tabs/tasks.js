@@ -4,7 +4,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
@@ -429,15 +429,27 @@ async function sendTaskChatMessage() {
           addTaskChatMsg('agent', reply);
         }
       } catch {
-        if (/\{"action"/.test(reply)) {
-          try {
-            const jsonMatch = reply.match(/\{[\s\S]*\}/);
-            const p = JSON.parse(jsonMatch[0]);
-            if (!processUniversalAction(p, text, addTaskChatMsg)) addTaskChatMsg('agent', reply);
-          } catch { addTaskChatMsg('agent', reply); }
-        } else {
-          addTaskChatMsg('agent', reply);
+        // Якщо reply містить кілька JSON дій підряд або JSON з оточуючим текстом —
+        // розбиваємо на окремі блоки і обробляємо кожен (множинні дії в одному chat).
+        const blocks = extractJsonBlocks(reply);
+        let handled = false;
+        for (const p of blocks) {
+          if (p.steps && Array.isArray(p.steps) && p.steps.length > 0) {
+            const allTasks = getTasks();
+            const taskIdx = allTasks.findIndex(x => x.id === taskChatId);
+            if (taskIdx !== -1) {
+              const newSteps = p.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+              allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
+              saveTasks(allTasks);
+              renderTasks();
+              addTaskChatMsg('agent', `✅ Додав ${p.steps.length} кроків до задачі. Перевір картку.`);
+              handled = true;
+            }
+          } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
+            handled = true;
+          }
         }
+        if (!handled) addTaskChatMsg('agent', reply);
       }
     }
     else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
