@@ -8236,7 +8236,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       id: "cat_" + safeSlug + "_" + Date.now().toString(36) + idx,
       name,
       icon: FIN_DEFAULT_ICONS[name] || "other",
-      color: pickRandomCatColor(idx),
+      color: FIN_DEFAULT_COLORS[name] || pickRandomCatColor(idx),
       subcategories: (FIN_DEFAULT_SUBCATS[name] || []).slice(),
       archived: false,
       order: idx
@@ -8255,9 +8255,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (typeof c === "string") return _makeCatObj(c, startIdx + i);
       if (!c || typeof c !== "object") return _makeCatObj("\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u043E", startIdx + i);
       if (!c.id || !c.name) return _makeCatObj(c.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438", startIdx + i);
-      if (!c.icon) c.icon = "other";
-      if (!c.color) c.color = pickRandomCatColor(i);
+      const known = FIN_DEFAULT_COLORS[c.name];
+      if (!c.icon || c.icon === "other") c.icon = FIN_DEFAULT_ICONS[c.name] || c.icon || "other";
+      if (!c.color) c.color = known || pickRandomCatColor(i);
+      else if (c.color.toLowerCase() === FIN_BROKEN_DEFAULT_COLOR && known && known !== FIN_BROKEN_DEFAULT_COLOR) c.color = known;
       if (!Array.isArray(c.subcategories)) c.subcategories = [];
+      if (c.subcategories.length === 0 && FIN_DEFAULT_SUBCATS[c.name]) c.subcategories = FIN_DEFAULT_SUBCATS[c.name].slice();
       if (typeof c.archived !== "boolean") c.archived = false;
       if (typeof c.order !== "number") c.order = i;
       return c;
@@ -8312,9 +8315,9 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const newCat = {
       id: "cat_" + (data.name || "new").toLowerCase().replace(/[^\wа-яґєії]/gi, "_").slice(0, 20) + "_" + Date.now().toString(36),
       name: data.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438",
-      icon: data.icon || "other",
-      color: data.color || pickRandomCatColor(order),
-      subcategories: data.subcategories || [],
+      icon: data.icon || FIN_DEFAULT_ICONS[data.name] || "other",
+      color: data.color || FIN_DEFAULT_COLORS[data.name] || pickRandomCatColor(order),
+      subcategories: data.subcategories && data.subcategories.length ? data.subcategories : (FIN_DEFAULT_SUBCATS[data.name] || []).slice(),
       archived: false,
       order
     };
@@ -8411,7 +8414,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     return false;
   }
-  var FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS;
+  var FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, FIN_DEFAULT_COLORS, FIN_BROKEN_DEFAULT_COLOR;
   var init_finance_cats = __esm({
     "src/tabs/finance-cats.js"() {
       init_finance();
@@ -8538,6 +8541,61 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         "\u0416\u0438\u0442\u043B\u043E": ["\u041E\u0440\u0435\u043D\u0434\u0430", "\u041A\u043E\u043C\u0443\u043D\u0430\u043B\u044C\u043D\u0456", "\u0406\u043D\u0442\u0435\u0440\u043D\u0435\u0442", "\u0420\u0435\u043C\u043E\u043D\u0442", "\u041C\u0435\u0431\u043B\u0456"],
         "\u041F\u043E\u043A\u0443\u043F\u043A\u0438": ["\u041E\u0434\u044F\u0433", "\u0422\u0435\u0445\u043D\u0456\u043A\u0430", "\u041A\u043D\u0438\u0433\u0438", "\u041F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438", "\u0414\u0456\u043C"]
       };
+      FIN_DEFAULT_COLORS = {
+        // Витрати — головні
+        "\u0407\u0436\u0430": "#f97316",
+        // оранжевий — апетитний
+        "\u0407\u0434\u0430": "#f97316",
+        "\u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442": "#22c55e",
+        // зелений — рух
+        "\u0410\u0432\u0442\u043E": "#22c55e",
+        "\u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438": "#a16207",
+        // темний бурштин — підписний сервіс
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#ec4899",
+        // рожевий — серце
+        "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F": "#ec4899",
+        "\u0417\u0434\u043E\u0440\u043E\u0432\u044F": "#ec4899",
+        "\u0416\u0438\u0442\u043B\u043E": "#ef4444",
+        // червоний — дім
+        "\u041F\u043E\u043A\u0443\u043F\u043A\u0438": "#14b8a6",
+        // бірюзовий
+        "\u0406\u043D\u0448\u0435": "#78716c",
+        // сірий — єдине допустиме місце сірого (Інше-як-інше)
+        // Витрати — типові назви що AI генерує
+        "\u041A\u0443\u0440\u0435\u0432\u043E": "#0ea5e9",
+        // блакитний
+        "\u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438": "#0ea5e9",
+        "\u041A\u0430\u0444\u0435": "#f59e0b",
+        // бурштиновий
+        "\u041F\u0430\u043B\u0438\u0432\u043E": "#eab308",
+        // жовтий
+        "\u0411\u0435\u043D\u0437\u0438\u043D": "#eab308",
+        "\u0421\u043F\u043E\u0440\u0442": "#84cc16",
+        // лайм
+        "\u0421\u043F\u043E\u0440\u0442\u0437\u0430\u043B": "#84cc16",
+        "\u0420\u043E\u0437\u0432\u0430\u0433\u0438": "#f43f5e",
+        // малиновий
+        "\u0414\u043E\u0437\u0432\u0456\u043B\u043B\u044F": "#f43f5e",
+        "\u041E\u0441\u0432\u0456\u0442\u0430": "#3b82f6",
+        // синій
+        "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456": "#06b6d4",
+        // циан
+        "\u0417\u0432'\u044F\u0437\u043E\u043A": "#6366f1",
+        // індиго
+        "\u0417\u0432\u044F\u0437\u043E\u043A": "#6366f1",
+        "\u0406\u043D\u0442\u0435\u0440\u043D\u0435\u0442": "#6366f1",
+        "\u0422\u0440\u0430\u0432\u0430": "#22c55e",
+        "\u0411\u043E\u0440\u0433\u0438": "#ef4444",
+        "\u0420\u043E\u0431\u043E\u0442\u0430": "#a16207",
+        // Доходи
+        "\u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430": "#22c55e",
+        // зелений — основний дохід
+        "\u041D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F": "#16a34a",
+        // темно-зелений
+        "\u041F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F": "#14b8a6"
+        // бірюзовий
+      };
+      FIN_BROKEN_DEFAULT_COLOR = "#78716c";
     }
   });
 
