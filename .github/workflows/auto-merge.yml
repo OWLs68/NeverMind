@@ -37,22 +37,31 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git checkout main
-          # Версія у main ДО merge (актуальна)
-          MAIN_VERSION=$(grep 'id="deploy-version"' index.html | grep -oP 'v\K\d+' | head -1)
+
+          # B-74 fix (17.04.2026 cnTkD): абсолютний лічильник деплоїв у deploy-counter.txt.
+          # Причина: раніше номер читали з бейджа у index.html — будь-який git reset --hard
+          # відкочував index.html → втрачали всі деплої після reset-точки (14.04 скид втратив
+          # v54-v130, див. docs/CHANGES.md запис 17.04 "Deploy counter reset investigation").
+          # Логіка: читаємо deploy-counter.txt ДО merge, після merge — ще раз, беремо MAX
+          # (захист від `-X theirs` який міг би відкотити до старого значення з гілки).
+          COUNTER_MAIN=$(cat deploy-counter.txt 2>/dev/null || echo "184")
 
           git merge --no-edit -X theirs ${{ github.ref_name }}
 
-          # Версія після merge (може бути старіша через -X theirs якщо claude гілка
-          # містила старий текст бейджа — це нормально, беремо MAX з двох)
-          BRANCH_VERSION=$(grep 'id="deploy-version"' index.html | grep -oP 'v\K\d+' | head -1)
-          if [ "$MAIN_VERSION" -gt "$BRANCH_VERSION" ]; then
-            OLD_VERSION=$MAIN_VERSION
+          COUNTER_AFTER_MERGE=$(cat deploy-counter.txt 2>/dev/null || echo "184")
+          if [ "$COUNTER_AFTER_MERGE" -gt "$COUNTER_MAIN" ]; then
+            OLD_COUNTER=$COUNTER_AFTER_MERGE
           else
-            OLD_VERSION=$BRANCH_VERSION
+            OLD_COUNTER=$COUNTER_MAIN
           fi
-          NEW_VERSION=$((OLD_VERSION + 1))
+          NEW_VERSION=$((OLD_COUNTER + 1))
           VERSION="v${NEW_VERSION}"
           DEPLOY_TIME=$(TZ='Europe/Amsterdam' date '+%d.%m %H:%M')
+
+          # Оновлюємо лічильник у файлі — наступний деплой прочитає нове значення
+          echo "$NEW_VERSION" > deploy-counter.txt
+
+          # Оновлюємо бейдж у index.html
           sed -i "s|>v[0-9]* · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]<|>${VERSION} · ${DEPLOY_TIME}<|" index.html
 
           # Записуємо інформацію про деплой у data-* атрибути бейджа
@@ -63,7 +72,7 @@ jobs:
           sed -i "s|data-source=\"[^\"]*\"|data-source=\"${SOURCE_BRANCH}\"|" index.html
           sed -i "s|data-branch=\"[^\"]*\"|data-branch=\"main\"|" index.html
 
-          git add index.html
+          git add index.html deploy-counter.txt
           git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME}"
 
       - name: Build bundle
