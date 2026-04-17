@@ -16805,6 +16805,8 @@ ${legacy}`;
   var _finTxDate = Date.now();
   var _finEditingCatId = null;
   var _finCatModalDraft = null;
+  var _catModalIconExpanded = false;
+  var _catModalColorExpanded = false;
   function closeFinTxModal() {
     document.getElementById("fin-tx-modal")?.remove();
   }
@@ -17225,6 +17227,8 @@ ${legacy}`;
       draft = { ...found.cat, type: found.type, subcategories: [...found.cat.subcategories] };
     }
     _finCatModalDraft = draft;
+    _catModalIconExpanded = false;
+    _catModalColorExpanded = false;
     const existing = document.getElementById("fin-cat-edit-modal");
     if (existing) existing.remove();
     const modal = document.createElement("div");
@@ -17237,14 +17241,25 @@ ${legacy}`;
   function _renderCatEditModalBody() {
     const d = _finCatModalDraft;
     const isNew = _finEditingCatId === "new";
-    const iconsHtml = FIN_CAT_ICON_NAMES.map((name) => {
+    const chev = (expanded) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform 0.2s;transform:rotate(${expanded ? 180 : 0}deg)"><polyline points="6 9 12 15 18 9"/></svg>`;
+    const iconTrigger = `<button onclick="toggleCatModalIcons()" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit">
+    <div style="width:36px;height:36px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 20)}</div>
+    <div style="flex:1;text-align:left;font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(d.icon)}</div>
+    <div style="color:rgba(30,16,64,0.45)">${chev(_catModalIconExpanded)}</div>
+  </button>`;
+    const iconsGrid = !_catModalIconExpanded ? "" : `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px;padding:10px;background:rgba(255,255,255,0.4);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">${FIN_CAT_ICON_NAMES.map((name) => {
       const active = name === d.icon;
       return `<button data-cat-icon="${name}" onclick="selectCatModalIcon('${name}')" style="width:42px;height:42px;border-radius:50%;border:2px solid ${active ? d.color : "rgba(30,16,64,0.08)"};background:${active ? d.color + "20" : "white"};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : "rgba(30,16,64,0.55)", 20)}</button>`;
-    }).join("");
-    const colorsHtml = FIN_CAT_PALETTE2.map((c) => {
+    }).join("")}</div>`;
+    const colorTrigger = `<button onclick="toggleCatModalColors()" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit">
+    <div style="width:36px;height:36px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
+    <div style="flex:1;text-align:left;font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(d.color)}</div>
+    <div style="color:rgba(30,16,64,0.45)">${chev(_catModalColorExpanded)}</div>
+  </button>`;
+    const colorsPalette = !_catModalColorExpanded ? "" : `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:10px;background:rgba(255,255,255,0.4);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">${FIN_CAT_PALETTE2.map((c) => {
       const active = c === d.color;
       return `<button data-cat-color="${c}" onclick="selectCatModalColor('${c}')" style="width:32px;height:32px;border-radius:50%;border:3px solid ${active ? "#1e1040" : "transparent"};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
-    }).join("");
+    }).join("")}</div>`;
     const subcatsHtml = d.subcategories.map(
       (s, i) => `<div style="display:flex;align-items:center;gap:6px">
       <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
@@ -17264,9 +17279,9 @@ ${legacy}`;
     <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0406\u043A\u043E\u043D\u043A\u0430</div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px">${iconsHtml}</div>
+    <div style="margin-bottom:14px">${iconTrigger}${iconsGrid}</div>
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041A\u043E\u043B\u0456\u0440</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${colorsHtml}</div>
+    <div style="margin-bottom:14px">${colorTrigger}${colorsPalette}</div>
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457</div>
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
     <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</button>
@@ -17321,39 +17336,25 @@ ${legacy}`;
       }
     }
   }
-  function _updateCatModalIconHighlight() {
-    const modal = document.getElementById("fin-cat-edit-modal");
-    if (!modal) return;
-    const d = _finCatModalDraft;
-    const btns = modal.querySelectorAll("button[data-cat-icon]");
-    btns.forEach((b) => {
-      const name = b.dataset.catIcon;
-      const active = name === d.icon;
-      b.style.border = `2px solid ${active ? d.color : "rgba(30,16,64,0.08)"}`;
-      b.style.background = active ? d.color + "20" : "white";
-      const svg = b.querySelector("svg");
-      if (svg) svg.setAttribute("stroke", active ? d.color : "rgba(30,16,64,0.55)");
-    });
-  }
-  function _updateCatModalColorHighlight() {
-    const modal = document.getElementById("fin-cat-edit-modal");
-    if (!modal) return;
-    const d = _finCatModalDraft;
-    const btns = modal.querySelectorAll("button[data-cat-color]");
-    btns.forEach((b) => {
-      const c = b.dataset.catColor;
-      const active = c === d.color;
-      b.style.border = `3px solid ${active ? "#1e1040" : "transparent"}`;
-    });
-    _updateCatModalIconHighlight();
-  }
   function selectCatModalIcon(name) {
     _finCatModalDraft.icon = name;
-    _updateCatModalIconHighlight();
+    _catModalIconExpanded = false;
+    _refreshCatEditModal();
   }
   function selectCatModalColor(c) {
     _finCatModalDraft.color = c;
-    _updateCatModalColorHighlight();
+    _catModalColorExpanded = false;
+    _refreshCatEditModal();
+  }
+  function toggleCatModalIcons() {
+    _catModalIconExpanded = !_catModalIconExpanded;
+    if (_catModalIconExpanded) _catModalColorExpanded = false;
+    _refreshCatEditModal();
+  }
+  function toggleCatModalColors() {
+    _catModalColorExpanded = !_catModalColorExpanded;
+    if (_catModalColorExpanded) _catModalIconExpanded = false;
+    _refreshCatEditModal();
   }
   function setCatModalType(t) {
     _finCatModalDraft.type = t;
@@ -17446,6 +17447,8 @@ ${legacy}`;
     deleteCategoryFromModal,
     selectCatModalIcon,
     selectCatModalColor,
+    toggleCatModalIcons,
+    toggleCatModalColors,
     setCatModalType,
     toggleCatModalArchive,
     addCatModalSubcat,
