@@ -11683,7 +11683,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     contentEl._swipeClose = true;
     let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
     contentEl.addEventListener("touchstart", (e) => {
-      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item");
+      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll");
       startY = e.touches[0].clientY;
       startX = e.touches[0].clientX;
       dy = 0;
@@ -14886,17 +14886,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function setupSettingsSwipe() {
     const panel = document.getElementById("settings-panel-el");
     if (!panel) return;
-    let startY = 0, startScrollTop = 0;
-    panel.addEventListener("touchstart", (e) => {
-      startY = e.touches[0].clientY;
-      startScrollTop = panel.scrollTop;
-    }, { passive: true });
-    panel.addEventListener("touchend", (e) => {
-      const dy = e.changedTouches[0].clientY - startY;
-      if (dy > 80 && startScrollTop === 0) {
-        closeSettings();
-      }
-    }, { passive: true });
+    setupModalSwipeClose(panel, closeSettings);
   }
   function applyBoardOverlays() {
     const configs = [
