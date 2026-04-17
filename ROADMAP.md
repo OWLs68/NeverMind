@@ -599,9 +599,9 @@
 
 ## 🛠 Інструменти розробки (поза продуктовим roadmap)
 
-**Скіли Claude Code** — план 6 скілів (UX-UI / Prompt Engineer / iOS PWA Debugger / Supabase Prep / A11y / Gamification) і плагін для анімації OWL. Створено у сесії W6MDn (16.04.2026). Це НЕ фічі NeverMind — це інструменти самої розробки.
+**Скіли Claude Code** — всі 7 скілів **написані** (VAP6z + W6MDn + hHIlZ, 16-17.04.2026): `/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/owl-motion`, `/supabase-prep`, `/a11y-enforcer`, `/gamification-engine`. Це НЕ фічі NeverMind — інструменти самої розробки. Далі — впровадження їх інструкцій у код за пріоритетами.
 
-→ [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md)
+→ Короткий індекс коли який активувати: [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md)
 
 ---
 

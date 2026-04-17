@@ -477,29 +477,26 @@ src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
 - Проактивні підказки: агент помічає закономірності ("щопонеділка ти додаєш багато задач — може розпланувати тиждень?")
 
 ### Анімація OWL (TODO)
-**Оновлено 16.04.2026 (сесія W6MDn) — обрано варіант 2:** готова SVG з вільного ресурсу (Flaticon/unDraw/iconify/svgrepo) + анімаційний скіл `freshtechbro/claudedesignskills` (рушій Anime.js). Детально → [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md) секція "Скіл для анімації OWL".
+**Рішення:** чистий SVG + CSS keyframes (без Lottie / Anime.js / бібліотек). Скіл `/owl-motion` (у `.claude/commands/owl-motion.md`) описує 5 станів: `idle` / `alert` / `thinking` / `error` / `greeting` + анімацію розгортання бабла (`scaleX(0)→scaleX(1)` з `transform-origin: left`).
 
-Кроки: (1) Роман знаходить багатошарову SVG сову з окремими path для голови/тіла/крил/очей. (2) Claude встановлює `freshtechbro/claudedesignskills`. (3) Пише 5 станів: `idle` / `talking` / `listening` / `error` / `celebration`. (4) Інтеграція у `nm-data-changed`.
+**Заблоковано:** потрібна багатошарова SVG сова (з окремими `path` для голови/тіла/крил/очей) — Роман знаходить на [Flaticon](https://www.flaticon.com/free-icons/owl) / [unDraw](https://undraw.co) / [iconify](https://iconify.design) / [svgrepo](https://www.svgrepo.com/vectors/owl). Коли SVG буде — Claude викликає `/owl-motion` і впроваджує в код.
 
-Варіант 3 (Gemini SVG Creator) — відкладено, об'єднати з B-56 (40 іконок категорій).
+**Варіант 3 (Gemini SVG Creator)** — відкладено, об'єднати з B-56 (40 іконок категорій Фінансів).
 
-Ідеї анімацій: кивок, поворот голови, опущені крила при помилці, змах крилом при вітанні, idle-ходіння коли нема що сказати.
+**Поведінка сови без бабла:** коли OWL нема що сказати → бабл зникає, сова лишається на екрані і може ходити/рухатись (idle). Як тільки нове повідомлення → сова біжить на своє місце ліворуч, бабл анімовано з'являється. CSS transitions підготує Claude коли SVG буде готовий.
 
 ### Скіли Claude Code (інструменти розробки, НЕ фічі NeverMind)
-**Створено 16.04.2026 (сесія W6MDn):** детальний план 6 скілів + формат SKILL.md → [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md).
+**Стан 17.04.2026:** всі 7 скілів **написані** у `.claude/commands/` — див. [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md) для короткого індексу коли який активувати. Далі — впровадження інструкцій у код.
 
-- 🟢 **UX-UI адаптований** (блокує "дефолтні" модалки, читає DESIGN_SYSTEM.md)
-- 🟢 **Prompt Engineer** (єдиний формат 7+ промптів OWL)
-- 🟢 **iOS Safari PWA Debugger** (bfcache / SW / keyboard / localStorage eviction)
-- 🟡 **Supabase Prep** — міграції+perf+retry+offline (перед Supabase)
-- 🔴 **A11y-Enforcer** (перед публічним релізом)
-- 🔵 **Gamification-Engine** (Блок 3)
+- 🟢 `/ux-ui` — блокує "дефолтні" модалки, читає `docs/DESIGN_SYSTEM.md`
+- 🟢 `/prompt-engineer` — єдиний формат 12 промптів OWL
+- 🟢 `/pwa-ios-fix` — iOS Safari чеклист (bfcache / SW / keyboard / overscroll)
+- 🟢 `/owl-motion` — анімація сови (заблоковано SVG)
+- 🟡 `/supabase-prep` — міграції / retry / offline (перед Supabase)
+- 🔴 `/a11y-enforcer` — WCAG 2.1 AA (перед публічним релізом)
+- 🔵 `/gamification-engine` — прогрес / streak / ачівки (Блок 3)
 
-Відкинуто: Remotion Master (ми без React/відео), Social Carousel (не маркетинговий продукт).
-
-**Анімація табло (додано 16.04.2026 3229b):** коли табло з'являється — анімація розширення вправо (від аватара). Коли зникає — згортається вліво (до аватара). CSS transitions: `transform: scaleX(0) → scaleX(1)` з `transform-origin: left`. Потребує SVG-персонажа для повної реалізації.
-
-**Поведінка сови без бабла (додано 16.04.2026 3229b):** коли OWL нема що сказати → бабл зникає, але сова залишається на екрані. Сова отримує **весь простір** де був бабл і може **ходити/рухатись** (анімація idle — стан очікування). Як тільки нове повідомлення з'являється → сова **біжить назад** на своє місце ліворуч від бабла, бабл анімовано з'являється. Потребує SVG-персонажа — CSS transitions для блоку підготує Claude коли SVG буде готовий.
+Відкинуто: Remotion Master (без React/відео), Social Carousel (не маркетинговий продукт), Anime.js/Lottie (перейшли на чистий CSS).
 
 ---
 
