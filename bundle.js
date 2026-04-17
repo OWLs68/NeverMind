@@ -2665,9 +2665,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
         projectsBarLoading = false;
         return;
       }
-      try {
-        const jsonMatch = reply.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
+      const _processOne = (parsed) => {
         const pid = parsed.project_id;
         if (parsed.action === "complete_project_step" && pid) {
           const projs = getProjects();
@@ -2682,13 +2680,12 @@ ${aiContext ? "\n\n" + aiContext : ""}
               saveProjects(projs);
               renderProjects();
               addProjectsChatMsg("agent", `\u2705 \u041A\u0440\u043E\u043A "${step.text}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041F\u0440\u043E\u0433\u0440\u0435\u0441: ${p.progress}%`);
-            } else {
-              safeAgentReply(reply, addProjectsChatMsg);
+              return true;
             }
-          } else {
-            safeAgentReply(reply, addProjectsChatMsg);
           }
-        } else if (parsed.action === "add_project_step" && pid) {
+          return false;
+        }
+        if (parsed.action === "add_project_step" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2698,10 +2695,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
             saveProjects(projs);
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A: "${parsed.step}"`);
-          } else {
-            safeAgentReply(reply, addProjectsChatMsg);
+            return true;
           }
-        } else if (parsed.action === "update_project_progress" && pid) {
+          return false;
+        }
+        if (parsed.action === "update_project_progress" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2711,7 +2709,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${p.progress}%`);
           }
-        } else if (parsed.action === "add_project_decision" && pid) {
+          return true;
+        }
+        if (parsed.action === "add_project_decision" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2721,7 +2721,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u0420\u0456\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: "${parsed.title}"`);
           }
-        } else if (parsed.action === "add_project_metric" && pid) {
+          return true;
+        }
+        if (parsed.action === "add_project_metric" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2731,7 +2733,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u041C\u0435\u0442\u0440\u0438\u043A\u0443 "${parsed.label}: ${parsed.value}" \u0434\u043E\u0434\u0430\u043D\u043E`);
           }
-        } else if (parsed.action === "add_project_resource" && pid) {
+          return true;
+        }
+        if (parsed.action === "add_project_resource" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2741,7 +2745,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${parsed.title}" \u0434\u043E\u0434\u0430\u043D\u043E`);
           }
-        } else if (parsed.action === "update_project_tempo" && pid) {
+          return true;
+        }
+        if (parsed.action === "update_project_tempo" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2752,7 +2758,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E`);
           }
-        } else if (parsed.action === "update_project_risks" && pid) {
+          return true;
+        }
+        if (parsed.action === "update_project_risks" && pid) {
           const projs = getProjects();
           const p = projs.find((pr) => pr.id === pid);
           if (p) {
@@ -2761,13 +2769,17 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderProjects();
             addProjectsChatMsg("agent", `\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E`);
           }
-        } else if (processUniversalAction(parsed, text, addProjectsChatMsg)) {
-        } else {
-          safeAgentReply(reply, addProjectsChatMsg);
+          return true;
         }
-      } catch {
-        safeAgentReply(reply, addProjectsChatMsg);
+        if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
+        return false;
+      };
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (_processOne(parsed)) handled = true;
       }
+      if (!handled) safeAgentReply(reply, addProjectsChatMsg);
     } catch {
       addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
