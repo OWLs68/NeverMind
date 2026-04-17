@@ -1,6 +1,44 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-17 (сесія **KTQZA** — 🛠 12 багів закрито + UI-поліпшення модалки категорії + фікс zombie-SW у Safari/Chrome)
+**Оновлено:** 2026-04-17 (сесія **14zLe** — 🔧 Винесення промптів у `src/ai/prompts.js` + прибрано дубль B-58)
+
+---
+
+## 🔧 Сесія 14zLe — рефакторинг промптів (17.04.2026)
+
+### Зроблено
+
+**1. Прибрано дубль B-58 у `NEVERMIND_BUGS.md`** — B-58 стояв і в "🟢 Дрібні", і в "✅ Закриті". Коміт `eb9174e`.
+
+**2. Винесення промптів у `src/ai/prompts.js`** — новий модуль 251 рядок. Що перенесено з `ai/core.js`:
+- `getOWLPersonality()` — 3 характери (coach/partner/mentor) + universal правила (емпатія, чесність, G12)
+- `INBOX_SYSTEM_PROMPT` — класифікатор Inbox (tool calling)
+- `INBOX_TOOLS` — 31 function definition для OpenAI tool calling
+- `getOwlChatSystemPrompt(context)` — **нова функція** для OWL міні-чату (замінила inline промпт у `callOwlChat()`)
+
+**3. `src/ai/core.js` скорочено з 839 → 623 рядки (-216 рядків, -26%).** Зараз там тільки:
+- `getAIContext()`, `getMeStatsContext()`, `safeAgentReply()`
+- HTTP wrappers (`_fetchAI`, `callAI`, `callAIWithHistory`, `callAIWithTools`, `callOwlChat`)
+- Chat storage (`saveChatMsg`, `loadChatMsgs`, `restoreChatUI`, `addMsgForTab`)
+- Open/close chat bars
+- Re-exports з `prompts.js` для backward-compat
+
+**4. Backward-compat через re-export** — `core.js` робить `export { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS } from './prompts.js'`. Тому 11 файлів (finance-insight, finance, proactive, evening, health, finance-chat, habits, projects, onboarding, notes, tasks) що імпортують ці константи з `./ai/core.js` працюють БЕЗ змін. Інший 1 файл (`core/nav.js`) + 2 виклики у `inbox.js` — теж без змін.
+
+### Чому це важливо
+
+**Техдолг:** коли OWL "не так відповідає" / "галюцинує" / "не той тон" — раніше треба було грипти у 839-рядковому файлі що змішує логіку HTTP-викликів і промпти. Тепер **одне місце правки** — `prompts.js`.
+
+**Передумова для характерів Badg/Rabi** — коли будемо додавати нові персонажі агента, структура `getOWLPersonality()` вже готова розширитись без розгрібання `core.js`.
+
+### Метрики
+
+- **Коміти сесії:** 3 (eb9174e дубль B-58, 06458b2 рефакторинг промптів, + фінальний docs)
+- **CACHE_NAME:** `nm-20260417-1944`
+- **Build:** пройшов без помилок (`node build.js` exit 0, bundle.js 1.2MB)
+- **Тригер-правила CLAUDE.md дотримані:** skeleton+Edit для prompts.js (>250 рядків), checkpoint-коміт після кожної фази
+
+---
 
 ---
 
