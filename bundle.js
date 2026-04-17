@@ -9227,8 +9227,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const sumStr = sum > 0 ? formatMoney(sum) : "0 " + getCurrency();
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
       const onClick = _finEditMode ? `openCategoryEditModal('${escapeHtml(cat.id)}')` : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
-      const levitShadow = `box-shadow:0 8px 18px rgba(0,0,0,0.22), 0 3px 6px rgba(0,0,0,0.14);`;
-      const editStyle = _finEditMode ? `box-shadow:0 8px 18px rgba(0,0,0,0.22), 0 3px 6px rgba(0,0,0,0.14), 0 0 0 2px ${cat.color}55;` : levitShadow;
+      const levitShadow = `box-shadow:0 10px 22px rgba(0,0,0,0.38), 0 4px 8px rgba(0,0,0,0.24);`;
+      const editStyle = _finEditMode ? `box-shadow:0 10px 22px rgba(0,0,0,0.38), 0 4px 8px rgba(0,0,0,0.24), 0 0 0 2px ${cat.color}55;` : levitShadow;
       const arrows = _finEditMode ? `
       <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="\u0412\u043B\u0456\u0432\u043E" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
       <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="\u0412\u043F\u0440\u0430\u0432\u043E" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
@@ -9275,7 +9275,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     ).join("");
     const donutBase = `<circle cx="50" cy="50" r="${donutR}" fill="none" stroke="rgba(30,16,64,0.06)" stroke-width="9"/>`;
     const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
-    <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 8px 18px rgba(30,16,64,0.18)) drop-shadow(0 3px 6px rgba(30,16,64,0.08))">
+    <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,0.38)) drop-shadow(0 5px 10px rgba(0,0,0,0.22))">
       ${donutBase}${donutRings}
       <circle cx="50" cy="50" r="${donutR - 5}" fill="rgba(255,255,255,0.95)"/>
     </svg>
