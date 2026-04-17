@@ -806,17 +806,23 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (!parsed || !parsed.text) { _boardGenerating[tab] = false; return; }
 
     // 4.40 Auto-silence (ROADMAP Блок 1): перевіряємо чи попереднє повідомлення табло
-    // мало чіпи і чи не було жодного кліку чіпа з моменту його появи.
-    // Якщо ні (3 рази поспіль) → 4 год тиші. reminder-due пробиває бо обходить Judge Layer.
+    // мало шанс бути поміченим юзером (min 10 хв між табло) і чи не було жодного кліку чіпа з моменту його появи.
+    // Якщо ні (5 разів поспіль) → 4 год тиші. reminder-due пробиває бо обходить Judge Layer.
+    // B-64: раніше поріг 3 + без мін.часу → за 2 хв "вирішував" що ігнорують. Тепер 5 повідомлень
+    // і тільки ті що провисіли >10хв рахуються як проігноровані.
     try {
+      const MIN_VISIBLE_MS = 10 * 60 * 1000; // 10 хв — мінімум щоб повідомлення вважалось "поміченим"
+      const IGNORE_THRESHOLD = 5;            // було 3 — агресивно
       const lastBoardTs = parseInt(localStorage.getItem('nm_owl_last_board_ts') || '0');
       const lastClickTs = parseInt(localStorage.getItem('nm_owl_last_chip_click_ts') || '0');
-      if (lastBoardTs > 0 && lastClickTs < lastBoardTs) {
+      const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
+      // Рахуємо як ignored ТІЛЬКИ якщо попереднє прожило >10хв і не було кліку за цей час
+      if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
         const ignored = parseInt(localStorage.getItem('nm_owl_ignored_msgs') || '0') + 1;
-        if (ignored >= 3) {
+        if (ignored >= IGNORE_THRESHOLD) {
           localStorage.setItem('nm_owl_silence_until', String(Date.now() + 4 * 60 * 60 * 1000));
           localStorage.setItem('nm_owl_ignored_msgs', '0');
-          console.log('[OWL 4.40] Auto-silence 4 год — 3 повідомлення поспіль проігноровано');
+          console.log('[OWL 4.40] Auto-silence 4 год —', IGNORE_THRESHOLD, 'повідомлень поспіль проігноровано');
         } else {
           localStorage.setItem('nm_owl_ignored_msgs', String(ignored));
         }

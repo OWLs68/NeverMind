@@ -227,6 +227,7 @@ export function applyBoardOverlays() {
     { fixedId: 'projects-fixed-top', scrollId: 'projects-scroll' },
     { fixedId: 'inbox-fixed-top',    scrollId: 'inbox-scroll' },
     { fixedId: 'fin-fixed-top',      scrollId: 'fin-scroll' },
+    { fixedId: 'notes-fixed-top',    scrollId: 'notes-scroll' },
   ];
   configs.forEach(({ fixedId, scrollId }) => {
     const fixed = document.getElementById(fixedId);

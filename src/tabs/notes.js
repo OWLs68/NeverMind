@@ -14,6 +14,40 @@ import { processUniversalAction } from './habits.js';
 // === NOTES ===
 let editingNoteId = null;
 
+// B-47: нормалізація назв папок — всі варіанти апострофів зводимо до одного.
+// Unicode має 3+ схожих символи: ' (U+0027), ʼ (U+02BC), ' (U+2019), ` (U+0060)
+// AI може повертати будь-який → створювалися "Здоров'я" і "Здоровʼя" як різні папки.
+export function normalizeFolderName(name) {
+  if (!name) return name;
+  return String(name).replace(/[\u02BC\u2019\u0060]/g, "'").trim();
+}
+
+// B-47: одноразова міграція існуючих папок у `nm_notes` — зводимо всі варіанти
+// апострофів і об'єднуємо нотатки з однаковою нормалізованою назвою у першу знайдену.
+function _migrateFoldersApostrophes() {
+  if (localStorage.getItem('nm_folders_apostrophe_migrated')) return;
+  try {
+    const notes = JSON.parse(localStorage.getItem('nm_notes') || '[]');
+    let changed = 0;
+    // Будуємо мапу normalized → canonical (перша зустрічна версія)
+    const canonical = {};
+    notes.forEach(n => {
+      if (!n.folder) return;
+      const norm = normalizeFolderName(n.folder);
+      if (!canonical[norm]) canonical[norm] = n.folder; // перша зустрічна — канонічна
+    });
+    notes.forEach(n => {
+      if (!n.folder) return;
+      const norm = normalizeFolderName(n.folder);
+      const target = canonical[norm];
+      if (n.folder !== target) { n.folder = target; changed++; }
+    });
+    if (changed > 0) localStorage.setItem('nm_notes', JSON.stringify(notes));
+    localStorage.setItem('nm_folders_apostrophe_migrated', '1');
+  } catch(e) {}
+}
+_migrateFoldersApostrophes();
+
 export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
 export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
 
@@ -25,7 +59,13 @@ function getFolders() {
 
 export function addNoteFromInbox(text, category, folder = null, source = 'inbox') {
   const notes = getNotes();
-  const resolvedFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
+  // B-47: нормалізуємо апострофи + дедуплікуємо проти існуючих папок (case-insensitive fuzzy match)
+  const rawFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
+  const normalized = normalizeFolderName(rawFolder);
+  // Якщо нормалізована назва збігається з існуючою папкою (case-insensitive) — використовуємо існуючу
+  const existingFolders = [...new Set(notes.map(n => n.folder).filter(Boolean))];
+  const match = existingFolders.find(f => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
+  const resolvedFolder = match || normalized;
   notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
 }
