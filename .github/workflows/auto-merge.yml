@@ -72,6 +72,18 @@ jobs:
           sed -i "s|data-source=\"[^\"]*\"|data-source=\"${SOURCE_BRANCH}\"|" index.html
           sed -i "s|data-branch=\"[^\"]*\"|data-branch=\"main\"|" index.html
 
+          # Cache-bust для style.css і bundle.js (17.04.2026 сесія 14zLe).
+          # Причина: Safari на iOS має власний HTTP-кеш поверх Service Worker'а,
+          # який тримає CSS/JS файли агресивно. Без cache-bust параметра у URL
+          # оновлення стилів або логіки можуть не доходити до користувача навіть
+          # коли SW отримав свіжу версію. Формат: v{N}-YYYYMMDD-HHMM — унікальний
+          # для кожного деплою, змушує браузер завантажити файли свіжими.
+          # НЕ ВИДАЛЯТИ ?v=... параметри з index.html — інакше цей sed не знайде
+          # що замінити і кеш-бастинг зламається.
+          CACHE_BUST="${NEW_VERSION}-$(TZ='Europe/Amsterdam' date '+%Y%m%d-%H%M')"
+          sed -i "s|style\.css?v=[^\"]*|style.css?v=${CACHE_BUST}|" index.html
+          sed -i "s|bundle\.js?v=[^\"]*|bundle.js?v=${CACHE_BUST}|" index.html
+
           git add index.html deploy-counter.txt
           git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME}"
 

@@ -1,42 +1,42 @@
 # Стан сесії
 
-**Оновлено:** 2026-04-17 (сесія **14zLe** — 🔧 Винесення промптів у `src/ai/prompts.js` + прибрано дубль B-58)
+**Оновлено:** 2026-04-17 (сесія **14zLe** — 🔧 Рефакторинг промптів + свайп Налаштувань + glass-стиль + cache-bust)
 
 ---
 
-## 🔧 Сесія 14zLe — рефакторинг промптів (17.04.2026)
+## 🔧 Сесія 14zLe — рефакторинг промптів + UX Налаштувань + cache-bust (17.04.2026)
 
-### Зроблено
+### Зроблено — 6 логічних блоків
 
-**1. Прибрано дубль B-58 у `NEVERMIND_BUGS.md`** — B-58 стояв і в "🟢 Дрібні", і в "✅ Закриті". Коміт `eb9174e`.
+**1. Прибрано дубль B-58 у `NEVERMIND_BUGS.md`** (коміт `eb9174e`) — стояв і в "🟢 Дрібні", і в "✅ Закриті".
 
-**2. Винесення промптів у `src/ai/prompts.js`** — новий модуль 251 рядок. Що перенесено з `ai/core.js`:
-- `getOWLPersonality()` — 3 характери (coach/partner/mentor) + universal правила (емпатія, чесність, G12)
-- `INBOX_SYSTEM_PROMPT` — класифікатор Inbox (tool calling)
-- `INBOX_TOOLS` — 31 function definition для OpenAI tool calling
-- `getOwlChatSystemPrompt(context)` — **нова функція** для OWL міні-чату (замінила inline промпт у `callOwlChat()`)
+**2. Винесення промптів у `src/ai/prompts.js`** (коміт `06458b2`) — новий модуль 251 рядок: `getOWLPersonality()` (3 характери), `INBOX_SYSTEM_PROMPT`, `INBOX_TOOLS` (31 tool), `getOwlChatSystemPrompt(context)`. `core.js` скорочено з 839 → 623 рядки (-216). Backward-compat через re-export — 11 файлів що імпортують з `core.js` працюють без змін.
 
-**3. `src/ai/core.js` скорочено з 839 → 623 рядки (-216 рядків, -26%).** Зараз там тільки:
-- `getAIContext()`, `getMeStatsContext()`, `safeAgentReply()`
-- HTTP wrappers (`_fetchAI`, `callAI`, `callAIWithHistory`, `callAIWithTools`, `callOwlChat`)
-- Chat storage (`saveChatMsg`, `loadChatMsgs`, `restoreChatUI`, `addMsgForTab`)
-- Open/close chat bars
-- Re-exports з `prompts.js` для backward-compat
+**3. Нове правило у CLAUDE.md про UI-мову** (коміт `941cfa9`) — додано "🎨 ДЛЯ UI-ЗАДАЧ" у секцію "⚠️ ОБОВ'ЯЗКОВО". Антипринцип: не сипати термінами `translateY`, `indigo-600`, `linear-gradient`. Описувати **що юзер бачить**. Анти-приклад з цієї ж сесії → переписано людською мовою. Правило "один спосіб пояснити" (не дублювати). Причина: Роман кілька разів за сесію просив "поясни простіше" — правило запобігає повторенню.
 
-**4. Backward-compat через re-export** — `core.js` робить `export { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS } from './prompts.js'`. Тому 11 файлів (finance-insight, finance, proactive, evening, health, finance-chat, habits, projects, onboarding, notes, tasks) що імпортують ці константи з `./ai/core.js` працюють БЕЗ змін. Інший 1 файл (`core/nav.js`) + 2 виклики у `inbox.js` — теж без змін.
+**4. Свайп закриття Налаштувань** (коміт `c763879`) — вміст обгорнуто у `.settings-scroll`, `setupSettingsSwipe` у `boot.js` замінено на `setupModalSwipeClose` (та сама функція що у задач/звичок/фінансів). Доповнено `.settings-scroll` до guard у `setupModalSwipeClose`. Панель тепер їде за пальцем, закривається з будь-якого місця смужки зверху.
+
+**5. Glass-стиль панелі Налаштувань** (коміт `29aa40e`) — під стиль Календаря: 16px відступ від країв, прозорий білий фон з розмиттям, закруглення 24px з усіх сторін, тонка біла рамка, max-width 480px. Вміст не чіпав.
+
+**6. Cache-bust** (коміти `f555dfb` + поточний):
+- **Проблема:** Safari має HTTP-кеш поверх SW, який тримає `style.css` і `bundle.js` агресивно. Після деплою бейдж оновився але стилі лишились старими.
+- **Чому раніше не замічали:** `style.css` радикально не змінювався; бейдж у HTML з `Cache-Control: no-cache` оновлювався нормально; зміни у `bundle.js` непомітні для юзера.
+- **Фікс:** `?v=...` параметри у `<link>` і `<script>`. `auto-merge.yml` `sed`'ом замінює їх на свіжу мітку `vN-YYYYMMDD-HHMM` при кожному деплої. Автоматично, ручне втручання не потрібне.
 
 ### Чому це важливо
 
-**Техдолг:** коли OWL "не так відповідає" / "галюцинує" / "не той тон" — раніше треба було грипти у 839-рядковому файлі що змішує логіку HTTP-викликів і промпти. Тепер **одне місце правки** — `prompts.js`.
+**Техдолг промптів:** коли OWL "не так відповідає" — тепер одне місце правки (`prompts.js`). Передумова для Badg/Rabi.
 
-**Передумова для характерів Badg/Rabi** — коли будемо додавати нові персонажі агента, структура `getOWLPersonality()` вже готова розширитись без розгрібання `core.js`.
+**UX Налаштувань:** свайп + glass — Налаштування стали консистентні з іншими модалками, не "чужі".
+
+**Cache-bust:** майбутні зміни стилів/коду долітають до iPhone **одразу** після деплою, без ручних танців з очищенням даних Safari.
 
 ### Метрики
 
-- **Коміти сесії:** 3 (eb9174e дубль B-58, 06458b2 рефакторинг промптів, + фінальний docs)
-- **CACHE_NAME:** `nm-20260417-1944`
-- **Build:** пройшов без помилок (`node build.js` exit 0, bundle.js 1.2MB)
-- **Тригер-правила CLAUDE.md дотримані:** skeleton+Edit для prompts.js (>250 рядків), checkpoint-коміт після кожної фази
+- **Коміти сесії:** 7+ (прибрали дубль, рефакторинг промптів, правило CLAUDE, свайп, glass, cache-bust фікс, cache-bust автоматизація + docs)
+- **CACHE_NAME:** `nm-20260417-2005`
+- **Build:** чистий після кожного коміту
+- **Правила дотримані:** skeleton+Edit для `prompts.js` (>250 рядків), checkpoint-коміт після кожного блоку, `docs/CHANGES.md` оновлений.
 
 ---
 
