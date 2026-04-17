@@ -178,16 +178,32 @@ function _migrateFinCats(saved) {
     localStorage.setItem('nm_finance_cats', JSON.stringify(fresh));
     return fresh;
   }
-  // Вже нова структура — повертаємо як є
-  if (Array.isArray(saved.expense) && saved.expense.length > 0 && typeof saved.expense[0] === 'object' && saved.expense[0].id) {
-    return saved;
-  }
-  // Стара структура (масив рядків) — мігруємо lazy, зберігаємо у localStorage
+  // B-70 fix (17.04.2026): перевіряємо КОЖЕН елемент у списку, не тільки перший.
+  // Раніше якщо перша категорія мала id, а наступні (створені AI через неповний об'єкт)
+  // не мали — міграція пропускала всю колекцію, і _finCatsGrid падав на escapeHtml(undefined).
+  // Також нормалізуємо битих: рядок → _makeCatObj, об'єкт без id/name → _makeCatObj(name).
+  const normalize = (list, startIdx) => (list || []).map((c, i) => {
+    if (typeof c === 'string') return _makeCatObj(c, startIdx + i);
+    if (!c || typeof c !== 'object') return _makeCatObj('Невідомо', startIdx + i);
+    // Об'єкт: добиваємо обов'язкові поля якщо відсутні
+    if (!c.id || !c.name) {
+      return _makeCatObj(c.name || 'Без назви', startIdx + i);
+    }
+    // Добиваємо опціональні щоб рендер не падав
+    if (!c.icon) c.icon = 'other';
+    if (!c.color) c.color = pickRandomCatColor(i);
+    if (!Array.isArray(c.subcategories)) c.subcategories = [];
+    if (typeof c.archived !== 'boolean') c.archived = false;
+    if (typeof c.order !== 'number') c.order = i;
+    return c;
+  });
   const migrated = {
-    expense: (saved.expense || []).map((n, i) => typeof n === 'string' ? _makeCatObj(n, i) : n),
-    income:  (saved.income  || []).map((n, i) => typeof n === 'string' ? _makeCatObj(n, i) : n),
+    expense: normalize(saved.expense, 0),
+    income:  normalize(saved.income, 1000), // зсунутий idx щоб не перетиналися ids з expense
   };
-  localStorage.setItem('nm_finance_cats', JSON.stringify(migrated));
+  // Зберігаємо назад якщо були зміни (щось нормалізувалось)
+  const needsSave = JSON.stringify(saved) !== JSON.stringify(migrated);
+  if (needsSave) localStorage.setItem('nm_finance_cats', JSON.stringify(migrated));
   return migrated;
 }
 
@@ -640,35 +656,44 @@ async function _refreshFinInsight(allTxs, win) {
   const budget = getFinBudget();
   const currency = getCurrency();
 
-  // B-46: конкретний промпт з числами, заборона шаблонних фраз
+  // B-46 + B-72: конкретний промпт, ЖОРСТКА заборона вигадувати числа, temperature низька
+  // щоб AI не "творчив" арифметику. Раніше €761 замість реальних €750 — вигадане число.
   const prompt = `${getOWLPersonality()}
 Ти — фінансовий тренер. Дай ОДНУ коротку конкретну пораду з числами. 1-2 речення, українською.
+
+🚨 ЖОРСТКЕ ПРАВИЛО ТОЧНОСТІ ЧИСЕЛ:
+- Якщо використовуєш число — воно МАЄ БУТИ ТОЧНО ТАКИМ ЯК У ДАНИХ НИЖЧЕ.
+- НЕ округляй, НЕ додавай, НЕ підсумовуй самостійно (юзер перевіряє арифметику).
+- Якщо даєш річну проекцію: число × 12 (без округлень) — порахуй точно.
+- Якщо не впевнений у числі — НЕ ПИШИ ЙОГО, дай пораду без конкретної цифри.
 
 ЗАБОРОНЕНО:
 - повторювати загальні суми які юзер бачить на екрані ("Витрати склали €X")
 - загальні фрази ("стеж за витратами", "плануй бюджет", "розподіляй кошти")
 - згадувати "загалом" / "в цілому" / "варто задуматись"
+- вигадувати числа яких нема у даних
 
-ОБОВ'ЯЗКОВО: конкретне число + конкретна дія або порівняння.
+ОБОВ'ЯЗКОВО: конкретне число З ДАНИХ + конкретна дія або порівняння.
 
-Шаблони (вибери НАЙРЕЛЕВАНТНІШИЙ для цих даних):
-1. Річна проекція: "{Категорія} ${currency}X/міс = ${currency}Y за рік — це {конкретна ціль}"
-2. Відхилення: "На {категорія} в {N}x більше ніж на {інша}"
-3. Економія: "Скоротити {категорія} на ${currency}X/тиждень = ${currency}Y за рік"
-4. Перевищення ліміту: "Категорія {X} перевищила ліміт на {N%}"
-5. Тренд: "Топ-категорія {X} — ${currency}Y, наступна у 2 рази менша"
+Шаблони (вибери НАЙРЕЛЕВАНТНІШИЙ):
+1. Річна проекція: "{Категорія} ${currency}X/міс = ${currency}Y за рік" (X — з даних, Y = X × 12)
+2. Відхилення: "На {категорія} {N}x більше ніж на {інша}" (обидва числа з даних)
+3. Економія: "Скоротити {категорія} на ${currency}X/тиждень = ${currency}Y за рік" (Y = X × 52)
+4. Перевищення ліміту: "Категорія {X} перевищила ліміт на {N%}" (обидва числа з даних)
+5. Тренд: "Топ — {X} ${currency}A, наступна {Y} ${currency}B" (обидва з даних)
 
-Дані (${win.label}):
-Топ-5 категорій: ${topCats.map(([c,a]) => `${c}=${formatMoney(a)}`).join(', ') || 'немає'}
-Всього витрат за період: ${formatMoney(totalExp)}
-${budget.total > 0 ? `Бюджет на місяць: ${formatMoney(budget.total)}, витрачено ${formatMoney(totalExp)} (${Math.round(totalExp/budget.total*100)}%)` : 'Бюджет не встановлено'}
-${totalInc > 0 ? `Доходи: ${formatMoney(totalInc)}, заощаджено ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ''}`;
+=== ДАНІ (${win.label}) ===
+${topCats.map(([c,a]) => `- ${c}: ${formatMoney(a)}`).join('\n') || '- немає'}
+Всього витрат: ${formatMoney(totalExp)}
+${budget.total > 0 ? `Бюджет місяця: ${formatMoney(budget.total)} (витрачено ${Math.round(totalExp/budget.total*100)}%)` : ''}
+${totalInc > 0 ? `Доходи: ${formatMoney(totalInc)} (заощаджено ${Math.round((totalInc - totalExp) / totalInc * 100)}%)` : ''}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 120, temperature: 0.7 })
+      // B-72: temperature 0.7 → 0.3 — менше творчості з числами, більше точності
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 120, temperature: 0.3 })
     });
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content?.trim();
@@ -734,7 +759,10 @@ export function moveFinCategory(id, delta) {
 function _finCatsGrid(allTxs, win) {
   const cats = getFinCats();
   const isExpense = currentFinTab === 'expense';
-  const catList = (isExpense ? cats.expense : cats.income).filter(c => !c.archived);
+  // B-70 fix: фільтруємо биті категорії (без id/name) — захист на випадок якщо _migrateFinCats
+  // не дістало всіх (наприклад AI створив неповний об'єкт після міграції).
+  const catList = (isExpense ? cats.expense : cats.income)
+    .filter(c => c && c.id && c.name && !c.archived);
   const txs = allTxs.filter(t => t.type === (isExpense ? 'expense' : 'income'));
   const totalSum = txs.reduce((s, t) => s + t.amount, 0);
   const periodLabel = win?.label || '';
