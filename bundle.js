@@ -8761,6 +8761,40 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       else if (pct >= 0.8) addFinanceChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
     }
   }
+  function _extractJsonBlocks(text) {
+    const blocks = [];
+    let depth = 0, start = -1, inStr = false, esc = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (c === "\\" && inStr) {
+        esc = true;
+        continue;
+      }
+      if (c === '"') {
+        inStr = !inStr;
+        continue;
+      }
+      if (inStr) continue;
+      if (c === "{") {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (c === "}") {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          try {
+            blocks.push(JSON.parse(text.slice(start, i + 1)));
+          } catch {
+          }
+          start = -1;
+        }
+      }
+    }
+    return blocks;
+  }
   async function sendFinanceBarMessage() {
     if (financeBarLoading) return;
     const input = document.getElementById("finance-bar-input");
@@ -8816,16 +8850,14 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         financeBarLoading = false;
         return;
       }
-      try {
-        const jsonMatch = reply.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
-        if (processUniversalAction(parsed, text, addFinanceChatMsg)) {
-        } else if (parsed.action === "save_expense" || parsed.action === "save_income") {
+      const _processOne = (parsed) => {
+        if (processUniversalAction(parsed, text, addFinanceChatMsg)) return true;
+        if (parsed.action === "save_expense" || parsed.action === "save_income") {
           const type = parsed.action === "save_expense" ? "expense" : "income";
           const amount = parseFloat(parsed.amount);
           const category = parsed.category || "\u0406\u043D\u0448\u0435";
           const comment = parsed.comment || "";
-          const ts = Date.now();
+          const ts = Date.now() + Math.floor(Math.random() * 1e3);
           const txs2 = getFinance();
           txs2.unshift({ id: ts, type, amount, category, comment, ts });
           saveFinance(txs2);
@@ -8845,14 +8877,17 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
           }
           addFinanceChatMsg("agent", `\u2713 ${type === "expense" ? "-" : "+"}${formatMoney(amount)} \xB7 ${category}`);
           checkFinBudgetWarning(type, category, amount);
-        } else if (parsed.action === "delete_transaction") {
+          return true;
+        }
+        if (parsed.action === "delete_transaction") {
           const item = getFinance().find((t) => t.id === parsed.id);
-          const _item = getFinance().find((t) => t.id === parsed.id);
-          if (_item) addToTrash("finance", _item);
+          if (item) addToTrash("finance", item);
           saveFinance(getFinance().filter((t) => t.id !== parsed.id));
           renderFinance();
           addFinanceChatMsg("agent", `\u{1F5D1} \u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E: ${item ? item.category + " " + formatMoney(item.amount) : "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E"}`);
-        } else if (parsed.action === "update_transaction") {
+          return true;
+        }
+        if (parsed.action === "update_transaction") {
           const txs2 = getFinance();
           const idx = txs2.findIndex((t) => t.id === parsed.id);
           if (idx !== -1) {
@@ -8865,26 +8900,34 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
           } else {
             addFinanceChatMsg("agent", "\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E.");
           }
-        } else if (parsed.action === "set_budget") {
+          return true;
+        }
+        if (parsed.action === "set_budget") {
           const bdg = getFinBudget();
           if (parsed.total) bdg.total = parsed.total;
           if (parsed.categories) Object.assign(bdg.categories, parsed.categories);
           saveFinBudget(bdg);
           renderFinance();
           addFinanceChatMsg("agent", "\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
-        } else if (parsed.action === "create_category") {
+          return true;
+        }
+        if (parsed.action === "create_category") {
           const type = parsed.type === "income" ? "income" : "expense";
           const c = getFinCats();
           const exists = (c[type] || []).some((x) => x.name.toLowerCase() === (parsed.name || "").toLowerCase());
           if (!exists) createFinCategory(type, { name: parsed.name });
           renderFinance();
           addFinanceChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${parsed.name}" ${exists ? "\u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0432\u0430\u043B\u0430" : "\u0434\u043E\u0434\u0430\u043D\u043E"}`);
-        } else {
-          safeAgentReply(reply, addFinanceChatMsg);
+          return true;
         }
-      } catch {
-        safeAgentReply(reply, addFinanceChatMsg);
+        return false;
+      };
+      const blocks = _extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (_processOne(parsed)) handled = true;
       }
+      if (!handled) safeAgentReply(reply, addFinanceChatMsg);
     } catch {
       addFinanceChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
