@@ -6,7 +6,7 @@ import { renderOwlBoard, setupChatBarSwipe, startOwlBoardCycle, clearStaleBoards
 import { startFollowupsCycle } from '../owl/followups.js';
 import { setupKeyboardAvoiding } from '../ui/keyboard.js';
 import { renderInbox } from '../tabs/inbox.js';
-import { renderTasks } from '../tabs/tasks.js';
+import { renderTasks, setupModalSwipeClose } from '../tabs/tasks.js';
 import { renderHabits, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
 import { renderNotes } from '../tabs/notes.js';
 import { renderFinance } from '../tabs/finance.js';
@@ -214,21 +214,15 @@ export function animateTabSwitch(newTab) {
 }
 
 // === SETTINGS SWIPE TO CLOSE ===
+// Використовує той самий механізм що й модалки задач/звичок —
+// панель їде за пальцем, закривається при свайпі >80px.
+// Свайп блокується коли починається всередині .settings-scroll —
+// там нативна прокрутка має пріоритет. Зверху (handle, заголовок, версія)
+// свайп завжди працює — незалежно від того скільки прокрутив.
 function setupSettingsSwipe() {
   const panel = document.getElementById('settings-panel-el');
   if (!panel) return;
-  let startY = 0, startScrollTop = 0;
-  panel.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY;
-    startScrollTop = panel.scrollTop;
-  }, { passive: true });
-  panel.addEventListener('touchend', e => {
-    const dy = e.changedTouches[0].clientY - startY;
-    // Close only if swiped down >80px AND panel is scrolled to top
-    if (dy > 80 && startScrollTop === 0) {
-      closeSettings();
-    }
-  }, { passive: true });
+  setupModalSwipeClose(panel, closeSettings);
 }
 
 export function applyBoardOverlays() {
