@@ -387,7 +387,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 **`auto-merge.yml` робить (ОДИН job, послідовно):**
 1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
-2. `sed` оновлює badge в `index.html` (Amsterdam час деплою)
+2. `sed` оновлює badge в `index.html` (Amsterdam час деплою) + `?v=...` параметри у `<link>` і `<script>` (cache-bust, див. нижче)
 3. `npm ci && node build.js` — збирає bundle.js з src/
 4. Комітить bundle.js і пушить у `main`
 5. Upload artifact + Deploy to GitHub Pages — **в тому ж job**, без race condition
@@ -397,6 +397,17 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 **Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → конфлікт → CI падає тихо. `-X theirs` вирішує на користь feature-гілки.
 
 **`concurrency: cancel-in-progress: true`** — якщо новий push приходить поки CI ще працює, попередній CI скасовується. Тому при частих пушах деплоїться тільки останній.
+
+### Cache-bust для style.css і bundle.js (додано 17.04.2026 сесія 14zLe)
+
+**Проблема:** Safari на iOS має два рівні кешу — SW кеш (наш, `CACHE_NAME`) і власний HTTP-кеш браузера. Без cache-bust параметра у URL другий кеш тримає `style.css` і `bundle.js` агресивно — після деплою бейдж версії оновлюється (HTML з `Cache-Control: no-cache`), але стилі і логіка застосунку залишаються старими. До 17.04 цього не помічали бо стилі рідко змінювались радикально; сьогоднішня заміна панелі Налаштувань (бежева → glass) вперше зробила проблему видимою.
+
+**Рішення:** `index.html` містить `?v=VERSION-YYYYMMDD-HHMM` параметр у `<link href="style.css?v=...">` і `<script src="bundle.js?v=...">`. CI (`auto-merge.yml`) при кожному деплої `sed`'ом замінює цей параметр на свіжу мітку (`v${NEW_VERSION}-$(date +%Y%m%d-%H%M)`). Safari бачить новий URL і завантажує файли свіжими. **Ручне втручання не потрібне — все автоматично.**
+
+**Правила:**
+- НЕ видаляти `?v=...` параметри з `index.html` — інакше sed у CI не знайде що замінити і кеш-бастинг зламається.
+- Якщо додаєш нове підключення CSS/JS (`<link>` / `<script>`) — додавай `?v=PLACEHOLDER` і додавай відповідний sed у `auto-merge.yml` поруч з існуючими.
+- `?v=...` НЕ заміняє `CACHE_NAME` у `sw.js` — це **другий шар** кеш-інвалідації (для HTTP-кешу Safari поверх SW). Обидва потрібні.
 
 ---
 
