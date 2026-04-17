@@ -501,6 +501,9 @@ body {
   flex: 1;
   padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
   -webkit-overflow-scrolling: touch;
+  /* Плавний fade зверху — картки "розчиняються" у заголовку замість різкого обрізання */
+  mask-image: linear-gradient(to bottom, transparent 0, black 20px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 20px);
 }
 #settings-overlay.open .settings-panel {
   margin-bottom: 0;
