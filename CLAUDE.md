@@ -264,7 +264,8 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml |
 | `src/core/logger.js` | Error logging, console override, UI панель логу, ring buffer юзер-дій (trackUserAction), автолистенер nm-data-changed, stack trace у записах |
 | `src/core/diagnostics.js` | **Діагностична система (B-67 acZEu):** Health Check (9 перевірок стану систем), Smoke Tests (9 авто-тестів), Performance monitor (startup/longtask/fetch monkey-patch). Рендерить 3 блоки у панелі логу. Експорти: runHealthCheck, runSmokeTests, getPerformanceData |
-| `src/ai/core.js` | getAIContext(), callAI(), chat storage (6 незалежних чатів), OWL особистість, "НАГАДАЙ=set_reminder" правило, 26 INBOX_TOOLS (включно з save_memory_fact) |
+| `src/ai/core.js` | **AI-логіка (~623 рядки після рефакторингу 17.04 14zLe):** getAIContext(), callAI(), chat storage (6 незалежних чатів), _fetchAI(), HTTP-wrappers (callAIWithHistory, callAIWithTools, callOwlChat), open/closeChatBar. Re-exports з `prompts.js` для backward-compat |
+| `src/ai/prompts.js` | **Промпти OWL (17.04 14zLe):** `getOWLPersonality()` (3 характери coach/partner/mentor + universal правила), `INBOX_SYSTEM_PROMPT` (класифікатор Inbox), `INBOX_TOOLS` (31 function definition), `getOwlChatSystemPrompt(context)` для callOwlChat. **Коли OWL "не так відповідає" — правити ТУТ**, не в core.js. Передумова для майбутніх характерів (Badg/Rabi) |
 | `src/ai/memory.js` | **Структурована пам'ять фактів** — `nm_facts` з часовими мітками (11.04). CRUD, дедуплікація, TTL, категорії (preferences/health/work/relationships/context/goals), formatFactsForContext/Board, міграція legacy nm_memory |
 | `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
 | `src/owl/board.js` | OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox) |
@@ -383,7 +384,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 Якщо msg.tool_calls немає → msg.content = reply (просто текст)
 ```
 
-**INBOX_TOOLS** — 25 function definitions у `src/ai/core.js`. Описують всі можливі дії з параметрами. AI ОБОВ'ЯЗКОВО вибирає одну чи кілька функцій замість тексту JSON. Промпт скорочений з ~200 до ~30 рядків — він тільки класифікує (task vs event vs project), самі формати у tool definitions.
+**INBOX_TOOLS** — 31 function definitions у `src/ai/prompts.js` (було у `core.js` до рефакторингу 17.04 14zLe). Описують всі можливі дії з параметрами. AI ОБОВ'ЯЗКОВО вибирає одну чи кілька функцій замість тексту JSON. Промпт скорочений з ~200 до ~30 рядків — він тільки класифікує (task vs event vs project), самі формати у tool definitions.
 
 **Backward compat:** `callAI()`, `callAIWithHistory()`, `callOwlChat()` працюють БЕЗ tools для tab chat bars і proactive.js (вони ще на текстовому форматі).
 
