@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { escapeHtml, logRecentAction } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { callAI, callAIWithHistory, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus, processUniversalAction } from './habits.js';
@@ -89,19 +89,16 @@ export async function sendMeChatMessage() {
   const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
   const loadEl = document.getElementById(loadId);
 
-  // Спробуємо розпарсити JSON дію
+  // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
   let handled = false;
   if (reply) {
-    try {
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
-          if (loadEl) loadEl.textContent = '✅';
-          handled = true;
-        }
+    const blocks = extractJsonBlocks(reply);
+    for (const parsed of blocks) {
+      if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
+        handled = true;
       }
-    } catch(e) {}
+    }
+    if (handled && loadEl) loadEl.textContent = '✅';
   }
 
   if (!handled && loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
@@ -982,15 +979,13 @@ export async function sendEveningBarMessage() {
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
 
-    try {
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g,'').trim());
-      if (!processUniversalAction(parsed, text, addEveningBarMsg)) {
-        safeAgentReply(reply, addEveningBarMsg);
-      }
-    } catch {
-      safeAgentReply(reply, addEveningBarMsg);
+    // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
+    const blocks = extractJsonBlocks(reply);
+    let handled = false;
+    for (const parsed of blocks) {
+      if (processUniversalAction(parsed, text, addEveningBarMsg)) handled = true;
     }
+    if (!handled) safeAgentReply(reply, addEveningBarMsg);
   } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
   eveningBarLoading = false;
 }
