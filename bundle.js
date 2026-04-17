@@ -10725,12 +10725,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         setTaskBarLoading(false);
         return;
       }
-      try {
-        const jsonMatch = reply.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : reply.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(jsonStr);
-        if (processUniversalAction(parsed, text, addTaskBarMsg)) {
-        } else if (parsed.action === "complete_step") {
+      const _processOne = (parsed) => {
+        if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
+        if (parsed.action === "complete_step") {
           const allTasks = getTasks();
           const t = allTasks.find((x) => x.id === parsed.task_id);
           if (t) {
@@ -10745,7 +10742,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
               addTaskBarMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0430\u043A\u0438\u0439 \u043A\u0440\u043E\u043A. \u0423\u0442\u043E\u0447\u043D\u0438 \u0431\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430.");
             }
           }
-        } else if (parsed.action === "complete_task") {
+          return true;
+        }
+        if (parsed.action === "complete_task") {
           const allTasks = getTasks();
           const t = allTasks.find((x) => x.id === parsed.task_id);
           if (t) {
@@ -10755,7 +10754,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
             renderTasks();
             addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
           }
-        } else if (parsed.action === "add_step") {
+          return true;
+        }
+        if (parsed.action === "add_step") {
           const allTasks = getTasks();
           const t = allTasks.find((x) => x.id === parsed.task_id);
           if (t) {
@@ -10764,7 +10765,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "' + parsed.step + '"');
           }
-        } else if (parsed.action === "complete_habit") {
+          return true;
+        }
+        if (parsed.action === "complete_habit") {
           const habits2 = getHabits();
           const h = habits2.find((x) => x.name.toLowerCase().includes((parsed.habit_name || "").toLowerCase().substring(0, 6)));
           if (h) {
@@ -10776,10 +10779,11 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
             renderProdHabits();
             renderHabits();
             addTaskBarMsg("agent", '\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "' + h.name + '" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456');
-          } else {
-            safeAgentReply(reply, addTaskBarMsg);
+            return true;
           }
-        } else if (parsed.action === "create_habit") {
+          return false;
+        }
+        if (parsed.action === "create_habit") {
           const habits2 = getHabits();
           const name = (parsed.name || "").trim();
           if (name) {
@@ -10790,17 +10794,21 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
             renderHabits();
             addTaskBarMsg("agent", '\u{1F331} \u0417\u0432\u0438\u0447\u043A\u0443 "' + name + '" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!');
           }
-        } else if (parsed.action === "create_task") {
+          return true;
+        }
+        if (parsed.action === "create_task") {
           const tasks2 = getTasks();
           const title = (parsed.title || "").trim();
           if (title) {
             const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-            tasks2.unshift({ id: Date.now(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() });
+            tasks2.unshift({ id: Date.now() + Math.floor(Math.random() * 1e3), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() });
             saveTasks(tasks2);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "' + title + '" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!');
           }
-        } else if (parsed.action === "undo_step") {
+          return true;
+        }
+        if (parsed.action === "undo_step") {
           const allTasks = getTasks();
           const t = allTasks.find((x) => x.id === parsed.task_id);
           if (t) {
@@ -10815,12 +10823,16 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
               addTaskBarMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0430\u043A\u0438\u0439 \u043A\u0440\u043E\u043A. \u0423\u0442\u043E\u0447\u043D\u0438 \u0431\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430.");
             }
           }
-        } else {
-          safeAgentReply(reply, addTaskBarMsg);
+          return true;
         }
-      } catch {
-        safeAgentReply(reply, addTaskBarMsg);
+        return false;
+      };
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (_processOne(parsed)) handled = true;
       }
+      if (!handled) safeAgentReply(reply, addTaskBarMsg);
     } catch {
       addTaskBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
