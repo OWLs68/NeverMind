@@ -11994,17 +11994,25 @@ ${JSON.stringify(contextData, null, 2)}` : "";
             addTaskChatMsg("agent", reply);
           }
         } catch {
-          if (/\{"action"/.test(reply)) {
-            try {
-              const jsonMatch = reply.match(/\{[\s\S]*\}/);
-              const p = JSON.parse(jsonMatch[0]);
-              if (!processUniversalAction(p, text, addTaskChatMsg)) addTaskChatMsg("agent", reply);
-            } catch {
-              addTaskChatMsg("agent", reply);
+          const blocks = extractJsonBlocks(reply);
+          let handled = false;
+          for (const p of blocks) {
+            if (p.steps && Array.isArray(p.steps) && p.steps.length > 0) {
+              const allTasks = getTasks();
+              const taskIdx = allTasks.findIndex((x) => x.id === taskChatId);
+              if (taskIdx !== -1) {
+                const newSteps = p.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false }));
+                allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
+                saveTasks(allTasks);
+                renderTasks();
+                addTaskChatMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 ${p.steps.length} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.`);
+                handled = true;
+              }
+            } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
+              handled = true;
             }
-          } else {
-            addTaskChatMsg("agent", reply);
           }
+          if (!handled) addTaskChatMsg("agent", reply);
         }
       } else addTaskChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
     } catch {
