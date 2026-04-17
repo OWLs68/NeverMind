@@ -157,9 +157,31 @@ function _migrateFinCats(saved) {
     if (typeof c.order !== 'number') c.order = i;
     return c;
   });
+  // B-75 fix (17.04 KTQZA): дедуп дублікатів за назвою (case-insensitive).
+  // Історична проблема — якщо є дві "Їжа" → донат малює два сегменти з тим самим sum
+  // (catMap групує по name), переповнення кола → "фрагментація".
+  const dedupe = (list) => {
+    const seen = new Map();
+    for (const c of list) {
+      const key = String(c.name || '').trim().toLowerCase();
+      if (!key) continue;
+      if (!seen.has(key)) {
+        seen.set(key, c);
+      } else {
+        // Дубль — мержимо підкатегорії у першу, першу залишаємо.
+        const first = seen.get(key);
+        const firstSubs = Array.isArray(first.subcategories) ? first.subcategories : [];
+        const dupSubs = Array.isArray(c.subcategories) ? c.subcategories : [];
+        const mergedSubs = [...firstSubs];
+        dupSubs.forEach(s => { if (!mergedSubs.includes(s)) mergedSubs.push(s); });
+        first.subcategories = mergedSubs;
+      }
+    }
+    return Array.from(seen.values());
+  };
   const migrated = {
-    expense: normalize(saved.expense, 0),
-    income:  normalize(saved.income, 1000),
+    expense: dedupe(normalize(saved.expense, 0)),
+    income:  dedupe(normalize(saved.income, 1000)),
   };
   const needsSave = JSON.stringify(saved) !== JSON.stringify(migrated);
   if (needsSave) localStorage.setItem('nm_finance_cats', JSON.stringify(migrated));
