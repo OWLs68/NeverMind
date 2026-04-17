@@ -8525,31 +8525,42 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       let startX = 0, startY = 0, dx = 0, locked = false;
       const card = sw.querySelector(".tx-row");
       if (!card) return;
-      let bin = sw.querySelector(".fin-tx-bin");
-      if (!bin) {
+      let bin = null;
+      const ensureBin = () => {
+        if (bin) return;
+        const w = Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
         bin = document.createElement("button");
         bin.className = "fin-tx-bin";
         bin.setAttribute("aria-label", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438");
-        bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${SWIPE_BIN_WIDTH}px;display:flex;align-items:center;justify-content:center;background:#ef4444;border:none;cursor:pointer;padding:0;z-index:0;font-family:inherit`;
-        bin.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(239,68,68,0) 0%, rgba(239,68,68,0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
+        bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
         bin.addEventListener("click", (e) => {
           e.stopPropagation();
           const txId = parseInt(sw.dataset.txId);
           if (!isNaN(txId)) _deleteFinTxById(txId);
         });
         sw.appendChild(bin);
-      }
+      };
+      const removeBin = () => {
+        if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
+        bin = null;
+      };
+      const getOpenOffset = () => -Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
       const setOffset = (offset, animate = false) => {
         card.style.transition = animate ? "transform 0.25s ease" : "";
         card.style.transform = `translateX(${offset}px)`;
       };
       const openSwipe = () => {
         sw._open = true;
-        setOffset(-SWIPE_BIN_WIDTH, true);
+        ensureBin();
+        setOffset(getOpenOffset(), true);
       };
       const closeSwipe = () => {
         sw._open = false;
         setOffset(0, true);
+        setTimeout(() => {
+          if (!sw._open) removeBin();
+        }, 280);
       };
       card.addEventListener("click", (e) => {
         if (sw._open) {
@@ -8567,16 +8578,15 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       }, { passive: true });
       sw.addEventListener("touchmove", (e) => {
         if (locked) return;
-        const curX = e.touches[0].clientX;
-        const curY = e.touches[0].clientY;
-        const ddx = curX - startX;
-        const ddy = curY - startY;
+        const ddx = e.touches[0].clientX - startX;
+        const ddy = e.touches[0].clientY - startY;
         if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) {
           locked = true;
           return;
         }
         dx = ddx;
-        const baseOffset = sw._open ? -SWIPE_BIN_WIDTH : 0;
+        if (dx < 0 && !sw._open && !bin) ensureBin();
+        const baseOffset = sw._open ? getOpenOffset() : 0;
         const newOffset = Math.min(0, baseOffset + dx);
         setOffset(newOffset);
       }, { passive: true });
@@ -8586,11 +8596,12 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           else closeSwipe();
           return;
         }
+        const threshold = sw.offsetWidth * SWIPE_OPEN_RATIO * 0.5;
         if (sw._open) {
           if (dx > 30) closeSwipe();
           else openSwipe();
         } else {
-          if (dx < -SWIPE_BIN_THRESHOLD) openSwipe();
+          if (dx < -threshold) openSwipe();
           else closeSwipe();
         }
       }, { passive: true });
@@ -8842,7 +8853,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const dateStr = new Date(t.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
       const categoryLine = t.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
       return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:rgba(255,255,255,0.95)">
+      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
           ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ""}
@@ -10169,7 +10180,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
     }
   }
-  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, SWIPE_BIN_WIDTH, SWIPE_BIN_THRESHOLD, FIN_INSIGHT_TTL, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft, _analyticsChartMode, _analyticsMiniIdx, _analyticsBenchmarkEdit;
+  var _financeTypingEl, FIN_CAT_ICONS, FIN_CAT_ICON_NAMES, FIN_CAT_PALETTE, FIN_DEFAULT_ICONS, FIN_DEFAULT_SUBCATS, currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _finEditingCatId, _MONTH_NAMES, SWIPE_OPEN_RATIO, FIN_INSIGHT_TTL, _finSwipeAttached, _finEditId, _finTxCurrentType, _finTxCategory, _finTxSubcategory, _finTxExpression, _finTxDate, _finTxComment, financeBarHistory, financeBarLoading, _finCatModalDraft, _analyticsChartMode, _analyticsMiniIdx, _analyticsBenchmarkEdit;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -10312,8 +10323,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       _finEditMode = false;
       _finEditingCatId = null;
       _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
-      SWIPE_BIN_WIDTH = 80;
-      SWIPE_BIN_THRESHOLD = SWIPE_DELETE_THRESHOLD * 1.5;
+      SWIPE_OPEN_RATIO = 0.5;
       FIN_INSIGHT_TTL = 60 * 60 * 1e3;
       _finSwipeAttached = false;
       _finEditId = null;
