@@ -5759,9 +5759,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
         healthBarLoading = false;
         return;
       }
-      try {
-        const jsonMatch = reply.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
+      const _processOne = (parsed) => {
         if (parsed.action === "log_health") {
           const log = getHealthLog();
           const today = (/* @__PURE__ */ new Date()).toDateString();
@@ -5771,7 +5769,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
           if (parsed.pain !== void 0) log[today].pain = parseInt(parsed.pain);
           saveHealthLog(log);
           addHealthChatMsg("agent", `\u2713 \u0417\u0430\u043F\u0438\u0441\u0430\u0432 \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F.`);
-        } else if (parsed.action === "update_health_progress" && parsed.card_id) {
+          return true;
+        }
+        if (parsed.action === "update_health_progress" && parsed.card_id) {
           const cards2 = getHealthCards();
           const idx = cards2.findIndex((c) => c.id === parsed.card_id);
           if (idx !== -1) {
@@ -5781,7 +5781,9 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderHealth();
             addHealthChatMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u043F\u0440\u043E\u0433\u0440\u0435\u0441: ${cards2[idx].progress}%${parsed.nextStep ? " \u2192 " + parsed.nextStep : ""}`);
           }
-        } else if (parsed.action === "add_medication" && parsed.card_id) {
+          return true;
+        }
+        if (parsed.action === "add_medication" && parsed.card_id) {
           const cards2 = getHealthCards();
           const idx = cards2.findIndex((c) => c.id === parsed.card_id);
           if (idx !== -1) {
@@ -5792,13 +5794,17 @@ ${aiContext ? "\n\n" + aiContext : ""}
             renderHealth();
             addHealthChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 ${parsed.name} \u0434\u043E \u043A\u0430\u0440\u0442\u043A\u0438`);
           }
-        } else if (processUniversalAction(parsed, text, addHealthChatMsg)) {
-        } else {
-          safeAgentReply(reply, addHealthChatMsg);
+          return true;
         }
-      } catch {
-        safeAgentReply(reply, addHealthChatMsg);
+        if (processUniversalAction(parsed, text, addHealthChatMsg)) return true;
+        return false;
+      };
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (_processOne(parsed)) handled = true;
       }
+      if (!handled) safeAgentReply(reply, addHealthChatMsg);
     } catch {
       addHealthChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
