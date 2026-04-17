@@ -499,9 +499,10 @@ body {
 .settings-scroll {
   overflow-y: auto;
   flex: 1;
+  padding-top: 20px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
   -webkit-overflow-scrolling: touch;
-  /* Плавний fade зверху — картки "розчиняються" у заголовку замість різкого обрізання */
+  /* Плавний fade зверху у зоні padding-top — перша картка не перекривається */
   mask-image: linear-gradient(to bottom, transparent 0, black 20px);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 20px);
 }
