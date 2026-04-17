@@ -965,7 +965,7 @@ function _tryTabLocalFallback(tab) {
       const exp = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
       const inc = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
       if (monthTxs.length === 0) {
-        text = 'Цього місяця транзакцій ще немає. Додай першу витрату!';
+        text = 'Цього місяця операцій ще немає. Додай першу витрату!';
       } else {
         text = `За місяць: витрати ${formatMoney(exp)}, доходи ${formatMoney(inc)}.${inc > 0 ? ` Збережено ${Math.round((inc - exp) / inc * 100)}%.` : ''}`;
       }

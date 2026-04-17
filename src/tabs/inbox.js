@@ -516,7 +516,7 @@ export async function sendToAI(fromChip = false) {
             if (action.amount) updParts.push('сума: ' + formatMoney(txs[idx].amount));
             addInboxChatMsg('agent', '✓ Оновлено: ' + (updParts.join(', ') || txs[idx].category));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов транзакцію. Спробуй ще раз.');
+            addInboxChatMsg('agent', 'Не знайшов операцію. Спробуй ще раз.');
           }
         } else if (action.action === 'complete_habit') {
           await processCompleteHabit(action, text);
@@ -572,7 +572,7 @@ export async function sendToAI(fromChip = false) {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;
           const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
-          const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'транзакцію' };
+          const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'операцію' };
           const typeIcon = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' };
           const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
           if (q === 'all') {
@@ -782,7 +782,7 @@ export async function sendToAI(fromChip = false) {
           } else {
             deleteFinCategory(found.cat.id);
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.name}" видалено. Старі транзакції збережено з цим ім'ям. ${action.comment || ''}`);
+            addInboxChatMsg('agent', `✓ Категорію "${action.name}" видалено. Старі операції збережено з цим ім'ям. ${action.comment || ''}`);
           }
         } else if (action.action === 'merge_finance_categories') {
           const from = findFinCatByName(action.from_name);
@@ -795,7 +795,7 @@ export async function sendToAI(fromChip = false) {
             const res = mergeFinCategories(from.cat.id, to.cat.id);
             if (res.ok) {
               if (currentTab === 'finance') renderFinance();
-              addInboxChatMsg('agent', `✓ Об'єднав "${res.from}" → "${res.to}". Перенесено ${res.txsMoved} транзакцій. ${action.comment || ''}`);
+              addInboxChatMsg('agent', `✓ Об'єднав "${res.from}" → "${res.to}". Перенесено ${res.txsMoved} операцій. ${action.comment || ''}`);
             } else {
               addInboxChatMsg('agent', `Не вдалось об'єднати: ${res.reason}`);
             }

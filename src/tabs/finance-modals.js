@@ -94,11 +94,11 @@ export function finCalcAppend(token) {
   const isOp = (c) => '+-*/×÷'.includes(c);
   if (isOp(token) && isOp(last)) {
     _finTxExpression = _finTxExpression.slice(0, -1) + token;
-  } else if (token === '.') {
+  } else if (token === ',' || token === '.') {
     const lastNum = _finTxExpression.split(/[+\-*/×÷]/).pop();
-    if (lastNum.includes('.')) return;
+    if (lastNum.includes(',') || lastNum.includes('.')) return;
     if (!lastNum) _finTxExpression += '0';
-    _finTxExpression += token;
+    _finTxExpression += ',';
   } else {
     _finTxExpression += token;
   }
@@ -161,7 +161,7 @@ function _showTransactionModal(data) {
   _finTxCurrentType = data.type === 'income' ? 'income' : 'expense';
   _finTxCategory = data.category || '';
   _finTxSubcategory = data.subcategory || '';
-  _finTxExpression = data.amount ? String(data.amount) : '';
+  _finTxExpression = data.amount ? String(data.amount).replace('.', ',') : '';
   _finTxDate = data.ts || Date.now();
 
   const existing = document.getElementById('fin-tx-modal');
@@ -243,7 +243,7 @@ function _renderTransactionModalBody() {
     ${calcBtn('2', "finCalcAppend('2')")}
     ${calcBtn('3', "finCalcAppend('3')")}
     ${calcBtn('−', "finCalcAppend('-')", opStyle)}
-    ${calcBtn(',', "finCalcAppend('.')")}
+    ${calcBtn(',', "finCalcAppend(',')")}
     ${calcBtn('0', "finCalcAppend('0')")}
     ${calcBtn('⌫', 'finCalcBackspace()', { bg: 'rgba(239,68,68,0.06)', col: '#dc2626', fontSize: '18px' })}
     ${calcBtn('+', "finCalcAppend('+')", opStyle)}
