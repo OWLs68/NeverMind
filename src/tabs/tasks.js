@@ -57,8 +57,8 @@ export function setupModalSwipeClose(contentEl, closeFn) {
   contentEl._swipeClose = true;
   let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
   contentEl.addEventListener('touchstart', e => {
-    // Не перехоплювати свайп на скролюваних елементах (барабан, чат)
-    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item');
+    // Не перехоплювати свайп на скролюваних елементах (барабан, чат, прокрутка Налаштувань)
+    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll');
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     dy = 0;
