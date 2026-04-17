@@ -27,6 +27,16 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '🔧 РОБОЧИЙ ПРОЦЕС (CLAUDE.md секція 🔧): 1) Файли >250 рядків → skeleton+Edit (не один Write). 2) Checkpoint-коміт після КОЖНОЇ логічної фази (не чекати кінця). 3) ≤25 слів між tool calls. 📋 ТРИГЕРИ АВТО-АКТИВАЦІЇ СКІЛІВ (_ai-tools/SKILLS_PLAN.md): модалка/стиль/колір/фон → /ux-ui • промпт/галюцинує/OWL_тон → /prompt-engineer • iOS/PWA/Safari/bfcache → /pwa-ios-fix • рефакторинг/розбити_файл/>500 рядків → /refactor-large • Supabase/backend/offline → /supabase-prep. Claude САМ викликає скіл за тригером, не чекає /команди.'"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
