@@ -65,6 +65,34 @@ function checkFinBudgetWarning(type, category, amount) {
   }
 }
 
+// Розбиває AI-відповідь на окремі JSON об'єкти.
+// Потрібно бо AI може повернути кілька дій одразу ("видали А,Б,В, додай Г" →
+// 4 JSON-блоки один за одним). Стара логіка з /\{[\s\S]*\}/ брала все як один
+// блок і парсинг падав → юзер бачив сирий JSON замість виконаних дій.
+// Балансує {} із урахуванням рядків у лапках (щоб { у value не ламав парсер).
+function _extractJsonBlocks(text) {
+  const blocks = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { blocks.push(JSON.parse(text.slice(start, i + 1))); } catch {}
+        start = -1;
+      }
+    }
+  }
+  return blocks;
+}
+
 export async function sendFinanceBarMessage() {
   if (financeBarLoading) return;
   const input = document.getElementById('finance-bar-input');
@@ -116,17 +144,15 @@ export async function sendFinanceBarMessage() {
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
 
-    try {
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
-      if (processUniversalAction(parsed, text, addFinanceChatMsg)) {
-        // оброблено універсально
-      } else if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
+    // Обробка одного JSON блоку. Повертає true якщо оброблено, false якщо невідомий action.
+    const _processOne = (parsed) => {
+      if (processUniversalAction(parsed, text, addFinanceChatMsg)) return true;
+      if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
         const type = parsed.action === 'save_expense' ? 'expense' : 'income';
         const amount = parseFloat(parsed.amount);
         const category = parsed.category || 'Інше';
         const comment = parsed.comment || '';
-        const ts = Date.now();
+        const ts = Date.now() + Math.floor(Math.random() * 1000); // унікальний id при множинних операціях
         const txs2 = getFinance();
         txs2.unshift({ id: ts, type, amount, category, comment, ts });
         saveFinance(txs2);
@@ -142,14 +168,17 @@ export async function sendFinanceBarMessage() {
         try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
         addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}`);
         checkFinBudgetWarning(type, category, amount);
-      } else if (parsed.action === 'delete_transaction') {
+        return true;
+      }
+      if (parsed.action === 'delete_transaction') {
         const item = getFinance().find(t => t.id === parsed.id);
-        const _item = getFinance().find(t => t.id === parsed.id);
-        if (_item) addToTrash('finance', _item);
+        if (item) addToTrash('finance', item);
         saveFinance(getFinance().filter(t => t.id !== parsed.id));
         renderFinance();
         addFinanceChatMsg('agent', `🗑 Видалено: ${item ? item.category + ' ' + formatMoney(item.amount) : 'операцію'}`);
-      } else if (parsed.action === 'update_transaction') {
+        return true;
+      }
+      if (parsed.action === 'update_transaction') {
         const txs2 = getFinance();
         const idx = txs2.findIndex(t => t.id === parsed.id);
         if (idx !== -1) {
@@ -162,26 +191,37 @@ export async function sendFinanceBarMessage() {
         } else {
           addFinanceChatMsg('agent', 'Транзакцію не знайдено.');
         }
-      } else if (parsed.action === 'set_budget') {
+        return true;
+      }
+      if (parsed.action === 'set_budget') {
         const bdg = getFinBudget();
         if (parsed.total) bdg.total = parsed.total;
         if (parsed.categories) Object.assign(bdg.categories, parsed.categories);
         saveFinBudget(bdg);
         renderFinance();
         addFinanceChatMsg('agent', '✓ Бюджет оновлено');
-      } else if (parsed.action === 'create_category') {
+        return true;
+      }
+      if (parsed.action === 'create_category') {
         const type = parsed.type === 'income' ? 'income' : 'expense';
         const c = getFinCats();
         const exists = (c[type] || []).some(x => x.name.toLowerCase() === (parsed.name || '').toLowerCase());
         if (!exists) createFinCategory(type, { name: parsed.name });
         renderFinance();
         addFinanceChatMsg('agent', `✓ Категорію "${parsed.name}" ${exists ? 'вже існувала' : 'додано'}`);
-      } else {
-        safeAgentReply(reply, addFinanceChatMsg);
+        return true;
       }
-    } catch {
-      safeAgentReply(reply, addFinanceChatMsg);
+      return false;
+    };
+
+    // Витягуємо всі JSON-блоки з відповіді (може бути кілька — "видали А,Б,В, додай Г").
+    // Якщо блоків немає або жоден не вдалось обробити — показуємо reply як текст.
+    const blocks = _extractJsonBlocks(reply);
+    let handled = false;
+    for (const parsed of blocks) {
+      if (_processOne(parsed)) handled = true;
     }
+    if (!handled) safeAgentReply(reply, addFinanceChatMsg);
   } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
   financeBarLoading = false;
 }
