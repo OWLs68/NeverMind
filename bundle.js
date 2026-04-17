@@ -15576,7 +15576,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const doReload = () => {
       if (_reloading) return;
       _reloading = true;
-      window.location.replace(window.location.href);
+      const url = new URL(window.location.href);
+      url.searchParams.set("_v", Date.now());
+      window.location.replace(url.toString());
     };
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (!hadController) return;
@@ -15592,10 +15594,16 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg) => {
       _swReg = reg;
       reg.update();
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
       reg.addEventListener("updatefound", () => {
         const sw = reg.installing;
         if (!sw) return;
         sw.addEventListener("statechange", () => {
+          if (sw.state === "installed" && navigator.serviceWorker.controller) {
+            sw.postMessage({ type: "SKIP_WAITING" });
+          }
           if (sw.state === "activated" && hadController) doReload();
         });
       });
