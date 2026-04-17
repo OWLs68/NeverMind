@@ -506,3 +506,13 @@ src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
 git reset --hard <hash> && git push --force origin HEAD:main
 # Стабільний коміт до рефакторингів: a8ae6cb (27.03 07:24)
 ```
+
+**⚠️ УВАГА при екстреному скиді (додано 17.04.2026 cnTkD):** `git reset --hard` відкочує **ВЕСЬ** repo у старий стан — включно з `deploy-counter.txt`. Якщо не компенсувати — лічильник версій у застосунку стрибне назад (приклад: 14.04 скид втратив v54-v130, деплої почались з v3 замість v131+).
+
+**Перед `git push --force` завжди:**
+1. Знайди останню відому версію в історії: `git log --all --oneline --grep="^chore: deploy v" | head -3`
+2. Онови `deploy-counter.txt` на `ОСТАННЯ_ВЕРСІЯ` (наступний CI-деплой зробить `+1`)
+3. `git add deploy-counter.txt && git commit --amend --no-edit` щоб включити у reset-коміт
+4. Тільки тоді `git push --force`
+
+Повна історія події і reasoning → `docs/CHANGES.md` 17.04.2026 "Deploy counter reset investigation".
