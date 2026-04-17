@@ -54,7 +54,9 @@ export function formatTime(ts) {
 }
 
 export function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // B-70 fix (17.04.2026): захист від undefined/null/number/object. Раніше undefined.replace
+  // кидав TypeError і ламав цілі блоки рендеру (приклад — _finCatsGrid).
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // === Міні-лог останніх дій для крос-контексту OWL ===

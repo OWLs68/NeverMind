@@ -11,7 +11,7 @@ import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
-import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate } from './finance.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { renderMeHabitsStats, getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents, getRoutine, saveRoutine } from './calendar.js';
 
@@ -1221,13 +1221,28 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const amount = parseFloat(parsed.amount) || 0;
     if (!amount || amount <= 0) { addMsg('agent', 'Не вдалось розпізнати суму.'); return true; }
     const category = parsed.category || 'Інше';
+    const comment = parsed.comment || originalText;
+    // B-70 fix: catList — масив об'єктів, не рядків. Раніше .includes('Їжа') завжди false
+    // і .push('Їжа') додавав рядок у масив об'єктів → биті категорії без id → _finCatsGrid падав.
     const cats = getFinCats();
     const catList = type === 'expense' ? cats.expense : cats.income;
-    if (!catList.includes(category)) { catList.push(category); saveFinCats(cats); }
+    if (!catList.some(c => c.name === category)) {
+      createFinCategory(type, { name: category });
+    }
     const txs = getFinance();
     const finTs = _resolveFinanceDate(parsed.date, originalText);
-    txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: finTs });
+    const txId = Date.now();
+    txs.unshift({ id: txId, type, amount, category, comment, ts: finTs });
     saveFinance(txs);
+    // B-71 fix: створюємо картку у Inbox стрічці — будь-яка операція видима скрізь,
+    // незалежно від точки введення (чат Фінансів, Task chat, Me chat тощо).
+    try {
+      const items = getInbox();
+      const inboxText = (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · ' + category + (comment && comment !== originalText ? ' — ' + comment : '');
+      items.unshift({ id: txId, text: inboxText, category: 'finance', ts: finTs, processed: true });
+      saveInbox(items);
+      if (currentTab === 'inbox') renderInbox();
+    } catch(e) {}
     if (currentTab === 'finance') renderFinance();
     addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · категорія: ' + category + (parsed.comment ? ' · ' + parsed.comment : ''));
     return true;
