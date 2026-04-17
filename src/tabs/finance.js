@@ -401,8 +401,8 @@ function _finCatsGrid(allTxs, win) {
     // B-61: тінь-левітація. Оновлено 17.04.2026 (14zLe) — чорна тінь замість
     // кольору категорії: виразніше "висить" над фоном, контрастніше.
     // У edit-режимі ще додатковий outline кольором категорії (вибраний стан).
-    const levitShadow = `box-shadow:0 10px 22px rgba(0,0,0,0.38), 0 4px 8px rgba(0,0,0,0.24);`;
-    const editStyle = _finEditMode ? `box-shadow:0 10px 22px rgba(0,0,0,0.38), 0 4px 8px rgba(0,0,0,0.24), 0 0 0 2px ${cat.color}55;` : levitShadow;
+    const levitShadow = `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);`;
+    const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
     // B-57: стрілки ‹ › у edit-режимі для переміщення категорії.
     const arrows = _finEditMode ? `
       <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="Вліво" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
@@ -458,7 +458,7 @@ function _finCatsGrid(allTxs, win) {
   // Базове сіре кільце (видно якщо totalSum=0 або якщо сегменти не покривають 100%)
   const donutBase = `<circle cx="50" cy="50" r="${donutR}" fill="none" stroke="rgba(30,16,64,0.06)" stroke-width="9"/>`;
   const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
-    <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 12px 28px rgba(0,0,0,0.38)) drop-shadow(0 5px 10px rgba(0,0,0,0.22))">
+    <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 5px 14px rgba(0,0,0,0.32)) drop-shadow(0 2px 5px rgba(0,0,0,0.22))">
       ${donutBase}${donutRings}
       <circle cx="50" cy="50" r="${donutR - 5}" fill="rgba(255,255,255,0.95)"/>
     </svg>
