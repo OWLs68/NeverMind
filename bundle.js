@@ -8262,9 +8262,29 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (typeof c.order !== "number") c.order = i;
       return c;
     });
+    const dedupe = (list) => {
+      const seen = /* @__PURE__ */ new Map();
+      for (const c of list) {
+        const key = String(c.name || "").trim().toLowerCase();
+        if (!key) continue;
+        if (!seen.has(key)) {
+          seen.set(key, c);
+        } else {
+          const first = seen.get(key);
+          const firstSubs = Array.isArray(first.subcategories) ? first.subcategories : [];
+          const dupSubs = Array.isArray(c.subcategories) ? c.subcategories : [];
+          const mergedSubs = [...firstSubs];
+          dupSubs.forEach((s) => {
+            if (!mergedSubs.includes(s)) mergedSubs.push(s);
+          });
+          first.subcategories = mergedSubs;
+        }
+      }
+      return Array.from(seen.values());
+    };
     const migrated = {
-      expense: normalize(saved.expense, 0),
-      income: normalize(saved.income, 1e3)
+      expense: dedupe(normalize(saved.expense, 0)),
+      income: dedupe(normalize(saved.income, 1e3))
     };
     const needsSave = JSON.stringify(saved) !== JSON.stringify(migrated);
     if (needsSave) localStorage.setItem("nm_finance_cats", JSON.stringify(migrated));
@@ -8868,7 +8888,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (currentTab === "finance") renderFinance();
   }
   function formatMoney(n) {
-    return getCurrency() + (Math.abs(n) % 1 === 0 ? Math.abs(n) : Math.abs(n).toFixed(2));
+    const abs = Math.abs(n);
+    const str = abs % 1 === 0 ? String(abs) : abs.toFixed(2).replace(".", ",");
+    return getCurrency() + str;
   }
   function getFinPeriodRange(period) {
     return _getFinPeriodWindow(period, 0).from;
@@ -16802,6 +16824,12 @@ ${legacy}`;
     _finTxSubcategory = "";
     _refreshTransactionModal();
   }
+  function setFinTxType(type) {
+    _finTxCurrentType = type === "income" ? "income" : "expense";
+    _finTxCategory = "";
+    _finTxSubcategory = "";
+    _refreshTransactionModal();
+  }
   function selectFinTxSubcat(name) {
     _finTxSubcategory = _finTxSubcategory === name ? "" : name;
     _refreshTransactionModal();
@@ -16923,6 +16951,10 @@ ${legacy}`;
     <div style="overflow-y:auto;max-height:85vh;padding:18px 0 calc(env(safe-area-inset-bottom)+18px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
+    ${isEdit ? "" : `<div style="display:flex;gap:6px;margin-bottom:10px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px">
+      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? "white" : "transparent"};color:${isExpense ? "#c2410c" : "rgba(30,16,64,0.5)"};box-shadow:${isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">\u0412\u0438\u0442\u0440\u0430\u0442\u0430</button>
+      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? "white" : "transparent"};color:${!isExpense ? "#16a34a" : "rgba(30,16,64,0.5)"};box-shadow:${!isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">\u0414\u043E\u0445\u0456\u0434</button>
+    </div>`}
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
       ${_finTxExpression && /[+\-*/×÷]/.test(_finTxExpression) ? `<div style="font-size:13px;color:rgba(30,16,64,0.45);margin-top:4px">= ${formatMoney(calcResult)}</div>` : ""}
@@ -17341,6 +17373,7 @@ ${legacy}`;
     finCalcBackspace,
     selectFinTxMainCat,
     selectFinTxSubcat,
+    setFinTxType,
     openFinDateModal,
     closeFinDateModal,
     setFinTxDateOffset,
