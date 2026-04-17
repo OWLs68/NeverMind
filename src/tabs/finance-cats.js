@@ -174,7 +174,8 @@ function _makeCatObj(name, idx) {
     name,
     icon: FIN_DEFAULT_ICONS[name] || 'other',
     color: FIN_DEFAULT_COLORS[name] || pickRandomCatColor(idx),
-    subcategories: (FIN_DEFAULT_SUBCATS[name] || []).slice(),
+    // B-58: автогенерація — максимум 3 підкатегорії, решту юзер додасть сам.
+    subcategories: (FIN_DEFAULT_SUBCATS[name] || []).slice(0, 3),
     archived: false,
     order: idx,
   };
@@ -202,7 +203,8 @@ function _migrateFinCats(saved) {
     // Ремап зламаного сірого: якщо категорія з відомою назвою має #78716c (не "Інше" — там сірий легальний) — замінити.
     else if (c.color.toLowerCase() === FIN_BROKEN_DEFAULT_COLOR && known && known !== FIN_BROKEN_DEFAULT_COLOR) c.color = known;
     if (!Array.isArray(c.subcategories)) c.subcategories = [];
-    if (c.subcategories.length === 0 && FIN_DEFAULT_SUBCATS[c.name]) c.subcategories = FIN_DEFAULT_SUBCATS[c.name].slice();
+    // B-58: автогенерація — максимум 3 підкатегорії.
+    if (c.subcategories.length === 0 && FIN_DEFAULT_SUBCATS[c.name]) c.subcategories = FIN_DEFAULT_SUBCATS[c.name].slice(0, 3);
     if (typeof c.archived !== 'boolean') c.archived = false;
     if (typeof c.order !== 'number') c.order = i;
     return c;
@@ -262,7 +264,8 @@ export function createFinCategory(type, data) {
     name: data.name || 'Без назви',
     icon: data.icon || FIN_DEFAULT_ICONS[data.name] || 'other',
     color: data.color || FIN_DEFAULT_COLORS[data.name] || pickRandomCatColor(order),
-    subcategories: data.subcategories && data.subcategories.length ? data.subcategories : (FIN_DEFAULT_SUBCATS[data.name] || []).slice(),
+    // B-58: якщо юзер/AI задав явно — беремо як є (до 3 максимум); якщо нема — дефолтні обмежені до 3.
+    subcategories: data.subcategories && data.subcategories.length ? data.subcategories.slice(0, 3) : (FIN_DEFAULT_SUBCATS[data.name] || []).slice(0, 3),
     archived: false,
     order,
   };
