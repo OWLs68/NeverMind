@@ -8264,14 +8264,26 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       localStorage.setItem("nm_finance_cats", JSON.stringify(fresh));
       return fresh;
     }
-    if (Array.isArray(saved.expense) && saved.expense.length > 0 && typeof saved.expense[0] === "object" && saved.expense[0].id) {
-      return saved;
-    }
+    const normalize = (list, startIdx) => (list || []).map((c, i) => {
+      if (typeof c === "string") return _makeCatObj(c, startIdx + i);
+      if (!c || typeof c !== "object") return _makeCatObj("\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u043E", startIdx + i);
+      if (!c.id || !c.name) {
+        return _makeCatObj(c.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438", startIdx + i);
+      }
+      if (!c.icon) c.icon = "other";
+      if (!c.color) c.color = pickRandomCatColor(i);
+      if (!Array.isArray(c.subcategories)) c.subcategories = [];
+      if (typeof c.archived !== "boolean") c.archived = false;
+      if (typeof c.order !== "number") c.order = i;
+      return c;
+    });
     const migrated = {
-      expense: (saved.expense || []).map((n, i) => typeof n === "string" ? _makeCatObj(n, i) : n),
-      income: (saved.income || []).map((n, i) => typeof n === "string" ? _makeCatObj(n, i) : n)
+      expense: normalize(saved.expense, 0),
+      income: normalize(saved.income, 1e3)
+      // зсунутий idx щоб не перетиналися ids з expense
     };
-    localStorage.setItem("nm_finance_cats", JSON.stringify(migrated));
+    const needsSave = JSON.stringify(saved) !== JSON.stringify(migrated);
+    if (needsSave) localStorage.setItem("nm_finance_cats", JSON.stringify(migrated));
     return migrated;
   }
   function getFinCats() {
@@ -8670,30 +8682,38 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const prompt2 = `${getOWLPersonality()}
 \u0422\u0438 \u2014 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0442\u0440\u0435\u043D\u0435\u0440. \u0414\u0430\u0439 \u041E\u0414\u041D\u0423 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u043F\u043E\u0440\u0430\u0434\u0443 \u0437 \u0447\u0438\u0441\u043B\u0430\u043C\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
 
+\u{1F6A8} \u0416\u041E\u0420\u0421\u0422\u041A\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0422\u041E\u0427\u041D\u041E\u0421\u0422\u0406 \u0427\u0418\u0421\u0415\u041B:
+- \u042F\u043A\u0449\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454\u0448 \u0447\u0438\u0441\u043B\u043E \u2014 \u0432\u043E\u043D\u043E \u041C\u0410\u0404 \u0411\u0423\u0422\u0418 \u0422\u041E\u0427\u041D\u041E \u0422\u0410\u041A\u0418\u041C \u042F\u041A \u0423 \u0414\u0410\u041D\u0418\u0425 \u041D\u0418\u0416\u0427\u0415.
+- \u041D\u0415 \u043E\u043A\u0440\u0443\u0433\u043B\u044F\u0439, \u041D\u0415 \u0434\u043E\u0434\u0430\u0432\u0430\u0439, \u041D\u0415 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u0432\u0443\u0439 \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E (\u044E\u0437\u0435\u0440 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u0454 \u0430\u0440\u0438\u0444\u043C\u0435\u0442\u0438\u043A\u0443).
+- \u042F\u043A\u0449\u043E \u0434\u0430\u0454\u0448 \u0440\u0456\u0447\u043D\u0443 \u043F\u0440\u043E\u0435\u043A\u0446\u0456\u044E: \u0447\u0438\u0441\u043B\u043E \xD7 12 (\u0431\u0435\u0437 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u044C) \u2014 \u043F\u043E\u0440\u0430\u0445\u0443\u0439 \u0442\u043E\u0447\u043D\u043E.
+- \u042F\u043A\u0449\u043E \u043D\u0435 \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u0438\u0439 \u0443 \u0447\u0438\u0441\u043B\u0456 \u2014 \u041D\u0415 \u041F\u0418\u0428\u0418 \u0419\u041E\u0413\u041E, \u0434\u0430\u0439 \u043F\u043E\u0440\u0430\u0434\u0443 \u0431\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0446\u0438\u0444\u0440\u0438.
+
 \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E:
 - \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0441\u0443\u043C\u0438 \u044F\u043A\u0456 \u044E\u0437\u0435\u0440 \u0431\u0430\u0447\u0438\u0442\u044C \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456 ("\u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u0441\u043A\u043B\u0430\u043B\u0438 \u20ACX")
 - \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438 ("\u0441\u0442\u0435\u0436 \u0437\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430\u043C\u0438", "\u043F\u043B\u0430\u043D\u0443\u0439 \u0431\u044E\u0434\u0436\u0435\u0442", "\u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B\u044F\u0439 \u043A\u043E\u0448\u0442\u0438")
 - \u0437\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 "\u0437\u0430\u0433\u0430\u043B\u043E\u043C" / "\u0432 \u0446\u0456\u043B\u043E\u043C\u0443" / "\u0432\u0430\u0440\u0442\u043E \u0437\u0430\u0434\u0443\u043C\u0430\u0442\u0438\u0441\u044C"
+- \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u0447\u0438\u0441\u043B\u0430 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0443 \u0434\u0430\u043D\u0438\u0445
 
-\u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E: \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0435 \u0447\u0438\u0441\u043B\u043E + \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0434\u0456\u044F \u0430\u0431\u043E \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F.
+\u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E: \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0435 \u0447\u0438\u0441\u043B\u043E \u0417 \u0414\u0410\u041D\u0418\u0425 + \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0434\u0456\u044F \u0430\u0431\u043E \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u043D\u043D\u044F.
 
-\u0428\u0430\u0431\u043B\u043E\u043D\u0438 (\u0432\u0438\u0431\u0435\u0440\u0438 \u041D\u0410\u0419\u0420\u0415\u041B\u0415\u0412\u0410\u041D\u0422\u041D\u0406\u0428\u0418\u0419 \u0434\u043B\u044F \u0446\u0438\u0445 \u0434\u0430\u043D\u0438\u0445):
-1. \u0420\u0456\u0447\u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0446\u0456\u044F: "{\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F} ${currency}X/\u043C\u0456\u0441 = ${currency}Y \u0437\u0430 \u0440\u0456\u043A \u2014 \u0446\u0435 {\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0446\u0456\u043B\u044C}"
-2. \u0412\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043D\u044F: "\u041D\u0430 {\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F} \u0432 {N}x \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0456\u0436 \u043D\u0430 {\u0456\u043D\u0448\u0430}"
-3. \u0415\u043A\u043E\u043D\u043E\u043C\u0456\u044F: "\u0421\u043A\u043E\u0440\u043E\u0442\u0438\u0442\u0438 {\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F} \u043D\u0430 ${currency}X/\u0442\u0438\u0436\u0434\u0435\u043D\u044C = ${currency}Y \u0437\u0430 \u0440\u0456\u043A"
-4. \u041F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043D\u044F \u043B\u0456\u043C\u0456\u0442\u0443: "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F {X} \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0438\u043B\u0430 \u043B\u0456\u043C\u0456\u0442 \u043D\u0430 {N%}"
-5. \u0422\u0440\u0435\u043D\u0434: "\u0422\u043E\u043F-\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F {X} \u2014 ${currency}Y, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0443 2 \u0440\u0430\u0437\u0438 \u043C\u0435\u043D\u0448\u0430"
+\u0428\u0430\u0431\u043B\u043E\u043D\u0438 (\u0432\u0438\u0431\u0435\u0440\u0438 \u041D\u0410\u0419\u0420\u0415\u041B\u0415\u0412\u0410\u041D\u0422\u041D\u0406\u0428\u0418\u0419):
+1. \u0420\u0456\u0447\u043D\u0430 \u043F\u0440\u043E\u0435\u043A\u0446\u0456\u044F: "{\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F} ${currency}X/\u043C\u0456\u0441 = ${currency}Y \u0437\u0430 \u0440\u0456\u043A" (X \u2014 \u0437 \u0434\u0430\u043D\u0438\u0445, Y = X \xD7 12)
+2. \u0412\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043D\u044F: "\u041D\u0430 {\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F} {N}x \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0456\u0436 \u043D\u0430 {\u0456\u043D\u0448\u0430}" (\u043E\u0431\u0438\u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0437 \u0434\u0430\u043D\u0438\u0445)
+3. \u0415\u043A\u043E\u043D\u043E\u043C\u0456\u044F: "\u0421\u043A\u043E\u0440\u043E\u0442\u0438\u0442\u0438 {\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F} \u043D\u0430 ${currency}X/\u0442\u0438\u0436\u0434\u0435\u043D\u044C = ${currency}Y \u0437\u0430 \u0440\u0456\u043A" (Y = X \xD7 52)
+4. \u041F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043D\u044F \u043B\u0456\u043C\u0456\u0442\u0443: "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F {X} \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0438\u043B\u0430 \u043B\u0456\u043C\u0456\u0442 \u043D\u0430 {N%}" (\u043E\u0431\u0438\u0434\u0432\u0430 \u0447\u0438\u0441\u043B\u0430 \u0437 \u0434\u0430\u043D\u0438\u0445)
+5. \u0422\u0440\u0435\u043D\u0434: "\u0422\u043E\u043F \u2014 {X} ${currency}A, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 {Y} ${currency}B" (\u043E\u0431\u0438\u0434\u0432\u0430 \u0437 \u0434\u0430\u043D\u0438\u0445)
 
-\u0414\u0430\u043D\u0456 (${win.label}):
-\u0422\u043E\u043F-5 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439: ${topCats.map(([c, a]) => `${c}=${formatMoney(a)}`).join(", ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u0412\u0441\u044C\u043E\u0433\u043E \u0432\u0438\u0442\u0440\u0430\u0442 \u0437\u0430 \u043F\u0435\u0440\u0456\u043E\u0434: ${formatMoney(totalExp)}
-${budget.total > 0 ? `\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: ${formatMoney(budget.total)}, \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(totalExp)} (${Math.round(totalExp / budget.total * 100)}%)` : "\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"}
-${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}, \u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E ${Math.round((totalInc - totalExp) / totalInc * 100)}%` : ""}`;
+=== \u0414\u0410\u041D\u0406 (${win.label}) ===
+${topCats.map(([c, a]) => `- ${c}: ${formatMoney(a)}`).join("\n") || "- \u043D\u0435\u043C\u0430\u0454"}
+\u0412\u0441\u044C\u043E\u0433\u043E \u0432\u0438\u0442\u0440\u0430\u0442: ${formatMoney(totalExp)}
+${budget.total > 0 ? `\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F: ${formatMoney(budget.total)} (\u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${Math.round(totalExp / budget.total * 100)}%)` : ""}
+${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)} (\u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E ${Math.round((totalInc - totalExp) / totalInc * 100)}%)` : ""}`;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 120, temperature: 0.7 })
+        // B-72: temperature 0.7 → 0.3 — менше творчості з числами, більше точності
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 120, temperature: 0.3 })
       });
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content?.trim();
@@ -8746,7 +8766,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   function _finCatsGrid(allTxs, win) {
     const cats = getFinCats();
     const isExpense = currentFinTab === "expense";
-    const catList = (isExpense ? cats.expense : cats.income).filter((c) => !c.archived);
+    const catList = (isExpense ? cats.expense : cats.income).filter((c) => c && c.id && c.name && !c.archived);
     const txs = allTxs.filter((t) => t.type === (isExpense ? "expense" : "income"));
     const totalSum = txs.reduce((s, t) => s + t.amount, 0);
     const periodLabel = win?.label || "";
@@ -11478,16 +11498,25 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         return true;
       }
       const category = parsed.category || "\u0406\u043D\u0448\u0435";
+      const comment = parsed.comment || originalText;
       const cats = getFinCats();
       const catList = type === "expense" ? cats.expense : cats.income;
-      if (!catList.includes(category)) {
-        catList.push(category);
-        saveFinCats(cats);
+      if (!catList.some((c) => c.name === category)) {
+        createFinCategory(type, { name: category });
       }
       const txs = getFinance();
       const finTs = _resolveFinanceDate(parsed.date, originalText);
-      txs.unshift({ id: Date.now(), type, amount, category, comment: parsed.comment || originalText, ts: finTs });
+      const txId = Date.now();
+      txs.unshift({ id: txId, type, amount, category, comment, ts: finTs });
       saveFinance(txs);
+      try {
+        const items = getInbox();
+        const inboxText = (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 " + category + (comment && comment !== originalText ? " \u2014 " + comment : "");
+        items.unshift({ id: txId, text: inboxText, category: "finance", ts: finTs, processed: true });
+        saveInbox(items);
+        if (currentTab === "inbox") renderInbox();
+      } catch (e) {
+      }
       if (currentTab === "finance") renderFinance();
       addMsg("agent", "\u2713 " + (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + category + (parsed.comment ? " \xB7 " + parsed.comment : ""));
       return true;
@@ -15274,7 +15303,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
   }
   function escapeHtml(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function logRecentAction(action, title, tab) {
     try {
