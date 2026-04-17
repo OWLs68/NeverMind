@@ -5,7 +5,7 @@
 // ============================================================
 
 import { switchTab, showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { processUniversalAction } from './habits.js';
@@ -1598,14 +1598,10 @@ ${aiContext ? '\n\n' + aiContext : ''}
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) { addHealthChatMsg('agent', 'Щось пішло не так.'); healthBarLoading = false; return; }
 
-    try {
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : reply);
-
+    // Обробка одного JSON блоку. Повертає true якщо оброблено.
+    const _processOne = (parsed) => {
       if (parsed.action === 'log_health') {
         // B-31 (15.04 6v2eR): legacy action — шкали 1-10 прибрано з UI.
-        // Запис даних лишаємо (fallback для старих AI відповідей), але без рендеру.
-        // Буде повністю замінено у Фазі 4 — класифікація тексту у тренд.
         const log = getHealthLog();
         const today = new Date().toDateString();
         if (!log[today]) log[today] = {};
@@ -1614,7 +1610,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
         if (parsed.pain !== undefined) log[today].pain = parseInt(parsed.pain);
         saveHealthLog(log);
         addHealthChatMsg('agent', `✓ Записав самопочуття.`);
-      } else if (parsed.action === 'update_health_progress' && parsed.card_id) {
+        return true;
+      }
+      if (parsed.action === 'update_health_progress' && parsed.card_id) {
         const cards = getHealthCards();
         const idx = cards.findIndex(c => c.id === parsed.card_id);
         if (idx !== -1) {
@@ -1624,7 +1622,9 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderHealth();
           addHealthChatMsg('agent', `✓ Оновлено прогрес: ${cards[idx].progress}%${parsed.nextStep ? ' → ' + parsed.nextStep : ''}`);
         }
-      } else if (parsed.action === 'add_medication' && parsed.card_id) {
+        return true;
+      }
+      if (parsed.action === 'add_medication' && parsed.card_id) {
         const cards = getHealthCards();
         const idx = cards.findIndex(c => c.id === parsed.card_id);
         if (idx !== -1) {
@@ -1635,12 +1635,19 @@ ${aiContext ? '\n\n' + aiContext : ''}
           renderHealth();
           addHealthChatMsg('agent', `✓ Додав ${parsed.name} до картки`);
         }
-      } else if (processUniversalAction(parsed, text, addHealthChatMsg)) {
-        // handled
-      } else {
-        safeAgentReply(reply, addHealthChatMsg);
+        return true;
       }
-    } catch { safeAgentReply(reply, addHealthChatMsg); }
+      if (processUniversalAction(parsed, text, addHealthChatMsg)) return true;
+      return false;
+    };
+
+    // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
+    const blocks = extractJsonBlocks(reply);
+    let handled = false;
+    for (const parsed of blocks) {
+      if (_processOne(parsed)) handled = true;
+    }
+    if (!handled) safeAgentReply(reply, addHealthChatMsg);
   } catch { addHealthChatMsg('agent', 'Мережева помилка.'); }
   healthBarLoading = false;
 }
