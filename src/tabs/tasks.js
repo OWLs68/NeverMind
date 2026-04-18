@@ -7,7 +7,7 @@ import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
-import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { updateProdTabCounters, processUniversalAction } from './habits.js';
 import { closeNoteView } from './notes.js';
 
@@ -218,7 +218,7 @@ export function renderTasks() {
     const isDone = t.status === 'done';
 
     return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
-      <div id="task-item-${t.id}"
+      <div id="task-item-${t.id}" onclick="taskCardClick(${t.id}, event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
         <div data-task-check="1" ontouchend="event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
@@ -242,20 +242,34 @@ export function renderTasks() {
       ` : ''}
     </div></div>`;
   }).join('');
-  // Прикріплюємо non-passive touch listeners для свайп-видалення (iOS сумісність)
-  setupTaskSwipeListeners();
+  // Підключаємо B-54 свайп-видалення (винесено у спільну утиліту 18.04 14zLe)
+  document.querySelectorAll('#tasks-list .task-item-wrap').forEach(wrap => {
+    const card = wrap.querySelector('[id^="task-item-"]');
+    if (!card) return;
+    const id = parseInt(card.id.replace('task-item-', ''));
+    attachSwipeDelete(wrap, card, () => {
+      const tasks = getTasks();
+      const taskOrigIdx = tasks.findIndex(x => x.id === id);
+      const item = tasks.find(x => x.id === id);
+      if (item) addToTrash('task', item);
+      saveTasks(tasks.filter(x => x.id !== id));
+      renderTasks();
+      if (item) showUndoToast('Задачу видалено', () => {
+        const t = getTasks();
+        const idx = Math.min(taskOrigIdx, t.length);
+        t.splice(idx, 0, item);
+        saveTasks(t);
+        renderTasks();
+      });
+    });
+  });
 }
 
-function setupTaskSwipeListeners() {
-  const tasks = getTasks();
-  tasks.forEach(t => {
-    const el = document.getElementById('task-item-' + t.id);
-    if (!el || el._swipeAttached) return;
-    el._swipeAttached = true;
-    el.addEventListener('touchstart', e => taskSwipeStart(e, t.id), { passive: true });
-    el.addEventListener('touchmove', e => taskSwipeMove(e, t.id), { passive: false });
-    el.addEventListener('touchend', e => taskSwipeEnd(e, t.id), { passive: false });
-  });
+// Тап на картку задачі — відкрити редагування. Чекбокс задачі і кроки
+// мають свої handlers через data-* атрибути — не відкривають edit.
+function taskCardClick(id, event) {
+  if (event.target.closest('[data-task-check],[data-step-check]')) return;
+  openEditTask(id);
 }
 
 async function askAIAboutTask(title, desc, steps) {
@@ -489,46 +503,8 @@ async function sendTaskChatMessage() {
 
 
 // === TASK SWIPE TO DELETE ===
-const taskSwipeState = {};
-
-function taskSwipeStart(e, id) {
-  const t = e.touches[0];
-  taskSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-}
-function taskSwipeMove(e, id) {
-  const s = taskSwipeState[id]; if (!s) return;
-  const t = e.touches[0];
-  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete taskSwipeState[id]; return; }
-  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-  if (!s.swiping) return;
-  if (s.dx <= 0) e.preventDefault();
-  s.dx = Math.min(0, dx);
-  const el = document.getElementById('task-item-' + id);
-  const wrap = document.getElementById('task-wrap-' + id);
-  applySwipeTrail(el, wrap, s.dx);
-}
-function taskSwipeEnd(e, id) {
-  const s = taskSwipeState[id]; if (!s) return;
-  const el = document.getElementById('task-item-' + id);
-  const wrap = document.getElementById('task-wrap-' + id);
-  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    setTimeout(() => {
-      const tasks = getTasks();
-      const taskOrigIdx = tasks.findIndex(x => x.id === id);
-      const item = tasks.find(x => x.id === id);
-      if (item) addToTrash('task', item);
-      saveTasks(tasks.filter(x => x.id !== id));
-      renderTasks();
-      if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
-    }, 200);
-  } else {
-    clearSwipeTrail(el, wrap);
-    if (!s.swiping && !e.target.closest('[data-task-check],[data-step-check]')) openEditTask(id);
-  }
-  delete taskSwipeState[id];
-}
+// Свайп-видалення тепер через спільну утиліту attachSwipeDelete
+// (підключається у renderTasks). Тап на картку — taskCardClick (теж там).
 
 // === AUTO GENERATE TASK STEPS ===
 export async function autoGenerateTaskSteps(taskId, title) {
@@ -606,4 +582,5 @@ Object.assign(window, {
   openAddTask, saveTask, closeTaskModal, deleteTaskFromModal,
   addTaskStep, toggleTempStep, removeTempStep, closeTaskChat,
   sendTaskChatMessage, toggleTaskStatus, toggleTaskStep,
+  taskCardClick,
 });
