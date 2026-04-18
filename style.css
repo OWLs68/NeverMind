@@ -1267,6 +1267,41 @@ body {
   animation: owl-dot-pulse 2s infinite;
 }
 @keyframes owl-dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.owl-mascot {
+  position: absolute;
+  inset: 0;
+  animation: owl-float 4s ease-in-out infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+@keyframes owl-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.owl-mascot-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(.2,.8,.2,1);
+  will-change: opacity, transform;
+}
+.owl-mascot[data-state="idle"]     .owl-mascot-frame[data-frame="idle"],
+.owl-mascot[data-state="alert"]    .owl-mascot-frame[data-frame="alert"],
+.owl-mascot[data-state="thinking"] .owl-mascot-frame[data-frame="thinking"],
+.owl-mascot[data-state="greeting"] .owl-mascot-frame[data-frame="greeting"],
+.owl-mascot[data-state="error"]    .owl-mascot-frame[data-frame="error"] {
+  opacity: 1;
+  transform: scale(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .owl-mascot { animation: none !important; }
+  .owl-mascot-frame { transition: opacity 0.2s linear !important; transform: none !important; }
+}
 .owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .owl-speech-bubble {
   margin-left: 0;
