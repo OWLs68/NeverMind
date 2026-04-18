@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Owl — NeverMind</title>
+<style>
+  :root {
+    --bg-1: #fff3e4;
+    --bg-2: #ffe4c9;
+    --amber-deep: #8a5208;
+    --bubble-bg: rgba(35, 24, 14, 0.92);
+    --bubble-text: #fff8ee;
+    --btn-bg: rgba(255, 255, 255, 0.7);
+    --btn-border: rgba(138, 82, 8, 0.18);
+    --btn-active: #c2790a;
+    --btn-active-text: #fff8ee;
+    --shadow: 0 10px 30px rgba(138, 82, 8, 0.18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background:
+      radial-gradient(1200px 700px at 70% -10%, #ffe9d0 0%, transparent 60%),
+      radial-gradient(900px 600px at 0% 110%, #ffd9b1 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    color: #2b1a08;
+  }
+  .wrap {
+    max-width: 720px; margin: 0 auto;
+    padding: clamp(16px, 4vw, 40px) clamp(16px, 4vw, 32px) 32px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: clamp(18px, 3.5vw, 28px);
+  }
+  .stage {
+    width: 100%; min-height: 260px;
+    padding: clamp(24px, 4vw, 36px) clamp(18px, 3.5vw, 28px);
+    background: rgba(255, 248, 238, 0.55);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 28px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: auto 1fr;
+    align-items: center; gap: clamp(12px, 3vw, 22px);
+  }
+
+  /* OWL container with image crossfade */
+  .owl {
+    width: 200px;
+    height: 220px;
+    position: relative;
+    animation: float 4s ease-in-out infinite;
+    will-change: transform;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+
+  .owl-frame {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: opacity 0.4s ease, transform 0.5s cubic-bezier(.2,.8,.2,1);
+    will-change: opacity, transform;
+    pointer-events: none;
+  }
+  .owl.state-idle     .frame-idle,
+  .owl.state-alert    .frame-alert,
+  .owl.state-thinking .frame-thinking,
+  .owl.state-greeting .frame-greeting,
+  .owl.state-error    .frame-error {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Placeholder shown when an image fails to load (missing PNG) */
+  .owl-frame.missing {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(138, 82, 8, 0.08) 0 8px,
+      rgba(138, 82, 8, 0.14) 8px 16px
+    );
+    border: 1px dashed rgba(138, 82, 8, 0.35);
+    border-radius: 20px;
+  }
+  .placeholder-hint {
+    position: absolute;
+    inset: auto 0 0 0;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(43, 26, 8, 0.55);
+    padding-bottom: 6px;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .owl { animation: none !important; }
+    .owl-frame { transition: opacity 0.2s linear !important; }
+  }
+
+  /* BUBBLE */
+  .bubble-wrap { min-width: 0; justify-self: start; align-self: center; }
+  .bubble {
+    position: relative; max-width: 280px;
+    padding: 14px 16px;
+    background: var(--bubble-bg); color: var(--bubble-text);
+    border-radius: 18px;
+    font-size: clamp(14px, 2.1vw, 16px);
+    line-height: 1.4; letter-spacing: 0.01em;
+    transform: scaleX(0); transform-origin: left center; opacity: 0;
+    transition: transform 0.3s cubic-bezier(.2,.8,.2,1), opacity 0.2s ease;
+    box-shadow: 0 8px 20px rgba(35, 24, 14, 0.22);
+  }
+  .bubble::before {
+    content: ""; position: absolute;
+    left: -6px; top: 50%;
+    width: 12px; height: 12px;
+    background: var(--bubble-bg); border-radius: 2px;
+    transform: translateY(-50%) rotate(45deg);
+  }
+  .bubble.show { transform: scaleX(1); opacity: 1; }
+  .bubble > span { display: inline-block; opacity: 0; transition: opacity 0.2s ease 0.18s; }
+  .bubble.show > span { opacity: 1; }
+
+  @media (max-width: 520px) {
+    .stage { grid-template-columns: 1fr; justify-items: center; }
+    .bubble-wrap { justify-self: center; }
+    .bubble { max-width: 88%; }
+    .bubble::before { left: 50%; top: -6px; transform: translateX(-50%) rotate(45deg); }
+  }
+
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+  .controls button {
+    appearance: none;
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    color: var(--amber-deep);
+    font: inherit; font-weight: 600; font-size: 14px;
+    padding: 10px 18px; border-radius: 999px;
+    cursor: pointer; min-height: 40px;
+    transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .controls button:hover  { transform: translateY(-1px); }
+  .controls button:active { transform: scale(0.97); }
+  .controls button.active {
+    background: var(--btn-active); color: var(--btn-active-text);
+    border-color: transparent; box-shadow: 0 6px 16px rgba(194, 121, 10, 0.35);
+  }
+  .hint { font-size: 12px; color: rgba(43, 26, 8, 0.55); text-align: center; margin-top: -8px; max-width: 520px; }
+  .hint code { background: rgba(138,82,8,0.08); padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="stage">
+      <div class="owl state-idle" id="owl" aria-label="Сова OWL">
+        <img src="owl-idle.png"     class="owl-frame frame-idle"     alt="Спокій" />
+        <img src="owl-alert.png"    class="owl-frame frame-alert"    alt="Увага" />
+        <img src="owl-thinking.png" class="owl-frame frame-thinking" alt="Думає" />
+        <img src="owl-greeting.png" class="owl-frame frame-greeting" alt="Вітається" />
+        <img src="owl-error.png"    class="owl-frame frame-error"    alt="Помилка" />
+        <div class="placeholder-hint" id="phHint"></div>
+      </div>
+
+      <div class="bubble-wrap">
+        <div class="bubble" id="bubble" role="status" aria-live="polite">
+          <span id="bubbleText">Час записати витрату за сьогодні. Чи готовий?</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls" role="tablist" aria-label="Стани сови">
+      <button type="button" data-state="idle" class="active">idle</button>
+      <button type="button" data-state="alert">alert</button>
+      <button type="button" data-state="thinking">thinking</button>
+      <button type="button" data-state="greeting">greeting</button>
+      <button type="button" data-state="error">error</button>
+    </div>
+    <div class="hint">
+      Завантажте в корінь проєкту файли:
+      <code>owl-idle.png</code>, <code>owl-alert.png</code>, <code>owl-thinking.png</code>, <code>owl-greeting.png</code>, <code>owl-error.png</code>.
+      Прозорий фон (PNG-24 з alpha) працюватиме найкраще.
+    </div>
+  </div>
+
+<script>
+  (function () {
+    var owl = document.getElementById('owl');
+    var bubble = document.getElementById('bubble');
+    var bubbleText = document.getElementById('bubbleText');
+    var buttons = document.querySelectorAll('.controls button');
+    var phHint = document.getElementById('phHint');
+
+    var MESSAGES = {
+      idle:     'Час записати витрату за сьогодні. Чи готовий?',
+      alert:    'Новий запис у Inbox — глянемо?',
+      thinking: 'Секунду, обдумую…',
+      greeting: 'Привіт! Радий тебе бачити 👋',
+      error:    'Ой… щось пішло не так.'
+    };
+    var STATE_CLASSES = ['state-idle','state-alert','state-thinking','state-greeting','state-error'];
+
+    // Mark missing images with a placeholder style so the frame is still visible.
+    var frames = owl.querySelectorAll('.owl-frame');
+    var anyMissing = false;
+    frames.forEach(function (img) {
+      img.addEventListener('error', function () {
+        img.classList.add('missing');
+        img.removeAttribute('alt');
+        anyMissing = true;
+        updateHint();
+      });
+    });
+    function updateHint() {
+      if (anyMissing) phHint.textContent = 'PNG ще не завантажено';
+      else phHint.textContent = '';
+    }
+
+    function setState(state) {
+      STATE_CLASSES.forEach(function (c) { owl.classList.remove(c); });
+      owl.classList.add('state-' + state);
+
+      if (state === 'idle') {
+        bubble.classList.remove('show');
+      } else {
+        bubbleText.textContent = MESSAGES[state] || '';
+        bubble.classList.remove('show');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { bubble.classList.add('show'); });
+        });
+      }
+      buttons.forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-state') === state);
+      });
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () { setState(b.getAttribute('data-state')); });
+    });
+    setState('idle');
+  })();
+</script>
+</body>
+</html>
