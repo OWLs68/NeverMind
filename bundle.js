@@ -9694,7 +9694,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     return total > 0 ? Math.round(done / total * 100) : 0;
   }
-  function getHabitWeekDays(id) {
+  function getHabitWeekDays(id, target) {
     const log = getHabitLog();
     const done = [];
     const today = /* @__PURE__ */ new Date();
@@ -9706,20 +9706,29 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const d = new Date(weekStart);
       d.setDate(weekStart.getDate() + i);
       const ds = d.toDateString();
-      if (log[ds]?.[id]) done.push(i);
+      const val = log[ds]?.[id];
+      const cur = typeof val === "boolean" ? val ? 1 : 0 : val || 0;
+      if (cur >= target) done.push({ i, bonus: cur > target });
     }
     return done;
   }
-  function makeHabitDayDots(h, weekDone, todayDow) {
+  function makeHabitDayDots(h, weekState, todayDow) {
     const labels = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
     return labels.map(function(label, i) {
       const isPlanned = (h.days || [0, 1, 2, 3, 4]).includes(i);
-      const isDone = weekDone.includes(i);
+      const entry = weekState.find((x) => x.i === i);
+      const isDone = !!entry;
+      const isBonus = !!(entry && entry.bonus);
       const isToday = i === todayDow;
       let bg, border, color;
       if (isDone) {
-        bg = "#16a34a";
-        border = "#16a34a";
+        if (isBonus) {
+          bg = "linear-gradient(135deg,#fbbf24,#f59e0b)";
+          border = "transparent";
+        } else {
+          bg = "#16a34a";
+          border = "#16a34a";
+        }
         color = "white";
       } else if (isPlanned) {
         bg = "transparent";
@@ -9756,7 +9765,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
       const streak = getHabitStreak(h.id);
       const pct = getHabitPct(h.id);
-      const weekDone = getHabitWeekDays(h.id);
+      const weekDone = getHabitWeekDays(h.id, target);
       const shortName = h.name.split(" ").slice(0, 4).join(" ");
       const dayDots = makeHabitDayDots(h, weekDone, todayDow);
       const pctColor = pct > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
@@ -9953,7 +9962,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const pct100 = Math.min(cur / target, 1);
       const isOver = cur > target;
       const streak = getHabitStreak(h.id);
-      const weekDone = getHabitWeekDays(h.id);
+      const weekDone = getHabitWeekDays(h.id, target);
       const shortName2 = h.name.split(" ").slice(0, 4).join(" ");
       const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
       const habitPct = getHabitPct(h.id);
