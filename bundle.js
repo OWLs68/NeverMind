@@ -16202,6 +16202,128 @@ ${legacy}`;
   init_diagnostics();
   init_keyboard();
   init_swipe_delete();
+
+  // src/ui/voice-input.js
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var SUPPORTED = !!SR;
+  var MIC_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+  function createMicButton() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "voice-btn";
+    btn.setAttribute("aria-label", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434");
+    btn.style.cssText = "width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.2s,transform 0.2s";
+    btn.innerHTML = MIC_SVG;
+    return btn;
+  }
+  function attachVoiceToTextarea(textarea, button) {
+    if (!SUPPORTED || !textarea || !button) return;
+    if (button.dataset.voiceAttached === "1") return;
+    button.dataset.voiceAttached = "1";
+    let rec = null;
+    let baseText = "";
+    function startRecording() {
+      if (rec) return;
+      try {
+        rec = new SR();
+        rec.lang = "uk-UA";
+        rec.continuous = false;
+        rec.interimResults = true;
+        rec.maxAlternatives = 1;
+      } catch (e) {
+        try {
+          window.showToast && window.showToast("\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439");
+        } catch {
+        }
+        rec = null;
+        return;
+      }
+      baseText = textarea.value ? textarea.value + (textarea.value.endsWith(" ") ? "" : " ") : "";
+      button.classList.add("recording");
+      rec.onresult = (ev) => {
+        let interim = "";
+        let fin = "";
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const txt = ev.results[i][0].transcript;
+          if (ev.results[i].isFinal) fin += txt;
+          else interim += txt;
+        }
+        textarea.value = baseText + fin + interim;
+        if (fin) baseText = textarea.value;
+        try {
+          window.autoResizeTextarea && window.autoResizeTextarea(textarea);
+        } catch {
+        }
+      };
+      rec.onerror = (ev) => {
+        const err = ev.error || "";
+        let msg = "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430";
+        if (err === "not-allowed" || err === "service-not-allowed") msg = "\u0414\u043E\u0437\u0432\u043E\u043B\u044C \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445";
+        else if (err === "no-speech") msg = "\u041D\u0435 \u0447\u0443\u044E \u0433\u043E\u043B\u043E\u0441\u0443";
+        else if (err === "network") msg = "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0434\u043B\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F";
+        try {
+          window.showToast && window.showToast(msg);
+        } catch {
+        }
+      };
+      rec.onend = () => {
+        button.classList.remove("recording");
+        rec = null;
+        try {
+          textarea.focus();
+        } catch {
+        }
+      };
+      try {
+        rec.start();
+      } catch (e) {
+        button.classList.remove("recording");
+        rec = null;
+      }
+    }
+    function stopRecording() {
+      if (!rec) return;
+      try {
+        rec.stop();
+      } catch {
+      }
+    }
+    button.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (rec) stopRecording();
+      else startRecording();
+    });
+  }
+  function initVoiceInput() {
+    if (!SUPPORTED) return;
+    const existingInboxBtn = document.querySelector("#inbox-ai-bar .ai-bar-input-box > button[disabled]");
+    if (existingInboxBtn) {
+      existingInboxBtn.removeAttribute("disabled");
+      existingInboxBtn.style.opacity = "";
+      existingInboxBtn.classList.add("voice-btn");
+      const inboxInput = document.getElementById("inbox-input");
+      if (inboxInput) attachVoiceToTextarea(inboxInput, existingInboxBtn);
+    }
+    const boxes = document.querySelectorAll(".ai-bar-new .ai-bar-input-box");
+    boxes.forEach((box) => {
+      const textarea = box.querySelector("textarea");
+      const sendBtn = box.querySelector(".ai-bar-send-btn");
+      if (!textarea || !sendBtn) return;
+      if (box.querySelector(".voice-btn")) return;
+      const micBtn = createMicButton();
+      box.insertBefore(micBtn, sendBtn);
+      attachVoiceToTextarea(textarea, micBtn);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initVoiceInput);
+  } else {
+    setTimeout(initVoiceInput, 0);
+  }
+  window.initVoiceInput = initVoiceInput;
+
+  // src/app.js
   init_core();
   init_inbox_board();
   init_chips();
