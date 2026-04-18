@@ -13314,7 +13314,6 @@ ${userText}
     return `${d.getDate()} ${months[d.getMonth()]}`;
   }
   function navigateInboxItem(id) {
-    if (_inboxSwipedRecently) return;
     const el = document.getElementById("item-" + id);
     if (!el) return;
     const cat = el.dataset.cat;
@@ -13390,11 +13389,8 @@ ${userText}
       const meta = CAT_META[item.category] || CAT_META.note;
       const dotBg = CAT_DOT_SOLID[item.category] || CAT_DOT_SOLID.note;
       const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
-      html += `<div class="inbox-item-wrap" id="wrap-${item.id}">
+      html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           ontouchstart="swipeStart(event,${item.id})"
-           ontouchmove="swipeMove(event,${item.id})"
-           ontouchend="swipeEnd(event,${item.id})"
            onclick="navigateInboxItem(${item.id})">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
@@ -13410,45 +13406,11 @@ ${userText}
     </div>`;
     });
     list.innerHTML = html;
-  }
-  function swipeStart(e, id) {
-    const t = e.touches[0];
-    swipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-  }
-  function swipeMove(e, id) {
-    const s = swipeState[id];
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById(`item-${id}`);
-    const wrap = document.getElementById(`wrap-${id}`);
-    applySwipeTrail(el, wrap, s.dx);
-  }
-  function swipeEnd(e, id) {
-    const s = swipeState[id];
-    if (!s) return;
-    if (s.swiping) {
-      _inboxSwipedRecently = true;
-      setTimeout(() => _inboxSwipedRecently = false, 50);
-    }
-    const el = document.getElementById(`item-${id}`);
-    const wrap = document.getElementById(`wrap-${id}`);
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) {
-        el.style.transition = "transform 0.2s ease, opacity 0.2s";
-        el.style.transform = "translateX(-110%)";
-        el.style.opacity = "0";
-      }
-      if (wrap) {
-        wrap.style.transition = "background 0.2s ease";
-        wrap.style.background = "rgba(239,68,68,0.15)";
-      }
-      setTimeout(() => {
+    document.querySelectorAll("#inbox-list .inbox-item-wrap").forEach((wrap) => {
+      const card = wrap.querySelector(".inbox-item");
+      if (!card) return;
+      attachSwipeDelete(wrap, card, () => {
+        const id = parseInt(wrap.dataset.id);
         const allItems = getInbox();
         const originalIdx = allItems.findIndex((i) => i.id === id);
         const item = allItems.find((i) => i.id === id);
@@ -13456,17 +13418,14 @@ ${userText}
         saveInbox(allItems.filter((i) => i.id !== id));
         renderInbox();
         if (item) showUndoToast("\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0437 Inbox", () => {
-          const items = getInbox();
-          const idx = Math.min(originalIdx, items.length);
-          items.splice(idx, 0, item);
-          saveInbox(items);
+          const items2 = getInbox();
+          const idx = Math.min(originalIdx, items2.length);
+          items2.splice(idx, 0, item);
+          saveInbox(items2);
           renderInbox();
         });
-      }, 220);
-    } else {
-      clearSwipeTrail(el, wrap);
-    }
-    delete swipeState[id];
+      });
+    });
   }
   function _toolCallToAction(name, args) {
     switch (name) {
@@ -14305,7 +14264,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tb = document.getElementById("tab-bar");
     return tb ? tb.offsetHeight : 83;
   }
-  var _inboxTypingEl, _inboxUnreadCount, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, _inboxSwipedRecently, INBOX_NAV_MAP, swipeState, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
+  var _inboxTypingEl, _inboxUnreadCount, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, INBOX_NAV_MAP, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
   var init_inbox = __esm({
     "src/tabs/inbox.js"() {
       init_nav();
@@ -14354,7 +14313,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         finance: { icon: "\u20B4", label: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", dotClass: "cat-dot-finance", tagClass: "cat-finance" },
         reminder: { icon: "\u23F0", label: "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", dotClass: "cat-dot-reminder", tagClass: "cat-reminder" }
       };
-      _inboxSwipedRecently = false;
       INBOX_NAV_MAP = {
         task: "tasks",
         habit: "habits",
@@ -14362,7 +14320,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         idea: "notes",
         finance: "finance"
       };
-      swipeState = {};
       aiLoading = false;
       inboxChatHistory = [];
       _lastUserMsgTs = 0;
@@ -14374,10 +14331,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         sendClarifyText,
         closeClarify,
         selectClarifyOption,
-        navigateInboxItem,
-        swipeStart,
-        swipeMove,
-        swipeEnd
+        navigateInboxItem
       });
     }
   });
