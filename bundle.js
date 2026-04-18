@@ -16438,12 +16438,13 @@ ${legacy}`;
     btn.innerHTML = MIC_SVG;
     return btn;
   }
-  function attachVoiceToTextarea(textarea, button) {
+  function attachVoiceToTextarea(textarea, button, sendBtn) {
     if (!SUPPORTED || !textarea || !button) return;
     if (button.dataset.voiceAttached === "1") return;
     button.dataset.voiceAttached = "1";
     let rec = null;
     let baseText = "";
+    let pendingSendClick = false;
     function startRecording() {
       if (rec) return;
       try {
@@ -16495,6 +16496,15 @@ ${legacy}`;
           textarea.focus();
         } catch {
         }
+        if (pendingSendClick && sendBtn) {
+          pendingSendClick = false;
+          setTimeout(() => {
+            try {
+              sendBtn.click();
+            } catch {
+            }
+          }, 60);
+        }
       };
       try {
         rec.start();
@@ -16516,6 +16526,17 @@ ${legacy}`;
       if (rec) stopRecording();
       else startRecording();
     });
+    if (sendBtn && !sendBtn.dataset.voiceIntercept) {
+      sendBtn.dataset.voiceIntercept = "1";
+      sendBtn.addEventListener("click", (ev) => {
+        if (rec) {
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+          pendingSendClick = true;
+          stopRecording();
+        }
+      }, true);
+    }
   }
   function initVoiceInput() {
     if (!SUPPORTED) return;
@@ -16525,7 +16546,8 @@ ${legacy}`;
       existingInboxBtn.style.opacity = "";
       existingInboxBtn.classList.add("voice-btn");
       const inboxInput = document.getElementById("inbox-input");
-      if (inboxInput) attachVoiceToTextarea(inboxInput, existingInboxBtn);
+      const inboxSend = document.getElementById("ai-send-btn") || document.querySelector("#inbox-ai-bar .ai-bar-send-btn");
+      if (inboxInput) attachVoiceToTextarea(inboxInput, existingInboxBtn, inboxSend);
     }
     const boxes = document.querySelectorAll(".ai-bar-new .ai-bar-input-box");
     boxes.forEach((box) => {
@@ -16535,7 +16557,7 @@ ${legacy}`;
       if (box.querySelector(".voice-btn")) return;
       const micBtn = createMicButton();
       box.insertBefore(micBtn, sendBtn);
-      attachVoiceToTextarea(textarea, micBtn);
+      attachVoiceToTextarea(textarea, micBtn, sendBtn);
     });
   }
   if (document.readyState === "loading") {
