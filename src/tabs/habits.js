@@ -289,7 +289,12 @@ function toggleHabitToday(id) {
   const target = h?.targetCount || 1;
   const rawVal = log[today][id];
   const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
-  log[today][id] = cur + 1;
+  // Тристаний цикл для звичайних звичок (target=1): 0→1→2→0 (порожня→зелена→жовта→порожня).
+  // Звички з лічильником (target>1) — старий behavior cur+1 щоб рахувати підходи.
+  const newVal = (target === 1)
+    ? (cur === 0 ? 1 : cur === 1 ? 2 : 0)
+    : cur + 1;
+  log[today][id] = newVal;
   saveHabitLog(log);
   if (h) logRecentAction('complete_habit', h.name, 'habits');
   renderHabits();
@@ -550,9 +555,13 @@ function toggleProdHabitToday(id) {
   const target = h?.targetCount || 1;
   const rawVal = log[today][id];
   const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
-  log[today][id] = cur + 1;
+  // Тристаний цикл для звичайних звичок (target=1): 0→1→2→0.
+  const newVal = (target === 1)
+    ? (cur === 0 ? 1 : cur === 1 ? 2 : 0)
+    : cur + 1;
+  log[today][id] = newVal;
   saveHabitLog(log);
-  if (cur + 1 === target) _habitConfetti(id);
+  if (newVal === target) _habitConfetti(id);
   renderProdHabits();
 }
 
