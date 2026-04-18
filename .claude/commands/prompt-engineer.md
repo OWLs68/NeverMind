@@ -19,8 +19,10 @@
 3. **Карта всіх промптів** (актуально на 17.04.2026):
    | Файл | Рядок | Промпт | Що робить |
    |------|-------|--------|-----------|
-   | `src/ai/core.js` | 30 | `getOWLPersonality()` | Базова персона (coach/partner/mentor) + універсальні правила |
-   | `src/ai/core.js` | 342 | `INBOX_SYSTEM_PROMPT` | Inbox classifier (task vs event vs project vs moment…) з tool calling |
+   | `src/ai/prompts.js` | 19 | `getOWLPersonality()` | Базова персона (coach/partner/mentor) + універсальні правила |
+   | `src/ai/prompts.js` | 81 | `INBOX_SYSTEM_PROMPT` | Inbox classifier (task vs event vs project vs moment…) з tool calling |
+   | `src/ai/prompts.js` | 156 | `INBOX_TOOLS` | 31 tool definitions — **джерело правди → `docs/AI_TOOLS.md`** |
+   | `src/ai/prompts.js` | 213 | `getOwlChatSystemPrompt()` | OWL міні-чат (з CHIP_PROMPT_RULES) |
    | `src/owl/proactive.js` | 723 | Табло OWL | Проактивні повідомлення + чіпи |
    | `src/core/nav.js` | 1111 | Memory migration | Одноразова міграція nm_memory → nm_facts |
    | `src/tabs/tasks.js` | 265 | Task add reaction | Реакція на додавання задачі |
@@ -35,6 +37,8 @@
    Перед зміною — знайти ВСІ промпти в таблиці які зачіпає задача. Часто треба правити 2-3, не один.
 
 4. **Анти-галюцинація у контексті.** Якщо додаєш новий блок у `getAIContext()` (`src/ai/core.js`):
+
+   > **Tools:** перед додаванням або зміною tool definition — ЗАВЖДИ перечитай `docs/AI_TOOLS.md` (довідник 39 існуючих + 14 у планах). Оновлюй таблицю у цьому файлі після змін.
    - Додай явне правило у самому блоці: "НЕ питай це — вже знаєш" або "Це ІСТОРИЧНІ дані, не цитуй поточний стан".
    - Приклад (реальний фікс B-68): блок "Розклад дня" у `getAIContext()` закінчується "НЕ питай цей розклад — він уже заданий".
    - Без такого правила AI за звичкою буде перепитувати.
@@ -139,7 +143,7 @@ date +"nm-%Y%m%d-%H%M"
 
 ## Важливо
 
-- **НЕ** додавати нові tool definitions у `INBOX_TOOLS` (src/ai/core.js) без обговорення з Романом. Зараз 31 tool — ще +5 і модель починає плутатись.
+- **НЕ** додавати нові tool definitions у `INBOX_TOOLS` (`src/ai/prompts.js`) без обговорення з Романом. Зараз 31 tool — ще +5 і модель починає плутатись. Перед додаванням — перечитай `docs/AI_TOOLS.md`.
 - **НЕ** міняти `getOWLPersonality()` заради одного флоу — це ядро всіх 10+ промптів.
 - Якщо треба нова перспектива агента — додавай новий persona у `personas` (поряд з coach/partner/mentor), не рефактор.
 - У `src/ai/core.js` функції `callAI`, `callAIWithHistory`, `callAIWithTools` — не чіпати підпис без перевірки всіх 10+ місць виклику.
