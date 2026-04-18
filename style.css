@@ -1302,6 +1302,34 @@ body {
   .owl-mascot { animation: none !important; }
   .owl-mascot-frame { transition: opacity 0.2s linear !important; transform: none !important; }
 }
+
+/* Sprite-sheet animation for greeting wave (6 frames horizontal) */
+.owl-mascot-sprite {
+  position: absolute;
+  inset: 0;
+  background-image: url('assets/owl/owl-greeting-sprite.png');
+  background-repeat: no-repeat;
+  background-size: 600% 100%;
+  background-position: 0% 0%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.owl-mascot[data-state="greeting"] .owl-mascot-sprite {
+  opacity: 1;
+  animation: owl-wave-sprite 0.9s steps(6) infinite;
+}
+/* Hide static greeting frame when sprite active (avoid doubled image) */
+.owl-mascot[data-state="greeting"] .owl-mascot-frame[data-frame="greeting"] {
+  opacity: 0 !important;
+}
+@keyframes owl-wave-sprite {
+  from { background-position: 0% 0%; }
+  to   { background-position: -600% 0%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .owl-mascot-sprite { animation: none !important; background-position: 0% 0% !important; }
+}
 .owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .owl-speech-bubble {
   margin-left: 0;
