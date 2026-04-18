@@ -2526,13 +2526,16 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
   function getProjectsContext() {
     const projects = getProjects();
     if (projects.length === 0) return "";
-    const parts = [`\u041F\u0440\u043E\u0435\u043A\u0442\u0438 (${projects.length}):`];
-    projects.slice(0, 3).forEach((p) => {
+    const now = Date.now();
+    const parts = [`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456\u0445 \u0434\u0456\u0439):`];
+    projects.slice(0, 5).forEach((p) => {
       const steps = p.steps || [];
       const done = steps.filter((s) => s.done).length;
       const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
       const next = steps.find((s) => !s.done);
-      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 " + next.text : ""}`);
+      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 864e5) : null;
+      const silence = silenceDays !== null && silenceDays >= 3 ? ` \u26A0\uFE0F ${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456` : "";
+      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
     });
     return parts.join("\n");
   }
@@ -11292,6 +11295,11 @@ ${inboxList}`);
     } catch (e) {
     }
     try {
+      const projectsCtx = getProjectsContext();
+      if (projectsCtx) parts.push(projectsCtx);
+    } catch (e) {
+    }
+    try {
       const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
       if (trash.length > 0) {
         const trashByType = {};
@@ -11697,6 +11705,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_calendar();
       init_evening();
       init_health();
+      init_projects();
       init_inbox_board();
       init_proactive();
       init_memory();
