@@ -343,8 +343,9 @@ export function getHabitPct(id) {
 }
 
 
-// Повертає масив індексів днів цього тижня (0=Пн..6=Нд) коли звичка була виконана
-function getHabitWeekDays(id) {
+// Повертає масив {i, bonus} — дні цього тижня коли звичка виконана.
+// bonus=true якщо cur > target (жовта галочка = подвійне виконання).
+function getHabitWeekDays(id, target) {
   const log = getHabitLog();
   const done = [];
   const today = new Date();
@@ -356,19 +357,27 @@ function getHabitWeekDays(id) {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
     const ds = d.toDateString();
-    if (log[ds]?.[id]) done.push(i);
+    const val = log[ds]?.[id];
+    const cur = typeof val === 'boolean' ? (val ? 1 : 0) : (val || 0);
+    if (cur >= target) done.push({ i, bonus: cur > target });
   }
   return done;
 }
 
-function makeHabitDayDots(h, weekDone, todayDow) {
+function makeHabitDayDots(h, weekState, todayDow) {
   const labels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
   return labels.map(function(label, i) {
     const isPlanned = (h.days || [0,1,2,3,4]).includes(i);
-    const isDone = weekDone.includes(i);
+    const entry = weekState.find(x => x.i === i);
+    const isDone = !!entry;
+    const isBonus = !!(entry && entry.bonus);
     const isToday = i === todayDow;
     let bg, border, color;
-    if (isDone) { bg = '#16a34a'; border = '#16a34a'; color = 'white'; }
+    if (isDone) {
+      if (isBonus) { bg = 'linear-gradient(135deg,#fbbf24,#f59e0b)'; border = 'transparent'; }
+      else { bg = '#16a34a'; border = '#16a34a'; }
+      color = 'white';
+    }
     else if (isPlanned) { bg = 'transparent'; border = 'rgba(30,16,64,0.2)'; color = 'rgba(30,16,64,0.4)'; }
     else { bg = 'transparent'; border = 'rgba(30,16,64,0.08)'; color = 'rgba(30,16,64,0.15)'; }
     const shadow = isToday ? 'box-shadow:0 0 0 2px rgba(22,163,74,0.3);' : '';
@@ -400,7 +409,7 @@ export function renderHabits() {
     const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
     const streak = getHabitStreak(h.id);
     const pct = getHabitPct(h.id);
-    const weekDone = getHabitWeekDays(h.id);
+    const weekDone = getHabitWeekDays(h.id, target);
     const shortName = h.name.split(' ').slice(0,4).join(' ');
     const dayDots = makeHabitDayDots(h, weekDone, todayDow);
     const pctColor = pct > 0 ? '#16a34a' : 'rgba(30,16,64,0.3)';
@@ -654,7 +663,7 @@ export function renderProdHabits() {
     const pct100 = Math.min(cur / target, 1);
     const isOver = cur > target;
     const streak = getHabitStreak(h.id);
-    const weekDone = getHabitWeekDays(h.id);
+    const weekDone = getHabitWeekDays(h.id, target);
     const shortName2 = h.name.split(' ').slice(0,4).join(' ');
     const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
     const habitPct = getHabitPct(h.id);
