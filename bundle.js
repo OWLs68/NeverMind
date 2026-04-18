@@ -945,6 +945,23 @@ ${logLines}
     localStorage.setItem("nm_notes", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "notes" }));
   }
+  function getNotesContext() {
+    const notes = getNotes();
+    if (notes.length === 0) return "";
+    const folderCount = {};
+    notes.forEach((n) => {
+      const f = n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435";
+      folderCount[f] = (folderCount[f] || 0) + 1;
+    });
+    const foldersStr = Object.entries(folderCount).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${name} (${count})`).join(", ");
+    const recent = notes.slice(0, 5).map((n) => {
+      const txt = (n.text || "").slice(0, 60).replace(/\n/g, " ");
+      const more = (n.text || "").length > 60 ? "\u2026" : "";
+      return `- [ID:${n.id}] [${n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"}] "${txt}${more}"`;
+    }).join("\n");
+    return `\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (${notes.length} \u0437\u0430\u0433\u0430\u043B\u043E\u043C, \u043F\u0430\u043F\u043A\u0438: ${foldersStr}):
+${recent}`;
+  }
   function getFolders() {
     const notes = getNotes();
     const set = new Set(notes.map((n) => n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
@@ -11317,6 +11334,11 @@ ${inboxList}`);
     try {
       const momentsCtx = getMomentsContext();
       if (momentsCtx) parts.push(momentsCtx);
+    } catch (e) {
+    }
+    try {
+      const notesCtx = getNotesContext();
+      if (notesCtx) parts.push(notesCtx);
     } catch (e) {
     }
     try {
