@@ -423,16 +423,19 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
 }
 
 // Контекст проектів для AI
-function getProjectsContext() {
+export function getProjectsContext() {
   const projects = getProjects();
   if (projects.length === 0) return '';
-  const parts = [`Проекти (${projects.length}):`];
-  projects.slice(0, 3).forEach(p => {
+  const now = Date.now();
+  const parts = [`Активні проекти (використовуй ID для майбутніх дій):`];
+  projects.slice(0, 5).forEach(p => {
     const steps = p.steps || [];
     const done = steps.filter(s => s.done).length;
     const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : (p.progress || 0);
     const next = steps.find(s => !s.done);
-    parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? ' → ' + next.text : ''}`);
+    const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 86400000) : null;
+    const silence = silenceDays !== null && silenceDays >= 3 ? ` ⚠️ ${silenceDays} дн. тиші` : '';
+    parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? ' → наступний крок: ' + next.text : ''}${silence}`);
   });
   return parts.join('\n');
 }

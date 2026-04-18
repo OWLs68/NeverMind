@@ -14,6 +14,7 @@ import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/financ
 import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
 import { getHealthContext } from '../tabs/health.js';
+import { getProjectsContext } from '../tabs/projects.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
 import { getBoardContext } from '../owl/proactive.js';
 import { formatFactsForContext, getFacts } from './memory.js';
@@ -160,6 +161,13 @@ export function getAIContext() {
   try {
     const healthCtx = getHealthContext();
     if (healthCtx) parts.push(healthCtx);
+  } catch(e) {}
+
+  // === Проекти (18.04 pvZG1) — принцип "один мозок" для Проектів ===
+  // Назва, % готовності, наступний крок, днів тиші. До 5 проектів.
+  try {
+    const projectsCtx = getProjectsContext();
+    if (projectsCtx) parts.push(projectsCtx);
   } catch(e) {}
 
   // === Кеш видалених (для restore_deleted) ===
