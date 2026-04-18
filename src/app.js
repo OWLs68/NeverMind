@@ -11,6 +11,7 @@ import './core/diagnostics.js';
 // UI (інтерфейс)
 import './ui/keyboard.js';
 import './ui/swipe-delete.js';
+import './ui/voice-input.js';
 
 // AI (штучний інтелект)
 import './ai/core.js';
