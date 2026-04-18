@@ -249,7 +249,17 @@
   - tools для здоров'я: `create_health_card`/`edit_health_card`/`delete_health_card`/`log_daily_scales`
   - Без цих tools AI "імпровізує" — видаляє не те, плутає типи. Принцип "один мозок": якщо дані є в застосунку — AI має вміти ними керувати
 - **4.10 Tool Calling на всіх чат-барах** (складність: середня 2-3 сесії, залежить від 4.9) — перевести ВСІ tab chat bars з текстового формату на tool calling. Зараз tool calling працює ТІЛЬКИ в Inbox — решта вкладок (tasks, notes, finance, health, projects, evening) використовують старий `callAI()`/`callAIWithHistory()` без tools. **Суперечить "один мозок"** — написав "витратив 200" на вкладці Задачі → AI не може зберегти у фінанси бо немає tool `save_finance` у цьому контексті. Залежить від 4.9 (спочатку створити tools, потім підключити). Завершує Фазу 1.3 яка зараз працює тільки через text-based `processUniversalAction`.
-- **4.17 UI Tools Suite — повний набір hands-free дій** (додано 18.04.2026 у сесії VJF2M, автор: Роман, складність: середня 2-3 сесії, не блокує/не блокується) — Розширює базовий `switch_tab` (пункт 4.15) до повного набору з 14 UI-інструментів. Агент виконує навігацію/фільтри/налаштування по голосу або тексту без тертя. Повний список, definitions, промпт-правила → **[`docs/AI_TOOLS.md`](docs/AI_TOOLS.md)** (довідник AI tools).
+- **4.17 UI Tools Suite — 8 базових реалізовано 18.04.2026 VJF2M** (автор: Роман) → `src/ai/ui-tools.js`. Агент виконує навігацію/фільтри/налаштування hands-free. Повний довідник → [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md).
+  - **✅ Зроблено (8):** `switch_tab`, `open_memory`, `open_settings`, `set_finance_period`, `open_finance_analytics`, `set_theme`, `set_owl_mode`, `export_health_card`
+- **4.17.B UI Tools — 6 заблокованих** (винесено 18.04.2026 VJF2M, потребують нової інфраструктури — окрема сесія):
+  - `open_record` — пошук запису + скрол + підсвітка (треба новий search-API)
+  - `open_trash` — нема модалки кошика у UI (треба створити)
+  - `calendar_jump_to` — треба API навігації стану календаря з конкретної дати
+  - `filter_tasks` — нема готового фільтра у Tasks (треба додати)
+  - `clear_chat` — нема per-chat очищення (кожен чат-бар має свій storage ключ)
+  - `toggle_owl_board` — нема toggle (OWL табло завжди видно)
+
+- **4.17 (оригінальний opus)** — Розширює базовий `switch_tab` (пункт 4.15) до повного набору з 14 UI-інструментів. Агент виконує навігацію/фільтри/налаштування по голосу або тексту без тертя. Повний список, definitions, промпт-правила → **[`docs/AI_TOOLS.md`](docs/AI_TOOLS.md)** (довідник AI tools).
   - **A. Навігація (5):** `switch_tab`, `open_record` (відкрити конкретну задачу/картку зі скролом+підсвіткою), `open_trash`, `open_memory`, `open_settings`
   - **C. Фільтри/режими (4):** `set_finance_period`, `open_finance_analytics`, `calendar_jump_to`, `filter_tasks`
   - **D. Середовище (2):** `set_theme`, `set_owl_mode`

@@ -8,6 +8,7 @@ import { currentTab, switchTab } from '../core/nav.js';
 import { escapeHtml, saveOffline } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -457,6 +458,17 @@ export async function sendToAI(fromChip = false) {
       // === TOOL CALLING DISPATCH ===
       for (const tc of msg.tool_calls) {
         const args = JSON.parse(tc.function.arguments);
+
+        // UI TOOLS (4.17) — hands-free навігація/фільтри/налаштування
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) {
+            addInboxChatMsg('agent', res.text);
+            try { window.showToast && window.showToast(res.text); } catch {}
+          }
+          continue;
+        }
+
         const action = _toolCallToAction(tc.function.name, args);
         if (!action) continue;
 

@@ -14,6 +14,7 @@ import './ui/swipe-delete.js';
 import './ui/voice-input.js';
 
 // AI (штучний інтелект)
+import './ai/ui-tools.js';
 import './ai/core.js';
 
 // OWL (агент)

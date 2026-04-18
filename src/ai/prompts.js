@@ -14,6 +14,7 @@
 // ============================================================
 
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
+import { UI_TOOLS } from './ui-tools.js';
 
 // ===== 1. getOWLPersonality — особистість OWL =====
 export function getOWLPersonality() {
@@ -150,7 +151,18 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 - "додай у Їжу підкатегорію Сніданок" → add_finance_subcategory з category_name='Їжа', subcategory='Сніданок'.
 - Іконки: food, car, subscription, heart, home, shopping, wallet, gift, refund, coffee, cigarette, fuel, sport, entertainment, education, travel, phone, grass, anchor, briefcase, other. Обирай за темою.
 
-НЕ вигадуй ліміти, бюджети або плани яких немає в контексті.`;
+НЕ вигадуй ліміти, бюджети або плани яких немає в контексті.
+
+UI TOOLS (4.17 — навігація/фільтри/налаштування, hands-free):
+- "відкрий X / покажи X / перейди до X" (вкладка) → switch_tab з target (inbox/tasks/notes/finance/habits/me/evening/health/projects/calendar)
+- "що ти про мене знаєш" / "покажи пам'ять" → open_memory
+- "відкрий налаштування" → open_settings
+- "покажи за тиждень/місяць/3 місяці" (Фінанси) → set_finance_period
+- "відкрий аналітику" / "покажи графіки витрат" → open_finance_analytics
+- "темна/світла тема" → set_theme
+- "переключись на Тренера/Партнера/Ментора" / "будь тренером" → set_owl_mode
+- "експортуй медкартку" / "зроби медичну картку" → export_health_card
+- ПРИНЦИП МІНІМАЛЬНОГО ТЕРТЯ: якщо юзер описує дію словами ("додай задачу купити хліб") — викликай save_task напряму. НЕ використовуй UI tools для відкриття порожніх форм створення. UI tools — лише для навігації/фільтрів/налаштувань.`;
 
 // ===== 3. INBOX_TOOLS — 31 function definition для OpenAI tool calling =====
 export const INBOX_TOOLS = [
@@ -205,6 +217,8 @@ export const INBOX_TOOLS = [
   { type: "function", function: { name: "delete_finance_category", description: "Видалити категорію Фінансів. Юзер каже 'видали категорію X'. Операції зберігаються (їх категорія лишиться рядком без візуального кружечка). Якщо юзер хоче об'єднати з іншою — використай merge_finance_categories замість delete.", parameters: { type: "object", properties: { name: { type: "string", description: "Назва категорії для видалення" }, comment: { type: "string" } }, required: ["name", "comment"], additionalProperties: false } } },
   { type: "function", function: { name: "merge_finance_categories", description: "Об'єднати дві категорії Фінансів в одну. Юзер каже 'об'єднай X і Y', 'злий X у Y'. Всі операції з 'from' перейдуть у 'to', 'from' буде видалена. Підкатегорії переносяться у 'to'.", parameters: { type: "object", properties: { from_name: { type: "string", description: "Назва категорії яка буде злита у іншу (зникне)" }, to_name: { type: "string", description: "Назва категорії-одержувача (залишиться)" }, comment: { type: "string" } }, required: ["from_name", "to_name", "comment"], additionalProperties: false } } },
   { type: "function", function: { name: "add_finance_subcategory", description: "Додати підкатегорію до існуючої категорії Фінансів. Юзер каже 'додай у Їжу підкатегорію Сніданок', 'в Транспорт — Метро'.", parameters: { type: "object", properties: { category_name: { type: "string", description: "Назва основної категорії" }, subcategory: { type: "string", description: "Назва підкатегорії" }, comment: { type: "string" } }, required: ["category_name", "subcategory", "comment"], additionalProperties: false } } },
+  // --- UI TOOLS (4.17, 18.04.2026 VJF2M) — навігація/фільтри/налаштування ---
+  ...UI_TOOLS,
 ];
 
 // ===== 4. getOwlChatSystemPrompt — OWL міні-чат =====
