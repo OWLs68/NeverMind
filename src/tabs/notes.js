@@ -51,6 +51,26 @@ _migrateFoldersApostrophes();
 export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
 export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
 
+// Контекст нотаток для AI (принцип "один мозок")
+// OWL бачить ЩО у юзера в нотатках — щоб не вигадувати "ти писав нотатку про Х" коли її немає
+// Показує: кількість + розбивка по папках + 5 останніх нотаток з ID і коротким текстом
+export function getNotesContext() {
+  const notes = getNotes();
+  if (notes.length === 0) return '';
+  const folderCount = {};
+  notes.forEach(n => { const f = n.folder || 'Загальне'; folderCount[f] = (folderCount[f] || 0) + 1; });
+  const foldersStr = Object.entries(folderCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => `${name} (${count})`)
+    .join(', ');
+  const recent = notes.slice(0, 5).map(n => {
+    const txt = (n.text || '').slice(0, 60).replace(/\n/g, ' ');
+    const more = (n.text || '').length > 60 ? '…' : '';
+    return `- [ID:${n.id}] [${n.folder || 'Загальне'}] "${txt}${more}"`;
+  }).join('\n');
+  return `Нотатки (${notes.length} загалом, папки: ${foldersStr}):\n${recent}`;
+}
+
 function getFolders() {
   const notes = getNotes();
   const set = new Set(notes.map(n => n.folder || 'Загальне'));

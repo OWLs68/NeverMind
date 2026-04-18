@@ -9,7 +9,7 @@ import { getTrash } from '../core/trash.js';
 import { getInbox, _clearInboxUnreadBadge, addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
-import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
+import { getNotes, addNotesChatMsg, getNotesContext } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
 import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { addEveningBarMsg, addMeChatMsg, getEveningMood, getMomentsContext } from '../tabs/evening.js';
@@ -175,6 +175,13 @@ export function getAIContext() {
   try {
     const momentsCtx = getMomentsContext();
     if (momentsCtx) parts.push(momentsCtx);
+  } catch(e) {}
+
+  // === Нотатки (18.04 pvZG1) — щоб OWL не вигадував неіснуючі нотатки ===
+  // Загальна кількість + розбивка по папках + 5 останніх з ID.
+  try {
+    const notesCtx = getNotesContext();
+    if (notesCtx) parts.push(notesCtx);
   } catch(e) {}
 
   // === Кеш видалених (для restore_deleted) ===
