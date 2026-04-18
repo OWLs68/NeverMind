@@ -123,9 +123,22 @@ export const UI_TOOL_NAMES = new Set(UI_TOOLS.map(t => t.function.name));
 export function handleUITool(name, args) {
   try {
     switch (name) {
-      case 'switch_tab':
-        switchTab(args.target);
-        return { text: `Відкрив ${_tabLabel(args.target)}.` };
+      case 'switch_tab': {
+        const t = args.target;
+        if (t === 'calendar') {
+          if (typeof window.openCalendarModal === 'function') {
+            window.openCalendarModal();
+            return { text: 'Відкрив Календар.' };
+          }
+          return { text: 'Календар недоступний.' };
+        }
+        if (t === 'habits') {
+          switchTab('tasks');
+          return { text: 'Відкрив Задачі/Звички.' };
+        }
+        switchTab(t);
+        return { text: `Відкрив ${_tabLabel(t)}.` };
+      }
 
       case 'open_memory':
         if (typeof window.openMemoryModal === 'function') {
