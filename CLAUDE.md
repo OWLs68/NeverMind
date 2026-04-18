@@ -317,7 +317,9 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/owl/followups.js` | **Live Chat Replies** — follow-up повідомлення агента у контекстний чат (stuck-task, event-passed), 5 хв таймер + nm-data-changed |
 | `src/owl/chips.js` | **Центральний модуль чіпів** — renderChips(), handleChipClick(), fuzzy match ✔️, CHIP_PROMPT_RULES |
 | `src/ui/keyboard.js` | setupKeyboardAvoiding (iOS-specific) |
-| `src/ui/swipe-delete.js` | **Базова логіка свайп-видалення** (як glass-стиль модалок): `attachSwipeDelete(wrapEl, cardEl, onDelete, opts)` — свайп вліво → кнопка-кошик справа → тап=видалення. Використовується у Inbox/Tasks/Notes/Habits/Finance. Нові списки мають ТАКОЖ використовувати цю функцію (не писати свій свайп). Legacy `applySwipeTrail`/`clearSwipeTrail`/`SWIPE_DELETE_THRESHOLD` залишились для backward-compat але більше ніким не імпортуються — можна видалити у майбутньому |
+| `src/ui/swipe-delete.js` | **Базова логіка свайп-видалення** (як glass-стиль модалок): `attachSwipeDelete(wrapEl, cardEl, onDelete, opts)` — свайп вліво → кнопка-кошик справа → тап=видалення. Використовується у Inbox/Tasks/Notes/Habits/Finance. |
+| `src/ui/voice-input.js` | **Голосовий ввід у всіх 8 чат-барах (18.04 VJF2M)** — Web Speech API з `lang='uk-UA'`. Автоматично додає кнопку 🎤 перед send-btn у кожному `.ai-bar-input-box` при DOMContentLoaded. Interim results → live-текст у textarea. Натискання send-btn під час запису → автостоп + програмна відправка через `pendingSendClick` + `onend` delay 60мс. Fallback: якщо `SpeechRecognition` недоступний — кнопка не з'являється. |
+| `src/ai/ui-tools.js` | **UI Tools (4.17, 18.04 VJF2M)** — 8 hands-free навігаційних tools: `switch_tab` (з aliases calendar→модалка, habits→tasks), `open_memory`, `open_settings`, `set_finance_period`, `open_finance_analytics`, `set_theme`, `set_owl_mode`, `export_health_card`. Масив `UI_TOOLS` + `UI_TOOL_NAMES` (Set) + `handleUITool(name, args)` dispatcher. Імпортується у `prompts.js` (spread у INBOX_TOOLS) і `inbox.js` (dispatch). Повний довідник → `docs/AI_TOOLS.md`. |
 | `src/tabs/inbox.js` | sendToAI(), processSaveAction(), renderInbox(), swipe delete |
 | `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat, setupModalSwipeClose (з drum-col guard) |
 | `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки, processUniversalAction (_splitReply) |
@@ -398,7 +400,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 ## AI-логіка
 
 **Коротко:**
-- **Inbox** використовує OpenAI Tool Calling (31 tool у `src/ai/prompts.js`) — AI повертає `msg.tool_calls[]`, диспатчиться через існуючі handlers (`processSaveAction`, `processFinanceAction`, `processCompleteHabit/Task`, `clarify`, `restore_deleted` тощо).
+- **Inbox** використовує OpenAI Tool Calling (**47 tools:** 31 у `src/ai/prompts.js` + 8 нових UI у `src/ai/ui-tools.js` + 8 health/memory/cat. Повний довідник → `docs/AI_TOOLS.md`). AI повертає `msg.tool_calls[]`, диспатчиться через існуючі handlers (`processSaveAction`, `processFinanceAction`, `processCompleteHabit/Task`, `handleUITool`, `clarify`, `restore_deleted` тощо).
 - **Tab chat bars і proactive.js** — ще на текстовому JSON форматі (`callAI()`, `callAIWithHistory()`, `callOwlChat()`).
 - **`getAIContext()`** повертає: дата/час, профіль, `nm_facts` (структурована пам'ять), задачі/звички/inbox, фінанси, кошик, поточне повідомлення OWL табло.
 - **OWL Board:** Табло (ініціатива агента, read-only) + Чат-бар (ініціатива юзера). Кожні 3 хв, 7-23, cooldown через `nm_owl_cooldowns`, пам'ять 30 повідомлень.

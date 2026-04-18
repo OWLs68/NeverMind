@@ -32,9 +32,9 @@ _Наразі порожньо._
 
 _Зберігаються закриті у 2 останніх активних сесіях. Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_У сесіях FMykK і Vydqm (поточні активні) жоден баг не закривався — обидві сесії присвячені інструментарію (скіли, хуки, документація)._
+_У сесіях VJF2M і Vydqm (поточні активні) жоден старий баг не закривався — VJF2M присвячена фічам (голосовий ввід, UI tools), Vydqm — інструментарію (хук контексту, фікси звичок/свайпу)._
 
-_Закриті у сесіях до FMykK (KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Закриті у сесіях до Vydqm (FMykK, KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
