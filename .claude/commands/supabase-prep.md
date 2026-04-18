@@ -82,9 +82,9 @@ function _migrateItem(item) {
 - [ ] `changed` trackається щоб не писати у localStorage якщо нічого не змінилось
 - [ ] `window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: '<тип>' }))` після save (OWL мозок)
 
-### Оновити таблицю у CLAUDE.md
+### Оновити таблицю у TECHNICAL_REFERENCE.md
 
-Після нової міграції — додати рядок у CLAUDE.md → секція "Дані (localStorage)" з новим прапорцем `nm_X_migrated_vN`.
+Після нової міграції — додати рядок у `docs/TECHNICAL_REFERENCE.md` → секція "Дані (localStorage)" з новим прапорцем `nm_X_migrated_vN`.
 
 ---
 

@@ -348,7 +348,8 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | Файл | Коли читати |
 |------|-------------|
 | `START_HERE.md` | **Перший файл у кожній новій сесії.** Карта проекту + обов'язкові файли |
-| `CLAUDE.md` *(цей файл)* | Правила процесу, файлова структура, AI-логіка, дані, міжмодульні залежності |
+| `CLAUDE.md` *(цей файл)* | Правила процесу, файлова структура, карта документації. Технічні деталі → `docs/TECHNICAL_REFERENCE.md` |
+| `docs/TECHNICAL_REFERENCE.md` | **Технічна довідка** — Система деплою, AI-логіка, Дані localStorage, Структури даних, Міжмодульні залежності. Читати перед роботою з відповідною частиною коду |
 | `РОМАН_ПРОФІЛЬ.md` | Хто такий Роман і як з ним працювати (перша сесія або давно не працювали) |
 | `NEVERMIND_BUGS.md` | Список відомих багів + `/fix B-XX` — виправлення конкретного |
 | `lessons.md` | Щоденник помилок Claude: помилка → причина → правило. Читати на старті сесії |
@@ -370,7 +371,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | **Виправлено баг** | 1) Перенести з відкритих у "Закриті" в `NEVERMIND_BUGS.md` з датою. 2) Оновити `_ai-tools/SESSION_STATE.md`. 3) Записати урок у `lessons.md` (помилка → причина → правило) |
 | **Зроблено значну роботу в сесії** | `_ai-tools/SESSION_STATE.md` — **після кожної зміни**, не чекати кінця сесії |
 | **Завершено сесію** | Додати запис у `docs/CHANGES.md` (формат: дата + що зроблено + змінені файли) |
-| **Структурна зміна (новий файл, новий ключ storage)** | 1) Файл у `src/` → імпорт у `src/app.js`. 2) Оновити таблицю файлів у `CLAUDE.md`. 3) Якщо storage — оновити таблицю даних у `CLAUDE.md` і діаграму в `docs/ARCHITECTURE.md` |
+| **Структурна зміна (новий файл, новий ключ storage)** | 1) Файл у `src/` → імпорт у `src/app.js`. 2) Оновити таблицю файлів у `CLAUDE.md`. 3) Якщо storage — оновити таблицю даних у `docs/TECHNICAL_REFERENCE.md` і діаграму в `docs/ARCHITECTURE.md` |
 | **Нова концепція вкладки (активна)** | `CONCEPTS_ACTIVE.md` |
 | **Нова ідея фічі (ще не робимо)** | `ROADMAP.md` → секція `💡 Ideas` (для обговорення) або `📋 Next` (якщо затверджена) |
 | **Затверджено нову дизайн-спеку (CSS, модалка, компонент)** | `docs/DESIGN_SYSTEM.md` |
@@ -386,189 +387,51 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 ## Система деплою
 
-**Флоу:** Claude пушить у `claude/**` → `auto-merge.yml` мержить у `main`, збирає bundle, деплоїть на GitHub Pages.
+**Коротко:** Claude пушить у `claude/**` → `auto-merge.yml` мержить у `main`, збирає bundle, деплоїть на GitHub Pages (2-3 хв). CI оновлює бейдж в `index.html` автоматично + cache-bust `?v=...` у `<link>`/`<script>` при кожному деплої. `CACHE_NAME` у `sw.js` змінювати **вручну локально** перед пушем (формат: `nm-YYYYMMDD-HHMM`).
 
-**`auto-merge.yml` робить (ОДИН job, послідовно):**
-1. `git merge --no-edit -X theirs <feature-branch>` — при конфліктах feature-гілка виграє
-2. `sed` оновлює badge в `index.html` (Amsterdam час деплою) + `?v=...` параметри у `<link>` і `<script>` (cache-bust, див. нижче)
-3. `npm ci && node build.js` — збирає bundle.js з src/
-4. Комітить bundle.js і пушить у `main`
-5. Upload artifact + Deploy to GitHub Pages — **в тому ж job**, без race condition
-
-**Чому один job:** раніше deploy був окремим job і міг взяти стару версію main (race condition — стан гонки між push і checkout). Тепер merge → build → push → deploy послідовно в одному job.
-
-**Чому `-X theirs`:** і Claude, і CI змінюють `sw.js` CACHE_NAME → конфлікт → CI падає тихо. `-X theirs` вирішує на користь feature-гілки.
-
-**`concurrency: cancel-in-progress: true`** — якщо новий push приходить поки CI ще працює, попередній CI скасовується. Тому при частих пушах деплоїться тільки останній.
-
-### Cache-bust для style.css і bundle.js (додано 17.04.2026 сесія 14zLe)
-
-**Проблема:** Safari на iOS має два рівні кешу — SW кеш (наш, `CACHE_NAME`) і власний HTTP-кеш браузера. Без cache-bust параметра у URL другий кеш тримає `style.css` і `bundle.js` агресивно — після деплою бейдж версії оновлюється (HTML з `Cache-Control: no-cache`), але стилі і логіка застосунку залишаються старими. До 17.04 цього не помічали бо стилі рідко змінювались радикально; сьогоднішня заміна панелі Налаштувань (бежева → glass) вперше зробила проблему видимою.
-
-**Рішення:** `index.html` містить `?v=VERSION-YYYYMMDD-HHMM` параметр у `<link href="style.css?v=...">` і `<script src="bundle.js?v=...">`. CI (`auto-merge.yml`) при кожному деплої `sed`'ом замінює цей параметр на свіжу мітку (`v${NEW_VERSION}-$(date +%Y%m%d-%H%M)`). Safari бачить новий URL і завантажує файли свіжими. **Ручне втручання не потрібне — все автоматично.**
-
-**Правила:**
-- НЕ видаляти `?v=...` параметри з `index.html` — інакше sed у CI не знайде що замінити і кеш-бастинг зламається.
-- Якщо додаєш нове підключення CSS/JS (`<link>` / `<script>`) — додавай `?v=PLACEHOLDER` і додавай відповідний sed у `auto-merge.yml` поруч з існуючими.
-- `?v=...` НЕ заміняє `CACHE_NAME` у `sw.js` — це **другий шар** кеш-інвалідації (для HTTP-кешу Safari поверх SW). Обидва потрібні.
+**Деталі (один job, `-X theirs`, concurrency, cache-bust правила):** → [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md#система-деплою).
 
 ---
 
 ## AI-логіка
 
-### Inbox flow (з 10.04 — OpenAI Tool Calling)
-```
-Юзер пише → sendToAI() → getAIContext() → callAIWithTools(prompt, history, INBOX_TOOLS)
-→ OpenAI повертає msg.tool_calls[] (гарантовано валідна структура, без JSON.parse)
-→ for each tool_call:
-    _toolCallToAction(name, args) → старий action format
-    → dispatch через існуючі handlers:
-       save_task/note/habit/moment → processSaveAction() → inbox + вкладки
-       save_finance                → processFinanceAction()
-       complete_habit/task         → processCompleteHabit/Task()
-       clarify                     → showClarify() → модалка з варіантами
-       add_step                    → додати кроки до task
-       create_project              → новий проект + startProjectInboxInterview()
-       create_event                → inline (nm_events + inbox entry)
-       restore_deleted             → searchTrash() → restoreFromTrash()
-       save_routine                → inline (nm_routine)
-       update_transaction          → inline (зміна fin запису)
-       edit_*/delete_*/reopen_task → processUniversalAction() у habits.js
-→ msg.content (якщо є) → показується як follow-up повідомлення від агента
+**Коротко:**
+- **Inbox** використовує OpenAI Tool Calling (31 tool у `src/ai/prompts.js`) — AI повертає `msg.tool_calls[]`, диспатчиться через існуючі handlers (`processSaveAction`, `processFinanceAction`, `processCompleteHabit/Task`, `clarify`, `restore_deleted` тощо).
+- **Tab chat bars і proactive.js** — ще на текстовому JSON форматі (`callAI()`, `callAIWithHistory()`, `callOwlChat()`).
+- **`getAIContext()`** повертає: дата/час, профіль, `nm_facts` (структурована пам'ять), задачі/звички/inbox, фінанси, кошик, поточне повідомлення OWL табло.
+- **OWL Board:** Табло (ініціатива агента, read-only) + Чат-бар (ініціатива юзера). Кожні 3 хв, 7-23, cooldown через `nm_owl_cooldowns`, пам'ять 30 повідомлень.
 
-Якщо msg.tool_calls немає → msg.content = reply (просто текст)
-```
-
-**INBOX_TOOLS** — 31 function definitions у `src/ai/prompts.js` (було у `core.js` до рефакторингу 17.04 14zLe). Описують всі можливі дії з параметрами. AI ОБОВ'ЯЗКОВО вибирає одну чи кілька функцій замість тексту JSON. Промпт скорочений з ~200 до ~30 рядків — він тільки класифікує (task vs event vs project), самі формати у tool definitions.
-
-**Backward compat:** `callAI()`, `callAIWithHistory()`, `callOwlChat()` працюють БЕЗ tools для tab chat bars і proactive.js (вони ще на текстовому форматі).
-
-### AI контекст (getAIContext повертає)
-1. Дата/час/день тижня (укр)
-2. Профіль користувача (з налаштувань)
-3. `nm_facts` — структуровані факти з часовими мітками (формат `formatFactsForContext()`). Заповнюється через tool calling (save_memory_fact у Inbox) + фонова екстракція раз на день (doRefreshMemory). Fallback на legacy `nm_memory` поки не пройшла міграція.
-4. Останні 8 активних задач з ID
-5. Всі звички з статусом виконання сьогодні
-6. Останні 8 записів inbox сьогодні
-7. Фінансовий контекст (бюджет, витрати)
-8. Кошик (для відновлення видаленого)
-9. **Поточне повідомлення OWL на табло** — текст з `nm_owl_board` або `nm_owl_tab_{tab}` + інструкція для AI: "якщо користувач відповідає на це — це відповідь на питання OWL, НЕ нова задача/нотатка"
-
-### OWL Board — концепція взаємодії (оновлено 04.04)
-
-**Два канали, один мозок:**
-- **Табло (Board)** = ініціатива агента. Read-only (тільки для читання). Агент проактивно говорить першим — поради, нагадування, питання. Користувач НЕ друкує в табло.
-- **Чат-бар (Chat Bar)** = ініціатива користувача. Поле вводу внизу екрану + вікно чату що розгортається вгору. Вся взаємодія користувача з агентом — тут.
-
-**Як це працює:**
-1. Табло показує проактивне повідомлення з чіпами (швидкі відповіді)
-2. Тап на чіп → `owlChipToChat(tab, text)` — два типи:
-   - **Навігаційні чіпи** (задачі/звички/підсумки/нотатки/фінанси/здоров'я/проекти) → `switchTab()` — переводять на вкладку
-   - **Текстові чіпи** → відкривають чат-бар і відправляють як повідомлення
-3. Кнопка "Поговорити" → `openChatBar(tab)` → відкриває порожній чат-бар
-4. Свайп вниз з speech → `openChatBar(tab)` (замість старого expanded-стану)
-5. Проактивні повідомлення дублюються в `nm_chat_{tab}` → видно в історії чату
-
-**Контекст для AI:** `getAIContext()` включає поточне повідомлення табло → AI розуміє коли користувач відповідає на питання OWL, а не створює нову задачу/нотатку.
-
-**Пам'ять агента:**
-- Зберігає до 30 повідомлень табло (Inbox + кожна вкладка)
-- При генерації нового — бачить 20 останніх з часом → будує діалог, не повторюється
-- `nm_memory` (портрет користувача) передається в промпт табло → персоналізовані чіпи і поради
-- Детекція активних вкладок → агент цікавиться тільки тим що використовує користувач
-
-**Технічні деталі:**
-- Генерація: кожні 3 хв (`OWL_BOARD_INTERVAL`), активний 7:00-23:00
-- Cooldown-система (`nm_owl_cooldowns`) — антиповтор
-- `getDayPhase()` + `getSchedule()` — фази дня під розклад користувача
-- Рендер: `renderTabBoard(tab)` — єдина функція для ВСІХ вкладок (включно з inbox)
-- 2 стани: `speech` (бабл з текстом) і `collapsed` (згорнутий рядок)
-- Мова: людська, без жаргону (стрік, трекер, прогрес заборонені в промпті)
-
-**🦉 Анімація сови (TODO):**
-Планується створити SVG/Lottie анімацію OWL-персонажа іншою нейромережею (не Claude — Claude погано генерує анімації). Роман створить анімацію окремо, потім Claude вставить у файли. Ідеї анімації: кивок на нове повідомлення, поворот голови при відповіді, опущені крила при помилці, змах крилом при вітанні.
+**Повний Inbox flow діаграма + список полів getAIContext + концепція OWL Board з усіма технічними деталями:** → [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md#ai-логіка).
 
 ---
 
 ## Дані (localStorage)
 
-| Ключ | Тип | Модуль |
-|------|-----|--------|
-| `nm_inbox` | `[]` | `src/tabs/inbox.js` |
-| `nm_tasks` | `[]` | `src/tabs/tasks.js` |
-| `nm_notes` | `[]` | `src/tabs/notes.js` |
-| `nm_folders_meta` | `{}` | `src/tabs/notes.js` |
-| `nm_habits2` | `[]` | `src/tabs/habits.js` |
-| `nm_habit_log2` | `{date: {id: count}}` | `src/tabs/habits.js` |
-| `nm_quit_log` | `{id: {streak, relapses}}` | `src/tabs/habits.js` |
-| `nm_finance` | `[]` | `src/tabs/finance.js` |
-| `nm_finance_budget` | `{total, categories}` | `src/tabs/finance.js` |
-| `nm_finance_cats` | `{expense:[], income:[]}` | `src/tabs/finance.js` |
-| `nm_health_cards` | `[]` — розширена структура з Фази 1 (15.04 план jMR6m): `{id, name, subtitle, status, progress, nextStep, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment:{date,time}, history:[{ts,type,text}], medications:[{id,name,dosage,schedule,courseDuration,log:[ts],createTasks}], treatments, owlAnalysis, createdAt}` | `src/tabs/health.js` |
-| `nm_health_log` | `{date: {energy, sleep, pain}}` — **legacy** з ранньої ітерації Здоров'я (шкали). Не чіпаємо до Фази 3 переробки UI — дані не видаляються | `src/tabs/health.js` |
-| `nm_allergies` | `[{id, name, notes, createdAt}]` — фіксовані правила для AI (Фаза 1 імплементовано 15.04 jMR6m коміт `fab3865`). Розширення з `severity` → `ROADMAP.md` секція `💡 Ideas`. Додаються у `getAIContext()` — OWL попереджає про алергени скрізь у застосунку (Inbox, Фінанси, Нотатки) | `src/tabs/health.js` |
-| `nm_health_migrated_v2` | `'1'` — прапор що lazy-міграція карток `nm_health_cards` у нову структуру Фази 1 пройдена (одноразово при першому `getHealthCards()` коли прапор не встановлений). Конвертує `doctorNotes` → `history` type=`doctor_visit`, старі медикаменти `{dose,time,taken}` → `{dosage,schedule[],log[]}` | `src/tabs/health.js` |
-| `nm_projects` | `[]` | `src/tabs/projects.js` |
-| `nm_events` | `[]` | `src/tabs/calendar.js` |
-| `nm_moments` | `[]` | `src/tabs/evening.js` |
-| `nm_evening_summary` | `{text, date}` | `src/tabs/evening.js` |
-| `nm_trash` | `[]` max 200, 7 днів TTL | `src/core/trash.js` |
-| `nm_settings` | `{}` | `src/core/nav.js` |
-| `nm_gemini_key` | string (OpenAI ключ — legacy-назва, **тимчасово** до Supabase. Після міграції — ключ на сервері, юзер не вводить вручну) | `src/core/nav.js` |
-| `nm_memory` | string (300 слів, AI-профіль) — **legacy з 11.04**, залишений як fallback поки не пройшла міграція | `src/ai/core.js` |
-| `nm_facts` | `[{id, text, category, ts, lastSeen, source, ttl}]` — структурована пам'ять (11.04) | `src/ai/memory.js` |
-| `nm_facts_migrated` | `'1'` — прапор що міграція з legacy nm_memory виконана | `src/ai/memory.js` |
-| `nm_owl_silence_until` | string (ts) — 4.40 Auto-silence: до якого часу OWL мовчить (4 год після 3 ігнорів поспіль) | `src/owl/proactive.js`, `src/owl/inbox-board.js` |
-| `nm_owl_ignored_msgs` | string (count 0-2) — лічильник проігнорованих повідомлень табло поспіль (скидається при кліку чіпа або активації silence) | `src/owl/proactive.js`, `src/owl/chips.js` |
-| `nm_owl_last_board_ts` | string (ts) — таймстемп останнього згенерованого повідомлення табло (для детекції ігнору в 4.40) | `src/owl/proactive.js` |
-| `nm_owl_last_chip_click_ts` | string (ts) — таймстемп останнього кліку будь-якого чіпа (для детекції ігнору в 4.40) | `src/owl/chips.js` |
+**Основні ключі:** `nm_inbox`, `nm_tasks`, `nm_notes`, `nm_habits2`, `nm_finance`, `nm_health_cards`, `nm_projects`, `nm_events`, `nm_moments`, `nm_trash`, `nm_settings`, `nm_facts` (AI пам'ять).
 
-**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`
+**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`.
+
+**Повна таблиця з типами і модулями (30+ ключів включно з OWL cooldowns, migrated прапорами, legacy полями):** → [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md#дані-localstorage).
+
+⚠️ **При додаванні нового storage-ключа** — оновлювати таблицю у `TECHNICAL_REFERENCE.md`, не тут.
 
 ---
 
 ## Структури даних
 
-```javascript
-// Task
-{ id, title, status:'active'|'done', steps:[{id,text,done,doneAt?}], createdAt, completedAt?, dueDate?, priority?:'normal'|'important'|'critical' }
-// Note
-{ id, text, folder, source:'inbox'|'manual'|'ai', ts, lastViewed, updatedAt? }
-// Habit
-{ id, name, details, emoji, days:[0-6], targetCount, type:'build'|'quit', createdAt }
-// Transaction
-{ id, type:'expense'|'income', amount, category, comment, ts }
-// Project
-{ id, name, subtitle, status:'idea'|'active'|'paused'|'done', progress, steps, decisions, metrics, tempoNow, tempoMore, tempoIdeal }
-// Event (календарна подія)
-{ id, title, date:'YYYY-MM-DD', time?:'HH:MM', priority?:'normal'|'important'|'critical', createdAt }
-// Moment
-{ id, text, mood:'positive'|'neutral'|'negative', ts, summary? }
-// TrashItem
-{ type:'task'|'note'|'habit'|'inbox'|'folder'|'finance', item, extra, deletedAt }
-```
+8 основних типів: Task, Note, Habit, Transaction, Project, Event, Moment, TrashItem.
+
+**Повні JS-об'єкти з усіма полями:** → [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md#структури-даних).
 
 ---
 
 ## Міжмодульні залежності
 
-```
-src/core/nav.js      ←─── всі модулі (switchTab, showToast, applyTheme)
-src/core/boot.js     ←─── всі модулі (ініціалізація, PWA, cross-tab sync)
-src/core/trash.js    ←─── всі модулі (addToTrash, showUndoToast)
-src/ai/core.js       ←─── всі AI-модулі (callAI, getAIContext, chat storage)
-src/owl/chips.js     ←─── board.js, inbox-board.js, proactive.js, ai/core.js
-                          (renderChips, CHIP_PROMPT_RULES, handleChipClick)
-                     ──→ src/tabs/tasks.js (getTasks, saveTasks, renderTasks)
-                     ──→ src/tabs/habits.js (getHabits, getHabitLog, saveHabitLog)
-src/tabs/inbox.js    ──→ processSaveAction ──→ notes / tasks / habits / evening
-src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
-                     ──→ src/tabs/* (get{Tasks,Habits,Notes,Finance})
-```
+**Основні вузли:** `nav.js` / `boot.js` / `trash.js` — імпортуються всіма. `ai/core.js` — базовий для AI-модулів. `owl/chips.js` — центр логіки чіпів.
 
-**Збірка через esbuild:** `src/app.js` — точка входу, імпортує всі модулі у правильному порядку. Згенерований `bundle.js` підключається одним тегом у `index.html`. Порядок імпортів у `src/app.js` критичний.
+**Збірка:** esbuild з `src/app.js` у `bundle.js`. Порядок імпортів у `app.js` критичний — AI-модулі раніше за табси для уникнення circular dependencies.
 
-⚠️ `src/ai/core.js` викликає `getTasks()` з `src/tabs/tasks.js` — тепер через ES-import замість глобального виклику. Circular dependencies (циклічні залежності — коли модуль A імпортує B, а B імпортує A) уникнуто бо AI-модулі імпортуються раніше в `app.js`.
+**Повний граф залежностей:** → [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md#міжмодульні-залежності).
 
 ---
 

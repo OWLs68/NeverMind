@@ -123,16 +123,80 @@
 
 ## Дані (localStorage)
 
-_Блок буде заповнений._
+| Ключ | Тип | Модуль |
+|------|-----|--------|
+| `nm_inbox` | `[]` | `src/tabs/inbox.js` |
+| `nm_tasks` | `[]` | `src/tabs/tasks.js` |
+| `nm_notes` | `[]` | `src/tabs/notes.js` |
+| `nm_folders_meta` | `{}` | `src/tabs/notes.js` |
+| `nm_habits2` | `[]` | `src/tabs/habits.js` |
+| `nm_habit_log2` | `{date: {id: count}}` | `src/tabs/habits.js` |
+| `nm_quit_log` | `{id: {streak, relapses}}` | `src/tabs/habits.js` |
+| `nm_finance` | `[]` | `src/tabs/finance.js` |
+| `nm_finance_budget` | `{total, categories}` | `src/tabs/finance.js` |
+| `nm_finance_cats` | `{expense:[], income:[]}` | `src/tabs/finance.js` |
+| `nm_health_cards` | `[]` — розширена структура з Фази 1 (15.04 план jMR6m): `{id, name, subtitle, status, progress, nextStep, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment:{date,time}, history:[{ts,type,text}], medications:[{id,name,dosage,schedule,courseDuration,log:[ts],createTasks}], treatments, owlAnalysis, createdAt}` | `src/tabs/health.js` |
+| `nm_health_log` | `{date: {energy, sleep, pain}}` — **legacy** з ранньої ітерації Здоров'я (шкали). Не чіпаємо до Фази 3 переробки UI — дані не видаляються | `src/tabs/health.js` |
+| `nm_allergies` | `[{id, name, notes, createdAt}]` — фіксовані правила для AI (Фаза 1 імплементовано 15.04 jMR6m коміт `fab3865`). Додаються у `getAIContext()` — OWL попереджає про алергени скрізь у застосунку | `src/tabs/health.js` |
+| `nm_health_migrated_v2` | `'1'` — прапор що lazy-міграція карток `nm_health_cards` у нову структуру Фази 1 пройдена. Конвертує `doctorNotes` → `history` type=`doctor_visit`, старі медикаменти → нова схема | `src/tabs/health.js` |
+| `nm_projects` | `[]` | `src/tabs/projects.js` |
+| `nm_events` | `[]` | `src/tabs/calendar.js` |
+| `nm_moments` | `[]` | `src/tabs/evening.js` |
+| `nm_evening_summary` | `{text, date}` | `src/tabs/evening.js` |
+| `nm_trash` | `[]` max 200, 7 днів TTL | `src/core/trash.js` |
+| `nm_settings` | `{}` | `src/core/nav.js` |
+| `nm_gemini_key` | string (OpenAI ключ — legacy-назва, **тимчасово** до Supabase. Після міграції — ключ на сервері, юзер не вводить вручну) | `src/core/nav.js` |
+| `nm_memory` | string (300 слів, AI-профіль) — **legacy з 11.04**, залишений як fallback поки не пройшла міграція | `src/ai/core.js` |
+| `nm_facts` | `[{id, text, category, ts, lastSeen, source, ttl}]` — структурована пам'ять (11.04) | `src/ai/memory.js` |
+| `nm_facts_migrated` | `'1'` — прапор що міграція з legacy nm_memory виконана | `src/ai/memory.js` |
+| `nm_owl_silence_until` | string (ts) — 4.40 Auto-silence: до якого часу OWL мовчить (4 год після 3 ігнорів поспіль) | `src/owl/proactive.js`, `src/owl/inbox-board.js` |
+| `nm_owl_ignored_msgs` | string (count 0-2) — лічильник проігнорованих повідомлень табло поспіль | `src/owl/proactive.js`, `src/owl/chips.js` |
+| `nm_owl_last_board_ts` | string (ts) — таймстемп останнього згенерованого повідомлення табло | `src/owl/proactive.js` |
+| `nm_owl_last_chip_click_ts` | string (ts) — таймстемп останнього кліку будь-якого чіпа | `src/owl/chips.js` |
+
+**Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`
 
 ---
 
 ## Структури даних
 
-_Блок буде заповнений._
+```javascript
+// Task
+{ id, title, status:'active'|'done', steps:[{id,text,done,doneAt?}], createdAt, completedAt?, dueDate?, priority?:'normal'|'important'|'critical' }
+// Note
+{ id, text, folder, source:'inbox'|'manual'|'ai', ts, lastViewed, updatedAt? }
+// Habit
+{ id, name, details, emoji, days:[0-6], targetCount, type:'build'|'quit', createdAt }
+// Transaction
+{ id, type:'expense'|'income', amount, category, comment, ts }
+// Project
+{ id, name, subtitle, status:'idea'|'active'|'paused'|'done', progress, steps, decisions, metrics, tempoNow, tempoMore, tempoIdeal }
+// Event (календарна подія)
+{ id, title, date:'YYYY-MM-DD', time?:'HH:MM', priority?:'normal'|'important'|'critical', createdAt }
+// Moment
+{ id, text, mood:'positive'|'neutral'|'negative', ts, summary? }
+// TrashItem
+{ type:'task'|'note'|'habit'|'inbox'|'folder'|'finance', item, extra, deletedAt }
+```
 
 ---
 
 ## Міжмодульні залежності
 
-_Блок буде заповнений._
+```
+src/core/nav.js      ←─── всі модулі (switchTab, showToast, applyTheme)
+src/core/boot.js     ←─── всі модулі (ініціалізація, PWA, cross-tab sync)
+src/core/trash.js    ←─── всі модулі (addToTrash, showUndoToast)
+src/ai/core.js       ←─── всі AI-модулі (callAI, getAIContext, chat storage)
+src/owl/chips.js     ←─── board.js, inbox-board.js, proactive.js, ai/core.js
+                          (renderChips, CHIP_PROMPT_RULES, handleChipClick)
+                     ──→ src/tabs/tasks.js (getTasks, saveTasks, renderTasks)
+                     ──→ src/tabs/habits.js (getHabits, getHabitLog, saveHabitLog)
+src/tabs/inbox.js    ──→ processSaveAction ──→ notes / tasks / habits / evening
+src/owl/* (4 файли)  ──→ src/ai/core.js (getAIContext, openChatBar)
+                     ──→ src/tabs/* (get{Tasks,Habits,Notes,Finance})
+```
+
+**Збірка через esbuild:** `src/app.js` — точка входу, імпортує всі модулі у правильному порядку. Згенерований `bundle.js` підключається одним тегом у `index.html`. Порядок імпортів у `src/app.js` критичний.
+
+⚠️ `src/ai/core.js` викликає `getTasks()` з `src/tabs/tasks.js` — через ES-import замість глобального виклику. Circular dependencies (коли модуль A імпортує B, а B імпортує A) уникнуто бо AI-модулі імпортуються раніше в `app.js`.
