@@ -196,7 +196,7 @@ graph LR
     end
 ```
 
-**Повна таблиця ключів з модулями** → `CLAUDE.md` секція "Дані (localStorage)".
+**Повна таблиця ключів з модулями** → [`docs/TECHNICAL_REFERENCE.md`](TECHNICAL_REFERENCE.md#дані-localstorage).
 
 ---
 
