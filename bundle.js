@@ -9765,7 +9765,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const target = h?.targetCount || 1;
     const rawVal = log[today][id];
     const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-    log[today][id] = cur + 1;
+    const newVal = target === 1 ? cur === 0 ? 1 : cur === 1 ? 2 : 0 : cur + 1;
+    log[today][id] = newVal;
     saveHabitLog(log);
     if (h) logRecentAction("complete_habit", h.name, "habits");
     renderHabits();
@@ -9981,9 +9982,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const target = h?.targetCount || 1;
     const rawVal = log[today][id];
     const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-    log[today][id] = cur + 1;
+    const newVal = target === 1 ? cur === 0 ? 1 : cur === 1 ? 2 : 0 : cur + 1;
+    log[today][id] = newVal;
     saveHabitLog(log);
-    if (cur + 1 === target) _habitConfetti(id);
+    if (newVal === target) _habitConfetti(id);
     renderProdHabits();
   }
   function tapHabitSquare(id, idx) {
