@@ -12,7 +12,7 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
@@ -243,85 +243,17 @@ function _deleteFinTxById(txId) {
   });
 }
 
+// Підключення B-54 механізму через спільну утиліту attachSwipeDelete (18.04.2026 14zLe).
+// До рефакторингу логіка жила інлайн; тепер винесена у src/ui/swipe-delete.js
+// як базовий компонент для всього застосунку (Inbox/Tasks/Notes/Habits).
 function _attachFinTxSwipeDelete() {
-  const wraps = document.querySelectorAll('.fin-tx-swipe-wrap');
-  wraps.forEach(sw => {
-    if (sw._swipeBound) return;
-    sw._swipeBound = true;
-    let startX = 0, startY = 0, dx = 0, locked = false;
+  document.querySelectorAll('.fin-tx-swipe-wrap').forEach(sw => {
     const card = sw.querySelector('.tx-row');
     if (!card) return;
-
-    // LAZY: bin створюється лише коли почався свайп. Прибирається після закриття.
-    let bin = null;
-    const ensureBin = () => {
-      if (bin) return;
-      const w = Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
-      bin = document.createElement('button');
-      bin.className = 'fin-tx-bin';
-      bin.setAttribute('aria-label', 'Видалити');
-      // Градієнт від прозорого зліва → червоний справа. Кошик-іконка по правому краю.
-      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(239,68,68,0) 0%, rgba(239,68,68,0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
-      bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-      bin.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const txId = parseInt(sw.dataset.txId);
-        if (!isNaN(txId)) _deleteFinTxById(txId);
-      });
-      sw.appendChild(bin);
-    };
-    const removeBin = () => {
-      if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
-      bin = null;
-    };
-
-    const getOpenOffset = () => -Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
-    const setOffset = (offset, animate = false) => {
-      card.style.transition = animate ? 'transform 0.25s ease' : '';
-      card.style.transform = `translateX(${offset}px)`;
-    };
-    const openSwipe = () => { sw._open = true; ensureBin(); setOffset(getOpenOffset(), true); };
-    const closeSwipe = () => {
-      sw._open = false;
-      setOffset(0, true);
-      setTimeout(() => { if (!sw._open) removeBin(); }, 280); // після завершення transition
-    };
-
-    // Тап на картку при відкритому свайпі → закриваємо (не відкриваємо редагування)
-    card.addEventListener('click', (e) => {
-      if (sw._open) { e.stopPropagation(); e.preventDefault(); closeSwipe(); }
-    }, true);
-
-    sw.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      dx = 0; locked = false;
-      card.style.transition = '';
-    }, { passive: true });
-
-    sw.addEventListener('touchmove', (e) => {
-      if (locked) return;
-      const ddx = e.touches[0].clientX - startX;
-      const ddy = e.touches[0].clientY - startY;
-      if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) { locked = true; return; }
-      dx = ddx;
-      // Перший свайп вліво створює bin (lazy)
-      if (dx < 0 && !sw._open && !bin) ensureBin();
-      const baseOffset = sw._open ? getOpenOffset() : 0;
-      const newOffset = Math.min(0, baseOffset + dx);
-      setOffset(newOffset);
-    }, { passive: true });
-
-    sw.addEventListener('touchend', () => {
-      if (locked) { if (sw._open) openSwipe(); else closeSwipe(); return; }
-      // Поріг = 50% від цільового offset (тобто чверть ширини картки)
-      const threshold = sw.offsetWidth * SWIPE_OPEN_RATIO * 0.5;
-      if (sw._open) {
-        if (dx > 30) closeSwipe(); else openSwipe();
-      } else {
-        if (dx < -threshold) openSwipe(); else closeSwipe();
-      }
-    }, { passive: true });
+    attachSwipeDelete(sw, card, () => {
+      const txId = parseInt(sw.dataset.txId);
+      if (!isNaN(txId)) _deleteFinTxById(txId);
+    }, { openRatio: SWIPE_OPEN_RATIO });
   });
 }
 
