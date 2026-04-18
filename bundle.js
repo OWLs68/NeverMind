@@ -805,6 +805,96 @@ ${logLines}
   });
 
   // src/ui/swipe-delete.js
+  function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
+    if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
+    wrapEl._swipeOpenBound = true;
+    const openRatio = opts.openRatio || 0.22;
+    const binBg = opts.binBgColor || "239,68,68";
+    let startX = 0, startY = 0, dx = 0, locked = false;
+    let bin = null;
+    const ensureBin = () => {
+      if (bin) return;
+      const w = Math.round(wrapEl.offsetWidth * openRatio);
+      bin = document.createElement("button");
+      bin.className = "swipe-open-bin";
+      bin.setAttribute("aria-label", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438");
+      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(${binBg},0) 0%, rgba(${binBg},0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
+      bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      bin.addEventListener("click", (e) => {
+        e.stopPropagation();
+        try {
+          onDelete();
+        } catch (err) {
+          console.error("[swipe-delete] onDelete error:", err);
+        }
+      });
+      wrapEl.appendChild(bin);
+    };
+    const removeBin = () => {
+      if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
+      bin = null;
+    };
+    const getOpenOffset = () => -Math.round(wrapEl.offsetWidth * openRatio);
+    const setOffset = (offset, animate = false) => {
+      cardEl.style.transition = animate ? "transform 0.25s ease" : "";
+      cardEl.style.transform = `translateX(${offset}px)`;
+    };
+    const openSwipe = () => {
+      wrapEl._open = true;
+      ensureBin();
+      setOffset(getOpenOffset(), true);
+    };
+    const closeSwipe = () => {
+      wrapEl._open = false;
+      setOffset(0, true);
+      setTimeout(() => {
+        if (!wrapEl._open) removeBin();
+      }, 280);
+    };
+    cardEl.addEventListener("click", (e) => {
+      if (wrapEl._open) {
+        e.stopPropagation();
+        e.preventDefault();
+        closeSwipe();
+      }
+    }, true);
+    wrapEl.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0;
+      locked = false;
+      cardEl.style.transition = "";
+    }, { passive: true });
+    wrapEl.addEventListener("touchmove", (e) => {
+      if (locked) return;
+      const ddx = e.touches[0].clientX - startX;
+      const ddy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) {
+        locked = true;
+        return;
+      }
+      dx = ddx;
+      if (dx < 0 && !wrapEl._open && !bin) ensureBin();
+      const baseOffset = wrapEl._open ? getOpenOffset() : 0;
+      const newOffset = Math.min(0, baseOffset + dx);
+      setOffset(newOffset);
+    }, { passive: true });
+    wrapEl.addEventListener("touchend", () => {
+      if (locked) {
+        if (wrapEl._open) openSwipe();
+        else closeSwipe();
+        return;
+      }
+      const threshold = wrapEl.offsetWidth * openRatio * 0.5;
+      if (wrapEl._open) {
+        if (dx > 30) closeSwipe();
+        else openSwipe();
+      } else {
+        if (dx < -threshold) openSwipe();
+        else closeSwipe();
+      }
+    }, { passive: true });
+  }
   function applySwipeTrail(cardEl, wrapEl, dx) {
     if (!cardEl) return;
     cardEl.style.transform = `translateX(${dx}px)`;
@@ -9090,93 +9180,13 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     });
   }
   function _attachFinTxSwipeDelete() {
-    const wraps = document.querySelectorAll(".fin-tx-swipe-wrap");
-    wraps.forEach((sw) => {
-      if (sw._swipeBound) return;
-      sw._swipeBound = true;
-      let startX = 0, startY = 0, dx = 0, locked = false;
+    document.querySelectorAll(".fin-tx-swipe-wrap").forEach((sw) => {
       const card = sw.querySelector(".tx-row");
       if (!card) return;
-      let bin = null;
-      const ensureBin = () => {
-        if (bin) return;
-        const w = Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
-        bin = document.createElement("button");
-        bin.className = "fin-tx-bin";
-        bin.setAttribute("aria-label", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438");
-        bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(239,68,68,0) 0%, rgba(239,68,68,0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
-        bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-        bin.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const txId = parseInt(sw.dataset.txId);
-          if (!isNaN(txId)) _deleteFinTxById(txId);
-        });
-        sw.appendChild(bin);
-      };
-      const removeBin = () => {
-        if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
-        bin = null;
-      };
-      const getOpenOffset = () => -Math.round(sw.offsetWidth * SWIPE_OPEN_RATIO);
-      const setOffset = (offset, animate = false) => {
-        card.style.transition = animate ? "transform 0.25s ease" : "";
-        card.style.transform = `translateX(${offset}px)`;
-      };
-      const openSwipe = () => {
-        sw._open = true;
-        ensureBin();
-        setOffset(getOpenOffset(), true);
-      };
-      const closeSwipe = () => {
-        sw._open = false;
-        setOffset(0, true);
-        setTimeout(() => {
-          if (!sw._open) removeBin();
-        }, 280);
-      };
-      card.addEventListener("click", (e) => {
-        if (sw._open) {
-          e.stopPropagation();
-          e.preventDefault();
-          closeSwipe();
-        }
-      }, true);
-      sw.addEventListener("touchstart", (e) => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        dx = 0;
-        locked = false;
-        card.style.transition = "";
-      }, { passive: true });
-      sw.addEventListener("touchmove", (e) => {
-        if (locked) return;
-        const ddx = e.touches[0].clientX - startX;
-        const ddy = e.touches[0].clientY - startY;
-        if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) {
-          locked = true;
-          return;
-        }
-        dx = ddx;
-        if (dx < 0 && !sw._open && !bin) ensureBin();
-        const baseOffset = sw._open ? getOpenOffset() : 0;
-        const newOffset = Math.min(0, baseOffset + dx);
-        setOffset(newOffset);
-      }, { passive: true });
-      sw.addEventListener("touchend", () => {
-        if (locked) {
-          if (sw._open) openSwipe();
-          else closeSwipe();
-          return;
-        }
-        const threshold = sw.offsetWidth * SWIPE_OPEN_RATIO * 0.5;
-        if (sw._open) {
-          if (dx > 30) closeSwipe();
-          else openSwipe();
-        } else {
-          if (dx < -threshold) openSwipe();
-          else closeSwipe();
-        }
-      }, { passive: true });
+      attachSwipeDelete(sw, card, () => {
+        const txId = parseInt(sw.dataset.txId);
+        if (!isNaN(txId)) _deleteFinTxById(txId);
+      }, { openRatio: SWIPE_OPEN_RATIO });
     });
   }
   function _finEmptyTxsHint() {
