@@ -13611,6 +13611,26 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
     if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
     const historySlice = inboxChatHistory.slice(-12);
     const _aiStart = Date.now();
+    const isQuestion = /\?\s*$/.test(text) && text.length <= 80;
+    if (isQuestion) {
+      const qPrompt = `${getOWLPersonality()} \u042E\u0437\u0435\u0440 \u0443 \u0447\u0430\u0442\u0456 Inbox \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u041F\u0418\u0422\u0410\u041D\u041D\u042F \u043F\u0440\u043E \u0441\u0432\u043E\u0457 \u0434\u0430\u043D\u0456.
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0436\u043E\u0434\u043D\u0438\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432, \u0436\u043E\u0434\u043D\u0438\u0445 tool calls
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E (1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u043F\u043E \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443
+- \u041F\u043E\u0441\u0438\u043B\u0430\u0439\u0441\u044F \u043D\u0430 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 ID/\u043D\u0430\u0437\u0432\u0438 \u044F\u043A\u0449\u043E \u0454
+- \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043D\u0435\u043C\u0430 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043F\u0440\u044F\u043C\u043E "\u043F\u043E\u043A\u0438 \u0449\u043E \u043D\u0435\u043C\u0430"
+
+${aiContext}`;
+      const reply = await callAIWithHistory(qPrompt, historySlice);
+      const elapsedQ = Date.now() - _aiStart;
+      if (elapsedQ < 800) await new Promise((r) => setTimeout(r, 800 - elapsedQ));
+      addInboxChatMsg("agent", reply || "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432, \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0439?");
+      inboxChatHistory.push({ role: "assistant", content: reply || "" });
+      aiLoading = false;
+      btn.disabled = false;
+      btn.innerHTML = SEND_SVG;
+      return;
+    }
     const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS);
     const elapsed = Date.now() - _aiStart;
     if (elapsed < 800) await new Promise((r) => setTimeout(r, 800 - elapsed));
@@ -14151,9 +14171,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const savedText = parsed.text || originalText;
     const folder = parsed.folder || null;
     const items = getInbox();
-    items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
+    const inboxCardId = Date.now();
+    items.unshift({ id: inboxCardId, text: savedText, category: cat, ts: Date.now(), processed: true });
     saveInbox(items);
     renderInbox();
+    let undoRef = null;
     if (cat === "task") {
       const taskTitle = parsed.task_title || savedText;
       const eventDetected = _detectEventFromTask(taskTitle);
@@ -14176,8 +14198,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       tasks.unshift(newTask);
       saveTasks(tasks);
       if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
+      undoRef = { type: "task", id: taskId, label: "\u0437\u0430\u0434\u0430\u0447\u0443" };
     }
-    if (cat === "note" || cat === "idea") addNoteFromInbox(savedText, cat, folder);
+    if (cat === "note" || cat === "idea") {
+      addNoteFromInbox(savedText, cat, folder);
+      const allNotes = getNotes();
+      if (allNotes[0]) undoRef = { type: "note", id: allNotes[0].id, label: cat === "idea" ? "\u0456\u0434\u0435\u044E" : "\u043D\u043E\u0442\u0430\u0442\u043A\u0443" };
+    }
     if (cat === "habit") {
       const habits = getHabits();
       const exists = habits.some((h) => h.name.toLowerCase() === savedText.toLowerCase());
@@ -14218,8 +14245,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const countMatch = txt.match(/(\d+)\s*(рази?|раз|разів|склянок|склянки|стакан|кроків|хвилин|разу)/i);
           if (countMatch) targetCount = Math.min(20, Math.max(2, parseInt(countMatch[1])));
         }
-        habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: "\u2B55", days, targetCount, createdAt: Date.now() });
+        const habitId = Date.now();
+        habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: "\u2B55", days, targetCount, createdAt: habitId });
         saveHabits(habits);
+        undoRef = { type: "habit", id: habitId, label: "\u0437\u0432\u0438\u0447\u043A\u0443" };
       }
     }
     if (cat === "event") {
@@ -14252,6 +14281,19 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     addInboxChatMsg("agent", confirmMsg2);
     if (parsed.ask_after) {
       setTimeout(() => addInboxChatMsg("agent", parsed.ask_after), 600);
+    }
+    if (undoRef) {
+      showUndoToast(`\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043E ${undoRef.label} \u2192 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438`, () => {
+        try {
+          if (undoRef.type === "task") saveTasks(getTasks().filter((t) => t.id !== undoRef.id));
+          else if (undoRef.type === "note") saveNotes(getNotes().filter((n) => n.id !== undoRef.id));
+          else if (undoRef.type === "habit") saveHabits(getHabits().filter((h) => h.id !== undoRef.id));
+          saveInbox(getInbox().filter((i) => i.id !== inboxCardId));
+          renderInbox();
+          showToast("\u21A9\uFE0F \u0412\u0456\u0434\u043C\u0456\u043D\u0435\u043D\u043E");
+        } catch (e) {
+        }
+      });
     }
   }
   function processCompleteHabit(parsed, originalText) {
