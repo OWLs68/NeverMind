@@ -136,6 +136,9 @@ export function renderTabBoard(tab) {
   if (cEl) cEl.textContent = msg.text;
   if (tmEl) tmEl.textContent = '';
 
+  // Mascot state: alert when new board message shown, revert to idle after 12s
+  if (tab === 'inbox') setOwlMascotState('alert', 12000);
+
   const chipsEl = document.getElementById('owl-tab-chips-' + tab);
   if (chipsEl) {
     renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
@@ -151,3 +154,23 @@ Object.assign(window, {
   toggleOwlTabChat, owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
   scrollOwlTabChips, openChatBar,
 });
+
+// === OWL MASCOT STATE CONTROL ===
+// Керує data-state на #owl-mascot-main. Змінює картинку сови (idle/alert/thinking/greeting/error).
+// Якщо autoRevertMs > 0 — через стільки мс автоматично повернеться у idle.
+let _owlMascotRevertTimer = null;
+export function setOwlMascotState(state, autoRevertMs = 0) {
+  const el = document.getElementById('owl-mascot-main');
+  if (!el) return;
+  const valid = ['idle','alert','thinking','greeting','error'];
+  if (!valid.includes(state)) return;
+  if (_owlMascotRevertTimer) { clearTimeout(_owlMascotRevertTimer); _owlMascotRevertTimer = null; }
+  el.setAttribute('data-state', state);
+  if (autoRevertMs > 0 && state !== 'idle') {
+    _owlMascotRevertTimer = setTimeout(() => {
+      const cur = el.getAttribute('data-state');
+      if (cur === state) el.setAttribute('data-state', 'idle');
+    }, autoRevertMs);
+  }
+}
+Object.assign(window, { setOwlMascotState });
