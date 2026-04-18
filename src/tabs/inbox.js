@@ -4,10 +4,10 @@
 // Залежності: app-core.js, app-ai.js
 // ============================================================
 
-import { currentTab, switchTab } from '../core/nav.js';
+import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, saveOffline } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
-import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
@@ -15,7 +15,7 @@ import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
-import { addNoteFromInbox } from './notes.js';
+import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
   createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
 import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
@@ -431,6 +431,31 @@ export async function sendToAI(fromChip = false) {
   // Передаємо останні 12 повідомлень — достатньо для контексту розмови
   const historySlice = inboxChatHistory.slice(-12);
   const _aiStart = Date.now();
+
+  // === ПИТАЛЬНИЙ GUARD (18.04 pvZG1) ===
+  // Якщо текст закінчується на "?" і короткий (≤80 знаків) — це питання до OWL,
+  // а не запис. Не викликаємо tools, а просто відповідаємо у чаті по контексту.
+  // Прибирає випадки коли "Скільки у мене нотаток?" зберігалось як нотатка.
+  const isQuestion = /\?\s*$/.test(text) && text.length <= 80;
+  if (isQuestion) {
+    const qPrompt = `${getOWLPersonality()} Юзер у чаті Inbox ставить ПИТАННЯ про свої дані.
+ПРАВИЛА:
+- НЕ створюй жодних записів, жодних tool calls
+- Відповідай коротко (1-2 речення) по реальних даних з контексту
+- Посилайся на конкретні ID/назви якщо є
+- Якщо даних нема — скажи прямо "поки що нема"
+
+${aiContext}`;
+    const reply = await callAIWithHistory(qPrompt, historySlice);
+    const elapsedQ = Date.now() - _aiStart;
+    if (elapsedQ < 800) await new Promise(r => setTimeout(r, 800 - elapsedQ));
+    addInboxChatMsg('agent', reply || 'Не зрозумів, переформулюй?');
+    inboxChatHistory.push({ role: 'assistant', content: reply || '' });
+    aiLoading = false;
+    btn.disabled = false;
+    btn.innerHTML = SEND_SVG;
+    return;
+  }
 
   // === TOOL CALLING — основний виклик ===
   const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS);
@@ -1010,9 +1035,13 @@ async function processSaveAction(parsed, originalText) {
   const savedText = parsed.text || originalText;
   const folder = parsed.folder || null;
   const items = getInbox();
-  items.unshift({ id: Date.now(), text: savedText, category: cat, ts: Date.now(), processed: true });
+  const inboxCardId = Date.now();
+  items.unshift({ id: inboxCardId, text: savedText, category: cat, ts: Date.now(), processed: true });
   saveInbox(items);
   renderInbox();
+
+  // 18.04 pvZG1: { type, id, label } — для тост-відкату в кінці функції
+  let undoRef = null;
 
   if (cat === 'task') {
     // Fallback: якщо AI створив task але це схоже на подію — конвертуємо в event
@@ -1039,8 +1068,13 @@ async function processSaveAction(parsed, originalText) {
     tasks.unshift(newTask);
     saveTasks(tasks);
     if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
+    undoRef = { type: 'task', id: taskId, label: 'задачу' };
   }
-  if (cat === 'note' || cat === 'idea') addNoteFromInbox(savedText, cat, folder);
+  if (cat === 'note' || cat === 'idea') {
+    addNoteFromInbox(savedText, cat, folder);
+    const allNotes = getNotes();
+    if (allNotes[0]) undoRef = { type: 'note', id: allNotes[0].id, label: cat === 'idea' ? 'ідею' : 'нотатку' };
+  }
   if (cat === 'habit') {
     const habits = getHabits();
     const exists = habits.some(h => h.name.toLowerCase() === savedText.toLowerCase());
@@ -1085,8 +1119,10 @@ async function processSaveAction(parsed, originalText) {
         if (countMatch) targetCount = Math.min(20, Math.max(2, parseInt(countMatch[1])));
       }
 
-      habits.push({ id: Date.now(), name: habitName, details: habitDetails, emoji: '⭕', days, targetCount, createdAt: Date.now() });
+      const habitId = Date.now();
+      habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: '⭕', days, targetCount, createdAt: habitId });
       saveHabits(habits);
+      undoRef = { type: 'habit', id: habitId, label: 'звичку' };
     }
   }
   if (cat === 'event') {
@@ -1127,6 +1163,21 @@ async function processSaveAction(parsed, originalText) {
   // Якщо є уточнення після збереження — показуємо через паузу
   if (parsed.ask_after) {
     setTimeout(() => addInboxChatMsg('agent', parsed.ask_after), 600);
+  }
+
+  // 18.04 pvZG1: тост-відкат для task/note/idea/habit.
+  // Випадково створив? Один тап "Відмінити" — і запис зникає з відповідної вкладки + Inbox.
+  if (undoRef) {
+    showUndoToast(`Створено ${undoRef.label} → Відмінити`, () => {
+      try {
+        if (undoRef.type === 'task') saveTasks(getTasks().filter(t => t.id !== undoRef.id));
+        else if (undoRef.type === 'note') saveNotes(getNotes().filter(n => n.id !== undoRef.id));
+        else if (undoRef.type === 'habit') saveHabits(getHabits().filter(h => h.id !== undoRef.id));
+        saveInbox(getInbox().filter(i => i.id !== inboxCardId));
+        renderInbox();
+        showToast('↩️ Відмінено');
+      } catch(e) {}
+    });
   }
 }
 
