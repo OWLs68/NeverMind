@@ -10741,9 +10741,22 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   function handleUITool(name, args) {
     try {
       switch (name) {
-        case "switch_tab":
-          switchTab(args.target);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(args.target)}.` };
+        case "switch_tab": {
+          const t = args.target;
+          if (t === "calendar") {
+            if (typeof window.openCalendarModal === "function") {
+              window.openCalendarModal();
+              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+            }
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          if (t === "habits") {
+            switchTab("tasks");
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
+          }
+          switchTab(t);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+        }
         case "open_memory":
           if (typeof window.openMemoryModal === "function") {
             window.openMemoryModal();
