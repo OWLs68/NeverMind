@@ -11874,7 +11874,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t.status === "done" ? 100 : 0;
       const isDone = t.status === "done";
       return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
-      <div id="task-item-${t.id}"
+      <div id="task-item-${t.id}" onclick="taskCardClick(${t.id}, event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? "10px" : "0"}">
         <div data-task-check="1" ontouchend="event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
@@ -11898,18 +11898,30 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       ` : ""}
     </div></div>`;
     }).join("");
-    setupTaskSwipeListeners();
-  }
-  function setupTaskSwipeListeners() {
-    const tasks = getTasks();
-    tasks.forEach((t) => {
-      const el = document.getElementById("task-item-" + t.id);
-      if (!el || el._swipeAttached) return;
-      el._swipeAttached = true;
-      el.addEventListener("touchstart", (e) => taskSwipeStart(e, t.id), { passive: true });
-      el.addEventListener("touchmove", (e) => taskSwipeMove(e, t.id), { passive: false });
-      el.addEventListener("touchend", (e) => taskSwipeEnd(e, t.id), { passive: false });
+    document.querySelectorAll("#tasks-list .task-item-wrap").forEach((wrap) => {
+      const card = wrap.querySelector('[id^="task-item-"]');
+      if (!card) return;
+      const id = parseInt(card.id.replace("task-item-", ""));
+      attachSwipeDelete(wrap, card, () => {
+        const tasks2 = getTasks();
+        const taskOrigIdx = tasks2.findIndex((x) => x.id === id);
+        const item = tasks2.find((x) => x.id === id);
+        if (item) addToTrash("task", item);
+        saveTasks(tasks2.filter((x) => x.id !== id));
+        renderTasks();
+        if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+          const t = getTasks();
+          const idx = Math.min(taskOrigIdx, t.length);
+          t.splice(idx, 0, item);
+          saveTasks(t);
+          renderTasks();
+        });
+      });
     });
+  }
+  function taskCardClick(id, event) {
+    if (event.target.closest("[data-task-check],[data-step-check]")) return;
+    openEditTask(id);
   }
   async function askAIAboutTask(title, desc, steps) {
     const key = localStorage.getItem("nm_gemini_key");
@@ -12057,59 +12069,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     btn.disabled = false;
     saveTaskChatHistory();
   }
-  function taskSwipeStart(e, id) {
-    const t = e.touches[0];
-    taskSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-  }
-  function taskSwipeMove(e, id) {
-    const s = taskSwipeState[id];
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
-      delete taskSwipeState[id];
-      return;
-    }
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    if (s.dx <= 0) e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById("task-item-" + id);
-    const wrap = document.getElementById("task-wrap-" + id);
-    applySwipeTrail(el, wrap, s.dx);
-  }
-  function taskSwipeEnd(e, id) {
-    const s = taskSwipeState[id];
-    if (!s) return;
-    const el = document.getElementById("task-item-" + id);
-    const wrap = document.getElementById("task-wrap-" + id);
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) {
-        el.style.transition = "transform 0.2s ease, opacity 0.2s";
-        el.style.transform = "translateX(-110%)";
-        el.style.opacity = "0";
-      }
-      setTimeout(() => {
-        const tasks = getTasks();
-        const taskOrigIdx = tasks.findIndex((x) => x.id === id);
-        const item = tasks.find((x) => x.id === id);
-        if (item) addToTrash("task", item);
-        saveTasks(tasks.filter((x) => x.id !== id));
-        renderTasks();
-        if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-          const t = getTasks();
-          const idx = Math.min(taskOrigIdx, t.length);
-          t.splice(idx, 0, item);
-          saveTasks(t);
-          renderTasks();
-        });
-      }, 200);
-    } else {
-      clearSwipeTrail(el, wrap);
-      if (!s.swiping && !e.target.closest("[data-task-check],[data-step-check]")) openEditTask(id);
-    }
-    delete taskSwipeState[id];
-  }
   async function autoGenerateTaskSteps(taskId, title) {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
@@ -12179,7 +12138,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     else taskBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("tasks", role, text);
   }
-  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskSwipeState, taskBarLoading, taskBarHistory, _taskTypingEl;
+  var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskBarLoading, taskBarHistory, _taskTypingEl;
   var init_tasks = __esm({
     "src/tabs/tasks.js"() {
       init_nav();
@@ -12212,7 +12171,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
           if (dx > 60) closeNoteView();
         }, { passive: true });
       })();
-      taskSwipeState = {};
       taskBarLoading = false;
       taskBarHistory = [];
       _taskTypingEl = null;
@@ -12227,7 +12185,8 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         closeTaskChat,
         sendTaskChatMessage,
         toggleTaskStatus,
-        toggleTaskStep
+        toggleTaskStep,
+        taskCardClick
       });
     }
   });
