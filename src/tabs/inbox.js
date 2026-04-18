@@ -10,7 +10,7 @@ import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/t
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, getAIContext, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
-import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
@@ -167,8 +167,7 @@ function _inboxDateLabel(ts) {
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
-// Тап: перекинути на відповідну вкладку (блокується після свайпу)
-let _inboxSwipedRecently = false;
+// Тап: перекинути на відповідну вкладку (блокування після свайпу — у attachSwipeDelete)
 const INBOX_NAV_MAP = {
   task: 'tasks',
   habit: 'habits',
@@ -177,7 +176,6 @@ const INBOX_NAV_MAP = {
   finance: 'finance',
 };
 function navigateInboxItem(id) {
-  if (_inboxSwipedRecently) return;
   const el = document.getElementById('item-' + id);
   if (!el) return;
   const cat = el.dataset.cat;
@@ -278,11 +276,8 @@ export function renderInbox() {
     const dotBg = CAT_DOT_SOLID[item.category] || CAT_DOT_SOLID.note;
     const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
 
-    html += `<div class="inbox-item-wrap" id="wrap-${item.id}">
+    html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           ontouchstart="swipeStart(event,${item.id})"
-           ontouchmove="swipeMove(event,${item.id})"
-           ontouchend="swipeEnd(event,${item.id})"
            onclick="navigateInboxItem(${item.id})">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
@@ -299,48 +294,27 @@ export function renderInbox() {
   });
 
   list.innerHTML = html;
-}
-
-// === SWIPE TO DELETE ===
-const swipeState = {};
-
-function swipeStart(e, id) {
-  const t = e.touches[0];
-  swipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-}
-function swipeMove(e, id) {
-  const s = swipeState[id]; if (!s) return;
-  const t = e.touches[0];
-  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
-  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-  if (!s.swiping) return;
-  e.preventDefault();
-  s.dx = Math.min(0, dx);
-  const el = document.getElementById(`item-${id}`);
-  const wrap = document.getElementById(`wrap-${id}`);
-  applySwipeTrail(el, wrap, s.dx);
-}
-function swipeEnd(e, id) {
-  const s = swipeState[id]; if (!s) return;
-  if (s.swiping) { _inboxSwipedRecently = true; setTimeout(() => _inboxSwipedRecently = false, 50); }
-  const el = document.getElementById(`item-${id}`);
-  const wrap = document.getElementById(`wrap-${id}`);
-  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    if (wrap) { wrap.style.transition = 'background 0.2s ease'; wrap.style.background = 'rgba(239,68,68,0.15)'; }
-    setTimeout(() => {
+  // Підключаємо B-54 свайп-видалення (винесено у спільну утиліту 18.04 14zLe)
+  document.querySelectorAll('#inbox-list .inbox-item-wrap').forEach(wrap => {
+    const card = wrap.querySelector('.inbox-item');
+    if (!card) return;
+    attachSwipeDelete(wrap, card, () => {
+      const id = parseInt(wrap.dataset.id);
       const allItems = getInbox();
       const originalIdx = allItems.findIndex(i => i.id === id);
       const item = allItems.find(i => i.id === id);
       if (item) addToTrash('inbox', item);
-      saveInbox(allItems.filter(i => i.id !== id)); renderInbox();
-      if (item) showUndoToast('Видалено з Inbox', () => { const items = getInbox(); const idx = Math.min(originalIdx, items.length); items.splice(idx, 0, item); saveInbox(items); renderInbox(); });
-    }, 220);
-  } else {
-    clearSwipeTrail(el, wrap);
-  }
-  delete swipeState[id];
+      saveInbox(allItems.filter(i => i.id !== id));
+      renderInbox();
+      if (item) showUndoToast('Видалено з Inbox', () => {
+        const items = getInbox();
+        const idx = Math.min(originalIdx, items.length);
+        items.splice(idx, 0, item);
+        saveInbox(items);
+        renderInbox();
+      });
+    });
+  });
 }
 
 // === UNIFIED SEND TO AI ===
@@ -1229,5 +1203,5 @@ export function getTabbarHeight() {
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   sendToAI, sendClarifyText, closeClarify, selectClarifyOption,
-  navigateInboxItem, swipeStart, swipeMove, swipeEnd,
+  navigateInboxItem,
 });
