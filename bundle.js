@@ -13580,10 +13580,6 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
             const res = handleUITool(tc.function.name, args);
             if (res && res.text) {
               addInboxChatMsg("agent", res.text);
-              try {
-                window.showToast && window.showToast(res.text);
-              } catch {
-              }
             }
             continue;
           }
