@@ -2,29 +2,84 @@
 
 > **Правило ротації:** у файлі детально описані **2 останні активні сесії**.
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
-> Попередні сесії до 14zLe — в архіві (14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
+> Попередні сесії до Vydqm — в архіві (Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-18 (сесія **Vydqm** — хук попередження про заповнення контексту)
+**Оновлено:** 2026-04-18 (сесія **VJF2M** — голосовий ввід + 4.17 UI Tools Suite + AI_TOOLS.md)
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. НОВИЙ ХУК `context-warning.sh`** — `UserPromptSubmit` хук який перед кожним повідомленням перевіряє розмір transcript сесії і попереджає при 80%/90% заповнення 1M-го вікна. Формула: `байти/3 ≈ токени`. Пороги 800K / 900K можна калібрувати порівнянням з `/context` у реальній сесії.
+**1. AGENT ТЕПЕР КЕРУЄ UI (4.17)** — агент виконує hands-free навігацію/фільтри/налаштування. 8 UI tools готових у `src/ai/ui-tools.js`: `switch_tab`, `open_memory`, `open_settings`, `set_finance_period`, `open_finance_analytics`, `set_theme`, `set_owl_mode`, `export_health_card`. Повний довідник + 6 заблокованих → `docs/AI_TOOLS.md`. Якщо додаєш/міняєш tool — ЗАВЖДИ оновлюй `docs/AI_TOOLS.md` (правило в CLAUDE.md секція "Писати коли").
 
-**2. У тебе вже 2 робочих хуки у `.claude/hooks/`:**
-- `rules-reminder.sh` — нагадує 5 ключових правил кожне 5-те повідомлення або за тригер-словами ("простіше", "довго", "технічно" тощо)
-- `context-warning.sh` — мовчить до 800K токенів, потім попереджає про `/finish`
+**2. ГОЛОСОВИЙ ВВІД (Web Speech API) у всіх 8 чат-барах** — `src/ui/voice-input.js`. `lang='uk-UA'`. Кнопка 🎤 поруч з send-btn. Червоне пульсування під час запису. Натискання send-btn під час запису → stop + автовідправка через `pendingSendClick` flag у `onend`.
 
-**3. Prompt cache TTL — не налаштовується у Claude Code.** Стандарт 5 хв hardcoded (зашитий). 1-годинний кеш доступний тільки через API напряму. Практично: не робити довгих пауз у межах одної задачі щоб не платити за перерахунок.
+**3. Перед новим імпортом — ЗАВЖДИ перевір що функція має `export`**, не тільки `Object.assign(window, ...)`. У цій сесії падав деплой v247 бо `openMemoryModal` живе тільки у window, без `export`. Фікс — виклик через `window.fn()`.
 
-**4. Файли >250 рядків створюй через skeleton+Edit.** Stream idle timeout обриває великі Write. Детально: CLAUDE.md секція "🔧 Робочий процес" → Правило №1.
+**4. `switchTab()` знає ТІЛЬКИ реальні вкладки (inbox/tasks/notes/finance/me/evening/health/projects).** `calendar` і `habits` — НЕ вкладки. Календар = `openCalendarModal()` (модалка), habits = частина вкладки Продуктивність (`switchTab('tasks')`). Якщо будеш додавати нові target у switch_tab — перевір наявність `page-{target}` у index.html.
 
-**5. Checkpoint-коміт після КОЖНОЇ логічної підзадачі.** Не чекати кінця всіх фаз. Правило №2.
+**5. Файли >250 рядків створюй через skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної підзадачі.
 
-**6. Ти САМ викликаєш скіли за тригер-фразами** з запиту Романа. Не чекати команди. Тригери: `_ai-tools/SKILLS_PLAN.md`. Приклади: "модалка/колір/фон" → `/ux-ui`, "промпт/галюцинує" → `/prompt-engineer`, "iOS/PWA/Safari" → `/pwa-ios-fix`, "Supabase/backend" → `/supabase-prep`.
+**6. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати підтвердження. Не пакетити кілька задач без підтвердження.
 
-**7. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати підтвердження. Не пакетити кілька задач підряд без підтвердження.
+**7. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`.
+
+---
+
+## 🔧 Сесія VJF2M — Голосовий ввід + 4.17 UI Tools Suite + AI_TOOLS.md (18.04.2026)
+
+### Зроблено
+
+**1. Голосовий ввід у всіх 8 чат-барах (`src/ui/voice-input.js`, 137 рядків) — коміт `76fe682`**
+- Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`), `lang='uk-UA'`.
+- Автоматично додає кнопку 🎤 у кожен `.ai-bar-input-box` при DOMContentLoaded.
+- Inbox: активує існуючу `disabled` кнопку. Решта 7: створює нову перед send-btn.
+- Interim results → live-оновлення textarea під час запису. Пауза → автостоп (`onend`).
+- Червоне пульсування (`.voice-btn.recording` + `@keyframes voice-pulse`).
+- Fallback: якщо браузер без підтримки — кнопка не з'являється.
+
+**2. Довідник `docs/AI_TOOLS.md` — коміт `313279c`**
+- Єдине місце правди для 47 tools (39 існуючих INBOX_TOOLS + 8 нових UI).
+- Категорії: CREATE/COMPLETE/EDIT/DELETE/ІНШЕ/ЗДОРОВ'Я/ПАМ'ЯТЬ/КАТ.ФІНАНСІВ. UI: A/C/D/E.
+- Посилання додані у CLAUDE.md (Карта документації + Писати коли), START_HERE.md, `.claude/commands/prompt-engineer.md`.
+- Бонус: виправлено rot у `/prompt-engineer` — `src/ai/core.js` → `src/ai/prompts.js` (після винесення промптів 17.04 14zLe).
+
+**3. 4.17 UI Tools Suite — 8 tools (`src/ai/ui-tools.js`, 210 рядків) — коміт `6f128b1`**
+- `switch_tab`, `open_memory`, `open_settings`, `set_finance_period`, `open_finance_analytics`, `set_theme`, `set_owl_mode`, `export_health_card`.
+- Dispatcher `handleUITool(name, args)` повертає `{text}` для чат-відповіді.
+- Імпорт `UI_TOOLS` у `prompts.js` → spread у `INBOX_TOOLS` (єдиний список для AI).
+- Нова секція "UI TOOLS" в `INBOX_SYSTEM_PROMPT` з принципом мінімального тертя.
+- У `inbox.js` dispatch: `UI_TOOL_NAMES.has(...)` check ДО `_toolCallToAction` → `handleUITool` → `addInboxChatMsg`.
+- 6 заблоковано (open_record, open_trash, calendar_jump_to, filter_tasks, clear_chat, toggle_owl_board) — винесено у ROADMAP 4.17.B.
+
+**4. 3 фікси після тесту на живому пристрої:**
+- **`b0c41a5`:** зламаний імпорт `openMemoryModal` (є тільки у window). Фікс — виклик через `window.openMemoryModal()`. Причина провалу деплою v247.
+- **`ca5981d`:** `switchTab('calendar')` падав бо немає `page-calendar`. Календар — модалка. Додано aliases: `calendar` → `openCalendarModal()`, `habits` → `switchTab('tasks')`.
+- **`fcb9306`:** натиск send-btn під час запису → `pendingSendClick=true` + `stopRecording()` → у `onend` через 60мс програмний `sendBtn.click()`. Перехоплення у capture phase з `preventDefault` + `stopImmediate`.
+- **`31eeeb8`:** прибрано toast підтвердження UI tools (Роман: "бабл що знизу появляється і зникає"). У чаті Inbox reply лишається.
+
+### Обговорено (без виконання)
+- Розширений список UI tools — 14 варіантів (A/B/C/D/E). Роман відкинув Блок B (відкриття порожніх форм створення) через принцип мінімального тертя.
+- 6 заблокованих tools — потребують нової інфраструктури (search API, UI модалка кошика, per-chat storage, toggle state), винесено у 4.17.B як окремі підзадачі.
+- Структура документа `docs/AI_TOOLS.md` — узгоджено з Романом: робимо єдиний довідник 47 tools з категоризацією + промпт-правилами + зв'язками.
+
+### Ключові рішення
+- **4.17 vs 4.15 `switch_tab`:** 4.17 консолідує 4.15 (пункт 4.15 залишений як історична довідка).
+- **UI tools НЕ відкривають порожні форми** — принцип мінімального тертя. Агент використовує CRUD tools напряму.
+- **Довідник tools окремо від промптів** — `docs/AI_TOOLS.md` описовий (для людей + Claude при читанні), `src/ai/prompts.js` + `src/ai/ui-tools.js` виконавчі.
+
+### Інциденти
+- **Деплой v247 провалився** — зламаний імпорт, локального `node build.js` не запускав. Після виправлення (`b0c41a5`) — OK.
+- **2 спроби тестування на пристрої** з помилками: "не можу відкрити календар" (AI не бачив tools через старий кеш) і "Не вдалось виконати: switch_tab" (TypeError з `page-calendar`). Обидві виправлено.
+- **Без git reset / force push.** Всі 8 комітів — normal.
+
+### Метрики
+- **Коміти:** `3ec8bb5` (roadmap) → `76fe682` (voice) → `313279c` (AI_TOOLS.md) → `6f128b1` (UI tools) → `b0c41a5` (fix import) → `ca5981d` (fix switch_tab) → `fcb9306` (voice+send) → `31eeeb8` (remove toast). **8 комітів.**
+- **Гілка:** `claude/start-session-VJF2M`
+- **Версії:** v243 (перед) → v250+ (після)
+- **CACHE_NAME:** `nm-20260418-1508` (останнє оновлення у toast-fix)
+- **Build:** чистий після фіксів (локальний `node build.js` зелений)
+- **Нові файли:** `src/ui/voice-input.js`, `src/ai/ui-tools.js`, `docs/AI_TOOLS.md`
 
 ---
 
@@ -88,79 +143,16 @@
 
 ---
 
-## 🔧 Сесія FMykK — Скіл `/finish` + стиснення CLAUDE.md + хук правил (18.04.2026)
-
-### Зроблено
-
-**1. Новий скіл `/finish` (`.claude/commands/finish.md`, 220 рядків)**
-- Проектний скіл для репо NeverMind (не глобальний)
-- 8 фаз: збір контексту → SESSION_STATE → BUGS → ROADMAP → CHANGES → умовні оновлення → коміт+пуш → звіт
-- Ідемпотентний: режим CREATE (ротація при першому виклику) / UPDATE (оновлення блоку без ротації)
-
-**2. Ручна ротація документації (перевірка алгоритму скіла)**
-- `NEVERMIND_BUGS.md` 314→75 рядків. Винесено у `_archive/BUGS_HISTORY.md` (178).
-- `_ai-tools/SESSION_STATE.md` 290→180 рядків. Винесено у `_archive/SESSION_STATE_archive.md` (126).
-- Додано правило ротації ("останні 2 активні сесії") у шапки обох файлів.
-- `docs/CHANGES.md` — новий запис FMykK.
-- `_ai-tools/SKILLS_PLAN.md` + `START_HERE.md` — додано `/finish`.
-
-**3. Стиснення CLAUDE.md (657→520, -21%)**
-- Створено `docs/TECHNICAL_REFERENCE.md` (202 рядки) з 5 технічними розділами: Система деплою, AI-логіка (Inbox flow/контекст/OWL Board), Дані localStorage, Структури даних, Міжмодульні залежності.
-- У CLAUDE.md на місці кожної секції — короткий блок (2-5 рядків) з посиланням.
-- Оновлено посилання у `START_HERE.md`, `docs/ARCHITECTURE.md`, `.claude/commands/supabase-prep.md`.
-- Правила у CLAUDE.md НЕ чіпано — тільки довідка.
-
-**4. Хук нагадування правил (`UserPromptSubmit`)**
-- `.claude/hooks/rules-reminder.sh` — bash скрипт з лічильником + тригер-словами.
-- Нагадує 5 ключових правил: розмір відповіді, UI-мова, глибина, без "Роби", робочий процес.
-- Спрацьовує: (а) кожне 5-те повідомлення (превентивно), (б) 11 тригер-слів ("простіше", "коротше", "довго", "технічно", "скороти" тощо — реактивно).
-- Лічильник у `.claude/hook-counter` (gitignore — локальний на пристрій).
-- Хук закомічений у `.claude/settings.json` → працює у NeverMind на будь-якому пристрої після `git pull`.
-
-### Обговорено
-
-- Принцип "2 активні сесії + архів" — правило динамічне (не хардкод імен), `/finish` сам переписує.
-- `/obsidian` і `/finish` — різні скіли: `/obsidian` пише у Roman's brain, `/finish` оновлює репо.
-- Скоуп `/finish`: тільки репо NeverMind (не глобально).
-- Стиснення CLAUDE.md — довідка винесена, правила цілі. Обговорено чи рефакторити правила — вирішено не чіпати, всі 42 актуальні.
-- ROADMAP — вирішено не архівувати (це план майбутнього, не історія).
-- CONCEPTS_ACTIVE — лишити як є (актуальний опис функціоналу).
-
-### Ключові рішення
-
-- **Скіл `/finish`:** назва Романа, ідемпотентність через перевірку блоку сесії у SESSION_STATE.
-- **Правила файлів самі описують ротацію** — шапки у BUGS/SESSION_STATE містять динамічне правило.
-- **Фаза 6 "Умовні оновлення"** залишена у скілі — Роман підтвердив автоматизацію.
-- **CLAUDE.md довідка → TECHNICAL_REFERENCE, правила лишені** — виграш 137 рядків без ризику для правил.
-- **Хук правил — комбінація "лічильник + тригери"** замість чистого лічильника (ловить і забування, і порушення).
-- **Правила CLAUDE.md не рефакторимо** — виграш малий (~60 рядків), ризик заплутати смисли вищий.
-
-### Інциденти
-
-- **Stream idle timeout** 3-4 рази під час написання скіла, TECHNICAL_REFERENCE, хука. Обхід через skeleton+Edit (правило №1). Прогрес не втрачено завдяки checkpoint-комітам (правило №2).
-- **Roman feedback — "кілометрові повідомлення".** Нагадав правило розміру. Результат — створено хук який автоматично нагадує правила.
-- **Без git reset / force push.** Всі зміни normal commits.
-
-### Метрики
-
-- **Коміти:** `da410ba` (скіл `/finish`) → `7f1c0f8` (ротація BUGS) → `a22b055` (ротація SESSION_STATE) → `8b40fbd` (CHANGES + SKILLS_PLAN + START_HERE) → `fc1085b` (TECHNICAL_REFERENCE skeleton) → `4880131` (стиснення CLAUDE.md) → `6a169ad` (хук правил). **7 комітів.**
-- **Гілка:** `claude/start-session-FMykK`
-- **Код не чіпано** — тільки документація і конфігурація хуків.
-- **CACHE_NAME:** не мінявся (деплою PWA не треба для `.md` і `.claude/`).
-- **Версія:** не деплоїлось.
-- **Build:** не перевірявся (немає JS-змін).
-
----
 
 ## Проект
 
 | | |
 |--|--|
-| **Версія** | v238+ (після Vydqm деплоїлось ще двічі — фікс звичок + свайпу) |
+| **Версія** | v250+ (після 8 комітів VJF2M — голос + UI tools + фікси) |
 | **URL** | owls68.github.io/NeverMind |
-| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (31 tools) |
-| **Гілка** | `claude/start-session-Vydqm` |
-| **CACHE_NAME** | `nm-20260418-1128` (з фіксу свайпу) |
+| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
+| **Гілка** | `claude/start-session-VJF2M` |
+| **CACHE_NAME** | `nm-20260418-1508` (з toast-fix) |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -179,21 +171,25 @@
 - Кільце продуктивності дня, підсумок OWL після 18:00, настрій-емодзі, моменти дня
 - Один файл (`evening.js`), видима цінність, легкий
 
-**B. 👤 Я — доробка** (65→100%, 1-2 сесії)
-- Теплова карта 14/30 днів, автопатерни раз на тиждень, огляд тижня
-- Інтелект-карта тижня — візуальні зв'язки проектів/звичок/настрою/фінансів
-
-**C. 📁 Проекти — доробка** (60→100%, 2 сесії)
+**B. 📁 Проекти — доробка** (65→100%, 2 сесії)
 - Глибоке інтерв'ю 4 питання, стагнація-детекція, синк Витрати→Фінанси
 - Поле `status` відсутнє у коді (треба додати)
+
+**C. 👤 Я — доробка** (65→100%, 1-2 сесії)
+- Теплова карта 14/30 днів, автопатерни раз на тиждень, огляд тижня
 
 **D. 🏥 Здоров'я Фаза 2+3** (55→80%, 1-2 сесії)
 - Фаза 2: CRUD карток через Inbox + чат-бари
 - Фаза 3: переробка UI (прибрати legacy шкали)
 
-**E. 🧪 Тестовий прогін** (30 хв)
-- Перевірити роботу свайп-видалення / тристаного циклу / множинних JSON у чатах
-- Точкові фікси якщо щось не так
+**E. 🚧 4.17.B — 6 заблокованих UI tools** (2-3 сесії)
+- `open_record` (search+highlight API), `open_trash` (UI модалка кошика)
+- `calendar_jump_to` (навігація стану), `filter_tasks` (фільтр у Tasks)
+- `clear_chat` (per-chat), `toggle_owl_board` (toggle state)
+
+**F. 4.11 `getAIContext` повне покриття** (1 сесія)
+- Перевірити чи OWL бачить ВСІ типи даних (проекти, моменти, події, здоров'я)
+- Блокуючий пункт для якісніших tool calls
 
 ---
 
@@ -209,4 +205,4 @@
 
 ## 📦 Попередні сесії
 
-Детальні описи 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m → [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
+Детальні описи FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m → [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
