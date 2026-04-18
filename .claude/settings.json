@@ -54,6 +54,10 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/rules-reminder.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/context-warning.sh"
           }
         ]
       }
