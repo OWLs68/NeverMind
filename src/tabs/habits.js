@@ -7,7 +7,7 @@ import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
-import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
@@ -443,11 +443,8 @@ export function renderHabits() {
 
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
-    return '<div style="position:relative;border-radius:14px;margin-bottom:6px">'
-      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')"'
-        + ' ontouchstart="habitMeSwipeStart(event,' + h.id + ')"'
-        + ' ontouchmove="habitMeSwipeMove(event,' + h.id + ')"'
-        + ' ontouchend="habitMeSwipeEnd(event,' + h.id + ')">'
+    return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px">'
+      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
           + '<div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
             + `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
@@ -465,6 +462,7 @@ export function renderHabits() {
       + '</div>'
     + '</div>';
   }).join('');
+  _attachHabitsSwipeDelete();
 }
 
 
@@ -700,11 +698,8 @@ export function renderProdHabits() {
 
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
-    return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
-      + '<div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"'
-        + ' ontouchstart="prodHabitSwipeStart(event,' + h.id + ')"'
-        + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
-        + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
+    return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
+      + '<div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
         + '<div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
           + `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
@@ -730,6 +725,7 @@ export function renderProdHabits() {
   }
 
   el.innerHTML = html;
+  _attachHabitsSwipeDelete();
 }
 
 // Рівень стійкості на основі кількості зривів за 30 днів
@@ -781,11 +777,8 @@ function _renderQuitHabitCard(h) {
   // Лампа — кругла індикаторна точка з підсвіткою
   const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ';box-shadow:0 0 8px 3px ' + lamp.glow + ';margin-top:3px"></div>';
 
-  return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
-    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"'
-    + ' ontouchstart="prodHabitSwipeStart(event,' + h.id + ')"'
-    + ' ontouchmove="prodHabitSwipeMove(event,' + h.id + ')"'
-    + ' ontouchend="prodHabitSwipeEnd(event,' + h.id + ')">'
+  return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
+    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent">'
 
     // Рядок 1: лампа + назва + тренд
     + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">'
@@ -837,69 +830,42 @@ function confirmQuitRelapse(habitId) {
 }
 
 
-// === HABIT SWIPE TO DELETE (unified) ===
-function _createHabitSwipe(stateObj, prefix, toggleFn) {
-  function start(e, id) {
-    const t = e.touches[0];
-    stateObj[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-  }
-  function move(e, id) {
-    const s = stateObj[id]; if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete stateObj[id]; return; }
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById(prefix + id);
-    const wrap = el ? el.parentElement : null;
-    applySwipeTrail(el, wrap, s.dx);
-  }
-  function end(e, id) {
-    const s = stateObj[id]; if (!s) return;
-    const el = document.getElementById(prefix + id);
-    const wrap = el ? el.parentElement : null;
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-      setTimeout(() => {
-        const allHabits = getHabits();
-        const habitOrigIdx = allHabits.findIndex(h => h.id === id);
-        const item = allHabits.find(h => h.id === id);
-        if (item) addToTrash('habit', item);
-        saveHabits(allHabits.filter(h => h.id !== id)); renderHabits(); renderProdHabits();
-        if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); const idx = Math.min(habitOrigIdx, habits.length); habits.splice(idx, 0, item); saveHabits(habits); renderHabits(); renderProdHabits(); });
-      }, 200);
-    } else {
-      clearSwipeTrail(el, wrap);
-      if (!s.swiping) {
-        const target = e.changedTouches[0];
-        const checkBtn = el ? el.querySelector('[data-habit-check]') : null;
-        if (checkBtn) {
-          const rect = checkBtn.getBoundingClientRect();
-          if (target.clientX >= rect.left && target.clientX <= rect.right &&
-              target.clientY >= rect.top && target.clientY <= rect.bottom) {
-            toggleFn(id);
-          } else {
-            openEditHabit(id);
-          }
-        }
-      }
-    }
-    delete stateObj[id];
-  }
-  return { start, move, end };
+// === HABIT SWIPE TO DELETE — через спільну attachSwipeDelete ===
+// Me-вкладка: .habit-me-item-wrap. Prod-вкладка: .prod-habit-item-wrap.
+// Підключається post-render з renderHabits і renderProdHabits.
+function _attachHabitsSwipeDelete() {
+  const bind = (wrap, card) => {
+    if (!card) return;
+    const id = parseInt(wrap.dataset.id);
+    attachSwipeDelete(wrap, card, () => {
+      const allHabits = getHabits();
+      const habitOrigIdx = allHabits.findIndex(h => h.id === id);
+      const item = allHabits.find(h => h.id === id);
+      if (item) addToTrash('habit', item);
+      saveHabits(allHabits.filter(h => h.id !== id));
+      renderHabits();
+      renderProdHabits();
+      if (item) showUndoToast('Звичку видалено', () => {
+        const habits = getHabits();
+        const idx = Math.min(habitOrigIdx, habits.length);
+        habits.splice(idx, 0, item);
+        saveHabits(habits);
+        renderHabits();
+        renderProdHabits();
+      });
+    });
+  };
+  document.querySelectorAll('.habit-me-item-wrap').forEach(w =>
+    bind(w, w.querySelector('[id^="habit-me-item-"]')));
+  document.querySelectorAll('.prod-habit-item-wrap').forEach(w =>
+    bind(w, w.querySelector('[id^="prod-habit-item-"]')));
 }
 
-const _habitMeSwipe = _createHabitSwipe({}, 'habit-me-item-', toggleHabitToday);
-function habitMeSwipeStart(e, id) { _habitMeSwipe.start(e, id); }
-function habitMeSwipeMove(e, id) { _habitMeSwipe.move(e, id); }
-function habitMeSwipeEnd(e, id) { _habitMeSwipe.end(e, id); }
-
-const _prodHabitSwipe = _createHabitSwipe({}, 'prod-habit-item-', toggleProdHabitToday);
-function prodHabitSwipeStart(e, id) { _prodHabitSwipe.start(e, id); }
-function prodHabitSwipeMove(e, id) { _prodHabitSwipe.move(e, id); }
-function prodHabitSwipeEnd(e, id) { _prodHabitSwipe.end(e, id); }
+// Тап на prod-habit картку — якщо на чекбокс → toggleProdHabitToday, інакше → edit
+function prodHabitCardClick(id, event) {
+  if (event.target.closest('[data-habit-check]')) return; // чекбокс має власний handler
+  openEditHabit(id);
+}
 
 
 // === UNIVERSAL ACTION PROCESSOR — один мозок для всіх барів ===
@@ -1492,7 +1458,6 @@ Object.assign(window, {
   deleteHabitFromModal, adjustHabitCount, sendTasksBarMessage,
   openEditHabit, toggleHabitToday, toggleProdHabitToday,
   tapHabitSquare, tapHabitSquareMe,
-  habitMeSwipeStart, habitMeSwipeMove, habitMeSwipeEnd,
-  prodHabitSwipeStart, prodHabitSwipeMove, prodHabitSwipeEnd,
+  prodHabitCardClick,
   holdQuitHabit, confirmQuitRelapse,
 });
