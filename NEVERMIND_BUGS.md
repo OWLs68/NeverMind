@@ -31,20 +31,9 @@ _Наразі порожньо._
 
 _Зберігаються закриті у 2 останніх активних сесіях. Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-| # | Коли | Опис |
-|---|------|------|
-| B-58 | 17.04.2026 (KTQZA) | **Автогенерація підкатегорій обмежена до 3.** Раніше дефолти у `FIN_DEFAULT_SUBCATS` містили по 5 на категорію — всі автоматично створювались. Фікс у 3 місцях `finance-cats.js`: `_makeCatObj` `.slice(0, 3)`, `normalize` у міграції доставляє до 3, `createFinCategory` бере до 3. Опис AI-tool оновлено. |
-| B-57 | 17.04.2026 (KTQZA) | **Стрілки переміщення категорій у edit-режимі.** Було: блок "Позиція в сітці" у модалці. Стало: у edit-режимі ✎ на кожному кружечку 22px кнопки `‹ ›` ліворуч/праворуч → `moveFinCategory(id, ±1)`. `event.stopPropagation()` щоб не відкривалась модалка. |
-| B-61 | 17.04.2026 (KTQZA) | **Тіні "левітації" на Hero кругу і кружечках категорій.** Hero donut — `drop-shadow` 2 шари, 0.18 alpha. Кружечки — `box-shadow` кольором самої категорії + outline у edit-режимі. |
-| B-79 | 17.04.2026 (KTQZA) | **Safari/Chrome non-standalone застрягали на v53** попри PWA v193+. Корінь: деплой до B-73 фіксу мав cache-first SW → Safari кешував `sw.js` → zombie-lock. Фікс: meta-теги `Cache-Control: no-cache` у `<head>` + ручна інструкція очистити website data. |
-| B-78 | 17.04.2026 (KTQZA) | **Дефолтні категорії отримували сірий `#78716c`.** `FIN_DEFAULT_COLORS` словник виразних кольорів для 30+ назв. `_makeCatObj`/`createFinCategory` пріоритизують дефолт. Міграція ремапить сірий на дефолтний. |
-| B-75 | 17.04.2026 (KTQZA) | **Донат фрагментований + дубль "Їжа".** `catMap` у `renderFinance` групує за NAME — кожен дубль отримував sum. `dedupe(list)` у `_migrateFinCats` за `name.trim().toLowerCase()`, мерж підкатегорій. |
-| B-76 | 17.04.2026 (KTQZA) | **`formatMoney` показував крапку** (`€52.20` замість `€52,20`). `.replace('.', ',')` після `toFixed(2)` у 11 місцях. |
-| B-77 | 17.04.2026 (KTQZA) | **Кнопка "+додати" завжди створювала витрату.** Toggle "Витрата / Дохід" (pill-style) у модалці при створенні. Нова `setFinTxType(type)` скидає категорію при перемиканні. |
-| B-44 | 17.04.2026 (KTQZA) | **Кома на калькуляторі ставила крапку** (`600.50`). `finCalcAppend` обробляє `','` і `'.'`, дисплей завжди `600,50`. При редагуванні `_finTxExpression = String(data.amount).replace('.', ',')`. |
-| B-50 | 17.04.2026 (KTQZA) | **"Транзакції" → "Операції" у 18 видимих UI-місцях + AI-промпти.** Замінено у `finance.js/inbox.js/finance-chat.js/proactive.js/core.js/index.html` + 3 tool descriptions. Коментарі коду не чіпано. |
+_У сесіях FMykK і Vydqm (поточні активні) жоден баг не закривався — обидві сесії присвячені інструментарію (скіли, хуки, документація)._
 
-_Закриті у сесіях до KTQZA (cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Закриті у сесіях до FMykK (KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
