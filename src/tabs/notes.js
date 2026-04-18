@@ -8,7 +8,7 @@ import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, formatTime } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail } from '../ui/swipe-delete.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { processUniversalAction } from './habits.js';
 
 // === NOTES ===
@@ -271,6 +271,7 @@ export function renderNotes(searchQuery = '') {
       return;
     }
     content.innerHTML = renderNotesList(notes);
+    _attachNotesSwipeDelete();
     return;
   }
 
@@ -292,6 +293,7 @@ export function renderNotes(searchQuery = '') {
     content.innerHTML = folderNotes.length
       ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + '</div>'
       : '<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">Папка порожня</div>';
+    _attachNotesSwipeDelete();
     return;
   }
 
@@ -326,12 +328,8 @@ export function renderNotes(searchQuery = '') {
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">📌</div>' : '';
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
-      return `<div style="position:relative;border-radius:18px">
-        <div id="folder-del-${key}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:18px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
-        <div id="folder-item-${key}"
-          ontouchstart="folderSwipeStart(event,'${safeFolder}')"
-          ontouchmove="folderSwipeMove(event,'${safeFolder}')"
-          ontouchend="folderSwipeEnd(event,'${safeFolder}')"
+      return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
+        <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
           style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
           ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
@@ -347,6 +345,7 @@ export function renderNotes(searchQuery = '') {
         </div>
       </div>`;
     }).join('') + '</div>';
+  _attachNotesSwipeDelete();
 }
 
 function renderNotesList(notes) {
@@ -355,11 +354,8 @@ function renderNotesList(notes) {
     const fc = getFolderColor(n.folder || 'Загальне');
     const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
     return `
-      <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);margin-bottom:8px">
+      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:8px">
         <div id="note-item-${n.id}" class="inbox-item"
-          ontouchstart="noteSwipeStart(event,${n.id})"
-          ontouchmove="noteSwipeMove(event,${n.id})"
-          ontouchend="noteSwipeEnd(event,${n.id})"
           style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
@@ -375,55 +371,56 @@ function renderNotesList(notes) {
 }
 
 
-// === NOTE SWIPE TO DELETE ===
-const noteSwipeState = {};
-
-function noteSwipeStart(e, id) {
-  const t = e.touches[0];
-  noteSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-}
-function noteSwipeMove(e, id) {
-  const s = noteSwipeState[id]; if (!s) return;
-  const t = e.touches[0];
-  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
-  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-  if (!s.swiping) return;
-  e.preventDefault();
-  s.dx = Math.min(0, dx);
-  const el = document.getElementById(`note-item-${id}`);
-  const wrap = document.getElementById(`note-wrap-${id}`);
-  applySwipeTrail(el, wrap, s.dx);
-}
-function noteSwipeEnd(e, id) {
-  const s = noteSwipeState[id]; if (!s) return;
-  const el = document.getElementById(`note-item-${id}`);
-  const wrap = document.getElementById(`note-wrap-${id}`);
-  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    setTimeout(() => {
+// === NOTES SWIPE TO DELETE (нотатки + папки) ===
+// Підключається після кожного renderNotes — обробляє і .note-item-wrap, і .folder-item-wrap.
+function _attachNotesSwipeDelete() {
+  // Нотатки
+  document.querySelectorAll('.note-item-wrap').forEach(wrap => {
+    const card = wrap.querySelector('[id^="note-item-"]');
+    if (!card) return;
+    const id = parseInt(wrap.dataset.id);
+    attachSwipeDelete(wrap, card, () => {
       const allNotes = getNotes();
       const noteSwipeIdx = allNotes.findIndex(x => x.id === id);
       const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
       const item = allNotes.find(x => x.id === id);
       if (item) addToTrash('note', item);
-      saveNotes(allNotes.filter(x => x.id !== id)); renderNotes();
+      saveNotes(allNotes.filter(x => x.id !== id));
+      renderNotes();
       if (item) showUndoToast('Нотатку видалено', () => {
         const notes = getNotes();
         let idx;
-        if (swipePredecessorId === null) {
-          idx = 0;
-        } else {
+        if (swipePredecessorId === null) idx = 0;
+        else {
           const predIdx = notes.findIndex(x => x.id === swipePredecessorId);
           idx = predIdx !== -1 ? predIdx + 1 : notes.length;
         }
-        notes.splice(idx, 0, item); saveNotes(notes); renderNotes();
+        notes.splice(idx, 0, item);
+        saveNotes(notes);
+        renderNotes();
       });
-    }, 200);
-  } else {
-    clearSwipeTrail(el, wrap);
-  }
-  delete noteSwipeState[id];
+    });
+  });
+  // Папки
+  document.querySelectorAll('.folder-item-wrap').forEach(wrap => {
+    const card = wrap.querySelector('[id^="folder-item-"]');
+    if (!card) return;
+    const folder = wrap.dataset.folder;
+    attachSwipeDelete(wrap, card, () => {
+      const notes = getNotes();
+      const folderNotes = notes.filter(n => (n.folder || 'Загальне') === folder);
+      const remaining = notes.filter(n => (n.folder || 'Загальне') !== folder);
+      if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
+      saveNotes(remaining);
+      renderNotes();
+      if (folderNotes.length > 0) showUndoToast('Папку "' + folder + '" видалено (' + folderNotes.length + ')', () => {
+        const n = getNotes();
+        folderNotes.forEach(note => n.push(note));
+        saveNotes(n);
+        renderNotes();
+      });
+    });
+  });
 }
 
 // === NOTE CONTEXT MENU ===
@@ -804,58 +801,12 @@ function saveAgentResponseAsNote(text) {
 }
 
 
-// === FOLDER SWIPE TO DELETE ===
-const folderSwipeState = {};
-
+// === FOLDER UTILITIES ===
 function _folderKey(folder) {
   return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
 }
-function folderSwipeStart(e, folder) {
-  const t = e.touches[0];
-  const key = _folderKey(folder);
-  folderSwipeState[key] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false, folder };
-}
-function folderSwipeMove(e, folder) {
-  const key = _folderKey(folder);
-  const s = folderSwipeState[key]; if (!s) return;
-  const t = e.touches[0];
-  const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-  if (!s.swiping && Math.abs(dy) > Math.abs(dx)) { delete folderSwipeState[key]; return; }
-  if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-  if (!s.swiping) return;
-  e.preventDefault();
-  s.dx = Math.min(0, dx);
-  const el = document.getElementById('folder-item-' + key);
-  const wrap = el ? el.parentElement : null;
-  applySwipeTrail(el, wrap, s.dx);
-}
-function folderSwipeEnd(e, folder) {
-  const key = _folderKey(folder);
-  const s = folderSwipeState[key]; if (!s) return;
-  const el = document.getElementById('folder-item-' + key);
-  const wrap = el ? el.parentElement : null;
-  if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-    if (el) { el.style.transition = 'transform 0.2s ease, opacity 0.2s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; }
-    setTimeout(() => {
-      const notes = getNotes();
-      const folderNotes = notes.filter(n => (n.folder || 'Загальне') === folder);
-      const remaining = notes.filter(n => (n.folder || 'Загальне') !== folder);
-      if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
-      saveNotes(remaining);
-      renderNotes();
-      if (folderNotes.length > 0) showUndoToast('Папку "' + folder + '" видалено (' + folderNotes.length + ')', () => {
-        const n = getNotes();
-        folderNotes.forEach(note => n.push(note));
-        saveNotes(n);
-        renderNotes();
-      });
-    }, 200);
-  } else {
-    clearSwipeTrail(el, wrap);
-    if (!s.swiping) openNotesFolder(folder);
-  }
-  delete folderSwipeState[key];
-}
+// Свайп-видалення папок підключено через _attachNotesSwipeDelete (B-54 механізм).
+// Тап на папку → onclick="openNotesFolder(...)" inline.
 
 // === FOLDER EDIT MODAL (#20) ===
 let _editingFolder = null;
@@ -1160,7 +1111,5 @@ Object.assign(window, {
   sendNoteChatMessage, sendNotesBarMessage,
   openNotesFolder, closeNotesFolder, openFolderEditModal,
   selectFolderIcon, selectFolderColor,
-  folderSwipeStart, folderSwipeMove, folderSwipeEnd,
-  noteSwipeStart, noteSwipeMove, noteSwipeEnd,
   addNotesChatMsg, autoSaveNoteView, openNoteMenu,
 });
