@@ -895,56 +895,8 @@ ${logLines}
       }
     }, { passive: true });
   }
-  function applySwipeTrail(cardEl, wrapEl, dx) {
-    if (!cardEl) return;
-    cardEl.style.transform = `translateX(${dx}px)`;
-    if (!wrapEl) return;
-    const progress = Math.min(1, -dx / 160);
-    let trail = wrapEl.querySelector(".swipe-trail");
-    if (!trail) {
-      trail = document.createElement("div");
-      trail.className = "swipe-trail";
-      trail.style.cssText = "position:absolute;top:0;bottom:0;right:0;pointer-events:none;border-radius:inherit;z-index:0";
-      wrapEl.appendChild(trail);
-    }
-    if (progress <= 0) {
-      trail.style.background = "";
-      trail.style.width = "0";
-      return;
-    }
-    const trailWidth = Math.round(-dx);
-    const alpha = (0.2 + progress * 0.8).toFixed(2);
-    trail.style.width = trailWidth + "px";
-    trail.style.background = `linear-gradient(to right, transparent 0%, rgba(239,68,68,${alpha}) 100%)`;
-  }
-  function clearSwipeTrail(cardEl, wrapEl) {
-    if (cardEl) {
-      cardEl.style.transition = "transform 0.25s ease";
-      cardEl.style.transform = "translateX(0)";
-      setTimeout(() => {
-        if (cardEl) cardEl.style.transition = "";
-      }, 300);
-    }
-    if (wrapEl) {
-      const trail = wrapEl.querySelector(".swipe-trail");
-      if (trail) {
-        trail.style.transition = "opacity 0.25s ease";
-        trail.style.opacity = "0";
-        setTimeout(() => {
-          if (trail) {
-            trail.style.opacity = "";
-            trail.style.width = "0";
-            trail.style.background = "";
-            trail.style.transition = "";
-          }
-        }, 300);
-      }
-    }
-  }
-  var SWIPE_DELETE_THRESHOLD;
   var init_swipe_delete = __esm({
     "src/ui/swipe-delete.js"() {
-      SWIPE_DELETE_THRESHOLD = 90;
     }
   });
 
@@ -9841,8 +9793,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div style="position:relative;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')" ontouchstart="habitMeSwipeStart(event,' + h.id + ')" ontouchmove="habitMeSwipeMove(event,' + h.id + ')" ontouchend="habitMeSwipeEnd(event,' + h.id + ')"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
+      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
     }).join("");
+    _attachHabitsSwipeDelete();
   }
   function updateProdTabCounters() {
     const taskCount = getTasks().filter((t) => t.status !== "done").length;
@@ -10038,13 +9991,14 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden"><div id="prod-habit-item-' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent" ontouchstart="prodHabitSwipeStart(event,' + h.id + ')" ontouchmove="prodHabitSwipeMove(event,' + h.id + ')" ontouchend="prodHabitSwipeEnd(event,' + h.id + ')"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
+      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
     }).join("");
     if (quitHabits.length > 0) {
       html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456</div>';
       html += quitHabits.map((h) => _renderQuitHabitCard(h)).join("");
     }
     el.innerHTML = html;
+    _attachHabitsSwipeDelete();
   }
   function _quitResilienceLamp(relapses30) {
     if (relapses30 === 0) return { color: "#16a34a", glow: "rgba(22,163,74,0.35)", label: "\u0421\u0442\u0456\u0439\u043A\u0438\u0439" };
@@ -10080,7 +10034,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const cardBg = relapses30 === 0 && streak > 0 ? "background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)" : relapses30 >= 6 ? "background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)" : "background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)";
     const streakColor = streak > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
     const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ";box-shadow:0 0 8px 3px " + lamp.glow + ';margin-top:3px"></div>';
-    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent" ontouchstart="prodHabitSwipeStart(event,' + h.id + ')" ontouchmove="prodHabitSwipeMove(event,' + h.id + ')" ontouchend="prodHabitSwipeEnd(event,' + h.id + ')"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">\u0432\u0456\u043B\u044C\u043D\u0438\u0445 ' + _dayWord(freedomDays) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">\u{1F525} \u0441\u0435\u0440\u0456\u044F ' + streak + " " + _dayWord(streak) + (longest > streak ? " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 " + longest : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">\u0440\u0435\u043A\u043E\u0440\u0434 ' + longest + " " + _dayWord(longest) + "</div>" : "") + '</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C") + '</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button></div></div></div>';
+    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">\u0432\u0456\u043B\u044C\u043D\u0438\u0445 ' + _dayWord(freedomDays) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">\u{1F525} \u0441\u0435\u0440\u0456\u044F ' + streak + " " + _dayWord(streak) + (longest > streak ? " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 " + longest : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">\u0440\u0435\u043A\u043E\u0440\u0434 ' + longest + " " + _dayWord(longest) + "</div>" : "") + '</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C") + '</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button></div></div></div>';
   }
   function confirmQuitRelapse(habitId) {
     const s = getQuitStatus(habitId);
@@ -10090,92 +10044,34 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       relapseQuitHabit(habitId);
     }
   }
-  function _createHabitSwipe(stateObj, prefix, toggleFn) {
-    function start(e, id) {
-      const t = e.touches[0];
-      stateObj[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-    }
-    function move(e, id) {
-      const s = stateObj[id];
-      if (!s) return;
-      const t = e.touches[0];
-      const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-      if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
-        delete stateObj[id];
-        return;
-      }
-      if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-      if (!s.swiping) return;
-      e.preventDefault();
-      s.dx = Math.min(0, dx);
-      const el = document.getElementById(prefix + id);
-      const wrap = el ? el.parentElement : null;
-      applySwipeTrail(el, wrap, s.dx);
-    }
-    function end(e, id) {
-      const s = stateObj[id];
-      if (!s) return;
-      const el = document.getElementById(prefix + id);
-      const wrap = el ? el.parentElement : null;
-      if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-        if (el) {
-          el.style.transition = "transform 0.2s ease, opacity 0.2s";
-          el.style.transform = "translateX(-110%)";
-          el.style.opacity = "0";
-        }
-        setTimeout(() => {
-          const allHabits = getHabits();
-          const habitOrigIdx = allHabits.findIndex((h) => h.id === id);
-          const item = allHabits.find((h) => h.id === id);
-          if (item) addToTrash("habit", item);
-          saveHabits(allHabits.filter((h) => h.id !== id));
+  function _attachHabitsSwipeDelete() {
+    const bind = (wrap, card) => {
+      if (!card) return;
+      const id = parseInt(wrap.dataset.id);
+      attachSwipeDelete(wrap, card, () => {
+        const allHabits = getHabits();
+        const habitOrigIdx = allHabits.findIndex((h) => h.id === id);
+        const item = allHabits.find((h) => h.id === id);
+        if (item) addToTrash("habit", item);
+        saveHabits(allHabits.filter((h) => h.id !== id));
+        renderHabits();
+        renderProdHabits();
+        if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+          const habits = getHabits();
+          const idx = Math.min(habitOrigIdx, habits.length);
+          habits.splice(idx, 0, item);
+          saveHabits(habits);
           renderHabits();
           renderProdHabits();
-          if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-            const habits = getHabits();
-            const idx = Math.min(habitOrigIdx, habits.length);
-            habits.splice(idx, 0, item);
-            saveHabits(habits);
-            renderHabits();
-            renderProdHabits();
-          });
-        }, 200);
-      } else {
-        clearSwipeTrail(el, wrap);
-        if (!s.swiping) {
-          const target = e.changedTouches[0];
-          const checkBtn = el ? el.querySelector("[data-habit-check]") : null;
-          if (checkBtn) {
-            const rect = checkBtn.getBoundingClientRect();
-            if (target.clientX >= rect.left && target.clientX <= rect.right && target.clientY >= rect.top && target.clientY <= rect.bottom) {
-              toggleFn(id);
-            } else {
-              openEditHabit(id);
-            }
-          }
-        }
-      }
-      delete stateObj[id];
-    }
-    return { start, move, end };
+        });
+      });
+    };
+    document.querySelectorAll(".habit-me-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="habit-me-item-"]')));
+    document.querySelectorAll(".prod-habit-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="prod-habit-item-"]')));
   }
-  function habitMeSwipeStart(e, id) {
-    _habitMeSwipe.start(e, id);
-  }
-  function habitMeSwipeMove(e, id) {
-    _habitMeSwipe.move(e, id);
-  }
-  function habitMeSwipeEnd(e, id) {
-    _habitMeSwipe.end(e, id);
-  }
-  function prodHabitSwipeStart(e, id) {
-    _prodHabitSwipe.start(e, id);
-  }
-  function prodHabitSwipeMove(e, id) {
-    _prodHabitSwipe.move(e, id);
-  }
-  function prodHabitSwipeEnd(e, id) {
-    _prodHabitSwipe.end(e, id);
+  function prodHabitCardClick(id, event) {
+    if (event.target.closest("[data-habit-check]")) return;
+    openEditHabit(id);
   }
   function _fuzzyFindFolder(query, folders) {
     if (!query || !folders.length) return null;
@@ -10782,7 +10678,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     setTaskBarLoading(false);
   }
-  var editingHabitId, _habitModalType, currentProdTab, _habitMeSwipe, _prodHabitSwipe;
+  var editingHabitId, _habitModalType, currentProdTab;
   var init_habits = __esm({
     "src/tabs/habits.js"() {
       init_nav();
@@ -10804,8 +10700,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         }
       });
       currentProdTab = "tasks";
-      _habitMeSwipe = _createHabitSwipe({}, "habit-me-item-", toggleHabitToday);
-      _prodHabitSwipe = _createHabitSwipe({}, "prod-habit-item-", toggleProdHabitToday);
       Object.assign(window, {
         switchProdTab,
         saveHabit,
@@ -10819,12 +10713,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         toggleProdHabitToday,
         tapHabitSquare,
         tapHabitSquareMe,
-        habitMeSwipeStart,
-        habitMeSwipeMove,
-        habitMeSwipeEnd,
-        prodHabitSwipeStart,
-        prodHabitSwipeMove,
-        prodHabitSwipeEnd,
+        prodHabitCardClick,
         holdQuitHabit,
         confirmQuitRelapse
       });
