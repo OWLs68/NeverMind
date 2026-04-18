@@ -1126,6 +1126,7 @@ ${logLines}
         return;
       }
       content.innerHTML = renderNotesList(notes);
+      _attachNotesSwipeDelete();
       return;
     }
     if (currentNotesFolder !== null) {
@@ -1143,6 +1144,7 @@ ${logLines}
       }
       const folderNotes = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === currentNotesFolder);
       content.innerHTML = folderNotes.length ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + "</div>" : '<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">\u041F\u0430\u043F\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u044F</div>';
+      _attachNotesSwipeDelete();
       return;
     }
     if (header) header.style.display = "none";
@@ -1168,12 +1170,8 @@ ${logLines}
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, "_");
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">\u{1F4CC}</div>' : "";
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
-      return `<div style="position:relative;border-radius:18px">
-        <div id="folder-del-${key}" style="position:absolute;right:0;top:0;bottom:0;width:72px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:18px;opacity:0;transition:opacity 0.15s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></div>
-        <div id="folder-item-${key}"
-          ontouchstart="folderSwipeStart(event,'${safeFolder}')"
-          ontouchmove="folderSwipeMove(event,'${safeFolder}')"
-          ontouchend="folderSwipeEnd(event,'${safeFolder}')"
+      return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
+        <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
           style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
           ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
@@ -1189,6 +1187,7 @@ ${logLines}
         </div>
       </div>`;
     }).join("") + "</div>";
+    _attachNotesSwipeDelete();
   }
   function renderNotesList(notes) {
     const now = Date.now();
@@ -1196,11 +1195,8 @@ ${logLines}
       const fc = getFolderColor(n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
       const preview = n.text.length > 80 ? n.text.substring(0, 80) + "\u2026" : n.text;
       return `
-      <div class="note-item-wrap" id="note-wrap-${n.id}" style="position:relative;border-radius:var(--card-radius);margin-bottom:8px">
+      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:8px">
         <div id="note-item-${n.id}" class="inbox-item"
-          ontouchstart="noteSwipeStart(event,${n.id})"
-          ontouchmove="noteSwipeMove(event,${n.id})"
-          ontouchend="noteSwipeEnd(event,${n.id})"
           style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
@@ -1214,36 +1210,12 @@ ${logLines}
     `;
     }).join("");
   }
-  function noteSwipeStart(e, id) {
-    const t = e.touches[0];
-    noteSwipeState[id] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false };
-  }
-  function noteSwipeMove(e, id) {
-    const s = noteSwipeState[id];
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) return;
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById(`note-item-${id}`);
-    const wrap = document.getElementById(`note-wrap-${id}`);
-    applySwipeTrail(el, wrap, s.dx);
-  }
-  function noteSwipeEnd(e, id) {
-    const s = noteSwipeState[id];
-    if (!s) return;
-    const el = document.getElementById(`note-item-${id}`);
-    const wrap = document.getElementById(`note-wrap-${id}`);
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) {
-        el.style.transition = "transform 0.2s ease, opacity 0.2s";
-        el.style.transform = "translateX(-110%)";
-        el.style.opacity = "0";
-      }
-      setTimeout(() => {
+  function _attachNotesSwipeDelete() {
+    document.querySelectorAll(".note-item-wrap").forEach((wrap) => {
+      const card = wrap.querySelector('[id^="note-item-"]');
+      if (!card) return;
+      const id = parseInt(wrap.dataset.id);
+      attachSwipeDelete(wrap, card, () => {
         const allNotes = getNotes();
         const noteSwipeIdx = allNotes.findIndex((x) => x.id === id);
         const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
@@ -1254,9 +1226,8 @@ ${logLines}
         if (item) showUndoToast("\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
           const notes = getNotes();
           let idx;
-          if (swipePredecessorId === null) {
-            idx = 0;
-          } else {
+          if (swipePredecessorId === null) idx = 0;
+          else {
             const predIdx = notes.findIndex((x) => x.id === swipePredecessorId);
             idx = predIdx !== -1 ? predIdx + 1 : notes.length;
           }
@@ -1264,11 +1235,27 @@ ${logLines}
           saveNotes(notes);
           renderNotes();
         });
-      }, 200);
-    } else {
-      clearSwipeTrail(el, wrap);
-    }
-    delete noteSwipeState[id];
+      });
+    });
+    document.querySelectorAll(".folder-item-wrap").forEach((wrap) => {
+      const card = wrap.querySelector('[id^="folder-item-"]');
+      if (!card) return;
+      const folder = wrap.dataset.folder;
+      attachSwipeDelete(wrap, card, () => {
+        const notes = getNotes();
+        const folderNotes = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === folder);
+        const remaining = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") !== folder);
+        if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
+        saveNotes(remaining);
+        renderNotes();
+        if (folderNotes.length > 0) showUndoToast('\u041F\u0430\u043F\u043A\u0443 "' + folder + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (' + folderNotes.length + ")", () => {
+          const n = getNotes();
+          folderNotes.forEach((note) => n.push(note));
+          saveNotes(n);
+          renderNotes();
+        });
+      });
+    });
   }
   function openNoteMenu(id) {
     activeNoteMenuId = id;
@@ -1590,64 +1577,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     document.getElementById("note-chat-save-btn")?.remove();
     _pendingAgentNote = "";
   }
-  function _folderKey(folder) {
-    return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, "_");
-  }
-  function folderSwipeStart(e, folder) {
-    const t = e.touches[0];
-    const key = _folderKey(folder);
-    folderSwipeState[key] = { startX: t.clientX, startY: t.clientY, dx: 0, swiping: false, folder };
-  }
-  function folderSwipeMove(e, folder) {
-    const key = _folderKey(folder);
-    const s = folderSwipeState[key];
-    if (!s) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX, dy = t.clientY - s.startY;
-    if (!s.swiping && Math.abs(dy) > Math.abs(dx)) {
-      delete folderSwipeState[key];
-      return;
-    }
-    if (!s.swiping && Math.abs(dx) > 8) s.swiping = true;
-    if (!s.swiping) return;
-    e.preventDefault();
-    s.dx = Math.min(0, dx);
-    const el = document.getElementById("folder-item-" + key);
-    const wrap = el ? el.parentElement : null;
-    applySwipeTrail(el, wrap, s.dx);
-  }
-  function folderSwipeEnd(e, folder) {
-    const key = _folderKey(folder);
-    const s = folderSwipeState[key];
-    if (!s) return;
-    const el = document.getElementById("folder-item-" + key);
-    const wrap = el ? el.parentElement : null;
-    if (s.dx < -SWIPE_DELETE_THRESHOLD) {
-      if (el) {
-        el.style.transition = "transform 0.2s ease, opacity 0.2s";
-        el.style.transform = "translateX(-110%)";
-        el.style.opacity = "0";
-      }
-      setTimeout(() => {
-        const notes = getNotes();
-        const folderNotes = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === folder);
-        const remaining = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") !== folder);
-        if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
-        saveNotes(remaining);
-        renderNotes();
-        if (folderNotes.length > 0) showUndoToast('\u041F\u0430\u043F\u043A\u0443 "' + folder + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (' + folderNotes.length + ")", () => {
-          const n = getNotes();
-          folderNotes.forEach((note) => n.push(note));
-          saveNotes(n);
-          renderNotes();
-        });
-      }, 200);
-    } else {
-      clearSwipeTrail(el, wrap);
-      if (!s.swiping) openNotesFolder(folder);
-    }
-    delete folderSwipeState[key];
-  }
   function openFolderEditModal(folder) {
     _editingFolder = folder;
     const meta = getFolderMeta(folder);
@@ -1905,7 +1834,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
     notesBarLoading = false;
   }
-  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_COLORS, DEFAULT_NOTE_FOLDER, noteSwipeState, activeNoteMenuId, activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote, folderSwipeState, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
+  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_MAP, FOLDER_ICONS, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_COLORS, DEFAULT_NOTE_FOLDER, activeNoteMenuId, activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
   var init_notes = __esm({
     "src/tabs/notes.js"() {
       init_nav();
@@ -1989,14 +1918,12 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456": { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u2708\uFE0F" }
       };
       DEFAULT_NOTE_FOLDER = { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", border: "rgba(255,255,255,0.4)", dot: "\u{1F4DD}" };
-      noteSwipeState = {};
       activeNoteMenuId = null;
       activeNoteViewId = null;
       noteChatHistory = [];
       noteChatLoading = false;
       _autoSaveNoteTimer = null;
       _pendingAgentNote = "";
-      folderSwipeState = {};
       _editingFolder = null;
       _selectedIconKey = "folder";
       _selectedColorKey = "default";
@@ -2035,12 +1962,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         openFolderEditModal,
         selectFolderIcon,
         selectFolderColor,
-        folderSwipeStart,
-        folderSwipeMove,
-        folderSwipeEnd,
-        noteSwipeStart,
-        noteSwipeMove,
-        noteSwipeEnd,
         addNotesChatMsg,
         autoSaveNoteView,
         openNoteMenu
