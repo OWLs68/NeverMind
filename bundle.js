@@ -7159,6 +7159,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (tEl) tEl.textContent = msg.text;
     if (cEl) cEl.textContent = msg.text;
     if (tmEl) tmEl.textContent = "";
+    if (tab === "inbox") setOwlMascotState("alert", 12e3);
     const chipsEl = document.getElementById("owl-tab-chips-" + tab);
     if (chipsEl) {
       renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
@@ -7168,7 +7169,24 @@ ${aiContext ? "\n\n" + aiContext : ""}
       setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
     }
   }
-  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
+  function setOwlMascotState(state, autoRevertMs = 0) {
+    const el = document.getElementById("owl-mascot-main");
+    if (!el) return;
+    const valid = ["idle", "alert", "thinking", "greeting", "error"];
+    if (!valid.includes(state)) return;
+    if (_owlMascotRevertTimer) {
+      clearTimeout(_owlMascotRevertTimer);
+      _owlMascotRevertTimer = null;
+    }
+    el.setAttribute("data-state", state);
+    if (autoRevertMs > 0 && state !== "idle") {
+      _owlMascotRevertTimer = setTimeout(() => {
+        const cur = el.getAttribute("data-state");
+        if (cur === state) el.setAttribute("data-state", "idle");
+      }, autoRevertMs);
+    }
+  }
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes, _owlMascotRevertTimer;
   var init_board = __esm({
     "src/owl/board.js"() {
       init_core();
@@ -7185,6 +7203,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
         scrollOwlTabChips,
         openChatBar
       });
+      _owlMascotRevertTimer = null;
+      Object.assign(window, { setOwlMascotState });
     }
   });
 
@@ -11470,22 +11490,42 @@ ${routineParts.join("\n")}${nextHint}
     }
     const body = { model: "gpt-4o-mini", messages, max_tokens: 400, temperature };
     if (tools && tools.length > 0) body.tools = tools;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      signal,
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) {
-      const data2 = await res.json().catch(() => ({}));
-      showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
-      return null;
+    try {
+      window.setOwlMascotState && window.setOwlMascotState("thinking");
+    } catch {
     }
-    const data = await res.json();
-    const msg = data.choices?.[0]?.message;
-    if (!msg) return null;
-    if (tools) return msg;
-    return msg.content || null;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        signal,
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const data2 = await res.json().catch(() => ({}));
+        showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
+        try {
+          window.setOwlMascotState && window.setOwlMascotState("error", 6e3);
+        } catch {
+        }
+        return null;
+      }
+      const data = await res.json();
+      const msg = data.choices?.[0]?.message;
+      try {
+        window.setOwlMascotState && window.setOwlMascotState("idle");
+      } catch {
+      }
+      if (!msg) return null;
+      if (tools) return msg;
+      return msg.content || null;
+    } catch (e) {
+      try {
+        window.setOwlMascotState && window.setOwlMascotState("error", 6e3);
+      } catch {
+      }
+      throw e;
+    }
   }
   async function callAI(systemPrompt, userMessage, contextData = {}) {
     const context = Object.keys(contextData).length > 0 ? `
