@@ -15281,12 +15281,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     }
     const delay = document.readyState === "complete" ? 300 : 500;
     setTimeout(showApp, delay);
-    setTimeout(() => {
-      try {
-        window.setOwlMascotState && window.setOwlMascotState("greeting", 6e3);
-      } catch {
-      }
-    }, delay + 1500);
   }
   var currentTabForAnim, NM_KEYS;
   var init_boot = __esm({
