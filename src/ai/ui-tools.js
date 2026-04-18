@@ -14,7 +14,7 @@
 // що показується у чаті і як toast.
 // ============================================================
 
-import { switchTab, applyTheme, openSettings, openMemoryModal } from '../core/nav.js';
+import { switchTab, applyTheme, openSettings } from '../core/nav.js';
 
 // ===== UI_TOOLS — function definitions для OpenAI =====
 export const UI_TOOLS = [
@@ -128,9 +128,11 @@ export function handleUITool(name, args) {
         return { text: `Відкрив ${_tabLabel(args.target)}.` };
 
       case 'open_memory':
-        if (typeof window.openMemoryModal === 'function') window.openMemoryModal();
-        else openMemoryModal();
-        return { text: 'Відкрив Пам\'ять.' };
+        if (typeof window.openMemoryModal === 'function') {
+          window.openMemoryModal();
+          return { text: 'Відкрив Пам\'ять.' };
+        }
+        return { text: 'Пам\'ять недоступна.' };
 
       case 'open_settings':
         openSettings();
