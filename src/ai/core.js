@@ -12,7 +12,7 @@ import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
 import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
-import { addEveningBarMsg, addMeChatMsg, getEveningMood } from '../tabs/evening.js';
+import { addEveningBarMsg, addMeChatMsg, getEveningMood, getMomentsContext } from '../tabs/evening.js';
 import { getHealthContext } from '../tabs/health.js';
 import { getProjectsContext } from '../tabs/projects.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
@@ -168,6 +168,13 @@ export function getAIContext() {
   try {
     const projectsCtx = getProjectsContext();
     if (projectsCtx) parts.push(projectsCtx);
+  } catch(e) {}
+
+  // === Моменти дня (18.04 pvZG1) — що юзер зафіксував сьогодні ===
+  // Ключове для вечірнього підсумку і емпатійних реакцій у чатах.
+  try {
+    const momentsCtx = getMomentsContext();
+    if (momentsCtx) parts.push(momentsCtx);
   } catch(e) {}
 
   // === Кеш видалених (для restore_deleted) ===

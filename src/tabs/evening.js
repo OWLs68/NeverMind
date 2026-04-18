@@ -473,6 +473,24 @@ let dialogLoading = false;
 export function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
 export function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'moments' })); }
 
+// Контекст моментів сьогодні для AI (принцип "один мозок")
+// OWL бачить що юзер зафіксував протягом дня — ключове для вечірнього підсумку
+// і для емпатійних реакцій у чатах ("бачу ти писав зранку що втомився — як зараз?")
+export function getMomentsContext() {
+  const today = new Date().toDateString();
+  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
+  if (moments.length === 0) return '';
+  const moodEmoji = { positive: '😊', neutral: '😐', negative: '😞' };
+  const lines = moments.slice(-8).map(m => {
+    const d = new Date(m.ts);
+    const time = d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    const em = moodEmoji[m.mood] || '';
+    const txt = m.summary || m.text;
+    return `- ${time} ${em} "${txt}"`;
+  }).join('\n');
+  return `Моменти дня (що юзер зафіксував сьогодні — використовуй у підсумках і емпатійних відповідях):\n${lines}`;
+}
+
 export function renderEvening() {
   const today = new Date().toDateString();
   const todayMoments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
