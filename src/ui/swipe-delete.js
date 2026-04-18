@@ -23,7 +23,7 @@ export const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для вс
 export function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
   if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
   wrapEl._swipeOpenBound = true;
-  const openRatio = opts.openRatio || 0.22;
+  const openRatio = opts.openRatio || 0.5;
   const binBg = opts.binBgColor || '239,68,68'; // RGB triple для градієнта
 
   let startX = 0, startY = 0, dx = 0, locked = false;
@@ -54,9 +54,15 @@ export function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
     cardEl.style.transition = animate ? 'transform 0.25s ease' : '';
     cardEl.style.transform = `translateX(${offset}px)`;
   };
-  const openSwipe = () => { wrapEl._open = true; ensureBin(); setOffset(getOpenOffset(), true); };
+  const openSwipe = () => {
+    wrapEl._open = true;
+    ensureBin();
+    if (bin) { bin.style.transition = 'opacity 0.25s ease'; bin.style.opacity = '1'; }
+    setOffset(getOpenOffset(), true);
+  };
   const closeSwipe = () => {
     wrapEl._open = false;
+    if (bin) { bin.style.transition = 'opacity 0.25s ease'; bin.style.opacity = '0'; }
     setOffset(0, true);
     setTimeout(() => { if (!wrapEl._open) removeBin(); }, 280);
   };
