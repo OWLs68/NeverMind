@@ -3145,6 +3145,21 @@ ${aiContext ? "\n\n" + aiContext : ""}
     localStorage.setItem("nm_moments", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "moments" }));
   }
+  function getMomentsContext() {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    if (moments.length === 0) return "";
+    const moodEmoji = { positive: "\u{1F60A}", neutral: "\u{1F610}", negative: "\u{1F61E}" };
+    const lines = moments.slice(-8).map((m) => {
+      const d = new Date(m.ts);
+      const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+      const em = moodEmoji[m.mood] || "";
+      const txt = m.summary || m.text;
+      return `- ${time} ${em} "${txt}"`;
+    }).join("\n");
+    return `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F (\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u0444\u0456\u043A\u0441\u0443\u0432\u0430\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0443 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0430\u0445 \u0456 \u0435\u043C\u043F\u0430\u0442\u0456\u0439\u043D\u0438\u0445 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044F\u0445):
+${lines}`;
+  }
   function renderEvening() {
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const todayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
@@ -11297,6 +11312,11 @@ ${inboxList}`);
     try {
       const projectsCtx = getProjectsContext();
       if (projectsCtx) parts.push(projectsCtx);
+    } catch (e) {
+    }
+    try {
+      const momentsCtx = getMomentsContext();
+      if (momentsCtx) parts.push(momentsCtx);
     } catch (e) {
     }
     try {
