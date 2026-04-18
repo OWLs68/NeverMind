@@ -808,7 +808,7 @@ ${logLines}
   function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
     if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
     wrapEl._swipeOpenBound = true;
-    const openRatio = opts.openRatio || 0.22;
+    const openRatio = opts.openRatio || 0.5;
     const binBg = opts.binBgColor || "239,68,68";
     let startX = 0, startY = 0, dx = 0, locked = false;
     let bin = null;
@@ -842,10 +842,18 @@ ${logLines}
     const openSwipe = () => {
       wrapEl._open = true;
       ensureBin();
+      if (bin) {
+        bin.style.transition = "opacity 0.25s ease";
+        bin.style.opacity = "1";
+      }
       setOffset(getOpenOffset(), true);
     };
     const closeSwipe = () => {
       wrapEl._open = false;
+      if (bin) {
+        bin.style.transition = "opacity 0.25s ease";
+        bin.style.opacity = "0";
+      }
       setOffset(0, true);
       setTimeout(() => {
         if (!wrapEl._open) removeBin();
