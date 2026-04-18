@@ -11,7 +11,7 @@
 ### Контекст
 Продовження рефакторингу після сесії KTQZA. Під час роботи виявлено ланцюг пов'язаних проблем у Налаштуваннях: свайп закриття поганий → скаргу Романа → виявлення що стиль модалки не збігається з іншими (не glass) → виявлення проблеми з кешем Safari (нові стилі не долітали до телефону).
 
-### Зроблено — 6 логічних блоків
+### Зроблено — 13 логічних блоків
 
 **1. Прибрано дубль B-58 у `NEVERMIND_BUGS.md`** (коміт `eb9174e`)
 B-58 стояв і у "🟢 Дрібні", і у "✅ Закриті" — забули видалити з відкритих після фіксу у KTQZA.
@@ -66,17 +66,78 @@ B-58 стояв і у "🟢 Дрібні", і у "✅ Закриті" — заб
 
 **Важливо:** не видаляти `?v=` параметри з `index.html` — інакше sed у CI не знайде що замінити і кеш-бастинг зламається. Якщо додаються нові підключення CSS/JS — додавати `?v=PLACEHOLDER` і додати відповідний sed у `auto-merge.yml`.
 
+**7. Фіолет → бурштин/коричневий у Налаштуваннях** (коміт `65bf917`)
+- Іконки Мова/Сповіщення: stroke `#4f46e5` → `#c2790a` (бурштин), фон `rgba(129,140,248,0.18)` → `rgba(242,217,120,0.35)`
+- OWL-характер Наставник + Пам'ять агента: stroke `#7c3aed` → `#c2790a`
+- Активний OWL-характер (updateOwlModeUI у `nav.js`): border+bg фіолет → бурштин
+- Активні pills (`.s-currency-btn.active`, `.s-lang-btn.active`): `#1e1040` → `#5c4a2a` (темно-коричневий)
+- Кнопка "Зберегти" у Налаштуваннях (`.settings-panel .btn-primary`): плоский `#1e1040` → градієнт `linear-gradient(135deg,#a67c52,#7a4e2d)` (кавовий лате). Не чіпає `.btn-primary` глобально
+- Модалка Пам'яті: кнопка "Оновити через OWL" і "Зберегти" — теж на бурштин/лате
+
+**8. Екстра простір знизу у всіх вкладках** (коміти `c04bc4a` + `f325bfb`)
+- `padding-bottom` scroll-контейнерів з `calc(var(--tabbar-h,83px) + 34px)` на `+100px` у 9 місцях: `inbox-list`, `tasks-list`, `prod-page-habits`, `notes-scroll`, `me-content`, `evening-scroll`, `fin-scroll`, `health-scroll`, `projects-scroll`
+- Причина: поле вводу ("Агент") висить над таб-баром і додає ~60px висоти — останні картки були сховані за ним, не можна було доскролити
+
+**9. Множинні JSON-дії у чат-барах** (коміти `9dd4687` + `d9c463b` + 5×fix: `0c5fe29`, `1252b0c`, `ab6d6bd`, `861695b`, `53e7837`)
+- **Проблема:** коли юзер просив кілька дій одразу ("видали А,Б,В, додай Г"), AI повертав 5 JSON-блоків підряд. Жадібне regex `/\{[\s\S]*\}/` захоплювало все як ОДИН блок — `JSON.parse` падав — юзер бачив сирий JSON у чаті замість виконаних дій.
+- **Рішення:** нова утиліта `extractJsonBlocks(text)` у `src/core/utils.js` — балансує фігурні дужки з урахуванням рядків у лапках, повертає масив розпарсених об'єктів.
+- **Інтегровано у 6 чат-барів:** Finance (`finance-chat.js`), Tasks (`tasks.js`), Habits/Prod (`habits.js sendTasksBarMessage`), Evening (`evening.js` — 2 місця: Me-chat + Evening-bar), Health (`health.js`), Projects (`projects.js`). Inbox не торкали — там tool calling.
+- **Архітектурно:** у кожному файлі обробка одного `parsed` винесена у inner closure `_processOne(parsed)` який повертає true/false. Зовні — цикл `for (const parsed of extractJsonBlocks(reply))`.
+
+**10. Чорні контрастні тіні на Фінансах** (коміти `8911310` → `c2bb546` → `8b28f57` → `d722e13`)
+- 4 ітерації по запитах Романа: спочатку чорні замість кольорових (B-61), потім темніші, потім компактніші (менше blur), потім продубльовано на навігацію (‹ ✎ ›).
+- Фінальні значення: `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22)` на категоріях і кнопках навігації + `drop-shadow(0 4px 10px ...) drop-shadow(0 2px 4px ...)` на SVG Hero donut.
+- Для Hero donut: перехід з `rgba(30,16,64,X)` (темно-фіолетовий) на чистий чорний — прибрано синюватий відтінок.
+
+**11. Fade зверху списку Налаштувань** (коміти `2f5912c` + `9d14740`)
+- `.settings-scroll` отримав `mask-image: linear-gradient(to bottom, transparent 0, black 20px)` + `padding-top: 20px`.
+- Перша картка при відкритті повністю видима (fade зона у padding), під час прокрутки картки плавно "розчиняються" у заголовку замість різкого обрізання.
+
+**12. Глобальна анімація натискання** (коміти `9b36914` + `bf9ccc7`)
+- CSS правило `button, [onclick] { transition: transform 0.3s ease-out } button:active, [onclick]:active { transform: scale(0.87) }`.
+- Застосовується скрізь автоматично: всі кнопки, чіпи OWL, кружечки категорій, стрілки навігації, картки з onclick, s-row'и з onclick.
+- Не зачіпає input/textarea/select (немає onclick) і `.drum-col` (барабани вибору часу мають свій transform для свайпу).
+- Параметри 87% scale + 0.3с за запитом Романа (помітний, драматичний "клацання" ефект).
+
+**13. Тристаний цикл галочки звичайних звичок** (коміт `4d4f7d1`)
+- Звичайна звичка (`target=1`): тап циклює `0 → 1 → 2 → 0` замість `cur+1` без обмежень.
+  - 1й тап — зелена (виконано), 2й — жовта (бонус/перевиконання через існуючий механізм `isOver`), 3й — порожня (скасовано).
+- Звички з лічильником (`target>1`, наприклад "8 склянок") — старий behavior `cur+1` збережено (не ламати підрахунок підходів).
+- Зміни у двох функціях: `toggleHabitToday` (вкладка Я) + `toggleProdHabitToday` (Продуктивність). Кнопка confetti спрацьовує коли `newVal === target`.
+
+**14. Уніфікація свайп-видалення (базова логіка застосунку)** (коміти `724c7ab`, `3f205dd`, `4876d14`, `3887a4c`, `3865545`)
+- **Контекст:** Роман визначив як "базову логіку застосунку, як glass-стиль модалок". До сесії в 5 списках (Inbox, Tasks, Notes, Habits, Finance) свайп-видалення працював по-різному — 4 списки через `applySwipeTrail` (миттєве видалення при свайпі >поріг), один (Фінанси) через B-54 механізм з кнопкою-кошиком.
+- **Нова утиліта:** `attachSwipeDelete(wrapEl, cardEl, onDelete, opts)` у `src/ui/swipe-delete.js`. Базовий контракт: wrapEl з `position:relative;overflow:hidden`, cardEl рухається `translateX`, свайп вліво → lazy-створена кнопка-кошик справа → тап на кошик = `onDelete()`. Свайп вправо при відкритому = закриття. Тап на картку при відкритому = закриття. openRatio 0.22 default.
+- **Інтегровано у 5 списків:**
+  - `finance.js`: `_attachFinTxSwipeDelete` (~75 рядків inline B-54 логіки → 8 рядків виклику утиліти)
+  - `inbox.js`: видалено swipeStart/Move/End + swipeState + `_inboxSwipedRecently`. Post-render hook у `renderInbox`.
+  - `tasks.js`: видалено taskSwipeStart/Move/End + setupTaskSwipeListeners. Нова функція `taskCardClick(id, event)` з guard'ом для `data-task-check` і `data-step-check`. Post-render hook у `renderTasks`.
+  - `notes.js`: видалено noteSwipeStart/Move/End + folderSwipeStart/Move/End. Папка отримала клас `.folder-item-wrap` + `data-folder` + onclick `openNotesFolder`. Пост-hook `_attachNotesSwipeDelete()` обробляє і нотатки, і папки. Викликається у 3 місцях.
+  - `habits.js`: видалено `_createHabitSwipe` (Me + Prod). Нова функція `prodHabitCardClick(id, event)` з guard'ом для `data-habit-check`. Me-картки зберегли onclick=openEditHabit. Post-render hook у `renderHabits` і `renderProdHabits`.
+- **Очищено:** ~25 рядків swipe-state declarations, ~300 рядків старих swipe handlers, window-exports застарілих функцій (habitMeSwipe*, prodHabitSwipe*, noteSwipe*, folderSwipe*, swipeStart/Move/End).
+- **Поведінка тепер:** **скрізь однакова** — свайп вліво відкриває панель з кошиком, треба свідомо тапнути щоб видалити. Безпечніше (не видалиш випадково), консистентно (одна ментальна модель).
+
 ### Файли змінені за сесію
-- **Код:** `src/ai/prompts.js` (новий), `src/ai/core.js`, `src/core/boot.js`, `src/tabs/tasks.js`, `index.html`, `style.css`, `sw.js`
-- **CI:** `.github/workflows/auto-merge.yml` (додано cache-bust sed)
-- **Документація:** `CLAUDE.md`, `docs/CHANGES.md` (цей запис), `_ai-tools/SESSION_STATE.md`, `NEVERMIND_BUGS.md`
+- **Код:** `src/ai/prompts.js` (новий), `src/ai/core.js`, `src/core/boot.js`, `src/core/utils.js` (extractJsonBlocks), `src/core/nav.js`, `src/ui/swipe-delete.js` (attachSwipeDelete), `src/tabs/inbox.js`, `src/tabs/tasks.js`, `src/tabs/notes.js`, `src/tabs/habits.js`, `src/tabs/finance.js`, `src/tabs/finance-chat.js`, `src/tabs/evening.js`, `src/tabs/health.js`, `src/tabs/projects.js`, `index.html`, `style.css`, `sw.js`
+- **CI:** `.github/workflows/auto-merge.yml` (cache-bust sed)
+- **Документація:** `CLAUDE.md`, `docs/CHANGES.md`, `_ai-tools/SESSION_STATE.md`, `NEVERMIND_BUGS.md`
+
+### Метрики
+- **32 коміти** (`eb9174e` → `3865545`)
+- **Діапазон версій:** v199 (на старті) → v205+ (CI ще деплоїть останні свайп-коміти)
+- **Рядків видалено:** ~500+ старого swipe-коду у 5 файлах
+- **Рядків додано:** ~250+ (прamptи.js новий + attachSwipeDelete + extractJsonBlocks + оновлені інтеграції)
+- **Build:** чистий після кожного коміту (`node build.js` exit 0)
+- **Tool calls / Stream idle timeout:** 4 обриви під час Write великих файлів — обхід через skeleton+Edit (правило CLAUDE.md дотримано)
 
 ### Відкрите на майбутнє
-- Нічого не висить — всі заплановані блоки сесії закриті.
-- Наступна задача (якщо продовжуємо): кольори Налаштувань — фіолетові іконки Мова/Сповіщення/OWL-характер → бурштин/помаранчевий (узгоджено з Романом, не розпочато).
+- **B-65** SW load failed — низький пріоритет, одноразова помилка
+- **Тестування на телефоні** потребує прогону: свайп-видалення на 5 вкладках, тристаний цикл звичок, анімація натискання, множинні JSON-дії
+- **Наступний крок:** Вечір 70→100% / Я 65→100% / Проекти 65→100% / Здоров'я Фаза 2
+- **Вторинно:** `src/core/nav.js` = 1236 рядків (трохи більше 1200) — кандидат на майбутнє розбиття (settings / theme / profile / storage)
 
 ### Інциденти
-Без інцидентів. Жодних `git reset --hard`, `git push --force` або інших руйнівних операцій не було.
+Без інцидентів. Жодних `git reset --hard`, `git push --force` або інших руйнівних операцій не було. Усі 32 коміти через стандартний flow: push у `claude/start-session-14zLe` → `auto-merge.yml` merge у main → CI build → deploy. `bundle.js` попадав у `git status` після локального `build.js` — перед кожним комітом `git checkout -- bundle.js` щоб не закомітити (він у `.gitignore`, CI сам генерує).
 
 ---
 

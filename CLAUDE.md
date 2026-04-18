@@ -202,6 +202,9 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 - **Локальні функції** `getTasks()`, `saveNotes()` і т.д. — інші модулі їх імпортують через `import` напряму з відповідного `src/tabs/*.js`. Не створювати проксі-обгорток.
 - **Порядок імпортів у `src/app.js`** — критичний. Повторює порядок старих `<script>` тегів до рефакторингу. Зміна порядку = потенційні circular dependencies (циклічні залежності: модуль A імпортує B, а B імпортує A — JS не знає з чого починати).
 - **Логіка `setupSW()` у `src/core/boot.js`** — функція реєстрації Service Worker (SW — фоновий файл що керує кешем PWA). Кожна строчка всередині вирішує конкретну проблему iOS Safari: `bfcache` (back-forward cache — iPhone кешує сторінки коли ти натискаєш "назад" і потім "вперед", іноді з застарілими даними), оновлення після `reload` (перезавантаження вкладки), режим "додано на головний екран" (коли PWA відкривається як окремий застосунок). Не "причісувати" — кожна лінія коштувала годин дебагу (дебаг — пошук і виправлення помилок).
+- **`attachSwipeDelete` у `src/ui/swipe-delete.js`** (17.04.2026 14zLe) — **базова логіка свайп-видалення** для всього застосунку, як glass-стиль модалок. Нові списки (Здоров'я картки, Проекти кроки, майбутні фічі) ЗОБОВ'ЯЗАНІ використовувати цю функцію, не писати свій свайп. HTML-структура: `<div class="*-wrap" data-id="..." style="position:relative;overflow:hidden">` + картка всередині. Виклик post-render: `attachSwipeDelete(wrap, card, onDelete)`.
+- **`extractJsonBlocks` у `src/core/utils.js`** (17.04.2026 14zLe) — AI у чат-барах тепер гарантовано обробляє множинні дії (не тільки одну). Використовується у Finance/Tasks/Habits/Evening/Health/Projects чатах. Не писати свій regex парсер JSON у нових чатах — це вже буде вирішеним через спільну утиліту.
+- **Глобальна анімація натискання у `style.css`** — `button, [onclick]:active { transform: scale(0.87); transition: transform 0.3s }`. Працює скрізь без винятків. **Не розширювати селектор** (не додавати `.my-class:active`) — сенс у тому щоб правило було широке і універсальне. Якщо треба виключити елемент — додай йому `pointer-events:none` або прибери onclick.
 
 ### Чеклист аудиту
 Детальні пункти перевірки → скіл `/audit`. Запусти після будь-якої нетривіальної зміни або коли Роман каже "перевір роботу".
@@ -302,7 +305,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/core/nav.js` | Глобальний стан (`currentTab`), switchTab, теми, налаштування, пам'ять |
 | `src/core/boot.js` | bootApp, PWA setup, cross-tab sync, NM_KEYS, init |
 | `src/core/trash.js` | Кошик (7 днів TTL), showUndoToast, undoDelete |
-| `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml |
+| `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml (safe для undefined з B-70), `extractJsonBlocks` (розбивка AI-відповіді на окремі JSON-об'єкти — для множинних дій у чат-барах, 17.04 14zLe) |
 | `src/core/logger.js` | Error logging, console override, UI панель логу, ring buffer юзер-дій (trackUserAction), автолистенер nm-data-changed, stack trace у записах |
 | `src/core/diagnostics.js` | **Діагностична система (B-67 acZEu):** Health Check (9 перевірок стану систем), Smoke Tests (9 авто-тестів), Performance monitor (startup/longtask/fetch monkey-patch). Рендерить 3 блоки у панелі логу. Експорти: runHealthCheck, runSmokeTests, getPerformanceData |
 | `src/ai/core.js` | **AI-логіка (~623 рядки після рефакторингу 17.04 14zLe):** getAIContext(), callAI(), chat storage (6 незалежних чатів), _fetchAI(), HTTP-wrappers (callAIWithHistory, callAIWithTools, callOwlChat), open/closeChatBar. Re-exports з `prompts.js` для backward-compat |
@@ -314,7 +317,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | `src/owl/followups.js` | **Live Chat Replies** — follow-up повідомлення агента у контекстний чат (stuck-task, event-passed), 5 хв таймер + nm-data-changed |
 | `src/owl/chips.js` | **Центральний модуль чіпів** — renderChips(), handleChipClick(), fuzzy match ✔️, CHIP_PROMPT_RULES |
 | `src/ui/keyboard.js` | setupKeyboardAvoiding (iOS-specific) |
-| `src/ui/swipe-delete.js` | Swipe trail для видалення |
+| `src/ui/swipe-delete.js` | **Базова логіка свайп-видалення** (як glass-стиль модалок): `attachSwipeDelete(wrapEl, cardEl, onDelete, opts)` — свайп вліво → кнопка-кошик справа → тап=видалення. Використовується у Inbox/Tasks/Notes/Habits/Finance. Нові списки мають ТАКОЖ використовувати цю функцію (не писати свій свайп). Legacy `applySwipeTrail`/`clearSwipeTrail`/`SWIPE_DELETE_THRESHOLD` залишились для backward-compat але більше ніким не імпортуються — можна видалити у майбутньому |
 | `src/tabs/inbox.js` | sendToAI(), processSaveAction(), renderInbox(), swipe delete |
 | `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat, setupModalSwipeClose (з drum-col guard) |
 | `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки, processUniversalAction (_splitReply) |
