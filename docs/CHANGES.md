@@ -100,10 +100,10 @@
 - Скіл `.claude/commands/owl-motion.md` — НЕ видаляв (лежить у скілах на випадок повернення до анімації)
 
 ### Метрики
-- **Коміти:** `897bc9a` (видалення коду+ассетів) + `<наступний>` (видалення handoff + доки)
-- **Файлів змінено:** 6 (index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js)
-- **Файлів видалено:** 15 (11 PNG + 4 handoff файли) + 5 handoff/components/*
-- **Рядків видалено:** ~650 (з першого комміту) + ~200 (документація)
+- **Коміти:** `897bc9a` (код+ассети) → `d29a595` (handoff + основні доки) → `77f59ba` (аудит — позначки ⏸️ на всіх згадках `/owl-motion`). **3 коміти.**
+- **Файлів змінено:** 12 (код: index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js + доки: CLAUDE.md, ROADMAP.md, START_HERE.md, SESSION_STATE.md, SKILLS_PLAN.md, NEVERMIND_BUGS.md, .claude/commands/owl-motion.md)
+- **Файлів видалено:** 19 (11 PNG у `assets/owl/` + 4 handoff top-level + 4 handoff/components/*)
+- **Рядків видалено:** ~650 (код) + ~472 (документація) = **~1120 рядків**
 - **CACHE_NAME:** `nm-20260419-1044` → `nm-20260419-1131`
 
 ### Відкладено
