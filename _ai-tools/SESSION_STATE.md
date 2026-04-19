@@ -10,9 +10,9 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. СОВА ЖИВА НА ТАБЛО INBOX (w3ISi)** — у `.owl-speech-avatar` замість емодзі 🦉 тепер намальована PNG-сова з дизайну, покачується 4с циклом. 5 станів у DOM (idle/alert/thinking/greeting/error) з кросфейдом 400мс. Наразі активний тільки `idle`. Картинки у `assets/owl/*.png`. На інших вкладках (tab boards + collapsed state) — 🦉 емодзі лишилось. Код інтеграції: коміт `a58104b`.
+**1. СОВА АНІМОВАНА НА ТАБЛО INBOX (w3ISi)** — PNG-сова з 4 автоматичними станами: alert при новому Inbox board повідомленні (12с), thinking під час AI запиту, error при fail (6с), idle за замовчуванням + постійне покачування 4с. Sprite-sheet анімація greeting (6 кадрів, 1536×256) при boot на 6 секунд (тимчасовий тригер). Код у `src/owl/board.js` (setOwlMascotState), `src/ai/core.js` (hook у _fetchAI), `src/core/boot.js` (auto-trigger). Коміти `53e64fd`, `a35db21`, `ac274fd`.
 
-**2. ЩЕ НЕ ЗРОБЛЕНО у темі сови:** автоматична зміна стану (alert при новому повідомленні Inbox board, thinking при AI запиті, error при fail, greeting при першому вході за день) + заміна емодзі на інших 5 вкладках + згорнутий стан.
+**2. GREETING КОНФЛІКТУЄ З ALERT** — при boot сова починає махати крилом, але якщо Inbox board одразу показує повідомлення → alert state перебиває greeting через 1-2 сек. Виглядає як "моргання". Треба у наступній сесії: або priority (greeting > alert), або відкласти board update на 10+ сек, або прибрати auto-trigger і підключити умову "перший вхід за день" через `localStorage.nm_last_greet_date`.
 
 **3. PNG-пакет від дизайнера (handoff/) — з питанням прозорості.** 5 файлів переміщено у `assets/owl/`, виглядають прозорими у моєму переглядачі. На скріншоті PWA з iPhone видно шаховий візерунок на бежевому фоні Inbox — я припустив "запечений у PNG", але Роман показав що PNG мають альфа-канал. Невирішено — причина може бути: (а) iOS Safari артефакт, (б) CSS issue, (в) було помилкою моїх очей. **Треба перевірити на телефоні після деплою v259+**. Якщо шаховий зник — значить було тимчасово, все OK.
 
@@ -45,10 +45,30 @@
 - Інші місця емодзі 🦉 (tab boards, collapsed state, onboarding) — **не чіпав**, Роман просив спочатку тільки головне табло.
 - CACHE_NAME bump: `nm-20260418-1610` → `nm-20260418-2212`.
 
-**3. НЕ зроблено (наступна сесія):**
-- Автоматична зміна стану: alert (нове Inbox board msg), thinking (AI запит), error (fetch fail), greeting (перший вхід за день)
-- Заміна 🦉 на інших 5 вкладках + згорнутому стані
-- JS-контролер станів (`src/owl/mascot.js`)
+**3. Автоматична зміна станів — alert/thinking/error (коміт `53e64fd`)**
+- У `src/owl/board.js` додано `setOwlMascotState(state, autoRevertMs)` — керує `data-state` на `#owl-mascot-main`. Auto-revert у `idle` через вказаний час.
+- При показі нового Inbox board повідомлення → `setOwlMascotState('alert', 12000)` — сова "уважно дивиться" 12 секунд.
+- У `src/ai/core.js _fetchAI` обгорнуто: `'thinking'` на старті, `'idle'` на успіху, `'error' (6000)` на HTTP або catch помилці.
+- `window.setOwlMascotState` доступний для debug з консолі.
+
+**4. Sprite-sheet анімація для greeting — 6 кадрів махання крилом (коміт `a35db21`)**
+- У `index.html:282` додано `<div class="owl-mascot-sprite" data-sprite="greeting">` всередині `.owl-mascot`.
+- У `style.css` додано `.owl-mascot-sprite` + `@keyframes owl-wave-sprite` — CSS `steps(6)` анімація `background-position` від `0%` до `-600%` за 0.9 сек, цикл.
+- `data-state="greeting"` активує сприт + ховає статичну greeting картинку (щоб не двоїлось).
+- Boot auto-trigger у `src/core/boot.js`: через 1.5 сек після старту → `setOwlMascotState('greeting', 6000)` (тимчасово для тесту).
+
+**5. Sprite іконки — ітерації розмірів:**
+- v1 (коміт `e6200ac`): Роман завантажив через GitHub веб 632×395 PNG — помилка пропорцій (кадр 105×395 — вузький високий, у квадратному контейнері 96×96 сплющувалось). Я переніс файл з кореня у `assets/owl/` (`4d98985`).
+- Відкочено auto-trigger (`c056c0d`) до отримання правильного sprite.
+- v2 (коміт `ac274fd`): Роман згенерував через Claude Design два варіанти — 576×96 (low-res) і 1536×256 (hi-res). Я обрав hi-res (кадри 256×256 — квадратні, ретіна-ready для iPhone 3×). Встановив як `assets/owl/owl-greeting-sprite.png`, увімкнув назад auto-trigger.
+
+**6. Що ЩЕ НЕ зроблено (для наступної сесії):**
+- Greeting конфліктує з alert — board message перебиває 6-секундну анімацію через 1-2 сек. Треба або priority (greeting > alert), або відкласти board на 10+ сек, або окрема test-кнопка.
+- Якість анімації слабка — Gemini-згенеровані кадри не цілком консистентні (сова трохи "дихає" між кадрами), видно як моргання а не плавне махання. Production якість — тільки через After Effects (Lottie) або Runway.
+- Greeting "перший вхід за день" — замінити auto-trigger на умову (check `localStorage.nm_last_greet_date`).
+- 4 інші стани (alert/thinking/error/idle) — все ще статичні PNG. Треба повторити sprite workflow для кожного.
+- Заміна 🦉 на інших 5 вкладках + згорнутому стані — не чіпали.
+- JS-контролер станів у окремому модулі `src/owl/mascot.js` — не створено, логіка живе у `board.js`.
 
 ### Обговорено (без виконання)
 
@@ -72,13 +92,12 @@
 
 ### Метрики
 
-- **Коміти:** `3f32b48` (handoff upload) → `a58104b` (mascot integration). 2 коміти.
+- **Коміти:** `3f32b48` (handoff) → `a58104b` (integration) → `53e64fd` (auto-states) → `a35db21` (sprite CSS) → `e6200ac` + `4d98985` (broken sprite v1) → `173199f` (boot trigger) → `c056c0d` (revert) → `785ad01` + `ac274fd` (sprite v2 hi-res). **9 комітів.**
 - **Гілка:** `claude/start-session-w3ISi`
-- **Версії:** v256 (перед) → v259+ (після деплою `a58104b`)
-- **CACHE_NAME:** `nm-20260418-2212`
-- **Build:** не перевіряв локально (немає esbuild), CI збере
-- **Нові папки:** `assets/owl/` (5 PNG), `handoff/` (README + 4 компоненти)
-- **Нові файли:** немає JS-модулів у `src/` цього разу
+- **Версії:** v256 → v268+ (після ac274fd)
+- **CACHE_NAME:** `nm-20260419-0200`
+- **Нові файли:** `assets/owl/owl-greeting-sprite.png` (1536×256, 392 KB), `handoff/` (README + 4 компоненти + 5 оригінальних PNG)
+- **Нові папки:** `assets/owl/`, `handoff/`
 
 ---
 
@@ -143,11 +162,11 @@
 
 | | |
 |--|--|
-| **Версія** | v259+ (після w3ISi — handoff сови + базова інтеграція PNG-маскота) |
+| **Версія** | v268+ (після w3ISi — handoff сови + 4 стани + sprite greeting) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
 | **Гілка** | `claude/start-session-w3ISi` |
-| **CACHE_NAME** | `nm-20260418-2212` |
+| **CACHE_NAME** | `nm-20260419-0200` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
