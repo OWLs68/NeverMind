@@ -14,7 +14,7 @@
 // що показується у чаті і як toast.
 // ============================================================
 
-import { switchTab, applyTheme, openSettings } from '../core/nav.js';
+import { switchTab, openSettings } from '../core/nav.js';
 
 // ===== UI_TOOLS — function definitions для OpenAI =====
 export const UI_TOOLS = [
@@ -75,21 +75,6 @@ export const UI_TOOLS = [
       name: "open_finance_analytics",
       description: "Відкрити екран Аналітики Фінансів (графіки, метрики, 50/30/20). Юзер каже 'відкрий аналітику', 'покажи графіки витрат'.",
       parameters: { type: "object", properties: {}, additionalProperties: false }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "set_theme",
-      description: "Перемкнути тему застосунку. Юзер каже 'темна тема', 'світла тема', 'переключи тему'.",
-      parameters: {
-        type: "object",
-        properties: {
-          theme: { type: "string", enum: ["light", "dark"] }
-        },
-        required: ["theme"],
-        additionalProperties: false
-      }
     }
   },
   {
@@ -167,14 +152,6 @@ export function handleUITool(name, args) {
           setTimeout(() => window.openFinAnalytics(), 120);
         }
         return { text: 'Відкрив Аналітику Фінансів.' };
-
-      case 'set_theme': {
-        const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-        settings.theme = args.theme;
-        localStorage.setItem('nm_settings', JSON.stringify(settings));
-        try { applyTheme(window.currentTab || 'inbox'); } catch {}
-        return { text: args.theme === 'dark' ? 'Темна тема.' : 'Світла тема.' };
-      }
 
       case 'set_owl_mode': {
         const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
