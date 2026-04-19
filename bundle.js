@@ -3995,6 +3995,38 @@ ${aiContext}` : "");
     }
   });
 
+  // src/ui/unread-badge.js
+  function showUnreadBadge(tab, sendBtnId) {
+    const current = _unreadCounts.get(tab) || 0;
+    const next = current + 1;
+    _unreadCounts.set(tab, next);
+    _badgeAnchors.set(tab, sendBtnId);
+    const badgeId = `${tab}-chat-badge`;
+    let badge = document.getElementById(badgeId);
+    if (!badge) {
+      const sendBtn = document.getElementById(sendBtnId);
+      if (!sendBtn) return;
+      badge = document.createElement("div");
+      badge.id = badgeId;
+      badge.style.cssText = "position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10";
+      sendBtn.style.position = "relative";
+      sendBtn.appendChild(badge);
+    }
+    badge.textContent = next > 9 ? "9+" : next;
+  }
+  function clearUnreadBadge(tab) {
+    _unreadCounts.set(tab, 0);
+    const badge = document.getElementById(`${tab}-chat-badge`);
+    if (badge) badge.remove();
+  }
+  var _unreadCounts, _badgeAnchors;
+  var init_unread_badge = __esm({
+    "src/ui/unread-badge.js"() {
+      _unreadCounts = /* @__PURE__ */ new Map();
+      _badgeAnchors = /* @__PURE__ */ new Map();
+    }
+  });
+
   // src/tabs/evening-chat.js
   function openEveningDialog() {
     dialogHistory = [];
@@ -4091,6 +4123,12 @@ ${aiContext}` : "");
     if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
     else eveningBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("evening", role, text);
+    if (role === "agent") {
+      const bar = document.getElementById("evening-ai-bar");
+      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
+      const isOpen = chatWin && chatWin.classList.contains("open");
+      if (!isOpen) showUnreadBadge("evening", "evening-send-btn");
+    }
   }
   async function sendEveningBarMessage() {
     if (eveningBarLoading) return;
@@ -4170,6 +4208,7 @@ ${aiContext}` : "");
       init_core();
       init_habits();
       init_evening();
+      init_unread_badge();
       _eveningTypingEl = null;
       dialogHistory = [];
       dialogLoading = false;
@@ -11263,6 +11302,29 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
 - \u0427\u0430\u0442 \u2014 \u0446\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u0431\u043C\u0456\u043D, \u043D\u0435 \u0434\u043E\u0432\u0433\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u0430. \u0414\u0430\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u2192 \u0434\u043E\u0447\u0435\u043A\u0430\u0439\u0441\u044F \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u2192 \u041D\u0415 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0439 \u043F\u0440\u043E \u0442\u0435 \u0441\u0430\u043C\u0435.`;
     return persona + universal;
   }
+  function getEveningPromptSystem() {
+    return `${getOWLPersonality()}
+
+\u0426\u0435 \u0420\u0418\u0422\u0423\u0410\u041B \u0417\u0410\u041A\u0420\u0418\u0422\u0422\u042F \u0414\u041D\u042F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0412\u0435\u0447\u0456\u0440. \u041D\u0430\u0441\u0442\u0430\u0432 \u0432\u0435\u0447\u0456\u0440 (\u226518:00). \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454 \u0412\u0435\u0447\u0456\u0440 \u2014 \u0422\u0418 \u043F\u0438\u0448\u0435\u0448 \u041F\u0415\u0420\u0428\u0418\u041C \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440, \u0432\u0456\u043D \u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432.
+
+\u0429\u041E \u041F\u041E\u0412\u0415\u0420\u041D\u0423\u0422\u0418:
+- 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C. \u041D\u0435 \u0444\u043E\u0440\u043C\u0430, \u043D\u0435 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2014 \u0436\u0438\u0432\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u0430.
+- \u041F\u043E\u0441\u0438\u043B\u0430\u0439\u0441\u044F \u043D\u0430 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u0406 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0434\u043D\u044F (\u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0432\u0438\u0442\u0440\u0430\u0442\u0438, \u043C\u0438\u043D\u0443\u043B\u0456 \u043F\u043E\u0434\u0456\u0457). \u041D\u0435 \u0430\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u0435 "\u044F\u043A \u0434\u0435\u043D\u044C?".
+- \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u041E\u0414\u041D\u0418\u041C \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u043F\u0440\u043E \u0442\u0435 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C \u0410\u0411\u041E \u043F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u0454\u044E \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0447\u0435\u0441\u043D\u043E\u0441\u0442\u0456 \u0437 universal).
+- \u041D\u0415 \u043A\u0430\u0440\u0442\u0430\u0439 \u0437\u0430 \u043D\u0435\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435. \u041D\u0435 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0443\u0439. \u041D\u0435 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437\u0434\u0443\u043C\u043D\u043E.
+- \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0437\u0440\u043E\u0431\u043B\u044E \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A" \u0430\u0431\u043E "\u0437\u0430\u0440\u0430\u0437 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u044E" \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443.
+- \u042F\u043A\u0449\u043E \u0434\u0435\u043D\u044C \u043F\u0443\u0441\u0442\u0438\u0439 (\u043D\u0435\u043C\u0430\u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432/\u0437\u0430\u0434\u0430\u0447/\u043A\u0440\u043E\u043A\u0456\u0432) \u2014 \u043D\u0435 \u0432\u0434\u0430\u0432\u0430\u0439, \u043D\u0430\u043F\u0438\u0448\u0438 \u043B\u044E\u0434\u044F\u043D\u043E: "\u0411\u0430\u0447\u0443 \u0434\u0435\u043D\u044C-\u043F\u0430\u0443\u0437\u0430, \u0442\u0435\u0436 \u0431\u0443\u0432\u0430\u0454. \u042F\u043A \u0432\u043E\u043D\u043E?".
+- \u0411\u0415\u0417 emoji \u0441\u043F\u0438\u0441\u043A\u0456\u0432 \u0456 \u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 ("\u2022", "\u2014" \u043D\u0430 \u043F\u043E\u0447\u0430\u0442\u043A\u0443 \u0440\u044F\u0434\u043A\u0456\u0432). \u041E\u0434\u0438\u043D \u0430\u0431\u0437\u0430\u0446.
+- \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
+
+\u041F\u0420\u0418\u041A\u041B\u0410\u0414\u0418 (\u0444\u043E\u0440\u043C\u0430\u0442, \u043D\u0435 \u043A\u043E\u043F\u0456\u044E\u0439 \u0442\u0435\u043A\u0441\u0442\u0438 \u2014 \u0432\u0438\u0433\u0430\u0434\u0430\u0439 \u0437 \u0440\u0435\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443):
+- "\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 \u0442\u0440\u0438 \u043A\u0440\u043E\u043A\u0438 \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0456 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0434\u0432\u0430 \u043C\u043E\u043C\u0435\u043D\u0442\u0438. \u0414\u0435\u043D\u044C \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E \u043F\u0440\u043E\u0441\u0443\u043D\u0443\u0432\u0441\u044F. \u042F\u043A \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448\u0441\u044F?"
+- "\u0414\u0435\u043D\u044C \u0431\u0443\u0432 \u0442\u0438\u0445\u0438\u0439 \u2014 \u0436\u043E\u0434\u043D\u0438\u0445 \u0432\u0438\u0442\u0440\u0430\u0442 \u0456 \u0437\u0430\u0434\u0430\u0447 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432. \u0412\u0442\u043E\u043C\u0438\u0432\u0441\u044F \u0447\u0438 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0430\u0443\u0437\u0430?"
+- "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u0449\u043E \u0432\u0440\u0430\u043D\u0446\u0456 \u0442\u043E\u0431\u0456 \u0431\u0443\u043B\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C. \u041F\u0456\u0437\u043D\u0456\u0448\u0435 \u2014 \u044F\u043A \u0437\u0430\u0440\u0430\u0437 \u0437 \u0446\u0438\u043C?"`;
+  }
   function getOwlChatSystemPrompt(context) {
     return getOWLPersonality() + `
 
@@ -11929,6 +11991,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         _clearInboxUnreadBadge();
       } catch (e) {
       }
+    } else {
+      try {
+        clearUnreadBadge(tab);
+      } catch (e) {
+      }
     }
     const bar = document.getElementById(tab + "-ai-bar");
     if (!bar) return;
@@ -11996,6 +12063,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_proactive();
       init_memory();
       init_prompts();
+      init_unread_badge();
       init_prompts();
       activeChatBar = null;
       lastChatClosedTs = 0;
@@ -13516,38 +13584,6 @@ ${userText}
     }
   });
 
-  // src/ui/unread-badge.js
-  function showUnreadBadge(tab, sendBtnId) {
-    const current = _unreadCounts.get(tab) || 0;
-    const next = current + 1;
-    _unreadCounts.set(tab, next);
-    _badgeAnchors.set(tab, sendBtnId);
-    const badgeId = `${tab}-chat-badge`;
-    let badge = document.getElementById(badgeId);
-    if (!badge) {
-      const sendBtn = document.getElementById(sendBtnId);
-      if (!sendBtn) return;
-      badge = document.createElement("div");
-      badge.id = badgeId;
-      badge.style.cssText = "position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10";
-      sendBtn.style.position = "relative";
-      sendBtn.appendChild(badge);
-    }
-    badge.textContent = next > 9 ? "9+" : next;
-  }
-  function clearUnreadBadge(tab) {
-    _unreadCounts.set(tab, 0);
-    const badge = document.getElementById(`${tab}-chat-badge`);
-    if (badge) badge.remove();
-  }
-  var _unreadCounts, _badgeAnchors;
-  var init_unread_badge = __esm({
-    "src/ui/unread-badge.js"() {
-      _unreadCounts = /* @__PURE__ */ new Map();
-      _badgeAnchors = /* @__PURE__ */ new Map();
-    }
-  });
-
   // src/tabs/inbox.js
   function addInboxChatMsg(role, text) {
     const el = document.getElementById("inbox-chat-messages");
@@ -14807,6 +14843,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     _checkInFlight = true;
     try {
       const triggers = [
+        _checkEveningPrompt,
         _checkStuckTasks,
         _checkPassedEvents
       ];
@@ -14831,6 +14868,14 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (tasks.length === 0) return null;
     return { type: "stuck-task", item: tasks[0] };
   }
+  function _checkEveningPrompt() {
+    const h = (/* @__PURE__ */ new Date()).getHours();
+    if (h < 18 || h >= 23) return null;
+    if (!owlCdExpired("evening_prompt_daily", EVENING_PROMPT_CD)) return null;
+    const hasContent = (getMomentsContext() || "").length > 0 || (getEveningContext() || "").length > 0;
+    if (!hasContent) return null;
+    return { type: "evening-prompt", item: null };
+  }
   function _checkPassedEvents() {
     const now = Date.now();
     const events = getEvents().filter((ev) => ev.time).filter((ev) => {
@@ -14845,12 +14890,24 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     return { type: "event-passed", item: events[0] };
   }
   async function _sendFollowupToChat(tab, type, item) {
-    const text = await _generateFollowupText(type, item);
+    const text = type === "evening-prompt" ? await _generateEveningPrompt() : await _generateFollowupText(type, item);
     if (!text) return;
     addMsgForTab(tab, "agent", text);
     setOwlCd("followup_global");
     if (type === "stuck-task") setOwlCd(`followup_stuck_${item.id}`);
     if (type === "event-passed") setOwlCd(`followup_event_${item.id}`);
+    if (type === "evening-prompt") setOwlCd("evening_prompt_daily");
+  }
+  async function _generateEveningPrompt() {
+    try {
+      const systemPrompt = getEveningPromptSystem() + "\n\n" + getAIContext();
+      const reply = await callAI(systemPrompt, "\u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439\u0441\u044F \u0437 \u044E\u0437\u0435\u0440\u043E\u043C \u0443 \u0447\u0430\u0442\u0456 \u0412\u0435\u0447\u043E\u0440\u0430 \u2014 \u0432\u0456\u043D \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454 \u0432\u043A\u043B\u0430\u0434\u043A\u0443.");
+      if (!reply || typeof reply !== "string") return null;
+      return reply.trim().slice(0, 400);
+    } catch (e) {
+      console.warn("[followups] evening-prompt generation failed:", e);
+      return null;
+    }
   }
   async function _generateFollowupText(type, item) {
     const prompts = {
@@ -14882,22 +14939,27 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       _debounceTimer = setTimeout(checkFollowups, FOLLOWUP_DEBOUNCE);
     });
   }
-  var FOLLOWUP_CHECK_INTERVAL, FOLLOWUP_DEBOUNCE, STUCK_TASK_DAYS, STUCK_TASK_CD, EVENT_PASSED_CD, TRIGGER_TO_TAB, _debounceTimer, _checkInFlight;
+  var FOLLOWUP_CHECK_INTERVAL, FOLLOWUP_DEBOUNCE, STUCK_TASK_DAYS, STUCK_TASK_CD, EVENT_PASSED_CD, EVENING_PROMPT_CD, TRIGGER_TO_TAB, _debounceTimer, _checkInFlight;
   var init_followups = __esm({
     "src/owl/followups.js"() {
       init_core();
       init_tasks();
       init_calendar();
+      init_evening();
+      init_prompts();
       init_inbox_board();
       FOLLOWUP_CHECK_INTERVAL = 5 * 60 * 1e3;
       FOLLOWUP_DEBOUNCE = 5 * 1e3;
       STUCK_TASK_DAYS = 3;
       STUCK_TASK_CD = 24 * 60 * 60 * 1e3;
       EVENT_PASSED_CD = 365 * 24 * 60 * 60 * 1e3;
+      EVENING_PROMPT_CD = 24 * 60 * 60 * 1e3;
       TRIGGER_TO_TAB = {
         "stuck-task": "tasks",
-        "event-passed": "tasks"
+        "event-passed": "tasks",
         // календар зараз живе всередині Продуктивності
+        "evening-prompt": "evening"
+        // Фаза 3 Вечора 2.0 — сова пише першою о 18:00
       };
       _debounceTimer = null;
       _checkInFlight = false;
