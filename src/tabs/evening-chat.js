@@ -18,10 +18,12 @@
 // ============================================================
 
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
-import { callAI, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAI, callAIWithHistory, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { processUniversalAction } from './habits.js';
 import { getMoments } from './evening.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
+import { renderChips } from '../owl/chips.js';
+import { getEveningChatSystem } from '../ai/prompts.js';
 
 // Typing indicator (локальний стейт для вечірнього чату)
 let _eveningTypingEl = null;
@@ -104,7 +106,7 @@ function showEveningBarMessages() {
   openChatBar('evening');
 }
 
-export function addEveningBarMsg(role, text, _noSave = false) {
+export function addEveningBarMsg(role, text, _noSave = false, chips = null) {
   const el = document.getElementById('evening-bar-messages');
   if (!el) return;
   if (_eveningTypingEl) { _eveningTypingEl.remove(); _eveningTypingEl = null; }
@@ -119,10 +121,25 @@ export function addEveningBarMsg(role, text, _noSave = false) {
   }
   if (!_noSave) { try { openChatBar('evening'); } catch(e) {} }
   const isAgent = role === 'agent';
+
+  // Чищу застарілі чіп-стрічки попередніх повідомлень сови — чіпи релевантні
+  // тільки останньому питанню, інакше вдруг юзер тапне старий чіп і плутанина
+  if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
+
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
+
+  // Чіпи під бульбою сови (Фаза 4 Вечора 2.0) — рендер через спільний chips.js.
+  // Клік на чіп кладе label у textarea і викликає sendEveningBarMessage.
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'evening');
+    el.appendChild(chipsRow);
+  }
+
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
   else eveningBarHistory.push({ role: 'assistant', content: text });
@@ -151,55 +168,40 @@ export async function sendEveningBarMessage() {
   eveningBarLoading = true;
   addEveningBarMsg('typing', '');
 
-  const today = new Date().toDateString();
-  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
-  const todayNotes = JSON.parse(localStorage.getItem('nm_notes') || '[]').filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
-  const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} Короткі відповіді (1-3 речення).
-Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'не додані'}.
-Нотатки сьогодні: ${todayNotes.map(n=>n.title||n.text||'').join('; ') || 'немає'}.
-Всі записи: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}.
-Якщо треба зберегти запис — відповідай JSON:
-- Нотатка: {"action":"create_note","text":"текст","folder":null}
-- Задача: {"action":"create_task","title":"назва","steps":[]}
-- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
-- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
-- Закрити задачу: {"action":"complete_task","task_id":ID}
-- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
-- Редагувати задачу: {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- Видалити задачу: {"action":"delete_task","task_id":ID}
-- Видалити звичку: {"action":"delete_habit","habit_id":ID}
-- Перевідкрити задачу: {"action":"reopen_task","task_id":ID}
-- Записати момент дня: {"action":"add_moment","text":"що сталося"}
-- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
-- Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
-- Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- Видалити подію: {"action":"delete_event","event_id":ID}
-- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
-- Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
-ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
-Інакше — текст українською 1-3 речення.
-НЕ вигадуй ліміти, плани або факти яких немає в даних вище.${aiContext ? '\n\n' + aiContext : ''}`;
+  // Новий промпт Фази 4: чіпи у діалозі + контекст через getAIContext
+  // (який вже містить getEveningContext з Фази 2 — моменти, задачі, проекти,
+  // витрати, настрій, quit-звички). Окремі блоки "моменти/нотатки/inbox" тут
+  // більше не потрібні — все у aiContext.
+  const systemPrompt = getEveningChatSystem() + '\n\n' + getAIContext();
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 300, temperature: 0.8 })
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim();
+    const reply = await callAIWithHistory(systemPrompt, eveningBarHistory.slice(-10));
     if (!reply) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
 
-    // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
+    // Розбираємо AI-відповідь: JSON блоки з {text, chips, action} + можливий сирий текст.
     const blocks = extractJsonBlocks(reply);
     let handled = false;
+    let lastAgentText = null;
+    let lastChips = null;
+
     for (const parsed of blocks) {
-      if (processUniversalAction(parsed, text, addEveningBarMsg)) handled = true;
+      // Спроба обробити як дію (save_task, complete_habit тощо)
+      const actionHandled = processUniversalAction(parsed, text, addEveningBarMsg);
+      if (actionHandled) { handled = true; continue; }
+
+      // Блок з текстом + можливими чіпами (типова відповідь з Фази 4)
+      if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) {
+        lastAgentText = parsed.text.trim();
+        if (Array.isArray(parsed.chips)) lastChips = parsed.chips;
+        handled = true;
+      } else if (parsed && Array.isArray(parsed.chips) && !lastChips) {
+        // Рідкий випадок: чіпи без тексту (наприклад після action)
+        lastChips = parsed.chips;
+      }
     }
-    if (!handled) safeAgentReply(reply, addEveningBarMsg);
+
+    if (lastAgentText) addEveningBarMsg('agent', lastAgentText, false, lastChips);
+    else if (!handled) safeAgentReply(reply, addEveningBarMsg);
   } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
   eveningBarLoading = false;
 }
