@@ -6,6 +6,48 @@
 
 ---
 
+## 🔧 Сесія rSTLV — Повний відкат маскот-сови до емодзі 🦉 (19.04.2026)
+
+### Зроблено
+
+**1. Видалення коду маскот-системи — коміт `897bc9a`**
+- `index.html:275-287` — блок `.owl-mascot` з 10 `<img>` замінено на простий `<div class="owl-speech-avatar">🦉</div>`
+- `style.css:1271-1356` — прибрано ~85 рядків: `.owl-mascot`, `.owl-mascot-frame`, `.owl-wave-frame`, `@keyframes owl-float/owl-head-tilt/owl-wave-1..5`, `.is-paused`, prefers-reduced-motion
+- `src/owl/board.js:139-202` — прибрано виклик `setOwlMascotState('alert', 12000)` у `_renderTabBoard` + весь priority state-machine блок (OWL_PRIORITY, ticket, failsafe, visibilitychange listener, window export)
+- `src/core/boot.js:398-401` — прибрано `setTimeout` з greeting-тригером (6 сек one-shot)
+- `src/ai/core.js _fetchAI` — прибрано 4 виклики `setOwlMascotState` (thinking/error/idle/error) + зовнішній try/catch
+- Видалено 11 PNG у `assets/owl/` + вся папка `assets/`
+- `sw.js:10` — CACHE_NAME `nm-20260419-1044` → `nm-20260419-1131`
+
+**2. Видалення handoff + оновлення основних документів — коміт `d29a595`**
+- `handoff/` повністю (README.md, OWL_ANIMATION_PLAN_V2.md, OWL_ANIMATION_RESEARCH.md, components/Owl.html/.js/.jsx/.css)
+- `CLAUDE.md` секція "Анімація OWL" скорочена до 2 рядків (статус "відкладено")
+- `ROADMAP.md` — два блоки Done 19.04 (NFtzw + uDZmz) замінено на один запис rSTLV
+- `docs/CHANGES.md` — детальний аудит-запис з повним переліком того що і звідки видалено + таблиця історичних комітів для відновлення
+
+**3. Повний аудит документів — коміт `77f59ba`** — `.claude/commands/owl-motion.md` header ⏸️ ВІДКЛАДЕНО; SKILLS_PLAN, CLAUDE.md, ROADMAP.md, START_HERE.md, NEVERMIND_BUGS.md — статус скіла і списки оновлено.
+
+### Ключові рішення
+
+- **Повне видалення** за прямим "стерти все нахуй" від Романа. Включно з priority state-machine, visibilitychange pause, head-tilt, boot auto-trigger.
+- **Таблиця 13 історичних комітів** у `docs/CHANGES.md` для відновлення за потреби.
+- **Скіл `/owl-motion` НЕ видалено** — заготовка у `.claude/commands/`.
+
+### Інциденти
+
+- Без reset/force push. 3 чисті коміти.
+- Локальний `node build.js` не запустився — esbuild not installed, CI зібрав сам.
+
+### Метрики
+
+- Коміти: `897bc9a` → `d29a595` → `77f59ba` (3)
+- Гілка: `claude/start-session-rSTLV`
+- Версії: v285 → v286+
+- CACHE_NAME: `nm-20260419-1131`
+- Файлів видалено 19, змінено 12, ~1120 рядків видалено
+
+---
+
 ## 🔧 Сесія w3ISi — Handoff дизайну сови + базова інтеграція PNG-маскота (18-19.04.2026)
 
 ### Зроблено
