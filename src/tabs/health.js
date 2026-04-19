@@ -74,8 +74,6 @@ export function getHealthCards() {
   return result;
 }
 function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
-export function getHealthLog() { return JSON.parse(localStorage.getItem('nm_health_log') || '{}'); }
-function saveHealthLog(obj) { localStorage.setItem('nm_health_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
 
 // === АЛЕРГІЇ (Фаза 1, 15.04 jMR6m) ===
 // Проста структура: {id, name, notes, createdAt}. Розширення з severity → ROADMAP.md Ideas.
@@ -1492,14 +1490,6 @@ export function getHealthContext() {
     });
   }
 
-  // Legacy шкали (fallback — живуть до Фази 3)
-  const log = getHealthLog();
-  const today = new Date().toDateString();
-  const entry = log[today] || {};
-  if (entry.energy || entry.sleep || entry.pain) {
-    parts.push(`Самопочуття сьогодні (legacy шкали 1-10): Енергія ${entry.energy||'—'}, Сон ${entry.sleep||'—'}, Біль ${entry.pain||'—'}`);
-  }
-
   return parts.join('\n');
 }
 
@@ -1600,18 +1590,6 @@ ${aiContext ? '\n\n' + aiContext : ''}
 
     // Обробка одного JSON блоку. Повертає true якщо оброблено.
     const _processOne = (parsed) => {
-      if (parsed.action === 'log_health') {
-        // B-31 (15.04 6v2eR): legacy action — шкали 1-10 прибрано з UI.
-        const log = getHealthLog();
-        const today = new Date().toDateString();
-        if (!log[today]) log[today] = {};
-        if (parsed.energy) log[today].energy = parseInt(parsed.energy);
-        if (parsed.sleep) log[today].sleep = parseInt(parsed.sleep);
-        if (parsed.pain !== undefined) log[today].pain = parseInt(parsed.pain);
-        saveHealthLog(log);
-        addHealthChatMsg('agent', `✓ Записав самопочуття.`);
-        return true;
-      }
       if (parsed.action === 'update_health_progress' && parsed.card_id) {
         const cards = getHealthCards();
         const idx = cards.findIndex(c => c.id === parsed.card_id);
