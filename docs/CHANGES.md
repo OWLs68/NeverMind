@@ -6,6 +6,78 @@
 
 ---
 
+## 2026-04-19 — 🌙 Вечір 2.0: планування концепції + Фаза 0 рефакторингу (сесія QV1n2)
+
+**Контекст:** Роман відкрив Вечір о 14:12 і побачив "0% Важкий день" — вкладка демотивує посеред робочого дня. Провели повний аудит (5 проблем) і переробили концепцію на **ритуал закриття дня з OWL** замість dashboard'у з цифрами. Потім виконали Фазу 0 рефакторингу — розбили `evening.js` (1054 рядки, змішував Я + Вечір) на 5 сфокусованих модулів.
+
+**Що зроблено:**
+
+**1. Стратегічне планування (4 коміти документації):**
+- Створено `docs/EVENING_2.0_PLAN.md` (544 рядки) — джерело правди для переробки: 10 блоків концепції, 8 фаз на 3 сесії, 3 живі сценарії діалогів, тригери+cooldowns, success metrics, failure modes, перехресні посилання з 14 пунктами ROADMAP
+- `ROADMAP.md` — новий блок у 🚀 Active з 8 фазами + посиланням на PLAN; старий блок "Вечір 70→100%" у Блок 2 замінено на пойнтер
+- `CONCEPTS_ACTIVE.md` — секція "🌙 Вечір" переписана на v2 (ритуал після 18:00, OWL пише першою, 2 CTA кнопки замість форм, чіпи у діалозі, автосинх)
+- `_ai-tools/SESSION_STATE.md` — оновлено "Для нового чату" (Active = Вечір 2.0 Сесія 1) + повний опис QV1n2
+- `CLAUDE.md` — додано `docs/EVENING_2.0_PLAN.md` у Карту документації
+
+**2. Фаза 0 рефакторингу `src/tabs/evening.js` (2 коміти):**
+
+*Крок 1 (`2e99b34`)* — винесення вкладки Я:
+- Новий `src/tabs/me.js` (480 рядків): `renderMe`, `renderMeActivityChart`, `refreshMeAnalysis`, `renderMeHabitsStats`, `sendMeChatMessage`, `addMeChatMsg`
+- `evening.js` 1054 → 587 рядків
+- Імпорти оновлено у 5 файлах (nav/boot/habits/chips/core.js) — **прямі імпорти** замість re-exports щоб уникнути циклічних залежностей
+
+*Крок 2 (`e996f0b`)* — чат + універсальний бейдж + заготовка:
+- Новий `src/tabs/evening-chat.js` (204 рядки): `sendEveningBarMessage`, `addEveningBarMsg`, `openEveningDialog`, `closeEveningDialog`, `sendDialogMessage`
+- Новий `src/ui/unread-badge.js` (67 рядків): універсальна червона крапка — `showUnreadBadge(tab, sendBtnId)` + `clearUnreadBadge(tab)` + `getUnreadCount(tab)` у in-memory Map
+- Новий `src/tabs/evening-actions.js` (30 рядків заготовка): пустий `EVENING_TOOL_HANDLERS` для Фази 7
+- `evening.js` 587 → 413 рядків
+- `inbox.js` — `_showInboxUnreadBadge` замінено на універсальний `showUnreadBadge('inbox', 'ai-send-btn')`; `_clearInboxUnreadBadge` залишено як wrapper над `clearUnreadBadge('inbox')` для backward-compat з `ai/core.js`
+- Імпорти `addEveningBarMsg` і `sendEveningBarMessage` перенаправлені з `evening.js` → `evening-chat.js`
+
+**Ключові рішення:**
+
+- **Ритуал після 18:00, не дашборд.** Вкладка блокується матовим склом до 18:00 (вирішує проблему "0% Важкий день" вдень). Автовідновлення о 23:59.
+- **Дві кнопки 📅/📔 замість полів вводу.** Живий діалог замість форм — принцип "мінімальне тертя" у найчистішому вигляді.
+- **Пілотуємо один чат перед міграцією 7-ми.** Варіант B (прогресивна міграція) проти варіанту A (все одразу). Після стабільного Вечора міграція Tasks/Habits/Notes/Finance/Health/Projects/Я на новий двигун — окремими сесіями.
+- **3-рівнева документація.** ROADMAP компактний → `docs/EVENING_2.0_PLAN.md` детальний → `CONCEPTS_ACTIVE.md` для юзерського світу. Jarvis-рівень організації.
+- **Окремий файл плану, не все в ROADMAP.** Аналог `docs/AI_TOOLS.md` — джерело правди для великої задачі живе окремо.
+- **Прямі імпорти у рефакторингу.** Re-export з evening.js ризикував би циклічною залежністю evening.js ↔ evening-chat.js. Прямі імпорти в 6 файлах — чистіше.
+
+**Інциденти:**
+
+- **Без reset/force push. 6 чистих комітів** прямо у `claude/start-session-QV1n2`.
+- **Stop hook на незакоммічений `bundle.js`** після push — вирішено `git checkout -- bundle.js` (bundle локально не комітимо, CI генерує при мержі у main).
+- **Edit конфлікт "SECTION:renderMe"** у skeleton `me.js` — два маркери з однаковим префіксом. Вирішено через об'єднаний Edit для двох сусідніх секцій.
+- **Контекст дійшов до 90%+** наприкінці — викликали `/finish` у режимі UPDATE щоб підготувати файли до нового чата.
+
+**Обговорено (без виконання):**
+
+- **8 концепцій з ROADMAP** які підсилять Вечір у Фазах 3/7/8 — прописані у PLAN: 4.6 Contextual Personality Shifts (`reflecting`), 4.12 Антидублювання, 4.21 Verify Loop, 4.31 Episode Summary Layer, 4.34 Memory Echo, 4.41 Mirror Mode, G4 Shadowing, G13 Brain Dump
+- **Post-MVP фічі** — спецрежим неділі, автомоменти з подій, інтелект-карта дня, голосове слухати підсумок, міграція інших чатів на універсальний двигун
+- **Блокери** — Динамічний розпорядок дня (2-3 сесії, 6 відкритих питань дизайну) блокує повну автосинхронізацію у Фазі 7. MVP — простий текстовий блок.
+
+**Файли:**
+
+*Створені (5):*
+- `docs/EVENING_2.0_PLAN.md` — 544 рядки
+- `src/tabs/me.js` — 480 рядків (винесено з evening.js)
+- `src/tabs/evening-chat.js` — 204 рядки (винесено з evening.js)
+- `src/tabs/evening-actions.js` — 30 рядків (заготовка Фази 7)
+- `src/ui/unread-badge.js` — 67 рядків (винесено з inbox.js)
+
+*Змінені (12):*
+- `ROADMAP.md`, `CONCEPTS_ACTIVE.md`, `CLAUDE.md`, `_ai-tools/SESSION_STATE.md` — документація Вечора 2.0
+- `src/tabs/evening.js` — 1054 → 413 рядків (core only)
+- `src/tabs/inbox.js` — використовує universal unread-badge
+- `src/app.js` — додано imports me/evening-chat/evening-actions/unread-badge у правильному порядку
+- `src/core/nav.js`, `src/core/boot.js`, `src/ai/core.js`, `src/owl/chips.js`, `src/tabs/habits.js` — імпорти me.js окремо від evening.js
+
+**Метрики:** 6 комітів (`7798595` → `5c1b479` → `ccb1483` → `a901450` → `2e99b34` → `e996f0b`), **v288 на проді** (нові версії згенеруються після мержу в main), CACHE_NAME без змін `nm-20260419-1131` (чекає Фази 1). Гілка `claude/start-session-QV1n2`. Build локальний зелений.
+
+**Наступний крок:** Фази 1-3 Сесії 1 Вечора 2.0 (блокування до 18:00 + getEveningContext + evening-prompt тригер) за окремим "Роби" у новому чаті.
+
+---
+
 ## 2026-04-19 — 🗑️ Повний відкат маскот-сови в Inbox до емодзі 🦉 (сесія rSTLV)
 
 ### Контекст

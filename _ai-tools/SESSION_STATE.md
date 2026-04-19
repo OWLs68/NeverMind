@@ -4,7 +4,7 @@
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 > Попередні сесії до uDZmz — в архіві (w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-19 (сесія **QV1n2** — планування **Вечір 2.0**, документація + ROADMAP. Код не чіпали — план записаний у 4 файли)
+**Оновлено:** 2026-04-19 (сесія **QV1n2** — планування **Вечір 2.0** + **Фаза 0 рефакторингу** виконана: 6 комітів, evening.js 1054→413 рядків + 4 нові модулі)
 
 ---
 
@@ -12,17 +12,19 @@
 
 **1. 🚀 ACTIVE = ВЕЧІР 2.0.** Повна переробка концепції вкладки з дашборду цифр на ритуал закриття дня з совою. **Детальний план на 3 сесії** → [`docs/EVENING_2.0_PLAN.md`](../docs/EVENING_2.0_PLAN.md) (544 рядки: 10 блоків концепції, 8 фаз, діалоги, метрики, ризики, перехресні посилання з ROADMAP).
 
-**2. НАСТУПНИЙ КРОК — СЕСІЯ 1 (Фази 0+1+2+3).** Починається з **Фази 0 — рефакторинг** `src/tabs/evening.js` (1055 рядків) на 4 модулі: `me.js` (вкладка Я), `evening.js` (core), `evening-chat.js` (чат), `evening-actions.js` (tool handlers). Плюс винести червону крапку з `inbox.js` у новий `src/ui/unread-badge.js`. Без зміни функціоналу, регрес-тест обов'язковий.
+**2. ФАЗА 0 РЕФАКТОРИНГУ ЗАВЕРШЕНА ✅.** `src/tabs/evening.js` (1054 рядки) розбитий на 5 модулів: **`evening.js`** (413, core), **`me.js`** (480, вкладка Я), **`evening-chat.js`** (204, чат-бар + фуллскрін діалог), **`evening-actions.js`** (30, заготовка для Фази 7), **`src/ui/unread-badge.js`** (67, універсальна червона крапка). Імпорти оновлено у 6 файлах (nav/boot/habits/chips/core.js/inbox.js) — прямі імпорти без re-exports щоб уникнути циклічних залежностей. Build зелений.
 
-**3. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1131` (від rSTLV). Чіпати тільки коли почнемо Фазу 1 (блокування до 18:00) і далі. Документаційні коміти QV1n2 `CACHE_NAME` не чіпали.
+**3. НАСТУПНИЙ КРОК — ФАЗИ 1-3 Сесії 1.** Фаза 1 — блокування Вечора матовим склом до 18:00 + авто-закриття о 23:59 + анімація танучого скла. Фаза 2 — нова функція `getEveningContext()` + підключення у `getAIContext`. Фаза 3 — тригер `evening-prompt` у followups.js + активація universal unread-badge у чат-барі Вечора. Детальний план → `docs/EVENING_2.0_PLAN.md` секція "8 фаз реалізації".
+
+**4. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1131` (від rSTLV). Чіпати треба **у Фазі 1** коли буде перша зміна коду що впливає на UI (блокування вкладки). Команда: `date +"nm-%Y%m%d-%H%M"`.
 
 **4. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. Довідник → `docs/AI_TOOLS.md`.
 
-**5. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази. Особливо критично у Фазі 0 (розбиття великого файлу).
+**5. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази. Фаза 0 вже зроблена — тепер кожен модуль <500 рядків.
 
 **6. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати. Усі технічні рішення обговорені у QV1n2 — не перевідкривати концепцію у Сесії 1, йти по плану.
 
-**7. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`. Для Сесії 1 Вечора 2.0 буде активація `/refactor-large` (Фаза 0 — розбиття 1055-рядкового файлу) і `/ux-ui` (Фаза 1 — матове скло, Фаза 5 — HTML-структура).
+**7. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`. Для продовження Сесії 1 буде активація `/ux-ui` (Фаза 1 — матове скло + анімація розмикання о 18:00) і `/pwa-ios-fix` (backdrop-filter fallback для iOS Safari).
 
 **8. Маскот відкочено (rSTLV).** Наразі скрізь 🦉 як емодзі. У Вечорі 2.0 використовуємо той самий емодзі — **не повертаємось** до PNG маскота. Деталі: `docs/CHANGES.md` 19.04 (rSTLV).
 
@@ -72,6 +74,36 @@
 - `docs/EVENING_2.0_PLAN.md` — **новий файл, 544 рядки** (джерело правди): навіщо переробка, 10 блоків концепції, 8 фаз з кроками і комітами, 3 сесії з критеріями готовності, тригери+cooldowns таблиця, 3 живі сценарії діалогів, перехресні посилання з ROADMAP, success metrics, failure modes з мітигацією, пост-MVP план.
 - `CONCEPTS_ACTIVE.md` — секція "🌙 Вечір" переписана на v2 коротко для юзерського світу (без технічних деталей). Стара v1 прибрана як "брехлива і дублююча Я".
 - `_ai-tools/SESSION_STATE.md` — оновлено "Для нового чату" (Active = Вечір 2.0 Сесія 1) + додано опис QV1n2.
+- `CLAUDE.md` — додано `docs/EVENING_2.0_PLAN.md` у Карту документації (секція "Коли читати").
+
+**6. ФАЗА 0 РЕФАКТОРИНГУ ВИКОНАНА (2 коміти після документації):**
+
+**Крок 1 (коміт `2e99b34`) — винесення вкладки Я:**
+- Створено `src/tabs/me.js` (480 рядків): `renderMe`, `renderMeActivityChart`, `refreshMeAnalysis`, `renderMeHabitsStats`, `sendMeChatMessage`, `addMeChatMsg`, `showMeChatMessages`, `meChatHistory`
+- `src/tabs/evening.js` скорочено з 1054 до 587 рядків (видалено весь Me-блок + Me AI Bar)
+- Імпорти оновлено у 5 файлах: `core/nav.js`, `core/boot.js`, `ai/core.js`, `tabs/habits.js`, `owl/chips.js` — **прямі імпорти з `me.js`** замість re-exports (щоб уникнути циклічних залежностей)
+- `src/app.js`: додано `import './tabs/me.js'` у правильному порядку
+- Build зелений
+
+**Крок 2 (коміт `e996f0b`) — винесення чату + універсальний бейдж + stub actions:**
+- Створено `src/tabs/evening-chat.js` (204 рядки): `sendEveningBarMessage`, `addEveningBarMsg`, `openEveningDialog`, `closeEveningDialog`, `sendDialogMessage`, `addDialogMessage`, `showEveningBarMessages`, `_eveningTypingEl`, `eveningBarHistory`, `eveningBarLoading`, `dialogHistory`, `dialogLoading` + власний window.assign
+- Створено `src/ui/unread-badge.js` (67 рядків): універсальна червона крапка для будь-якого чату — `showUnreadBadge(tab, sendBtnId)`, `clearUnreadBadge(tab)`, `getUnreadCount(tab)`. Використовує `Map` для in-memory лічильників.
+- Створено `src/tabs/evening-actions.js` (30 рядків заготовки): пустий `EVENING_TOOL_HANDLERS` для Фази 7 автосинх
+- `src/tabs/evening.js` скорочено з 587 до 413 рядків (видалено evening chat + dialog + непотрібні імпорти)
+- `src/tabs/inbox.js` — `_showInboxUnreadBadge` + `_inboxUnreadCount` замінено на universal `showUnreadBadge('inbox', 'ai-send-btn')`. Backward-compat `_clearInboxUnreadBadge` → wrapper над `clearUnreadBadge('inbox')` (щоб `ai/core.js` продовжив працювати)
+- Імпорти у `ai/core.js` і `owl/chips.js` перенаправлені з `evening.js` → `evening-chat.js`
+- `src/app.js`: додано evening-chat.js, evening-actions.js, unread-badge.js у правильному порядку
+- Build зелений
+
+**Підсумок розподілу коду:**
+| Файл | Рядків | Зміст |
+|------|--------|-------|
+| `src/tabs/evening.js` | 413 | Core Вечора (рендер, моменти, настрій, підсумок, moment view) |
+| `src/tabs/me.js` | 480 | Повна вкладка Я (тижневий огляд + чат) |
+| `src/tabs/evening-chat.js` | 204 | Чат-бар Вечора + фуллскрін діалог |
+| `src/tabs/evening-actions.js` | 30 | Заготовка Фази 7 |
+| `src/ui/unread-badge.js` | 67 | Універсальна червона крапка |
+| **Разом** | **1194** | Було 1054 в одному файлі → 1194 у 5 модулях |
 
 ### Ключові рішення
 
@@ -80,31 +112,39 @@
 - **Чіпи у діалозі з балансом.** Не меню-опитування, не чистий текст — гібрид. Правила у промпті "коли так, коли ні".
 - **Пілотуємо на одній вкладці перед міграцією 7-ми.** Варіант B (прогресивна міграція) проти Варіант A (одразу все). Менший ризик, швидший прогрес для юзера.
 - **Окремий файл `docs/EVENING_2.0_PLAN.md`** — Jarvis-рівень організації: ROADMAP лишається компактним, деталі живуть окремо. Аналогічно `docs/AI_TOOLS.md`.
-- **Фаза 0 рефакторинг ПЕРЕД функціоналом.** Не додавати 600 рядків у файл що вже 1055. Розбити на правильні модулі — потім додавати.
-- **Код не чіпали.** Тільки документи. Сесія 1 (Фаза 0 + 1 + 2 + 3) — наступним викликом Романа з "Роби".
+- **Фаза 0 рефакторинг ПЕРЕД функціоналом.** Не додавати 600 рядків у файл що вже 1055. Розбити на правильні модулі — потім додавати. Виконано у цій же сесії після планування.
+- **Прямі імпорти у кожному файлі замість re-exports.** Варіант з `export { ... } from './me.js'` у evening.js створив би циклічну залежність evening.js ↔ evening-chat.js (бо evening-chat імпортує getMoments з evening.js, а evening.js re-export з evening-chat). Прямі імпорти у 6 залежних файлах — чистіше і без ризику циклу.
+- **Backward-compat через wrapper для `_clearInboxUnreadBadge`.** Замість міняти імпорти у `ai/core.js` — залишили у inbox.js тонкий wrapper `_clearInboxUnreadBadge = () => clearUnreadBadge('inbox')`. Один рядок змін у core.js, без caskаду правок.
+- **`bundle.js` локально не комітити.** Правило з CLAUDE.md. CI сам генерує при мержі у main. Локальні build — тільки для перевірки "синтаксис не зламаний", результат скидати через `git checkout -- bundle.js` перед push.
 
 ### Інциденти
 
 - **Multiple system-reminder на правила CLAUDE.md** — нагадування про розмір відповіді, пояснення в дужках, опис вигляду замість назв. Іноді доводилось переписувати відповіді щоб вкластись у "середній розмір" замість простирадла.
-- **TodoWrite reminders** — кілька разів система нагадувала використати TodoWrite. Використано для 5-крокового плану документації.
-- **Без reset/force push.** 3 чисті коміти прямо у `claude/start-session-QV1n2`.
-- **Локальний `node build.js` не викликали** — документаційна сесія, код не чіпали.
+- **TodoWrite reminders** — система періодично нагадувала використати TodoWrite. Використано активно для планування документації і рефакторингу по фазах.
+- **Stop hook про незакоммічений `bundle.js`** — після фінального push хук попередив що bundle.js відрізняється. Повернули через `git checkout -- bundle.js`. Це правильна поведінка: bundle.js не комітимо локально, CI згенерує свою версію при мержі у main.
+- **Edit конфлікт "SECTION:renderMe"** — `me.js` skeleton мав дубльований маркер через схожі назви (`renderMe` vs `renderMeActivityChart`). Вирішено через спеціфіку контексту (об'єднаний маркер двох сусідніх секцій у одному Edit).
+- **Без reset/force push. 6 чистих комітів у `claude/start-session-QV1n2`:** 4 документаційних + 2 рефакторингові.
+- **Node_modules не було установлено на старті.** Запустили `npm install esbuild` — вдалось за 1 виклик, build зелений.
 
 ### Метрики
 
-- **Коміти:** `7798595` (PLAN) → `5c1b479` (ROADMAP) → `ccb1483` (CONCEPTS) → `[наступний]` (SESSION_STATE + CLAUDE). **4 коміти.**
+- **Коміти:** `7798595` (PLAN) → `5c1b479` (ROADMAP) → `ccb1483` (CONCEPTS) → `a901450` (SESSION_STATE + CLAUDE) → `2e99b34` (refactor me.js) → `e996f0b` (refactor evening-chat + unread-badge + actions stub). **6 комітів.**
 - **Гілка:** `claude/start-session-QV1n2`
-- **Версія:** v288 (від rSTLV) — нові деплої не генеруються бо код не чіпаний
-- **CACHE_NAME:** `nm-20260419-1131` (без змін, документаційна сесія)
-- **Файлів створено:** 1 (`docs/EVENING_2.0_PLAN.md`, 544 рядки)
-- **Файлів оновлено:** 4 (`ROADMAP.md`, `CONCEPTS_ACTIVE.md`, `_ai-tools/SESSION_STATE.md`, `CLAUDE.md`)
-- **Рядків документації додано:** ~750
+- **Версія:** v288 на production (від rSTLV). Після мержу цієї гілки у main CI згенерує bundle.js і деплой v289+.
+- **CACHE_NAME:** `nm-20260419-1131` (без змін — рефакторинг без UI-зміни, кеш не інвалідовано спеціально — побачимо на проді чи треба буде bump у Фазі 1).
+- **Файлів створено:** 5 (`docs/EVENING_2.0_PLAN.md` 544 рядки, `src/tabs/me.js` 480, `src/tabs/evening-chat.js` 204, `src/tabs/evening-actions.js` 30, `src/ui/unread-badge.js` 67).
+- **Файлів оновлено:** 9 (`ROADMAP.md`, `CONCEPTS_ACTIVE.md`, `_ai-tools/SESSION_STATE.md`, `CLAUDE.md`, `src/tabs/evening.js` 1054→413, `src/tabs/inbox.js`, `src/app.js`, `src/core/nav.js`, `src/core/boot.js`, `src/ai/core.js`, `src/owl/chips.js`, `src/tabs/habits.js`).
+- **Рядків додано/змінено:** ~750 документації + ~1194 у 5 нових модулях (зустрічний рух — 641 рядок видалений з evening.js).
+- **Build:** локальний `node build.js` → `bundle.js` 1.22 MB зелений після кожного коміту рефакторингу.
 
 ### Наступні кроки
 
-- **Сесія 1 Вечора 2.0:** запустити Фазу 0 рефакторинг `evening.js` → `me.js` + `evening.js` + `evening-chat.js` + `evening-actions.js` + `src/ui/unread-badge.js`. Критерій — все працює як раніше, регрес-тест зелений.
-- Далі у Сесії 1: Фази 1 (блокування), 2 (getEveningContext), 3 (evening-prompt) з checkpoint-комітом після кожної.
-- Після Сесії 1 Роман тестує на телефоні — скло вечором, сова пише о 18:00, бейдж видно.
+- **Фази 1-3 Сесії 1 Вечора 2.0** (за окремим "Роби"):
+  - Фаза 1 — блокування вкладки до 18:00 матовим склом (`backdrop-filter: blur(16px)`, CACHE_NAME bump обов'язковий) + авто-закриття о 23:59 + анімація танучого скла о 18:00
+  - Фаза 2 — нова функція `getEveningContext()` у `evening.js` + підключення у `getAIContext()` у `ai/core.js`
+  - Фаза 3 — новий тригер `_checkEveningPrompt()` у `followups.js` (вікно 18-22:59, cooldown 24 год) + активація `showUnreadBadge('evening', 'evening-send-btn')` коли сова кладе повідомлення
+- Після Сесії 1 — Роман тестує на iPhone: до 18:00 скло з таймером, о 18:00 тане + сова пише перше повідомлення, червона крапка на Надіслати
+- Сесії 2-3 — Фази 4-8 (чіпи у діалозі, контент ритуалу, дві CTA кнопки, tool calling автосинх, фінальний підсумок v2 + чистка старого)
 
 ---
 
@@ -294,11 +334,11 @@
 
 | | |
 |--|--|
-| **Версія** | v288 (після rSTLV, код не чіпано у QV1n2 — сесія документаційна) |
+| **Версія** | v288 на проді (від rSTLV). Після мержу QV1n2 у main — v289+ з Фазою 0 рефакторингу |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
-| **Гілка** | `claude/start-session-QV1n2` |
-| **CACHE_NAME** | `nm-20260419-1131` (чіпається з Фази 1 Вечора 2.0) |
+| **Гілка** | `claude/start-session-QV1n2` (6 комітів, push зелений) |
+| **CACHE_NAME** | `nm-20260419-1131` (без змін — чекає Фазу 1 коли буде UI-зміна) |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -311,24 +351,35 @@
 
 ---
 
-## 🎯 НАСТУПНИЙ КРОК — Сесія 1 Вечора 2.0
+## 🎯 НАСТУПНИЙ КРОК — Фази 1-3 Сесії 1 Вечора 2.0
 
-**Почати з Фази 0 — рефакторинг `src/tabs/evening.js` (1055 рядків):**
+**✅ Фаза 0 зроблена** (2 коміти: `2e99b34` + `e996f0b`). Далі:
 
-1. Винести вкладку **Я** у новий `src/tabs/me.js` (renderMe, renderMeActivityChart, refreshMeAnalysis, renderMeHabitsStats, sendMeChatMessage, addMeChatMsg)
-2. Розбити `evening.js` → `evening.js` (core, ~400) + `evening-chat.js` (чат, ~200 заготовка) + `evening-actions.js` (tool handlers, заготовка)
-3. Винести червону крапку непрочитаних з `src/tabs/inbox.js` у новий `src/ui/unread-badge.js`
-4. Оновити імпорти у `src/app.js` (порядок критичний)
-5. Регрес-тест: Я і Вечір працюють як раніше
+### Фаза 1 — Блокування до 18:00 + авторозмикання
 
-**Коміт після Фази 0:** `refactor(evening,me): split evening.js into 4 modules + universal unread badge`
+1. У `src/tabs/evening.js` → `renderEvening()` — перевірка `const hour = new Date().getHours(); const locked = hour < 18;`
+2. Якщо заблоковано — overlay з `backdrop-filter: blur(16px)` (з `-webkit-` fallback для iOS), темна сова з амбер-обводкою по центру, напис "Повернись після 18:00", таймер "до розблокування"
+3. `setTimeout` на різницю до 18:00 → викликає `renderEvening()` знову з анімацією "скло тане зверху вниз"
+4. `setTimeout` на 23:59 → замикає знову до наступного 18:00
+5. **CACHE_NAME bump обов'язковий** (команда `date +"nm-%Y%m%d-%H%M"`)
+6. Коміт: `feat(evening): lock tab before 18:00 with frosted glass + auto-unlock animation`
 
-**Далі у Сесії 1:**
-- Фаза 1 — блокування до 18:00 + авто-закриття о 23:59 + анімація
-- Фаза 2 — `getEveningContext` + підключити у `getAIContext`
-- Фаза 3 — тригер `evening-prompt` + універсальний бейдж у Вечорі
+### Фаза 2 — getEveningContext + getAIContext інтеграція
 
-**Альтернативні напрямки** (якщо Роман змінить пріоритет):
+1. Нова функція `getEveningContext()` у `evening.js` або `evening-chat.js`: повертає блок для промпта (моменти сьогодні, закриті задачі + проекти, виконані звички, quit-статус, минулі події календаря, настрій, транзакції дня, прийняті/пропущені дози ліків, недороблені задачі з `dueDate === today`, short-term facts)
+2. У `src/ai/core.js` → `getAIContext()` — додати виклик `getEveningContext()` у загальний блок контексту
+3. Коміт: `feat(evening,ai): evening context aggregator + wire into getAIContext`
+
+### Фаза 3 — Тригер `evening-prompt` + бейдж у Вечорі
+
+1. Нова функція `_checkEveningPrompt()` у `src/owl/followups.js` — перевіряє: `hour >= 18 && hour < 23` + `owlCdExpired('evening_prompt_daily', 24h)` + є контент у дні + `shouldOwlSpeak` дозволяє
+2. Додати Вечір у `TRIGGER_TO_TAB`: `'evening-prompt': 'evening'`
+3. Генерація тексту через `callAI()` з новим системним промптом (живе у `src/ai/prompts.js`)
+4. Додати повідомлення через `addMsgForTab('evening', 'agent', text)` — але також викликати `showUnreadBadge('evening', 'evening-send-btn')` (ID кнопки Надіслати з HTML — треба перевірити)
+5. Коли юзер відкриває чат-бар Вечора → `clearUnreadBadge('evening')` у `openChatBar`
+6. Коміт: `feat(evening): OWL proactive evening-prompt trigger with unread badge`
+
+### Альтернативні напрямки (якщо Роман змінить пріоритет)
 - **A. 📁 Проекти 65→100%** (2 сесії) — глибоке інтерв'ю 4 питання, стагнація-детекція, синк Витрати→Фінанси
 - **B. 👤 Я 65→100%** (1-2 сесії) — теплова карта 14/30 днів, автопатерни раз на тиждень
 - **C. 🏥 Здоров'я Фаза 2+3** (1-2 сесії) — CRUD через Inbox, прибрати legacy шкали
