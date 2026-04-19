@@ -2,31 +2,86 @@
 
 > **Правило ротації:** у файлі детально описані **2 останні активні сесії**.
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
-> Попередні сесії до w3ISi — в архіві (VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
+> Попередні сесії до uDZmz — в архіві (w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-19 (сесія **uDZmz** — priority state-machine + SVG-крило + нові PNG сови)
+**Оновлено:** 2026-04-19 (сесія **NFtzw** — research + V2 plan + Phase 0 flipbook skeleton)
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. ПЕРШИЙ КРОК У НАСТУПНІЙ СЕСІЇ — FLIPBOOK-МАХАННЯ.** У `style.css` зараз DEBUG-блок: SVG-крило махає постійно з червоною пунктирною рамкою (`outline: 2px dashed red`). Треба: (а) прибрати debug-блок, (б) прибрати SVG-крило взагалі (`<svg class="owl-wing-overlay">` в index.html + `@keyframes wing-wave-premium` у style.css), (в) замість нього — flipbook: CSS-анімація яка при `[data-state="greeting"]` швидко перемикає `opacity` між `owl-idle.png` і `owl-greeting.png` 3 рази × 150мс, потім залишається idle. Нові PNG вже завантажені правильно (див. пункт 3). Деталі плану в блоці сесії uDZmz "Обговорено".
+**1. ЧЕКАЄМО 5 PNG ВІД РОМАНА у `assets/owl/wave/`.** Кадри махання крилом для flipbook greeting — `frame-1.png` (idle, крило вниз) ... `frame-5.png` (крило 100°, усміх). Роман генерує через Nano Banana покадрово. HTML і CSS вже готові — як тільки PNG будуть залиті у гілку через GitHub Web, flipbook сам оживе при наступному деплої. **Fallback:** поки немає PNG — показується статичний `owl-greeting.png` (як було).
 
-**2. PRIORITY STATE-MACHINE ГОТОВА** — `setOwlMascotState` у `src/owl/board.js` має `OWL_PRIORITY` (error=100, alert=80, thinking=60, greeting=40, idle=0) + ticket-лічильник + failsafe 30с. Нижчий пріоритет не перебиває вищий. `visibilitychange` → клас `.is-paused` на батьку ставить на паузу всі анімації. Це вирішує w3ISi "моргання" між greeting і alert.
+**2. NANO BANANA WORKFLOW задокументовано** у `handoff/OWL_ANIMATION_PLAN_V2.md` (план + 4 фази + skill tree) і `handoff/OWL_ANIMATION_RESEARCH.md` (дослідження Rive vs Lottie vs CSS/PNG). Критичний нюанс: **compound degradation** у Nano Banana — завжди новий чат + оригінальна idle PNG як референс для кожного кадру, НЕ чейнити.
 
-**3. НОВІ PNG СОВИ ЗАВАНТАЖЕНІ:** `owl-idle.png` (спокій) + `owl-greeting.png` (з піднятим крилом) у стилі amber/brown з прозорим фоном. Використай ці два файли для flipbook. Файли `owl-alert.png`, `owl-thinking.png`, `owl-error.png` ще старі ("здивовані") — Роман замінюватиме пізніше.
+**3. BG-REMOVAL PIPELINE:** `erase.bg` (безкоштовно, до 5000×5000, без кредитів). Промпт Nano Banana просить чорний фон — потім erase.bg зрізає.
 
-**4. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-0438`. При наступній зміні коду — оновити на нову мітку (`date +"nm-%Y%m%d-%H%M"`).
+**4. PRIORITY STATE-MACHINE ГОТОВА** — `setOwlMascotState` у `src/owl/board.js` (error=100 > alert=80 > thinking=60 > greeting=40 > idle=0) + ticket + failsafe 30с. `visibilitychange` ставить на паузу у фоні.
 
-**5. AGENT КЕРУЄ UI (4.17)** — 8 UI tools готових у `src/ai/ui-tools.js`. Довідник + 6 заблокованих → `docs/AI_TOOLS.md`.
+**5. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-0918`. При наступній зміні коду — оновити (`date +"nm-%Y%m%d-%H%M"`).
 
-**6. ГОЛОСОВИЙ ВВІД (Web Speech API)** у всіх 8 чат-барах — `src/ui/voice-input.js`, `lang='uk-UA'`.
+**6. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. Довідник → `docs/AI_TOOLS.md`.
 
 **7. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази.
 
-**8. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати підтвердження.
+**8. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати.
 
 **9. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`.
+
+---
+
+## 🔧 Сесія NFtzw — Research + V2 план + Phase 0 flipbook skeleton (19.04.2026)
+
+### Зроблено
+
+**1. Глибоке дослідження анімаційних підходів — коміт `f16685b`**
+- Файл `handoff/OWL_ANIMATION_RESEARCH.md` (177 рядків). Порівняння CSS/PNG vs Lottie vs Rive + індустріальні джерела (Duolingo перехід з Lottie на Rive, file-size 5MB→50KB, FPS 17→60).
+- 3 початкові tier'и: PNG доробка (6/10), Lottie (6/10, не рекомендую), Rive через Fiverr ($100-200, 9/10).
+
+**2. V2 план — самостійний шлях з Nano Banana — коміт `af90d41`**
+- Файл `handoff/OWL_ANIMATION_PLAN_V2.md` (219 рядків). Принципи: усе самі, AI-сервіси як інструменти, **покадрова анімація основний шлях**, Rive learning — паралельний трек.
+- 4 фази: 0 стабілізація, 1 Nano Banana покадрово (22 кадри на 4 анімації), 2 вторинна анімація завжди (дихання/кліпання), 3 Rive editor learning.
+- Base prompt + 8 add-on промптів для кожного кадру махання крилом.
+
+**3. Фаза 0 у коді — коміти `6266c17` + `7e5b479`**
+- Прибрано debug SVG-крило з `style.css` (червона дашована рамка + `@keyframes wing-wave-premium`) і `<svg class="owl-wing-overlay">` з `index.html:282-284`.
+- Додано 5 `<img class="owl-wave-frame" data-wave="1..5">` у `.owl-mascot` — чекають на `assets/owl/wave/frame-{1..5}.png`.
+- CSS `@keyframes owl-wave-1..5` + `steps(1,end)` 600мс — кожен кадр по 120мс, жорсткий стрибок без блендингу.
+- Fallback: статичний `owl-greeting.png` не ховається — показується коли wave-PNG відсутні, перекривається коли завантажені (z-index: 2).
+- `CACHE_NAME`: `nm-20260419-0438` → `nm-20260419-0918`.
+
+### Обговорено (без виконання)
+
+- **Compound degradation у Nano Banana** — якість падає з кожною послідовною правкою. Рішення: завжди оригінал idle.png як референс, новий чат для кожного кадру.
+- **Bg-removal tools:** `erase.bg` (топ — 5000×5000, безкоштовно, без кредитів), Photoroom (iOS app), Adobe Express. НЕ `remove.bg` (ріже до 500px без платної), НЕ Canva (Pro only), НЕ Claude Design (артефакти).
+- **Промпт-хак "green screen":** просити Nano Banana чорний/зелений фон, потім erase.bg чистить ідеально.
+- **Gap-fill кадри:** якщо у Романа буде 8 замість 5 — 3 додаткові add-on промпти (wing 15°, 30°, 80% squint transitional) — у чаті.
+- **Rive learning — паралельний трек** на ноутбуці (editor не працює на телефоні), 3-4 сесії по 45 хв.
+
+### Ключові рішення
+
+- **Відмовились від зовнішнього дизайнера ($100-200 Fiverr).** Вчимось самі з Nano Banana — Роман прямо попросив "побудуй план де ми самі навчимося і зробимо все самі з допомогою сервісів".
+- **Відмовились від Lottie** — безкоштовних owl-анімацій у amber-палітрі немає, ініціатива без реального покращення.
+- **Відмовились від SVG-крила overlay** — живе SVG на статичній PNG ріже око (uDZmz підтвердив).
+- **Покадрова PNG — основний шлях**, Rive — майбутнє/опціонально.
+- **Fallback у CSS greeting** — не ховати статичний PNG, щоб broken-img не давав порожнечу.
+
+### Інциденти
+
+- **2× stream idle timeout** під час запису першої версії `OWL_ANIMATION_RESEARCH.md` — перейшов на skeleton+Edit підхід, третя спроба з компактнішим Write (177 рядків) спрацювала.
+- **Гілка нестандартного формату** — `claude/owl-animation-research-NFtzw` замість `claude/start-session-NFtzw` (Claude Code runtime створив під задачу). Суфікс NFtzw використовую як session ID.
+- **Stop hook наполягав на push** після Фази 0 — пофіксив через додавання fallback (статичний greeting не ховається при broken wave-PNG), пушнув без ризику порожнечі на продакшені.
+- Без reset/force push. 4 коміти чистих.
+
+### Метрики
+
+- **Коміти:** `f16685b` (research) → `af90d41` (V2 plan) → `6266c17` (Phase 0 code) → `7e5b479` (fallback fix). **4 коміти.**
+- **Гілка:** `claude/owl-animation-research-NFtzw` (нестандартний формат)
+- **Версії:** v277 (на момент /finish деплой ще не запущений — новий деплой v278+ піде від docs-комітів)
+- **CACHE_NAME:** `nm-20260419-0918`
+- **Build:** чистий (локальний `node build.js` зелений)
+- **Нові файли:** `handoff/OWL_ANIMATION_RESEARCH.md`, `handoff/OWL_ANIMATION_PLAN_V2.md`
+- **Нова папка:** `assets/owl/wave/` (порожня, чекає на 5 PNG)
 
 ---
 
@@ -88,86 +143,15 @@
 
 ---
 
-## 🔧 Сесія w3ISi — Handoff дизайну сови + базова інтеграція PNG-маскота (18-19.04.2026)
-
-### Зроблено
-
-**1. Receive handoff з дизайном сови (коміт `3f32b48`)**
-- Роман завантажив через GitHub веб пакет у папку `handoff/`: README.md з інструкцією, 4 варіанти коду компонента (Owl.html / Owl.css / Owl.js / OwlReact.jsx), 5 PNG ~1.2 МБ кожна (5 станів: idle/alert/thinking/greeting/error).
-- Кольорова палітра дизайну: amber-deep `#8a5208`, active `#c2790a` — співпадає з правилом "без фіолету".
-- Перенесено 5 PNG з `handoff/assets/owl/` у `assets/owl/` (робоче місце для PWA).
-
-**2. Базова інтеграція PNG-маскота на головному табло (коміт `a58104b`)**
-- У `style.css` додано класи `.owl-mascot` (float 4s) + `.owl-mascot-frame` (кросфейд 400мс + scale 500мс) + селектори `[data-state=*] [data-frame=*]` для 5 станів + `prefers-reduced-motion` виняток.
-- У `index.html:275` замінено емодзі 🦉 у `.owl-speech-avatar` на контейнер `.owl-mascot` з 5 накладеними `<img>` (по одному на кожний стан). Активний стан — `data-state="idle"` за замовчуванням.
-- Інші місця емодзі 🦉 (tab boards, collapsed state, onboarding) — **не чіпав**, Роман просив спочатку тільки головне табло.
-- CACHE_NAME bump: `nm-20260418-1610` → `nm-20260418-2212`.
-
-**3. Автоматична зміна станів — alert/thinking/error (коміт `53e64fd`)**
-- У `src/owl/board.js` додано `setOwlMascotState(state, autoRevertMs)` — керує `data-state` на `#owl-mascot-main`. Auto-revert у `idle` через вказаний час.
-- При показі нового Inbox board повідомлення → `setOwlMascotState('alert', 12000)` — сова "уважно дивиться" 12 секунд.
-- У `src/ai/core.js _fetchAI` обгорнуто: `'thinking'` на старті, `'idle'` на успіху, `'error' (6000)` на HTTP або catch помилці.
-- `window.setOwlMascotState` доступний для debug з консолі.
-
-**4. Sprite-sheet анімація для greeting — 6 кадрів махання крилом (коміт `a35db21`)**
-- У `index.html:282` додано `<div class="owl-mascot-sprite" data-sprite="greeting">` всередині `.owl-mascot`.
-- У `style.css` додано `.owl-mascot-sprite` + `@keyframes owl-wave-sprite` — CSS `steps(6)` анімація `background-position` від `0%` до `-600%` за 0.9 сек, цикл.
-- `data-state="greeting"` активує сприт + ховає статичну greeting картинку (щоб не двоїлось).
-- Boot auto-trigger у `src/core/boot.js`: через 1.5 сек після старту → `setOwlMascotState('greeting', 6000)` (тимчасово для тесту).
-
-**5. Sprite іконки — ітерації розмірів:**
-- v1 (коміт `e6200ac`): Роман завантажив через GitHub веб 632×395 PNG — помилка пропорцій (кадр 105×395 — вузький високий, у квадратному контейнері 96×96 сплющувалось). Я переніс файл з кореня у `assets/owl/` (`4d98985`).
-- Відкочено auto-trigger (`c056c0d`) до отримання правильного sprite.
-- v2 (коміт `ac274fd`): Роман згенерував через Claude Design два варіанти — 576×96 (low-res) і 1536×256 (hi-res). Я обрав hi-res (кадри 256×256 — квадратні, ретіна-ready для iPhone 3×). Встановив як `assets/owl/owl-greeting-sprite.png`, увімкнув назад auto-trigger.
-
-**6. Що ЩЕ НЕ зроблено (для наступної сесії):**
-- Greeting конфліктує з alert — board message перебиває 6-секундну анімацію через 1-2 сек. Треба або priority (greeting > alert), або відкласти board на 10+ сек, або окрема test-кнопка.
-- Якість анімації слабка — Gemini-згенеровані кадри не цілком консистентні (сова трохи "дихає" між кадрами), видно як моргання а не плавне махання. Production якість — тільки через After Effects (Lottie) або Runway.
-- Greeting "перший вхід за день" — замінити auto-trigger на умову (check `localStorage.nm_last_greet_date`).
-- 4 інші стани (alert/thinking/error/idle) — все ще статичні PNG. Треба повторити sprite workflow для кожного.
-- Заміна 🦉 на інших 5 вкладках + згорнутому стані — не чіпали.
-- JS-контролер станів у окремому модулі `src/owl/mascot.js` — не створено, логіка живе у `board.js`.
-
-### Обговорено (без виконання)
-
-- **Розмір PNG ~6 МБ сумарно** — для мобільного багато. README пропонував WebP конвертацію (`cwebp`) — зменшило б у 4 рази. Локально конвертера нема (немає cwebp/ImageMagick/Pillow), перший деплой буде повільнішим але PWA закешує.
-- **Підозра на запечений шаховий візерунок у PNG** — на скріншоті iPhone у Inbox видно клітинки поверх бежевого фону. Роман показав що у Finder файли мають "Альфа-канал: Так" — тобто PNG нормальні. Я неправильно інтерпретував візерунок у своєму image-переглядачі (індикація прозорості ≠ запечена текстура). Невирішено: чому на телефоні видно шаховий. Можливі причини: (а) iOS Safari артефакт, (б) CSS issue з PWA кешем, (в) моя помилка читання скріншота. **Треба перевірити ще раз на телефоні після деплою v259+.**
-- **Промпт для Gemini для генерації 5 станів** — я видав Роману English-промпт з детальним описом кожного стану (idle/alert/thinking/greeting/error), amber/brown палітрою, вимогою PNG-24 з альфа-каналом, 1024×1024. Роман піде перегенерує у Gemini якщо старі не підійдуть.
-- **Instructions на GitHub Web для папок** — Роман вперше клав папки у репо через веб-інтерфейс. Покрокова інструкція: перемкнути гілку, Add file → Upload files, перетягнути папку щоб зберегти структуру. Branch `claude/start-session-w3ISi` створено через `git push -u origin` (Роман дав згоду на push порожньої гілки щоб з'явилась на GitHub).
-
-### Ключові рішення
-
-- **Назва папки `handoff/` (не `_design/`)** — стандартний термін для "передача від дизайну розробнику", зрозуміліше.
-- **Перший етап — тільки idle + головне табло.** Роман свідомо обрав мінімальний зріз перед станами, щоб побачити візуально як виглядає перш ніж вкладатись у логіку.
-- **Покачування 4с — постійно активне.** Роман сказав "хай шивелиться постійно", паузу робити не будемо.
-- **Картинки в корені `assets/owl/`** — PWA Service Worker (`sw.js`) автоматично кешує cache-first (не треба додавати у STATIC_ASSETS).
-
-### Інциденти
-
-- **Гілка `claude/start-session-w3ISi` не існувала на GitHub** при старті — локальна, створена Claude Code runtime. Я запушив `git push -u origin claude/start-session-w3ISi` після згоди Романа (коміт без змін — fast-forward зі стану main `efbaf93`).
-- **Помилкова інтерпретація шахового візерунка** — я двічі стверджував "PNG зламані" коли Роман показував скріншоти PNG у своєму переглядачі. Насправді це була лише індикація прозорості у переглядачі (Finder/чат Claude). Треба було одразу запитати "який колір фону за картинкою у твоєму переглядачі?". Вибачився, записав у рішення "перевіряти на кольоровому фоні ПЕРЕД висновками про запечений фон".
-- Без reset/force push. 2 коміти чистих.
-
-### Метрики
-
-- **Коміти:** `3f32b48` (handoff) → `a58104b` (integration) → `53e64fd` (auto-states) → `a35db21` (sprite CSS) → `e6200ac` + `4d98985` (broken sprite v1) → `173199f` (boot trigger) → `c056c0d` (revert) → `785ad01` + `ac274fd` (sprite v2 hi-res). **9 комітів.**
-- **Гілка:** `claude/start-session-w3ISi`
-- **Версії:** v256 → v268+ (після ac274fd)
-- **CACHE_NAME:** `nm-20260419-0200`
-- **Нові файли:** `assets/owl/owl-greeting-sprite.png` (1536×256, 392 KB), `handoff/` (README + 4 компоненти + 5 оригінальних PNG)
-- **Нові папки:** `assets/owl/`, `handoff/`
-
----
-
 ## Проект
 
 | | |
 |--|--|
-| **Версія** | v274+ (після uDZmz — priority state-machine + SVG-крило debug + нові PNG сови) |
+| **Версія** | v277+ (після NFtzw — research + V2 plan + Phase 0 flipbook skeleton) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
-| **Гілка** | `claude/bird-wing-animation-uDZmz` |
-| **CACHE_NAME** | `nm-20260419-0438` |
+| **Гілка** | `claude/owl-animation-research-NFtzw` |
+| **CACHE_NAME** | `nm-20260419-0918` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
