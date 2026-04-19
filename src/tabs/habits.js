@@ -6,7 +6,9 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
@@ -1348,21 +1350,31 @@ export async function sendTasksBarMessage() {
     + '17. Перевідкрити закриту задачу — JSON: {"action":"reopen_task","task_id":ID}\n'
     + '18. Записати момент дня — JSON: {"action":"add_moment","text":"що сталося"}\n'
     + 'КРИТИЧНЕ ПРАВИЛО: коли юзер просить ЗРОБИТИ дію (створити задачу/подію/звичку/нотатку, закрити, видалити, записати витрату) — відповідай ТІЛЬКИ чистим JSON. НЕ кажи "зараз створю", "зачекай", "готово" — ОДРАЗУ повертай JSON об\'єкт з action. Текст тільки якщо це відповідь на ПИТАННЯ або обговорення.\n'
-    + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.'
+    + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.\n\n'
+    + UI_TOOLS_RULES
     + (aiContext ? '\n\n' + aiContext : '');
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'system', content: systemPrompt }, ...taskBarHistory.slice(-8), { role: 'user', content: text }],
-        max_tokens: 200, temperature: 0.5
-      })
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim();
+    // "Один мозок #1": callAIWithTools з UI_TOOLS — навігація через tool calling,
+    // CRUD через текстовий JSON як раніше.
+    const history = [...taskBarHistory.slice(-8), { role: 'user', content: text }];
+    const msg = await callAIWithTools(systemPrompt, history, UI_TOOLS);
+
+    // UI tools dispatch
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      for (const tc of msg.tool_calls) {
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          let args = {};
+          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) addTaskBarMsg('agent', res.text);
+        }
+      }
+      setTaskBarLoading(false);
+      return;
+    }
+
+    const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); setTaskBarLoading(false); return; }
 
     // Обробка одного JSON блоку. Повертає true якщо дія оброблена.

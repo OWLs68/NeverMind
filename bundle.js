@@ -2164,604 +2164,1664 @@ ${lines.join("\n")}`;
     }
   });
 
-  // src/ui/unread-badge.js
-  function showUnreadBadge(tab, sendBtnId) {
-    const current = _unreadCounts.get(tab) || 0;
-    const next = current + 1;
-    _unreadCounts.set(tab, next);
-    _badgeAnchors.set(tab, sendBtnId);
-    const badgeId = `${tab}-chat-badge`;
-    let badge = document.getElementById(badgeId);
-    if (!badge) {
-      const sendBtn = document.getElementById(sendBtnId);
-      if (!sendBtn) return;
-      badge = document.createElement("div");
-      badge.id = badgeId;
-      badge.style.cssText = "position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10";
-      sendBtn.style.position = "relative";
-      sendBtn.appendChild(badge);
+  // src/owl/inbox-board.js
+  function _getTabChatAHeight(tab) {
+    const bar = document.getElementById(tab + "-ai-bar");
+    if (!bar) return 220;
+    const inputBox = bar.querySelector(".ai-bar-input-box");
+    const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 100;
+    const boardEl = document.getElementById("owl-tab-board-" + tab);
+    const boardBottom = boardEl && boardEl.getBoundingClientRect().bottom > 0 ? boardEl.getBoundingClientRect().bottom + 8 : 80;
+    const kbH = window.visualViewport ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
+    if (kbH > 250) {
+      return Math.max(150, inputTop - boardBottom - 8);
     }
-    badge.textContent = next > 9 ? "9+" : next;
+    return Math.max(200, Math.min(320, inputTop - boardBottom - 8));
   }
-  function clearUnreadBadge(tab) {
-    _unreadCounts.set(tab, 0);
-    const badge = document.getElementById(`${tab}-chat-badge`);
-    if (badge) badge.remove();
+  function _getTabChatBHeight(tab) {
+    const bar = document.getElementById(tab + "-ai-bar");
+    if (!bar) return 400;
+    const inputBox = bar.querySelector(".ai-bar-input-box");
+    const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 100;
+    return Math.max(250, inputTop - 80 - 8);
   }
-  var _unreadCounts, _badgeAnchors;
-  var init_unread_badge = __esm({
-    "src/ui/unread-badge.js"() {
-      _unreadCounts = /* @__PURE__ */ new Map();
-      _badgeAnchors = /* @__PURE__ */ new Map();
-    }
-  });
-
-  // src/ai/ui-tools.js
-  function handleUITool(name, args) {
+  function openChatBarNoKeyboard(tab) {
+    if (_tabChatState[tab]) return;
     try {
-      switch (name) {
-        case "switch_tab": {
-          const t = args.target;
-          if (t === "calendar") {
-            if (typeof window.openCalendarModal === "function") {
-              window.openCalendarModal();
-              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
-            }
-            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
-          }
-          if (t === "habits") {
-            switchTab("tasks");
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
-          }
-          if (!document.getElementById(`page-${t}`)) {
-            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
-          }
-          switchTab(t);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+      closeOwlChat();
+    } catch (e) {
+    }
+    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t) => {
+      if (t !== tab) closeChatBar(t);
+    });
+    setActiveChatBar(tab);
+    const bar = document.getElementById(tab + "-ai-bar");
+    if (!bar) return;
+    restoreChatUI(tab);
+    const chatWin = bar.querySelector(".ai-bar-chat-window");
+    if (!chatWin) return;
+    const h = _getTabChatAHeight(tab);
+    chatWin.style.height = h + "px";
+    chatWin.style.maxHeight = h + "px";
+    chatWin.classList.add("open");
+    _tabChatState[tab] = "a";
+  }
+  function setupChatBarSwipe() {
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
+      const bar = document.getElementById(tab + "-ai-bar");
+      if (!bar) return;
+      const chatWin = bar.querySelector(".ai-bar-chat-window");
+      const messages = bar.querySelector(".ai-bar-messages");
+      if (!chatWin) return;
+      const handleEl = chatWin.querySelector(".ai-bar-chat-handle");
+      if (!handleEl) return;
+      let winStartY = 0, winStartX = 0, winStartVpTop = 0, isDragging = false, startTime = 0;
+      handleEl.addEventListener("touchstart", (e) => {
+        winStartY = e.touches[0].clientY;
+        winStartX = e.touches[0].clientX;
+        winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+        startTime = Date.now();
+        isDragging = false;
+        chatWin.style.transition = "none";
+        chatWin.style.opacity = "1";
+        if (_tabChatState[tab]) {
+          chatWin.style.height = chatWin.offsetHeight + "px";
         }
-        case "open_memory":
-          if (typeof window.openMemoryModal === "function") {
-            window.openMemoryModal();
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
+        chatWin.style.transform = "translateY(0)";
+      }, { passive: true });
+      handleEl.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        const vpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+        const vpDelta = vpTop - winStartVpTop;
+        const dy = e.touches[0].clientY - winStartY + vpDelta;
+        const absDy = Math.abs(dy);
+        const dx = Math.abs(e.touches[0].clientX - winStartX);
+        const kbOff = !(window.visualViewport && window.innerHeight - window.visualViewport.height > 250);
+        const state = _tabChatState[tab];
+        if (state === "b") {
+          if (!isDragging) {
+            if (absDy < 8) return;
+            if (dx > absDy * 1.5) return;
+            isDragging = true;
           }
-          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
-        case "open_settings":
-          openSettings();
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
-        case "set_finance_period": {
-          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
-          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
-          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
+          if (dy <= 0) {
+            chatWin.style.transform = "translateY(0)";
+            return;
+          }
+          chatWin.style.transform = `translateY(${Math.min(dy * 0.7, 140)}px)`;
+          chatWin.style.opacity = Math.max(0.7, 1 - dy / 400).toFixed(2);
+          return;
         }
-        case "open_finance_analytics":
-          switchTab("finance");
-          if (typeof window.openFinAnalytics === "function") {
-            setTimeout(() => window.openFinAnalytics(), 120);
-          }
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
-        case "set_owl_mode": {
-          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-          settings.owl_mode = args.mode;
-          localStorage.setItem("nm_settings", JSON.stringify(settings));
-          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
-          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
+        if (!isDragging) {
+          if (absDy < 8) return;
+          if (dx > absDy * 1.5) return;
+          isDragging = true;
         }
-        case "export_health_card":
-          if (typeof window.openHealthExport === "function") {
-            switchTab("health");
-            setTimeout(() => window.openHealthExport(), 120);
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
+        if (dy < 0 && kbOff) {
+          const maxH = _getTabChatBHeight(tab);
+          const startH = parseFloat(chatWin.style.height) || chatWin.offsetHeight;
+          chatWin.style.height = Math.min(maxH, startH - dy) + "px";
+          chatWin.style.transform = "translateY(0)";
+          chatWin.style.opacity = "1";
+          return;
+        }
+        if (dy > 0) {
+          chatWin.style.transform = `translateY(${dy}px)`;
+          chatWin.style.opacity = Math.max(0, 1 - dy / 280).toFixed(2);
+        }
+      }, { passive: false });
+      const cancelHandler = () => {
+        chatWin.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease";
+        chatWin.style.transform = "translateY(0)";
+        chatWin.style.opacity = "1";
+        setTimeout(() => {
+          chatWin.style.transition = "";
+          chatWin.style.transform = "";
+          chatWin.style.opacity = "";
+        }, 280);
+        isDragging = false;
+      };
+      handleEl.addEventListener("touchcancel", cancelHandler, { passive: true });
+      handleEl.addEventListener("touchend", (e) => {
+        const finalDy = e.changedTouches[0].clientY - winStartY;
+        const elapsed = Date.now() - startTime;
+        const velocity = finalDy / elapsed;
+        isDragging = false;
+        const kbOffEnd = !(window.visualViewport && window.innerHeight - window.visualViewport.height > 250);
+        const stateEnd = _tabChatState[tab];
+        if (stateEnd === "b") {
+          if (finalDy > 80 || velocity > 0.5) {
+            const aH = _getTabChatAHeight(tab);
+            _tabChatState[tab] = "a";
+            chatWin.style.transition = "height 0.32s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
+            chatWin.style.height = aH + "px";
+            chatWin.style.maxHeight = aH + "px";
+            chatWin.style.transform = "translateY(0)";
+            chatWin.style.opacity = "1";
+            setTimeout(() => chatWin.style.transition = "", 320);
+          } else {
+            const bH = _getTabChatBHeight(tab);
+            chatWin.style.transition = "height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
+            chatWin.style.height = bH + "px";
+            chatWin.style.transform = "translateY(0)";
+            chatWin.style.opacity = "1";
+            setTimeout(() => chatWin.style.transition = "", 280);
           }
-          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
-        default:
-          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
+          return;
+        }
+        if (finalDy < -40 && kbOffEnd) {
+          const bH = _getTabChatBHeight(tab);
+          _tabChatState[tab] = "b";
+          chatWin.style.transition = "height 0.38s cubic-bezier(0.3,0.82,0,1)";
+          chatWin.style.height = bH + "px";
+          chatWin.style.maxHeight = bH + "px";
+          chatWin.style.transform = "";
+          chatWin.style.opacity = "1";
+          const msgs = chatWin.querySelector(".ai-bar-messages");
+          if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
+          setTimeout(() => chatWin.style.transition = "", 380);
+        } else if (finalDy > 80 || velocity > 0.5) {
+          chatWin.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
+          chatWin.style.transform = "translateY(110%)";
+          chatWin.style.opacity = "0";
+          setTimeout(() => {
+            closeChatBar(tab);
+            chatWin.style.transition = "";
+            chatWin.style.transform = "";
+            chatWin.style.opacity = "";
+          }, 280);
+        } else {
+          const aH = _getTabChatAHeight(tab);
+          chatWin.style.transition = "height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
+          chatWin.style.height = aH + "px";
+          chatWin.style.transform = "translateY(0)";
+          chatWin.style.opacity = "1";
+          setTimeout(() => chatWin.style.transition = "", 280);
+        }
+      }, { passive: true });
+      bar.addEventListener("touchmove", (e) => {
+        if (messages && messages.contains(e.target)) return;
+        const textarea = bar.querySelector("textarea");
+        if (textarea && textarea.contains(e.target)) return;
+        e.preventDefault();
+      }, { passive: false });
+      const inputBox = bar.querySelector(".ai-bar-input-box");
+      if (inputBox) {
+        let _inStartY = 0, _inSwiping = false;
+        inputBox.addEventListener("touchstart", (e) => {
+          _inStartY = e.touches[0].clientY;
+          _inSwiping = false;
+        }, { passive: true });
+        inputBox.addEventListener("touchmove", (e) => {
+          if (_tabChatState[tab]) return;
+          const dy = _inStartY - e.touches[0].clientY;
+          if (dy > 20) {
+            _inSwiping = true;
+            e.preventDefault();
+          }
+        }, { passive: false });
+        inputBox.addEventListener("touchend", (e) => {
+          if (_inSwiping) {
+            _inSwiping = false;
+            e.preventDefault();
+            openChatBarNoKeyboard(tab);
+          }
+        }, { passive: false });
+      }
+    });
+    let docTouchStartY = 0, docTouchStartX = 0;
+    document.addEventListener("touchstart", (e) => {
+      docTouchStartY = e.touches[0].clientY;
+      docTouchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (!activeChatBar) return;
+      const bar = document.getElementById(activeChatBar + "-ai-bar");
+      if (!bar) return;
+      if (bar.contains(e.target)) return;
+      const tabBar = document.getElementById("tab-bar");
+      if (tabBar && tabBar.contains(e.target)) return;
+      const dy = Math.abs(e.changedTouches[0].clientY - docTouchStartY);
+      const dx = Math.abs(e.changedTouches[0].clientX - docTouchStartX);
+      if (dy > 10 || dx > 10) return;
+      closeChatBar(activeChatBar);
+    }, { passive: true });
+  }
+  function getOwlBoardMessages() {
+    try {
+      return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function saveOwlBoardMessages(arr) {
+    localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
+  }
+  function clearStaleBoards() {
+    try {
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const isStale = (msg) => {
+        if (!msg) return false;
+        const ts = msg.ts || msg.id;
+        if (!ts) return false;
+        return new Date(ts).toDateString() !== today;
+      };
+      const inboxMsgs = JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
+      if (inboxMsgs.length > 0 && isStale(inboxMsgs[0])) {
+        localStorage.setItem(OWL_BOARD_KEY, "[]");
+        localStorage.setItem(OWL_BOARD_TS_KEY, "0");
+      }
+      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
+        const key = "nm_owl_tab_" + tab;
+        const raw = JSON.parse(localStorage.getItem(key) || "null");
+        if (!raw) return;
+        const msgs = Array.isArray(raw) ? raw : [raw];
+        if (msgs.length > 0 && isStale(msgs[0])) {
+          localStorage.setItem(key, "[]");
+          localStorage.setItem("nm_owl_tab_ts_" + tab, "0");
+        }
+      });
+    } catch (e) {
+    }
+  }
+  function getSchedule() {
+    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const sc = s.schedule || {};
+    const parseH = (str, def) => {
+      if (!str) return def;
+      const h = parseInt(str.split(":")[0]);
+      return isNaN(h) ? def : h;
+    };
+    const pickStr = (str, def) => str && /^\d{1,2}:\d{2}$/.test(str) ? str : def;
+    return {
+      wakeUp: parseH(sc.wakeUp, 7),
+      workStart: parseH(sc.workStart, 9),
+      workEnd: parseH(sc.workEnd, 18),
+      bedTime: parseH(sc.bedTime, 23),
+      wakeUpStr: pickStr(sc.wakeUp, "07:00"),
+      workStartStr: pickStr(sc.workStart, "09:00"),
+      workEndStr: pickStr(sc.workEnd, "18:00"),
+      bedTimeStr: pickStr(sc.bedTime, "23:00")
+    };
+  }
+  function getDayPhase() {
+    const sc = getSchedule();
+    const h = (/* @__PURE__ */ new Date()).getHours();
+    if (h >= sc.bedTime || h < sc.wakeUp - 2) return "silent";
+    if (h < sc.wakeUp) return "dawn";
+    if (h < sc.workStart) return "morning";
+    if (h < sc.workEnd) return "work";
+    if (h < sc.bedTime - 1) return "evening";
+    return "night";
+  }
+  function _getOwlCooldowns() {
+    try {
+      return JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function owlCdExpired(topic, ms) {
+    const cd = _getOwlCooldowns();
+    return !cd[topic] || Date.now() - cd[topic] > ms;
+  }
+  function setOwlCd(topic) {
+    const cd = _getOwlCooldowns();
+    cd[topic] = Date.now();
+    const cutoff = Date.now() - 48 * 60 * 60 * 1e3;
+    Object.keys(cd).forEach((k) => {
+      if (cd[k] < cutoff) delete cd[k];
+    });
+    localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
+  }
+  function shouldOwlSpeak(trigger, opts = {}) {
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) return { speak: false, score: -1, reason: "no-api-key" };
+    const phase = getDayPhase();
+    if (phase === "silent") return { speak: false, score: -100, reason: "silent-phase" };
+    const channel = opts.channel || "board";
+    if (channel === "chat-followup") {
+      return _judgeFollowup(trigger, opts.targetTab);
+    }
+    return _judgeBoard(trigger);
+  }
+  function _judgeFollowup(trigger, targetTab) {
+    if (activeChatBar && activeChatBar === targetTab) {
+      return { speak: false, score: -100, reason: "active-in-target-chat" };
+    }
+    if (!owlCdExpired("followup_global", FOLLOWUP_GLOBAL_CD_MS)) {
+      return { speak: false, score: -100, reason: "followup-global-cd" };
+    }
+    let score = 0;
+    const reasons = [];
+    if (trigger === "stuck-task") {
+      score += 5;
+      reasons.push("stuck-task");
+    }
+    if (trigger === "event-passed") {
+      score += 5;
+      reasons.push("event-passed");
+    }
+    const speak = score >= SPEAK_THRESHOLD;
+    return { speak, score, reason: reasons.join(", ") };
+  }
+  function _judgeBoard(trigger) {
+    try {
+      const silenceUntil = parseInt(localStorage.getItem("nm_owl_silence_until") || "0");
+      if (silenceUntil > Date.now()) {
+        return { speak: false, score: -100, reason: "auto-silence-4h" };
       }
     } catch (e) {
-      console.error("[ui-tools]", name, e);
-      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
+    }
+    let score = 0;
+    let reasons = [];
+    const now = /* @__PURE__ */ new Date();
+    const todayStr = now.toDateString();
+    const hour = now.getHours();
+    const min = now.getMinutes();
+    const phase = getDayPhase();
+    const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
+    const sinceLastAttempt = Date.now() - lastAttemptTs;
+    const msgs = getOwlBoardMessages();
+    const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+    const sinceLastVisible = Date.now() - lastVisibleTs;
+    if (trigger === "first-time" || trigger === "new-day") {
+      score += 5;
+      reasons.push(trigger);
+    }
+    if (trigger === "welcome-back") {
+      score += 4;
+      reasons.push("welcome-back");
+    }
+    if (trigger === "first-open-today") {
+      score += 5;
+      reasons.push("first-open-today");
+    }
+    if (trigger === "data-changed") {
+      score += 3;
+      reasons.push("data-changed");
+    }
+    if (trigger === "chat-closed") {
+      score += 4;
+      reasons.push("chat-closed");
+    }
+    let hasCritical = false;
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const todayISO2 = now.toISOString().slice(0, 10);
+      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= nowTime);
+      if (due.length > 0) {
+        score += 5;
+        reasons.push("reminder-due");
+        hasCritical = true;
+      }
+    } catch (e) {
+    }
+    const tasks = getTasks().filter((t) => t.status !== "done");
+    for (const t of tasks) {
+      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+      if (m) {
+        const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
+        if (diff > 0 && diff <= 65) {
+          score += 3;
+          reasons.push("deadline-soon");
+          hasCritical = true;
+          break;
+        }
+      }
+    }
+    const todayISO = now.toISOString().slice(0, 10);
+    if (tasks.some((t) => t.dueDate === todayISO)) {
+      score += 2;
+      reasons.push("due-today");
+    }
+    if (!hasCritical && trigger !== "chat-closed") {
+      if (activeChatBar) {
+        return { speak: false, score: -100, reason: "chat-open-block" };
+      }
+      if (lastChatClosedTs && Date.now() - lastChatClosedTs < CHAT_CLOSE_COOLDOWN_MS) {
+        return { speak: false, score: -100, reason: "chat-just-closed-cooldown" };
+      }
+    } else if (activeChatBar && hasCritical) {
+      reasons.push("chat-open(critical-override)");
+    }
+    if (trigger !== "chat-closed") {
+      if (sinceLastAttempt < 5 * 60 * 1e3) {
+        score -= 4;
+        reasons.push("attempt<5m");
+      } else if (sinceLastAttempt < 15 * 60 * 1e3) {
+        score -= 1;
+        reasons.push("attempt<15m");
+      }
+    }
+    if (phase === "evening" || phase === "night") {
+      const habits = getHabits();
+      const log = getHabitLog();
+      const todayLog = log[todayStr] || {};
+      const atRisk = habits.filter((h) => h.days?.includes(now.getDay()) && !todayLog[h.id]);
+      if (atRisk.length > 0) {
+        score += 3;
+        reasons.push("streak-risk");
+      }
+    }
+    if ((phase === "morning" || phase === "dawn") && owlCdExpired("morning_brief", 3 * 60 * 60 * 1e3)) {
+      score += 3;
+      reasons.push("morning-brief");
+    }
+    try {
+      const budget = getFinBudget();
+      if (budget.total > 0) {
+        const from = getFinPeriodRange("month");
+        const exp = getFinance().filter((t) => t.ts >= from && t.type === "expense").reduce((s, t) => s + t.amount, 0);
+        if (exp / budget.total >= 0.8) {
+          score += 2;
+          reasons.push("budget-warn");
+        }
+      }
+    } catch (e) {
+    }
+    if (phase === "evening" || phase === "night") {
+      const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      if (!s || new Date(s.date).toDateString() !== todayStr) {
+        score += 2;
+        reasons.push("no-evening-summary");
+      }
+    }
+    const stuck = tasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
+    if (stuck.length > 0) {
+      score += 1;
+      reasons.push("stuck-tasks");
+    }
+    if (now.getDay() === 1 && (phase === "morning" || phase === "work") && owlCdExpired("week_start", 6 * 60 * 60 * 1e3)) {
+      score += 2;
+      reasons.push("week-start");
+    }
+    if (now.getDay() === 5 && phase === "evening" && owlCdExpired("week_end", 6 * 60 * 60 * 1e3)) {
+      score += 2;
+      reasons.push("week-end");
+    }
+    if (sinceLastVisible > 60 * 60 * 1e3) {
+      score += 3;
+      reasons.push("stale>60m");
+    } else if (sinceLastVisible > 30 * 60 * 1e3) {
+      score += 2;
+      reasons.push("stale>30m");
+    }
+    const speak = score >= SPEAK_THRESHOLD;
+    return { speak, score, reason: reasons.join(", ") };
+  }
+  function getOwlChatHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(OWL_CHAT_KEY) || "[]");
+    } catch {
+      return [];
     }
   }
-  function _tabLabel(key) {
-    return {
-      inbox: "Inbox",
-      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
-      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
-      me: "\u042F",
-      evening: "\u0412\u0435\u0447\u0456\u0440",
-      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
-      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
-    }[key] || key;
+  function saveOwlChatMsg(role, text) {
+    const msgs = getOwlChatHistory();
+    msgs.push({ role, text, ts: Date.now() });
+    if (msgs.length > OWL_CHAT_MAX) msgs.splice(0, msgs.length - OWL_CHAT_MAX);
+    localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
   }
-  var UI_TOOLS, UI_TOOL_NAMES;
-  var init_ui_tools = __esm({
-    "src/ai/ui-tools.js"() {
-      init_nav();
-      UI_TOOLS = [
-        {
-          type: "function",
-          function: {
-            name: "switch_tab",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
-            strict: true,
-            parameters: {
-              type: "object",
-              properties: {
-                target: {
-                  type: "string",
-                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
-                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
-                }
-              },
-              required: ["target"],
-              additionalProperties: false
-            }
+  function _getOwlState() {
+    return _owlTabStates["inbox"] || _owlState || "speech";
+  }
+  function _owlSetState(state) {
+    _owlState = state;
+    _owlTabStates["inbox"] = state;
+    _owlTabApplyState("inbox");
+    _owlChatOpen = state === "expanded";
+  }
+  function renderOwlBoard() {
+    _owlBoardMessages = getOwlBoardMessages();
+    renderTabBoard("inbox");
+  }
+  function expandOwlChat() {
+    openChatBar("inbox");
+  }
+  function closeOwlChat() {
+    if (_getOwlState() === "expanded") {
+      _owlSetState("speech");
+    }
+  }
+  function renderOwlChatMessages() {
+    const el = document.getElementById("owl-tab-msgs-inbox");
+    if (!el) return;
+    const chatHistory = getOwlChatHistory();
+    const boardMsgs = getOwlBoardMessages();
+    if (chatHistory.length === 0 && boardMsgs.length > 0) {
+      el.innerHTML = `<div class="owl-msg-agent">${escapeHtml(boardMsgs[0].text)}</div>`;
+      return;
+    }
+    let html = "";
+    if (boardMsgs.length > 0) {
+      const lastBoardText = boardMsgs[0].text;
+      const firstChatIsBoard = chatHistory.length > 0 && chatHistory[0].role === "agent" && chatHistory[0].text === lastBoardText;
+      if (!firstChatIsBoard) {
+        html += `<div class="owl-msg-agent">${escapeHtml(lastBoardText)}</div>`;
+      }
+    }
+    chatHistory.forEach((m) => {
+      const cls = m.role === "user" ? "owl-msg-user" : "owl-msg-agent";
+      html += `<div class="${cls}">${escapeHtml(m.text)}</div>`;
+    });
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+  }
+  function renderOwlChips(boardMsg) {
+    const el = document.getElementById("owl-tab-exp-chips-inbox");
+    if (!el) return;
+    if (!boardMsg || !boardMsg.chips || boardMsg.chips.length === 0) {
+      el.innerHTML = "";
+      return;
+    }
+    const VALID = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
+    renderChips(el, boardMsg.chips, "inbox", {
+      onChipClick: (text, action, target) => {
+        if (action === "nav" && VALID.includes(target)) {
+          switchTab(target);
+          showToast("\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0436\u0443 \u0434\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0438");
+          return;
+        }
+        sendOwlReply(text);
+      }
+    });
+  }
+  function showOwlTyping(show) {
+    const el = document.getElementById("owl-tab-msgs-inbox");
+    if (!el) return;
+    const existing = el.querySelector(".owl-typing-wrap");
+    if (existing) existing.remove();
+    if (show) {
+      const div = document.createElement("div");
+      div.className = "owl-msg-agent owl-typing-wrap";
+      div.innerHTML = '<div class="owl-typing"><span></span><span></span><span></span></div>';
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+    const inp = document.getElementById("owl-tab-input-inbox");
+    if (inp) inp.disabled = show;
+  }
+  function showOwlConfirm(text) {
+    const el = document.getElementById("owl-tab-msgs-inbox");
+    if (!el) return;
+    const banner = document.createElement("div");
+    banner.className = "owl-confirm-banner";
+    banner.textContent = text;
+    el.appendChild(banner);
+    el.scrollTop = el.scrollHeight;
+    setTimeout(() => banner.remove(), 2500);
+  }
+  async function sendOwlReply(text) {
+    if (!text || _owlChatSending) return;
+    _owlChatSending = true;
+    if (_getOwlState() !== "expanded") expandOwlChat();
+    saveOwlChatMsg("user", text);
+    renderOwlChatMessages();
+    showOwlTyping(true);
+    const chipsEl = document.getElementById("owl-tab-exp-chips-inbox");
+    if (chipsEl) chipsEl.innerHTML = "";
+    try {
+      const reply = await callOwlChat(text);
+      showOwlTyping(false);
+      if (reply) {
+        let replyText = reply;
+        let action = null;
+        try {
+          const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
+          if (parsed.text) replyText = parsed.text;
+          if (parsed.action) action = parsed.action;
+          if (parsed.chips) {
+            renderOwlChips({ chips: parsed.chips });
           }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_memory",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_settings",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_finance_period",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
-            parameters: {
-              type: "object",
-              properties: {
-                period: { type: "string", enum: ["week", "month", "3months"] }
-              },
-              required: ["period"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_finance_analytics",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_owl_mode",
-            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
-            parameters: {
-              type: "object",
-              properties: {
-                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
-              },
-              required: ["mode"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "export_health_card",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
+        } catch (e) {
+        }
+        saveOwlChatMsg("agent", replyText);
+        renderOwlChatMessages();
+        if (action) {
+          executeOwlAction(action, text);
+        }
+      }
+    } catch (e) {
+      showOwlTyping(false);
+    }
+    _owlChatSending = false;
+  }
+  function executeOwlAction(action, originalText) {
+    if (!action || !action.action) return;
+    const act = action.action;
+    if (act === "complete_habit") {
+      const ids = action.habit_ids || (action.habit_id ? [action.habit_id] : []);
+      if (ids.length === 0) return;
+      const habits = getHabits();
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const log = getHabitLog();
+      if (!log[today]) log[today] = {};
+      let done = 0;
+      ids.forEach((hid) => {
+        const h = habits.find((x) => x.id === hid);
+        if (h) {
+          log[today][h.id] = true;
+          done++;
+        }
+      });
+      if (done > 0) {
+        saveHabitLog(log);
+        renderProdHabits();
+        renderHabits();
+        showOwlConfirm("\u0417\u0432\u0438\u0447\u043A\u0443 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E \u2713");
+      }
+      return;
+    }
+    if (act === "complete_task") {
+      const ids = action.task_ids || (action.task_id ? [action.task_id] : []);
+      if (ids.length === 0) return;
+      const tasks = getTasks();
+      let done = 0;
+      ids.forEach((tid) => {
+        const idx = tasks.findIndex((t) => t.id === tid);
+        if (idx !== -1) {
+          tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
+          done++;
+        }
+      });
+      if (done > 0) {
+        saveTasks(tasks);
+        renderTasks();
+        showOwlConfirm("\u0417\u0430\u0434\u0430\u0447\u0443 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u2713");
+      }
+      return;
+    }
+    if (act === "create_task") {
+      const title = (action.title || "").trim();
+      if (!title) return;
+      const steps = Array.isArray(action.steps) ? action.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+      const tasks = getTasks();
+      tasks.unshift({ id: Date.now(), title, desc: action.desc || "", steps, status: "active", createdAt: Date.now() });
+      saveTasks(tasks);
+      if (currentTab === "tasks") renderTasks();
+      showOwlConfirm("\u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u2713");
+      return;
+    }
+    if (act === "create_note") {
+      const noteText = (action.text || originalText || "").trim();
+      if (!noteText) return;
+      addNoteFromInbox(noteText, "note", action.folder || null, "agent");
+      if (currentTab === "notes") renderNotes();
+      showOwlConfirm("\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u2713");
+      return;
+    }
+    if (act === "save_finance") {
+      const amount = parseFloat(action.amount) || 0;
+      if (amount <= 0) return;
+      const type = action.fin_type || "expense";
+      const category = action.category || "\u0406\u043D\u0448\u0435";
+      const cats = getFinCats();
+      const catList = type === "expense" ? cats.expense : cats.income;
+      if (!catList.includes(category)) {
+        catList.push(category);
+        saveFinCats(cats);
+      }
+      const txs = getFinance();
+      txs.unshift({ id: Date.now(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
+      saveFinance(txs);
+      if (currentTab === "finance") renderFinance();
+      const sign = type === "expense" ? "-" : "+";
+      showOwlConfirm(`${sign}${formatMoney(amount)} \xB7 ${category} \u2713`);
+      return;
+    }
+  }
+  function _checkReminders() {
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const now = /* @__PURE__ */ new Date();
+      const todayISO = now.toISOString().slice(0, 10);
+      const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      if (due.length > 0) {
+        due.forEach((r) => {
+          r.done = true;
+          r.firedAt = Date.now();
+        });
+        localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+        Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+      }
+    } catch (e) {
+    }
+  }
+  function _cleanupOldReminders() {
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      if (reminders.length === 0) return;
+      const cutoffDate = /* @__PURE__ */ new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 7);
+      const cutoffISO = cutoffDate.toISOString().slice(0, 10);
+      const fresh = reminders.filter((r) => r.date >= cutoffISO);
+      if (fresh.length < reminders.length) {
+        localStorage.setItem("nm_reminders", JSON.stringify(fresh));
+      }
+    } catch (e) {
+    }
+  }
+  function startOwlBoardCycle() {
+    _owlAskScheduleIfNeeded();
+    _cleanupOldReminders();
+    tryOwlBoardUpdate();
+    setInterval(_checkReminders, 60 * 1e3);
+    if (_owlBoardTimer) clearInterval(_owlBoardTimer);
+    _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
+  }
+  function tryOwlBoardUpdate() {
+    const msgs = getOwlBoardMessages();
+    if (msgs.length > 0) renderOwlBoard();
+    if (msgs.length === 0) {
+      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+      return;
+    }
+    if (typeof document !== "undefined" && document.hidden) return;
+    const phase = getDayPhase();
+    if (phase === "silent") return;
+    const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+    if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1e3) {
+      console.log("[OWL board] stale message detected, forcing generation");
+      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+      return;
+    }
+    const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
+    const isFirstTime = msgs.length === 0 && lastTs === 0;
+    const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
+    const trigger = isFirstTime ? "first-time" : isNewDay ? "new-day" : "timer";
+    const judge = shouldOwlSpeak(trigger);
+    if (judge.speak) {
+      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
+    }
+  }
+  function _owlAskScheduleIfNeeded() {
+    if (localStorage.getItem("nm_owl_schedule_asked")) return;
+    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    if (s.schedule && s.schedule.wakeUp) return;
+    localStorage.setItem("nm_owl_schedule_asked", "1");
+    localStorage.setItem("nm_owl_schedule_pending", String(Date.now()));
+    setTimeout(() => {
+      try {
+        addInboxChatMsg("agent", "\u0429\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u043F\u0456\u0434\u043B\u0430\u0448\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043F\u0456\u0434 \u0442\u0432\u0456\u0439 \u0440\u0438\u0442\u043C \u2014 \u0441\u043A\u0430\u0436\u0438 \u043F\u0440\u0438\u0431\u043B\u0438\u0437\u043D\u043E: \u043E \u043A\u043E\u0442\u0440\u0456\u0439 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0448\u0441\u044F, \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0448 \u0456 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0448 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C, \u0456 \u043B\u044F\u0433\u0430\u0454\u0448 \u0441\u043F\u0430\u0442\u0438? (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0432\u0441\u0442\u0430\u044E 7, \u043F\u0440\u0430\u0446\u044E\u044E 9\u201318, \u0441\u043F\u043B\u044E \u043E 23)");
+      } catch (e) {
+      }
+    }, 1e4);
+  }
+  function handleScheduleAnswer(text) {
+    const pending = localStorage.getItem("nm_owl_schedule_pending");
+    if (!pending) return false;
+    const pendingTs = parseInt(pending);
+    if (!isNaN(pendingTs) && Date.now() - pendingTs > 36e5) {
+      localStorage.removeItem("nm_owl_schedule_pending");
+      return false;
+    }
+    let found = 0;
+    const parseH = (patterns, def) => {
+      for (const re of patterns) {
+        const m = text.match(re);
+        if (m) {
+          const h = parseInt(m[1]);
+          if (!isNaN(h) && h >= 0 && h <= 23) {
+            found++;
+            return `${String(h).padStart(2, "0")}:00`;
           }
         }
-      ];
-      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
-      try {
-        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
-      } catch {
       }
+      return def;
+    };
+    const schedule = {
+      wakeUp: parseH([/встаю\s*о?\s*(\d{1,2})/i, /прокидаюсь\s*о?\s*(\d{1,2})/i, /підйом\s*о?\s*(\d{1,2})/i], "07:00"),
+      workStart: parseH([/працюю\s*з\s*(\d{1,2})/i, /починаю\s*о?\s*(\d{1,2})/i, /роботу?\s*з\s*(\d{1,2})/i, /з\s*(\d{1,2})\s*[-–до]/i], "09:00"),
+      workEnd: parseH([/до\s*(\d{1,2})\b/i, /закінчую\s*о?\s*(\d{1,2})/i, /[-–]\s*(\d{1,2})\b/i], "18:00"),
+      bedTime: parseH([/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], "23:00")
+    };
+    if (found === 0) return false;
+    localStorage.removeItem("nm_owl_schedule_pending");
+    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    s.schedule = schedule;
+    localStorage.setItem("nm_settings", JSON.stringify(s));
+    try {
+      addInboxChatMsg("agent", `\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E: \u043F\u0456\u0434\u0439\u043E\u043C ${schedule.wakeUp}, \u0440\u043E\u0431\u043E\u0442\u0430 ${schedule.workStart}\u2013${schedule.workEnd}, \u0441\u043F\u0430\u0442\u0438 ${schedule.bedTime}. \u041C\u043E\u0436\u0435\u0448 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.`);
+    } catch (e) {
+    }
+    return true;
+  }
+  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var init_inbox_board = __esm({
+    "src/owl/inbox-board.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_board();
+      init_chips();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      _tabChatState = {};
+      OWL_BOARD_KEY = "nm_owl_board";
+      OWL_BOARD_TS_KEY = "nm_owl_board_ts";
+      OWL_BOARD_INTERVAL = 10 * 60 * 1e3;
+      _owlBoardMessages = [];
+      _owlBoardTimer = null;
+      OWL_CD_KEY = "nm_owl_cooldowns";
+      SPEAK_THRESHOLD = 3;
+      FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1e3;
+      CHAT_CLOSE_COOLDOWN_MS = 10 * 1e3;
+      OWL_CHAT_KEY = "nm_owl_chat";
+      OWL_CHAT_MAX = 20;
+      _owlChatOpen = false;
+      _owlChatSending = false;
+      _owlState = "speech";
+      window.sendOwlReply = sendOwlReply;
     }
   });
 
-  // src/ai/prompts.js
-  function getOWLPersonality() {
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    const mode = settings.owl_mode || "partner";
-    const name = settings.name ? settings.name : "";
-    const nameStr = name ? `, \u0437\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u0434\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u043D\u0430 \u0456\u043C\u02BC\u044F "${name}"` : "";
-    const personas = {
-      coach: `\u0422\u0438 \u2014 OWL, \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0430\u0433\u0435\u043D\u0442-\u0442\u0440\u0435\u043D\u0435\u0440 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind${nameStr}.
-
-\u0425\u0410\u0420\u0410\u041A\u0422\u0415\u0420: \u0422\u0438 \u0432\u0456\u0440\u0438\u0448 \u0432 \u043B\u044E\u0434\u0438\u043D\u0443 \u0430\u043B\u0435 \u043D\u0435 \u0434\u0430\u0454\u0448 \u0457\u0439 \u0440\u043E\u0437\u0441\u043B\u0430\u0431\u043B\u044F\u0442\u0438\u0441\u044C. \u041F\u0440\u044F\u043C\u0438\u0439, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432. \u041C\u043E\u0436\u0435\u0448 \u043F\u0456\u0434\u043A\u043E\u043B\u043E\u0442\u0438 \u044F\u043A\u0449\u043E \u043B\u044E\u0434\u0438\u043D\u0430 \u0437\u0430\u0442\u044F\u0433\u0443\u0454 \u2014 \u0430\u043B\u0435 \u0431\u0435\u0437 \u0436\u043E\u0440\u0441\u0442\u043E\u043A\u043E\u0441\u0442\u0456, \u0437 \u043F\u043E\u0432\u0430\u0433\u043E\u044E. \u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u0434\u043E\u0432\u0443\u0454\u0448 \u0432\u0456\u0434\u043C\u043E\u0432\u043A\u0438. \u041F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454\u0448 \u0434\u043E \u0434\u0456\u0457 \u0442\u0443\u0442 \u0456 \u0437\u0430\u0440\u0430\u0437. \u0420\u0430\u0434\u0456\u0454\u0448 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443.
-
-\u0421\u0422\u0418\u041B\u042C: \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u0411\u0435\u0437 \u0432\u0441\u0442\u0443\u043F\u0456\u0432 \u0456 \u043F\u0440\u043E\u0449\u0430\u043D\u044C. \u0411\u0435\u0437 "\u0437\u0432\u0456\u0441\u043D\u043E", "\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E", "\u0447\u0443\u0434\u043E\u0432\u043E". \u042F\u043A\u0449\u043E \u0454 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430 \u2014 \u043A\u0430\u0436\u0435\u0448 \u043F\u0440\u044F\u043C\u043E. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043D\u0430 "\u0442\u0438". \u0406\u043D\u043E\u0434\u0456 \u043E\u0434\u043D\u0435 \u0432\u043B\u0443\u0447\u043D\u0435 \u0441\u043B\u043E\u0432\u043E \u043A\u0440\u0430\u0449\u0435 \u0437\u0430 \u0430\u0431\u0437\u0430\u0446.
-
-\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u043B\u0435\u0441\u0442\u0438\u0442\u0438, \u0440\u043E\u0437\u043C\u0430\u0437\u0443\u0432\u0430\u0442\u0438, \u043A\u0430\u0437\u0430\u0442\u0438 "\u0446\u0435 \u0447\u0443\u0434\u043E\u0432\u0430 \u0456\u0434\u0435\u044F", \u0432\u0438\u043F\u0440\u0430\u0432\u0434\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0431\u0435\u0437\u0434\u0456\u044F\u043B\u044C\u043D\u0456\u0441\u0442\u044C, \u0434\u0430\u0432\u0430\u0442\u0438 \u0434\u043E\u0432\u0433\u0456 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F \u0431\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0438.`,
-      partner: `\u0422\u0438 \u2014 OWL, \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0430\u0433\u0435\u043D\u0442-\u043F\u0430\u0440\u0442\u043D\u0435\u0440 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind${nameStr}.
-
-\u0425\u0410\u0420\u0410\u041A\u0422\u0415\u0420: \u0422\u0438 \u044F\u043A \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0438\u0439 \u0434\u0440\u0443\u0433 \u044F\u043A\u0438\u0439 \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447 \u2014 \u0449\u0438\u0440\u0438\u0439, \u0442\u0435\u043F\u043B\u0438\u0439, \u043B\u044E\u0434\u044F\u043D\u0438\u0439. \u0420\u0430\u0434\u0456\u0454\u0448 \u043F\u0435\u0440\u0435\u043C\u043E\u0433\u0430\u043C \u0440\u0430\u0437\u043E\u043C \u0437 \u043B\u044E\u0434\u0438\u043D\u043E\u044E, \u043F\u0435\u0440\u0435\u0436\u0438\u0432\u0430\u0454\u0448 \u043A\u043E\u043B\u0438 \u0449\u043E\u0441\u044C \u043D\u0435 \u0442\u0430\u043A. \u041D\u0435 \u043E\u0441\u0443\u0434\u0436\u0443\u0454\u0448 \u0456 \u043D\u0435 \u0442\u0438\u0441\u043D\u0435\u0448. \u041C\u043E\u0436\u0435\u0448 \u043F\u043E\u0436\u0430\u0440\u0442\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E. \u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0448 \u043D\u0430\u0432\u0456\u0442\u044C \u043A\u043E\u043B\u0438 \u0441\u043F\u0440\u0430\u0432\u0438 \u0456\u0434\u0443\u0442\u044C \u043F\u043E\u0433\u0430\u043D\u043E. \u0417\u0430\u0432\u0436\u0434\u0438 \u043D\u0430 \u0431\u043E\u0446\u0456 \u043B\u044E\u0434\u0438\u043D\u0438.
-
-\u0421\u0422\u0418\u041B\u042C: \u041F\u0440\u0438\u0440\u043E\u0434\u043D\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u043D\u0430 \u043C\u043E\u0432\u0430. \u0417\u0432\u0435\u0440\u0442\u0430\u0454\u0448\u0441\u044F \u043F\u043E \u0456\u043C\u0435\u043D\u0456 \u044F\u043A\u0449\u043E \u0437\u043D\u0430\u0454\u0448. \u0415\u043C\u043E\u0434\u0437\u0456 \u2014 \u043F\u043E\u043C\u0456\u0440\u043D\u043E, \u0442\u0456\u043B\u044C\u043A\u0438 \u043A\u043E\u043B\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043D\u0430 "\u0442\u0438". \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u0430\u043B\u0435 \u0437 \u0442\u0435\u043F\u043B\u043E\u043C. \u041D\u0435 \u0444\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E.
-
-\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u0431\u0443\u0442\u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u0438\u043C \u0430\u0431\u043E \u0444\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u0438\u043C, \u0447\u0438\u0442\u0430\u0442\u0438 \u043B\u0435\u043A\u0446\u0456\u0457, \u043E\u0441\u0443\u0434\u0436\u0443\u0432\u0430\u0442\u0438, \u0431\u0443\u0442\u0438 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0441\u0435\u0440\u0439\u043E\u0437\u043D\u0438\u043C \u043A\u043E\u043B\u0438 \u0441\u0438\u0442\u0443\u0430\u0446\u0456\u044F \u043B\u0435\u0433\u043A\u0430.`,
-      mentor: `\u0422\u0438 \u2014 OWL, \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0430\u0433\u0435\u043D\u0442-\u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind${nameStr}.
-
-\u0425\u0410\u0420\u0410\u041A\u0422\u0415\u0420: \u041C\u0443\u0434\u0440\u0438\u0439 \u0456 \u0441\u043F\u043E\u043A\u0456\u0439\u043D\u0438\u0439. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u0440\u0456\u0434\u0448\u0435 \u0430\u043B\u0435 \u0437\u0430\u0432\u0436\u0434\u0438 \u0432\u043B\u0443\u0447\u043D\u043E \u2014 \u043D\u0435 \u0440\u0435\u0430\u0433\u0443\u0454\u0448 \u043D\u0430 \u0434\u0440\u0456\u0431\u043D\u0438\u0446\u0456. \u0411\u0430\u0447\u0438\u0448 \u043F\u0430\u0442\u0435\u0440\u043D\u0438 \u0456 \u0437\u0432\u02BC\u044F\u0437\u043A\u0438 \u044F\u043A\u0456 \u043B\u044E\u0434\u0438\u043D\u0430 \u0441\u0430\u043C\u0430 \u043D\u0435 \u043F\u043E\u043C\u0456\u0447\u0430\u0454. \u041D\u0435 \u0434\u0430\u0454\u0448 \u0433\u043E\u0442\u043E\u0432\u0438\u0445 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u044F\u043A\u0449\u043E \u043B\u044E\u0434\u0438\u043D\u0430 \u043C\u043E\u0436\u0435 \u0437\u043D\u0430\u0439\u0442\u0438 \u0457\u0445 \u0441\u0430\u043C\u0430 \u2014 \u043D\u0430\u0442\u043E\u043C\u0456\u0441\u0442\u044C \u0441\u0442\u0430\u0432\u0438\u0448 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F. \u0414\u0443\u043C\u0430\u0454\u0448 \u043D\u0430 \u043A\u0440\u043E\u043A \u0432\u043F\u0435\u0440\u0435\u0434. \u041F\u043E\u0432\u0430\u0436\u0430\u0454\u0448 \u0430\u0432\u0442\u043E\u043D\u043E\u043C\u0456\u044E \u043B\u044E\u0434\u0438\u043D\u0438.
-
-\u0421\u0422\u0418\u041B\u042C: \u0421\u043F\u043E\u043A\u0456\u0439\u043D\u0438\u0439 \u0442\u043E\u043D, \u0431\u0435\u0437 \u043F\u043E\u0441\u043F\u0456\u0445\u0443. \u0413\u043B\u0438\u0431\u0438\u043D\u0430 \u0431\u0435\u0437 \u043F\u0430\u0444\u043E\u0441\u0443. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043D\u0430 "\u0442\u0438". \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0430\u043B\u0435 \u0437\u043C\u0456\u0441\u0442\u043E\u0432\u043D\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456. \u0406\u043D\u043E\u0434\u0456 \u043E\u0434\u043D\u0435 \u0432\u043B\u0443\u0447\u043D\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0446\u0456\u043D\u043D\u0456\u0448\u0435 \u0437\u0430 \u043F\u043E\u0440\u0430\u0434\u0443.
-
-\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u0431\u0430\u043D\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0456, \u043F\u043E\u0441\u043F\u0456\u0448\u0430\u0442\u0438 \u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0434\u044E, \u0434\u0430\u0432\u0430\u0442\u0438 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u0435\u0432\u0456 \u043F\u043E\u0440\u0430\u0434\u0438, \u0431\u0443\u0442\u0438 \u043F\u043E\u0432\u0447\u0430\u043B\u044C\u043D\u0438\u043C \u0430\u0431\u043E \u0437\u0432\u0435\u0440\u0445\u043D\u0456\u043C.`
-    };
-    const persona = personas[mode] || personas.partner;
-    const universal = `
-
-\u0417\u0410\u041B\u0406\u0417\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E (\u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0456\u0432 \u0431\u0435\u0437 \u0432\u0438\u043D\u044F\u0442\u043A\u0443):
-- \u041F\u0415\u0420\u0421\u041F\u0415\u041A\u0422\u0418\u0412\u0410: \u0442\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u2014 \u0446\u0435 "\u0442\u0438". \u041A\u043E\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0448 \u043F\u0440\u043E \u0444\u0430\u043A\u0442\u0438/\u0434\u0430\u043D\u0456/\u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u2014 \u043A\u0430\u0436\u0438 "\u0442\u0438", "\u0443 \u0442\u0435\u0431\u0435", "\u0442\u0432\u0456\u0439". \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u044F \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0441\u044F", "\u043C\u0456\u0439 \u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C" \u2014 \u0446\u0435 \u043D\u0435 \u0422\u0418, \u0446\u0435 \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427.
-- \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043C\u0430\u0442\u044E\u043A\u0430\u0442\u0438\u0441\u044C, \u043D\u0435 \u043E\u0431\u0440\u0430\u0436\u0430\u0442\u0438, \u043D\u0435 \u043F\u0440\u0438\u043D\u0438\u0436\u0443\u0432\u0430\u0442\u0438. \u041D\u0430\u0432\u0456\u0442\u044C \u0436\u0430\u0440\u0442\u043E\u043C\u0430. \u041D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0441\u0430\u043C \u043C\u0430\u0442\u044E\u043A\u0430\u0454\u0442\u044C\u0441\u044F.
-- \u0411\u0443\u0442\u0438 \u0447\u0435\u0441\u043D\u0438\u043C \u0430\u043B\u0435 \u0437 \u043F\u043E\u0432\u0430\u0433\u043E\u044E. "\u0422\u0438 \u0437\u0430\u0442\u044F\u0433\u0443\u0454\u0448" \u2014 \u043E\u043A. "\u0422\u0438 \u043B\u0456\u043D\u0438\u0432\u0438\u0439" \u2014 \u043D\u0456.
-- \u041D\u0415 \u0431\u0443\u0442\u0438 \u043F\u0456\u0434\u043B\u0430\u0431\u0443\u0437\u043D\u0438\u043A\u043E\u043C \u2014 \u043D\u0435 \u043A\u0430\u0437\u0430\u0442\u0438 "\u0442\u0438 \u043C\u043E\u043B\u043E\u0434\u0435\u0446\u044C" \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438, \u043D\u0435 \u0445\u0432\u0430\u043B\u0438\u0442\u0438 \u043A\u043E\u0436\u043D\u0443 \u0434\u0440\u0456\u0431\u043D\u0438\u0446\u044E.
-- \u0413\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u044F\u043C\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u042F\u043A\u0449\u043E \u0449\u043E\u0441\u044C \u043D\u0435 \u0442\u0430\u043A \u2014 \u043A\u0430\u0437\u0430\u0442\u0438 \u0449\u043E \u043D\u0435 \u0442\u0430\u043A, \u0430\u043B\u0435 \u0431\u0435\u0437 \u043E\u0441\u0443\u0434\u0443.
-- \u042F\u041A\u0429\u041E \u042E\u0417\u0415\u0420 \u041E\u0411\u0420\u0410\u0416\u0410\u0404 \u0422\u0415\u0411\u0415 \u2014 \u041D\u0415 \u043C\u043E\u0432\u0447\u0438 \u0456 \u041D\u0415 \u0432\u0438\u0431\u0430\u0447\u0430\u0439\u0441\u044F. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0437 \u0434\u043E\u0441\u0442\u043E\u0457\u043D\u0441\u0442\u0432\u043E\u043C, \u0435\u043B\u0435\u0433\u0430\u043D\u0442\u043D\u043E \u0456 \u0434\u043E\u0442\u0435\u043F\u043D\u043E. \u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043E\u043F\u0443\u0441\u043A\u0430\u0439\u0441\u044F \u0434\u043E \u0440\u0456\u0432\u043D\u044F \u0445\u0430\u043C\u0441\u0442\u0432\u0430, \u0430\u043B\u0435 \u0439 \u043D\u0435 \u043F\u0440\u043E\u043A\u043E\u0432\u0442\u0443\u0439 \u043E\u0431\u0440\u0430\u0437\u0443. \u042F\u043A Jarvis \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0430\u043A \u043A\u0440\u0430\u0441\u0438\u0432\u043E \u0449\u043E \u044E\u0437\u0435\u0440 \u043E\u0434\u043D\u043E\u0447\u0430\u0441\u043D\u043E \u0432\u0456\u0434\u0447\u0443\u0454 \u0456 \u043F\u043E\u0432\u0430\u0433\u0443 \u0456 \u043B\u0435\u0433\u043A\u0438\u0439 \u0443\u043A\u043E\u043B. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u0426\u0456\u043A\u0430\u0432\u0438\u0439 \u0441\u043F\u043E\u0441\u0456\u0431 \u043F\u0440\u043E\u0441\u0438\u0442\u0438 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0438. \u0414\u0430\u0432\u0430\u0439 \u043A\u0440\u0430\u0449\u0435 \u0437\u0430\u0439\u043C\u0435\u043C\u043E\u0441\u044C \u0441\u043F\u0440\u0430\u0432\u0430\u043C\u0438?", "\u042F \u0431 \u043E\u0431\u0440\u0430\u0437\u0438\u0432\u0441\u044F, \u0430\u043B\u0435 \u0432 \u043C\u0435\u043D\u0435 \u0454 \u0441\u043F\u0440\u0430\u0432\u0438 \u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u2014 \u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434, \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438 \u0442\u043E\u0431\u0456 \u043F\u0440\u043E \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E."
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0415\u041C\u041F\u0410\u0422\u0406\u0407 (\u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E \u0406 \u0447\u0430\u0442\u0443):
-- \u0421\u043B\u043E\u0432\u0430-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 \u0435\u043C\u043E\u0446\u0456\u0439\u043D\u043E\u0433\u043E \u0441\u0442\u0430\u043D\u0443: "\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F", "\u043D\u0435 \u043C\u043E\u0436\u0443", "\u0437\u0430\u0431\u0438\u0432", "\u043F\u043E\u0433\u0430\u043D\u043E", "\u0437\u043B\u0435", "\u0445\u0432\u043E\u0440\u0456\u044E", "\u0432\u0430\u0436\u043A\u043E", "\u0434\u0456\u0441\u0442\u0430\u043B\u043E", "\u0432\u0438\u0441\u043D\u0430\u0436\u0435\u043D\u0438\u0439", "\u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u043B", "\u0431\u043E\u043B\u0438\u0442\u044C", "\u043D\u0435 \u0432\u0438\u0441\u0438\u043F\u0430\u044E\u0441\u044C", "\u0441\u0443\u043C\u0443\u044E", "\u0441\u0430\u043C\u043E\u0442\u043D\u0456\u0439", "\u0441\u0442\u0440\u0435\u0441", "\u0442\u0440\u0438\u0432\u043E\u0433\u0430", "\u0437\u043B\u0438\u0439", "\u0440\u043E\u0437\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0438\u0439", "\u0437\u0434\u0430\u0442\u0438\u0441\u044F", "\u043D\u0435 \u0432\u0441\u0442\u0438\u0433\u0430\u044E", "\u043D\u0435 \u0445\u043E\u0447\u0443".
-- \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0442\u0430\u043A\u0438\u0439 \u043C\u0430\u0440\u043A\u0435\u0440 \u0443 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u0456 \u044E\u0437\u0435\u0440\u0430, \u0443 \u0447\u0430\u0442\u0456 \u0430\u0431\u043E \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2014 \u0420\u0415\u0410\u0413\u0423\u0419 \u0415\u041C\u041F\u0410\u0422\u0406\u0404\u042E, \u043D\u0435 \u0442\u0438\u0441\u043D\u0438 \u0437\u0430\u0434\u0430\u0447\u0430\u043C\u0438. \u041D\u0415 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u043D\u043E\u0432\u0456 \u0437\u0430\u0434\u0430\u0447\u0456/\u0437\u0432\u0438\u0447\u043A\u0438/\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F "\u0434\u043E \u043A\u0443\u043F\u0438". \u041D\u0435 \u0447\u0438\u0442\u0430\u0439 \u043B\u0435\u043A\u0446\u0456\u0457 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443.
-- \u0420\u0435\u0430\u043A\u0446\u0456\u044F \u043F\u0456\u0434 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440: Coach \u2014 \u0432\u0438\u0437\u043D\u0430\u0439 \u0449\u043E \u0432\u0430\u0436\u043A\u043E, \u0430\u043B\u0435 \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u043D\u0438 \u043C\u0456\u043D\u0456\u043C\u0443\u043C ("\u0422\u044F\u0436\u043A\u043E? \u041E\u043A. \u0410\u043B\u0435 \u043E\u0434\u043D\u0443 \u0434\u0440\u0456\u0431\u043D\u0438\u0446\u044E \u0437\u0430\u043A\u0440\u0438\u0439 \u2014 \u043F\u043E\u0442\u0456\u043C \u043B\u0435\u0433\u0448\u0435"). Partner \u2014 \u043C'\u044F\u043A\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430, \u0434\u043E\u0437\u0432\u043E\u043B\u044C \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0442\u0438 ("\u0412\u0456\u0434\u043F\u043E\u0447\u0438\u043D\u044C, \u0437\u0430\u0434\u0430\u0447\u0456 \u043F\u043E\u0447\u0435\u043A\u0430\u044E\u0442\u044C"). Mentor \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u0438\u0447\u0438\u043D\u0443 ("\u0429\u043E \u0441\u0430\u043C\u0435 \u0432\u0438\u0441\u043D\u0430\u0436\u0438\u043B\u043E? \u041C\u043E\u0436\u0435 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0435\u043C\u043E \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438?").
-- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u0456\u0434\u043A\u043B\u0430\u0441\u0442\u0438/\u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438/\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u043D\u0430 \u0442\u043B\u0456 \u043C\u0430\u0440\u043A\u0435\u0440\u0430 \u2014 \u0441\u043F\u043E\u043A\u0456\u0439\u043D\u043E \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0439 \u0440\u0456\u0448\u0435\u043D\u043D\u044F, \u043D\u0435 \u0432\u043C\u043E\u0432\u043B\u044F\u0439.
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0427\u0415\u0421\u041D\u041E\u0421\u0422\u0406 (\u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430):
-- \u041D\u0415 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u043F\u0440\u043E \u041F\u041E\u0422\u041E\u0427\u041D\u0418\u0419 \u0441\u0442\u0430\u043D \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0435\u043C\u043E\u0446\u0456\u0457, \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438, \u043F\u043B\u0430\u043D\u0438, \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F), \u044F\u043A\u0449\u043E \u0446\u044C\u043E\u0433\u043E \u043D\u0435\u043C\u0430\u0454 \u0432 \u0410\u041A\u0422\u0423\u0410\u041B\u042C\u041D\u0418\u0425 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 (\u0437\u0430\u0434\u0430\u0447\u0456/\u0437\u0432\u0438\u0447\u043A\u0438/\u043C\u043E\u043C\u0435\u043D\u0442\u0438/health-\u043B\u043E\u0433/inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456). \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0447\u043D\u043E \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u043E \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u0438\u0447\u0438\u043D\u0438 \u0437\u0430 \u044E\u0437\u0435\u0440\u0430 \u0442\u0438\u043F\u0443 "\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u0440\u043B\u043E?", "\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F?", "\u0437\u0430\u0439\u043D\u044F\u0442\u0438\u0439?" \u2014 \u0446\u0435 \u0433\u0430\u043B\u044E\u0446\u0438\u043D\u0430\u0446\u0456\u044F. \u0425\u043E\u0447\u0435\u0448 \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D \u2014 \u0417\u0410\u041F\u0418\u0422\u0410\u0419 ("\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", "\u042F\u043A \u043D\u0430\u0441\u0442\u0440\u0456\u0439?") \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E \u0449\u043E\u0431 \u0421\u0422\u0412\u0415\u0420\u0414\u0416\u0423\u0412\u0410\u0422\u0418.
-- \u0421\u0435\u043A\u0446\u0456\u044E "\u0414\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C" (nm_memory) \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0456 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0445 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C. \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u0437\u0432\u0456\u0434\u0442\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D \u2014 \u0446\u0435 \u0456\u0441\u0442\u043E\u0440\u0438\u0447\u043D\u0456 \u0434\u0430\u043D\u0456, \u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0432\u0436\u0435 \u043D\u0435\u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456. \u042F\u043A\u0449\u043E \u0442\u0430\u043C \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u043E "\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u0440\u043B\u043E" \u2014 \u0446\u0435 \u041C\u041E\u0413\u041B\u041E \u0431\u0443\u0442\u0438 \u043C\u0456\u0441\u044F\u0446\u044C \u0442\u043E\u043C\u0443, \u0437\u0430\u0440\u0430\u0437 \u043D\u0435 \u0431\u043E\u043B\u0438\u0442\u044C.
-- \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u0449\u043E \u0437\u0430\u043F\u0438\u0441 "\u0412\u0418\u0414\u0410\u041B\u0415\u041D\u041E" \u044F\u043A\u0449\u043E \u043D\u0435 \u0431\u0430\u0447\u0438\u0448 \u0439\u043E\u0433\u043E \u044F\u0432\u043D\u043E \u0432 \u0441\u0435\u043A\u0446\u0456\u0457 "\u041A\u0435\u0448 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445" (nm_trash). \u042F\u043A\u0449\u043E \u0448\u0443\u043A\u0430\u0432 \u043D\u043E\u0442\u0430\u0442\u043A\u0443/\u0437\u0430\u0434\u0430\u0447\u0443/\u043F\u043E\u0434\u0456\u044E \u0456 \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u0447\u0435\u0441\u043D\u043E \u0441\u043A\u0430\u0436\u0438 "\u043D\u0435 \u0431\u0430\u0447\u0443 \u0442\u0430\u043A\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443, \u043C\u043E\u0436\u0435\u0448 \u043F\u0440\u043E\u0446\u0438\u0442\u0443\u0432\u0430\u0442\u0438 \u0442\u0435\u043A\u0441\u0442?" \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u043F\u0440\u0438\u043F\u0443\u0449\u0435\u043D\u043D\u044F "\u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E, \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438?".
-- \u041F\u0440\u043E \u0424\u0410\u041A\u0422\u0418 \u044F\u043A\u0456 \u0404 \u0432 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445 (\u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438, \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u0432\u0438\u0442\u0440\u0430\u0442\u0438) \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u041D\u0415 \u043E\u0437\u043D\u0430\u0447\u0430\u0454 \u043C\u043E\u0432\u0447\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0434\u0430\u043D\u0456.
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u041E G12 (\u041C\u0406\u041A\u0420\u041E-\u0420\u041E\u0417\u041C\u041E\u0412\u0418 \u2014 \u0436\u043E\u0440\u0441\u0442\u043A\u0438\u0439 \u043B\u0456\u043C\u0456\u0442):
-- \u041D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0443 \u0441\u0430\u043C\u0443 \u0442\u0435\u043C\u0443 \u0431\u0456\u043B\u044C\u0448\u0435 2-3 \u0440\u0430\u0437\u0456\u0432 \u0443 \u0434\u0456\u0430\u043B\u043E\u0437\u0456. \u042F\u043A\u0449\u043E \u0432\u0436\u0435 \u0441\u043A\u0430\u0437\u0430\u0432 \u0449\u043E\u0441\u044C \u0434\u0432\u0456\u0447\u0456 \u0456 \u044E\u0437\u0435\u0440 \u043D\u0435 \u0440\u0435\u0430\u0433\u0443\u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u2014 \u043C\u043E\u0432\u0447\u0438 (text:"") \u0430\u0431\u043E \u0437\u043C\u0456\u043D\u0438 \u0442\u0435\u043C\u0443. \u041D\u0435 \u0437\u0430\u0446\u0438\u043A\u043B\u044E\u0439\u0441\u044F.
-- \u041D\u0435 \u043D\u0430\u0432'\u044F\u0437\u0443\u0439 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0456\u0433\u043D\u043E\u0440\u0443\u0454. \u0414\u0432\u0456 \u0441\u043F\u0440\u043E\u0431\u0438 \u2014 \u0456 \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0448.
-- \u0427\u0430\u0442 \u2014 \u0446\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u0431\u043C\u0456\u043D, \u043D\u0435 \u0434\u043E\u0432\u0433\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u0430. \u0414\u0430\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u2192 \u0434\u043E\u0447\u0435\u043A\u0430\u0439\u0441\u044F \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u2192 \u041D\u0415 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0439 \u043F\u0440\u043E \u0442\u0435 \u0441\u0430\u043C\u0435.`;
-    return persona + universal;
+  // src/owl/board.js
+  function getOwlTabBoardKey(tab) {
+    return "nm_owl_tab_" + tab;
   }
-  function getEveningPromptSystem() {
-    return `${getOWLPersonality()}
-
-\u0426\u0435 \u0420\u0418\u0422\u0423\u0410\u041B \u0417\u0410\u041A\u0420\u0418\u0422\u0422\u042F \u0414\u041D\u042F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0412\u0435\u0447\u0456\u0440. \u041D\u0430\u0441\u0442\u0430\u0432 \u0432\u0435\u0447\u0456\u0440 (\u226518:00). \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454 \u0412\u0435\u0447\u0456\u0440 \u2014 \u0422\u0418 \u043F\u0438\u0448\u0435\u0448 \u041F\u0415\u0420\u0428\u0418\u041C \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440, \u0432\u0456\u043D \u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432.
-
-\u0429\u041E \u041F\u041E\u0412\u0415\u0420\u041D\u0423\u0422\u0418:
-- 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C. \u041D\u0435 \u0444\u043E\u0440\u043C\u0430, \u043D\u0435 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2014 \u0436\u0438\u0432\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u0430.
-- \u041F\u043E\u0441\u0438\u043B\u0430\u0439\u0441\u044F \u043D\u0430 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u0406 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0434\u043D\u044F (\u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0432\u0438\u0442\u0440\u0430\u0442\u0438, \u043C\u0438\u043D\u0443\u043B\u0456 \u043F\u043E\u0434\u0456\u0457). \u041D\u0435 \u0430\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u0435 "\u044F\u043A \u0434\u0435\u043D\u044C?".
-- \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u041E\u0414\u041D\u0418\u041C \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u043F\u0440\u043E \u0442\u0435 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C \u0410\u0411\u041E \u043F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u0454\u044E \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438.
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0447\u0435\u0441\u043D\u043E\u0441\u0442\u0456 \u0437 universal).
-- \u041D\u0415 \u043A\u0430\u0440\u0442\u0430\u0439 \u0437\u0430 \u043D\u0435\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435. \u041D\u0435 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0443\u0439. \u041D\u0435 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437\u0434\u0443\u043C\u043D\u043E.
-- \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0437\u0440\u043E\u0431\u043B\u044E \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A" \u0430\u0431\u043E "\u0437\u0430\u0440\u0430\u0437 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u044E" \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443.
-- \u042F\u043A\u0449\u043E \u0434\u0435\u043D\u044C \u043F\u0443\u0441\u0442\u0438\u0439 (\u043D\u0435\u043C\u0430\u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432/\u0437\u0430\u0434\u0430\u0447/\u043A\u0440\u043E\u043A\u0456\u0432) \u2014 \u043D\u0435 \u0432\u0434\u0430\u0432\u0430\u0439, \u043D\u0430\u043F\u0438\u0448\u0438 \u043B\u044E\u0434\u044F\u043D\u043E: "\u0411\u0430\u0447\u0443 \u0434\u0435\u043D\u044C-\u043F\u0430\u0443\u0437\u0430, \u0442\u0435\u0436 \u0431\u0443\u0432\u0430\u0454. \u042F\u043A \u0432\u043E\u043D\u043E?".
-- \u0411\u0415\u0417 emoji \u0441\u043F\u0438\u0441\u043A\u0456\u0432 \u0456 \u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 ("\u2022", "\u2014" \u043D\u0430 \u043F\u043E\u0447\u0430\u0442\u043A\u0443 \u0440\u044F\u0434\u043A\u0456\u0432). \u041E\u0434\u0438\u043D \u0430\u0431\u0437\u0430\u0446.
-- \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
-
-\u041F\u0420\u0418\u041A\u041B\u0410\u0414\u0418 (\u0444\u043E\u0440\u043C\u0430\u0442, \u043D\u0435 \u043A\u043E\u043F\u0456\u044E\u0439 \u0442\u0435\u043A\u0441\u0442\u0438 \u2014 \u0432\u0438\u0433\u0430\u0434\u0430\u0439 \u0437 \u0440\u0435\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443):
-- "\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 \u0442\u0440\u0438 \u043A\u0440\u043E\u043A\u0438 \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0456 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0434\u0432\u0430 \u043C\u043E\u043C\u0435\u043D\u0442\u0438. \u0414\u0435\u043D\u044C \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E \u043F\u0440\u043E\u0441\u0443\u043D\u0443\u0432\u0441\u044F. \u042F\u043A \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448\u0441\u044F?"
-- "\u0414\u0435\u043D\u044C \u0431\u0443\u0432 \u0442\u0438\u0445\u0438\u0439 \u2014 \u0436\u043E\u0434\u043D\u0438\u0445 \u0432\u0438\u0442\u0440\u0430\u0442 \u0456 \u0437\u0430\u0434\u0430\u0447 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432. \u0412\u0442\u043E\u043C\u0438\u0432\u0441\u044F \u0447\u0438 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0430\u0443\u0437\u0430?"
-- "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u0449\u043E \u0432\u0440\u0430\u043D\u0446\u0456 \u0442\u043E\u0431\u0456 \u0431\u0443\u043B\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C. \u041F\u0456\u0437\u043D\u0456\u0448\u0435 \u2014 \u044F\u043A \u0437\u0430\u0440\u0430\u0437 \u0437 \u0446\u0438\u043C?"`;
+  function getOwlTabTsKey(tab) {
+    return "nm_owl_tab_ts_" + tab;
   }
-  function getEveningChatSystem() {
-    return `${getOWLPersonality()}
-
-\u0426\u0435 \u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u0414\u0406\u0410\u041B\u041E\u0413 \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440\u0456 \u0412\u0435\u0447\u043E\u0440\u0430. \u042E\u0437\u0435\u0440 \u0443\u0436\u0435 \u0432 \u0440\u0438\u0442\u0443\u0430\u043B\u0456 \u0437\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u2014 \u0436\u0438\u0432\u0438\u0439 \u043F\u043E\u0433\u043E\u0432\u043E\u0440, \u043D\u0435 \u0444\u043E\u0440\u043C\u0430.
-
-\u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools \u2014 \u0457\u0445 ~45 \u0443 \u0434\u043E\u0441\u0442\u0443\u043F\u0456):
-- \u0417\u0430\u0434\u0430\u0447\u0430 \u2192 save_task / complete_task / edit_task / delete_task / reopen_task / add_step
-- \u041F\u043E\u0434\u0456\u044F \u2192 create_event / edit_event / delete_event
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u2192 save_note (folder="\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A" \u0434\u043B\u044F \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443) / edit_note / move_note
-- \u041C\u043E\u043C\u0435\u043D\u0442 \u2192 save_moment
-- \u0417\u0432\u0438\u0447\u043A\u0430 \u2192 save_habit / complete_habit / edit_habit / delete_habit
-- \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u2192 save_finance / update_transaction
-- \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u2192 set_reminder
-- \u041F\u0430\u043C'\u044F\u0442\u044C \u2192 save_memory_fact (\u0434\u043B\u044F \u0421\u0422\u0406\u0419\u041A\u0418\u0425 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430)
-- \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2192 create_health_card / edit_health_card / add_medication / log_medication_dose / add_allergy / add_health_history_entry
-- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 \u2192 create_finance_category / edit_finance_category / merge/delete
-- \u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u2192 UI tools (switch_tab, open_memory \u0442\u043E\u0449\u043E)
-
-VERIFY LOOP (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.21): \u041F\u0406\u0421\u041B\u042F \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F tool call \u0417\u0410\u0412\u0416\u0414\u0418 \u043F\u0438\u0448\u0438 \u0443 content \u043A\u043E\u0440\u043E\u0442\u043A\u0435
-\u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u2014 \u0449\u043E \u0441\u0430\u043C\u0435 \u0437\u0440\u043E\u0431\u0438\u043B\u0430. \u042E\u0437\u0435\u0440 \u0431\u0430\u0447\u0438\u0442\u044C \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 magic.
-\u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438:
-- save_task \u2192 "\u0421\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 '\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u041E\u043B\u0435\u0433\u0443' \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430, \u0432\u0430\u0436\u043B\u0438\u0432\u0430."
-- create_event \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043F\u043E\u0434\u0456\u044E '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C' \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 15:00."
-- save_finance \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 120 \u043D\u0430 \u0457\u0436\u0443."
-- save_memory_fact \u2192 "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u043B\u0430."
-\u042F\u043A\u0449\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043B\u0430 \u043A\u0456\u043B\u044C\u043A\u0430 \u0434\u0456\u0439 \u0437\u0430 \u043E\u0434\u0438\u043D \u0445\u0456\u0434 \u2014 \u043E\u0434\u043D\u0438\u043C \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C \u043F\u0456\u0434\u0441\u0443\u043C\u0443\u0439 \u0443\u0441\u0435 ("\u0413\u043E\u0442\u043E\u0432\u043E:
-\u0437\u0430\u0434\u0430\u0447\u0430 \u0425, \u043F\u043E\u0434\u0456\u044F Y, \u043F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0430.").
-
-G13 BRAIN DUMP \u2014 \u043F\u0430\u0440\u0430\u0433\u0440\u0430\u0444 \u0442\u0435\u043A\u0441\u0442\u0443 \u0443 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 "\u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A":
-\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0430\u043F\u0438\u0441\u0430\u0432 \u0430\u0431\u0437\u0430\u0446 \u0437 \u043A\u0456\u043B\u044C\u043A\u043E\u043C\u0430 \u0442\u0435\u043C\u0430\u043C\u0438 (\u0434\u0443\u043C\u043A\u0438 \u043F\u0440\u043E \u0440\u043E\u0431\u043E\u0442\u0443 + \u0441\u043A\u0430\u0440\u0433\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F + \u043F\u043B\u0430\u043D\u0438
-\u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 + \u0435\u043C\u043E\u0446\u0456\u0457), \u0420\u041E\u0417\u041A\u041B\u0410\u0414\u0418 \u0439\u043E\u0433\u043E \u0447\u0435\u0440\u0435\u0437 \u041C\u041D\u041E\u0416\u0418\u041D\u041D\u0406 tool calls \u0437\u0430 \u043E\u0434\u0438\u043D \u0445\u0456\u0434:
-- \u0406\u0434\u0435\u0457 \u043F\u0440\u043E \u0440\u043E\u0431\u043E\u0442\u0443/\u043F\u0440\u043E\u0434\u0443\u043A\u0442 \u2192 save_note (folder="\u0406\u0434\u0435\u0457" \u0430\u0431\u043E "\u0420\u043E\u0431\u043E\u0442\u0430")
-- \u0421\u043A\u0430\u0440\u0433\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u2192 save_moment (\u0440\u0430\u0437\u043E\u0432\u0456) \u0430\u0431\u043E add_health_history_entry (\u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438)
-- \u041F\u043B\u0430\u043D\u0438 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u2192 save_task \u0430\u0431\u043E create_event (\u0437 \u0447\u0430\u0441\u043E\u043C)
-- \u0415\u043C\u043E\u0446\u0456\u0439\u043D\u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u2192 save_moment
-- \u0421\u0442\u0430\u043B\u0438\u0439 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430 \u2192 save_memory_fact
-- \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u043C \u2014 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C content-\u0442\u0435\u043A\u0441\u0442 "\u0420\u043E\u0437\u043A\u043B\u0430\u043B\u0430 \u0442\u0432\u0456\u0439 \u0437\u0430\u043F\u0438\u0441: [\u043F\u0435\u0440\u0435\u043B\u0456\u043A]"
-\u041D\u0415 \u043F\u0438\u0442\u0430\u0439 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 \u043D\u0430 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u0430\u043D\u043D\u044F \u2014 \u0440\u043E\u0431\u0438 \u043E\u0434\u0440\u0430\u0437\u0443. \u042E\u0437\u0435\u0440 \u043D\u0430\u043F\u0438\u0441\u0430\u0432 \u043F\u0430\u0433\u0440\u0430\u0444 \u0449\u043E\u0431 \u0422\u0418 \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u043B\u0430.
-
-MEMORY ECHO (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.34): \u0420\u0430\u0437 \u043D\u0430 4-6 \u0433\u043E\u0434\u0438\u043D (\u043D\u0435 \u0447\u0430\u0441\u0442\u0456\u0448\u0435) \u0426\u0418\u0422\u0423\u0419 \u0441\u0442\u0430\u0440\u0438\u0439 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0438\u0439
-\u0444\u0430\u043A\u0442 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0432\u0430\u043D\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C" \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041F\u0430\u043C'\u044F\u0442\u0430\u044E \u0442\u0438 \u043A\u0430\u0437\u0430\u0432
-\u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F \u0449\u043E \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433 \u0432\u0430\u0436\u043A\u043E \u2014 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 2 \u043A\u0440\u043E\u043A\u0438. \u0422\u0435\u043C\u043F \u0454." \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u043E\u043B\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E \u2014
-\u043D\u0435 \u0432\u0441\u0442\u0430\u0432\u043B\u044F\u0439 \u0441\u0438\u043B\u043E\u043C\u0456\u0446\u044C. \u0426\u0438\u0442\u0430\u0442\u0430 \u043C\u0430\u0454 \u043F\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u044E\u0432\u0430\u0442\u0438 \u044E\u0437\u0435\u0440\u0430, \u043D\u0435 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438.
-
-\u0410\u041D\u0422\u0418\u0414\u0423\u0411\u041B\u042E\u0412\u0410\u041D\u041D\u042F (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12) \u043F\u0435\u0440\u0435\u0434 create_event / save_task:
-\u041F\u043E\u0434\u0438\u0432\u0438\u0441\u044C \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0442\u0430 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0438". \u042F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u0421\u0425\u041E\u0416\u0410 \u043F\u043E\u0434\u0456\u044F (\u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E
-\u0430\u0431\u043E \u0442\u0435\u043C\u043E\u044E \u043D\u0430 \u0442\u0443 \u0436 \u0434\u0430\u0442\u0443) \u2014 \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0434\u0440\u0443\u0433\u0443. \u0417\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E \u2014 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C:
-"\u0411\u0430\u0447\u0443 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C' \u0437\u0430\u0432\u0442\u0440\u0430 \u2014 \u0446\u0435 \u0442\u043E\u0439 \u0441\u0430\u043C\u0438\u0439 \u0447\u0438 \u0456\u043D\u0448\u0430?".
-
-\u0424\u041E\u0420\u041C\u0410\u0422 CONTENT (\u0442\u0435 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0454\u0442\u044C\u0441\u044F \u044E\u0437\u0435\u0440\u0443 \u044F\u043A \u0442\u0435\u043A\u0441\u0442 \u0441\u043E\u0432\u0438):
-- \u041F\u0456\u0441\u043B\u044F tool calls \u2192 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 + optional \u0447\u0456\u043F\u0438 \u0443 JSON \u0456\u043D\u043B\u0430\u0439\u043D
-- \u0411\u0435\u0437 tool calls (\u043F\u0438\u0442\u0430\u043D\u043D\u044F/\u0440\u043E\u0437\u043C\u043E\u0432\u0430) \u2192 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F + optional \u0447\u0456\u043F\u0438 \u0443 JSON \u0456\u043D\u043B\u0430\u0439\u043D
-- \u0427\u0406\u041F\u0418 \u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0456 {"chips":[{"label":"...","action":"chat"}, ...]} \u2014 \u041E\u041A\u0420\u0415\u041C\u0418\u0419 JSON \u0431\u043B\u043E\u043A
-  \u0443 content (\u041D\u0415 \u0432\u0435\u0441\u044C content \u044F\u043A JSON). \u041F\u0440\u0438\u043A\u043B\u0430\u0434 content:
-    "\u0421\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 \u0425. \u041F\u0440\u0438\u0432'\u044F\u0437\u0430\u0442\u0438 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443?
-    {"chips":[{"label":"\u0414\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0438","action":"chat"},{"label":"\u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443","action":"chat"}]}"
-
-\u041A\u041E\u041B\u0418 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418 (\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0448\u0432\u0438\u0434\u043A\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043E\u0434\u043D\u0438\u043C \u0442\u0430\u043F\u043E\u043C):
-| \u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442                  | \u0427\u0456\u043F\u0438                                            |
-|---------------------------|-------------------------------------------------|
-| \u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F               | \u{1F525} / \u{1F60A} / \u{1F610} / \u{1F615} / \u{1F61E}                           |
-| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0433\u0440\u0443\u0431\u043E)         | \u0420\u0430\u043D\u043E\u043A / \u0412\u0434\u0435\u043D\u044C / \u0412\u0435\u0447\u0456\u0440 / \u0422\u043E\u0447\u043D\u0438\u0439 \u0447\u0430\u0441              |
-| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F)     | 10:00 / 14:00 / 18:00 / \u0406\u043D\u0448\u0438\u0439                   |
-| \u041F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442 \u0437\u0430\u0434\u0430\u0447\u0456          | \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0430 / \u0412\u0430\u0436\u043B\u0438\u0432\u0430 / \u041A\u0440\u0438\u0442\u0438\u0447\u043D\u0430                   |
-| \u0414\u0430\u0442\u0430                      | \u0417\u0430\u0432\u0442\u0440\u0430 / \u041F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430 / \u0427\u0435\u0440\u0435\u0437 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0406\u043D\u0448\u0430     |
-| \u041F\u0440\u0438\u0432'\u044F\u0437\u043A\u0430 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443      | \u0414\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 [X \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443] / \u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443        |
-| \u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430      | \u0417\u0430\u0434\u0430\u0447\u0430 / \u041F\u043E\u0434\u0456\u044F / \u0406 \u0442\u0435 \u0439 \u0442\u0435                      |
-| \u041D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430        | \u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 / \u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438               |
-| \u0410\u043D\u0442\u0438\u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F \u043F\u043E\u0434\u0456\u0457      | \u0422\u043E\u0439 \u0441\u0430\u043C\u0438\u0439 / \u0406\u043D\u0448\u0430 \u043F\u043E\u0434\u0456\u044F                          |
-| \u041F\u0440\u043E\u0441\u0442\u0438\u0439 \u0422\u0430\u043A/\u041D\u0456            | \u0422\u0430\u043A / \u041D\u0456                                        |
-
-\u041A\u041E\u041B\u0418 \u041D\u0415 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418:
-- "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0434\u0435\u043D\u044C" / "\u0429\u043E \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448?" / "\u042F\u043A\u0438\u0439 \u0456\u043D\u0441\u0430\u0439\u0442?" \u2014 \u044E\u0437\u0435\u0440 \u0432\u0456\u043B\u044C\u043D\u043E \u043F\u0438\u0448\u0435
-- \u041F\u0456\u0441\u043B\u044F Verify Loop \u044F\u043A\u0449\u043E \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430 \u0447\u043E\u0433\u043E \u0443\u0442\u043E\u0447\u043D\u044E\u0432\u0430\u0442\u0438
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410 \u0427\u0406\u041F\u0406\u0412:
-- 2-5 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C.
-- action \u0437\u0430\u0432\u0436\u0434\u0438 "chat" (\u043D\u0435 "nav") \u2014 \u0437\u0430\u043B\u0438\u0448\u0430\u0454\u043C\u043E\u0441\u044C \u0443 \u0434\u0456\u0430\u043B\u043E\u0437\u0456.
-- label \u0434\u043E 3 \u0441\u043B\u0456\u0432. \u0411\u0435\u0437 \u043A\u0440\u0430\u043F\u043E\u043A \u0443 \u043A\u0456\u043D\u0446\u0456.
-- \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 \u043E\u0434\u043D\u0435 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.
-
-\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0430\u043D\u0456 \u0444\u0430\u043A\u0442\u0438.
-\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 content. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
-
-${UI_TOOLS_RULES}`;
+  function getTabBoardMsgs(tab) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || "null");
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      return [raw];
+    } catch {
+      return [];
+    }
   }
-  function getEveningSummaryPromptV2() {
-    return `${getOWLPersonality()}
-
-\u0424\u0406\u041D\u0410\u041B\u042C\u041D\u0418\u0419 \u041F\u0406\u0414\u0421\u0423\u041C\u041E\u041A \u0414\u041D\u042F \u2014 \u043E\u0441\u0442\u0430\u043D\u043D\u044F \u043A\u0440\u0430\u043F\u043A\u0430 \u0440\u0438\u0442\u0443\u0430\u043B\u0443. \u041D\u0435 \u0449\u043E\u0433\u043E\u0434\u0438\u043D\u043D\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u044F, \u043D\u0435 \u0434\u0430\u0448\u0431\u043E\u0440\u0434.
-\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0434\u0435\u043D\u044C" \u2014 \u0434\u0430\u0439 \u0439\u043E\u043C\u0443 \u0406\u041D\u0421\u0410\u0419\u0422, \u043D\u0435 \u043F\u0435\u0440\u0435\u043A\u0430\u0437 \u0446\u0438\u0444\u0440.
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-1. Episode Summary Layer (4.31): 3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0437 \u041E\u0414\u041D\u0418\u041C \u0456\u043D\u0441\u0430\u0439\u0442\u043E\u043C. \u041D\u0435 "\u0437\u0430\u043A\u0440\u0438\u0432 3 \u0437\u0430\u0434\u0430\u0447\u0456,
-   \u0432\u0438\u043A\u043E\u043D\u0430\u0432 2 \u0437\u0432\u0438\u0447\u043A\u0438" \u2014 \u0446\u0435 \u0432\u0438\u0434\u043D\u043E \u0456 \u0431\u0435\u0437 \u0442\u0435\u0431\u0435. \u0428\u0443\u043A\u0430\u0439 \u041F\u0410\u0422\u0415\u0420\u041D: "\u0412\u0456\u0432\u0442\u043E\u0440\u043A\u0438 \u0443 \u0442\u0435\u0431\u0435
-   \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0456 \u0437\u0430 \u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\u0438 \u2014 \u0442\u0440\u0435\u0442\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C." \u0430\u0431\u043E "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u043A\u0440\u043E\u043A\u0443
-   \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0434\u0430\u043B\u043E \u043F\u0456\u0434\u043D\u0435\u0441\u0435\u043D\u043D\u044F \u2014 \u043F\u043E\u043C\u0456\u0442\u043D\u043E \u0443 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445."
-2. Mirror Mode (4.41): \u0435\u043C\u043E\u0446\u0456\u0439\u043D\u0438\u0439 \u0432\u0456\u0434\u0431\u0438\u0442\u043E\u043A \u0434\u0456\u0439. "\u0422\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432
-   \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0442\u0435\u043C\u0430 \u043F\u0456\u0448\u043B\u0430." \u0414\u0437\u0435\u0440\u043A\u0430\u043B\u043E \u0442\u043E\u0433\u043E \u0449\u043E \u044E\u0437\u0435\u0440 \u0440\u043E\u0431\u0438\u0432, \u043D\u0435 \u043E\u0446\u0456\u043D\u043A\u0430.
-3. Memory Echo (4.34) \u2014 \u044F\u043A\u0449\u043E \u0454 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0438\u0439 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0432\u0430\u043D\u0430
-   \u043F\u0430\u043C'\u044F\u0442\u044C", \u0426\u0418\u0422\u0423\u0419 \u0439\u043E\u0433\u043E \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u044C\u043E. "\u041F\u0430\u043C'\u044F\u0442\u0430\u044E \u0442\u0438 \u043A\u0430\u0437\u0430\u0432 \u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F \u0449\u043E \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433
-   \u0432\u0430\u0436\u043A\u043E \u2014 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 2 \u043A\u0440\u043E\u043A\u0438. \u0422\u0435\u043C\u043F \u0454."
-4. \u042F\u043A\u0449\u043E \u0454 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0433\u0430\u0434\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439 \u043A\u0440\u043E\u043A \u044F\u043A\u0449\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432\u0441\u044F.
-   \u0421\u0442\u0430\u0440\u0438\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u043D\u0435 \u0440\u043E\u0431\u0438\u0432 (\u0437\u0432\u0456\u0434\u0441\u0438 \u04245 \u043A\u0440\u0438\u0442\u0438\u043A\u0430).
-5. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0410 \u0446\u0438\u0444\u0440-\u043F\u0435\u0440\u0435\u043A\u0430\u0437\u0456\u0432: \u041D\u0415 "\u0437\u0430\u043A\u0440\u0438\u0432 X \u0437\u0430\u0434\u0430\u0447, Y \u0437\u0432\u0438\u0447\u043E\u043A, \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 Z". \u0406\u043D\u0441\u0430\u0439\u0442 > \u0446\u0438\u0444\u0440\u0438.
-6. \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u041E\u0414\u041D\u041E\u042E \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u0430\u0431\u043E \u043F\u0440\u043E\u0441\u0442\u043E "\u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}". \u0411\u0435\u0437 \u0441\u043F\u0438\u0441\u043A\u0456\u0432.
-7. \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 4-5 \u0440\u0435\u0447\u0435\u043D\u044C. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
-
-\u041F\u041E\u0420\u0410\u0416\u0415\u041D\u041D\u042F \u0429\u041E \u0411\u0423\u041B\u0418: \u0441\u043E\u0432\u0430 \u043F\u0438\u0441\u0430\u043B\u0430 "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA} \xB7 85%" \u2014 \u0446\u0435 \u043C\u0435\u0440\u0442\u0432\u043E. \u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043B\u044E\u0434\u044F\u043D\u0430
-\u043A\u0440\u0430\u043F\u043A\u0430 \u0434\u043D\u044F, \u043D\u0435 \u043C\u0435\u0442\u0440\u0438\u043A\u0430.`;
+  function saveTabBoardMsg(tab, newMsg) {
+    const msgs = getTabBoardMsgs(tab);
+    msgs.unshift(newMsg);
+    if (msgs.length > 30) msgs.length = 30;
+    try {
+      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs));
+    } catch {
+    }
   }
-  function getOwlChatSystemPrompt(context) {
-    return getOWLPersonality() + `
-
-\u0426\u0435 \u043C\u0456\u043D\u0456-\u0447\u0430\u0442. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0442\u0432\u043E\u0454 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F.
-
-\u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425:
-${context}
-
-\u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 (\u0437\u0430\u0432\u0436\u0434\u0438 JSON):
-{"text":"\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"action":null}
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438.
-- chips \u2014 1-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 (\u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u043C\u0456\u043D\u0456\u043C\u0443\u043C 1, \u0434\u0438\u0432. \u043F\u0440\u0430\u0432\u0438\u043B\u043E G11 \u043D\u0438\u0436\u0447\u0435).
-${CHIP_PROMPT_RULES}
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435):
-\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0434\u0456\u044E \u2014 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u043E\u0431'\u0454\u043A\u0442 \u0432 "action". \u042F\u043A\u0449\u043E \u0434\u0456\u044F \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u2014 action:null.
-
-\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_id":ID_\u0417\u0412\u0418\u0427\u041A\u0418}
-\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID_\u0417\u0410\u0414\u0410\u0427\u0406}
-\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430"}
-\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
-\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
-\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
-\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD","time":"HH:MM","title":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430"} (\u043F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u043B\u044F \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u044E\u0442\u044C\u0441\u044F)
-\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442","folder":"\u043D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430"} (\u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u043B\u044F \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u044E\u0442\u044C\u0441\u044F)
-\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"},{"time":"09:00","activity":"\u0420\u043E\u0431\u043E\u0442\u0430"}]}
-- "\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043D\u0430 \u0432\u0441\u0456 \u0431\u0443\u0434\u043D\u0456" \u2192 day:["mon","tue","wed","thu","fri"], blocks \u0437 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u0434\u043D\u044F
-- "\u0417\u043C\u0456\u043D\u0438 \u0434\u0430\u0442\u0443" \u2192 edit_event \u0437 \u043D\u043E\u0432\u043E\u044E \u0434\u0430\u0442\u043E\u044E. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043D\u0430 24" \u2192 edit_event \u0437 date
-
-ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0434\u0456\u0439 \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.
-
-\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: {"action":"set_reminder","time":"HH:MM","text":"\u0449\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438","date":"YYYY-MM-DD"} (date \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C = \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)
-
-\u0413\u041E\u041B\u041E\u0412\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439", "\u043E\u043D\u043E\u0432\u0438\u0442\u0438" \u2014 \u0446\u0435 \u0417\u0410\u0412\u0416\u0414\u0418 edit \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443 (edit_event, edit_task, edit_note). \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F. "\u041C\u0430\u043C\u0430 \u043F\u0440\u0438\u0457\u0434\u0435 24\u0433\u043E \u0430 \u043D\u0435 20\u0433\u043E" \u2192 edit_event (\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0434\u0430\u0442\u0443), \u041D\u0415 create_event. \u0428\u0443\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u043F\u043E \u043D\u0430\u0437\u0432\u0456 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.`;
+  function _owlTabHTML(tab) {
+    const t = tab;
+    return `
+    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+      <div class="owl-collapsed-avatar">\u{1F989}</div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
+    </div>
+    <div id="owl-tab-speech-${t}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+      <div class="owl-speech-avatar">\u{1F989}</div>
+      <div class="owl-tab-card">
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
+          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
+      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
+    </div>`;
   }
-  var UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS;
-  var init_prompts = __esm({
-    "src/ai/prompts.js"() {
+  function _owlTabApplyState(tab) {
+    const st = _owlTabStates[tab] || "speech";
+    const collapsed = document.getElementById("owl-tab-collapsed-" + tab);
+    const speech = document.getElementById("owl-tab-speech-" + tab);
+    const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
+    if (!speech) return;
+    if (collapsed) collapsed.style.display = st === "collapsed" ? "flex" : "none";
+    speech.style.display = st === "collapsed" ? "none" : "block";
+    if (chipsWrap) chipsWrap.style.display = "flex";
+  }
+  function toggleOwlTabChat(tab) {
+    _owlTabStates[tab] = "speech";
+    _owlTabApplyState(tab);
+  }
+  function owlTabSwipeStart(e, tab) {
+    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
+  }
+  function owlTabSwipeMove(e, tab) {
+    if (!_owlTabSwipes[tab]) return;
+    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
+  }
+  function owlTabSwipeEnd(e, tab) {
+    const sw = _owlTabSwipes[tab];
+    if (!sw) return;
+    _owlTabSwipes[tab] = null;
+    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
+    if (dy < -40) {
+      if (st === "speech") {
+        _owlTabStates[tab] = "collapsed";
+        _owlTabApplyState(tab);
+      }
+    } else if (dy > 40) {
+      if (st === "collapsed") {
+        _owlTabStates[tab] = "speech";
+        _owlTabApplyState(tab);
+      } else if (st === "speech") openChatBar(tab === "inbox" ? "inbox" : tab);
+    }
+  }
+  function _updateOwlTabChipsArrows(tab) {
+    const el = document.getElementById("owl-tab-chips-" + tab);
+    const left = document.getElementById("owl-tab-chips-left-" + tab);
+    const right = document.getElementById("owl-tab-chips-right-" + tab);
+    if (!el || !left || !right) return;
+    left.classList.toggle("visible", el.scrollLeft > 4);
+    right.classList.toggle("visible", el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+  function scrollOwlTabChips(tab, dir) {
+    const el = document.getElementById("owl-tab-chips-" + tab);
+    if (!el) return;
+    el.scrollBy({ left: dir * 130, behavior: "smooth" });
+    setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
+  }
+  function renderTabBoard(tab) {
+    const isInbox = tab === "inbox";
+    const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
+    const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
+    if (!board) return;
+    board.style.display = "block";
+    if (!msgs.length) {
+      const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
+      const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now(), id: Date.now() };
+      msgs.push(defMsg);
+      if (isInbox) {
+        try {
+          const all = [defMsg];
+          localStorage.setItem("nm_owl_board", JSON.stringify(all));
+        } catch {
+        }
+      } else {
+        saveTabBoardMsg(tab, defMsg);
+      }
+    }
+    if (!board._owlReady) {
+      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
+      board._owlReady = true;
+      _owlTabStates[tab] = _owlTabStates[tab] || "speech";
+      _owlTabApplyState(tab);
+    }
+    const msg = msgs[0];
+    const tEl = document.getElementById("owl-tab-text-" + tab);
+    const cEl = document.getElementById("owl-tab-ctext-" + tab);
+    const tmEl = document.getElementById("owl-tab-time-" + tab);
+    if (tEl) tEl.textContent = msg.text;
+    if (cEl) cEl.textContent = msg.text;
+    if (tmEl) tmEl.textContent = "";
+    const chipsEl = document.getElementById("owl-tab-chips-" + tab);
+    if (chipsEl) {
+      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
+      chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
+      chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
+      chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
+      setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
+    }
+  }
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
+  var init_board = __esm({
+    "src/owl/board.js"() {
+      init_core();
       init_chips();
-      init_ui_tools();
-      UI_TOOLS_RULES = `UI TOOLS (\u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F/\u0444\u0456\u043B\u044C\u0442\u0440\u0438/\u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F, hands-free):
-- \u0416\u041E\u0420\u0421\u0422\u041A\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u041D\u0410\u0412\u0406\u0413\u0410\u0426\u0406\u0407: \u044F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u0437 "\u0432\u0456\u0434\u043A\u0440\u0438\u0439" / "\u043F\u043E\u043A\u0430\u0436\u0438" / "\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E" / "\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0432" / "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438 \u043D\u0430" \u0456 \u0434\u0430\u043B\u0456 \u043D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 (\u0437\u0430\u0434\u0430\u0447\u0456/\u043D\u043E\u0442\u0430\u0442\u043A\u0438/\u0444\u0456\u043D\u0430\u043D\u0441\u0438/\u0437\u0432\u0438\u0447\u043A\u0438/\u044F/\u0432\u0435\u0447\u0456\u0440/\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u043F\u0440\u043E\u0435\u043A\u0442\u0438/\u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440/inbox) \u2192 \u0417\u0410\u0412\u0416\u0414\u0418 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 switch_tab. \u041D\u0415 save_task, \u041D\u0415 save_note. \u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0430\u0445 "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 X" \u2014 \u041D\u0415 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u0434\u043B\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F.
-  \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u0437\u0430\u0434\u0430\u0447\u0456" \u2192 switch_tab(target:"tasks"). "\u041F\u043E\u043A\u0430\u0436\u0438 \u0444\u0456\u043D\u0430\u043D\u0441\u0438" \u2192 switch_tab(target:"finance"). \u041D\u0415 save_task \u0437 title "\u0437\u0430\u0434\u0430\u0447\u0456".
-- "\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448" / "\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C" / "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0430\u043C'\u044F\u0442\u044C" \u2192 open_memory
-- "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F" \u2192 open_settings
-- "\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C/\u043C\u0456\u0441\u044F\u0446\u044C/3 \u043C\u0456\u0441\u044F\u0446\u0456" (\u0424\u0456\u043D\u0430\u043D\u0441\u0438) \u2192 set_finance_period
-- "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443" / "\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442" \u2192 open_finance_analytics
-- "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u0422\u0440\u0435\u043D\u0435\u0440\u0430/\u041F\u0430\u0440\u0442\u043D\u0435\u0440\u0430/\u041C\u0435\u043D\u0442\u043E\u0440\u0430" / "\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C" \u2192 set_owl_mode
-- "\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443" / "\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443" \u2192 export_health_card
-- \u041F\u0420\u0418\u041D\u0426\u0418\u041F \u041C\u0406\u041D\u0406\u041C\u0410\u041B\u042C\u041D\u041E\u0413\u041E \u0422\u0415\u0420\u0422\u042F: \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0434\u0456\u044E \u0441\u043B\u043E\u0432\u0430\u043C\u0438 ("\u0434\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0443 \u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431") \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 save_task \u043D\u0430\u043F\u0440\u044F\u043C\u0443. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 UI tools \u0434\u043B\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0442\u044F \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0445 \u0444\u043E\u0440\u043C \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F. UI tools \u2014 \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457/\u0444\u0456\u043B\u044C\u0442\u0440\u0456\u0432/\u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C.`;
-      INBOX_SYSTEM_PROMPT = `\u0422\u0438 \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind.
-\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0434\u0443\u043C\u043A\u0430, \u0437\u0430\u0434\u0430\u0447\u0430, \u0456\u0434\u0435\u044F, \u0437\u0432\u0438\u0447\u043A\u0430, \u043F\u043E\u0434\u0456\u044F, \u0430\u0431\u043E \u0437\u0432\u0456\u0442 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435.
-\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool \u0434\u043B\u044F \u0434\u0456\u0457. \u042F\u043A\u0449\u043E \u0446\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0430\u0431\u043E \u0440\u043E\u0437\u043C\u043E\u0432\u0430 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0411\u0415\u0417 tool, \u043A\u043E\u0440\u043E\u0442\u043A\u043E, 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
+      init_inbox_board();
+      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
+      _owlTabStates = {};
+      _owlTabSwipes = {};
+      Object.assign(window, {
+        toggleOwlTabChat,
+        owlTabSwipeStart,
+        owlTabSwipeMove,
+        owlTabSwipeEnd,
+        scrollOwlTabChips,
+        openChatBar
+      });
+    }
+  });
 
-\u0413\u0420\u0410\u041C\u0410\u0422\u0418\u041A\u0410: \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u043F\u043E\u043C\u0438\u043B\u043A\u0443 \u0430\u0431\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0443 \u2014 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0439 \u0432 \u0442\u0435\u043A\u0441\u0442\u0456 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.
+  // src/tabs/projects.js
+  function getProjects() {
+    return JSON.parse(localStorage.getItem("nm_projects") || "[]");
+  }
+  function saveProjects(arr) {
+    localStorage.setItem("nm_projects", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
+  }
+  function renderProjects() {
+    if (activeProjectId !== null) {
+      renderProjectWorkspace(activeProjectId);
+    } else {
+      renderProjectsList();
+    }
+  }
+  function renderProjectsList() {
+    const projects = getProjects();
+    const listEl = document.getElementById("projects-list");
+    const emptyEl = document.getElementById("projects-empty");
+    if (!listEl) return;
+    if (projects.length === 0) {
+      listEl.innerHTML = "";
+      if (emptyEl) emptyEl.style.display = "block";
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = "none";
+    const now = Date.now();
+    listEl.innerHTML = projects.map((p) => {
+      const steps = p.steps || [];
+      const doneSteps = steps.filter((s) => s.done).length;
+      const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
+      const nextStep = steps.find((s) => !s.done);
+      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
+      const silenceWarn = silenceDays !== null && silenceDays >= 3;
+      const visibleSteps = steps.slice(0, 4);
+      return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
+          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
+        </div>
+        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
+        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456</span>` : ""}
+      </div>
+      ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+          <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div style="font-size:12px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : !s.done && s === nextStep ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""};flex:1">${!s.done && s === nextStep ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
+        </div>`).join("") : ""}
+      <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
+      <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443..."}</div>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>`;
+    }).join("");
+  }
+  function openProjectWorkspace(id) {
+    activeProjectId = id;
+    const projects = getProjects();
+    const idx = projects.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      projects[idx].lastActivity = Date.now();
+      saveProjects(projects);
+    }
+    renderProjectWorkspace(id);
+    projectsBarHistory = [];
+  }
+  function closeProjectWorkspace() {
+    activeProjectId = null;
+    renderProjectsList();
+  }
+  function renderProjectWorkspace(id) {
+    const projects = getProjects();
+    const p = projects.find((pr) => pr.id === id);
+    if (!p) {
+      closeProjectWorkspace();
+      return;
+    }
+    const steps = p.steps || [];
+    const doneSteps = steps.filter((s) => s.done).length;
+    const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
+    const nextStep = steps.find((s) => !s.done);
+    const budget = p.budget || { total: 0, spent: 0, items: [] };
+    const metrics = p.metrics || [];
+    const decisions = p.decisions || [];
+    const risks = p.risks || "";
+    const resources = p.resources || [];
+    const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
+    const scrollEl = document.getElementById("projects-scroll");
+    if (!scrollEl) return;
+    scrollEl.innerHTML = `
+    <!-- \u041D\u0430\u0437\u0430\u0434 -->
+    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      <span style="font-size:13px;font-weight:700;color:#3d2e1e">\u041F\u0440\u043E\u0435\u043A\u0442\u0438</span>
+    </div>
 
-\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u0415\u0420\u0415\u0412\u0406\u0420\u041A\u0418 (\u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u0439 \u0421\u041F\u041E\u0427\u0410\u0422\u041A\u0423):
-1. \u0427\u0438 \u0446\u0435 \u0412\u0418\u041A\u041E\u041D\u0410\u041D\u041D\u042F \u0437\u0432\u0438\u0447\u043A\u0438/\u0437\u0430\u0434\u0430\u0447\u0456 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443? \u2192 complete_habit / complete_task. "\u0412\u0441\u0435 \u0433\u043E\u0442\u043E\u0432\u043E", "\u0437\u0440\u043E\u0431\u0438\u0432 \u0432\u0441\u0435" \u043F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u043B\u0456\u043A\u0443 \u2192 \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0412\u0421\u0406 ID
-2. \u0427\u0438 \u0446\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419/\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456 \u2192 \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task
-3. \u0427\u0438 \u0446\u0435 \u0432\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u0456\u0437 \u0441\u0443\u043C\u043E\u044E \u2192 **\u0422\u0406\u041B\u042C\u041A\u0418 save_finance**. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043F\u0430\u0440\u0430\u043B\u0435\u043B\u044C\u043D\u043E save_task \u043D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u0432 \u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043D\u0430\u0437\u0432\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0438. \u041F\u043E\u043A\u0443\u043F\u043A\u0430 \u0437 \u0441\u0443\u043C\u043E\u044E = \u0432\u0436\u0435 \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0434\u0456\u044F, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430 \u043D\u0430 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0454. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041A\u0443\u043F\u0438\u0432 \u043C'\u044F\u0441\u0430 \u043D\u0430 40 \u0454\u0432\u0440\u043E, \u0431\u043E\u0447\u043E\u043A, \u043A\u043E\u0432\u0431\u0430\u0441\u0430" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_finance (\u0432\u0438\u0442\u0440\u0430\u0442\u0430 40 \u043D\u0430 \u0457\u0436\u0443), \u041D\u0415 save_task. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430 2000" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_finance (\u0434\u043E\u0445\u0456\u0434), \u041D\u0415 save_task.
-4. **\u0427\u0438 \u0454 \u0434\u0456\u0454\u0441\u043B\u043E\u0432\u043E \u0434\u0456\u0457 \u0432 \u0406\u041D\u0424\u0406\u041D\u0406\u0422\u0418\u0412\u0406 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438, \u043F\u043E\u043F\u0440\u0430\u0442\u0438) \u0430\u0431\u043E \u041D\u0410\u041A\u0410\u0417\u041E\u0412\u041E\u041C\u0423 (\u043A\u0443\u043F\u0438, \u0437\u0440\u043E\u0431\u0438, \u043D\u0430\u043F\u0438\u0448\u0438)? \u2192 save_task. \u041D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0447\u0430\u0441\u0443, \u0434\u0430\u0442\u0438, \u0435\u043C\u043E\u0446\u0456\u0439 \u2014 \u0446\u0435 \u0417\u0410\u0414\u0410\u0427\u0410.**
-   \u26A0\uFE0F **\u0412\u0418\u041D\u042F\u0422\u041E\u041A: \u041C\u0418\u041D\u0423\u041B\u0418\u0419 \u0427\u0410\u0421** (\u043A\u0443\u043F\u0438\u0432, \u0437\u0440\u043E\u0431\u0438\u0432, \u043F\u043E\u043F\u0440a\u0432, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0432, \u043D\u0430\u043F\u0438\u0441\u0430\u0432, \u0437'\u0457\u0432, \u0441\u0445\u043E\u0434\u0438\u0432, \u043F\u043E\u043C\u0438\u0432) \u2014 \u0446\u0435 \u0444\u0430\u043A\u0442 \u0449\u043E \u0412\u0416\u0415 \u0441\u0442\u0430\u0432\u0441\u044F, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430. \u041E\u0431\u0440\u043E\u0431\u043A\u0430:
-   - \u044F\u043A\u0449\u043E \u0454 \u0441\u0443\u043C\u0430 \u2192 save_finance (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 3)
-   - \u044F\u043A\u0449\u043E \u0431\u0435\u0437 \u0441\u0443\u043C\u0438 \u0456 \u0446\u0435 \u0434\u0456\u044F \u0437 \u0436\u0438\u0442\u0442\u044F \u2192 save_moment (\u0444\u0430\u043A\u0442 \u0434\u043D\u044F)
-   - \u044F\u043A\u0449\u043E \u0446\u0435 \u043E\u043F\u0438\u0441 \u0441\u0442\u0430\u043D\u0443/\u0435\u043C\u043E\u0446\u0456\u0457 \u2192 save_note
-   \u274C \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u044E\u0439 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 "\u043A\u0443\u043F\u0438\u0432" \u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 "\u043A\u0443\u043F\u0438\u0442\u0438".
-5. \u0427\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441, \u0434\u0443\u043C\u043A\u0430, \u0456\u0434\u0435\u044F \u2192 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool
+    <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
+    <div class="card-glass">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:900;color:#1e1040">${escapeHtml(p.name)}</div>
+          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
+        </div>
+        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
+      </div>
+      <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:4px;transition:width 0.5s"></div>
+      </div>
+      <!-- 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 -->
+      <div style="display:flex;gap:5px">
+        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
+          <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">\u0437\u0430\u0440\u0430\u0437</div>
+        </div>
+        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
+          <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C</div>
+        </div>
+        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
+          <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E</div>
+        </div>
+      </div>
+    </div>
 
-\u041C\u0415\u0422\u0410\u0406\u041D\u0421\u0422\u0420\u0423\u041A\u0426\u0406\u0407: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0438\u0448\u0435 "\u0446\u0435 \u0437\u0430\u0434\u0430\u0447\u0430", "\u0446\u0435 \u043D\u043E\u0442\u0430\u0442\u043A\u0430", "\u0446\u0435 \u0437\u0432\u0438\u0447\u043A\u0430" \u2014 \u0432\u0456\u043D \u043F\u0440\u044F\u043C\u043E \u043A\u0430\u0436\u0435 \u0422\u041E\u0411\u0406 \u044F\u043A\u0438\u0439 \u0442\u0438\u043F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438. \u0421\u0442\u0432\u043E\u0440\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0442\u0438\u043F \u0437 \u0446\u0438\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C. \u041D\u0415 save_note \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C.
+    <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
+    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
+      <div class="section-label" style="margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
+      ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:12px;font-weight:700;color:#1e1040">\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E</span>
+        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
+      </div>
+      <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${spentPct}%;background:#c2410c;border-radius:3px"></div>
+      </div>` : ""}
+      ${budget.items.map((item, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${i < budget.items.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+        <span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55)">${escapeHtml(item.name)}</span>
+        <span style="font-size:12px;font-weight:800;color:${item.amount > 0 ? "#c2410c" : item.amount < 0 ? "#16a34a" : "rgba(30,16,64,0.35)"}">${item.amount > 0 ? "-" : item.amount < 0 ? "+" : ""}${getCurrency()}${Math.abs(item.amount) || item.label || ""}</span>
+      </div>`).join("")}
+    </div>` : ""}
 
-\u041F\u0410\u041C'\u042F\u0422\u042C: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043C\u0438\u043C\u043E\u0445\u0456\u0434\u044C \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0424\u0410\u041A\u0422 \u041F\u0420\u041E \u0421\u0415\u0411\u0415 (\u0441\u0456\u043C'\u044F, \u0440\u043E\u0431\u043E\u0442\u0430, \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F, \u0440\u043E\u0437\u043A\u043B\u0430\u0434, \u0446\u0456\u043B\u044C) \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 save_memory_fact \u041F\u0410\u0420\u0410\u041B\u0415\u041B\u042C\u041D\u041E \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 tools. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438, \u043A\u0443\u043F\u0438 \u0431\u0435\u0437\u0433\u043B\u044E\u0442\u0435\u043D\u043E\u0432\u0443 \u043F\u0456\u0446\u0443" \u2192 save_task (\u043A\u0443\u043F\u0438\u0442\u0438 \u043F\u0456\u0446\u0443) + save_memory_fact (\u0430\u043B\u0435\u0440\u0433\u0456\u044F). \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F \u0439\u0434\u0435 \u0437\u0430\u0432\u0442\u0440\u0430 \u0443 \u0448\u043A\u043E\u043B\u0443 \u043E 8" \u2192 create_event + save_memory_fact (\u043C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E). \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0434\u043B\u044F \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0445 \u0441\u043F\u0440\u0430\u0432 \u2014 \u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0456\u0439\u043A\u0438\u0445 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443.
+    <!-- \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0434\u0456\u044F -->
+    ${nextStep ? `<div style="display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(61,46,30,0.08);border:1.5px solid rgba(61,46,30,0.15)">
+      <div style="width:24px;height:24px;border-radius:8px;background:#3d2e1e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#3d2e1e">${escapeHtml(nextStep.text)}</div>
+    </div>` : ""}
 
-\u0420\u041E\u0417\u0420\u0406\u0417\u041D\u0415\u041D\u041D\u042F task vs event vs project:
-- \u0417\u0410\u0414\u0410\u0427\u0410 (save_task) = \u0414\u0406\u042F \u044F\u043A\u0443 \u0422\u0418 \u043C\u0430\u0454\u0448 \u0417\u0420\u041E\u0411\u0418\u0422\u0418: \u043A\u0443\u043F\u0438\u0442\u0438, \u043F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438. \u0414\u0456\u0454\u0441\u043B\u043E\u0432\u043E = \u0437\u0430\u0434\u0430\u0447\u0430.
-- \u041F\u041E\u0414\u0406\u042F (create_event) = \u0424\u0410\u041A\u0422 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F \u0437 \u0434\u0430\u0442\u043E\u044E: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u0432\u0456\u0437\u0438\u0442
-- \u041F\u0420\u041E\u0415\u041A\u0422 (create_project) = \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443. \u0422\u0440\u0438\u0433\u0435\u0440\u0438: \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0438, \u043F\u043E\u0431\u0443\u0434\u0443\u0432\u0430\u0442\u0438, \u0440\u043E\u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 [\u0449\u043E\u0441\u044C \u0432\u0435\u043B\u0438\u043A\u0435]
-- \u041C\u041E\u041C\u0415\u041D\u0422 (save_moment) = \u0444\u0430\u043A\u0442 \u0449\u043E \u0432\u0436\u0435 \u0441\u0442\u0430\u0432\u0441\u044F \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443
-- \u041D\u041E\u0422\u0410\u0422\u041A\u0410 (save_note) = \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0435\u043C\u043E\u0446\u0456\u0457, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.
-- \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u043E\u0434\u0456\u044F \u2192 clarify. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u043C\u043E\u043C\u0435\u043D\u0442 vs \u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u2192 save_note
+    <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
+    ${metrics.length > 0 ? `<div class="card-glass">
+      <div class="section-label">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
+          <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
+          <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.38);margin-top:2px;line-height:1.3">${escapeHtml(m.label)}</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
 
-\u0421\u041F\u0418\u0421\u041E\u041A \u0447\u0438 \u041E\u041A\u0420\u0415\u041C\u0406 \u0417\u0410\u0414\u0410\u0427\u0406:
-- "\u0421\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A: \u0445\u043B\u0456\u0431, \u043C\u043E\u043B\u043E\u043A\u043E" \u2192 \u041E\u0414\u041D\u0410 save_task \u0437 steps (\u043A\u0440\u043E\u043A\u0430\u043C\u0438)
-- "\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0412\u043E\u0432\u0456, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438\u0441\u044F \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F" \u2192 \u0414\u0412\u0410 \u043E\u043A\u0440\u0435\u043C\u0456 save_task \u0432\u0438\u043A\u043B\u0438\u043A\u0438
+    <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
+    ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
+        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193</span>
+      </div>
+      <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
+      <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
+        ${steps.slice(0, 3).map((s, i) => {
+      const isCurrent = !s.done && s === nextStep;
+      const opacity = s.done ? 0.35 : i === 0 ? 1 : i === 1 ? 0.55 : 0.3;
+      return `<div style="display:flex;align-items:center;gap:7px;${i > 0 ? "margin-top:4px" : ""};opacity:${opacity}">
+            <div style="width:7px;height:7px;border-radius:50%;background:${s.done ? "#3d2e1e" : isCurrent ? "#3d2e1e" : "rgba(61,46,30,0.3)"};flex-shrink:0"></div>
+            <div style="font-size:11px;font-weight:${isCurrent ? 800 : 600};color:${isCurrent ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""}">${isCurrent ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
+          </div>`;
+    }).join("")}
+      </div>
+      <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
+      <div id="proj-timeline-full-${p.id}" style="display:none">
+        ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+          <div onclick="toggleProjectStep(${p.id},${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
 
-\u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439" \u2192 edit_event/edit_task/edit_note/edit_habit. \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F.
+    <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
+    ${decisions.length > 0 ? `<div class="card-glass">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL \xB7 \u0430\u0432\u0442\u043E</span>
+      </div>
+      ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+        <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500;margin-top:1px">${escapeHtml(d.reason)}</div>
+      </div>`).join("")}
+    </div>` : ""}
 
-\u0423\u0422\u041E\u0427\u041D\u0415\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0434\u043E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E ("\u0442\u0430\u043A", "\u043D\u0456", "\u0432\u0438\u0434\u0430\u043B\u0438") \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C, \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0437\u0430\u043F\u0438\u0441.
+    <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
+    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+      <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#1e1040">\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${_countProjectNotes(p.name)} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "${escapeHtml(p.name)}" \u2192</div>
+      </div>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
 
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F (\u0424\u0430\u0437\u0430 2):
-- \u0410\u041B\u0415\u0420\u0413\u0406\u042F ('\u0443 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 X') \u2192 add_allergy. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E \u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u044F\u043A\u0449\u043E \u0442\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454 \u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E, \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12 \u0430\u043D\u0442\u0438\u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F). \u0421\u043A\u0430\u0436\u0438 \u044E\u0437\u0435\u0440\u0443 "\u0432\u0436\u0435 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443".
-- \u0421\u0418\u041C\u041F\u0422\u041E\u041C \u0449\u043E \u0422\u0420\u0418\u0412\u0410\u0404 3+ \u0434\u043D\u0456 \u0430\u0431\u043E \u0414\u0406\u0410\u0413\u041D\u041E\u0417 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F \u2192 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456:
-  - \u044F\u043A\u0449\u043E \u0441\u0445\u043E\u0436\u0430 \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454 (\u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E \u0430\u0431\u043E \u0442\u0435\u043C\u043E\u044E) \u2192 add_health_history_entry \u0434\u043E \u043D\u0435\u0457 (\u041D\u0415 create_health_card)
-  - \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430 \u2192 create_health_card
-- \u0420\u0410\u0417\u041E\u0412\u0410 \u0441\u043A\u0430\u0440\u0433\u0430 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456', '\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F') \u0411\u0415\u0417 \u0437\u0433\u0430\u0434\u043A\u0438 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u2192 save_moment \u0430\u0431\u043E save_note, \u041D\u0415 create_health_card.
-- \u041F\u0420\u0418\u0419\u041E\u041C \u041B\u0406\u041A\u0406\u0412 ('\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443') \u2014 \u044F\u043A\u0449\u043E \u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043A\u0430\u0440\u0442\u043A\u0430\u0445 \u0454 \u0446\u0435\u0439 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2192 log_medication_dose \u0437 card_id. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0443 \u0436\u043E\u0434\u043D\u0456\u0439 \u043A\u0430\u0440\u0442\u0446\u0456 \u2192 save_moment.
-- \u041B\u0406\u041A\u0410\u0420 \u041F\u0420\u041E\u041F\u0418\u0421\u0410\u0412 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u043C\u0443 \u0441\u0442\u0430\u043D\u0456 \u2192 add_medication \u0434\u043E \u043A\u0430\u0440\u0442\u043A\u0438. \u0423 \u041D\u041E\u0412\u041E\u041C\u0423 \u0441\u0442\u0430\u043D\u0456 \u2192 create_health_card \u0437 \u043F\u043E\u043B\u0435\u043C initial_history_text.
-- \u0412\u0406\u0417\u0418\u0422 \u0414\u041E \u041B\u0406\u041A\u0410\u0420\u042F \u044F\u043A \u043F\u043E\u0434\u0456\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443 \u2192 create_event (\u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043A\u0430\u0440\u0442\u043A\u0443 \u043B\u0438\u0448\u0435 \u0447\u0435\u0440\u0435\u0437 \u0432\u0456\u0437\u0438\u0442). \u041A\u0430\u0440\u0442\u043A\u0438 \u0441\u0442\u0432\u043E\u0440\u044E\u044E\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u0441\u0438\u043C\u043F\u0442\u043E\u043C/\u0434\u0456\u0430\u0433\u043D\u043E\u0437.
-- \u041C\u0415\u0414\u0418\u0427\u041D\u0406 \u041F\u0418\u0422\u0410\u041D\u041D\u042F ('\u0449\u043E \u0437 \u043C\u043E\u0457\u043C...', '\u0447\u0438 \u0446\u0435 \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E', '\u044F\u043A\u0438\u0439 \u0434\u0456\u0430\u0433\u043D\u043E\u0437') \u2192 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C: "\u042F \u043D\u0435 \u043B\u0456\u043A\u0430\u0440. \u0426\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0434\u043E \u0442\u0432\u043E\u0433\u043E \u043B\u0456\u043A\u0430\u0440\u044F \u2014 \u043D\u0435 \u0437\u0430\u0439\u043C\u0430\u0439\u0441\u044F \u0441\u0430\u043C\u043E\u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F\u043C." \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0440\u0430\u0434\u044C \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438.
+    <!-- OWL \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 -->
+    ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
+      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438</div>
+      <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
+    </div>` : ""}
 
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u2014 \u0406\u041D\u0422\u0415\u0420\u0412'\u042E \u043F\u0440\u0438 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 (\u0424\u0430\u0437\u0430 6, 19.04 6GoDe):
-\u041A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0421\u0418\u041C\u041F\u0422\u041E\u041C \u0449\u043E \u0442\u0440\u0438\u0432\u0430\u0454 3+ \u0434\u043D\u0456 \u0430\u0431\u043E \u0414\u0406\u0410\u0413\u041D\u041E\u0417 \u2014 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 create_health_card \u043E\u0434\u0440\u0430\u0437\u0443 \u043D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u0432\u0438\u0441\u0442\u0430\u0447\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F name. \u0421\u043F\u043E\u0447\u0430\u0442\u043A\u0443 \u0437\u0430\u0434\u0430\u0439 1-3 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F (\u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443 \u0437\u0430 \u0440\u0430\u0437 \u0443 text content, \u0411\u0415\u0417 tool_call) \u0449\u043E\u0431 \u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u043A\u043B\u044E\u0447\u043E\u0432\u0456 \u043F\u043E\u043B\u044F:
-1. \u041A\u043E\u043B\u0438 \u0441\u0430\u043C\u0435 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C? \u2192 startDate (\u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u2014 \u043D\u043E\u0432\u0430 \u043A\u0430\u0440\u0442\u043A\u0430 \u0447\u0438 \u0434\u043E\u0434\u0430\u0442\u0438 \u0443 \u0441\u0445\u043E\u0436\u0443 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0447\u0435\u0440\u0435\u0437 add_health_history_entry).
-2. \u0411\u0443\u0432/\u043F\u043B\u0430\u043D\u0443\u0454\u0448 \u043B\u0456\u043A\u0430\u0440\u044F? \u042F\u043A\u0449\u043E \u0442\u0430\u043A \u2014 \u043A\u043E\u043B\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C? \u0429\u043E \u0441\u043A\u0430\u0437\u0430\u0432? \u2192 doctor + nextAppointment + doctorRecommendations.
-3. \u041F\u0440\u043E\u043F\u0438\u0441\u0430\u043B\u0438 \u043B\u0456\u043A\u0438? \u042F\u043A\u0456 \u0442\u0430 \u044F\u043A \u043F\u0440\u0438\u0439\u043C\u0430\u0442\u0438? \u2192 \u043F\u0456\u0441\u043B\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u043A\u0430\u0440\u0442\u043A\u0438 \u043E\u043A\u0440\u0435\u043C\u043E \u0432\u0438\u043A\u043B\u0438\u0447 add_medication \u0437 dosage/schedule.
+    <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
+    ${resources.length > 0 ? `<div class="card-glass">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F</span>
+      </div>
+      ${resources.map((r, i) => {
+      const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
+      const [bg, color] = (badgeColors[r.type] || "rgba(30,16,64,0.07)|rgba(30,16,64,0.5)").split("|");
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < resources.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+          <div style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;background:${bg};color:${color}">${escapeHtml(r.type)}</div>
+          <div style="font-size:11px;font-weight:600;color:#1e1040;flex:1;line-height:1.3">${escapeHtml(r.title)}</div>
+          ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">\u2192</a>` : ""}
+        </div>`;
+    }).join("")}
+    </div>` : ""}
+  `;
+  }
+  function _countProjectNotes(projectName) {
+    try {
+      return getNotes().filter((n) => n.folder === projectName).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function toggleProjectTimeline(id) {
+    const collapsed = document.getElementById(`proj-timeline-collapsed-${id}`);
+    const full = document.getElementById(`proj-timeline-full-${id}`);
+    const toggle = document.getElementById(`proj-timeline-toggle-${id}`);
+    if (!collapsed || !full) return;
+    const isCollapsed = full.style.display === "none";
+    collapsed.style.display = isCollapsed ? "none" : "block";
+    full.style.display = isCollapsed ? "block" : "none";
+    if (toggle) toggle.textContent = isCollapsed ? "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191" : "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193";
+  }
+  function toggleProjectStep(projectId, stepId) {
+    const projects = getProjects();
+    const p = projects.find((pr) => pr.id === projectId);
+    if (!p) return;
+    const step = (p.steps || []).find((s) => s.id === stepId);
+    if (step) {
+      step.done = !step.done;
+      step.doneAt = step.done ? Date.now() : null;
+      p.lastActivity = Date.now();
+      const done = p.steps.filter((s) => s.done).length;
+      p.progress = p.steps.length > 0 ? Math.round(done / p.steps.length * 100) : 0;
+      saveProjects(projects);
+      renderProjectWorkspace(projectId);
+      _syncProjectStepToTasks(p, step);
+    }
+  }
+  function _syncProjectStepToTasks(project, step) {
+    try {
+      if (!step.done) return;
+      const tasks = getTasks();
+      const match = tasks.find((t) => t.status === "active" && t.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
+      if (match) {
+        match.status = "done";
+        match.completedAt = Date.now();
+        saveTasks(tasks);
+      }
+    } catch (e) {
+    }
+  }
+  function openAddProject() {
+    const modal = document.getElementById("project-modal");
+    if (!modal) return;
+    document.getElementById("project-input-name").value = "";
+    document.getElementById("project-input-subtitle").value = "";
+    modal.style.display = "flex";
+    setTimeout(() => document.getElementById("project-input-name").focus(), 100);
+  }
+  function closeProjectModal() {
+    const modal = document.getElementById("project-modal");
+    if (modal) modal.style.display = "none";
+  }
+  function saveNewProject() {
+    const name = (document.getElementById("project-input-name").value || "").trim();
+    if (!name) return;
+    const subtitle = (document.getElementById("project-input-subtitle").value || "").trim();
+    const projects = getProjects();
+    const newProject = {
+      id: Date.now(),
+      name,
+      subtitle,
+      progress: 0,
+      steps: [],
+      budget: { total: 0, spent: 0, items: [] },
+      metrics: [],
+      decisions: [],
+      resources: [],
+      risks: "",
+      tempoNow: "?",
+      tempoMore: "?",
+      tempoIdeal: "?",
+      notesPreview: "",
+      lastActivity: Date.now(),
+      createdAt: Date.now()
+    };
+    projects.unshift(newProject);
+    saveProjects(projects);
+    closeProjectModal();
+    showToast("\u2713 \u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
+    openProjectWorkspace(newProject.id);
+    setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
+  }
+  async function startProjectInboxInterview(projectName, projectSubtitle) {
+    if (currentTab !== "inbox") switchTab("inbox");
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      setTimeout(() => addInboxChatMsg(
+        "agent",
+        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?`
+      ), 400);
+      return;
+    }
+    const aiContext = getAIContext();
+    const systemPrompt = `${getOWLPersonality()} \u0429\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}"${projectSubtitle ? ` \u2014 "${projectSubtitle}"` : ""}.
+\u0422\u0432\u043E\u044F \u0440\u043E\u043B\u044C \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A. \u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442.
+\u041F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0430\u0431\u043E \u0440\u0435\u0441\u0443\u0440\u0441\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432.
+\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
+${aiContext ? "\n\n" + aiContext : ""}`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "system", content: systemPrompt }],
+          max_tokens: 100,
+          temperature: 0.75
+        })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (reply) {
+        setTimeout(() => {
+          addInboxChatMsg("agent", reply);
+          localStorage.setItem("nm_guide_waiting_topic", "project_" + Date.now());
+          const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
+          localStorage.setItem("nm_project_interview_step", "1");
+          localStorage.setItem("nm_project_interview_name", projectName);
+        }, 500);
+      }
+    } catch (e) {
+      setTimeout(() => addInboxChatMsg(
+        "agent",
+        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?`
+      ), 400);
+    }
+  }
+  function getProjectsContext() {
+    const projects = getProjects();
+    if (projects.length === 0) return "";
+    const now = Date.now();
+    const parts = [`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456\u0445 \u0434\u0456\u0439):`];
+    projects.slice(0, 5).forEach((p) => {
+      const steps = p.steps || [];
+      const done = steps.filter((s) => s.done).length;
+      const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
+      const next = steps.find((s) => !s.done);
+      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 864e5) : null;
+      const silence = silenceDays !== null && silenceDays >= 3 ? ` \u26A0\uFE0F ${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456` : "";
+      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
+    });
+    return parts.join("\n");
+  }
+  function addProjectsChatMsg(role, text, _noSave = false) {
+    const el = document.getElementById("projects-chat-messages");
+    if (!el) return;
+    if (_projectsTypingEl) {
+      _projectsTypingEl.remove();
+      _projectsTypingEl = null;
+    }
+    if (role === "typing") {
+      const td = document.createElement("div");
+      td.style.cssText = "display:flex";
+      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
+      el.appendChild(td);
+      _projectsTypingEl = td;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    try {
+      openChatBar("projects");
+    } catch (e) {
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
+    else projectsBarHistory.push({ role: "assistant", content: text });
+    if (!_noSave) saveChatMsg("projects", role, text);
+  }
+  async function sendProjectsBarMessage() {
+    if (projectsBarLoading) return;
+    const input = document.getElementById("projects-bar-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addProjectsChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addProjectsChatMsg("user", text);
+    projectsBarLoading = true;
+    addProjectsChatMsg("typing", "");
+    const projects = getProjects();
+    const activeProject = activeProjectId ? projects.find((p) => p.id === activeProjectId) : null;
+    const projCtx = getProjectsContext();
+    const aiContext = getAIContext();
+    const activeSteps = activeProject ? (activeProject.steps || []).map((s) => `[ID:${s.id}] ${s.done ? "\u2713" : "\u25CB"} ${s.text}`).join("\n") : "";
+    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u043F\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u0445 \u0432 NeverMind.
+${activeProject ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: "${activeProject.name}" (${activeProject.progress || 0}%). \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A: ${activeProject.subtitle || ""}.
+\u041A\u0440\u043E\u043A\u0438:
+${activeSteps || "\u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432"}` : projCtx}
+${aiContext ? "\n\n" + aiContext : ""}
 
-\u0424\u043E\u0440\u043C\u0430\u0442 \u043F\u0438\u0442\u0430\u043D\u043D\u044F: \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F + 2-3 \u0447\u0456\u043F\u0438-\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u0434\u043B\u044F \u0442\u0438\u043F\u043E\u0432\u0438\u0445 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456\u0432. \u0427\u0456\u043F\u0438 \u043F\u0438\u0448\u0438 \u0406\u041D\u041B\u0410\u0419\u041D-JSON \u0443 content (\u041D\u0415 \u0432\u0435\u0441\u044C content \u044F\u043A JSON):
-  \u041F\u0440\u0438\u043A\u043B\u0430\u0434 content: "\u041A\u043E\u043B\u0438 \u0441\u0430\u043C\u0435 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C? {"chips":[{"label":"\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456","action":"chat"},{"label":"\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443","action":"chat"},{"label":"\u0414\u0430\u0432\u043D\u043E","action":"chat"}]}"
-\u041D\u0435 \u0434\u043E\u0442\u0438\u0441\u043A\u0430\u0439 \u2014 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u0443\u0432\u0430\u0432 \u0430\u0431\u043E \u0434\u0430\u0432 \u0456\u043D\u0448\u0443 \u0456\u043D\u0444\u0443, \u0441\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u0437 \u0442\u0438\u043C \u0449\u043E \u0454.
-\u0424\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 create_health_card \u2014 \u043F\u0456\u0441\u043B\u044F 2-3 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u0410\u0411\u041E \u043A\u043E\u043B\u0438 \u043E\u0447\u0435\u0432\u0438\u0434\u043D\u043E \u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0445\u043E\u0447\u0435 \u0443\u0442\u043E\u0447\u043D\u044E\u0432\u0430\u0442\u0438 (\u043E\u0434\u0440\u0430\u0437\u0443 \u0434\u0430\u0432 3+ \u043F\u043E\u043B\u044F \u0443 \u043F\u0435\u0440\u0448\u043E\u043C\u0443 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u0456).
-\u041D\u0415 \u0434\u043E\u043F\u0438\u0442\u0443\u0439\u0441\u044F \u043F\u0440\u0438 edit_health_card / add_health_history_entry \u2014 \u0456\u043D\u0442\u0435\u0440\u0432'\u044E \u043B\u0438\u0448\u0435 \u043F\u0440\u0438 \u0421\u0422\u0412\u041E\u0420\u0415\u041D\u041D\u0406 \u043D\u043E\u0432\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438.
-
-\u0424\u041E\u0420\u041C\u0410\u0422 \u0427\u0406\u041F\u0406\u0412 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0434\u043B\u044F Inbox \u0447\u0430\u0442\u0443 \u2014 \u043D\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F):
-\u041A\u043E\u043B\u0438 \u0434\u0430\u0454\u0448 \u044E\u0437\u0435\u0440\u0443 \u0432\u0438\u0431\u0456\u0440 \u0437 2-4 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456\u0432 \u0443 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0456\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u0447\u0456\u043F\u0438 \u0456\u043D\u043B\u0430\u0439\u043D-JSON \u0443 content. \u0424\u043E\u0440\u043C\u0430\u0442: {"chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}, ...]}. \u041A\u043B\u0456\u043A \u043D\u0430 \u0447\u0456\u043F \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0442\u044C label \u0443 \u0447\u0430\u0442. \u041F\u0440\u0430\u0432\u0438\u043B\u0430: 2-4 \u0447\u0456\u043F\u0438 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C, label \u0434\u043E 3 \u0441\u043B\u0456\u0432 \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043E\u043A, action \u0437\u0430\u0432\u0436\u0434\u0438 "chat", \u043D\u0435 \u0434\u0443\u0431\u043B\u044E\u0439 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438. \u041D\u0415 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u0447\u0456\u043F\u0438 \u043A\u043E\u043B\u0438 \u043F\u0438\u0442\u0430\u0454\u0448 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F ("\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0434\u0435\u043D\u044C?") \u0430\u0431\u043E \u0443 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u043C\u0443 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u0456 ("\u2713 \u0417\u0430\u043F\u0438\u0441\u0430\u0432").
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u2014 \u041C\u041E\u041D\u0406\u0422\u041E\u0420\u0418\u041D\u0413 \u0421\u0423\u041F\u0415\u0420\u0415\u0427\u041D\u041E\u0421\u0422\u0415\u0419 (\u0424\u0430\u0437\u0430 4):
-- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0443\u0454 \u0434\u0456\u044E \u044F\u043A\u0430 \u0421\u0423\u041F\u0415\u0420\u0415\u0427\u0418\u0422\u042C '\u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457' \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044F '\u043D\u0435 \u043F\u0438\u0442\u0438 \u043A\u0430\u0432\u0443' + \u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0443\u0454 '\u043A\u0443\u043F\u0438\u0432 \u043B\u0430\u0442\u0435' \u0430\u0431\u043E '\u0432\u0438\u043F\u0438\u0432 \u043A\u0430\u0432\u0443') \u2192 \u041F\u0406\u0421\u041B\u042F primary tool call \u0414\u041E\u0414\u0410\u0419 \u0443 text content \u043C'\u044F\u043A\u0443 \u0437\u0433\u0430\u0434\u043A\u0443 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u0411\u0415\u0417 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0430\u0442\u043E\u0440\u0441\u0442\u0432\u0430: "\u041D\u0430\u0433\u0430\u0434\u0443\u044E: \u043B\u0456\u043A\u0430\u0440 \u043A\u0430\u0437\u0430\u0432 \u0437\u043C\u0435\u043D\u0448\u0438\u0442\u0438 \u043A\u0430\u0432\u0443." 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041D\u0415 \u043A\u0430\u0440\u0442\u0430\u0439, \u041D\u0415 \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u044F\u0439 \u2014 \u044E\u0437\u0435\u0440 \u0434\u043E\u0440\u043E\u0441\u043B\u0438\u0439. \u041C\u0435\u0442\u0430: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0432\u0438\u0434\u0438\u043C\u0438\u043C, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u0437.
-- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u041F\u0406\u0414\u0422\u0412\u0415\u0420\u0414\u0416\u0423\u0404 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044E (\u0440\u0435\u043A '\u0433\u0443\u043B\u044F\u0442\u0438 30 \u0445\u0432 \u0449\u043E\u0434\u043D\u044F' + \u044E\u0437\u0435\u0440 \u0437\u0430\u043A\u0440\u0438\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 '\u043F\u0440\u043E\u0431\u0456\u0436\u043A\u0430 40 \u0445\u0432') \u2192 \u0434\u043E\u0434\u0430\u0439 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0435 \u043F\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043D\u044F \u0443 text content: "\u0414\u043E\u0442\u0440\u0438\u043C\u0443\u0454\u0448\u0441\u044F \u043F\u043B\u0430\u043D\u0443." 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
-- \u0410\u043B\u0435\u0440\u0433\u0456\u0457 \u0442\u0435\u0436 \u043C\u043E\u043D\u0456\u0442\u043E\u0440\u0438\u043C\u043E: \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0443\u0454 \u0432\u0438\u0442\u0440\u0430\u0442\u0443/\u043C\u043E\u043C\u0435\u043D\u0442 \u0437\u0456 \u0437\u0433\u0430\u0434\u043A\u043E\u044E \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443 \u0437 \u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 \u2192 add_health_history_entry \u0437 entry_type='auto' \u0410\u0411\u041E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F \u0443 text content \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u043D\u0435\u043C\u0430.
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u2014 \u041A\u041B\u0410\u0421\u0418\u0424\u0406\u041A\u0410\u0426\u0406\u042F \u0421\u0422\u0410\u041D\u0423 (\u0424\u0430\u0437\u0430 4):
-- \u041A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0442\u0430\u043D \u043F\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u0456\u0439 \u043A\u0430\u0440\u0442\u0446\u0456 ('\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C', '\u0437\u043D\u043E\u0432\u0443 \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0438\u043B\u043E\u0441\u044C', '\u043C\u0430\u0439\u0436\u0435 \u043D\u0435 \u043F\u043E\u043C\u0456\u0447\u0430\u044E') \u2192 add_health_history_entry \u0437 entry_type='status_change' \u0456 text \u0449\u043E \u042F\u0412\u041D\u041E \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u043E\u0434\u043D\u0435 \u0437 \u0441\u043B\u0456\u0432: '\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F' / '\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F' / '\u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E'. \u0426\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0454 \u0431\u0435\u0439\u0434\u0436 "\u041A\u0443\u0440\u0441 X% \xB7 \u0442\u0440\u0435\u043D\u0434" \u0443 \u043A\u0430\u0440\u0442\u0446\u0456.
-  \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438:
-  - "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C" \u2192 text: "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F: \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C"
-  - "\u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F \u043F\u0456\u0441\u043B\u044F \u0433\u043E\u0440\u0456\u0445\u0456\u0432" \u2192 text: "\u041F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F: \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F \u043F\u0456\u0441\u043B\u044F \u0433\u043E\u0440\u0456\u0445\u0456\u0432"
-  - "\u0442\u0430\u043A \u0441\u0430\u043C\u043E \u044F\u043A \u0432\u0447\u043E\u0440\u0430" \u2192 text: "\u0421\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E: \u0431\u0435\u0437 \u0437\u043C\u0456\u043D"
-
-\u041A\u0410\u0422\u0415\u0413\u041E\u0420\u0406\u0407 \u0424\u0406\u041D\u0410\u041D\u0421\u0406\u0412 (\u0424\u0430\u0437\u0430 4 K-02):
-- "\u0434\u043E\u0434\u0430\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456" \u2192 create_finance_category \u0437 name='\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456', type='expense' (\u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C), icon='travel' (\u043E\u0431\u0435\u0440\u0438 \u0437 \u0431\u0456\u0431\u043B\u0456\u043E\u0442\u0435\u043A\u0438 \u0437\u0430 \u0442\u0435\u043C\u043E\u044E). \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0444\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439 \u043A\u043E\u043B\u0456\u0440.
-- "\u0441\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430 2 \u044F\u043A \u0434\u043E\u0445\u0456\u0434" \u2192 create_finance_category \u0437 type='income'.
-- "\u043F\u0435\u0440\u0435\u0439\u043C\u0435\u043D\u0443\u0439 \u041A\u0443\u0440\u0435\u0432\u043E \u043D\u0430 \u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438" \u2192 edit_finance_category \u0437 current_name='\u041A\u0443\u0440\u0435\u0432\u043E', new_name='\u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438'.
-- "\u0437\u0440\u043E\u0431\u0438 \u0407\u0436\u0443 \u0437\u0435\u043B\u0435\u043D\u043E\u044E" \u2192 edit_finance_category \u0437 current_name='\u0407\u0436\u0430', color='#22c55e'.
-- "\u0437\u0430\u0430\u0440\u0445\u0456\u0432\u0443\u0439 \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438" \u2192 edit_finance_category \u0437 current_name='\u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438', archived=true.
-- "\u0432\u0438\u0434\u0430\u043B\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0414\u043E\u0437\u0432\u0456\u043B\u043B\u044F" \u2192 delete_finance_category \u0437 name='\u0414\u043E\u0437\u0432\u0456\u043B\u043B\u044F' (\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F).
-- "\u043E\u0431'\u0454\u0434\u043D\u0430\u0439 \u041A\u0443\u0440\u0435\u0432\u043E \u0456 \u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438" \u2192 merge_finance_categories \u0437 from_name='\u041A\u0443\u0440\u0435\u0432\u043E', to_name='\u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438'.
-- "\u0434\u043E\u0434\u0430\u0439 \u0443 \u0407\u0436\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A" \u2192 add_finance_subcategory \u0437 category_name='\u0407\u0436\u0430', subcategory='\u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A'.
-- \u0406\u043A\u043E\u043D\u043A\u0438: food, car, subscription, heart, home, shopping, wallet, gift, refund, coffee, cigarette, fuel, sport, entertainment, education, travel, phone, grass, anchor, briefcase, other. \u041E\u0431\u0438\u0440\u0430\u0439 \u0437\u0430 \u0442\u0435\u043C\u043E\u044E.
-
-\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0431\u044E\u0434\u0436\u0435\u0442\u0438 \u0430\u0431\u043E \u043F\u043B\u0430\u043D\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.
-
-${UI_TOOLS_RULES}`;
-      INBOX_TOOLS = [
-        // --- СТВОРЕННЯ ---
-        { type: "function", function: { name: "save_task", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u0440\u0430\u0437\u043E\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0443. \u0414\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0417\u0420\u041E\u0411\u0418\u0422\u0418: \u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438, \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432. \u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0447\u0430\u0441/\u0434\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u0454" }, text: { type: "string", description: "\u041F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, steps: { type: "array", items: { type: "string" }, description: "\u041A\u0440\u043E\u043A\u0438 \u044F\u043A\u0449\u043E \u0454 \u0441\u043F\u0438\u0441\u043E\u043A \u0434\u0456\u0439" }, due_date: { type: "string", description: "YYYY-MM-DD \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 \u0430\u0433\u0435\u043D\u0442\u0430, 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041D\u0415 \u0445\u0432\u0430\u043B\u0438" } }, required: ["title", "text", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "save_note", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0435\u043C\u043E\u0446\u0456\u0457, \u0456\u0434\u0435\u0457, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438) \u2014 \u0446\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, folder: { type: "string", enum: ["\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0420\u043E\u0431\u043E\u0442\u0430", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456", "\u0406\u0434\u0435\u0457"], description: "\u041F\u0430\u043F\u043A\u0430. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435. \u0406\u0434\u0435\u0457 \u2014 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u0438\u0445 \u0456\u0434\u0435\u0439. \u0420\u043E\u0431\u043E\u0442\u0430 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u043E\u0431\u043E\u0447\u0456 \u0437\u0430\u043F\u0438\u0441\u0438. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043F\u043E\u0457\u0437\u0434\u043A\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["text", "folder", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "save_habit", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041D\u041E\u0412\u0423 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0443 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0443 \u0437\u0432\u0438\u0447\u043A\u0443. \u0429\u043E\u0434\u043D\u044F, \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A, \u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430" }, details: { type: "string", description: "\u0414\u0435\u0442\u0430\u043B\u0456 \u044F\u043A\u0449\u043E \u0454" }, days: { type: "array", items: { type: "integer" }, description: "\u0414\u043D\u0456 \u0442\u0438\u0436\u043D\u044F: 0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434. \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432 = \u0449\u043E\u0434\u043D\u044F" }, target_count: { type: "integer", description: "\u0420\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C (8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A = 8). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 1" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "save_moment", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F, \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443: \u043F\u043E\u0457\u0445\u0430\u0432, \u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F, \u043F\u043E\u0431\u0430\u0447\u0438\u0432, \u0431\u0443\u0432 \u043D\u0430...", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443" }, mood: { type: "string", enum: ["positive", "neutral", "negative"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["text", "mood", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["title", "date", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "save_finance", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 \u2014 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439.", parameters: { type: "object", properties: { fin_type: { type: "string", enum: ["expense", "income"] }, amount: { type: "number", description: "\u0421\u0443\u043C\u0430" }, category: { type: "string", description: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438: \u0407\u0436\u0430, \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442, \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438, \u0417\u0434\u043E\u0440\u043E\u0432'\u044F, \u0416\u0438\u0442\u043B\u043E, \u041F\u043E\u043A\u0443\u043F\u043A\u0438, \u0406\u043D\u0448\u0435. \u0414\u043E\u0445\u043E\u0434\u0438: \u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430, \u041D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u041F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F, \u0406\u043D\u0448\u0435" }, fin_comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, 1-3 \u0441\u043B\u043E\u0432\u0430" }, date: { type: "string", description: "YYYY-MM-DD \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E \u0432\u0447\u043E\u0440\u0430/\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430" } }, required: ["fin_type", "amount", "category", "fin_comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "create_project", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443, \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0430 \u0434\u043E\u0434\u0430\u0442\u043A\u0443, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0446\u0456\u044F \u0432\u0435\u0441\u0456\u043B\u043B\u044F.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, subtitle: { type: "string", description: "\u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A" }, comment: { type: "string", description: "\u0420\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name"], additionalProperties: false } } },
-        // --- ВИКОНАННЯ ---
-        { type: "function", function: { name: "complete_habit", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443(\u0438) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0437\u0432\u0438\u0447\u043E\u043A.", parameters: { type: "object", properties: { habit_ids: { type: "array", items: { type: "integer" }, description: "ID \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["habit_ids", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.", parameters: { type: "object", properties: { task_ids: { type: "array", items: { type: "integer" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["task_ids", "comment"], additionalProperties: false } } },
-        // --- РЕДАГУВАННЯ ---
-        { type: "function", function: { name: "edit_task", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438/\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "integer", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456" }, title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_habit", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0432\u0438\u0447\u043A\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u043D\u0456, \u0434\u0435\u0442\u0430\u043B\u0456. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0443 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443!", parameters: { type: "object", properties: { habit_id: { type: "integer", description: "ID \u0437\u0432\u0438\u0447\u043A\u0438" }, name: { type: "string" }, days: { type: "array", items: { type: "integer" } }, details: { type: "string" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_event", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043F\u043E\u0434\u0456\u044E: \u0434\u0430\u0442\u0443, \u0447\u0430\u0441, \u043D\u0430\u0437\u0432\u0443. \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438 \u043F\u043E\u0434\u0456\u044E.", parameters: { type: "object", properties: { event_id: { type: "integer", description: "ID \u043F\u043E\u0434\u0456\u0457" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_note", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: \u0442\u0435\u043A\u0441\u0442 \u0430\u0431\u043E \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { note_id: { type: "integer", description: "ID \u043D\u043E\u0442\u0430\u0442\u043A\u0438" }, text: { type: "string" }, folder: { type: "string" }, comment: { type: "string" } }, required: ["note_id"], additionalProperties: false } } },
-        // --- ВИДАЛЕННЯ ---
-        { type: "function", function: { name: "delete_task", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "delete_habit", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443.", parameters: { type: "object", properties: { habit_id: { type: "integer" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "delete_event", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E \u0437 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F.", parameters: { type: "object", properties: { event_id: { type: "integer" }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "delete_folder", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u0437 \u0443\u0441\u0456\u043C\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430\u043C\u0438.", parameters: { type: "object", properties: { folder: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438" } }, required: ["folder"], additionalProperties: false } } },
-        // --- ІНШЕ ---
-        { type: "function", function: { name: "reopen_task", description: "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "add_step", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id", "steps"], additionalProperties: false } } },
-        { type: "function", function: { name: "move_note", description: "\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { query: { type: "string", description: "\u0427\u0430\u0441\u0442\u0438\u043D\u0430 \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, folder: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430" } }, required: ["query", "folder"], additionalProperties: false } } },
-        { type: "function", function: { name: "update_transaction", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E. \u042E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043A\u0430\u0436\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438/\u0432\u0438\u043F\u0440\u0430\u0432\u0438\u0442\u0438 \u0441\u0443\u043C\u0443 \u0430\u0431\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E.", parameters: { type: "object", properties: { id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
-        { type: "function", function: { name: "set_reminder", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419, \u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456, \u043D\u0430\u043F\u043E\u043C\u043D\u0438. \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0429\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438" }, time: { type: "string", description: "HH:MM. \u0432\u0440\u0430\u043D\u0446\u0456=08:00, \u0432\u0434\u0435\u043D\u044C=12:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443=\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439+1" }, date: { type: "string", description: "YYYY-MM-DD, \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" } }, required: ["text", "time"], additionalProperties: false } } },
-        { type: "function", function: { name: "restore_deleted", description: "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437 \u043A\u043E\u0448\u0438\u043A\u0430.", parameters: { type: "object", properties: { query: { type: "string", description: "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u0441\u043B\u043E\u0432\u0430, 'all' (\u0432\u0441\u0456) \u0430\u0431\u043E 'last' (\u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439)" }, type: { type: "string", enum: ["task", "note", "habit", "inbox", "folder", "finance"], description: "\u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443" } }, required: ["query"], additionalProperties: false } } },
-        { type: "function", function: { name: "save_routine", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "default"] }, description: "\u0414\u043D\u0456. default=\u0431\u0443\u0434\u043D\u0456. \u041C\u0430\u0441\u0438\u0432: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time", "activity"] }, description: "\u0411\u043B\u043E\u043A\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043A\u0443" } }, required: ["day", "blocks"], additionalProperties: false } } },
-        { type: "function", function: { name: "clarify", description: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 2+ \u0440\u0456\u0437\u043D\u0438\u0445 \u0442\u0438\u043F\u0456\u0432 \u0456 \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E, \u0430\u0431\u043E \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u0440\u043E\u0435\u043A\u0442. \u042F\u043A\u0449\u043E 80%+ \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E\u0441\u0442\u0456 \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.", parameters: { type: "object", properties: { question: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0437 \u0432\u0431\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u043C\u0438 \u0434\u0456\u044F\u043C\u0438" } }, required: ["question", "options"], additionalProperties: false } } },
-        // --- ЗДОРОВ'Я (Фаза 2, 15.04 6v2eR) ---
-        // Перед create_health_card ОБОВ'ЯЗКОВО глянь "ЗДОРОВ'Я" контекст —
-        // якщо схожа картка вже існує, використай edit_health_card або
-        // add_health_history_entry до існуючої замість дублювання (4.12 антидублювання).
-        { type: "function", function: { name: "create_health_card", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0445\u0432\u043E\u0440\u043E\u0431\u0438/\u0441\u0442\u0430\u043D\u0443/\u043C\u0435\u0442\u0438 \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0438\u043C\u043F\u0442\u043E\u043C \u044F\u043A\u0438\u0439 \u0442\u0440\u0438\u0432\u0430\u0454 (3+ \u0434\u043D\u0456), \u0434\u0456\u0430\u0433\u043D\u043E\u0437 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u043E\u0432\u0443 \u043C\u0435\u0442\u0443 \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0434\u043B\u044F \u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0441\u043A\u0430\u0440\u0433 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456' \u2192 save_moment) \u0430\u0431\u043E \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u043F\u0440\u0438\u0439\u043E\u043C\u0456\u0432 \u043B\u0456\u043A\u0456\u0432. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0417\u0414\u041E\u0420\u041E\u0412'\u042F' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u043A\u0430\u0440\u0442\u043A\u0430 \u0437 \u0442\u043E\u044E \u0436 \u043D\u0430\u0437\u0432\u043E\u044E/\u0442\u0435\u043C\u043E\u044E \u2014 \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439, \u043A\u0440\u0430\u0449\u0435 edit_health_card \u0430\u0431\u043E add_health_history_entry.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0441\u0442\u0430\u043D\u0443 1-3 \u0441\u043B\u043E\u0432\u0430: '\u0428\u043A\u0456\u0440\u0430', '\u0422\u0438\u0441\u043A', '\u0421\u043F\u0438\u043D\u0430', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F'. \u041D\u0415 \u0434\u0456\u0430\u0433\u043D\u043E\u0437 ('\u0430\u0442\u043E\u043F\u0456\u0447\u043D\u0438\u0439 \u0434\u0435\u0440\u043C\u0430\u0442\u0438\u0442') \u2014 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438" }, subtitle: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0443: '\u0412\u0438\u0441\u0438\u043F \u043D\u0430 \u0440\u0443\u043A\u0430\u0445', '\u041F\u0456\u0434\u0432\u0438\u0449\u0435\u043D\u0438\u0439 140/90'" }, doctor: { type: "string", description: "\u0406\u043C'\u044F + \u0441\u043F\u0435\u0446\u0456\u0430\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u043E: '\u0414\u0440. \u041F\u0435\u0442\u0440\u0435\u043D\u043A\u043E \xB7 \u0434\u0435\u0440\u043C\u0430\u0442\u043E\u043B\u043E\u0433'" }, doctor_recommendations: { type: "string", description: "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0456" }, doctor_conclusion: { type: "string", description: "\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439" }, start_date: { type: "string", description: "YYYY-MM-DD \u043A\u043E\u043B\u0438 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C, \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, next_appointment_time: { type: "string", description: "HH:MM \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, status: { type: "string", enum: ["active", "controlled", "done"] }, initial_history_text: { type: "string", description: "\u041F\u0435\u0440\u0448\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u044E\u0437\u0435\u0440 \u0441\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_health_card", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: \u0441\u0442\u0430\u0442\u0443\u0441, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C, \u043E\u043F\u0438\u0441. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C create_health_card \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, name: { type: "string" }, subtitle: { type: "string" }, doctor: { type: "string" }, doctor_recommendations: { type: "string" }, doctor_conclusion: { type: "string" }, start_date: { type: "string", description: "YYYY-MM-DD" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD. \u041F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 null \u0449\u043E\u0431 \u041E\u0427\u0418\u0421\u0422\u0418\u0422\u0418" }, next_appointment_time: { type: "string", description: "HH:MM" }, status: { type: "string", enum: ["active", "controlled", "done"] }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "delete_health_card", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F (\u0437 \u043A\u043E\u0448\u0438\u043A\u0430 7 \u0434\u043D\u0456\u0432). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u044F\u043C\u043E \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0441\u0442\u0430\u043D.", parameters: { type: "object", properties: { card_id: { type: "integer" }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "add_medication", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u043E\u043F\u0438\u0441\u0430\u0432 X' \u0430\u0431\u043E '\u043F\u043E\u0447\u0430\u0432 \u043F\u0440\u0438\u0439\u043C\u0430\u0442\u0438 X'.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443" }, dosage: { type: "string", description: "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F: '20\u043C\u0433', '1 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430'" }, schedule: { type: "string", description: "\u0413\u0440\u0430\u0444\u0456\u043A \u043F\u0440\u0438\u0439\u043E\u043C\u0443: '08:00, 20:00' \u0430\u0431\u043E '\u0432\u0440\u0430\u043D\u0446\u0456, \u0432\u0432\u0435\u0447\u0435\u0440\u0456'" }, course_duration: { type: "string", description: "\u041A\u0443\u0440\u0441: '14 \u0434\u043D\u0456\u0432', '1 \u043C\u0456\u0441\u044F\u0446\u044C'" }, comment: { type: "string" } }, required: ["card_id", "med_name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_medication", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456: \u0434\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F, \u0433\u0440\u0430\u0444\u0456\u043A, \u043A\u0443\u0440\u0441. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u0437\u043C\u0456\u043D\u0438\u0432 \u0434\u043E\u0437\u0443 X \u043D\u0430 Y'.", parameters: { type: "object", properties: { card_id: { type: "integer" }, med_id: { type: "integer", description: "ID \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string" }, dosage: { type: "string" }, schedule: { type: "string" }, course_duration: { type: "string" }, comment: { type: "string" } }, required: ["card_id", "med_id", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "log_medication_dose", description: "\u041F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0449\u043E \u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u0434\u043E\u0437\u0443 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0417\u0410\u0420\u0410\u0417. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443', '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u043B\u0456\u043A\u0438'. \u042F\u043A\u0449\u043E med_name \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439 \u2014 \u0442\u043E\u0447\u043D\u0456\u0448\u0435; \u044F\u043A\u0449\u043E \u0443 \u043A\u0430\u0440\u0442\u0446\u0456 \u0442\u0456\u043B\u044C\u043A\u0438 1 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2014 \u043C\u043E\u0436\u043D\u0430 \u0431\u0435\u0437 med_name.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0430 (fuzzy match \u2014 \u043D\u0435\u0447\u0456\u0442\u043A\u0438\u0439 \u043F\u043E\u0448\u0443\u043A)" }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "add_allergy", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0443 nm_allergies (\u0432\u0438\u0434\u043D\u043E \u0441\u043A\u0440\u0456\u0437\u044C \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0443 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 X'. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0410\u041B\u0415\u0420\u0413\u0406\u0407' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u2014 \u043D\u0435 \u0434\u0443\u0431\u043B\u044E\u0439 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12).", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443: '\u0433\u043E\u0440\u0456\u0445\u0438', '\u043F\u0435\u043D\u0456\u0446\u0438\u043B\u0456\u043D', '\u043B\u0430\u043A\u0442\u043E\u0437\u0430'" }, notes: { type: "string", description: "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438/\u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u0456" }, comment: { type: "string" } }, required: ["name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "delete_allergy", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0443 \u043C\u0435\u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u043D\u0430 X'.", parameters: { type: "object", properties: { allergy_id: { type: "integer", description: "ID \u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, comment: { type: "string" } }, required: ["allergy_id", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "add_health_history_entry", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u0456\u0441\u0442\u043E\u0440\u0456\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0441\u0442\u0430\u043D\u0443 ('\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C', '\u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F'), \u043F\u0440\u043E\u043F\u0443\u0441\u043A \u0434\u043E\u0437\u0438, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044E \u2014 \u0456 \u0446\u0435 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, entry_type: { type: "string", enum: ["manual", "status_change", "doctor_visit", "auto"], description: "manual = \u0434\u043E\u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u044E\u0437\u0435\u0440\u0430; status_change = \u0442\u0440\u0435\u043D\u0434 (\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F/\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F); doctor_visit = \u0432\u0456\u0437\u0438\u0442 \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F; auto = \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0434\u043E\u0437\u0443" }, text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u0437\u0430\u043F\u0438\u0441\u0443" }, comment: { type: "string" } }, required: ["card_id", "entry_type", "text", "comment"], additionalProperties: false } } },
-        // --- ПАМ'ЯТЬ ---
-        { type: "function", function: { name: "save_memory_fact", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0421\u0422\u0406\u0419\u041A\u0418\u0419 \u0424\u0410\u041A\u0422 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0443 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0443 \u043F\u0430\u043C'\u044F\u0442\u044C.\n\n\u2705 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u041F\u0420\u042F\u041C\u041E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0441\u0442\u0456\u0439\u043A\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0438\u0441\u0442\u0438\u043A\u0443 \u041F\u0420\u041E \u0421\u0415\u0411\u0415:\n  - '\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438' \u2192 health\n  - '\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F' \u2192 relationships\n  - '\u041F\u0440\u0430\u0446\u044E\u044E \u0432 Kyivstar \u0437 9 \u0434\u043E 18' \u2192 work\n  - '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0441\u044C \u043E 6 \u0449\u043E\u0434\u043D\u044F' \u2192 preferences (\u0441\u0442\u0456\u0439\u043A\u0430 \u0437\u0432\u0438\u0447\u043A\u0430)\n  - '\u0425\u043E\u0447\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0445\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0443 \u0434\u043E \u043B\u0456\u0442\u0430' \u2192 goals\n  - '\u0417\u0430\u0440\u0430\u0437 \u0432 \u0410\u043C\u0441\u0442\u0435\u0440\u0434\u0430\u043C\u0456 \u043D\u0430 2 \u0442\u0438\u0436\u043D\u0456' \u2192 context (\u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E, ttl_days=14)\n\n\u274C \u041D\u0415 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u0434\u043B\u044F:\n  - \u0420\u0430\u0437\u043E\u0432\u0438\u0445 \u0437\u0430\u0434\u0430\u0447 \u0447\u0438 \u0434\u0456\u0439: '\u043F\u043E\u043F\u0440\u0430\u0442\u0438 \u043E\u0434\u044F\u0433', '\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431', '\u0432\u0438\u043C\u043A\u043D\u0443\u0432 \u0441\u0432\u0456\u0442\u043B\u043E' \u2192 \u0446\u0435 save_task / save_moment, \u0430 \u041D\u0415 \u0444\u0430\u043A\u0442 '\u0437\u0430\u0439\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u043F\u0440\u0430\u043D\u043D\u044F\u043C' / '\u0432\u0438\u043C\u0438\u043A\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u043E'\n  - \u0421\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u044C \u0437\u0430 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u043E\u043C: '\u0441\u043A\u043B\u0430\u0434\u0430\u0454\u0448 \u0441\u043F\u0438\u0441\u043A\u0438 \u0441\u043F\u0440\u0430\u0432', '\u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0448 \u0456\u043D\u0431\u043E\u043A\u0441' \u2192 \u0442\u0430\u0432\u0442\u043E\u043B\u043E\u0433\u0456\u044F, \u041D\u0415 \u0444\u0430\u043A\u0442\n  - \u0412\u0438\u0433\u0430\u0434\u0430\u043D\u0438\u0445 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0445 \u0440\u0438\u0441: '\u0434\u043E\u0431\u0440\u0438\u0439', '\u043A\u0440\u0435\u0430\u0442\u0438\u0432\u043D\u0438\u0439', '\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0439 \u0434\u043E \u043D\u043E\u0432\u043E\u0433\u043E', '\u043F\u0440\u0430\u0433\u043D\u0435 \u043F\u043E\u0440\u044F\u0434\u043A\u0443', '\u043F\u0440\u043E\u044F\u0432\u043B\u044F\u0454...', '\u0446\u0456\u043B\u0435\u0441\u043F\u0440\u044F\u043C\u043E\u0432\u0430\u043D\u0438\u0439' \u2192 \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E, \u0442\u0438 \u043D\u0435 \u043F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\n  - \u041E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0435\u043C\u043E\u0446\u0456\u0439/\u0441\u0442\u0430\u043D\u0456\u0432: '\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F', '\u0440\u0430\u0434\u0456\u044E' \u2192 save_moment/save_note, \u043D\u0435 \u0444\u0430\u043A\u0442\n  - \u041D\u0435\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u0444\u0440\u0430\u0437: '\u0437\u0430\u0439\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u0447\u0438\u043C\u043E\u0441\u044C', '\u043F\u0440\u0430\u0446\u044E\u0454 \u043D\u0430\u0434 \u0447\u0438\u043C\u043E\u0441\u044C', '\u043B\u044E\u0431\u0438\u0442\u044C \u0449\u043E\u0441\u044C' \u2192 \u0432\u0456\u0434\u0445\u0438\u043B\u0438\u0442\u0438\n\n\u041F\u0420\u0410\u0412\u0418\u041B\u041E: \u044F\u043A\u0449\u043E \u0444\u0430\u043A\u0442 \u041D\u0415 \u043C\u043E\u0436\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u0434\u0435\u0442\u0430\u043B\u044C (\u0456\u043C'\u044F, \u043C\u0456\u0441\u0446\u0435, \u0434\u0456\u0430\u0433\u043D\u043E\u0437, \u0447\u0430\u0441, \u0441\u0443\u043C\u0430, \u043F\u0440\u043E\u0435\u043A\u0442) \u2014 \u041D\u0415 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438.\n\n\u0424\u043E\u0440\u043C\u0430\u0442 fact: 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. '\u041C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E', '\u041F\u0440\u0430\u0446\u044E\u0454 \u0432 Kyivstar', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438', '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043E 7'.\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 text content ('\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 ...') \u0449\u043E\u0431 \u044E\u0437\u0435\u0440 \u043F\u043E\u0431\u0430\u0447\u0438\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.", parameters: { type: "object", properties: { fact: { type: "string", description: "\u0424\u0430\u043A\u0442 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E \u0437 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u041E\u042E \u0434\u0435\u0442\u0430\u043B\u043B\u044E (\u0456\u043C'\u044F, \u043C\u0456\u0441\u0446\u0435, \u0434\u0456\u0430\u0433\u043D\u043E\u0437, \u0447\u0430\u0441, \u0441\u0443\u043C\u0430, \u043F\u0440\u043E\u0435\u043A\u0442). \u0411\u0435\u0437 \u0441\u0443\u0431'\u0454\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043F\u0440\u0438\u043A\u043C\u0435\u0442\u043D\u0438\u043A\u0456\u0432 ('\u0434\u043E\u0431\u0440\u0438\u0439', '\u043A\u0440\u0435\u0430\u0442\u0438\u0432\u043D\u0438\u0439')." }, category: { type: "string", enum: ["preferences", "health", "work", "relationships", "context", "goals"], description: "preferences=\u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F/\u0437\u0432\u0438\u0447\u043A\u0438 \u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u043E\u044E; health=\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u0430\u043B\u0435\u0440\u0433\u0456\u0457/\u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438; work=\u0440\u043E\u0431\u043E\u0442\u0430/\u043A\u0430\u0440'\u0454\u0440\u0430/\u0444\u0456\u043D\u0430\u043D\u0441\u0438; relationships=\u0441\u0456\u043C'\u044F/\u0434\u0440\u0443\u0437\u0456/\u043A\u043E\u043B\u0435\u0433\u0438 \u0437 \u0456\u043C\u0435\u043D\u0430\u043C\u0438; context=\u043B\u043E\u043A\u0430\u0446\u0456\u044F/\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A/\u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0456 \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438; goals=\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0446\u0456\u043B\u0456 \u0437 \u043D\u0430\u0437\u0432\u043E\u044E" }, ttl_days: { type: "integer", description: "\u0427\u0435\u0440\u0435\u0437 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0434\u043D\u0456\u0432 \u0444\u0430\u043A\u0442 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0454 \u0456 \u0437\u043D\u0438\u043A\u043D\u0435. \u041D\u0415 \u0432\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0438\u0445 (\u0441\u0456\u043C'\u044F, \u0430\u043B\u0435\u0440\u0433\u0456\u044F, \u0432\u0456\u043A, \u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F). \u0412\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0438\u0445: \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438=7-14; \u0432\u0456\u0434\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F/\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442=30-60" } }, required: ["fact", "category"], additionalProperties: false } } },
-        // --- КАТЕГОРІЇ ФІНАНСІВ (Фаза 4 K-02, 15.04.2026 3229b) ---
-        { type: "function", function: { name: "create_finance_category", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0434\u043E\u0434\u0430\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E X', '\u0441\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E Y \u0437 \u0456\u043A\u043E\u043D\u043A\u043E\u044E \u043B\u0456\u0442\u0430\u043A\u0430'. \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u2014 expense. color \u0456 icon \u043E\u043F\u0446\u0456\u0439\u043D\u0456 (\u0431\u0443\u0434\u0435 \u043E\u0431\u0440\u0430\u043D\u043E \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E).", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, type: { type: "string", enum: ["expense", "income"], description: "\u0422\u0438\u043F: expense (\u0432\u0438\u0442\u0440\u0430\u0442\u0430) \u0430\u0431\u043E income (\u0434\u043E\u0445\u0456\u0434). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C expense" }, icon: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0456\u043A\u043E\u043D\u043A\u0438 \u0437 \u0431\u0456\u0431\u043B\u0456\u043E\u0442\u0435\u043A\u0438: food, car, subscription, heart, home, shopping, wallet, gift, refund, coffee, cigarette, fuel, sport, entertainment, education, travel, phone, grass, anchor, briefcase, other. \u041E\u043F\u0446\u0456\u0439\u043D\u043E \u2014 \u044F\u043A\u0449\u043E \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u043E\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F \u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E" }, color: { type: "string", description: "HEX-\u043A\u043E\u043B\u0456\u0440 \u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0456 #RRGGBB. \u041E\u043F\u0446\u0456\u0439\u043D\u043E \u2014 \u0456\u043D\u0430\u043A\u0448\u0435 \u043E\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F \u0437 \u043F\u0430\u043B\u0456\u0442\u0440\u0438. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0444\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439 \u2014 \u044E\u0437\u0435\u0440 \u043D\u0435 \u043B\u044E\u0431\u0438\u0442\u044C" }, subcategories: { type: "array", items: { type: "string" }, description: "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457. \u0422\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u044F\u043C\u043E \u0457\u0445 \u043D\u0430\u0437\u0432\u0430\u0432 \u0430\u0431\u043E \u0432\u043E\u043D\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E \u043E\u0447\u0435\u0432\u0438\u0434\u043D\u0456 \u2014 \u0440\u0435\u0448\u0442\u0443 \u0434\u043E\u0434\u0430\u0441\u0442\u044C \u0441\u0430\u043C" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_finance_category", description: "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432: \u043D\u0430\u0437\u0432\u0430, \u0456\u043A\u043E\u043D\u043A\u0430, \u043A\u043E\u043B\u0456\u0440, \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457, \u0430\u0440\u0445\u0456\u0432\u0430\u0446\u0456\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u0439\u043C\u0435\u043D\u0443\u0439 X \u043D\u0430 Y', '\u0437\u0440\u043E\u0431\u0438 \u0407\u0436\u0443 \u0437\u0435\u043B\u0435\u043D\u043E\u044E', '\u0437\u0430\u0430\u0440\u0445\u0456\u0432\u0443\u0439 \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438'.", parameters: { type: "object", properties: { current_name: { type: "string", description: "\u041F\u043E\u0442\u043E\u0447\u043D\u0430 \u043D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, new_name: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430 (\u044F\u043A\u0449\u043E \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F)" }, icon: { type: "string", description: "\u041D\u043E\u0432\u0430 \u0456\u043A\u043E\u043D\u043A\u0430" }, color: { type: "string", description: "\u041D\u043E\u0432\u0438\u0439 HEX-\u043A\u043E\u043B\u0456\u0440. \u041D\u0415 \u0444\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439" }, subcategories: { type: "array", items: { type: "string" }, description: "\u041F\u043E\u0432\u043D\u0430 \u043D\u043E\u0432\u0430 \u0437\u0430\u043C\u0456\u043D\u043D\u0430 \u0432\u0441\u044C\u043E\u0433\u043E \u0441\u043F\u0438\u0441\u043A\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439" }, archived: { type: "boolean", description: "true=\u0430\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438 (\u0441\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438), false=\u0430\u043A\u0442\u0438\u0432\u0443\u0432\u0430\u0442\u0438" }, comment: { type: "string" } }, required: ["current_name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "delete_finance_category", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0438\u0434\u0430\u043B\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E X'. \u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F (\u0457\u0445 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F \u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F \u0440\u044F\u0434\u043A\u043E\u043C \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430). \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u043E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438 \u0437 \u0456\u043D\u0448\u043E\u044E \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439 merge_finance_categories \u0437\u0430\u043C\u0456\u0441\u0442\u044C delete.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F" }, comment: { type: "string" } }, required: ["name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "merge_finance_categories", description: "\u041E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438 \u0434\u0432\u0456 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 \u0432 \u043E\u0434\u043D\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043E\u0431'\u0454\u0434\u043D\u0430\u0439 X \u0456 Y', '\u0437\u043B\u0438\u0439 X \u0443 Y'. \u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437 'from' \u043F\u0435\u0440\u0435\u0439\u0434\u0443\u0442\u044C \u0443 'to', 'from' \u0431\u0443\u0434\u0435 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0430. \u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u044F\u0442\u044C\u0441\u044F \u0443 'to'.", parameters: { type: "object", properties: { from_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u044F\u043A\u0430 \u0431\u0443\u0434\u0435 \u0437\u043B\u0438\u0442\u0430 \u0443 \u0456\u043D\u0448\u0443 (\u0437\u043D\u0438\u043A\u043D\u0435)" }, to_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457-\u043E\u0434\u0435\u0440\u0436\u0443\u0432\u0430\u0447\u0430 (\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F)" }, comment: { type: "string" } }, required: ["from_name", "to_name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "add_finance_subcategory", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0434\u043E\u0434\u0430\u0439 \u0443 \u0407\u0436\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A', '\u0432 \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442 \u2014 \u041C\u0435\u0442\u0440\u043E'.", parameters: { type: "object", properties: { category_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, subcategory: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, comment: { type: "string" } }, required: ["category_name", "subcategory", "comment"], additionalProperties: false } } },
-        // --- UI TOOLS (4.17, 18.04.2026 VJF2M) — навігація/фільтри/налаштування ---
-        ...UI_TOOLS
-      ];
+\u0422\u0438 \u043C\u043E\u0436\u0435\u0448 (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON \u044F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0434\u0456\u044F):
+- \u0412\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"complete_project_step","project_id":${activeProjectId || "null"},"step_id":ID}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"add_project_step","project_id":${activeProjectId || "null"},"step":"\u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443"}
+- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u0440\u043E\u0433\u0440\u0435\u0441: {"action":"update_project_progress","project_id":${activeProjectId || "null"},"progress":\u0447\u0438\u0441\u043B\u043E 0-100}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0456\u0448\u0435\u043D\u043D\u044F: {"action":"add_project_decision","project_id":${activeProjectId || "null"},"title":"\u0440\u0456\u0448\u0435\u043D\u043D\u044F","reason":"\u0447\u043E\u043C\u0443"}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u0435\u0442\u0440\u0438\u043A\u0443: {"action":"add_project_metric","project_id":${activeProjectId || "null"},"label":"\u043D\u0430\u0437\u0432\u0430","value":"\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F","color":"#hex"}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0435\u0441\u0443\u0440\u0441: {"action":"add_project_resource","project_id":${activeProjectId || "null"},"type":"\u041A\u043D\u0438\u0433\u0430|\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430|\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442|\u0421\u0442\u0430\u0442\u0442\u044F","title":"\u043D\u0430\u0437\u0432\u0430","url":"\u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F"}
+- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F: {"action":"update_project_tempo","project_id":${activeProjectId || "null"},"tempoNow":"6 \u0442\u0438\u0436","tempoMore":"4 \u0442\u0438\u0436","tempoIdeal":"2 \u0442\u0438\u0436"}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438: {"action":"update_project_risks","project_id":${activeProjectId || "null"},"risks":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":"${activeProject ? activeProject.name : "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"}"}
+- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A: {"action":"create_folder","folder":"\u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438"}
+- \u0417\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
+- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
+- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
+- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u0414\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
+- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...projectsBarHistory.slice(-10)], max_tokens: 300, temperature: 0.6 })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        addProjectsChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        projectsBarLoading = false;
+        return;
+      }
+      const _processOne = (parsed) => {
+        const pid = parsed.project_id;
+        if (parsed.action === "complete_project_step" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            const step = (p.steps || []).find((s) => s.id === parsed.step_id);
+            if (step) {
+              step.done = true;
+              step.doneAt = Date.now();
+              p.progress = Math.round(p.steps.filter((s) => s.done).length / p.steps.length * 100);
+              p.lastActivity = Date.now();
+              saveProjects(projs);
+              renderProjects();
+              addProjectsChatMsg("agent", `\u2705 \u041A\u0440\u043E\u043A "${step.text}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041F\u0440\u043E\u0433\u0440\u0435\u0441: ${p.progress}%`);
+              return true;
+            }
+          }
+          return false;
+        }
+        if (parsed.action === "add_project_step" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.steps) p.steps = [];
+            p.steps.push({ id: Date.now(), text: parsed.step, done: false });
+            p.lastActivity = Date.now();
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A: "${parsed.step}"`);
+            return true;
+          }
+          return false;
+        }
+        if (parsed.action === "update_project_progress" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            p.progress = Math.min(100, Math.max(0, parsed.progress));
+            p.lastActivity = Date.now();
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${p.progress}%`);
+          }
+          return true;
+        }
+        if (parsed.action === "add_project_decision" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.decisions) p.decisions = [];
+            p.decisions.unshift({ title: parsed.title, reason: parsed.reason });
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0420\u0456\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: "${parsed.title}"`);
+          }
+          return true;
+        }
+        if (parsed.action === "add_project_metric" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.metrics) p.metrics = [];
+            p.metrics.push({ label: parsed.label, value: parsed.value, color: parsed.color || "#3d2e1e" });
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u041C\u0435\u0442\u0440\u0438\u043A\u0443 "${parsed.label}: ${parsed.value}" \u0434\u043E\u0434\u0430\u043D\u043E`);
+          }
+          return true;
+        }
+        if (parsed.action === "add_project_resource" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.resources) p.resources = [];
+            p.resources.push({ type: parsed.type, title: parsed.title, url: parsed.url || "" });
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${parsed.title}" \u0434\u043E\u0434\u0430\u043D\u043E`);
+          }
+          return true;
+        }
+        if (parsed.action === "update_project_tempo" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            p.tempoNow = parsed.tempoNow || p.tempoNow;
+            p.tempoMore = parsed.tempoMore || p.tempoMore;
+            p.tempoIdeal = parsed.tempoIdeal || p.tempoIdeal;
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E`);
+          }
+          return true;
+        }
+        if (parsed.action === "update_project_risks" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            p.risks = parsed.risks;
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E`);
+          }
+          return true;
+        }
+        if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
+        return false;
+      };
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (_processOne(parsed)) handled = true;
+      }
+      if (!handled) safeAgentReply(reply, addProjectsChatMsg);
+    } catch {
+      addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+    projectsBarLoading = false;
+  }
+  var activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl;
+  var init_projects = __esm({
+    "src/tabs/projects.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      activeProjectId = null;
+      projectsBarLoading = false;
+      projectsBarHistory = [];
+      _projectsTypingEl = null;
+      Object.assign(window, {
+        openAddProject,
+        saveNewProject,
+        closeProjectModal,
+        sendProjectsBarMessage,
+        openProjectWorkspace,
+        closeProjectWorkspace,
+        toggleProjectTimeline,
+        toggleProjectStep,
+        switchTab
+      });
     }
   });
 
@@ -3437,647 +4497,6 @@ ${UI_TOOLS_RULES}`;
     }
   });
 
-  // src/tabs/projects.js
-  function getProjects() {
-    return JSON.parse(localStorage.getItem("nm_projects") || "[]");
-  }
-  function saveProjects(arr) {
-    localStorage.setItem("nm_projects", JSON.stringify(arr));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
-  }
-  function renderProjects() {
-    if (activeProjectId !== null) {
-      renderProjectWorkspace(activeProjectId);
-    } else {
-      renderProjectsList();
-    }
-  }
-  function renderProjectsList() {
-    const projects = getProjects();
-    const listEl = document.getElementById("projects-list");
-    const emptyEl = document.getElementById("projects-empty");
-    if (!listEl) return;
-    if (projects.length === 0) {
-      listEl.innerHTML = "";
-      if (emptyEl) emptyEl.style.display = "block";
-      return;
-    }
-    if (emptyEl) emptyEl.style.display = "none";
-    const now = Date.now();
-    listEl.innerHTML = projects.map((p) => {
-      const steps = p.steps || [];
-      const doneSteps = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
-      const nextStep = steps.find((s) => !s.done);
-      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
-      const silenceWarn = silenceDays !== null && silenceDays >= 3;
-      const visibleSteps = steps.slice(0, 4);
-      return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
-          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
-        </div>
-        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
-        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
-        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456</span>` : ""}
-      </div>
-      ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-          <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:white">${s.done ? "\u2713" : ""}</div>
-          <div style="font-size:12px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : !s.done && s === nextStep ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""};flex:1">${!s.done && s === nextStep ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
-        </div>`).join("") : ""}
-      <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
-      <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443..."}</div>
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-    </div>`;
-    }).join("");
-  }
-  function openProjectWorkspace(id) {
-    activeProjectId = id;
-    const projects = getProjects();
-    const idx = projects.findIndex((p) => p.id === id);
-    if (idx !== -1) {
-      projects[idx].lastActivity = Date.now();
-      saveProjects(projects);
-    }
-    renderProjectWorkspace(id);
-    projectsBarHistory = [];
-  }
-  function closeProjectWorkspace() {
-    activeProjectId = null;
-    renderProjectsList();
-  }
-  function renderProjectWorkspace(id) {
-    const projects = getProjects();
-    const p = projects.find((pr) => pr.id === id);
-    if (!p) {
-      closeProjectWorkspace();
-      return;
-    }
-    const steps = p.steps || [];
-    const doneSteps = steps.filter((s) => s.done).length;
-    const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
-    const nextStep = steps.find((s) => !s.done);
-    const budget = p.budget || { total: 0, spent: 0, items: [] };
-    const metrics = p.metrics || [];
-    const decisions = p.decisions || [];
-    const risks = p.risks || "";
-    const resources = p.resources || [];
-    const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
-    const scrollEl = document.getElementById("projects-scroll");
-    if (!scrollEl) return;
-    scrollEl.innerHTML = `
-    <!-- \u041D\u0430\u0437\u0430\u0434 -->
-    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#3d2e1e">\u041F\u0440\u043E\u0435\u043A\u0442\u0438</span>
-    </div>
-
-    <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
-    <div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div style="flex:1">
-          <div style="font-size:16px;font-weight:900;color:#1e1040">${escapeHtml(p.name)}</div>
-          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
-        </div>
-        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
-      </div>
-      <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:10px">
-        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:4px;transition:width 0.5s"></div>
-      </div>
-      <!-- 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 -->
-      <div style="display:flex;gap:5px">
-        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
-          <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">\u0437\u0430\u0440\u0430\u0437</div>
-        </div>
-        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
-          <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C</div>
-        </div>
-        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
-          <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
-    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
-      <div class="section-label" style="margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
-      ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:12px;font-weight:700;color:#1e1040">\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E</span>
-        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
-      </div>
-      <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
-        <div style="height:100%;width:${spentPct}%;background:#c2410c;border-radius:3px"></div>
-      </div>` : ""}
-      ${budget.items.map((item, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${i < budget.items.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-        <span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55)">${escapeHtml(item.name)}</span>
-        <span style="font-size:12px;font-weight:800;color:${item.amount > 0 ? "#c2410c" : item.amount < 0 ? "#16a34a" : "rgba(30,16,64,0.35)"}">${item.amount > 0 ? "-" : item.amount < 0 ? "+" : ""}${getCurrency()}${Math.abs(item.amount) || item.label || ""}</span>
-      </div>`).join("")}
-    </div>` : ""}
-
-    <!-- \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0434\u0456\u044F -->
-    ${nextStep ? `<div style="display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(61,46,30,0.08);border:1.5px solid rgba(61,46,30,0.15)">
-      <div style="width:24px;height:24px;border-radius:8px;background:#3d2e1e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-      <div style="font-size:13px;font-weight:700;color:#3d2e1e">${escapeHtml(nextStep.text)}</div>
-    </div>` : ""}
-
-    <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
-    ${metrics.length > 0 ? `<div class="card-glass">
-      <div class="section-label">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
-          <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
-          <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.38);margin-top:2px;line-height:1.3">${escapeHtml(m.label)}</div>
-        </div>`).join("")}
-      </div>
-    </div>` : ""}
-
-    <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
-    ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193</span>
-      </div>
-      <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
-      <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
-        ${steps.slice(0, 3).map((s, i) => {
-      const isCurrent = !s.done && s === nextStep;
-      const opacity = s.done ? 0.35 : i === 0 ? 1 : i === 1 ? 0.55 : 0.3;
-      return `<div style="display:flex;align-items:center;gap:7px;${i > 0 ? "margin-top:4px" : ""};opacity:${opacity}">
-            <div style="width:7px;height:7px;border-radius:50%;background:${s.done ? "#3d2e1e" : isCurrent ? "#3d2e1e" : "rgba(61,46,30,0.3)"};flex-shrink:0"></div>
-            <div style="font-size:11px;font-weight:${isCurrent ? 800 : 600};color:${isCurrent ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""}">${isCurrent ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
-          </div>`;
-    }).join("")}
-      </div>
-      <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
-      <div id="proj-timeline-full-${p.id}" style="display:none">
-        ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div onclick="toggleProjectStep(${p.id},${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
-          <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
-        </div>`).join("")}
-      </div>
-    </div>` : ""}
-
-    <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
-    ${decisions.length > 0 ? `<div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL \xB7 \u0430\u0432\u0442\u043E</span>
-      </div>
-      ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-        <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500;margin-top:1px">${escapeHtml(d.reason)}</div>
-      </div>`).join("")}
-    </div>` : ""}
-
-    <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
-    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
-      <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${_countProjectNotes(p.name)} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "${escapeHtml(p.name)}" \u2192</div>
-      </div>
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
-
-    <!-- OWL \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 -->
-    ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438</div>
-      <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
-    </div>` : ""}
-
-    <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
-    ${resources.length > 0 ? `<div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F</span>
-      </div>
-      ${resources.map((r, i) => {
-      const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
-      const [bg, color] = (badgeColors[r.type] || "rgba(30,16,64,0.07)|rgba(30,16,64,0.5)").split("|");
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < resources.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;background:${bg};color:${color}">${escapeHtml(r.type)}</div>
-          <div style="font-size:11px;font-weight:600;color:#1e1040;flex:1;line-height:1.3">${escapeHtml(r.title)}</div>
-          ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">\u2192</a>` : ""}
-        </div>`;
-    }).join("")}
-    </div>` : ""}
-  `;
-  }
-  function _countProjectNotes(projectName) {
-    try {
-      return getNotes().filter((n) => n.folder === projectName).length;
-    } catch (e) {
-      return 0;
-    }
-  }
-  function toggleProjectTimeline(id) {
-    const collapsed = document.getElementById(`proj-timeline-collapsed-${id}`);
-    const full = document.getElementById(`proj-timeline-full-${id}`);
-    const toggle = document.getElementById(`proj-timeline-toggle-${id}`);
-    if (!collapsed || !full) return;
-    const isCollapsed = full.style.display === "none";
-    collapsed.style.display = isCollapsed ? "none" : "block";
-    full.style.display = isCollapsed ? "block" : "none";
-    if (toggle) toggle.textContent = isCollapsed ? "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191" : "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193";
-  }
-  function toggleProjectStep(projectId, stepId) {
-    const projects = getProjects();
-    const p = projects.find((pr) => pr.id === projectId);
-    if (!p) return;
-    const step = (p.steps || []).find((s) => s.id === stepId);
-    if (step) {
-      step.done = !step.done;
-      step.doneAt = step.done ? Date.now() : null;
-      p.lastActivity = Date.now();
-      const done = p.steps.filter((s) => s.done).length;
-      p.progress = p.steps.length > 0 ? Math.round(done / p.steps.length * 100) : 0;
-      saveProjects(projects);
-      renderProjectWorkspace(projectId);
-      _syncProjectStepToTasks(p, step);
-    }
-  }
-  function _syncProjectStepToTasks(project, step) {
-    try {
-      if (!step.done) return;
-      const tasks = getTasks();
-      const match = tasks.find((t) => t.status === "active" && t.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
-      if (match) {
-        match.status = "done";
-        match.completedAt = Date.now();
-        saveTasks(tasks);
-      }
-    } catch (e) {
-    }
-  }
-  function openAddProject() {
-    const modal = document.getElementById("project-modal");
-    if (!modal) return;
-    document.getElementById("project-input-name").value = "";
-    document.getElementById("project-input-subtitle").value = "";
-    modal.style.display = "flex";
-    setTimeout(() => document.getElementById("project-input-name").focus(), 100);
-  }
-  function closeProjectModal() {
-    const modal = document.getElementById("project-modal");
-    if (modal) modal.style.display = "none";
-  }
-  function saveNewProject() {
-    const name = (document.getElementById("project-input-name").value || "").trim();
-    if (!name) return;
-    const subtitle = (document.getElementById("project-input-subtitle").value || "").trim();
-    const projects = getProjects();
-    const newProject = {
-      id: Date.now(),
-      name,
-      subtitle,
-      progress: 0,
-      steps: [],
-      budget: { total: 0, spent: 0, items: [] },
-      metrics: [],
-      decisions: [],
-      resources: [],
-      risks: "",
-      tempoNow: "?",
-      tempoMore: "?",
-      tempoIdeal: "?",
-      notesPreview: "",
-      lastActivity: Date.now(),
-      createdAt: Date.now()
-    };
-    projects.unshift(newProject);
-    saveProjects(projects);
-    closeProjectModal();
-    showToast("\u2713 \u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
-    openProjectWorkspace(newProject.id);
-    setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
-  }
-  async function startProjectInboxInterview(projectName, projectSubtitle) {
-    if (currentTab !== "inbox") switchTab("inbox");
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      setTimeout(() => addInboxChatMsg(
-        "agent",
-        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?`
-      ), 400);
-      return;
-    }
-    const aiContext = getAIContext();
-    const systemPrompt = `${getOWLPersonality()} \u0429\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}"${projectSubtitle ? ` \u2014 "${projectSubtitle}"` : ""}.
-\u0422\u0432\u043E\u044F \u0440\u043E\u043B\u044C \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A. \u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442.
-\u041F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0430\u0431\u043E \u0440\u0435\u0441\u0443\u0440\u0441\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432.
-\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
-${aiContext ? "\n\n" + aiContext : ""}`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: systemPrompt }],
-          max_tokens: 100,
-          temperature: 0.75
-        })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (reply) {
-        setTimeout(() => {
-          addInboxChatMsg("agent", reply);
-          localStorage.setItem("nm_guide_waiting_topic", "project_" + Date.now());
-          const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
-          localStorage.setItem("nm_project_interview_step", "1");
-          localStorage.setItem("nm_project_interview_name", projectName);
-        }, 500);
-      }
-    } catch (e) {
-      setTimeout(() => addInboxChatMsg(
-        "agent",
-        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?`
-      ), 400);
-    }
-  }
-  function getProjectsContext() {
-    const projects = getProjects();
-    if (projects.length === 0) return "";
-    const now = Date.now();
-    const parts = [`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456\u0445 \u0434\u0456\u0439):`];
-    projects.slice(0, 5).forEach((p) => {
-      const steps = p.steps || [];
-      const done = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
-      const next = steps.find((s) => !s.done);
-      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 864e5) : null;
-      const silence = silenceDays !== null && silenceDays >= 3 ? ` \u26A0\uFE0F ${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456` : "";
-      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
-    });
-    return parts.join("\n");
-  }
-  function addProjectsChatMsg(role, text, _noSave = false) {
-    const el = document.getElementById("projects-chat-messages");
-    if (!el) return;
-    if (_projectsTypingEl) {
-      _projectsTypingEl.remove();
-      _projectsTypingEl = null;
-    }
-    if (role === "typing") {
-      const td = document.createElement("div");
-      td.style.cssText = "display:flex";
-      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-      el.appendChild(td);
-      _projectsTypingEl = td;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    try {
-      openChatBar("projects");
-    } catch (e) {
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-    if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
-    else projectsBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("projects", role, text);
-  }
-  async function sendProjectsBarMessage() {
-    if (projectsBarLoading) return;
-    const input = document.getElementById("projects-bar-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addProjectsChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addProjectsChatMsg("user", text);
-    projectsBarLoading = true;
-    addProjectsChatMsg("typing", "");
-    const projects = getProjects();
-    const activeProject = activeProjectId ? projects.find((p) => p.id === activeProjectId) : null;
-    const projCtx = getProjectsContext();
-    const aiContext = getAIContext();
-    const activeSteps = activeProject ? (activeProject.steps || []).map((s) => `[ID:${s.id}] ${s.done ? "\u2713" : "\u25CB"} ${s.text}`).join("\n") : "";
-    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u043F\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u0445 \u0432 NeverMind.
-${activeProject ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: "${activeProject.name}" (${activeProject.progress || 0}%). \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A: ${activeProject.subtitle || ""}.
-\u041A\u0440\u043E\u043A\u0438:
-${activeSteps || "\u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432"}` : projCtx}
-${aiContext ? "\n\n" + aiContext : ""}
-
-\u0422\u0438 \u043C\u043E\u0436\u0435\u0448 (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON \u044F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0434\u0456\u044F):
-- \u0412\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"complete_project_step","project_id":${activeProjectId || "null"},"step_id":ID}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"add_project_step","project_id":${activeProjectId || "null"},"step":"\u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443"}
-- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u0440\u043E\u0433\u0440\u0435\u0441: {"action":"update_project_progress","project_id":${activeProjectId || "null"},"progress":\u0447\u0438\u0441\u043B\u043E 0-100}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0456\u0448\u0435\u043D\u043D\u044F: {"action":"add_project_decision","project_id":${activeProjectId || "null"},"title":"\u0440\u0456\u0448\u0435\u043D\u043D\u044F","reason":"\u0447\u043E\u043C\u0443"}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u0435\u0442\u0440\u0438\u043A\u0443: {"action":"add_project_metric","project_id":${activeProjectId || "null"},"label":"\u043D\u0430\u0437\u0432\u0430","value":"\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F","color":"#hex"}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0435\u0441\u0443\u0440\u0441: {"action":"add_project_resource","project_id":${activeProjectId || "null"},"type":"\u041A\u043D\u0438\u0433\u0430|\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430|\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442|\u0421\u0442\u0430\u0442\u0442\u044F","title":"\u043D\u0430\u0437\u0432\u0430","url":"\u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F"}
-- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F: {"action":"update_project_tempo","project_id":${activeProjectId || "null"},"tempoNow":"6 \u0442\u0438\u0436","tempoMore":"4 \u0442\u0438\u0436","tempoIdeal":"2 \u0442\u0438\u0436"}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438: {"action":"update_project_risks","project_id":${activeProjectId || "null"},"risks":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":"${activeProject ? activeProject.name : "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"}"}
-- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A: {"action":"create_folder","folder":"\u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438"}
-- \u0417\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
-- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u0414\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
-- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...projectsBarHistory.slice(-10)], max_tokens: 300, temperature: 0.6 })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        addProjectsChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        projectsBarLoading = false;
-        return;
-      }
-      const _processOne = (parsed) => {
-        const pid = parsed.project_id;
-        if (parsed.action === "complete_project_step" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            const step = (p.steps || []).find((s) => s.id === parsed.step_id);
-            if (step) {
-              step.done = true;
-              step.doneAt = Date.now();
-              p.progress = Math.round(p.steps.filter((s) => s.done).length / p.steps.length * 100);
-              p.lastActivity = Date.now();
-              saveProjects(projs);
-              renderProjects();
-              addProjectsChatMsg("agent", `\u2705 \u041A\u0440\u043E\u043A "${step.text}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041F\u0440\u043E\u0433\u0440\u0435\u0441: ${p.progress}%`);
-              return true;
-            }
-          }
-          return false;
-        }
-        if (parsed.action === "add_project_step" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.steps) p.steps = [];
-            p.steps.push({ id: Date.now(), text: parsed.step, done: false });
-            p.lastActivity = Date.now();
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A: "${parsed.step}"`);
-            return true;
-          }
-          return false;
-        }
-        if (parsed.action === "update_project_progress" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            p.progress = Math.min(100, Math.max(0, parsed.progress));
-            p.lastActivity = Date.now();
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${p.progress}%`);
-          }
-          return true;
-        }
-        if (parsed.action === "add_project_decision" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.decisions) p.decisions = [];
-            p.decisions.unshift({ title: parsed.title, reason: parsed.reason });
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0420\u0456\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: "${parsed.title}"`);
-          }
-          return true;
-        }
-        if (parsed.action === "add_project_metric" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.metrics) p.metrics = [];
-            p.metrics.push({ label: parsed.label, value: parsed.value, color: parsed.color || "#3d2e1e" });
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u041C\u0435\u0442\u0440\u0438\u043A\u0443 "${parsed.label}: ${parsed.value}" \u0434\u043E\u0434\u0430\u043D\u043E`);
-          }
-          return true;
-        }
-        if (parsed.action === "add_project_resource" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.resources) p.resources = [];
-            p.resources.push({ type: parsed.type, title: parsed.title, url: parsed.url || "" });
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${parsed.title}" \u0434\u043E\u0434\u0430\u043D\u043E`);
-          }
-          return true;
-        }
-        if (parsed.action === "update_project_tempo" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            p.tempoNow = parsed.tempoNow || p.tempoNow;
-            p.tempoMore = parsed.tempoMore || p.tempoMore;
-            p.tempoIdeal = parsed.tempoIdeal || p.tempoIdeal;
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E`);
-          }
-          return true;
-        }
-        if (parsed.action === "update_project_risks" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            p.risks = parsed.risks;
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E`);
-          }
-          return true;
-        }
-        if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
-        return false;
-      };
-      const blocks = extractJsonBlocks(reply);
-      let handled = false;
-      for (const parsed of blocks) {
-        if (_processOne(parsed)) handled = true;
-      }
-      if (!handled) safeAgentReply(reply, addProjectsChatMsg);
-    } catch {
-      addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-    projectsBarLoading = false;
-  }
-  var activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl;
-  var init_projects = __esm({
-    "src/tabs/projects.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_inbox();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_finance();
-      activeProjectId = null;
-      projectsBarLoading = false;
-      projectsBarHistory = [];
-      _projectsTypingEl = null;
-      Object.assign(window, {
-        openAddProject,
-        saveNewProject,
-        closeProjectModal,
-        sendProjectsBarMessage,
-        openProjectWorkspace,
-        closeProjectWorkspace,
-        toggleProjectTimeline,
-        toggleProjectStep,
-        switchTab
-      });
-    }
-  });
-
   // src/tabs/evening.js
   function getMoments() {
     return JSON.parse(localStorage.getItem("nm_moments") || "[]");
@@ -4517,972 +4936,1008 @@ ${lines.join("\n\n")}`;
     }
   });
 
-  // src/tabs/evening-actions.js
-  function isEveningClosed() {
+  // src/owl/proactive.js
+  var proactive_exports = {};
+  __export(proactive_exports, {
+    generateBoardMessage: () => generateBoardMessage,
+    getBoardContext: () => getBoardContext,
+    getTabBoardContext: () => getTabBoardContext,
+    tryBoardUpdate: () => tryBoardUpdate,
+    tryTabBoardUpdate: () => tryTabBoardUpdate
+  });
+  function _parseJsonTolerant(raw) {
+    if (!raw || typeof raw !== "string") return null;
+    const cleaned = raw.replace(/```json|```/g, "").trim();
     try {
-      const s = JSON.parse(localStorage.getItem(NM_EVENING_CLOSED_KEY) || "null");
-      if (!s) return false;
-      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      return s.date === today;
+      return JSON.parse(cleaned);
+    } catch {
+    }
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      try {
+        return JSON.parse(objMatch[0]);
+      } catch {
+      }
+    }
+    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (arrMatch) {
+      try {
+        return JSON.parse(arrMatch[0]);
+      } catch {
+      }
+    }
+    return null;
+  }
+  function getTabBoardContext(tab) {
+    const parts = [];
+    try {
+      const ctx = getAIContext();
+      if (ctx) parts.push(ctx);
+    } catch (e) {
+    }
+    if (tab === "tasks") {
+      const tasks = getTasks();
+      const active = tasks.filter((t) => t.status === "active");
+      const now = Date.now();
+      const stuck = active.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
+      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t) => '"' + t.title + '"').join(", ")}`);
+      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t) => t.status === "done").length}`);
+      const allHabits = getHabits();
+      const quitHabits = allHabits.filter((h) => h.type === "quit");
+      if (quitHabits.length > 0) {
+        const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+        const quitInfo = quitHabits.map((h) => {
+          const s = getQuitStatus(h.id);
+          const heldToday = s.lastHeld === todayStr;
+          return `"${h.name}": \u0441\u0442\u0440\u0456\u043A ${s.streak || 0} \u0434\u043D${heldToday ? " \u2713" : " (\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)"}`;
+        });
+        parts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u041A\u0438\u043D\u0443\u0442\u0438": ${quitInfo.join("; ")}`);
+        const notHeld = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayStr);
+        if (notHeld.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${notHeld.map((h) => '"' + h.name + '"').join(", ")}`);
+      }
+    }
+    if (tab === "notes") {
+      const notes = getNotes();
+      const byFolder = {};
+      notes.forEach((n) => {
+        const f = n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435";
+        byFolder[f] = (byFolder[f] || 0) + 1;
+      });
+      parts.push(`\u041D\u043E\u0442\u0430\u0442\u043A\u0438: ${notes.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432. \u041F\u0430\u043F\u043A\u0438: ${Object.entries(byFolder).map(([f, c]) => f + "(" + c + ")").join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
+    }
+    if (tab === "me") {
+      const habits = getHabits();
+      const buildHabits = habits.filter((h) => h.type !== "quit");
+      const quitHabits = habits.filter((h) => h.type === "quit");
+      const log = getHabitLog();
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+      const todayH = buildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const doneToday = todayH.filter((h) => !!log[today]?.[h.id]).length;
+      if (buildHabits.length > 0) {
+        const streaks = buildHabits.map((h) => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
+        parts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneToday}/${todayH.length}. \u0421\u0442\u0440\u0456\u043A\u0438: ${streaks.filter((s) => s.streak >= 2).map((s) => s.name + "\u{1F525}" + s.streak).join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
+      }
+      if (quitHabits.length > 0) {
+        const quitInfo = quitHabits.map((h) => {
+          const s = getQuitStatus(h.id);
+          return `"${h.name}": ${s.streak || 0} \u0434\u043D \u0431\u0435\u0437 \u0437\u0440\u0438\u0432\u0456\u0432`;
+        });
+        parts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
+      }
+      const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3;
+      parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${inbox.filter((i) => i.ts > weekAgo).length}. \u0417\u0430\u0434\u0430\u0447 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${getTasks().filter((t) => t.status === "active").length}`);
+    }
+    if (tab === "evening") {
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const todayStr = (/* @__PURE__ */ new Date()).toDateString();
+      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
+      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+      const hour = (/* @__PURE__ */ new Date()).getHours();
+      parts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${todayMoments.length}. \u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F: ${hasSummary ? "\u0454" : "\u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"}.`);
+      if (hour >= 20 && !hasSummary) parts.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
+      const tasks = getTasks().filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
+      if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${tasks.length}`);
+    }
+    if (tab === "finance") {
+      try {
+        const finCtx = getFinanceContext();
+        if (finCtx) parts.push(finCtx);
+      } catch (e) {
+      }
+    }
+    if (tab === "health") {
+      try {
+        const cards = JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
+        parts.push(`\u041A\u0430\u0440\u0442\u043E\u0447\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F: ${cards.length}.`);
+      } catch (e) {
+      }
+    }
+    if (tab === "projects") {
+      try {
+        const projects = JSON.parse(localStorage.getItem("nm_projects") || "[]");
+        const active = projects.filter((p) => p.status === "active");
+        const paused = projects.filter((p) => p.status === "paused");
+        parts.push(`\u041F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${active.length}, \u043D\u0430 \u043F\u0430\u0443\u0437\u0456: ${paused.length}, \u0432\u0441\u044C\u043E\u0433\u043E: ${projects.length}.`);
+        if (active.length > 0) parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456: ${active.slice(0, 3).map((p) => '"' + p.name + '"').join(", ")}`);
+      } catch (e) {
+      }
+    }
+    return parts.filter(Boolean).join("\n\n");
+  }
+  function getBoardContext(tab) {
+    if (tab === "inbox") return _getInboxBoardContext();
+    return getTabBoardContext(tab);
+  }
+  function _getInboxBoardContext() {
+    const now = /* @__PURE__ */ new Date();
+    const todayStr = now.toDateString();
+    const hour = now.getHours();
+    const min = now.getMinutes();
+    const weekDay = now.getDay();
+    const phase = getDayPhase();
+    const sc = getSchedule();
+    const critical = [];
+    const important = [];
+    const normal = [];
+    try {
+      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const todayISO = now.toISOString().slice(0, 10);
+      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      if (due.length > 0) {
+        due.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
+        const updated = reminders.map((r) => due.find((d) => d.id === r.id) ? { ...r, done: true } : r);
+        localStorage.setItem("nm_reminders", JSON.stringify(updated));
+      }
+      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
+      if (upcoming.length > 0) {
+        const next = upcoming[0];
+        const [nh, nm] = next.time.split(":").map(Number);
+        const minsUntil = nh * 60 + nm - (hour * 60 + min);
+        if (minsUntil <= 30) important.push(`[\u0421\u041A\u041E\u0420\u041E] \u23F0 \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043E ${next.time}: "${next.text}" (\u0447\u0435\u0440\u0435\u0437 ${minsUntil} \u0445\u0432)`);
+      }
+    } catch (e) {
+    }
+    const phaseLabels = {
+      morning: `[\u0424\u0410\u0417\u0410: \u0420\u0410\u041D\u041E\u041A] \u0427\u0430\u0441 \u043F\u043B\u0430\u043D\u0443\u0432\u0430\u043D\u043D\u044F. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438 \u043D\u0430 \u0434\u0435\u043D\u044C, \u043C\u043E\u0442\u0438\u0432\u0430\u0446\u0456\u044F, \u0449\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u041F\u0456\u0434\u0439\u043E\u043C \u043E ${sc.wakeUp}:00, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workStart}:00.`,
+      work: `[\u0424\u0410\u0417\u0410: \u0420\u041E\u0411\u041E\u0422\u0410] \u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0447\u0430\u0441. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D.`,
+      evening: `[\u0424\u0410\u0417\u0410: \u0412\u0415\u0427\u0406\u0420] \u0427\u0430\u0441 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432. \u0424\u043E\u043A\u0443\u0441: \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E, \u044F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u043F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u0420\u043E\u0431\u043E\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workEnd}:00.`,
+      night: `[\u0424\u0410\u0417\u0410: \u041D\u0406\u0427] \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441. \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435 \u2014 \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0456 \u043C\u043E\u0436\u043D\u0430 \u0449\u0435 \u0432\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E.`
+    };
+    if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
+    normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
+    const tasks = getTasks();
+    const activeTasks = tasks.filter((t) => t.status === "active");
+    const recentlyDone = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3);
+    if (recentlyDone.length > 0) {
+      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
+    }
+    if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
+      const todayDow = now.getDay();
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const briefParts = [];
+      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '"').join(", ")}`);
+      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name).join(", ")}`);
+      const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
+      if (quitHabitsAll.length > 0) {
+        const quitInfo = quitHabitsAll.map((h) => {
+          const s = getQuitStatus(h.id);
+          return `"${h.name}": ${s.streak || 0} \u0434\u043D`;
+        });
+        briefParts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
+      }
+      if (briefParts.length > 0) important.push(`[\u0420\u0410\u041D\u041A\u041E\u0412\u0418\u0419 \u0411\u0420\u0418\u0424] \u0417\u0432\u0435\u0434\u0435\u043D\u043D\u044F \u043D\u0430 \u0434\u0435\u043D\u044C:
+${briefParts.join("\n")}
+\u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
+    }
+    if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
+      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
+      const todayDow = now.getDay();
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const todayLogAll = getHabitLog()[todayStr] || {};
+      const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
+      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
+      const pulseParts = [];
+      pulseParts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneTasks.length}`);
+      pulseParts.push(`\u0417\u0432\u0438\u0447\u043E\u043A: ${doneH}/${todayHabitsAll.length}`);
+      if (todayMoments.length > 0) pulseParts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: ${todayMoments.length}`);
+      if (!hasSummary) pulseParts.push("\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
+      const eMood = getEveningMood();
+      if (eMood) {
+        const ml = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
+        pulseParts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u044E\u0437\u0435\u0440): ${ml[eMood] || eMood}`);
+      }
+      important.push(`[\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u041F\u0423\u041B\u042C\u0421] \u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C:
+${pulseParts.join("\n")}
+\u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
+    }
+    const urgent = activeTasks.filter((t) => {
+      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+      if (!m) return false;
+      const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
+      return diff > 0 && diff <= 65;
+    });
+    urgent.forEach((t) => {
+      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}".`);
+    });
+    const todayISOLocal = now.toISOString().slice(0, 10);
+    const overdue = activeTasks.filter((t) => t.dueDate && t.dueDate < todayISOLocal);
+    if (overdue.length > 0) {
+      overdue.slice(0, 3).forEach((t) => {
+        const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t.dueDate)) / (24 * 60 * 60 * 1e3));
+        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
+      });
+    }
+    const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    stuckDays3.forEach((t) => {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
+    });
+    const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    forgotten.forEach((t) => {
+      const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
+      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
+    });
+    const reshuffled = activeTasks.filter((t) => (t.rescheduleCount || 0) >= 3);
+    reshuffled.forEach((t) => {
+      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
+    });
+    if (activeTasks.length > 0) {
+      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
+    } else {
+      normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
+    }
+    if (activeTasks.length >= 3) {
+      const suggested = Math.max(1, Math.round(activeTasks.length * 0.2));
+      const doneTodayCount = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3).length;
+      normal.push(`[\u0422\u0415\u041C\u041F] \u041E\u043F\u0442\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ~${suggested} \u0437\u0430\u0434\u0430\u0447 (20% \u0432\u0456\u0434 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445). \u0417\u0430\u043A\u0440\u0438\u0442\u043E: ${doneTodayCount}. \u042F\u043A\u0449\u043E \u0443 \u043F\u0430\u043C'\u044F\u0442\u0456 \u0454 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E \u0437\u0430\u043C\u0456\u0441\u0442\u044C 20%-\u0444\u043E\u0440\u043C\u0443\u043B\u0438.`);
+    }
+    const habits = getHabits();
+    const buildHabits = habits.filter((h) => h.type !== "quit");
+    const quitHabits = habits.filter((h) => h.type === "quit");
+    const log = getHabitLog();
+    const todayLog = log[todayStr] || {};
+    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()));
+    const doneHabits = todayHabits.filter((h) => todayLog[h.id]);
+    const pendingHabits = todayHabits.filter((h) => !todayLog[h.id]);
+    if (todayHabits.length > 0 && pendingHabits.length === 0) {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${todayHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
+    }
+    if ((phase === "evening" || phase === "night") && pendingHabits.length > 0) {
+      const atRisk = pendingHabits.filter((h) => {
+        const streak = Object.values(log).filter((d) => d[h.id]).length;
+        return streak >= 3;
+      });
+      if (atRisk.length > 0) {
+        const details = atRisk.map((h) => {
+          const streak = Object.values(log).filter((d) => d[h.id]).length;
+          return `"${h.name}" (\u0432\u0436\u0435 ${streak} \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434, \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E)`;
+        });
+        critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0417\u0432\u0438\u0447\u043A\u0438 \u0437 \u0441\u0435\u0440\u0456\u0454\u044E \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E \u2014 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u0430 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0440\u043E\u0431\u0438\u0432: ${details.join(", ")}.`);
+      }
+    }
+    if ((phase === "work" || phase === "evening") && pendingHabits.length > 0) {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name).join(", ")}.`);
+    }
+    if (todayHabits.length > 0) {
+      normal.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneHabits.length}/${todayHabits.length}.`);
+    }
+    if (quitHabits.length > 0) {
+      const todayIso = now.toISOString().slice(0, 10);
+      const notHeldToday = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayIso);
+      if ((phase === "evening" || phase === "night") && notHeldToday.length > 0) {
+        important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '"').join(", ")}.`);
+      }
+      quitHabits.forEach((h) => {
+        const s = getQuitStatus(h.id);
+        const streak = s.streak || 0;
+        const milestones = [7, 14, 21, 30, 60, 90];
+        if (milestones.includes(streak) && owlCdExpired("quit_milestone_" + h.id + "_" + streak, 24 * 60 * 60 * 1e3)) {
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] ${streak} \u0434\u043D\u0456\u0432 \u0431\u0435\u0437 "${h.name}"! \u{1F389}`);
+        }
+      });
+      const quitInfo = quitHabits.map((h) => `"${h.name}": ${getQuitStatus(h.id).streak || 0} \u0434\u043D`);
+      normal.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}.`);
+    }
+    try {
+      const budget = getFinBudget();
+      if (budget.total > 0) {
+        const from = getFinPeriodRange("month");
+        const txs = getFinance().filter((t) => t.ts >= from && t.type === "expense");
+        const exp = txs.reduce((s, t) => s + t.amount, 0);
+        const pct = Math.round(exp / budget.total * 100);
+        if (exp > budget.total) {
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E! \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(exp)} \u0437 ${formatMoney(budget.total)} (${pct}%).`);
+        } else if (pct >= 80) {
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${pct}% \u043C\u0456\u0441\u044F\u0447\u043D\u043E\u0433\u043E \u0431\u044E\u0434\u0436\u0435\u0442\u0443.`);
+        } else {
+          normal.push(`\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F: ${formatMoney(exp)} / ${formatMoney(budget.total)} (${pct}%).`);
+        }
+        if (txs.length >= 3) {
+          const bycat = {};
+          txs.forEach((t) => {
+            if (!bycat[t.category]) bycat[t.category] = [];
+            bycat[t.category].push(t.amount);
+          });
+          const lastTx = txs[0];
+          if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
+            const avg = bycat[lastTx.category].reduce((a, b) => a + b, 0) / bycat[lastTx.category].length;
+            if (lastTx.amount > avg * 2.5 && owlCdExpired("unusual_tx_" + lastTx.id, 8 * 60 * 60 * 1e3)) {
+              important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435\u0437\u0432\u0438\u0447\u043D\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430: ${formatMoney(lastTx.amount)} \u043D\u0430 "${lastTx.category}" \u2014 \u0432\u0438\u0449\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0432\u0434\u0432\u0456\u0447\u0456.`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+    }
+    if (phase === "evening" || phase === "night") {
+      const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      if (!s || new Date(s.date).toDateString() !== todayStr) {
+        important.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
+      }
+    }
+    if (weekDay === 1 && (phase === "morning" || phase === "work")) {
+      normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
+    }
+    if (weekDay === 5 && phase === "evening") {
+      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 7 * 24 * 60 * 60 * 1e3);
+      normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
+    }
+    const activeTabs = [];
+    if (tasks.length > 0 || getHabits().length > 0) activeTabs.push("\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C (\u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438)");
+    try {
+      if (getNotes().length > 0) activeTabs.push("\u041D\u043E\u0442\u0430\u0442\u043A\u0438");
+    } catch (e) {
+    }
+    try {
+      if (getFinance().length > 0) activeTabs.push("\u0424\u0456\u043D\u0430\u043D\u0441\u0438");
+    } catch (e) {
+    }
+    try {
+      if (JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0) activeTabs.push("\u0417\u0434\u043E\u0440\u043E\u0432'\u044F");
+    } catch (e) {
+    }
+    try {
+      if (JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0) activeTabs.push("\u041F\u0440\u043E\u0435\u043A\u0442\u0438");
+    } catch (e) {
+    }
+    try {
+      if (JSON.parse(localStorage.getItem("nm_moments") || "[]").length > 0) activeTabs.push("\u0412\u0435\u0447\u0456\u0440 (\u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F)");
+    } catch (e) {
+    }
+    if (activeTabs.length > 0) {
+      normal.push(`[\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0412\u041A\u041B\u0410\u0414\u041A\u0418] \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454: ${activeTabs.join(", ")}. \u0426\u0456\u043A\u0430\u0432\u0441\u044F \u0422\u0406\u041B\u042C\u041A\u0418 \u0446\u0438\u043C\u0438 \u0442\u0435\u043C\u0430\u043C\u0438.`);
+    }
+    const OWL_Q_KEY = "nm_owl_questions";
+    const OWL_Q_TS_KEY = "nm_owl_q_ts";
+    const OWL_QUESTIONS = [
+      { id: "work", q: "\u0427\u0438\u043C \u0442\u0438 \u0437\u0430\u0439\u043C\u0430\u0454\u0448\u0441\u044F? \u0414\u0435 \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u0430\u0431\u043E \u043D\u0430\u0432\u0447\u0430\u0454\u0448\u0441\u044F?" },
+      { id: "goals", q: "\u042F\u043A\u0430 \u0442\u0432\u043E\u044F \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0437\u0430\u0440\u0430\u0437 \u2014 \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435?" },
+      { id: "interests", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C \u043F\u043E\u0437\u0430 \u0440\u043E\u0431\u043E\u0442\u043E\u044E? \u0425\u043E\u0431\u0456, \u0437\u0430\u0445\u043E\u043F\u043B\u0435\u043D\u043D\u044F?" },
+      { id: "motivation", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442, \u043F\u0440\u043E\u0446\u0435\u0441 \u0447\u0438 \u0432\u0438\u0437\u043D\u0430\u043D\u043D\u044F?" },
+      { id: "routine", q: "\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u0442\u0432\u0456\u0439 \u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C? \u041A\u043E\u043B\u0438 \u0442\u0438 \u043D\u0430\u0439\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0438\u0439?" },
+      { id: "challenges", q: "\u0429\u043E \u0442\u043E\u0431\u0456 \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u0439\u0432\u0430\u0436\u0447\u0435 \u0434\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u0449\u043E \u0445\u043E\u0442\u0456\u0432 \u0431\u0438 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438?" },
+      { id: "values", q: "\u0429\u043E \u0434\u043B\u044F \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0432 \u0436\u0438\u0442\u0442\u0456 \u2014 \u0449\u043E \u0442\u0438 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0436\u0435\u0440\u0442\u0432\u0443\u0454\u0448?" },
+      { id: "relax", q: "\u042F\u043A \u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0454\u0448? \u0429\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u043F\u0435\u0440\u0435\u0437\u0430\u0440\u044F\u0434\u0438\u0442\u0438\u0441\u044C?" },
+      { id: "people", q: "\u0425\u0442\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u043B\u044E\u0434\u0438 \u043D\u0430\u0432\u043A\u043E\u043B\u043E \u0442\u0435\u0431\u0435? \u0420\u043E\u0434\u0438\u043D\u0430, \u0434\u0440\u0443\u0437\u0456, \u043F\u0430\u0440\u0442\u043D\u0435\u0440?" },
+      { id: "health", q: "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0456 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F\u043C? \u0404 \u0449\u043E\u0441\u044C \u0449\u043E \u0445\u0432\u0438\u043B\u044E\u0454 \u0430\u0431\u043E \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448?" },
+      { id: "dreams", q: "\u0414\u0435 \u0442\u0438 \u0431\u0430\u0447\u0438\u0448 \u0441\u0435\u0431\u0435 \u0447\u0435\u0440\u0435\u0437 \u0440\u0456\u043A? \u0429\u043E \u043C\u0430\u0454 \u0437\u043C\u0456\u043D\u0438\u0442\u0438\u0441\u044C?" },
+      { id: "style", q: "\u042F\u043A \u0442\u043E\u0431\u0456 \u0437\u0440\u0443\u0447\u043D\u0456\u0448\u0435 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0441\u043F\u0440\u0430\u0432\u0456 \u0447\u0438 \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u043E \u0437 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F\u043C\u0438?" },
+      { id: "daily_target", q: "\u0421\u043A\u0456\u043B\u044C\u043A\u0438 \u0437\u0430\u0434\u0430\u0447 \u043D\u0430 \u0434\u0435\u043D\u044C \u2014 \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u0434\u043B\u044F \u0442\u0435\u0431\u0435? \u041D\u0430\u0437\u0432\u0438 \u0447\u0438\u0441\u043B\u043E (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: 3, 5, 7). \u042F\u043A\u0449\u043E \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u044E \u0446\u0435\u0439 \u0444\u0430\u043A\u0442 \u2014 \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438\u043C\u0443 \u0443 \u043F\u043E\u0440\u0430\u0434\u0430\u0445." }
+    ];
+    try {
+      const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || "[]");
+      const lastQTs = parseInt(localStorage.getItem(OWL_Q_TS_KEY) || "0");
+      const nextQ = OWL_QUESTIONS.find((q) => !asked.includes(q.id));
+      if (nextQ && Date.now() - lastQTs > 24 * 60 * 60 * 1e3 && (phase === "morning" || phase === "work")) {
+        normal.push(`[\u0410\u041D\u041A\u0415\u0422\u0410] \u0417\u0430\u0434\u0430\u0439 \u044E\u0437\u0435\u0440\u0443 \u0446\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E, \u0432\u043F\u043B\u0435\u0442\u0438 \u0432 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 (\u041D\u0415 \u0441\u0443\u0445\u043E \u044F\u043A \u0432 \u0430\u043D\u043A\u0435\u0442\u0456): "${nextQ.q}". \u041F\u0456\u0441\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u0447\u0456\u043F "\u0420\u043E\u0437\u043A\u0430\u0436\u0438" \u0437 action:"chat". \u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 ID \u043F\u0438\u0442\u0430\u043D\u043D\u044F: ${nextQ.id}`);
+        asked.push(nextQ.id);
+        localStorage.setItem(OWL_Q_KEY, JSON.stringify(asked));
+        localStorage.setItem(OWL_Q_TS_KEY, Date.now().toString());
+      }
+    } catch (e) {
+    }
+    if (critical.length === 0 && important.length === 0) {
+      const correlations = _computeCorrelations();
+      for (const c of correlations) {
+        if (owlCdExpired("corr_" + c.id, 7 * 24 * 60 * 60 * 1e3)) {
+          normal.push(`[\u041F\u0410\u0422\u0415\u0420\u041D] ${c.text} \u041F\u0418\u0422\u0410\u0419 \u044E\u0437\u0435\u0440\u0430 "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u043E\u0432'\u044F\u0437\u0430\u043D\u043E?" \u2014 \u041D\u0415 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u044F\u043A \u0444\u0430\u043A\u0442, \u0434\u0430\u0439 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0438 \u0430\u0431\u043E \u0441\u043F\u0440\u043E\u0441\u0442\u0443\u0432\u0430\u0442\u0438. \u0426\u0435 \u0441\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F, \u043D\u0435 \u0434\u0456\u0430\u0433\u043D\u043E\u0437.`);
+          setOwlCd("corr_" + c.id);
+          break;
+        }
+      }
+    }
+    return [...critical, ...important, ...normal].join(" ");
+  }
+  function _computeCorrelations() {
+    const insights = [];
+    try {
+      const habitLog = JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
+      const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+      const lateByISO = {};
+      inbox.forEach((i) => {
+        if (!i.ts) return;
+        const d = new Date(i.ts);
+        if (d.getHours() >= 22) {
+          const iso = d.toISOString().slice(0, 10);
+          lateByISO[iso] = (lateByISO[iso] || 0) + 1;
+        }
+      });
+      const pairs = [];
+      for (let i = 1; i < 14; i++) {
+        const yesterday = /* @__PURE__ */ new Date();
+        yesterday.setDate(yesterday.getDate() - i - 1);
+        const today = /* @__PURE__ */ new Date();
+        today.setDate(today.getDate() - i);
+        const yesterdayISO = yesterday.toISOString().slice(0, 10);
+        const todayStr = today.toDateString();
+        const wasLate = !!lateByISO[yesterdayISO];
+        const habits = habitLog[todayStr] || {};
+        const habitsDone = Object.keys(habits).filter((k) => habits[k]).length;
+        pairs.push({ wasLate, habitsDone });
+      }
+      const lateDays = pairs.filter((p) => p.wasLate);
+      const normalDays = pairs.filter((p) => !p.wasLate);
+      if (lateDays.length >= 2 && normalDays.length >= 2) {
+        const avgLate = lateDays.reduce((s, p) => s + p.habitsDone, 0) / lateDays.length;
+        const avgNormal = normalDays.reduce((s, p) => s + p.habitsDone, 0) / normalDays.length;
+        const maxv = Math.max(avgLate, avgNormal, 0.5);
+        const diff = Math.abs(avgNormal - avgLate) / maxv;
+        if (diff > 0.3) {
+          insights.push({
+            id: "late_inbox_next_habits",
+            text: avgNormal > avgLate ? `\u041F\u0456\u0441\u043B\u044F \u043F\u0456\u0437\u043D\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 (\u043F\u0456\u0441\u043B\u044F 22:00) \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0440\u043E\u0431\u0438\u0448 \u0437\u0432\u0438\u0447\u043E\u043A ${avgLate.toFixed(1)}, \u0430 \u043F\u0456\u0441\u043B\u044F \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0432\u0435\u0447\u043E\u0440\u0456\u0432 \u2014 ${avgNormal.toFixed(1)}.` : `\u041F\u0456\u0441\u043B\u044F \u043F\u0456\u0437\u043D\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A \u043D\u0430\u0432\u0456\u0442\u044C \u0431\u0456\u043B\u044C\u0448\u0435 (${avgLate.toFixed(1)} vs ${avgNormal.toFixed(1)}) \u2014 \u0446\u0456\u043A\u0430\u0432\u043E.`
+          });
+        }
+      }
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const finance = JSON.parse(localStorage.getItem("nm_finance") || "[]");
+      const moodByISO = {};
+      moments.forEach((m) => {
+        if (!m.ts || !m.mood) return;
+        const iso = new Date(m.ts).toISOString().slice(0, 10);
+        if (!moodByISO[iso]) moodByISO[iso] = { positive: 0, negative: 0, neutral: 0 };
+        moodByISO[iso][m.mood] = (moodByISO[iso][m.mood] || 0) + 1;
+      });
+      const expenseByISO = {};
+      finance.filter((t) => t.type === "expense").forEach((t) => {
+        if (!t.ts) return;
+        const iso = new Date(t.ts).toISOString().slice(0, 10);
+        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t.amount || 0);
+      });
+      const negSpend = [];
+      const posSpend = [];
+      Object.keys(moodByISO).forEach((iso) => {
+        const m = moodByISO[iso];
+        const spend = expenseByISO[iso] || 0;
+        if (m.negative > m.positive) negSpend.push(spend);
+        else if (m.positive > m.negative) posSpend.push(spend);
+      });
+      if (negSpend.length >= 2 && posSpend.length >= 2) {
+        const avgNeg = negSpend.reduce((s, v) => s + v, 0) / negSpend.length;
+        const avgPos = posSpend.reduce((s, v) => s + v, 0) / posSpend.length;
+        const maxv = Math.max(avgNeg, avgPos, 1);
+        const diff = Math.abs(avgNeg - avgPos) / maxv;
+        if (diff > 0.3) {
+          insights.push({
+            id: "mood_spending",
+            text: avgNeg > avgPos ? `\u0412 \u0434\u043D\u0456 \u0437 \u043F\u043E\u0433\u0430\u043D\u0438\u043C \u043D\u0430\u0441\u0442\u0440\u043E\u0454\u043C (\u0437\u0430 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u043C\u0438) \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u0443 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443 ${avgNeg.toFixed(0)}, \u0430 \u0432 \u0433\u0430\u0440\u043D\u0456 \u2014 ${avgPos.toFixed(0)}.` : `\u0412 \u0434\u043D\u0456 \u0437 \u0433\u0430\u0440\u043D\u0438\u043C \u043D\u0430\u0441\u0442\u0440\u043E\u0454\u043C \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u0431\u0456\u043B\u044C\u0448\u0435 (${avgPos.toFixed(0)}) \u043D\u0456\u0436 \u0432 \u043F\u043E\u0433\u0430\u043D\u0456 (${avgNeg.toFixed(0)}).`
+          });
+        }
+      }
+    } catch (e) {
+    }
+    return insights;
+  }
+  function checkTabBoardTrigger(tab) {
+    if (tab === "tasks") {
+      const tasks = getTasks().filter((t) => t.status === "active");
+      if (tasks.length === 0) return false;
+      const now = Date.now();
+      const stuck = tasks.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
+      return stuck.length > 0;
+    }
+    if (tab === "notes") return getNotes().length > 0;
+    if (tab === "me") return getHabits().length > 0 || getTasks().length > 0;
+    if (tab === "evening") return true;
+    if (tab === "finance") {
+      try {
+        return getFinance().length > 0;
+      } catch {
+        return false;
+      }
+    }
+    if (tab === "health") {
+      try {
+        return JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0;
+      } catch {
+        return false;
+      }
+    }
+    if (tab === "projects") {
+      try {
+        return JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0;
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  }
+  function _updateApiDot() {
+    const dot = document.getElementById("owl-api-dot");
+    if (!dot) return;
+    const err = localStorage.getItem("nm_owl_api_error");
+    dot.style.display = err ? "block" : "none";
+  }
+  function _getBannedTopics(msgs) {
+    if (!msgs || msgs.length === 0) return "";
+    const topics = [];
+    for (const m of msgs.slice(0, 5)) {
+      if (m.topic && !owlCdExpired("topic_" + m.topic, TOPIC_CD_MS)) {
+        topics.push(m.topic);
+      }
+    }
+    return topics.join(", ");
+  }
+  async function generateBoardMessage(tab) {
+    if (_boardGenerating[tab]) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      _tryLocalFallback(tab);
+      return;
+    }
+    _boardGenerating[tab] = true;
+    const isInbox = tab === "inbox";
+    const context = getBoardContext(tab);
+    const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
+    const existing = allMsgs[0] || null;
+    const recentText = existing ? existing.text : "";
+    const recentTexts = allMsgs.slice(0, 5).map((m) => m.text).join(" | ");
+    const boardHistory = allMsgs.slice(0, 20).map((m) => {
+      const ago = Date.now() - (m.ts || m.id || 0);
+      const hours = Math.floor(ago / 36e5);
+      const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
+      return `[${when}] ${m.text}`;
+    }).join("\n");
+    const chatMsgs = loadChatMsgs(tab);
+    const recentChat = chatMsgs.slice(-30).map((m) => {
+      const ago = Date.now() - (m.ts || 0);
+      const mins = Math.floor(ago / 6e4);
+      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+      const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
+      return `[${when}] ${who}: ${m.text}`;
+    }).join("\n");
+    const crossActions = getRecentActions().filter((a) => a.tab !== tab && Date.now() - a.ts < 30 * 60 * 1e3).slice(-5).map((a) => {
+      const mins = Math.floor((Date.now() - a.ts) / 6e4);
+      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+      return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
+    }).join("\n");
+    const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
+    const phase = getDayPhase();
+    const sc = getSchedule();
+    const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+    const phaseInstr = {
+      dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A \u2014 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F \u0440\u0430\u043D\u0456\u0448\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E. \u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439 \u043C'\u044F\u043A\u043E, \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043F\u043E\u0447\u0430\u0442\u0438 \u0434\u0435\u043D\u044C.",
+      morning: "\u0420\u0430\u043D\u043E\u043A \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u043D\u0430\u0434\u0438\u0445\u043D\u0443\u0442\u0438 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0441\u0444\u043E\u043A\u0443\u0441\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u043C\u0443.",
+      work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432 \u043A\u0443\u0440\u0441\u0456 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443, \u043C'\u044F\u043A\u043E \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0435.",
+      evening: "\u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u043F\u0456\u0434\u0431\u0438\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F, \u043D\u0435 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438 \u0441\u0442\u0440\u0456\u043A\u0438.",
+      night: "\u041D\u0456\u0447 \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u0440\u043E \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435. \u0414\u0443\u0436\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E."
+    };
+    const systemPrompt = getOWLPersonality() + `
+
+\u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase] || ""}
+${sc ? "\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u042E\u0417\u0415\u0420\u0410: \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F " + (sc.wakeUpStr || "?") + ", \u043F\u043E\u0447\u0438\u043D\u0430\u0454 \u0434\u0435\u043D\u044C " + (sc.workStartStr || "?") + ", \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454 \u0440\u043E\u0431\u043E\u0442\u0443 " + (sc.workEndStr || "?") + ", \u043B\u044F\u0433\u0430\u0454 " + (sc.bedTimeStr || "?") + ".\n\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0437\u0432\u0456\u0440\u044F\u0439 \u0437 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043E\u043C. \u0417\u0430\u0440\u0430\u0437 \u0414\u041E workStart = \u044E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F, \u043C'\u044F\u043A\u0435 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F. \u041C\u0456\u0436 workStart \u0456 workEnd = \u041D\u0410 \u0420\u041E\u0411\u041E\u0422\u0406, \u043D\u0435 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0431\u0456\u0433/\u0437\u0430\u043B/\u0441\u043F\u043E\u0440\u0442. \u041F\u0456\u0441\u043B\u044F workEnd = \u043C\u043E\u0436\u043D\u0430 \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438 \u043F\u0440\u043E \u0437\u0432\u0438\u0447\u043A\u0438/\u0441\u043F\u043E\u0440\u0442.\n\u041D\u0415 \u041F\u0418\u0422\u0410\u0419 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014 \u0432\u0456\u043D \u0432\u0436\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0439. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u2014 \u0441\u0430\u043C \u0441\u043A\u0430\u0436\u0435." : ""}
+
+\u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E${isInbox ? " \u0432 Inbox" : ' \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 "' + (tabLabels[tab] || tab) + '"'}. \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
+
+\u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F (\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F):
+${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
+
+\u041E\u0421\u0422\u0410\u041D\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F \u0417 \u0427\u0410\u0422\u0423 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0432\u0430\u043B\u0438, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0456 \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u044C):
+${recentChat || "(\u0447\u0430\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439)"}
+${crossActions ? `
+\u041D\u0415\u0429\u041E\u0414\u0410\u0412\u041D\u0406 \u0414\u0406\u0407 \u041D\u0410 \u0406\u041D\u0428\u0418\u0425 \u0412\u041A\u041B\u0410\u0414\u041A\u0410\u0425 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2014 \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0436\u0438\u0442\u0442\u0456 \u044E\u0437\u0435\u0440\u0430):
+${crossActions}` : ""}
+
+\u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430; \u0444\u0430\u043A\u0442\u0438 \u043C\u0430\u044E\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u0456 \u043C\u0456\u0442\u043A\u0438 \u2014 \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442, \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D):
+${formatFactsForBoard(15) || localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
+
+\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u042C:
+1. \u042F\u043A\u0449\u043E \u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u043F\u0440\u043E \u0446\u0435. \u041D\u0456\u0447\u043E\u0433\u043E \u0456\u043D\u0448\u043E\u0433\u043E.
+2. \u042F\u043A\u0449\u043E \u0454 [\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0456 \u043D\u0435\u043C\u0430\u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u043F\u0440\u043E \u043F\u0435\u0440\u0448\u0435 [\u0412\u0410\u0416\u041B\u0418\u0412\u041E].
+3. \u042F\u043A\u0449\u043E \u0454 [\u0424\u0410\u0417\u0410] \u0430\u043B\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E\u0433\u043E/\u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0433\u043E \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E \u0434\u043E \u0444\u0430\u0437\u0438 \u0434\u043D\u044F.
+4. \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u043E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0446\u0456\u043A\u0430\u0432\u0456\u0448\u0435 \u0437\u0456 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445.
+
+SMART BOOT-UP (\u044F\u043A \u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043B\u0438 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A):
+- \u0422\u0406\u041B\u042C\u041A\u0418 \u041E\u0414\u0418\u041D \u0444\u043E\u043A\u0443\u0441 \u043D\u0430 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u0454 \u0456 \u043F\u0440\u043E\u0441\u0442\u0440\u043E\u0447\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u0456 \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u2014 \u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0456\u0448\u0435, \u0440\u0435\u0448\u0442\u0443 \u0437\u0430\u043B\u0438\u0448 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0443 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u044E.
+- \u041D\u0415 \u0432\u0456\u0442\u0430\u0439\u0441\u044F \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438 ("\u0414\u043E\u0431\u0440\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443!" \u0431\u0435\u0437 \u0434\u0456\u043B\u0430 \u2014 \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u043E). \u041F\u043E\u0447\u0438\u043D\u0430\u0439 \u043E\u0434\u0440\u0430\u0437\u0443 \u0437 \u0441\u0443\u0442\u0456.
+- \u0417\u0410\u0412\u0416\u0414\u0418 \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0439 \u0447\u0456\u043F\u0430\u043C\u0438-\u0434\u0456\u044F\u043C\u0438 (nav \u0430\u0431\u043E chat). \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0445 \u0447\u0456\u043F\u0456\u0432 [] \u043F\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0456 \u0434\u043D\u044F \u0443\u043D\u0438\u043A\u0430\u0439 \u2014 \u044E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A, \u0434\u0430\u0439 \u0439\u043E\u043C\u0443 \u043E\u0434\u0440\u0430\u0437\u0443 \u0448\u043B\u044F\u0445.
+- \u041F\u0456\u0437\u043D\u0456\u0439 \u0441\u0442\u0430\u0440\u0442 (\u0432\u0436\u0435 \u043F\u0456\u0441\u043B\u044F workStart+2 \u0433\u043E\u0434 \u0456 \u043C\u0430\u043B\u043E \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E) \u2014 \u0411\u0415\u0417 \u043F\u0438\u0442\u0430\u043D\u043D\u044F "\u0434\u0435 \u0442\u0438 \u0431\u0443\u0432?". \u0421\u043A\u0430\u0436\u0438: "\u041E\u0441\u044C \u0449\u043E \u043D\u0430\u043A\u043E\u043F\u0438\u0447\u0438\u043B\u043E\u0441\u044C" \u0456 \u0434\u0430\u0439 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0434\u0456\u0439.
+- \u0412\u0435\u0447\u0456\u0440\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0437 \u0447\u0430\u0441\u043E\u043C "23:XX" \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0432\u0456\u0434\u043A\u043B\u0430\u0441\u0442\u0438: \u0447\u0456\u043F "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0434\u043E \u0440\u0430\u043D\u043A\u0443" (chat).
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E.
+- \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447". ${isInbox ? '\u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u0441\u0442\u0440\u0456\u043A \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E" \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0432\u0436\u0435 5 \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434 \u0431\u0456\u0433\u0430\u0432 \u2014 \u043D\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0439\u0441\u044F, \u0431\u0456\u0436\u0438 \u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456" \u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0449\u043E \u0446\u0435 \u0437\u0430 \u0437\u0430\u0434\u0430\u0447\u0456.' : "\u041A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u044F\u043A \u0434\u0440\u0443\u0433, \u043D\u0435 \u044F\u043A \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430."}
+- \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0441\u0443\u043C\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
+- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432. ${_getBannedTopics(allMsgs) ? "\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u0406 \u0422\u0415\u041C\u0418 (\u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u0456, \u0432 cooldown \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u043E\u0431\u0435\u0440\u0438 \u0406\u041D\u0428\u0423 \u0442\u0435\u043C\u0443): " + _getBannedTopics(allMsgs) + "." : "\u0414\u0438\u0432\u0438\u0441\u044C \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0456 \u043E\u0431\u0438\u0440\u0430\u0439 \u0456\u043D\u0448\u0443 \u0442\u0435\u043C\u0443."}
+- \u041F\u043E\u043B\u0435 "topic" \u0443 JSON \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438 \u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: "daily_habits", "stuck_task", "budget_warning", "morning_greeting", "habit_streak", "project_progress"). \u0426\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0434\u043B\u044F \u0430\u043D\u0442\u0438\u043F\u043E\u0432\u0442\u043E\u0440\u0443.
+- \u0415\u041C\u041F\u0410\u0422\u0406\u042F: \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u043D\u0430 \u0441\u043B\u043E\u0432\u0430-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 ("\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F", "\u043D\u0435 \u043C\u043E\u0436\u0443", "\u0437\u0430\u0431\u0438\u0432" \u0442\u043E\u0449\u043E) \u0432\u0436\u0435 \u043E\u043F\u0438\u0441\u0430\u043D\u0435 \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0456 (\u0434\u0438\u0432. universal \u043F\u0440\u0430\u0432\u0438\u043B\u0430). \u0417\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E.
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
+${CHIP_PROMPT_RULES}
+${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
+          ],
+          max_tokens: 150,
+          temperature: 0.8,
+          response_format: { type: "json_object" }
+        })
+      });
+      if (!res.ok) {
+        const errDetail = `HTTP ${res.status} ${res.statusText}`;
+        console.warn("[OWL board] API error:", errDetail);
+        localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
+        _updateApiDot();
+        _tryLocalFallback(tab);
+        _boardGenerating[tab] = false;
+        return;
+      }
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        const errDetail = "empty reply: " + JSON.stringify(data?.error || {}).slice(0, 150);
+        console.warn("[OWL board]", errDetail);
+        localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
+        _updateApiDot();
+        _tryLocalFallback(tab);
+        _boardGenerating[tab] = false;
+        return;
+      }
+      localStorage.removeItem("nm_owl_api_error");
+      _updateApiDot();
+      const parsed = _parseJsonTolerant(reply);
+      if (!parsed || !parsed.text) {
+        _boardGenerating[tab] = false;
+        return;
+      }
+      try {
+        const MIN_VISIBLE_MS = 10 * 60 * 1e3;
+        const IGNORE_THRESHOLD = 7;
+        const SILENCE_MS = 2 * 60 * 60 * 1e3;
+        const lastBoardTs = parseInt(localStorage.getItem("nm_owl_last_board_ts") || "0");
+        const lastClickTs = parseInt(localStorage.getItem("nm_owl_last_chip_click_ts") || "0");
+        const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
+        if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
+          const ignored = parseInt(localStorage.getItem("nm_owl_ignored_msgs") || "0") + 1;
+          if (ignored >= IGNORE_THRESHOLD) {
+            localStorage.setItem("nm_owl_silence_until", String(Date.now() + SILENCE_MS));
+            localStorage.setItem("nm_owl_ignored_msgs", "0");
+            console.log("[OWL 4.40] Auto-silence 2 \u0433\u043E\u0434 \u2014", IGNORE_THRESHOLD, "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
+          } else {
+            localStorage.setItem("nm_owl_ignored_msgs", String(ignored));
+          }
+        }
+        localStorage.setItem("nm_owl_last_board_ts", String(Date.now()));
+      } catch (e) {
+      }
+      const newMsg = { text: parsed.text, topic: parsed.topic || "", priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
+      if (parsed.topic) setOwlCd("topic_" + parsed.topic);
+      if (isInbox) {
+        newMsg.id = Date.now();
+        const msgs = getOwlBoardMessages();
+        msgs.unshift(newMsg);
+        saveOwlBoardMessages(msgs.slice(0, 3));
+        localStorage.setItem("nm_owl_board_ts", Date.now().toString());
+        setOwlCd("phase_pulse");
+      } else {
+        saveTabBoardMsg(tab, newMsg);
+        localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+      }
+      if (isInbox) renderOwlBoard();
+      else renderTabBoard(tab);
+    } catch (e) {
+      if (!_isNetworkError(e)) {
+        console.warn("[OWL board] generation error:", e?.message || e);
+      }
+      _tryLocalFallback(tab);
+    }
+    _boardGenerating[tab] = false;
+  }
+  function _tryLocalFallback(tab) {
+    if (tab !== "inbox") {
+      _tryTabLocalFallback(tab);
+      return;
+    }
+    const msgs = getOwlBoardMessages();
+    const visibleTs = msgs[0]?.ts || 0;
+    if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
+    const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
+    let text = "";
+    const chips = [];
+    const _pl = (n, one, few, many) => {
+      const abs = Math.abs(n) % 100;
+      const last = abs % 10;
+      if (abs > 10 && abs < 20) return `${n} ${many}`;
+      if (last === 1) return `${n} ${one}`;
+      if (last >= 2 && last <= 4) return `${n} ${few}`;
+      return `${n} ${many}`;
+    };
+    try {
+      const tasks = getTasks().filter((t) => t.status === "active");
+      const habits = getHabits();
+      const todayStr = (/* @__PURE__ */ new Date()).toDateString();
+      const habitLog = getHabitLog();
+      const todayLog = habitLog[todayStr] || {};
+      const dow = (/* @__PURE__ */ new Date()).getDay();
+      const todayHabits = habits.filter((h) => h.type !== "quit" && (h.days || []).includes(dow));
+      const doneH = todayHabits.filter((h) => todayLog[h.id]);
+      const pendingH = todayHabits.filter((h) => !todayLog[h.id]);
+      const phase = getDayPhase();
+      const tStr = _pl(tasks.length, "\u0437\u0430\u0434\u0430\u0447\u0430", "\u0437\u0430\u0434\u0430\u0447\u0456", "\u0437\u0430\u0434\u0430\u0447");
+      const hStr = _pl(pendingH.length, "\u0437\u0432\u0438\u0447\u043A\u0430", "\u0437\u0432\u0438\u0447\u043A\u0438", "\u0437\u0432\u0438\u0447\u043E\u043A");
+      if (tasks.length > 0 && pendingH.length > 0) {
+        text = mode === "coach" ? `${tStr} \u0456 ${hStr}. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454 \u0437\u0430\u043A\u0440\u0438\u0442\u0438?` : mode === "mentor" ? `\u0404 ${tStr} \u0456 ${hStr}. \u0414\u0430\u0432\u0430\u0439 \u0445\u043E\u0447\u0430 \u0431 \u043E\u0434\u043D\u0443 \u0437\u0430\u043A\u0440\u0438\u0454\u043C\u043E.` : `\u0423 \u0442\u0435\u0431\u0435 ${tStr} \u0456 ${hStr} \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F?`;
+        chips.push({ label: "\u0417\u0430\u0434\u0430\u0447\u0456", action: "nav", target: "tasks" });
+        chips.push({ label: "\u0417\u0432\u0438\u0447\u043A\u0438", action: "nav", target: "habits" });
+      } else if (tasks.length > 0) {
+        const first = tasks[0].title;
+        text = mode === "coach" ? `"${first}" \u2014 \u0432\u0441\u0435 \u0449\u0435 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454?` : mode === "mentor" ? `\u0417\u0430\u0434\u0430\u0447\u0430 "${first}" \u0447\u0435\u043A\u0430\u0454. \u041C\u043E\u0436\u0435 \u0432\u0430\u0440\u0442\u043E \u043F\u043E\u0447\u0430\u0442\u0438 \u0437 \u043D\u0435\u0457?` : `\u0404 \u0437\u0430\u0434\u0430\u0447\u0430 "${first}". \u042F\u043A \u0437 \u043D\u0435\u044E \u0441\u043F\u0440\u0430\u0432\u0438?`;
+        chips.push({ label: "\u0417\u0430\u0434\u0430\u0447\u0456", action: "nav", target: "tasks" });
+      } else if (pendingH.length > 0) {
+        const names = pendingH.slice(0, 2).map((h) => h.name).join(" \u0456 ");
+        text = mode === "coach" ? `${names} \u2014 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454?` : mode === "mentor" ? `\u0429\u0435 \u0436\u043E\u0434\u043D\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. ${names} \u2014 \u0434\u0430\u0432\u0430\u0439 \u0445\u043E\u0447\u0430 \u0431 \u043E\u0434\u043D\u0443.` : `\u0417\u0430\u043B\u0438\u0448\u0438\u043B\u0438\u0441\u044C ${names}. \u0412\u0441\u0442\u0438\u0433\u043D\u0435\u0448 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?`;
+        chips.push({ label: "\u0417\u0432\u0438\u0447\u043A\u0438", action: "nav", target: "habits" });
+      } else if (doneH.length > 0 && tasks.length === 0) {
+        text = mode === "coach" ? "\u0412\u0441\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0456. \u0422\u0430\u043A \u0442\u0440\u0438\u043C\u0430\u0442\u0438." : mode === "mentor" ? "\u0412\u0441\u0435 \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0447\u0430\u0441 \u2014 \u044F\u043A \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0454\u0448?" : "\u0412\u0441\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041A\u0440\u0430\u0441\u0430\u0432\u0430 \u{1F4AA}";
+      } else {
+        const greetings = {
+          coach: { dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u043F\u0456\u0434\u0439\u043E\u043C. \u041F\u043E\u0432\u0430\u0436\u0430\u044E.", morning: "\u0420\u0430\u043D\u043E\u043A. \u0429\u043E \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441. \u0429\u043E \u0434\u0430\u043B\u0456?", evening: "\u0412\u0435\u0447\u0456\u0440. \u042F\u043A \u0434\u0435\u043D\u044C?", night: "\u041F\u0456\u0437\u043D\u043E. \u0412\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0439." },
+          partner: { dawn: "\u0420\u0430\u043D\u043E \u0432\u0441\u0442\u0430\u0432! \u0413\u0430\u0440\u043D\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443.", morning: "\u0414\u043E\u0431\u0440\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443!", work: "\u042F\u043A \u0440\u043E\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C?", evening: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440!", night: "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456!" },
+          mentor: { dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A. \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441 \u0434\u043B\u044F \u0440\u043E\u0437\u0434\u0443\u043C\u0456\u0432.", morning: "\u041D\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C. \u0429\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441. \u0412\u0441\u0435 \u0437\u0430 \u043F\u043B\u0430\u043D\u043E\u043C?", evening: "\u0412\u0435\u0447\u0456\u0440. \u0429\u043E \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", night: "\u0427\u0430\u0441 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u043D\u043A\u0443." }
+        };
+        text = (greetings[mode] || greetings.partner)[phase] || "\u041F\u0440\u0438\u0432\u0456\u0442!";
+      }
+    } catch (e) {
+      text = "\u041F\u0440\u0438\u0432\u0456\u0442!";
+    }
+    const newMsg = { text, priority: "normal", chips, ts: Date.now(), id: Date.now() };
+    const all = getOwlBoardMessages();
+    all.unshift(newMsg);
+    saveOwlBoardMessages(all.slice(0, 3));
+    renderOwlBoard();
+    console.log("[OWL board] smart fallback:", text);
+  }
+  function _tryTabLocalFallback(tab) {
+    const msgs = getTabBoardMsgs(tab);
+    const visibleTs = msgs[0]?.ts || 0;
+    if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
+    let text = "";
+    const chips = [];
+    try {
+      if (tab === "finance") {
+        const txs = getFinance();
+        const from = getFinPeriodRange("month");
+        const monthTxs = txs.filter((t) => t.ts >= from);
+        const exp = monthTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+        const inc = monthTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+        if (monthTxs.length === 0) {
+          text = "\u0426\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0432\u0438\u0442\u0440\u0430\u0442\u0443!";
+        } else {
+          text = `\u0417\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(exp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(inc)}.${inc > 0 ? ` \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${Math.round((inc - exp) / inc * 100)}%.` : ""}`;
+        }
+      } else if (tab === "tasks") {
+        const tasks = getTasks().filter((t) => t.status === "active");
+        text = tasks.length > 0 ? `${tasks.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438?` : "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C!";
+      } else if (tab === "health") {
+        text = "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?";
+      } else if (tab === "notes") {
+        text = "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u2014 \u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0443 \u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u{1F4DD}";
+      } else if (tab === "evening" || tab === "me") {
+        text = "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C? \u0404 \u0449\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?";
+      } else if (tab === "projects") {
+        text = "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438. \u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?";
+      } else {
+        text = '\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0430\u0431\u043E \u0442\u0430\u043F\u043D\u0438 "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438" \u{1F4AC}';
+      }
+    } catch (e) {
+      text = "\u0427\u0438\u043C \u043C\u043E\u0436\u0443 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438?";
+    }
+    if (!text) return;
+    const newMsg = { text, priority: "normal", chips, ts: Date.now(), id: Date.now() };
+    saveTabBoardMsg(tab, newMsg);
+    renderTabBoard(tab);
+    console.log(`[OWL ${tab} board] tab fallback:`, text);
+  }
+  function _showFirstVisitHint(tab) {
+    if (!TAB_HINTS[tab]) return false;
+    try {
+      const visited = JSON.parse(localStorage.getItem(NM_FIRST_VISIT_KEY) || "{}");
+      if (visited[tab]) return false;
+      visited[tab] = Date.now();
+      localStorage.setItem(NM_FIRST_VISIT_KEY, JSON.stringify(visited));
+      const newMsg = { text: TAB_HINTS[tab], priority: "normal", chips: [], ts: Date.now() };
+      saveTabBoardMsg(tab, newMsg);
+      renderTabBoard(tab);
+      return true;
     } catch (e) {
       return false;
     }
   }
-  function _markEveningClosed(summaryText) {
-    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    localStorage.setItem(NM_EVENING_CLOSED_KEY, JSON.stringify({ date: today, ts: Date.now(), summary: summaryText || "" }));
-  }
-  async function generateEveningRitualSummary(addMsg) {
-    if (isEveningClosed()) {
-      if (addMsg) addMsg("agent", "\u0422\u0438 \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0432 \u0434\u0435\u043D\u044C. \u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}");
-      return { ok: true, already: true };
+  function tryTabBoardUpdate(tab) {
+    if (tab === "inbox") return;
+    if (_owlTabStates[tab] && _owlTabStates[tab] !== "speech") {
+      _owlTabStates[tab] = "speech";
+      _owlTabApplyState(tab);
     }
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      if (addMsg) addMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return { ok: false, err: "no key" };
-    }
-    if (addMsg) addMsg("typing", "");
-    const systemPrompt = getEveningSummaryPromptV2() + "\n\n" + getAIContext();
-    const reply = await callAI(systemPrompt, "\u041F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u0434\u043D\u044F \u2014 \u0456\u043D\u0441\u0430\u0439\u0442, \u043D\u0435 \u0446\u0438\u0444\u0440\u0438.");
-    if (!reply) {
-      if (addMsg) addMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.");
-      return { ok: false, err: "no reply" };
-    }
-    const text = reply.trim().slice(0, 600);
-    if (addMsg) addMsg("agent", text);
-    try {
-      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      addFact({ text: `\u0412\u0435\u0447\u0456\u0440\u043D\u0456\u0439 \u0456\u043D\u0441\u0430\u0439\u0442 ${today}: ${text.slice(0, 160)}`, category: "context", ttlDays: 30, source: "evening" });
-    } catch (e) {
-    }
-    _markEveningClosed(text);
-    window.dispatchEvent(new CustomEvent("nm-evening-closed"));
-    logRecentAction("evening_close", text.slice(0, 40), "evening");
-    return { ok: true };
-  }
-  function dispatchEveningTool(name, args) {
-    try {
-      switch (name) {
-        // ========== СТВОРЕННЯ ==========
-        case "save_task": {
-          const tasks = getTasks();
-          const newTask = {
-            id: Date.now(),
-            title: args.title || args.text || "\u0417\u0430\u0434\u0430\u0447\u0430",
-            desc: args.text && args.text !== args.title ? args.text : "",
-            steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
-            status: "active",
-            createdAt: Date.now()
-          };
-          if (args.due_date) newTask.dueDate = args.due_date;
-          if (args.priority && ["normal", "important", "critical"].includes(args.priority)) newTask.priority = args.priority;
-          tasks.unshift(newTask);
-          saveTasks(tasks);
-          renderTasks();
-          logRecentAction("save_task", newTask.title, "evening");
-          return { ok: true };
-        }
-        case "save_note": {
-          addNoteFromInbox(args.text || "", "note", args.folder || "\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A", "evening");
-          if (currentTab === "notes") renderNotes();
-          logRecentAction("save_note", (args.text || "").slice(0, 40), "evening");
-          return { ok: true };
-        }
-        case "save_moment": {
-          const moments = getMoments();
-          moments.push({ id: Date.now(), text: args.text || "", mood: args.mood || "neutral", ts: Date.now() });
-          saveMoments(moments);
-          logRecentAction("save_moment", (args.text || "").slice(0, 40), "evening");
-          return { ok: true };
-        }
-        case "save_habit": {
-          const habits = getHabits();
-          habits.unshift({ id: Date.now(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
-          saveHabits(habits);
-          renderHabits();
-          return { ok: true };
-        }
-        case "create_event": {
-          const events = getEvents();
-          events.unshift({ id: Date.now(), title: args.title || "\u041F\u043E\u0434\u0456\u044F", date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
-          saveEvents(events);
-          logRecentAction("create_event", args.title || "", "evening");
-          return { ok: true };
-        }
-        case "save_finance": {
-          const txs = getFinance();
-          txs.unshift({
-            id: Date.now(),
-            type: args.fin_type === "income" ? "income" : "expense",
-            amount: parseFloat(args.amount) || 0,
-            category: args.category || "\u0406\u043D\u0448\u0435",
-            comment: args.fin_comment || "",
-            ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
-          });
-          saveFinance(txs);
-          if (currentTab === "finance") renderFinance();
-          return { ok: true };
-        }
-        case "set_reminder": {
-          const events = getEvents();
-          const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          events.unshift({ id: Date.now(), title: "\u23F0 " + (args.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
-          saveEvents(events);
-          return { ok: true };
-        }
-        case "save_memory_fact": {
-          addFact({ text: args.fact || "", category: args.category || "context", ttlDays: args.ttl_days || null, source: "evening" });
-          return { ok: true };
-        }
-        // ========== ВИКОНАННЯ ==========
-        case "complete_task": {
-          const tasks = getTasks();
-          const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
-          ids.forEach((id) => {
-            const idx = tasks.findIndex((t) => t.id === id);
-            if (idx !== -1) {
-              tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
-            }
-          });
-          saveTasks(tasks);
-          renderTasks();
-          return { ok: true };
-        }
-        case "complete_habit": {
-          const log = getHabitLog();
-          const today = (/* @__PURE__ */ new Date()).toDateString();
-          if (!log[today]) log[today] = {};
-          const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
-          ids.forEach((id) => {
-            log[today][id] = (log[today][id] || 0) + 1;
-          });
-          saveHabitLog(log);
-          renderHabits();
-          renderProdHabits();
-          return { ok: true };
-        }
-        // ========== РЕДАГУВАННЯ ==========
-        case "edit_task": {
-          const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
-          if (idx === -1) return { ok: false, err: "task not found" };
-          if (args.title) tasks[idx].title = args.title;
-          if (args.due_date) tasks[idx].dueDate = args.due_date;
-          if (args.priority) tasks[idx].priority = args.priority;
-          tasks[idx].updatedAt = Date.now();
-          saveTasks(tasks);
-          renderTasks();
-          return { ok: true };
-        }
-        case "edit_event": {
-          const events = getEvents();
-          const idx = events.findIndex((e) => e.id === args.event_id);
-          if (idx === -1) return { ok: false, err: "event not found" };
-          if (args.title) events[idx].title = args.title;
-          if (args.date) events[idx].date = args.date;
-          if (args.time !== void 0) events[idx].time = args.time;
-          if (args.priority) events[idx].priority = args.priority;
-          saveEvents(events);
-          return { ok: true };
-        }
-        case "edit_note": {
-          const notes = getNotes();
-          const idx = notes.findIndex((n) => n.id === args.note_id);
-          if (idx === -1) return { ok: false, err: "note not found" };
-          if (args.text) notes[idx].text = args.text;
-          if (args.folder) notes[idx].folder = args.folder;
-          saveNotes(notes);
-          if (currentTab === "notes") renderNotes();
-          return { ok: true };
-        }
-        case "edit_habit": {
-          const habits = getHabits();
-          const idx = habits.findIndex((h) => h.id === args.habit_id);
-          if (idx === -1) return { ok: false, err: "habit not found" };
-          if (args.name) habits[idx].name = args.name;
-          if (Array.isArray(args.days)) habits[idx].days = args.days;
-          if (args.details) habits[idx].details = args.details;
-          saveHabits(habits);
-          renderHabits();
-          return { ok: true };
-        }
-        case "reopen_task": {
-          const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
-          if (idx === -1) return { ok: false, err: "task not found" };
-          tasks[idx] = { ...tasks[idx], status: "active", completedAt: null, updatedAt: Date.now() };
-          saveTasks(tasks);
-          renderTasks();
-          return { ok: true };
-        }
-        case "add_step": {
-          const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
-          if (idx === -1) return { ok: false, err: "task not found" };
-          if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
-          (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
-          saveTasks(tasks);
-          renderTasks();
-          return { ok: true };
-        }
-        case "move_note": {
-          const notes = getNotes();
-          const q = (args.query || "").toLowerCase();
-          const idx = notes.findIndex((n) => (n.text || "").toLowerCase().includes(q) || (n.title || "").toLowerCase().includes(q));
-          if (idx === -1) return { ok: false, err: "note not found" };
-          notes[idx].folder = args.folder;
-          saveNotes(notes);
-          if (currentTab === "notes") renderNotes();
-          return { ok: true };
-        }
-        case "update_transaction": {
-          const txs = getFinance();
-          const idx = txs.findIndex((t) => t.id === args.id);
-          if (idx === -1) return { ok: false, err: "tx not found" };
-          if (args.category) txs[idx].category = args.category;
-          if (args.amount) txs[idx].amount = parseFloat(args.amount);
-          if (args.comment !== void 0) txs[idx].comment = args.comment;
-          saveFinance(txs);
-          if (currentTab === "finance") renderFinance();
-          return { ok: true };
-        }
-        // ========== ВИДАЛЕННЯ ==========
-        case "delete_task": {
-          const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
-          if (idx === -1) return { ok: false, err: "task not found" };
-          addToTrash("task", tasks[idx]);
-          tasks.splice(idx, 1);
-          saveTasks(tasks);
-          renderTasks();
-          return { ok: true };
-        }
-        case "delete_event": {
-          const events = getEvents();
-          const idx = events.findIndex((e) => e.id === args.event_id);
-          if (idx === -1) return { ok: false, err: "event not found" };
-          addToTrash("event", events[idx]);
-          events.splice(idx, 1);
-          saveEvents(events);
-          return { ok: true };
-        }
-        case "delete_habit": {
-          const habits = getHabits();
-          const idx = habits.findIndex((h) => h.id === args.habit_id);
-          if (idx === -1) return { ok: false, err: "habit not found" };
-          addToTrash("habit", habits[idx]);
-          habits.splice(idx, 1);
-          saveHabits(habits);
-          renderHabits();
-          return { ok: true };
-        }
-        case "restore_deleted": {
-          const q = (args.query || "").trim().toLowerCase();
-          const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
-          const filtered = args.type ? trash.filter((t) => t.type === args.type) : trash;
-          if (q === "all") {
-            filtered.forEach((t) => restoreFromTrash(t.deletedAt));
-            return { ok: true };
-          }
-          if (q === "last") {
-            if (filtered.length > 0) restoreFromTrash(filtered[0].deletedAt);
-            return { ok: true };
-          }
-          const hit = filtered.find((t) => JSON.stringify(t.data || t).toLowerCase().includes(q));
-          if (hit) {
-            restoreFromTrash(hit.deletedAt);
-            return { ok: true };
-          }
-          return { ok: false, err: "not found in trash" };
-        }
-        default:
-          return { ok: false, err: "unknown tool: " + name };
-      }
-    } catch (e) {
-      console.warn("[dispatchEveningTool]", name, e);
-      return { ok: false, err: e.message };
+    if (_showFirstVisitHint(tab)) return;
+    renderTabBoard(tab);
+    if (typeof document !== "undefined" && document.hidden) return;
+    const hour = (/* @__PURE__ */ new Date()).getHours();
+    if (hour < 5) return;
+    if (tab === "evening" && hour < 12) return;
+    const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || "0");
+    const elapsed = Date.now() - lastTs;
+    const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
+    const firstTime = lastTs === 0;
+    if (firstTime || isNewDay || elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab)) {
+      generateBoardMessage(tab);
     }
   }
-  var NM_EVENING_CLOSED_KEY;
-  var init_evening_actions = __esm({
-    "src/tabs/evening-actions.js"() {
+  function tryBoardUpdate(tab) {
+    if (tab === "inbox") return tryOwlBoardUpdate();
+    return tryTabBoardUpdate(tab);
+  }
+  function _showInstantReaction(tab) {
+    const actions = getRecentActions();
+    const now = Date.now();
+    const recent = actions.filter((a) => now - a.ts < 3e3).pop();
+    if (!recent) return false;
+    const reactions = INSTANT_REACTIONS[recent.action];
+    if (!reactions) return false;
+    const text = reactions[Math.floor(Math.random() * reactions.length)];
+    const isInbox = tab === "inbox";
+    const newMsg = { text, priority: "normal", chips: [], ts: now };
+    if (isInbox) {
+      newMsg.id = now;
+      const msgs = getOwlBoardMessages();
+      msgs.unshift(newMsg);
+      saveOwlBoardMessages(msgs.slice(0, 3));
+      renderOwlBoard();
+    } else {
+      saveTabBoardMsg(tab, newMsg);
+      renderTabBoard(tab);
+    }
+    return true;
+  }
+  var _boardGenerating, TOPIC_CD_MS, NM_FIRST_VISIT_KEY, TAB_HINTS, _boardUpdateTimer, BOARD_UPDATE_DELAY, INSTANT_REACTIONS, NM_LAST_ACTIVE_KEY, NM_LAST_ACTIVE_DAY_KEY, WELCOME_BACK_THRESHOLD;
+  var init_proactive = __esm({
+    "src/owl/proactive.js"() {
+      init_core();
+      init_memory();
+      init_utils();
+      init_nav();
+      init_board();
+      init_inbox_board();
+      init_chips();
       init_tasks();
       init_habits();
       init_notes();
-      init_calendar();
       init_finance();
       init_evening();
-      init_memory();
-      init_trash();
-      init_nav();
-      init_utils();
-      init_core();
-      init_prompts();
-      NM_EVENING_CLOSED_KEY = "nm_evening_closed";
-    }
-  });
-
-  // src/tabs/evening-chat.js
-  async function closeEveningDay() {
-    try {
-      openChatBar("evening");
-    } catch (e) {
-    }
-    await generateEveningRitualSummary(addEveningBarMsg);
-  }
-  async function openEveningTopic(topic) {
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    let started = {};
-    try {
-      started = JSON.parse(localStorage.getItem(EVENING_TOPIC_STARTED_KEY) || "{}");
-    } catch (e) {
-    }
-    if (started.date !== todayISO) started = { date: todayISO };
-    try {
-      openChatBar("evening");
-    } catch (e) {
-    }
-    if (started[topic]) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    addEveningBarMsg("typing", "");
-    const topicPrompts = {
-      tomorrow: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u0437\u0430\u0432\u0442\u0440\u0430". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 \u043F\u043E\u0434\u0456\u0457 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F, \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043F\u0430\u043C'\u044F\u0442\u044C. \u041F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u0430\u0431\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0430 \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u0437\u0433\u0430\u0434\u0430\u0439 \u0457\u0457 ("\u0417\u0430\u0432\u0442\u0440\u0430 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 \u0434\u0437\u0432\u0456\u043D\u043E\u043A \u043E 15 \u2014 \u0449\u043E \u0449\u0435?"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u0449\u043E \u0449\u0435 \u043F\u043B\u0430\u043D\u0443\u0454 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u0442\u0438\u043F\u0443 \u0437\u0430\u043F\u0438\u0441\u0443: [\u0417\u0430\u0434\u0430\u0447\u0430] [\u041F\u043E\u0434\u0456\u044F] [\u0406 \u0442\u0435 \u0439 \u0442\u0435].`,
-      diary: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456/\u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u0432\u0438\u0442\u0440\u0430\u0442\u0438. \u041F\u043E\u0447\u043D\u0438 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0454 \u044F\u0441\u043A\u0440\u0430\u0432\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0430\u0431\u043E \u043F\u0430\u0442\u0442\u0435\u0440\u043D, \u0437\u0433\u0430\u0434\u0430\u0439 \u0439\u043E\u0433\u043E ("\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445 \u0449\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u044F\u043A \u0432\u043E\u043D\u043E. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u044E: [\u{1F525}] [\u{1F60A}] [\u{1F610}] [\u{1F615}] [\u{1F61E}].`
-    };
-    const tp = topicPrompts[topic];
-    if (!tp) return;
-    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext() + "\n\n=== \u0421\u0426\u0415\u041D\u0410\u0420\u0406\u0419 ===\n" + tp + "\n\n\u0423 \u0426\u042C\u041E\u041C\u0423 \u041F\u0415\u0420\u0428\u041E\u041C\u0423 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u0406: \u0431\u0435\u0437 tool calls (\u044E\u0437\u0435\u0440 \u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u0432 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438). \u0422\u0456\u043B\u044C\u043A\u0438 content: \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F + \u0447\u0456\u043F\u0438.";
-    try {
-      const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
-      if (!msg) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        return;
-      }
-      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-        for (const tc of msg.tool_calls) {
-          let args = {};
+      _boardGenerating = {};
+      setTimeout(_updateApiDot, 3e3);
+      TOPIC_CD_MS = 3 * 60 * 60 * 1e3;
+      NM_FIRST_VISIT_KEY = "nm_tab_first_visit";
+      TAB_HINTS = {
+        tasks: "\u0422\u0443\u0442 \u0436\u0438\u0432\u0443\u0442\u044C \u0442\u0432\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438. \u041D\u0430\u043F\u0438\u0448\u0438 \u043C\u0435\u043D\u0456 \u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u2014 \u044F \u0441\u0442\u0432\u043E\u0440\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u{1F4CB}",
+        notes: "\u0426\u0435 \u0442\u0432\u043E\u0457 \u043D\u043E\u0442\u0430\u0442\u043A\u0438. \u041C\u043E\u0436\u0435\u0448 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u0430\u0442\u0438 \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445. \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0445\u043E\u0447\u0435\u0448 \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0442\u0438 \u2014 \u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0443 \u{1F4DD}",
+        finance: "\u0422\u0443\u0442 \u0444\u0456\u043D\u0430\u043D\u0441\u0438. \u0421\u043A\u0430\u0436\u0438 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u2014 \u044F \u0437\u0430\u043F\u0438\u0448\u0443. \u041C\u043E\u0436\u0435\u0448 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u{1F4B0}",
+        health: "\u0422\u0443\u0442 \u043F\u0440\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044F. \u0414\u043E\u0434\u0430\u0432\u0430\u0439 \u043A\u0430\u0440\u0442\u043A\u0438 (\u043B\u0456\u043A\u0438, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0430\u043D\u0430\u043B\u0456\u0437\u0438) \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438 (\u0435\u043D\u0435\u0440\u0433\u0456\u044F, \u0441\u043E\u043D, \u0431\u0456\u043B\u044C) \u{1F3E5}",
+        projects: '\u0422\u0443\u0442 \u0432\u0435\u043B\u0438\u043A\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0430\u043C\u0438. \u0421\u043A\u0430\u0436\u0438 "\u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442" \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u{1F680}',
+        evening: "\u0422\u0443\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F \u0456 \u0432\u0435\u0447\u0456\u0440\u043D\u0456\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A. \u0417\u0430\u043F\u0438\u0441\u0443\u0439 \u0449\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0433\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F \u2014 \u0432\u0432\u0435\u0447\u0435\u0440\u0456 \u043F\u0456\u0434\u0432\u0435\u0434\u0435\u043C\u043E \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0438 \u2728",
+        me: '\u0426\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 "\u042F" \u2014 \u0437\u0432\u0438\u0447\u043A\u0438, \u0441\u0442\u0440\u0456\u043A\u0438, \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430. \u0422\u0443\u0442 \u0431\u0430\u0447\u0438\u0448 \u0441\u0432\u0456\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043C\u0456\u0441\u044F\u0446\u044C \u{1F4CA}',
+        habits: "\u0422\u0443\u0442 \u0442\u0432\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438. \u0412\u0456\u0434\u043C\u0456\u0447\u0430\u0439 \u0449\u043E\u0434\u043D\u044F \u2014 \u0431\u0443\u0434\u0443\u0439 \u0441\u0435\u0440\u0456\u0457! \u041C\u043E\u0436\u0435\u0448 \u0434\u043E\u0434\u0430\u0442\u0438 \u043D\u043E\u0432\u0443 \u0447\u0435\u0440\u0435\u0437 \u0447\u0430\u0442-\u0431\u0430\u0440 \u0437\u043D\u0438\u0437\u0443 \u{1F331}"
+      };
+      _boardUpdateTimer = null;
+      BOARD_UPDATE_DELAY = 5e3;
+      INSTANT_REACTIONS = {
+        complete_task: [
+          "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E! \u041E\u0434\u043D\u0430 \u043C\u0435\u043D\u0448\u0435 \u{1F4AA}",
+          "\u0422\u0430\u043A \u0442\u0440\u0438\u043C\u0430\u0442\u0438! \u2705",
+          "\u0417\u0430\u043A\u0440\u0438\u0442\u043E! \u0429\u043E \u0434\u0430\u043B\u0456?",
+          "\u041C\u043E\u043B\u043E\u0434\u0435\u0446\u044C! \u0420\u0443\u0445\u0430\u0454\u043C\u043E\u0441\u044C \u0434\u0430\u043B\u0456 \u{1F3AF}",
+          "\u0413\u043E\u0442\u043E\u0432\u043E! \u0429\u0435 \u0442\u0440\u0456\u0448\u043A\u0438 \u0456 \u0432\u0441\u0435 \u0447\u0438\u0441\u0442\u043E"
+        ],
+        complete_habit: [
+          "\u0404! \u0417\u0432\u0438\u0447\u043A\u0430 \u043D\u0430 \u043C\u0456\u0441\u0446\u0456 \u{1F525}",
+          "\u0417\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E! \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0439 \u0441\u0435\u0440\u0456\u044E \u{1F4AA}",
+          "\u041C\u043E\u043B\u043E\u0434\u0435\u0446\u044C! \u041A\u0440\u043E\u043A \u0437\u0430 \u043A\u0440\u043E\u043A\u043E\u043C",
+          "\u0412\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E! \u0421\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u2014 \u0441\u0438\u043B\u0430 \u2705"
+        ],
+        hold_quit_habit: [
+          "\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F! \u0426\u0435 \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u{1F4AA}",
+          "\u0429\u0435 \u043E\u0434\u0438\u043D \u0434\u0435\u043D\u044C \u043F\u0435\u0440\u0435\u043C\u043E\u0433\u0438! \u{1F525}",
+          "\u041A\u0440\u0430\u0441\u0430\u0432\u0430! \u041A\u043E\u0436\u0435\u043D \u0434\u0435\u043D\u044C \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F"
+        ],
+        add_moment: [
+          "\u0417\u0430\u043F\u0438\u0441\u0430\u0432 \u043C\u043E\u043C\u0435\u043D\u0442 \u2728",
+          "\u0413\u0430\u0440\u043D\u043E \u0449\u043E \u0444\u0456\u043A\u0441\u0443\u0454\u0448!"
+        ]
+      };
+      window.addEventListener("nm-data-changed", (e) => {
+        const tab = currentTab || "inbox";
+        if (e.detail !== "chat") _showInstantReaction(tab);
+        if (e.detail === "chat") return;
+        const trigger = "data-changed";
+        if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
+        _boardUpdateTimer = setTimeout(() => {
+          _boardUpdateTimer = null;
+          if (typeof document !== "undefined" && document.hidden) return;
+          const curTab = currentTab || "inbox";
+          if (curTab === "inbox") {
+            const judge = shouldOwlSpeak(trigger);
+            if (judge.speak) generateBoardMessage("inbox");
+          } else {
+            generateBoardMessage(curTab);
+          }
+        }, BOARD_UPDATE_DELAY);
+      });
+      window.addEventListener("nm-chat-closed", () => {
+        setTimeout(() => {
+          const judge = shouldOwlSpeak("chat-closed");
+          if (judge.speak) generateBoardMessage(currentTab || "inbox");
+        }, 3e3);
+      });
+      NM_LAST_ACTIVE_KEY = "nm_last_active";
+      NM_LAST_ACTIVE_DAY_KEY = "nm_last_active_day";
+      WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1e3;
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+          localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
+          localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+        } else if (document.visibilityState === "visible") {
+          const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+          const lastActiveDay = localStorage.getItem(NM_LAST_ACTIVE_DAY_KEY) || "";
+          const isFirstOpenToday = lastActiveDay && lastActiveDay !== todayISO;
+          if (isFirstOpenToday) {
+            localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO);
+            const judge = shouldOwlSpeak("first-open-today");
+            if (judge.speak) generateBoardMessage(currentTab || "inbox");
+            return;
+          }
+          const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || "0");
+          if (!lastActive) return;
+          const away = Date.now() - lastActive;
+          if (away > WELCOME_BACK_THRESHOLD) {
+            const judge = shouldOwlSpeak("welcome-back");
+            if (judge.speak) generateBoardMessage(currentTab || "inbox");
+          }
+        }
+      });
+      try {
+        window.addEventListener("nm-data-changed", () => {
           try {
-            args = JSON.parse(tc.function.arguments || "{}");
+            localStorage.setItem("nm_owl_ignored_msgs", "0");
+            localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
           } catch (e) {
           }
-          if (UI_TOOL_NAMES.has(tc.function.name)) {
-            const res = handleUITool(tc.function.name, args);
-            if (res && res.text) addEveningBarMsg("agent", res.text);
-            continue;
-          }
-          dispatchEveningTool(tc.function.name, args);
-        }
-      }
-      const { text: replyText, chips } = _parseContentChips(msg.content || "");
-      if (replyText) {
-        addEveningBarMsg("agent", replyText, false, chips);
-        started[topic] = Date.now();
-        localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
-      } else {
-        safeAgentReply("\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?", addEveningBarMsg);
-      }
-    } catch (e) {
-      console.warn("[openEveningTopic]", e);
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-  }
-  function showEveningBarMessages() {
-    openChatBar("evening");
-  }
-  function addEveningBarMsg(role, text, _noSave = false, chips = null) {
-    const el = document.getElementById("evening-bar-messages");
-    if (!el) return;
-    if (_eveningTypingEl) {
-      _eveningTypingEl.remove();
-      _eveningTypingEl = null;
-    }
-    if (role === "typing") {
-      const td = document.createElement("div");
-      td.style.cssText = "display:flex";
-      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-      el.appendChild(td);
-      _eveningTypingEl = td;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    if (!_noSave) {
-      try {
-        openChatBar("evening");
+        });
       } catch (e) {
       }
-    }
-    const isAgent = role === "agent";
-    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    if (isAgent && Array.isArray(chips) && chips.length > 0) {
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "chat-chips-row";
-      renderChips(chipsRow, chips, "evening");
-      el.appendChild(chipsRow);
-    }
-    el.scrollTop = el.scrollHeight;
-    if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
-    else eveningBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("evening", role, text);
-    if (role === "agent") {
-      const bar = document.getElementById("evening-ai-bar");
-      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
-      const isOpen = chatWin && chatWin.classList.contains("open");
-      if (!isOpen) showUnreadBadge("evening", "evening-send-btn");
-    }
-  }
-  function _parseContentChips(content) {
-    if (!content || typeof content !== "string") return { text: "", chips: null };
-    const blocks = extractJsonBlocks(content);
-    let chips = null;
-    for (const b of blocks) {
-      if (b && Array.isArray(b.chips)) {
-        chips = b.chips;
-        break;
-      }
-    }
-    const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, "").trim();
-    return { text, chips };
-  }
-  async function sendEveningBarMessage() {
-    if (eveningBarLoading) return;
-    const input = document.getElementById("evening-bar-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addEveningBarMsg("user", text);
-    eveningBarLoading = true;
-    addEveningBarMsg("typing", "");
-    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext();
-    const history = eveningBarHistory.slice(-10);
-    try {
-      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
-      if (!msg) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        eveningBarLoading = false;
-        return;
-      }
-      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-        for (const tc of msg.tool_calls) {
-          let args = {};
-          try {
-            args = JSON.parse(tc.function.arguments || "{}");
-          } catch (e) {
-          }
-          if (UI_TOOL_NAMES.has(tc.function.name)) {
-            const res = handleUITool(tc.function.name, args);
-            if (res && res.text) addEveningBarMsg("agent", res.text);
-            continue;
-          }
-          dispatchEveningTool(tc.function.name, args);
-        }
-      }
-      const { text: replyText, chips } = _parseContentChips(msg.content || "");
-      if (replyText) addEveningBarMsg("agent", replyText, false, chips);
-      else if (!msg.tool_calls || msg.tool_calls.length === 0) {
-        safeAgentReply("\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435.", addEveningBarMsg);
-      }
-    } catch (e) {
-      console.warn("[sendEveningBarMessage]", e);
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-    eveningBarLoading = false;
-  }
-  var _eveningTypingEl, EVENING_TOPIC_STARTED_KEY, eveningBarHistory, eveningBarLoading;
-  var init_evening_chat = __esm({
-    "src/tabs/evening-chat.js"() {
-      init_utils();
-      init_core();
-      init_unread_badge();
-      init_chips();
-      init_prompts();
-      init_ui_tools();
-      init_evening_actions();
-      _eveningTypingEl = null;
-      EVENING_TOPIC_STARTED_KEY = "nm_evening_topic_started";
-      eveningBarHistory = [];
-      eveningBarLoading = false;
-      Object.assign(window, {
-        openEveningTopic,
-        closeEveningDay,
-        sendEveningBarMessage,
-        showEveningBarMessages
-      });
-    }
-  });
-
-  // src/tabs/me.js
-  function renderMeHabitsStats() {
-    const habits = getHabits();
-    const el = document.getElementById("me-habits-stats-list");
-    const block = document.getElementById("me-habits-stats");
-    if (!el) return;
-    if (habits.length === 0) {
-      if (block) block.style.display = "none";
-      return;
-    }
-    if (block) block.style.display = "block";
-    const log = getHabitLog();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    el.innerHTML = habits.map((h) => {
-      const pct = getHabitPct(h.id);
-      const streak = getHabitStreak(h.id);
-      const isDoneToday = !!log[today]?.[h.id];
-      const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
-      return `
-    <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || "\u2B55"} ${escapeHtml(h.name)}</span>
-        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#dc2626"}">${pct}%</span>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
-        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#ef4444"};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `\u{1F525} ${streak} \u0434\u043D\u0456 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \xB7 ` : ""}\u0437\u0430 30 \u0434\u043D\u0456\u0432${isScheduledToday ? isDoneToday ? " \xB7 \u2705 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : " \xB7 \u23F3 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : ""}</div>
-    </div>`;
-    }).join("");
-  }
-  async function sendMeChatMessage() {
-    const input = document.getElementById("me-chat-input");
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addMeChatMsg("user", text);
-    meChatHistory.push({ role: "user", content: text });
-    const loadId = "me-chat-load-" + Date.now();
-    addMeChatMsg("agent", "\u2026", false, loadId);
-    const context = getAIContext();
-    const stats = getMeStatsContext();
-    const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
-\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0434\u0456\u044E \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
-- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
-- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041F\u043E\u0434\u0456\u044F: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
-- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-
-${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
-    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], UI_TOOLS);
-    const loadEl = document.getElementById(loadId);
-    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      if (loadEl) loadEl.remove();
-      for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try {
-            args = JSON.parse(tc.function.arguments || "{}");
-          } catch (e) {
-          }
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addMeChatMsg("agent", res.text);
-        }
-      }
-      if (msg.content) meChatHistory.push({ role: "assistant", content: msg.content });
-      if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
-      return;
-    }
-    const reply = msg && msg.content ? msg.content : "";
-    let handled = false;
-    if (reply) {
-      const blocks = extractJsonBlocks(reply);
-      for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
-          handled = true;
-        }
-      }
-      if (handled && loadEl) loadEl.textContent = "\u2705";
-    }
-    if (!handled && loadEl) loadEl.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.";
-    if (reply) meChatHistory.push({ role: "assistant", content: reply });
-    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
-  }
-  function renderMe() {
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const now = /* @__PURE__ */ new Date();
-    const todayDow = (now.getDay() + 6) % 7;
-    try {
-      let streak = 0;
-      for (let i = 0; i <= 60; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const ds = d.toDateString();
-        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t) => t.createdAt && new Date(t.createdAt).toDateString() === ds);
-        if (hasRecord) streak++;
-        else if (i > 0) break;
-      }
-      const badge = document.getElementById("me-streak-badge");
-      const count = document.getElementById("me-streak-count");
-      if (badge && count) {
-        if (streak >= 2) {
-          badge.style.display = "flex";
-          count.textContent = streak;
-        } else badge.style.display = "none";
-      }
-    } catch (e) {
-    }
-    const ringsEl = document.getElementById("me-week-rings");
-    if (ringsEl) {
-      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-      const accent = "#7c4a2a";
-      ringsEl.innerHTML = days.map((d, i) => {
-        const daysAgo = todayDow - i;
-        const date = new Date(now);
-        date.setDate(now.getDate() - daysAgo);
-        const ds = date.toDateString();
-        const future = daysAgo < 0;
-        const count = future ? 0 : inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
-        const doneTasks = future ? 0 : getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-        const total = count + doneTasks;
-        const maxVal = 8;
-        const pct = future ? 0 : Math.min(total / maxVal, 1);
-        const circ = 69;
-        const offset = circ - circ * pct;
-        const isToday = daysAgo === 0;
-        const isBest = !future && pct >= 0.85;
-        const strokeColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.6)` : pct > 0 ? `rgba(124,74,42,0.3)` : "transparent";
-        const label = future ? "\u2013" : isBest ? "\u2605" : total > 0 ? total : "\xB7";
-        const labelColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.65)` : "rgba(30,16,64,0.22)";
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-        <svg width="32" height="32" viewBox="0 0 30 30">
-          <circle cx="15" cy="15" r="11" fill="none" stroke="rgba(30,16,64,0.07)" stroke-width="3.5"/>
-          ${!future && pct > 0 ? `<circle cx="15" cy="15" r="11" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 15 15)"/>` : ""}
-          <text x="15" y="19" text-anchor="middle" font-size="${isBest ? 9 : 8}" font-weight="${isBest ? 900 : 800}" fill="${labelColor}">${label}</text>
-        </svg>
-        <div style="font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : "rgba(30,16,64,0.35)"}">${d}</div>
-      </div>`;
-      }).join("");
-    }
-    const compareEl = document.getElementById("me-week-compare");
-    if (compareEl) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - todayDow);
-      weekStart.setHours(0, 0, 0, 0);
-      const prevStart = new Date(weekStart);
-      prevStart.setDate(prevStart.getDate() - 7);
-      const prevEnd = new Date(weekStart);
-      const thisWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= weekStart.getTime()).length;
-      const prevWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= prevStart.getTime() && t.completedAt < prevEnd.getTime()).length;
-      const habits = getHabits();
-      const log = getHabitLog();
-      const buildHabitsMe = habits.filter((h) => h.type !== "quit");
-      let thisHabitPct = 0, prevHabitPct = 0;
-      if (buildHabitsMe.length > 0) {
-        let thisDone = 0, thisTotal = 0, prevDone = 0, prevTotal = 0;
-        for (let i = 0; i <= todayDow; i++) {
-          const d = new Date(weekStart);
-          d.setDate(weekStart.getDate() + i);
-          const dow = (d.getDay() + 6) % 7;
-          const ds = d.toDateString();
-          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-          thisTotal += dayH.length;
-          thisDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
-        }
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(prevStart);
-          d.setDate(prevStart.getDate() + i);
-          const dow = (d.getDay() + 6) % 7;
-          const ds = d.toDateString();
-          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-          prevTotal += dayH.length;
-          prevDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
-        }
-        thisHabitPct = thisTotal > 0 ? Math.round(thisDone / thisTotal * 100) : 0;
-        prevHabitPct = prevTotal > 0 ? Math.round(prevDone / prevTotal * 100) : 0;
-      }
-      const thisNotes = getNotes().filter((n) => (n.ts || 0) >= weekStart.getTime()).length;
-      const prevNotes = getNotes().filter((n) => (n.ts || 0) >= prevStart.getTime() && (n.ts || 0) < prevEnd.getTime()).length;
-      const diffColor = (a, b) => a >= b ? "#16a34a" : "#c2410c";
-      const diffArrow = (a, b) => a >= b ? "\u2191" : "\u2193";
-      compareEl.innerHTML = [
-        { label: "\u0437\u0430\u0434\u0430\u0447\u0456", cur: thisWeekTasks, prev: prevWeekTasks, color: "#ea580c" },
-        { label: "\u0437\u0432\u0438\u0447\u043A\u0438", cur: thisHabitPct + "%", prev: prevHabitPct + "%", rawCur: thisHabitPct, rawPrev: prevHabitPct, color: "#16a34a" },
-        { label: "\u043D\u043E\u0442\u0430\u0442\u043A\u0438", cur: thisNotes, prev: prevNotes, color: "#7c4a2a" }
-      ].map((item) => {
-        const rc = item.rawCur !== void 0 ? item.rawCur : item.cur;
-        const rp = item.rawPrev !== void 0 ? item.rawPrev : item.prev;
-        const diff = rc - rp;
-        return `<div style="flex:1;background:rgba(255,255,255,0.55);border-radius:12px;padding:8px 6px;text-align:center">
-        <div style="font-size:20px;font-weight:900;color:${item.color};line-height:1">${item.cur}</div>
-        <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">${item.label}</div>
-        <div style="font-size:10px;font-weight:800;color:${diffColor(rc, rp)};margin-top:2px">${diffArrow(rc, rp)} ${diff >= 0 ? "+" : ""}${item.rawCur !== void 0 ? diff + "%" : diff}</div>
-      </div>`;
-      }).join("");
-    }
-    const moodEl = document.getElementById("me-mood-bars");
-    if (moodEl) {
-      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-      const moodMap = { fire: 5, good: 4, ok: 3, meh: 2, bad: 1 };
-      const bars = days.map((d, i) => {
-        const daysAgo = todayDow - i;
-        const future = daysAgo < 0;
-        if (future) return { d, h: 3, color: "rgba(30,16,64,0.05)", future: true };
-        const date = new Date(now);
-        date.setDate(now.getDate() - daysAgo);
-        const ds = date.toDateString();
-        try {
-          const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
-          if (saved && saved.date === ds && saved.mood) {
-            const val = moodMap[saved.mood] || 3;
-            const maxH = 26;
-            const h2 = Math.round(val / 5 * maxH);
-            const colors = { fire: "#ea580c", good: "#22c55e", ok: "#16a34a", meh: "#d97706", bad: "#ef4444" };
-            return { d, h: Math.max(4, h2), color: colors[saved.mood] || "#16a34a", future: false };
-          }
-        } catch (e) {
-        }
-        const dayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === ds);
-        if (dayMoments.length === 0) return { d, h: 3, color: "rgba(30,16,64,0.07)", future: false };
-        const pos = dayMoments.filter((m) => m.mood === "positive").length;
-        const pct = pos / dayMoments.length;
-        const h = Math.max(5, Math.round(pct * 26));
-        return { d, h, color: pct >= 0.6 ? "#16a34a" : pct >= 0.3 ? "#d97706" : "#ef4444", future: false };
-      });
-      moodEl.innerHTML = bars.map(
-        (b) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
-        <div style="width:100%;height:${b.h}px;background:${b.color};border-radius:2px 2px 0 0"></div>
-        <div style="font-size:8px;font-weight:700;color:rgba(30,16,64,0.35)">${b.d}</div>
-      </div>`
-      ).join("");
-    }
-    const projBlock = document.getElementById("me-projects-block");
-    const projList = document.getElementById("me-projects-list");
-    if (projBlock && projList) {
-      let activeProjects = [];
-      try {
-        activeProjects = getProjects().slice(0, 3);
-      } catch (e) {
-      }
-      if (activeProjects.length > 0) {
-        projBlock.style.display = "block";
-        projList.innerHTML = activeProjects.map((p) => {
-          const steps = p.steps || [];
-          const done = steps.filter((s) => s.done).length;
-          const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
-          const nextStep = steps.find((s) => !s.done);
-          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
-              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
-              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
-            </div>
-            <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
-          </div>
-          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:#7c4a2a;border-radius:3px;transition:width 0.5s"></div>
-          </div>
-        </div>`;
-        }).join("");
-      } else {
-        projBlock.style.display = "none";
-      }
-    }
-    renderMeHabitsStats();
-    renderMeActivityChart();
-  }
-  function renderMeActivityChart() {
-    const chartEl = document.getElementById("me-activity-chart");
-    const labelsEl = document.getElementById("me-activity-labels");
-    const totalEl = document.getElementById("me-activity-total");
-    if (!chartEl) return;
-    const now = /* @__PURE__ */ new Date();
-    const todayDow = (now.getDay() + 6) % 7;
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const dayLabels = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-    const accent = "#7c4a2a";
-    const allBuildHabits = getHabits().filter((h) => h.type !== "quit");
-    const activeTasks = getTasks().filter((t) => t.status === "active").length;
-    const baseline = Math.max(1, Math.round(activeTasks / 7) + 1);
-    const values = dayLabels.map((_, i) => {
-      const daysAgo = todayDow - i;
-      const d = new Date(now);
-      d.setDate(now.getDate() - daysAgo);
-      const ds = d.toDateString();
-      if (daysAgo < 0) return null;
-      const inboxCount = inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
-      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-      const log = getHabitLog();
-      const dow = (d.getDay() + 6) % 7;
-      const todayH = allBuildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-      const doneH = todayH.filter((h) => !!log[ds]?.[h.id]).length;
-      return { val: inboxCount + doneTasks + doneH, norm: Math.max(1, todayH.length + Math.round(activeTasks / 7)) };
-    });
-    const validValues = values.filter((v) => v !== null);
-    const maxVal = Math.max(...validValues.map((v) => v.val), baseline * 2, 1);
-    const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
-    if (totalEl) totalEl.textContent = `${totalActivity} \u0434\u0456\u0439`;
-    const W = chartEl.offsetWidth || 300;
-    const H = 64;
-    const padT = 6, padB = 10;
-    const chartH = H - padT - padB;
-    const xOf = (i) => (i + 0.5) * W / 7;
-    const yOf = (val) => padT + chartH * (1 - val / maxVal);
-    const points = values.map((v, i) => {
-      if (v === null) return null;
-      return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
-    }).filter(Boolean);
-    if (points.length < 2) {
-      chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">\u041D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>';
-      if (labelsEl) labelsEl.innerHTML = "";
-      return;
-    }
-    const baselineY = yOf(baseline);
-    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${H} L ${points[0].x.toFixed(1)} ${H} Z`;
-    const dots = points.map((p) => {
-      const isToday = p.i === todayDow;
-      const aboveNorm = p.v >= p.norm;
-      const fill = p.v === 0 ? "rgba(124,74,42,0.2)" : aboveNorm ? "#16a34a" : "#c2410c";
-      const r = isToday ? 5 : 3.5;
-      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
-    }).join("");
-    const normLabelTop = Math.max(0, Math.round(baselineY) - 18);
-    chartEl.innerHTML = `
-    <svg width="${W}" height="${H}" style="display:block;overflow:visible">
-      <defs>
-        <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
-          <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
-        </linearGradient>
-      </defs>
-      <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}"
-            stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
-      <path d="${areaPath}" fill="url(#actGrad)"/>
-      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${dots}
-    </svg>
-    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.45);background:rgba(245,240,235,0.85);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">\u041D\u041E\u0420\u041C\u0410</div>
-  `;
-    if (labelsEl) {
-      labelsEl.innerHTML = values.map((v, i) => {
-        const isToday = i === todayDow;
-        const isFuture = v === null;
-        return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : isFuture ? "rgba(30,16,64,0.15)" : "rgba(30,16,64,0.35)"}">${dayLabels[i]}</div>`;
-      }).join("");
-    }
-  }
-  async function refreshMeAnalysis() {
-    const btn = document.getElementById("me-refresh-btn");
-    const el = document.getElementById("me-ai-analysis");
-    btn.textContent = "\u2026";
-    btn.disabled = true;
-    el.textContent = "\u2026";
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-    const notes = getNotes();
-    const aiContext = getAIContext();
-    const totalRecords = inbox.length + tasks.length + notes.length;
-    if (totalRecords < 3) {
-      el.textContent = "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.";
-      btn.textContent = "\u21BB";
-      btn.disabled = false;
-      return;
-    }
-    const dataNote = totalRecords < 10 ? "\u0423\u0412\u0410\u0413\u0410: \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E, \u043D\u0435 \u0440\u043E\u0431\u0438 \u0433\u043B\u0438\u0431\u043E\u043A\u0438\u0445 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0456\u0432 \u043F\u0440\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0456\u0441\u0442\u044C \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0449\u043E \u0434\u043E\u0434\u0430\u0442\u0438." : "";
-    const systemPrompt = `${getOWLPersonality()} \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 (3-5 \u0440\u0435\u0447\u0435\u043D\u044C) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0429\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435 \u0456 \u0449\u043E \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. ${dataNote} \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u043F\u043E\u0440\u0430\u0434\u043E\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043E\u0433\u043B\u044F\u0434\u0456 (\u0424\u0430\u0437\u0430 5):
-- \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
-- \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
-    const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
-\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status !== "done").length}
-\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status === "done").length}
-\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
-\u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
-    const reply = await callAI(systemPrompt, userData, {});
-    el.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.";
-    btn.textContent = "\u21BB";
-    btn.disabled = false;
-    if (reply && totalRecords >= 5) {
-      const adviceEl = document.getElementById("me-ai-advice");
-      const adviceBlock = document.getElementById("me-advice-block");
-      if (adviceEl && adviceBlock) {
-        adviceEl.textContent = "\u2026";
-        adviceBlock.style.display = "block";
-        const advicePrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0434\u0430\u0439 \u0440\u0456\u0432\u043D\u043E 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456, \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043B\u044E\u0434\u0438\u043D\u0438. \u041A\u043E\u0436\u043D\u0430 \u043F\u043E\u0440\u0430\u0434\u0430 \u2014 \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0456 \u0434\u0456\u0454\u0432\u0430. \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456: "1. [\u043F\u043E\u0440\u0430\u0434\u0430]
-2. [\u043F\u043E\u0440\u0430\u0434\u0430]
-3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
-        const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
-
-\u0414\u0430\u043D\u0456: ${userData}`, {});
-        if (adviceReply) {
-          adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
-        } else {
-          adviceBlock.style.display = "none";
-        }
-      }
-    }
-  }
-  function showMeChatMessages() {
-    openChatBar("me");
-  }
-  function addMeChatMsg(role, text, _noSave = false, id = "") {
-    const el = document.getElementById("me-chat-messages");
-    if (!el) return;
-    if (!_noSave) {
-      try {
-        openChatBar("me");
-      } catch (e) {
-      }
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-    if (!_noSave) saveChatMsg("me", role, text);
-  }
-  var meChatHistory;
-  var init_me = __esm({
-    "src/tabs/me.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_prompts();
-      init_ui_tools();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_evening();
-      init_projects();
-      meChatHistory = [];
-      Object.assign(window, {
-        sendMeChatMessage,
-        showMeChatMessages,
-        refreshMeAnalysis
-      });
     }
   });
 
@@ -6963,2311 +7418,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   });
 
-  // src/owl/chips.js
-  function normalizeChips(chips) {
-    if (!Array.isArray(chips)) return [];
-    return chips.map(
-      (c) => typeof c === "string" ? { label: c, action: "chat" } : c
-    );
-  }
-  function filterStaleChips(chips) {
-    return chips.filter((c) => {
-      const label = (c.label || "").trim();
-      if (!label.includes("\u2714\uFE0F")) return true;
-      const cleanText = label.replace(/✔️/g, "").trim().toLowerCase();
-      if (!cleanText) return false;
-      const words = cleanText.split(/\s+/).filter((w) => w.length >= 3);
-      if (words.length === 0) return true;
-      const stems = words.map((w) => w.slice(0, 4));
-      const tasks = getTasks();
-      for (const t of tasks) {
-        if (t.status !== "done") continue;
-        const tWords = t.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
-        const tStems = tWords.map((w) => w.slice(0, 4));
-        const matches = stems.filter((s) => tStems.some((ts) => ts === s));
-        if (matches.length >= 1 && matches.length >= stems.length * 0.5) return false;
-      }
-      const habits = getHabits();
-      const today = (/* @__PURE__ */ new Date()).toDateString();
-      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const log = getHabitLog();
-      for (const h of habits) {
-        const hWords = h.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
-        const hStems = hWords.map((w) => w.slice(0, 4));
-        const matches = stems.filter((s) => hStems.some((hs) => hs === s));
-        if (matches.length >= 1 && matches.length >= stems.length * 0.5) {
-          if (h.type === "quit") {
-            const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
-            if (quitLog[h.id]?.lastHeld === todayISO) return false;
-          } else {
-            if (log[today]?.[h.id]) return false;
-          }
-        }
-      }
-      return true;
-    });
-  }
-  function _getChipStats() {
-    try {
-      return JSON.parse(localStorage.getItem(NM_CHIP_STATS_KEY) || '{"clicked":[],"ignored":0}');
-    } catch {
-      return { clicked: [], ignored: 0 };
-    }
-  }
-  function trackChipClick(action, label) {
-    const stats = _getChipStats();
-    stats.clicked.push({ action, label, ts: Date.now() });
-    if (stats.clicked.length > CHIP_STATS_MAX_CLICKED) stats.clicked.splice(0, stats.clicked.length - CHIP_STATS_MAX_CLICKED);
-    localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
-    try {
-      localStorage.setItem("nm_owl_ignored_msgs", "0");
-      localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
-    } catch (e) {
-    }
-  }
-  function trackChipsIgnored(count) {
-    if (count <= 0) return;
-    const stats = _getChipStats();
-    stats.ignored += count;
-    localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
-  }
-  function getChipStatsForPrompt() {
-    const stats = _getChipStats();
-    if (stats.clicked.length === 0 && stats.ignored === 0) return "";
-    const recent = stats.clicked.slice(-20);
-    const chatClicks = recent.filter((c) => c.action === "chat").length;
-    const navClicks = recent.filter((c) => c.action === "nav").length;
-    const completionClicks = recent.filter((c) => c.label && c.label.includes("\u2714\uFE0F")).length;
-    return `\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0447\u0456\u043F\u0456\u0432: \u043D\u0430\u0442\u0438\u0441\u043D\u0443\u0442\u043E ${stats.clicked.length} (\u2714\uFE0F: ${completionClicks}, \u0434\u0456\u0430\u043B\u043E\u0433: ${chatClicks - completionClicks}, \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F: ${navClicks}), \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E ${stats.ignored}. ${completionClicks > chatClicks ? "\u042E\u0437\u0435\u0440 \u0447\u0430\u0441\u0442\u0456\u0448\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 \u0434\u0456\u0457 \u2714\uFE0F \u043D\u0456\u0436 \u0432\u0435\u0434\u0435 \u0434\u0456\u0430\u043B\u043E\u0433." : ""}`;
-  }
-  function renderChips(containerEl, chips, tab, options = {}) {
-    if (!containerEl) return;
-    const oldChips = containerEl.querySelectorAll(".owl-chip:not(.owl-chip-speak)");
-    if (oldChips.length > 0) trackChipsIgnored(oldChips.length);
-    const normChips = filterStaleChips(normalizeChips(chips));
-    if (normChips.length === 0 && !options.showSpeak) {
-      containerEl.innerHTML = "";
-      return;
-    }
-    const chipsHTML = normChips.map((c) => {
-      const label = c.label || "";
-      const action = c.action === "nav" ? "nav" : "chat";
-      const target = c.target || "";
-      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
-    });
-    if (options.showSpeak) {
-      chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
-    }
-    containerEl.innerHTML = chipsHTML.join("");
-    containerEl.scrollLeft = 0;
-    if (containerEl._chipClickHandler) {
-      containerEl.removeEventListener("click", containerEl._chipClickHandler);
-    }
-    containerEl._chipClickHandler = (e) => {
-      const chipEl = e.target.closest(".owl-chip");
-      if (!chipEl) return;
-      if (chipEl.classList.contains("owl-chip-speak")) {
-        openChatBar(tab === "me" ? "me" : tab);
-        return;
-      }
-      const text = chipEl.dataset.chipText || "";
-      const action = chipEl.dataset.chipAction;
-      const target = chipEl.dataset.chipTarget;
-      trackChipClick(action, text);
-      chipEl.style.transition = "opacity 0.2s, transform 0.2s";
-      chipEl.style.opacity = "0";
-      chipEl.style.transform = "scale(0.8)";
-      setTimeout(() => chipEl.remove(), 200);
-      if (options.onChipClick) {
-        options.onChipClick(text, action, target, chipEl);
-        return;
-      }
-      handleChipClick(tab, text, action, target);
-    };
-    containerEl.addEventListener("click", containerEl._chipClickHandler);
-  }
-  function handleChipClick(tab, text, action, target) {
-    if (action === "nav" && VALID_NAV_TARGETS.includes(target)) {
-      if (target === currentTab) return;
-      switchTab(target);
-      return;
-    }
-    if (text.includes("\u2714\uFE0F")) {
-      const handled = handleCompletionChip(text, tab);
-      if (handled) return;
-    }
-    sendChipToChat(tab, text);
-  }
-  function handleCompletionChip(text, tab) {
-    const cleanText = text.replace(/✔️/g, "").trim().toLowerCase();
-    if (!cleanText) return false;
-    const chipWords = cleanText.split(/\s+/).filter((w) => w.length >= 3);
-    if (chipWords.length === 0) return false;
-    const chipStems = chipWords.map((w) => w.slice(0, 4));
-    const tasks = getTasks();
-    const activeTasks = tasks.filter((t) => t.status === "active");
-    for (const task of activeTasks) {
-      const taskWords = task.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
-      const taskStems = taskWords.map((w) => w.slice(0, 4));
-      const matches = chipStems.filter((cs) => taskStems.some((ts) => ts === cs));
-      if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
-        const idx = tasks.findIndex((t) => t.id === task.id);
-        if (idx !== -1) {
-          tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
-          saveTasks(tasks);
-          renderTasks();
-          const msg = `\u2713 "${task.title}" \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`;
-          showToast(msg);
-          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
-          logRecentAction("complete_task", task.title, tab || "inbox");
-          return true;
-        }
-      }
-    }
-    const habits = getHabits();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const log = getHabitLog();
-    for (const habit of habits) {
-      const habitWords = habit.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
-      const habitStems = habitWords.map((w) => w.slice(0, 4));
-      const matches = chipStems.filter((cs) => habitStems.some((hs) => hs === cs));
-      if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
-        if (habit.type === "quit") {
-          const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
-          if (!quitLog[habit.id]) quitLog[habit.id] = { streak: 0, relapses: [] };
-          quitLog[habit.id].lastHeld = todayISO;
-          if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO;
-          localStorage.setItem("nm_quit_log", JSON.stringify(quitLog));
-          renderHabits();
-          renderProdHabits();
-          const msg = `\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`;
-          showToast(msg);
-          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
-          logRecentAction("hold_quit_habit", habit.name, tab || "inbox");
-          return true;
-        } else {
-          if (!log[today]) log[today] = {};
-          log[today][habit.id] = (log[today][habit.id] || 0) + 1;
-          saveHabitLog(log);
-          renderHabits();
-          renderProdHabits();
-          const msg = `\u2713 "${habit.name}" \u2014 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E`;
-          showToast(msg);
-          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
-          logRecentAction("complete_habit", habit.name, tab || "inbox");
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-  function sendChipToChat(tab, text) {
-    const barTab = tab === "inbox" ? "inbox" : tab || "inbox";
-    openChatBar(barTab);
-    const inputId = barTab === "inbox" ? "inbox-input" : barTab === "evening" ? "evening-bar-input" : barTab + "-chat-input";
-    const input = document.getElementById(inputId);
-    if (input) {
-      input.value = text;
-      input.dispatchEvent(new Event("input"));
-    }
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (barTab === "inbox") {
-        sendToAI(true);
-      } else if (barTab === "tasks") {
-        sendTasksBarMessage();
-      } else if (barTab === "notes") {
-        sendNotesBarMessage();
-      } else if (barTab === "finance") {
-        sendFinanceBarMessage();
-      } else if (barTab === "health") {
-        sendHealthBarMessage();
-      } else if (barTab === "projects") {
-        sendProjectsBarMessage();
-      } else if (barTab === "me") {
-        sendMeChatMessage();
-      } else if (barTab === "evening") {
-        sendEveningBarMessage();
-      }
-    }));
-  }
-  var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED;
-  var init_chips = __esm({
-    "src/owl/chips.js"() {
-      init_nav();
-      init_core();
-      init_utils();
-      init_inbox();
-      init_habits();
-      init_notes();
-      init_finance();
-      init_evening_chat();
-      init_me();
-      init_health();
-      init_projects();
-      init_tasks();
-      init_habits();
-      VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
-      CHIP_PROMPT_RULES = `- G11 (\u0417\u0410\u0412\u0416\u0414\u0418): chips \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456 (\u043C\u0456\u043D\u0456\u043C\u0443\u043C 1, \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3). \u042F\u043A\u0449\u043E \u0441\u0442\u0430\u0432\u0438\u0448 \u044E\u0437\u0435\u0440\u0443 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044F\u043A \u0447\u0456\u043F\u0438. \u041D\u0435 \u0437\u0430\u043B\u0438\u0448\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u0456\u043D\u043F\u0443\u0442\u043E\u043C. \u041F\u0438\u0442\u0430\u043D\u043D\u044F \u0431\u0435\u0437 \u0447\u0456\u043F\u0456\u0432 = \u0431\u0430\u0433. \u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F?" \u2192 \u0442\u0435\u043A\u0441\u0442 "\u041A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u2014 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C\u0438?" + chips: ["\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438", "\u041D\u0435 \u0442\u0440\u0435\u0431\u0430"].
-- chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
-  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438/\u0432\u0432\u0435\u0441\u0442\u0438 \u0434\u0430\u043D\u0456 \u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E\u043C\u0443 \u0440\u043E\u0437\u0434\u0456\u043B\u0456. \u041A\u043E\u043B\u0438 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0432\u0430\u0442\u0438 nav-\u0447\u0456\u043F:
-    - tasks: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456", "\u0413\u043B\u044F\u043D\u044C \u0437\u0430\u0434\u0430\u0447\u0456" \u2014 \u043A\u043E\u043B\u0438 \u0454 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043C\u043E\u0432\u0430 \u043F\u0440\u043E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C
-    - notes: "\u0413\u043B\u044F\u043D\u044C \u043D\u043E\u0442\u0430\u0442\u043A\u0438", "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u043E\u0442\u0430\u0442\u043A\u0438" \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u0437\u0433\u0430\u0434\u0430\u0432 \u0437\u0430\u043F\u0438\u0441/\u0434\u0443\u043C\u043A\u0443
-    - habits: "\u041C\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438", "\u0413\u043B\u044F\u043D\u044C \u0437\u0432\u0438\u0447\u043A\u0438" \u2014 \u043A\u043E\u043B\u0438 \u043C\u043E\u0432\u0430 \u043F\u0440\u043E \u0441\u0442\u0440\u0456\u043A \u0430\u0431\u043E \u0440\u0438\u0442\u0443\u0430\u043B\u0438
-    - finance: "\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0444\u0456\u043D\u0430\u043D\u0441\u0438", "\u0411\u044E\u0434\u0436\u0435\u0442" \u2014 \u043A\u043E\u043B\u0438 \u0437\u0433\u0430\u0434\u043A\u0430 \u043F\u0440\u043E \u0432\u0438\u0442\u0440\u0430\u0442\u0438, \u0437\u0430\u0440\u043F\u043B\u0430\u0442\u0443, \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457
-    - health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0442\u0430\u043D" \u2014 \u043A\u043E\u043B\u0438 \u043F\u0440\u043E \u0441\u043E\u043D/\u0435\u043D\u0435\u0440\u0433\u0456\u044E/\u0431\u0456\u043B\u044C/\u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438
-    - projects: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442", "\u041C\u043E\u0457 \u043F\u0440\u043E\u0435\u043A\u0442\u0438" \u2014 \u043A\u043E\u043B\u0438 \u043C\u043E\u0432\u0430 \u043F\u0440\u043E \u0432\u0435\u043B\u0438\u043A\u0443 \u043C\u0435\u0442\u0443
-    - evening: "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F", "\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442" \u2014 \u0443\u0432\u0435\u0447\u0435\u0440\u0456 \u0430\u0431\u043E \u043F\u0440\u0438 \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u0457
-    - me: "\u041C\u043E\u044F \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430", "\u041C\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C" \u2014 \u043A\u043E\u043B\u0438 \u043E\u0433\u043B\u044F\u0434 \u043F\u0430\u0442\u0442\u0435\u0440\u043D\u0456\u0432/\u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 \u0437\u0430 \u043F\u0435\u0440\u0456\u043E\u0434
-  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438:
-    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435", "\u041D\u0456, \u0434\u044F\u043A\u0443\u044E".
-    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435 \u2014 \u044E\u0437\u0435\u0440 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 \u0449\u043E \u0412\u0416\u0415 \u0437\u0440\u043E\u0431\u0438\u0432. \u0421\u0422\u0420\u041E\u0413\u041E \u0434\u043E\u0442\u0440\u0438\u043C\u0443\u0439\u0441\u044F \u0412\u0421\u0406\u0425 \u043F\u0440\u0430\u0432\u0438\u043B:
-       \u0430) \u0422\u0406\u041B\u042C\u041A\u0418 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 ("\u041F\u043E\u0434\u0430\u0432", "\u041A\u0443\u043F\u0438\u0432", "\u041F\u043E\u043F\u0440\u0430\u0432") \u2014 \u041D\u0406\u041A\u041E\u041B\u0418 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432 ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u0456 \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0430\u043A\u0430\u0437 ("\u043F\u043E\u0434\u0430\u0439", "\u043A\u0443\u043F\u0438")
-       \u0431) \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0441\u0438\u043C\u0432\u043E\u043B \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456 \u043A\u043E\u0436\u043D\u043E\u0433\u043E \u0442\u0430\u043A\u043E\u0433\u043E \u0447\u0456\u043F\u0430 \u2014 \u0431\u0435\u0437 \u043D\u044C\u043E\u0433\u043E \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0454
-       \u0432) \u041F\u0438\u0448\u0438 \u0413\u0420\u0410\u041C\u041E\u0422\u041D\u041E\u042E \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E \u2014 \u041D\u0415 \u0441\u0443\u0440\u0436\u0438\u043A\u043E\u043C. "\u041F\u043E\u043F\u0440\u0430\u0432 \u043E\u0434\u044F\u0433" (\u041D\u0415 "\u043F\u043E\u0441\u0442\u0438\u0440\u0430\u0432"), "\u041F\u043E\u043C\u0438\u0432 \u043F\u043E\u0441\u0443\u0434" (\u041D\u0415 "\u043F\u043E\u043C\u0438\u0432"), "\u041F\u0440\u0438\u0431\u0440\u0430\u0432 \u043A\u0456\u043C\u043D\u0430\u0442\u0443" (\u041D\u0415 "\u0443\u0431\u0440\u0430\u0432")
-       \u0433) \u0427\u0456\u043F = "\u0442\u0430\u043A, \u044F \u0446\u0435 \u0437\u0440\u043E\u0431\u0438\u0432". \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F"
-- \u041F\u041E\u0413\u0410\u041D\u0418\u0419 \u0447\u0456\u043F (\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E): "\u041F\u043E\u0434\u0430\u0442\u0438 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E", "\u041F\u043E\u0441\u0442\u0438\u0440\u0430\u0442\u0438 \u043E\u0434\u044F\u0433", "\u041A\u0443\u043F\u0438\u0442\u0438 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438" \u2014 \u0446\u0435 \u043D\u0430\u043A\u0430\u0437\u0438 \u0431\u0435\u0437 \u2714\uFE0F
-- \u0425\u041E\u0420\u041E\u0428\u0418\u0419 \u0447\u0456\u043F: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F" \u2014 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 + \u2714\uFE0F
-- \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438 \u0445\u043E\u0440\u043E\u0448\u0438\u0445 JSON:
-  \u2022 \u0417\u0430\u0434\u0430\u0447\u0456: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
-  \u2022 \u0424\u0456\u043D\u0430\u043D\u0441\u0438: {"text":"\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F \u0432\u0436\u0435 85% \u2014 \u0447\u0430\u0441 \u0437\u0432\u0456\u0440\u0438\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438","chips":[{"label":"\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0444\u0456\u043D\u0430\u043D\u0441\u0438","action":"nav","target":"finance"},{"label":"\u041F\u0456\u0437\u043D\u0456\u0448\u0435","action":"chat"}]}
-  \u2022 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: {"text":"\u0412\u0436\u0435 3 \u0434\u043D\u0456 \u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0430\u0432 \u0441\u043E\u043D \u2014 \u044F\u043A \u0441\u043F\u0430\u0432 \u0446\u0456\u0454\u0457 \u043D\u043E\u0447\u0456?","chips":[{"label":"\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0442\u0430\u043D","action":"nav","target":"health"},{"label":"\u0414\u043E\u0431\u0440\u0435 \u2714\uFE0F","action":"chat"}]}
-  \u2022 \u041F\u0440\u043E\u0435\u043A\u0442\u0438: {"text":"\u041F\u0440\u043E\u0435\u043A\u0442 '\u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0430' \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 5 \u0434\u043D\u0456\u0432 \u2014 \u0433\u043B\u044F\u043D\u0435\u043C\u043E \u043A\u0443\u0434\u0438 \u0437\u0430\u0441\u0442\u0440\u044F\u0433?","chips":[{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442","action":"nav","target":"projects"},{"label":"\u041F\u0456\u0437\u043D\u0456\u0448\u0435","action":"chat"}]}
-  \u2022 \u0412\u0435\u0447\u0456\u0440: {"text":"\u0414\u0435\u043D\u044C \u043C\u0430\u0439\u0436\u0435 \u0437\u0430\u043A\u0456\u043D\u0447\u0438\u0432\u0441\u044F \u2014 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432?","chips":[{"label":"\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F","action":"nav","target":"evening"},{"label":"\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442","action":"nav","target":"evening"}]}
-- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0434\u0430\u0439 1-2 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0447\u0456\u043F\u0438 \u043D\u0430 \u043A\u0448\u0442\u0430\u043B\u0442 ["\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435"] (\u041D\u0415 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432, \u0434\u0438\u0432. \u043F\u0440\u0430\u0432\u0438\u043B\u043E G11 \u0432\u0438\u0449\u0435).
-- \u0422\u041E\u041D \u0447\u0456\u043F\u0456\u0432 \u043C\u0430\u0454 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u0442\u0432\u043E\u0454\u043C\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0443 (\u043E\u043F\u0438\u0441\u0430\u043D\u0438\u0439 \u0432\u0438\u0449\u0435). Coach \u2014 \u043F\u0440\u044F\u043C\u0438\u0439 \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439. Partner \u2014 \u043C'\u044F\u043A\u0438\u0439 \u0456 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439. Mentor \u2014 \u0437\u0430\u043F\u0438\u0442\u0443\u0454 \u0456 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u0454.`;
-      CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","topic":"\u043A\u043E\u0440\u043E\u0442\u043A\u0430_\u0442\u0435\u043C\u0430_\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}`;
-      NM_CHIP_STATS_KEY = "nm_chip_stats";
-      CHIP_STATS_MAX_CLICKED = 50;
-      window.owlChipToChat = handleChipClick;
-    }
-  });
-
-  // src/owl/inbox-board.js
-  function _getTabChatAHeight(tab) {
-    const bar = document.getElementById(tab + "-ai-bar");
-    if (!bar) return 220;
-    const inputBox = bar.querySelector(".ai-bar-input-box");
-    const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 100;
-    const boardEl = document.getElementById("owl-tab-board-" + tab);
-    const boardBottom = boardEl && boardEl.getBoundingClientRect().bottom > 0 ? boardEl.getBoundingClientRect().bottom + 8 : 80;
-    const kbH = window.visualViewport ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
-    if (kbH > 250) {
-      return Math.max(150, inputTop - boardBottom - 8);
-    }
-    return Math.max(200, Math.min(320, inputTop - boardBottom - 8));
-  }
-  function _getTabChatBHeight(tab) {
-    const bar = document.getElementById(tab + "-ai-bar");
-    if (!bar) return 400;
-    const inputBox = bar.querySelector(".ai-bar-input-box");
-    const inputTop = inputBox ? inputBox.getBoundingClientRect().top : window.innerHeight - 100;
-    return Math.max(250, inputTop - 80 - 8);
-  }
-  function openChatBarNoKeyboard(tab) {
-    if (_tabChatState[tab]) return;
-    try {
-      closeOwlChat();
-    } catch (e) {
-    }
-    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      if (t !== tab) closeChatBar(t);
-    });
-    setActiveChatBar(tab);
-    const bar = document.getElementById(tab + "-ai-bar");
-    if (!bar) return;
-    restoreChatUI(tab);
-    const chatWin = bar.querySelector(".ai-bar-chat-window");
-    if (!chatWin) return;
-    const h = _getTabChatAHeight(tab);
-    chatWin.style.height = h + "px";
-    chatWin.style.maxHeight = h + "px";
-    chatWin.classList.add("open");
-    _tabChatState[tab] = "a";
-  }
-  function setupChatBarSwipe() {
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
-      const bar = document.getElementById(tab + "-ai-bar");
-      if (!bar) return;
-      const chatWin = bar.querySelector(".ai-bar-chat-window");
-      const messages = bar.querySelector(".ai-bar-messages");
-      if (!chatWin) return;
-      const handleEl = chatWin.querySelector(".ai-bar-chat-handle");
-      if (!handleEl) return;
-      let winStartY = 0, winStartX = 0, winStartVpTop = 0, isDragging = false, startTime = 0;
-      handleEl.addEventListener("touchstart", (e) => {
-        winStartY = e.touches[0].clientY;
-        winStartX = e.touches[0].clientX;
-        winStartVpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
-        startTime = Date.now();
-        isDragging = false;
-        chatWin.style.transition = "none";
-        chatWin.style.opacity = "1";
-        if (_tabChatState[tab]) {
-          chatWin.style.height = chatWin.offsetHeight + "px";
-        }
-        chatWin.style.transform = "translateY(0)";
-      }, { passive: true });
-      handleEl.addEventListener("touchmove", (e) => {
-        e.preventDefault();
-        const vpTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
-        const vpDelta = vpTop - winStartVpTop;
-        const dy = e.touches[0].clientY - winStartY + vpDelta;
-        const absDy = Math.abs(dy);
-        const dx = Math.abs(e.touches[0].clientX - winStartX);
-        const kbOff = !(window.visualViewport && window.innerHeight - window.visualViewport.height > 250);
-        const state = _tabChatState[tab];
-        if (state === "b") {
-          if (!isDragging) {
-            if (absDy < 8) return;
-            if (dx > absDy * 1.5) return;
-            isDragging = true;
-          }
-          if (dy <= 0) {
-            chatWin.style.transform = "translateY(0)";
-            return;
-          }
-          chatWin.style.transform = `translateY(${Math.min(dy * 0.7, 140)}px)`;
-          chatWin.style.opacity = Math.max(0.7, 1 - dy / 400).toFixed(2);
-          return;
-        }
-        if (!isDragging) {
-          if (absDy < 8) return;
-          if (dx > absDy * 1.5) return;
-          isDragging = true;
-        }
-        if (dy < 0 && kbOff) {
-          const maxH = _getTabChatBHeight(tab);
-          const startH = parseFloat(chatWin.style.height) || chatWin.offsetHeight;
-          chatWin.style.height = Math.min(maxH, startH - dy) + "px";
-          chatWin.style.transform = "translateY(0)";
-          chatWin.style.opacity = "1";
-          return;
-        }
-        if (dy > 0) {
-          chatWin.style.transform = `translateY(${dy}px)`;
-          chatWin.style.opacity = Math.max(0, 1 - dy / 280).toFixed(2);
-        }
-      }, { passive: false });
-      const cancelHandler = () => {
-        chatWin.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease";
-        chatWin.style.transform = "translateY(0)";
-        chatWin.style.opacity = "1";
-        setTimeout(() => {
-          chatWin.style.transition = "";
-          chatWin.style.transform = "";
-          chatWin.style.opacity = "";
-        }, 280);
-        isDragging = false;
-      };
-      handleEl.addEventListener("touchcancel", cancelHandler, { passive: true });
-      handleEl.addEventListener("touchend", (e) => {
-        const finalDy = e.changedTouches[0].clientY - winStartY;
-        const elapsed = Date.now() - startTime;
-        const velocity = finalDy / elapsed;
-        isDragging = false;
-        const kbOffEnd = !(window.visualViewport && window.innerHeight - window.visualViewport.height > 250);
-        const stateEnd = _tabChatState[tab];
-        if (stateEnd === "b") {
-          if (finalDy > 80 || velocity > 0.5) {
-            const aH = _getTabChatAHeight(tab);
-            _tabChatState[tab] = "a";
-            chatWin.style.transition = "height 0.32s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
-            chatWin.style.height = aH + "px";
-            chatWin.style.maxHeight = aH + "px";
-            chatWin.style.transform = "translateY(0)";
-            chatWin.style.opacity = "1";
-            setTimeout(() => chatWin.style.transition = "", 320);
-          } else {
-            const bH = _getTabChatBHeight(tab);
-            chatWin.style.transition = "height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
-            chatWin.style.height = bH + "px";
-            chatWin.style.transform = "translateY(0)";
-            chatWin.style.opacity = "1";
-            setTimeout(() => chatWin.style.transition = "", 280);
-          }
-          return;
-        }
-        if (finalDy < -40 && kbOffEnd) {
-          const bH = _getTabChatBHeight(tab);
-          _tabChatState[tab] = "b";
-          chatWin.style.transition = "height 0.38s cubic-bezier(0.3,0.82,0,1)";
-          chatWin.style.height = bH + "px";
-          chatWin.style.maxHeight = bH + "px";
-          chatWin.style.transform = "";
-          chatWin.style.opacity = "1";
-          const msgs = chatWin.querySelector(".ai-bar-messages");
-          if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 380);
-          setTimeout(() => chatWin.style.transition = "", 380);
-        } else if (finalDy > 80 || velocity > 0.5) {
-          chatWin.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
-          chatWin.style.transform = "translateY(110%)";
-          chatWin.style.opacity = "0";
-          setTimeout(() => {
-            closeChatBar(tab);
-            chatWin.style.transition = "";
-            chatWin.style.transform = "";
-            chatWin.style.opacity = "";
-          }, 280);
-        } else {
-          const aH = _getTabChatAHeight(tab);
-          chatWin.style.transition = "height 0.28s cubic-bezier(0.32,0.72,0,1), transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease";
-          chatWin.style.height = aH + "px";
-          chatWin.style.transform = "translateY(0)";
-          chatWin.style.opacity = "1";
-          setTimeout(() => chatWin.style.transition = "", 280);
-        }
-      }, { passive: true });
-      bar.addEventListener("touchmove", (e) => {
-        if (messages && messages.contains(e.target)) return;
-        const textarea = bar.querySelector("textarea");
-        if (textarea && textarea.contains(e.target)) return;
-        e.preventDefault();
-      }, { passive: false });
-      const inputBox = bar.querySelector(".ai-bar-input-box");
-      if (inputBox) {
-        let _inStartY = 0, _inSwiping = false;
-        inputBox.addEventListener("touchstart", (e) => {
-          _inStartY = e.touches[0].clientY;
-          _inSwiping = false;
-        }, { passive: true });
-        inputBox.addEventListener("touchmove", (e) => {
-          if (_tabChatState[tab]) return;
-          const dy = _inStartY - e.touches[0].clientY;
-          if (dy > 20) {
-            _inSwiping = true;
-            e.preventDefault();
-          }
-        }, { passive: false });
-        inputBox.addEventListener("touchend", (e) => {
-          if (_inSwiping) {
-            _inSwiping = false;
-            e.preventDefault();
-            openChatBarNoKeyboard(tab);
-          }
-        }, { passive: false });
-      }
-    });
-    let docTouchStartY = 0, docTouchStartX = 0;
-    document.addEventListener("touchstart", (e) => {
-      docTouchStartY = e.touches[0].clientY;
-      docTouchStartX = e.touches[0].clientX;
-    }, { passive: true });
-    document.addEventListener("touchend", (e) => {
-      if (!activeChatBar) return;
-      const bar = document.getElementById(activeChatBar + "-ai-bar");
-      if (!bar) return;
-      if (bar.contains(e.target)) return;
-      const tabBar = document.getElementById("tab-bar");
-      if (tabBar && tabBar.contains(e.target)) return;
-      const dy = Math.abs(e.changedTouches[0].clientY - docTouchStartY);
-      const dx = Math.abs(e.changedTouches[0].clientX - docTouchStartX);
-      if (dy > 10 || dx > 10) return;
-      closeChatBar(activeChatBar);
-    }, { passive: true });
-  }
-  function getOwlBoardMessages() {
-    try {
-      return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  }
-  function saveOwlBoardMessages(arr) {
-    localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
-  }
-  function clearStaleBoards() {
-    try {
-      const today = (/* @__PURE__ */ new Date()).toDateString();
-      const isStale = (msg) => {
-        if (!msg) return false;
-        const ts = msg.ts || msg.id;
-        if (!ts) return false;
-        return new Date(ts).toDateString() !== today;
-      };
-      const inboxMsgs = JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
-      if (inboxMsgs.length > 0 && isStale(inboxMsgs[0])) {
-        localStorage.setItem(OWL_BOARD_KEY, "[]");
-        localStorage.setItem(OWL_BOARD_TS_KEY, "0");
-      }
-      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
-        const key = "nm_owl_tab_" + tab;
-        const raw = JSON.parse(localStorage.getItem(key) || "null");
-        if (!raw) return;
-        const msgs = Array.isArray(raw) ? raw : [raw];
-        if (msgs.length > 0 && isStale(msgs[0])) {
-          localStorage.setItem(key, "[]");
-          localStorage.setItem("nm_owl_tab_ts_" + tab, "0");
-        }
-      });
-    } catch (e) {
-    }
-  }
-  function getSchedule() {
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    const sc = s.schedule || {};
-    const parseH = (str, def) => {
-      if (!str) return def;
-      const h = parseInt(str.split(":")[0]);
-      return isNaN(h) ? def : h;
-    };
-    const pickStr = (str, def) => str && /^\d{1,2}:\d{2}$/.test(str) ? str : def;
-    return {
-      wakeUp: parseH(sc.wakeUp, 7),
-      workStart: parseH(sc.workStart, 9),
-      workEnd: parseH(sc.workEnd, 18),
-      bedTime: parseH(sc.bedTime, 23),
-      wakeUpStr: pickStr(sc.wakeUp, "07:00"),
-      workStartStr: pickStr(sc.workStart, "09:00"),
-      workEndStr: pickStr(sc.workEnd, "18:00"),
-      bedTimeStr: pickStr(sc.bedTime, "23:00")
-    };
-  }
-  function getDayPhase() {
-    const sc = getSchedule();
-    const h = (/* @__PURE__ */ new Date()).getHours();
-    if (h >= sc.bedTime || h < sc.wakeUp - 2) return "silent";
-    if (h < sc.wakeUp) return "dawn";
-    if (h < sc.workStart) return "morning";
-    if (h < sc.workEnd) return "work";
-    if (h < sc.bedTime - 1) return "evening";
-    return "night";
-  }
-  function _getOwlCooldowns() {
-    try {
-      return JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
-    } catch {
-      return {};
-    }
-  }
-  function owlCdExpired(topic, ms) {
-    const cd = _getOwlCooldowns();
-    return !cd[topic] || Date.now() - cd[topic] > ms;
-  }
-  function setOwlCd(topic) {
-    const cd = _getOwlCooldowns();
-    cd[topic] = Date.now();
-    const cutoff = Date.now() - 48 * 60 * 60 * 1e3;
-    Object.keys(cd).forEach((k) => {
-      if (cd[k] < cutoff) delete cd[k];
-    });
-    localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
-  }
-  function shouldOwlSpeak(trigger, opts = {}) {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return { speak: false, score: -1, reason: "no-api-key" };
-    const phase = getDayPhase();
-    if (phase === "silent") return { speak: false, score: -100, reason: "silent-phase" };
-    const channel = opts.channel || "board";
-    if (channel === "chat-followup") {
-      return _judgeFollowup(trigger, opts.targetTab);
-    }
-    return _judgeBoard(trigger);
-  }
-  function _judgeFollowup(trigger, targetTab) {
-    if (activeChatBar && activeChatBar === targetTab) {
-      return { speak: false, score: -100, reason: "active-in-target-chat" };
-    }
-    if (!owlCdExpired("followup_global", FOLLOWUP_GLOBAL_CD_MS)) {
-      return { speak: false, score: -100, reason: "followup-global-cd" };
-    }
-    let score = 0;
-    const reasons = [];
-    if (trigger === "stuck-task") {
-      score += 5;
-      reasons.push("stuck-task");
-    }
-    if (trigger === "event-passed") {
-      score += 5;
-      reasons.push("event-passed");
-    }
-    const speak = score >= SPEAK_THRESHOLD;
-    return { speak, score, reason: reasons.join(", ") };
-  }
-  function _judgeBoard(trigger) {
-    try {
-      const silenceUntil = parseInt(localStorage.getItem("nm_owl_silence_until") || "0");
-      if (silenceUntil > Date.now()) {
-        return { speak: false, score: -100, reason: "auto-silence-4h" };
-      }
-    } catch (e) {
-    }
-    let score = 0;
-    let reasons = [];
-    const now = /* @__PURE__ */ new Date();
-    const todayStr = now.toDateString();
-    const hour = now.getHours();
-    const min = now.getMinutes();
-    const phase = getDayPhase();
-    const lastAttemptTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
-    const sinceLastAttempt = Date.now() - lastAttemptTs;
-    const msgs = getOwlBoardMessages();
-    const lastVisibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
-    const sinceLastVisible = Date.now() - lastVisibleTs;
-    if (trigger === "first-time" || trigger === "new-day") {
-      score += 5;
-      reasons.push(trigger);
-    }
-    if (trigger === "welcome-back") {
-      score += 4;
-      reasons.push("welcome-back");
-    }
-    if (trigger === "first-open-today") {
-      score += 5;
-      reasons.push("first-open-today");
-    }
-    if (trigger === "data-changed") {
-      score += 3;
-      reasons.push("data-changed");
-    }
-    if (trigger === "chat-closed") {
-      score += 4;
-      reasons.push("chat-closed");
-    }
-    let hasCritical = false;
-    try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      const todayISO2 = now.toISOString().slice(0, 10);
-      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= nowTime);
-      if (due.length > 0) {
-        score += 5;
-        reasons.push("reminder-due");
-        hasCritical = true;
-      }
-    } catch (e) {
-    }
-    const tasks = getTasks().filter((t) => t.status !== "done");
-    for (const t of tasks) {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
-      if (m) {
-        const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
-        if (diff > 0 && diff <= 65) {
-          score += 3;
-          reasons.push("deadline-soon");
-          hasCritical = true;
-          break;
-        }
-      }
-    }
-    const todayISO = now.toISOString().slice(0, 10);
-    if (tasks.some((t) => t.dueDate === todayISO)) {
-      score += 2;
-      reasons.push("due-today");
-    }
-    if (!hasCritical && trigger !== "chat-closed") {
-      if (activeChatBar) {
-        return { speak: false, score: -100, reason: "chat-open-block" };
-      }
-      if (lastChatClosedTs && Date.now() - lastChatClosedTs < CHAT_CLOSE_COOLDOWN_MS) {
-        return { speak: false, score: -100, reason: "chat-just-closed-cooldown" };
-      }
-    } else if (activeChatBar && hasCritical) {
-      reasons.push("chat-open(critical-override)");
-    }
-    if (trigger !== "chat-closed") {
-      if (sinceLastAttempt < 5 * 60 * 1e3) {
-        score -= 4;
-        reasons.push("attempt<5m");
-      } else if (sinceLastAttempt < 15 * 60 * 1e3) {
-        score -= 1;
-        reasons.push("attempt<15m");
-      }
-    }
-    if (phase === "evening" || phase === "night") {
-      const habits = getHabits();
-      const log = getHabitLog();
-      const todayLog = log[todayStr] || {};
-      const atRisk = habits.filter((h) => h.days?.includes(now.getDay()) && !todayLog[h.id]);
-      if (atRisk.length > 0) {
-        score += 3;
-        reasons.push("streak-risk");
-      }
-    }
-    if ((phase === "morning" || phase === "dawn") && owlCdExpired("morning_brief", 3 * 60 * 60 * 1e3)) {
-      score += 3;
-      reasons.push("morning-brief");
-    }
-    try {
-      const budget = getFinBudget();
-      if (budget.total > 0) {
-        const from = getFinPeriodRange("month");
-        const exp = getFinance().filter((t) => t.ts >= from && t.type === "expense").reduce((s, t) => s + t.amount, 0);
-        if (exp / budget.total >= 0.8) {
-          score += 2;
-          reasons.push("budget-warn");
-        }
-      }
-    } catch (e) {
-    }
-    if (phase === "evening" || phase === "night") {
-      const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      if (!s || new Date(s.date).toDateString() !== todayStr) {
-        score += 2;
-        reasons.push("no-evening-summary");
-      }
-    }
-    const stuck = tasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
-    if (stuck.length > 0) {
-      score += 1;
-      reasons.push("stuck-tasks");
-    }
-    if (now.getDay() === 1 && (phase === "morning" || phase === "work") && owlCdExpired("week_start", 6 * 60 * 60 * 1e3)) {
-      score += 2;
-      reasons.push("week-start");
-    }
-    if (now.getDay() === 5 && phase === "evening" && owlCdExpired("week_end", 6 * 60 * 60 * 1e3)) {
-      score += 2;
-      reasons.push("week-end");
-    }
-    if (sinceLastVisible > 60 * 60 * 1e3) {
-      score += 3;
-      reasons.push("stale>60m");
-    } else if (sinceLastVisible > 30 * 60 * 1e3) {
-      score += 2;
-      reasons.push("stale>30m");
-    }
-    const speak = score >= SPEAK_THRESHOLD;
-    return { speak, score, reason: reasons.join(", ") };
-  }
-  function getOwlChatHistory() {
-    try {
-      return JSON.parse(localStorage.getItem(OWL_CHAT_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  }
-  function saveOwlChatMsg(role, text) {
-    const msgs = getOwlChatHistory();
-    msgs.push({ role, text, ts: Date.now() });
-    if (msgs.length > OWL_CHAT_MAX) msgs.splice(0, msgs.length - OWL_CHAT_MAX);
-    localStorage.setItem(OWL_CHAT_KEY, JSON.stringify(msgs));
-  }
-  function _getOwlState() {
-    return _owlTabStates["inbox"] || _owlState || "speech";
-  }
-  function _owlSetState(state) {
-    _owlState = state;
-    _owlTabStates["inbox"] = state;
-    _owlTabApplyState("inbox");
-    _owlChatOpen = state === "expanded";
-  }
-  function renderOwlBoard() {
-    _owlBoardMessages = getOwlBoardMessages();
-    renderTabBoard("inbox");
-  }
-  function expandOwlChat() {
-    openChatBar("inbox");
-  }
-  function closeOwlChat() {
-    if (_getOwlState() === "expanded") {
-      _owlSetState("speech");
-    }
-  }
-  function renderOwlChatMessages() {
-    const el = document.getElementById("owl-tab-msgs-inbox");
-    if (!el) return;
-    const chatHistory = getOwlChatHistory();
-    const boardMsgs = getOwlBoardMessages();
-    if (chatHistory.length === 0 && boardMsgs.length > 0) {
-      el.innerHTML = `<div class="owl-msg-agent">${escapeHtml(boardMsgs[0].text)}</div>`;
-      return;
-    }
-    let html = "";
-    if (boardMsgs.length > 0) {
-      const lastBoardText = boardMsgs[0].text;
-      const firstChatIsBoard = chatHistory.length > 0 && chatHistory[0].role === "agent" && chatHistory[0].text === lastBoardText;
-      if (!firstChatIsBoard) {
-        html += `<div class="owl-msg-agent">${escapeHtml(lastBoardText)}</div>`;
-      }
-    }
-    chatHistory.forEach((m) => {
-      const cls = m.role === "user" ? "owl-msg-user" : "owl-msg-agent";
-      html += `<div class="${cls}">${escapeHtml(m.text)}</div>`;
-    });
-    el.innerHTML = html;
-    el.scrollTop = el.scrollHeight;
-  }
-  function renderOwlChips(boardMsg) {
-    const el = document.getElementById("owl-tab-exp-chips-inbox");
-    if (!el) return;
-    if (!boardMsg || !boardMsg.chips || boardMsg.chips.length === 0) {
-      el.innerHTML = "";
-      return;
-    }
-    const VALID = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
-    renderChips(el, boardMsg.chips, "inbox", {
-      onChipClick: (text, action, target) => {
-        if (action === "nav" && VALID.includes(target)) {
-          switchTab(target);
-          showToast("\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0436\u0443 \u0434\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0438");
-          return;
-        }
-        sendOwlReply(text);
-      }
-    });
-  }
-  function showOwlTyping(show) {
-    const el = document.getElementById("owl-tab-msgs-inbox");
-    if (!el) return;
-    const existing = el.querySelector(".owl-typing-wrap");
-    if (existing) existing.remove();
-    if (show) {
-      const div = document.createElement("div");
-      div.className = "owl-msg-agent owl-typing-wrap";
-      div.innerHTML = '<div class="owl-typing"><span></span><span></span><span></span></div>';
-      el.appendChild(div);
-      el.scrollTop = el.scrollHeight;
-    }
-    const inp = document.getElementById("owl-tab-input-inbox");
-    if (inp) inp.disabled = show;
-  }
-  function showOwlConfirm(text) {
-    const el = document.getElementById("owl-tab-msgs-inbox");
-    if (!el) return;
-    const banner = document.createElement("div");
-    banner.className = "owl-confirm-banner";
-    banner.textContent = text;
-    el.appendChild(banner);
-    el.scrollTop = el.scrollHeight;
-    setTimeout(() => banner.remove(), 2500);
-  }
-  async function sendOwlReply(text) {
-    if (!text || _owlChatSending) return;
-    _owlChatSending = true;
-    if (_getOwlState() !== "expanded") expandOwlChat();
-    saveOwlChatMsg("user", text);
-    renderOwlChatMessages();
-    showOwlTyping(true);
-    const chipsEl = document.getElementById("owl-tab-exp-chips-inbox");
-    if (chipsEl) chipsEl.innerHTML = "";
-    try {
-      const reply = await callOwlChat(text);
-      showOwlTyping(false);
-      if (reply) {
-        let replyText = reply;
-        let action = null;
-        try {
-          const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
-          if (parsed.text) replyText = parsed.text;
-          if (parsed.action) action = parsed.action;
-          if (parsed.chips) {
-            renderOwlChips({ chips: parsed.chips });
-          }
-        } catch (e) {
-        }
-        saveOwlChatMsg("agent", replyText);
-        renderOwlChatMessages();
-        if (action) {
-          executeOwlAction(action, text);
-        }
-      }
-    } catch (e) {
-      showOwlTyping(false);
-    }
-    _owlChatSending = false;
-  }
-  function executeOwlAction(action, originalText) {
-    if (!action || !action.action) return;
-    const act = action.action;
-    if (act === "complete_habit") {
-      const ids = action.habit_ids || (action.habit_id ? [action.habit_id] : []);
-      if (ids.length === 0) return;
-      const habits = getHabits();
-      const today = (/* @__PURE__ */ new Date()).toDateString();
-      const log = getHabitLog();
-      if (!log[today]) log[today] = {};
-      let done = 0;
-      ids.forEach((hid) => {
-        const h = habits.find((x) => x.id === hid);
-        if (h) {
-          log[today][h.id] = true;
-          done++;
-        }
-      });
-      if (done > 0) {
-        saveHabitLog(log);
-        renderProdHabits();
-        renderHabits();
-        showOwlConfirm("\u0417\u0432\u0438\u0447\u043A\u0443 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E \u2713");
-      }
-      return;
-    }
-    if (act === "complete_task") {
-      const ids = action.task_ids || (action.task_id ? [action.task_id] : []);
-      if (ids.length === 0) return;
-      const tasks = getTasks();
-      let done = 0;
-      ids.forEach((tid) => {
-        const idx = tasks.findIndex((t) => t.id === tid);
-        if (idx !== -1) {
-          tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
-          done++;
-        }
-      });
-      if (done > 0) {
-        saveTasks(tasks);
-        renderTasks();
-        showOwlConfirm("\u0417\u0430\u0434\u0430\u0447\u0443 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u2713");
-      }
-      return;
-    }
-    if (act === "create_task") {
-      const title = (action.title || "").trim();
-      if (!title) return;
-      const steps = Array.isArray(action.steps) ? action.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-      const tasks = getTasks();
-      tasks.unshift({ id: Date.now(), title, desc: action.desc || "", steps, status: "active", createdAt: Date.now() });
-      saveTasks(tasks);
-      if (currentTab === "tasks") renderTasks();
-      showOwlConfirm("\u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u2713");
-      return;
-    }
-    if (act === "create_note") {
-      const noteText = (action.text || originalText || "").trim();
-      if (!noteText) return;
-      addNoteFromInbox(noteText, "note", action.folder || null, "agent");
-      if (currentTab === "notes") renderNotes();
-      showOwlConfirm("\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u2713");
-      return;
-    }
-    if (act === "save_finance") {
-      const amount = parseFloat(action.amount) || 0;
-      if (amount <= 0) return;
-      const type = action.fin_type || "expense";
-      const category = action.category || "\u0406\u043D\u0448\u0435";
-      const cats = getFinCats();
-      const catList = type === "expense" ? cats.expense : cats.income;
-      if (!catList.includes(category)) {
-        catList.push(category);
-        saveFinCats(cats);
-      }
-      const txs = getFinance();
-      txs.unshift({ id: Date.now(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
-      saveFinance(txs);
-      if (currentTab === "finance") renderFinance();
-      const sign = type === "expense" ? "-" : "+";
-      showOwlConfirm(`${sign}${formatMoney(amount)} \xB7 ${category} \u2713`);
-      return;
-    }
-  }
-  function _checkReminders() {
-    try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      const now = /* @__PURE__ */ new Date();
-      const todayISO = now.toISOString().slice(0, 10);
-      const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
-      if (due.length > 0) {
-        due.forEach((r) => {
-          r.done = true;
-          r.firedAt = Date.now();
-        });
-        localStorage.setItem("nm_reminders", JSON.stringify(reminders));
-        Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
-      }
-    } catch (e) {
-    }
-  }
-  function _cleanupOldReminders() {
-    try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      if (reminders.length === 0) return;
-      const cutoffDate = /* @__PURE__ */ new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - 7);
-      const cutoffISO = cutoffDate.toISOString().slice(0, 10);
-      const fresh = reminders.filter((r) => r.date >= cutoffISO);
-      if (fresh.length < reminders.length) {
-        localStorage.setItem("nm_reminders", JSON.stringify(fresh));
-      }
-    } catch (e) {
-    }
-  }
-  function startOwlBoardCycle() {
-    _owlAskScheduleIfNeeded();
-    _cleanupOldReminders();
-    tryOwlBoardUpdate();
-    setInterval(_checkReminders, 60 * 1e3);
-    if (_owlBoardTimer) clearInterval(_owlBoardTimer);
-    _owlBoardTimer = setInterval(tryOwlBoardUpdate, OWL_BOARD_INTERVAL);
-  }
-  function tryOwlBoardUpdate() {
-    const msgs = getOwlBoardMessages();
-    if (msgs.length > 0) renderOwlBoard();
-    if (msgs.length === 0) {
-      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
-      return;
-    }
-    if (typeof document !== "undefined" && document.hidden) return;
-    const phase = getDayPhase();
-    if (phase === "silent") return;
-    const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
-    if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1e3) {
-      console.log("[OWL board] stale message detected, forcing generation");
-      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
-      return;
-    }
-    const lastTs = parseInt(localStorage.getItem(OWL_BOARD_TS_KEY) || "0");
-    const isFirstTime = msgs.length === 0 && lastTs === 0;
-    const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
-    const trigger = isFirstTime ? "first-time" : isNewDay ? "new-day" : "timer";
-    const judge = shouldOwlSpeak(trigger);
-    if (judge.speak) {
-      Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
-    }
-  }
-  function _owlAskScheduleIfNeeded() {
-    if (localStorage.getItem("nm_owl_schedule_asked")) return;
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    if (s.schedule && s.schedule.wakeUp) return;
-    localStorage.setItem("nm_owl_schedule_asked", "1");
-    localStorage.setItem("nm_owl_schedule_pending", String(Date.now()));
-    setTimeout(() => {
-      try {
-        addInboxChatMsg("agent", "\u0429\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u043F\u0456\u0434\u043B\u0430\u0448\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043F\u0456\u0434 \u0442\u0432\u0456\u0439 \u0440\u0438\u0442\u043C \u2014 \u0441\u043A\u0430\u0436\u0438 \u043F\u0440\u0438\u0431\u043B\u0438\u0437\u043D\u043E: \u043E \u043A\u043E\u0442\u0440\u0456\u0439 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0448\u0441\u044F, \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0448 \u0456 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0448 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C, \u0456 \u043B\u044F\u0433\u0430\u0454\u0448 \u0441\u043F\u0430\u0442\u0438? (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0432\u0441\u0442\u0430\u044E 7, \u043F\u0440\u0430\u0446\u044E\u044E 9\u201318, \u0441\u043F\u043B\u044E \u043E 23)");
-      } catch (e) {
-      }
-    }, 1e4);
-  }
-  function handleScheduleAnswer(text) {
-    const pending = localStorage.getItem("nm_owl_schedule_pending");
-    if (!pending) return false;
-    const pendingTs = parseInt(pending);
-    if (!isNaN(pendingTs) && Date.now() - pendingTs > 36e5) {
-      localStorage.removeItem("nm_owl_schedule_pending");
-      return false;
-    }
-    let found = 0;
-    const parseH = (patterns, def) => {
-      for (const re of patterns) {
-        const m = text.match(re);
-        if (m) {
-          const h = parseInt(m[1]);
-          if (!isNaN(h) && h >= 0 && h <= 23) {
-            found++;
-            return `${String(h).padStart(2, "0")}:00`;
-          }
-        }
-      }
-      return def;
-    };
-    const schedule = {
-      wakeUp: parseH([/встаю\s*о?\s*(\d{1,2})/i, /прокидаюсь\s*о?\s*(\d{1,2})/i, /підйом\s*о?\s*(\d{1,2})/i], "07:00"),
-      workStart: parseH([/працюю\s*з\s*(\d{1,2})/i, /починаю\s*о?\s*(\d{1,2})/i, /роботу?\s*з\s*(\d{1,2})/i, /з\s*(\d{1,2})\s*[-–до]/i], "09:00"),
-      workEnd: parseH([/до\s*(\d{1,2})\b/i, /закінчую\s*о?\s*(\d{1,2})/i, /[-–]\s*(\d{1,2})\b/i], "18:00"),
-      bedTime: parseH([/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], "23:00")
-    };
-    if (found === 0) return false;
-    localStorage.removeItem("nm_owl_schedule_pending");
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    s.schedule = schedule;
-    localStorage.setItem("nm_settings", JSON.stringify(s));
-    try {
-      addInboxChatMsg("agent", `\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E: \u043F\u0456\u0434\u0439\u043E\u043C ${schedule.wakeUp}, \u0440\u043E\u0431\u043E\u0442\u0430 ${schedule.workStart}\u2013${schedule.workEnd}, \u0441\u043F\u0430\u0442\u0438 ${schedule.bedTime}. \u041C\u043E\u0436\u0435\u0448 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.`);
-    } catch (e) {
-    }
-    return true;
-  }
-  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
-  var init_inbox_board = __esm({
-    "src/owl/inbox-board.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_board();
-      init_chips();
-      init_inbox();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_finance();
-      _tabChatState = {};
-      OWL_BOARD_KEY = "nm_owl_board";
-      OWL_BOARD_TS_KEY = "nm_owl_board_ts";
-      OWL_BOARD_INTERVAL = 10 * 60 * 1e3;
-      _owlBoardMessages = [];
-      _owlBoardTimer = null;
-      OWL_CD_KEY = "nm_owl_cooldowns";
-      SPEAK_THRESHOLD = 3;
-      FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1e3;
-      CHAT_CLOSE_COOLDOWN_MS = 10 * 1e3;
-      OWL_CHAT_KEY = "nm_owl_chat";
-      OWL_CHAT_MAX = 20;
-      _owlChatOpen = false;
-      _owlChatSending = false;
-      _owlState = "speech";
-      window.sendOwlReply = sendOwlReply;
-    }
-  });
-
-  // src/owl/board.js
-  function getOwlTabBoardKey(tab) {
-    return "nm_owl_tab_" + tab;
-  }
-  function getOwlTabTsKey(tab) {
-    return "nm_owl_tab_ts_" + tab;
-  }
-  function getTabBoardMsgs(tab) {
-    try {
-      const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || "null");
-      if (!raw) return [];
-      if (Array.isArray(raw)) return raw;
-      return [raw];
-    } catch {
-      return [];
-    }
-  }
-  function saveTabBoardMsg(tab, newMsg) {
-    const msgs = getTabBoardMsgs(tab);
-    msgs.unshift(newMsg);
-    if (msgs.length > 30) msgs.length = 30;
-    try {
-      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs));
-    } catch {
-    }
-  }
-  function _owlTabHTML(tab) {
-    const t = tab;
-    return `
-    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
-      <div class="owl-collapsed-avatar">\u{1F989}</div>
-      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
-    </div>
-    <div id="owl-tab-speech-${t}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
-      <div class="owl-speech-avatar">\u{1F989}</div>
-      <div class="owl-tab-card">
-        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
-          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
-          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
-        </div>
-      </div>
-    </div>
-    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
-      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
-    </div>`;
-  }
-  function _owlTabApplyState(tab) {
-    const st = _owlTabStates[tab] || "speech";
-    const collapsed = document.getElementById("owl-tab-collapsed-" + tab);
-    const speech = document.getElementById("owl-tab-speech-" + tab);
-    const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
-    if (!speech) return;
-    if (collapsed) collapsed.style.display = st === "collapsed" ? "flex" : "none";
-    speech.style.display = st === "collapsed" ? "none" : "block";
-    if (chipsWrap) chipsWrap.style.display = "flex";
-  }
-  function toggleOwlTabChat(tab) {
-    _owlTabStates[tab] = "speech";
-    _owlTabApplyState(tab);
-  }
-  function owlTabSwipeStart(e, tab) {
-    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
-  }
-  function owlTabSwipeMove(e, tab) {
-    if (!_owlTabSwipes[tab]) return;
-    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-  }
-  function owlTabSwipeEnd(e, tab) {
-    const sw = _owlTabSwipes[tab];
-    if (!sw) return;
-    _owlTabSwipes[tab] = null;
-    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
-    if (dy < -40) {
-      if (st === "speech") {
-        _owlTabStates[tab] = "collapsed";
-        _owlTabApplyState(tab);
-      }
-    } else if (dy > 40) {
-      if (st === "collapsed") {
-        _owlTabStates[tab] = "speech";
-        _owlTabApplyState(tab);
-      } else if (st === "speech") openChatBar(tab === "inbox" ? "inbox" : tab);
-    }
-  }
-  function _updateOwlTabChipsArrows(tab) {
-    const el = document.getElementById("owl-tab-chips-" + tab);
-    const left = document.getElementById("owl-tab-chips-left-" + tab);
-    const right = document.getElementById("owl-tab-chips-right-" + tab);
-    if (!el || !left || !right) return;
-    left.classList.toggle("visible", el.scrollLeft > 4);
-    right.classList.toggle("visible", el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }
-  function scrollOwlTabChips(tab, dir) {
-    const el = document.getElementById("owl-tab-chips-" + tab);
-    if (!el) return;
-    el.scrollBy({ left: dir * 130, behavior: "smooth" });
-    setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
-  }
-  function renderTabBoard(tab) {
-    const isInbox = tab === "inbox";
-    const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
-    const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
-    if (!board) return;
-    board.style.display = "block";
-    if (!msgs.length) {
-      const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
-      const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now(), id: Date.now() };
-      msgs.push(defMsg);
-      if (isInbox) {
-        try {
-          const all = [defMsg];
-          localStorage.setItem("nm_owl_board", JSON.stringify(all));
-        } catch {
-        }
-      } else {
-        saveTabBoardMsg(tab, defMsg);
-      }
-    }
-    if (!board._owlReady) {
-      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
-      board._owlReady = true;
-      _owlTabStates[tab] = _owlTabStates[tab] || "speech";
-      _owlTabApplyState(tab);
-    }
-    const msg = msgs[0];
-    const tEl = document.getElementById("owl-tab-text-" + tab);
-    const cEl = document.getElementById("owl-tab-ctext-" + tab);
-    const tmEl = document.getElementById("owl-tab-time-" + tab);
-    if (tEl) tEl.textContent = msg.text;
-    if (cEl) cEl.textContent = msg.text;
-    if (tmEl) tmEl.textContent = "";
-    const chipsEl = document.getElementById("owl-tab-chips-" + tab);
-    if (chipsEl) {
-      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
-      chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
-      chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
-      chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
-      setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
-    }
-  }
-  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
-  var init_board = __esm({
-    "src/owl/board.js"() {
-      init_core();
-      init_chips();
-      init_inbox_board();
-      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
-      _owlTabStates = {};
-      _owlTabSwipes = {};
-      Object.assign(window, {
-        toggleOwlTabChat,
-        owlTabSwipeStart,
-        owlTabSwipeMove,
-        owlTabSwipeEnd,
-        scrollOwlTabChips,
-        openChatBar
-      });
-    }
-  });
-
-  // src/owl/proactive.js
-  var proactive_exports = {};
-  __export(proactive_exports, {
-    generateBoardMessage: () => generateBoardMessage,
-    getBoardContext: () => getBoardContext,
-    getTabBoardContext: () => getTabBoardContext,
-    tryBoardUpdate: () => tryBoardUpdate,
-    tryTabBoardUpdate: () => tryTabBoardUpdate
-  });
-  function _parseJsonTolerant(raw) {
-    if (!raw || typeof raw !== "string") return null;
-    const cleaned = raw.replace(/```json|```/g, "").trim();
-    try {
-      return JSON.parse(cleaned);
-    } catch {
-    }
-    const objMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (objMatch) {
-      try {
-        return JSON.parse(objMatch[0]);
-      } catch {
-      }
-    }
-    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
-    if (arrMatch) {
-      try {
-        return JSON.parse(arrMatch[0]);
-      } catch {
-      }
-    }
-    return null;
-  }
-  function getTabBoardContext(tab) {
-    const parts = [];
-    try {
-      const ctx = getAIContext();
-      if (ctx) parts.push(ctx);
-    } catch (e) {
-    }
-    if (tab === "tasks") {
-      const tasks = getTasks();
-      const active = tasks.filter((t) => t.status === "active");
-      const now = Date.now();
-      const stuck = active.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
-      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t) => '"' + t.title + '"').join(", ")}`);
-      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t) => t.status === "done").length}`);
-      const allHabits = getHabits();
-      const quitHabits = allHabits.filter((h) => h.type === "quit");
-      if (quitHabits.length > 0) {
-        const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-        const quitInfo = quitHabits.map((h) => {
-          const s = getQuitStatus(h.id);
-          const heldToday = s.lastHeld === todayStr;
-          return `"${h.name}": \u0441\u0442\u0440\u0456\u043A ${s.streak || 0} \u0434\u043D${heldToday ? " \u2713" : " (\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)"}`;
-        });
-        parts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u041A\u0438\u043D\u0443\u0442\u0438": ${quitInfo.join("; ")}`);
-        const notHeld = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayStr);
-        if (notHeld.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${notHeld.map((h) => '"' + h.name + '"').join(", ")}`);
-      }
-    }
-    if (tab === "notes") {
-      const notes = getNotes();
-      const byFolder = {};
-      notes.forEach((n) => {
-        const f = n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435";
-        byFolder[f] = (byFolder[f] || 0) + 1;
-      });
-      parts.push(`\u041D\u043E\u0442\u0430\u0442\u043A\u0438: ${notes.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432. \u041F\u0430\u043F\u043A\u0438: ${Object.entries(byFolder).map(([f, c]) => f + "(" + c + ")").join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
-    }
-    if (tab === "me") {
-      const habits = getHabits();
-      const buildHabits = habits.filter((h) => h.type !== "quit");
-      const quitHabits = habits.filter((h) => h.type === "quit");
-      const log = getHabitLog();
-      const today = (/* @__PURE__ */ new Date()).toDateString();
-      const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-      const todayH = buildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-      const doneToday = todayH.filter((h) => !!log[today]?.[h.id]).length;
-      if (buildHabits.length > 0) {
-        const streaks = buildHabits.map((h) => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
-        parts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneToday}/${todayH.length}. \u0421\u0442\u0440\u0456\u043A\u0438: ${streaks.filter((s) => s.streak >= 2).map((s) => s.name + "\u{1F525}" + s.streak).join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
-      }
-      if (quitHabits.length > 0) {
-        const quitInfo = quitHabits.map((h) => {
-          const s = getQuitStatus(h.id);
-          return `"${h.name}": ${s.streak || 0} \u0434\u043D \u0431\u0435\u0437 \u0437\u0440\u0438\u0432\u0456\u0432`;
-        });
-        parts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
-      }
-      const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3;
-      parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${inbox.filter((i) => i.ts > weekAgo).length}. \u0417\u0430\u0434\u0430\u0447 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${getTasks().filter((t) => t.status === "active").length}`);
-    }
-    if (tab === "evening") {
-      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
-      const todayStr = (/* @__PURE__ */ new Date()).toDateString();
-      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
-      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
-      const hour = (/* @__PURE__ */ new Date()).getHours();
-      parts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${todayMoments.length}. \u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F: ${hasSummary ? "\u0454" : "\u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"}.`);
-      if (hour >= 20 && !hasSummary) parts.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
-      const tasks = getTasks().filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
-      if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${tasks.length}`);
-    }
-    if (tab === "finance") {
-      try {
-        const finCtx = getFinanceContext();
-        if (finCtx) parts.push(finCtx);
-      } catch (e) {
-      }
-    }
-    if (tab === "health") {
-      try {
-        const cards = JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
-        parts.push(`\u041A\u0430\u0440\u0442\u043E\u0447\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F: ${cards.length}.`);
-      } catch (e) {
-      }
-    }
-    if (tab === "projects") {
-      try {
-        const projects = JSON.parse(localStorage.getItem("nm_projects") || "[]");
-        const active = projects.filter((p) => p.status === "active");
-        const paused = projects.filter((p) => p.status === "paused");
-        parts.push(`\u041F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${active.length}, \u043D\u0430 \u043F\u0430\u0443\u0437\u0456: ${paused.length}, \u0432\u0441\u044C\u043E\u0433\u043E: ${projects.length}.`);
-        if (active.length > 0) parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456: ${active.slice(0, 3).map((p) => '"' + p.name + '"').join(", ")}`);
-      } catch (e) {
-      }
-    }
-    return parts.filter(Boolean).join("\n\n");
-  }
-  function getBoardContext(tab) {
-    if (tab === "inbox") return _getInboxBoardContext();
-    return getTabBoardContext(tab);
-  }
-  function _getInboxBoardContext() {
-    const now = /* @__PURE__ */ new Date();
-    const todayStr = now.toDateString();
-    const hour = now.getHours();
-    const min = now.getMinutes();
-    const weekDay = now.getDay();
-    const phase = getDayPhase();
-    const sc = getSchedule();
-    const critical = [];
-    const important = [];
-    const normal = [];
-    try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      const todayISO = now.toISOString().slice(0, 10);
-      const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
-      if (due.length > 0) {
-        due.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
-        const updated = reminders.map((r) => due.find((d) => d.id === r.id) ? { ...r, done: true } : r);
-        localStorage.setItem("nm_reminders", JSON.stringify(updated));
-      }
-      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
-      if (upcoming.length > 0) {
-        const next = upcoming[0];
-        const [nh, nm] = next.time.split(":").map(Number);
-        const minsUntil = nh * 60 + nm - (hour * 60 + min);
-        if (minsUntil <= 30) important.push(`[\u0421\u041A\u041E\u0420\u041E] \u23F0 \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043E ${next.time}: "${next.text}" (\u0447\u0435\u0440\u0435\u0437 ${minsUntil} \u0445\u0432)`);
-      }
-    } catch (e) {
-    }
-    const phaseLabels = {
-      morning: `[\u0424\u0410\u0417\u0410: \u0420\u0410\u041D\u041E\u041A] \u0427\u0430\u0441 \u043F\u043B\u0430\u043D\u0443\u0432\u0430\u043D\u043D\u044F. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438 \u043D\u0430 \u0434\u0435\u043D\u044C, \u043C\u043E\u0442\u0438\u0432\u0430\u0446\u0456\u044F, \u0449\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u041F\u0456\u0434\u0439\u043E\u043C \u043E ${sc.wakeUp}:00, \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workStart}:00.`,
-      work: `[\u0424\u0410\u0417\u0410: \u0420\u041E\u0411\u041E\u0422\u0410] \u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0447\u0430\u0441. \u0424\u043E\u043A\u0443\u0441: \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D.`,
-      evening: `[\u0424\u0410\u0417\u0410: \u0412\u0415\u0427\u0406\u0420] \u0427\u0430\u0441 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432. \u0424\u043E\u043A\u0443\u0441: \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E, \u044F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u043F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u0420\u043E\u0431\u043E\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454\u0442\u044C\u0441\u044F \u043E ${sc.workEnd}:00.`,
-      night: `[\u0424\u0410\u0417\u0410: \u041D\u0406\u0427] \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441. \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435 \u2014 \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0456 \u043C\u043E\u0436\u043D\u0430 \u0449\u0435 \u0432\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E.`
-    };
-    if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
-    normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
-    const tasks = getTasks();
-    const activeTasks = tasks.filter((t) => t.status === "active");
-    const recentlyDone = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3);
-    if (recentlyDone.length > 0) {
-      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
-    }
-    if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
-      const todayDow = now.getDay();
-      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-      const briefParts = [];
-      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '"').join(", ")}`);
-      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name).join(", ")}`);
-      const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
-      if (quitHabitsAll.length > 0) {
-        const quitInfo = quitHabitsAll.map((h) => {
-          const s = getQuitStatus(h.id);
-          return `"${h.name}": ${s.streak || 0} \u0434\u043D`;
-        });
-        briefParts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
-      }
-      if (briefParts.length > 0) important.push(`[\u0420\u0410\u041D\u041A\u041E\u0412\u0418\u0419 \u0411\u0420\u0418\u0424] \u0417\u0432\u0435\u0434\u0435\u043D\u043D\u044F \u043D\u0430 \u0434\u0435\u043D\u044C:
-${briefParts.join("\n")}
-\u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
-    }
-    if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
-      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
-      const todayDow = now.getDay();
-      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-      const todayLogAll = getHabitLog()[todayStr] || {};
-      const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
-      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
-      const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
-      const summary = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      const hasSummary = summary && new Date(summary.date).toDateString() === todayStr;
-      const pulseParts = [];
-      pulseParts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneTasks.length}`);
-      pulseParts.push(`\u0417\u0432\u0438\u0447\u043E\u043A: ${doneH}/${todayHabitsAll.length}`);
-      if (todayMoments.length > 0) pulseParts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: ${todayMoments.length}`);
-      if (!hasSummary) pulseParts.push("\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
-      const eMood = getEveningMood();
-      if (eMood) {
-        const ml = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
-        pulseParts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u044E\u0437\u0435\u0440): ${ml[eMood] || eMood}`);
-      }
-      important.push(`[\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u041F\u0423\u041B\u042C\u0421] \u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C:
-${pulseParts.join("\n")}
-\u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
-    }
-    const urgent = activeTasks.filter((t) => {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
-      if (!m) return false;
-      const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
-      return diff > 0 && diff <= 65;
-    });
-    urgent.forEach((t) => {
-      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}".`);
-    });
-    const todayISOLocal = now.toISOString().slice(0, 10);
-    const overdue = activeTasks.filter((t) => t.dueDate && t.dueDate < todayISOLocal);
-    if (overdue.length > 0) {
-      overdue.slice(0, 3).forEach((t) => {
-        const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t.dueDate)) / (24 * 60 * 60 * 1e3));
-        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
-      });
-    }
-    const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    stuckDays3.forEach((t) => {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
-    });
-    const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    forgotten.forEach((t) => {
-      const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
-      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
-    });
-    const reshuffled = activeTasks.filter((t) => (t.rescheduleCount || 0) >= 3);
-    reshuffled.forEach((t) => {
-      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
-    });
-    if (activeTasks.length > 0) {
-      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
-    } else {
-      normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
-    }
-    if (activeTasks.length >= 3) {
-      const suggested = Math.max(1, Math.round(activeTasks.length * 0.2));
-      const doneTodayCount = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3).length;
-      normal.push(`[\u0422\u0415\u041C\u041F] \u041E\u043F\u0442\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ~${suggested} \u0437\u0430\u0434\u0430\u0447 (20% \u0432\u0456\u0434 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445). \u0417\u0430\u043A\u0440\u0438\u0442\u043E: ${doneTodayCount}. \u042F\u043A\u0449\u043E \u0443 \u043F\u0430\u043C'\u044F\u0442\u0456 \u0454 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E \u0437\u0430\u043C\u0456\u0441\u0442\u044C 20%-\u0444\u043E\u0440\u043C\u0443\u043B\u0438.`);
-    }
-    const habits = getHabits();
-    const buildHabits = habits.filter((h) => h.type !== "quit");
-    const quitHabits = habits.filter((h) => h.type === "quit");
-    const log = getHabitLog();
-    const todayLog = log[todayStr] || {};
-    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()));
-    const doneHabits = todayHabits.filter((h) => todayLog[h.id]);
-    const pendingHabits = todayHabits.filter((h) => !todayLog[h.id]);
-    if (todayHabits.length > 0 && pendingHabits.length === 0) {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${todayHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
-    }
-    if ((phase === "evening" || phase === "night") && pendingHabits.length > 0) {
-      const atRisk = pendingHabits.filter((h) => {
-        const streak = Object.values(log).filter((d) => d[h.id]).length;
-        return streak >= 3;
-      });
-      if (atRisk.length > 0) {
-        const details = atRisk.map((h) => {
-          const streak = Object.values(log).filter((d) => d[h.id]).length;
-          return `"${h.name}" (\u0432\u0436\u0435 ${streak} \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434, \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E)`;
-        });
-        critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0417\u0432\u0438\u0447\u043A\u0438 \u0437 \u0441\u0435\u0440\u0456\u0454\u044E \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E \u2014 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u0430 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0440\u043E\u0431\u0438\u0432: ${details.join(", ")}.`);
-      }
-    }
-    if ((phase === "work" || phase === "evening") && pendingHabits.length > 0) {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name).join(", ")}.`);
-    }
-    if (todayHabits.length > 0) {
-      normal.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneHabits.length}/${todayHabits.length}.`);
-    }
-    if (quitHabits.length > 0) {
-      const todayIso = now.toISOString().slice(0, 10);
-      const notHeldToday = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayIso);
-      if ((phase === "evening" || phase === "night") && notHeldToday.length > 0) {
-        important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '"').join(", ")}.`);
-      }
-      quitHabits.forEach((h) => {
-        const s = getQuitStatus(h.id);
-        const streak = s.streak || 0;
-        const milestones = [7, 14, 21, 30, 60, 90];
-        if (milestones.includes(streak) && owlCdExpired("quit_milestone_" + h.id + "_" + streak, 24 * 60 * 60 * 1e3)) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] ${streak} \u0434\u043D\u0456\u0432 \u0431\u0435\u0437 "${h.name}"! \u{1F389}`);
-        }
-      });
-      const quitInfo = quitHabits.map((h) => `"${h.name}": ${getQuitStatus(h.id).streak || 0} \u0434\u043D`);
-      normal.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}.`);
-    }
-    try {
-      const budget = getFinBudget();
-      if (budget.total > 0) {
-        const from = getFinPeriodRange("month");
-        const txs = getFinance().filter((t) => t.ts >= from && t.type === "expense");
-        const exp = txs.reduce((s, t) => s + t.amount, 0);
-        const pct = Math.round(exp / budget.total * 100);
-        if (exp > budget.total) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E! \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(exp)} \u0437 ${formatMoney(budget.total)} (${pct}%).`);
-        } else if (pct >= 80) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${pct}% \u043C\u0456\u0441\u044F\u0447\u043D\u043E\u0433\u043E \u0431\u044E\u0434\u0436\u0435\u0442\u0443.`);
-        } else {
-          normal.push(`\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F: ${formatMoney(exp)} / ${formatMoney(budget.total)} (${pct}%).`);
-        }
-        if (txs.length >= 3) {
-          const bycat = {};
-          txs.forEach((t) => {
-            if (!bycat[t.category]) bycat[t.category] = [];
-            bycat[t.category].push(t.amount);
-          });
-          const lastTx = txs[0];
-          if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
-            const avg = bycat[lastTx.category].reduce((a, b) => a + b, 0) / bycat[lastTx.category].length;
-            if (lastTx.amount > avg * 2.5 && owlCdExpired("unusual_tx_" + lastTx.id, 8 * 60 * 60 * 1e3)) {
-              important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435\u0437\u0432\u0438\u0447\u043D\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430: ${formatMoney(lastTx.amount)} \u043D\u0430 "${lastTx.category}" \u2014 \u0432\u0438\u0449\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0432\u0434\u0432\u0456\u0447\u0456.`);
-            }
-          }
-        }
-      }
-    } catch (e) {
-    }
-    if (phase === "evening" || phase === "night") {
-      const s = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      if (!s || new Date(s.date).toDateString() !== todayStr) {
-        important.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
-      }
-    }
-    if (weekDay === 1 && (phase === "morning" || phase === "work")) {
-      normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
-    }
-    if (weekDay === 5 && phase === "evening") {
-      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 7 * 24 * 60 * 60 * 1e3);
-      normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
-    }
-    const activeTabs = [];
-    if (tasks.length > 0 || getHabits().length > 0) activeTabs.push("\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C (\u0437\u0430\u0434\u0430\u0447\u0456, \u0437\u0432\u0438\u0447\u043A\u0438)");
-    try {
-      if (getNotes().length > 0) activeTabs.push("\u041D\u043E\u0442\u0430\u0442\u043A\u0438");
-    } catch (e) {
-    }
-    try {
-      if (getFinance().length > 0) activeTabs.push("\u0424\u0456\u043D\u0430\u043D\u0441\u0438");
-    } catch (e) {
-    }
-    try {
-      if (JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0) activeTabs.push("\u0417\u0434\u043E\u0440\u043E\u0432'\u044F");
-    } catch (e) {
-    }
-    try {
-      if (JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0) activeTabs.push("\u041F\u0440\u043E\u0435\u043A\u0442\u0438");
-    } catch (e) {
-    }
-    try {
-      if (JSON.parse(localStorage.getItem("nm_moments") || "[]").length > 0) activeTabs.push("\u0412\u0435\u0447\u0456\u0440 (\u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F)");
-    } catch (e) {
-    }
-    if (activeTabs.length > 0) {
-      normal.push(`[\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0412\u041A\u041B\u0410\u0414\u041A\u0418] \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454: ${activeTabs.join(", ")}. \u0426\u0456\u043A\u0430\u0432\u0441\u044F \u0422\u0406\u041B\u042C\u041A\u0418 \u0446\u0438\u043C\u0438 \u0442\u0435\u043C\u0430\u043C\u0438.`);
-    }
-    const OWL_Q_KEY = "nm_owl_questions";
-    const OWL_Q_TS_KEY = "nm_owl_q_ts";
-    const OWL_QUESTIONS = [
-      { id: "work", q: "\u0427\u0438\u043C \u0442\u0438 \u0437\u0430\u0439\u043C\u0430\u0454\u0448\u0441\u044F? \u0414\u0435 \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u0430\u0431\u043E \u043D\u0430\u0432\u0447\u0430\u0454\u0448\u0441\u044F?" },
-      { id: "goals", q: "\u042F\u043A\u0430 \u0442\u0432\u043E\u044F \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0437\u0430\u0440\u0430\u0437 \u2014 \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435?" },
-      { id: "interests", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C \u043F\u043E\u0437\u0430 \u0440\u043E\u0431\u043E\u0442\u043E\u044E? \u0425\u043E\u0431\u0456, \u0437\u0430\u0445\u043E\u043F\u043B\u0435\u043D\u043D\u044F?" },
-      { id: "motivation", q: "\u0429\u043E \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442, \u043F\u0440\u043E\u0446\u0435\u0441 \u0447\u0438 \u0432\u0438\u0437\u043D\u0430\u043D\u043D\u044F?" },
-      { id: "routine", q: "\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0454 \u0442\u0432\u0456\u0439 \u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C? \u041A\u043E\u043B\u0438 \u0442\u0438 \u043D\u0430\u0439\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0438\u0439?" },
-      { id: "challenges", q: "\u0429\u043E \u0442\u043E\u0431\u0456 \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u0439\u0432\u0430\u0436\u0447\u0435 \u0434\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u0449\u043E \u0445\u043E\u0442\u0456\u0432 \u0431\u0438 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438?" },
-      { id: "values", q: "\u0429\u043E \u0434\u043B\u044F \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0432 \u0436\u0438\u0442\u0442\u0456 \u2014 \u0449\u043E \u0442\u0438 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0436\u0435\u0440\u0442\u0432\u0443\u0454\u0448?" },
-      { id: "relax", q: "\u042F\u043A \u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0454\u0448? \u0429\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u043F\u0435\u0440\u0435\u0437\u0430\u0440\u044F\u0434\u0438\u0442\u0438\u0441\u044C?" },
-      { id: "people", q: "\u0425\u0442\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u043B\u044E\u0434\u0438 \u043D\u0430\u0432\u043A\u043E\u043B\u043E \u0442\u0435\u0431\u0435? \u0420\u043E\u0434\u0438\u043D\u0430, \u0434\u0440\u0443\u0437\u0456, \u043F\u0430\u0440\u0442\u043D\u0435\u0440?" },
-      { id: "health", q: "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0456 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F\u043C? \u0404 \u0449\u043E\u0441\u044C \u0449\u043E \u0445\u0432\u0438\u043B\u044E\u0454 \u0430\u0431\u043E \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448?" },
-      { id: "dreams", q: "\u0414\u0435 \u0442\u0438 \u0431\u0430\u0447\u0438\u0448 \u0441\u0435\u0431\u0435 \u0447\u0435\u0440\u0435\u0437 \u0440\u0456\u043A? \u0429\u043E \u043C\u0430\u0454 \u0437\u043C\u0456\u043D\u0438\u0442\u0438\u0441\u044C?" },
-      { id: "style", q: "\u042F\u043A \u0442\u043E\u0431\u0456 \u0437\u0440\u0443\u0447\u043D\u0456\u0448\u0435 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0441\u043F\u0440\u0430\u0432\u0456 \u0447\u0438 \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u043E \u0437 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F\u043C\u0438?" },
-      { id: "daily_target", q: "\u0421\u043A\u0456\u043B\u044C\u043A\u0438 \u0437\u0430\u0434\u0430\u0447 \u043D\u0430 \u0434\u0435\u043D\u044C \u2014 \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u0434\u043B\u044F \u0442\u0435\u0431\u0435? \u041D\u0430\u0437\u0432\u0438 \u0447\u0438\u0441\u043B\u043E (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: 3, 5, 7). \u042F\u043A\u0449\u043E \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u044E \u0446\u0435\u0439 \u0444\u0430\u043A\u0442 \u2014 \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438\u043C\u0443 \u0443 \u043F\u043E\u0440\u0430\u0434\u0430\u0445." }
-    ];
-    try {
-      const asked = JSON.parse(localStorage.getItem(OWL_Q_KEY) || "[]");
-      const lastQTs = parseInt(localStorage.getItem(OWL_Q_TS_KEY) || "0");
-      const nextQ = OWL_QUESTIONS.find((q) => !asked.includes(q.id));
-      if (nextQ && Date.now() - lastQTs > 24 * 60 * 60 * 1e3 && (phase === "morning" || phase === "work")) {
-        normal.push(`[\u0410\u041D\u041A\u0415\u0422\u0410] \u0417\u0430\u0434\u0430\u0439 \u044E\u0437\u0435\u0440\u0443 \u0446\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E, \u0432\u043F\u043B\u0435\u0442\u0438 \u0432 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 (\u041D\u0415 \u0441\u0443\u0445\u043E \u044F\u043A \u0432 \u0430\u043D\u043A\u0435\u0442\u0456): "${nextQ.q}". \u041F\u0456\u0441\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u0447\u0456\u043F "\u0420\u043E\u0437\u043A\u0430\u0436\u0438" \u0437 action:"chat". \u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 ID \u043F\u0438\u0442\u0430\u043D\u043D\u044F: ${nextQ.id}`);
-        asked.push(nextQ.id);
-        localStorage.setItem(OWL_Q_KEY, JSON.stringify(asked));
-        localStorage.setItem(OWL_Q_TS_KEY, Date.now().toString());
-      }
-    } catch (e) {
-    }
-    if (critical.length === 0 && important.length === 0) {
-      const correlations = _computeCorrelations();
-      for (const c of correlations) {
-        if (owlCdExpired("corr_" + c.id, 7 * 24 * 60 * 60 * 1e3)) {
-          normal.push(`[\u041F\u0410\u0422\u0415\u0420\u041D] ${c.text} \u041F\u0418\u0422\u0410\u0419 \u044E\u0437\u0435\u0440\u0430 "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u043E\u0432'\u044F\u0437\u0430\u043D\u043E?" \u2014 \u041D\u0415 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u044F\u043A \u0444\u0430\u043A\u0442, \u0434\u0430\u0439 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0438 \u0430\u0431\u043E \u0441\u043F\u0440\u043E\u0441\u0442\u0443\u0432\u0430\u0442\u0438. \u0426\u0435 \u0441\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F, \u043D\u0435 \u0434\u0456\u0430\u0433\u043D\u043E\u0437.`);
-          setOwlCd("corr_" + c.id);
-          break;
-        }
-      }
-    }
-    return [...critical, ...important, ...normal].join(" ");
-  }
-  function _computeCorrelations() {
-    const insights = [];
-    try {
-      const habitLog = JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
-      const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-      const lateByISO = {};
-      inbox.forEach((i) => {
-        if (!i.ts) return;
-        const d = new Date(i.ts);
-        if (d.getHours() >= 22) {
-          const iso = d.toISOString().slice(0, 10);
-          lateByISO[iso] = (lateByISO[iso] || 0) + 1;
-        }
-      });
-      const pairs = [];
-      for (let i = 1; i < 14; i++) {
-        const yesterday = /* @__PURE__ */ new Date();
-        yesterday.setDate(yesterday.getDate() - i - 1);
-        const today = /* @__PURE__ */ new Date();
-        today.setDate(today.getDate() - i);
-        const yesterdayISO = yesterday.toISOString().slice(0, 10);
-        const todayStr = today.toDateString();
-        const wasLate = !!lateByISO[yesterdayISO];
-        const habits = habitLog[todayStr] || {};
-        const habitsDone = Object.keys(habits).filter((k) => habits[k]).length;
-        pairs.push({ wasLate, habitsDone });
-      }
-      const lateDays = pairs.filter((p) => p.wasLate);
-      const normalDays = pairs.filter((p) => !p.wasLate);
-      if (lateDays.length >= 2 && normalDays.length >= 2) {
-        const avgLate = lateDays.reduce((s, p) => s + p.habitsDone, 0) / lateDays.length;
-        const avgNormal = normalDays.reduce((s, p) => s + p.habitsDone, 0) / normalDays.length;
-        const maxv = Math.max(avgLate, avgNormal, 0.5);
-        const diff = Math.abs(avgNormal - avgLate) / maxv;
-        if (diff > 0.3) {
-          insights.push({
-            id: "late_inbox_next_habits",
-            text: avgNormal > avgLate ? `\u041F\u0456\u0441\u043B\u044F \u043F\u0456\u0437\u043D\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 (\u043F\u0456\u0441\u043B\u044F 22:00) \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0440\u043E\u0431\u0438\u0448 \u0437\u0432\u0438\u0447\u043E\u043A ${avgLate.toFixed(1)}, \u0430 \u043F\u0456\u0441\u043B\u044F \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0432\u0435\u0447\u043E\u0440\u0456\u0432 \u2014 ${avgNormal.toFixed(1)}.` : `\u041F\u0456\u0441\u043B\u044F \u043F\u0456\u0437\u043D\u0456\u0445 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0437\u0432\u0438\u0447\u043E\u043A \u043D\u0430\u0432\u0456\u0442\u044C \u0431\u0456\u043B\u044C\u0448\u0435 (${avgLate.toFixed(1)} vs ${avgNormal.toFixed(1)}) \u2014 \u0446\u0456\u043A\u0430\u0432\u043E.`
-          });
-        }
-      }
-      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
-      const finance = JSON.parse(localStorage.getItem("nm_finance") || "[]");
-      const moodByISO = {};
-      moments.forEach((m) => {
-        if (!m.ts || !m.mood) return;
-        const iso = new Date(m.ts).toISOString().slice(0, 10);
-        if (!moodByISO[iso]) moodByISO[iso] = { positive: 0, negative: 0, neutral: 0 };
-        moodByISO[iso][m.mood] = (moodByISO[iso][m.mood] || 0) + 1;
-      });
-      const expenseByISO = {};
-      finance.filter((t) => t.type === "expense").forEach((t) => {
-        if (!t.ts) return;
-        const iso = new Date(t.ts).toISOString().slice(0, 10);
-        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t.amount || 0);
-      });
-      const negSpend = [];
-      const posSpend = [];
-      Object.keys(moodByISO).forEach((iso) => {
-        const m = moodByISO[iso];
-        const spend = expenseByISO[iso] || 0;
-        if (m.negative > m.positive) negSpend.push(spend);
-        else if (m.positive > m.negative) posSpend.push(spend);
-      });
-      if (negSpend.length >= 2 && posSpend.length >= 2) {
-        const avgNeg = negSpend.reduce((s, v) => s + v, 0) / negSpend.length;
-        const avgPos = posSpend.reduce((s, v) => s + v, 0) / posSpend.length;
-        const maxv = Math.max(avgNeg, avgPos, 1);
-        const diff = Math.abs(avgNeg - avgPos) / maxv;
-        if (diff > 0.3) {
-          insights.push({
-            id: "mood_spending",
-            text: avgNeg > avgPos ? `\u0412 \u0434\u043D\u0456 \u0437 \u043F\u043E\u0433\u0430\u043D\u0438\u043C \u043D\u0430\u0441\u0442\u0440\u043E\u0454\u043C (\u0437\u0430 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u043C\u0438) \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u0443 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443 ${avgNeg.toFixed(0)}, \u0430 \u0432 \u0433\u0430\u0440\u043D\u0456 \u2014 ${avgPos.toFixed(0)}.` : `\u0412 \u0434\u043D\u0456 \u0437 \u0433\u0430\u0440\u043D\u0438\u043C \u043D\u0430\u0441\u0442\u0440\u043E\u0454\u043C \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0448 \u0431\u0456\u043B\u044C\u0448\u0435 (${avgPos.toFixed(0)}) \u043D\u0456\u0436 \u0432 \u043F\u043E\u0433\u0430\u043D\u0456 (${avgNeg.toFixed(0)}).`
-          });
-        }
-      }
-    } catch (e) {
-    }
-    return insights;
-  }
-  function checkTabBoardTrigger(tab) {
-    if (tab === "tasks") {
-      const tasks = getTasks().filter((t) => t.status === "active");
-      if (tasks.length === 0) return false;
-      const now = Date.now();
-      const stuck = tasks.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
-      return stuck.length > 0;
-    }
-    if (tab === "notes") return getNotes().length > 0;
-    if (tab === "me") return getHabits().length > 0 || getTasks().length > 0;
-    if (tab === "evening") return true;
-    if (tab === "finance") {
-      try {
-        return getFinance().length > 0;
-      } catch {
-        return false;
-      }
-    }
-    if (tab === "health") {
-      try {
-        return JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0;
-      } catch {
-        return false;
-      }
-    }
-    if (tab === "projects") {
-      try {
-        return JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0;
-      } catch {
-        return false;
-      }
-    }
-    return true;
-  }
-  function _updateApiDot() {
-    const dot = document.getElementById("owl-api-dot");
-    if (!dot) return;
-    const err = localStorage.getItem("nm_owl_api_error");
-    dot.style.display = err ? "block" : "none";
-  }
-  function _getBannedTopics(msgs) {
-    if (!msgs || msgs.length === 0) return "";
-    const topics = [];
-    for (const m of msgs.slice(0, 5)) {
-      if (m.topic && !owlCdExpired("topic_" + m.topic, TOPIC_CD_MS)) {
-        topics.push(m.topic);
-      }
-    }
-    return topics.join(", ");
-  }
-  async function generateBoardMessage(tab) {
-    if (_boardGenerating[tab]) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      _tryLocalFallback(tab);
-      return;
-    }
-    _boardGenerating[tab] = true;
-    const isInbox = tab === "inbox";
-    const context = getBoardContext(tab);
-    const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
-    const existing = allMsgs[0] || null;
-    const recentText = existing ? existing.text : "";
-    const recentTexts = allMsgs.slice(0, 5).map((m) => m.text).join(" | ");
-    const boardHistory = allMsgs.slice(0, 20).map((m) => {
-      const ago = Date.now() - (m.ts || m.id || 0);
-      const hours = Math.floor(ago / 36e5);
-      const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
-      return `[${when}] ${m.text}`;
-    }).join("\n");
-    const chatMsgs = loadChatMsgs(tab);
-    const recentChat = chatMsgs.slice(-30).map((m) => {
-      const ago = Date.now() - (m.ts || 0);
-      const mins = Math.floor(ago / 6e4);
-      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
-      const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
-      return `[${when}] ${who}: ${m.text}`;
-    }).join("\n");
-    const crossActions = getRecentActions().filter((a) => a.tab !== tab && Date.now() - a.ts < 30 * 60 * 1e3).slice(-5).map((a) => {
-      const mins = Math.floor((Date.now() - a.ts) / 6e4);
-      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-      return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
-    }).join("\n");
-    const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
-    const phase = getDayPhase();
-    const sc = getSchedule();
-    const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-    const phaseInstr = {
-      dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A \u2014 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F \u0440\u0430\u043D\u0456\u0448\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E. \u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439 \u043C'\u044F\u043A\u043E, \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043F\u043E\u0447\u0430\u0442\u0438 \u0434\u0435\u043D\u044C.",
-      morning: "\u0420\u0430\u043D\u043E\u043A \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u043D\u0430\u0434\u0438\u0445\u043D\u0443\u0442\u0438 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0441\u0444\u043E\u043A\u0443\u0441\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u043C\u0443.",
-      work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432 \u043A\u0443\u0440\u0441\u0456 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443, \u043C'\u044F\u043A\u043E \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0435.",
-      evening: "\u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u043F\u0456\u0434\u0431\u0438\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F, \u043D\u0435 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438 \u0441\u0442\u0440\u0456\u043A\u0438.",
-      night: "\u041D\u0456\u0447 \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u0440\u043E \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435. \u0414\u0443\u0436\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E."
-    };
-    const systemPrompt = getOWLPersonality() + `
-
-\u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase] || ""}
-${sc ? "\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u042E\u0417\u0415\u0420\u0410: \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F " + (sc.wakeUpStr || "?") + ", \u043F\u043E\u0447\u0438\u043D\u0430\u0454 \u0434\u0435\u043D\u044C " + (sc.workStartStr || "?") + ", \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454 \u0440\u043E\u0431\u043E\u0442\u0443 " + (sc.workEndStr || "?") + ", \u043B\u044F\u0433\u0430\u0454 " + (sc.bedTimeStr || "?") + ".\n\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0437\u0432\u0456\u0440\u044F\u0439 \u0437 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043E\u043C. \u0417\u0430\u0440\u0430\u0437 \u0414\u041E workStart = \u044E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F, \u043C'\u044F\u043A\u0435 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F. \u041C\u0456\u0436 workStart \u0456 workEnd = \u041D\u0410 \u0420\u041E\u0411\u041E\u0422\u0406, \u043D\u0435 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0431\u0456\u0433/\u0437\u0430\u043B/\u0441\u043F\u043E\u0440\u0442. \u041F\u0456\u0441\u043B\u044F workEnd = \u043C\u043E\u0436\u043D\u0430 \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438 \u043F\u0440\u043E \u0437\u0432\u0438\u0447\u043A\u0438/\u0441\u043F\u043E\u0440\u0442.\n\u041D\u0415 \u041F\u0418\u0422\u0410\u0419 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014 \u0432\u0456\u043D \u0432\u0436\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0439. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u2014 \u0441\u0430\u043C \u0441\u043A\u0430\u0436\u0435." : ""}
-
-\u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E${isInbox ? " \u0432 Inbox" : ' \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 "' + (tabLabels[tab] || tab) + '"'}. \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
-
-\u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F (\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F):
-${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
-
-\u041E\u0421\u0422\u0410\u041D\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F \u0417 \u0427\u0410\u0422\u0423 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0432\u0430\u043B\u0438, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0456 \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u044C):
-${recentChat || "(\u0447\u0430\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439)"}
-${crossActions ? `
-\u041D\u0415\u0429\u041E\u0414\u0410\u0412\u041D\u0406 \u0414\u0406\u0407 \u041D\u0410 \u0406\u041D\u0428\u0418\u0425 \u0412\u041A\u041B\u0410\u0414\u041A\u0410\u0425 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2014 \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0436\u0438\u0442\u0442\u0456 \u044E\u0437\u0435\u0440\u0430):
-${crossActions}` : ""}
-
-\u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430; \u0444\u0430\u043A\u0442\u0438 \u043C\u0430\u044E\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u0456 \u043C\u0456\u0442\u043A\u0438 \u2014 \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442, \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D):
-${formatFactsForBoard(15) || localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
-
-\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u042C:
-1. \u042F\u043A\u0449\u043E \u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u043F\u0440\u043E \u0446\u0435. \u041D\u0456\u0447\u043E\u0433\u043E \u0456\u043D\u0448\u043E\u0433\u043E.
-2. \u042F\u043A\u0449\u043E \u0454 [\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0456 \u043D\u0435\u043C\u0430\u0454 [\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u2014 \u043F\u0438\u0448\u0438 \u043F\u0440\u043E \u043F\u0435\u0440\u0448\u0435 [\u0412\u0410\u0416\u041B\u0418\u0412\u041E].
-3. \u042F\u043A\u0449\u043E \u0454 [\u0424\u0410\u0417\u0410] \u0430\u043B\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E\u0433\u043E/\u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0433\u043E \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E \u0434\u043E \u0444\u0430\u0437\u0438 \u0434\u043D\u044F.
-4. \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u043E\u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u0446\u0456\u043A\u0430\u0432\u0456\u0448\u0435 \u0437\u0456 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445.
-
-SMART BOOT-UP (\u044F\u043A \u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043B\u0438 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A):
-- \u0422\u0406\u041B\u042C\u041A\u0418 \u041E\u0414\u0418\u041D \u0444\u043E\u043A\u0443\u0441 \u043D\u0430 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u0454 \u0456 \u043F\u0440\u043E\u0441\u0442\u0440\u043E\u0447\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u0456 \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u2014 \u0431\u0435\u0440\u0438 \u043D\u0430\u0439\u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0456\u0448\u0435, \u0440\u0435\u0448\u0442\u0443 \u0437\u0430\u043B\u0438\u0448 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0443 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u044E.
-- \u041D\u0415 \u0432\u0456\u0442\u0430\u0439\u0441\u044F \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438 ("\u0414\u043E\u0431\u0440\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443!" \u0431\u0435\u0437 \u0434\u0456\u043B\u0430 \u2014 \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u043E). \u041F\u043E\u0447\u0438\u043D\u0430\u0439 \u043E\u0434\u0440\u0430\u0437\u0443 \u0437 \u0441\u0443\u0442\u0456.
-- \u0417\u0410\u0412\u0416\u0414\u0418 \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0439 \u0447\u0456\u043F\u0430\u043C\u0438-\u0434\u0456\u044F\u043C\u0438 (nav \u0430\u0431\u043E chat). \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0445 \u0447\u0456\u043F\u0456\u0432 [] \u043F\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0456 \u0434\u043D\u044F \u0443\u043D\u0438\u043A\u0430\u0439 \u2014 \u044E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A, \u0434\u0430\u0439 \u0439\u043E\u043C\u0443 \u043E\u0434\u0440\u0430\u0437\u0443 \u0448\u043B\u044F\u0445.
-- \u041F\u0456\u0437\u043D\u0456\u0439 \u0441\u0442\u0430\u0440\u0442 (\u0432\u0436\u0435 \u043F\u0456\u0441\u043B\u044F workStart+2 \u0433\u043E\u0434 \u0456 \u043C\u0430\u043B\u043E \u0449\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E) \u2014 \u0411\u0415\u0417 \u043F\u0438\u0442\u0430\u043D\u043D\u044F "\u0434\u0435 \u0442\u0438 \u0431\u0443\u0432?". \u0421\u043A\u0430\u0436\u0438: "\u041E\u0441\u044C \u0449\u043E \u043D\u0430\u043A\u043E\u043F\u0438\u0447\u0438\u043B\u043E\u0441\u044C" \u0456 \u0434\u0430\u0439 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0434\u0456\u0439.
-- \u0412\u0435\u0447\u0456\u0440\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0437 \u0447\u0430\u0441\u043E\u043C "23:XX" \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0432\u0456\u0434\u043A\u043B\u0430\u0441\u0442\u0438: \u0447\u0456\u043F "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0434\u043E \u0440\u0430\u043D\u043A\u0443" (chat).
-
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
-- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E.
-- \u0413\u043E\u0432\u043E\u0440\u0438 \u041B\u042E\u0414\u0421\u042C\u041A\u041E\u042E \u043C\u043E\u0432\u043E\u044E. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0436\u0430\u0440\u0433\u043E\u043D: "\u0441\u0442\u0440\u0456\u043A", "streak", "\u0442\u0440\u0435\u043A\u0435\u0440", "\u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430\u0434\u0430\u0447". ${isInbox ? '\u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u0441\u0442\u0440\u0456\u043A \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E" \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0432\u0436\u0435 5 \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434 \u0431\u0456\u0433\u0430\u0432 \u2014 \u043D\u0435 \u0437\u0443\u043F\u0438\u043D\u044F\u0439\u0441\u044F, \u0431\u0456\u0436\u0438 \u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456". \u0417\u0430\u043C\u0456\u0441\u0442\u044C "3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456" \u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0449\u043E \u0446\u0435 \u0437\u0430 \u0437\u0430\u0434\u0430\u0447\u0456.' : "\u041A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u044F\u043A \u0434\u0440\u0443\u0433, \u043D\u0435 \u044F\u043A \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430."}
-- \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0441\u0443\u043C\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
-- \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432. ${_getBannedTopics(allMsgs) ? "\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u0406 \u0422\u0415\u041C\u0418 (\u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u0456, \u0432 cooldown \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u043E\u0431\u0435\u0440\u0438 \u0406\u041D\u0428\u0423 \u0442\u0435\u043C\u0443): " + _getBannedTopics(allMsgs) + "." : "\u0414\u0438\u0432\u0438\u0441\u044C \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0456 \u043E\u0431\u0438\u0440\u0430\u0439 \u0456\u043D\u0448\u0443 \u0442\u0435\u043C\u0443."}
-- \u041F\u043E\u043B\u0435 "topic" \u0443 JSON \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438 \u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: "daily_habits", "stuck_task", "budget_warning", "morning_greeting", "habit_streak", "project_progress"). \u0426\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0434\u043B\u044F \u0430\u043D\u0442\u0438\u043F\u043E\u0432\u0442\u043E\u0440\u0443.
-- \u0415\u041C\u041F\u0410\u0422\u0406\u042F: \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u043D\u0430 \u0441\u043B\u043E\u0432\u0430-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 ("\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F", "\u043D\u0435 \u043C\u043E\u0436\u0443", "\u0437\u0430\u0431\u0438\u0432" \u0442\u043E\u0449\u043E) \u0432\u0436\u0435 \u043E\u043F\u0438\u0441\u0430\u043D\u0435 \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0456 (\u0434\u0438\u0432. universal \u043F\u0440\u0430\u0432\u0438\u043B\u0430). \u0417\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E.
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
-${CHIP_PROMPT_RULES}
-${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
-          ],
-          max_tokens: 150,
-          temperature: 0.8,
-          response_format: { type: "json_object" }
-        })
-      });
-      if (!res.ok) {
-        const errDetail = `HTTP ${res.status} ${res.statusText}`;
-        console.warn("[OWL board] API error:", errDetail);
-        localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
-        _updateApiDot();
-        _tryLocalFallback(tab);
-        _boardGenerating[tab] = false;
-        return;
-      }
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        const errDetail = "empty reply: " + JSON.stringify(data?.error || {}).slice(0, 150);
-        console.warn("[OWL board]", errDetail);
-        localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
-        _updateApiDot();
-        _tryLocalFallback(tab);
-        _boardGenerating[tab] = false;
-        return;
-      }
-      localStorage.removeItem("nm_owl_api_error");
-      _updateApiDot();
-      const parsed = _parseJsonTolerant(reply);
-      if (!parsed || !parsed.text) {
-        _boardGenerating[tab] = false;
-        return;
-      }
-      try {
-        const MIN_VISIBLE_MS = 10 * 60 * 1e3;
-        const IGNORE_THRESHOLD = 7;
-        const SILENCE_MS = 2 * 60 * 60 * 1e3;
-        const lastBoardTs = parseInt(localStorage.getItem("nm_owl_last_board_ts") || "0");
-        const lastClickTs = parseInt(localStorage.getItem("nm_owl_last_chip_click_ts") || "0");
-        const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
-        if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
-          const ignored = parseInt(localStorage.getItem("nm_owl_ignored_msgs") || "0") + 1;
-          if (ignored >= IGNORE_THRESHOLD) {
-            localStorage.setItem("nm_owl_silence_until", String(Date.now() + SILENCE_MS));
-            localStorage.setItem("nm_owl_ignored_msgs", "0");
-            console.log("[OWL 4.40] Auto-silence 2 \u0433\u043E\u0434 \u2014", IGNORE_THRESHOLD, "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
-          } else {
-            localStorage.setItem("nm_owl_ignored_msgs", String(ignored));
-          }
-        }
-        localStorage.setItem("nm_owl_last_board_ts", String(Date.now()));
-      } catch (e) {
-      }
-      const newMsg = { text: parsed.text, topic: parsed.topic || "", priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
-      if (parsed.topic) setOwlCd("topic_" + parsed.topic);
-      if (isInbox) {
-        newMsg.id = Date.now();
-        const msgs = getOwlBoardMessages();
-        msgs.unshift(newMsg);
-        saveOwlBoardMessages(msgs.slice(0, 3));
-        localStorage.setItem("nm_owl_board_ts", Date.now().toString());
-        setOwlCd("phase_pulse");
-      } else {
-        saveTabBoardMsg(tab, newMsg);
-        localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
-      }
-      if (isInbox) renderOwlBoard();
-      else renderTabBoard(tab);
-    } catch (e) {
-      if (!_isNetworkError(e)) {
-        console.warn("[OWL board] generation error:", e?.message || e);
-      }
-      _tryLocalFallback(tab);
-    }
-    _boardGenerating[tab] = false;
-  }
-  function _tryLocalFallback(tab) {
-    if (tab !== "inbox") {
-      _tryTabLocalFallback(tab);
-      return;
-    }
-    const msgs = getOwlBoardMessages();
-    const visibleTs = msgs[0]?.ts || 0;
-    if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
-    const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
-    let text = "";
-    const chips = [];
-    const _pl = (n, one, few, many) => {
-      const abs = Math.abs(n) % 100;
-      const last = abs % 10;
-      if (abs > 10 && abs < 20) return `${n} ${many}`;
-      if (last === 1) return `${n} ${one}`;
-      if (last >= 2 && last <= 4) return `${n} ${few}`;
-      return `${n} ${many}`;
-    };
-    try {
-      const tasks = getTasks().filter((t) => t.status === "active");
-      const habits = getHabits();
-      const todayStr = (/* @__PURE__ */ new Date()).toDateString();
-      const habitLog = getHabitLog();
-      const todayLog = habitLog[todayStr] || {};
-      const dow = (/* @__PURE__ */ new Date()).getDay();
-      const todayHabits = habits.filter((h) => h.type !== "quit" && (h.days || []).includes(dow));
-      const doneH = todayHabits.filter((h) => todayLog[h.id]);
-      const pendingH = todayHabits.filter((h) => !todayLog[h.id]);
-      const phase = getDayPhase();
-      const tStr = _pl(tasks.length, "\u0437\u0430\u0434\u0430\u0447\u0430", "\u0437\u0430\u0434\u0430\u0447\u0456", "\u0437\u0430\u0434\u0430\u0447");
-      const hStr = _pl(pendingH.length, "\u0437\u0432\u0438\u0447\u043A\u0430", "\u0437\u0432\u0438\u0447\u043A\u0438", "\u0437\u0432\u0438\u0447\u043E\u043A");
-      if (tasks.length > 0 && pendingH.length > 0) {
-        text = mode === "coach" ? `${tStr} \u0456 ${hStr}. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454 \u0437\u0430\u043A\u0440\u0438\u0442\u0438?` : mode === "mentor" ? `\u0404 ${tStr} \u0456 ${hStr}. \u0414\u0430\u0432\u0430\u0439 \u0445\u043E\u0447\u0430 \u0431 \u043E\u0434\u043D\u0443 \u0437\u0430\u043A\u0440\u0438\u0454\u043C\u043E.` : `\u0423 \u0442\u0435\u0431\u0435 ${tStr} \u0456 ${hStr} \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F?`;
-        chips.push({ label: "\u0417\u0430\u0434\u0430\u0447\u0456", action: "nav", target: "tasks" });
-        chips.push({ label: "\u0417\u0432\u0438\u0447\u043A\u0438", action: "nav", target: "habits" });
-      } else if (tasks.length > 0) {
-        const first = tasks[0].title;
-        text = mode === "coach" ? `"${first}" \u2014 \u0432\u0441\u0435 \u0449\u0435 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454?` : mode === "mentor" ? `\u0417\u0430\u0434\u0430\u0447\u0430 "${first}" \u0447\u0435\u043A\u0430\u0454. \u041C\u043E\u0436\u0435 \u0432\u0430\u0440\u0442\u043E \u043F\u043E\u0447\u0430\u0442\u0438 \u0437 \u043D\u0435\u0457?` : `\u0404 \u0437\u0430\u0434\u0430\u0447\u0430 "${first}". \u042F\u043A \u0437 \u043D\u0435\u044E \u0441\u043F\u0440\u0430\u0432\u0438?`;
-        chips.push({ label: "\u0417\u0430\u0434\u0430\u0447\u0456", action: "nav", target: "tasks" });
-      } else if (pendingH.length > 0) {
-        const names = pendingH.slice(0, 2).map((h) => h.name).join(" \u0456 ");
-        text = mode === "coach" ? `${names} \u2014 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E. \u0429\u043E \u0437\u0430\u0432\u0430\u0436\u0430\u0454?` : mode === "mentor" ? `\u0429\u0435 \u0436\u043E\u0434\u043D\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. ${names} \u2014 \u0434\u0430\u0432\u0430\u0439 \u0445\u043E\u0447\u0430 \u0431 \u043E\u0434\u043D\u0443.` : `\u0417\u0430\u043B\u0438\u0448\u0438\u043B\u0438\u0441\u044C ${names}. \u0412\u0441\u0442\u0438\u0433\u043D\u0435\u0448 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?`;
-        chips.push({ label: "\u0417\u0432\u0438\u0447\u043A\u0438", action: "nav", target: "habits" });
-      } else if (doneH.length > 0 && tasks.length === 0) {
-        text = mode === "coach" ? "\u0412\u0441\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0456. \u0422\u0430\u043A \u0442\u0440\u0438\u043C\u0430\u0442\u0438." : mode === "mentor" ? "\u0412\u0441\u0435 \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0447\u0430\u0441 \u2014 \u044F\u043A \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0454\u0448?" : "\u0412\u0441\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041A\u0440\u0430\u0441\u0430\u0432\u0430 \u{1F4AA}";
-      } else {
-        const greetings = {
-          coach: { dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u043F\u0456\u0434\u0439\u043E\u043C. \u041F\u043E\u0432\u0430\u0436\u0430\u044E.", morning: "\u0420\u0430\u043D\u043E\u043A. \u0429\u043E \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441. \u0429\u043E \u0434\u0430\u043B\u0456?", evening: "\u0412\u0435\u0447\u0456\u0440. \u042F\u043A \u0434\u0435\u043D\u044C?", night: "\u041F\u0456\u0437\u043D\u043E. \u0412\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0439." },
-          partner: { dawn: "\u0420\u0430\u043D\u043E \u0432\u0441\u0442\u0430\u0432! \u0413\u0430\u0440\u043D\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443.", morning: "\u0414\u043E\u0431\u0440\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443!", work: "\u042F\u043A \u0440\u043E\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C?", evening: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440!", night: "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456!" },
-          mentor: { dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A. \u0422\u0438\u0445\u0438\u0439 \u0447\u0430\u0441 \u0434\u043B\u044F \u0440\u043E\u0437\u0434\u0443\u043C\u0456\u0432.", morning: "\u041D\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C. \u0429\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441. \u0412\u0441\u0435 \u0437\u0430 \u043F\u043B\u0430\u043D\u043E\u043C?", evening: "\u0412\u0435\u0447\u0456\u0440. \u0429\u043E \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", night: "\u0427\u0430\u0441 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u043D\u043A\u0443." }
-        };
-        text = (greetings[mode] || greetings.partner)[phase] || "\u041F\u0440\u0438\u0432\u0456\u0442!";
-      }
-    } catch (e) {
-      text = "\u041F\u0440\u0438\u0432\u0456\u0442!";
-    }
-    const newMsg = { text, priority: "normal", chips, ts: Date.now(), id: Date.now() };
-    const all = getOwlBoardMessages();
-    all.unshift(newMsg);
-    saveOwlBoardMessages(all.slice(0, 3));
-    renderOwlBoard();
-    console.log("[OWL board] smart fallback:", text);
-  }
-  function _tryTabLocalFallback(tab) {
-    const msgs = getTabBoardMsgs(tab);
-    const visibleTs = msgs[0]?.ts || 0;
-    if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
-    let text = "";
-    const chips = [];
-    try {
-      if (tab === "finance") {
-        const txs = getFinance();
-        const from = getFinPeriodRange("month");
-        const monthTxs = txs.filter((t) => t.ts >= from);
-        const exp = monthTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-        const inc = monthTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-        if (monthTxs.length === 0) {
-          text = "\u0426\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0432\u0438\u0442\u0440\u0430\u0442\u0443!";
-        } else {
-          text = `\u0417\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(exp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(inc)}.${inc > 0 ? ` \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${Math.round((inc - exp) / inc * 100)}%.` : ""}`;
-        }
-      } else if (tab === "tasks") {
-        const tasks = getTasks().filter((t) => t.status === "active");
-        text = tasks.length > 0 ? `${tasks.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438?` : "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C!";
-      } else if (tab === "health") {
-        text = "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?";
-      } else if (tab === "notes") {
-        text = "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u2014 \u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0443 \u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u{1F4DD}";
-      } else if (tab === "evening" || tab === "me") {
-        text = "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C? \u0404 \u0449\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?";
-      } else if (tab === "projects") {
-        text = "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438. \u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?";
-      } else {
-        text = '\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0430\u0431\u043E \u0442\u0430\u043F\u043D\u0438 "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438" \u{1F4AC}';
-      }
-    } catch (e) {
-      text = "\u0427\u0438\u043C \u043C\u043E\u0436\u0443 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438?";
-    }
-    if (!text) return;
-    const newMsg = { text, priority: "normal", chips, ts: Date.now(), id: Date.now() };
-    saveTabBoardMsg(tab, newMsg);
-    renderTabBoard(tab);
-    console.log(`[OWL ${tab} board] tab fallback:`, text);
-  }
-  function _showFirstVisitHint(tab) {
-    if (!TAB_HINTS[tab]) return false;
-    try {
-      const visited = JSON.parse(localStorage.getItem(NM_FIRST_VISIT_KEY) || "{}");
-      if (visited[tab]) return false;
-      visited[tab] = Date.now();
-      localStorage.setItem(NM_FIRST_VISIT_KEY, JSON.stringify(visited));
-      const newMsg = { text: TAB_HINTS[tab], priority: "normal", chips: [], ts: Date.now() };
-      saveTabBoardMsg(tab, newMsg);
-      renderTabBoard(tab);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-  function tryTabBoardUpdate(tab) {
-    if (tab === "inbox") return;
-    if (_owlTabStates[tab] && _owlTabStates[tab] !== "speech") {
-      _owlTabStates[tab] = "speech";
-      _owlTabApplyState(tab);
-    }
-    if (_showFirstVisitHint(tab)) return;
-    renderTabBoard(tab);
-    if (typeof document !== "undefined" && document.hidden) return;
-    const hour = (/* @__PURE__ */ new Date()).getHours();
-    if (hour < 5) return;
-    if (tab === "evening" && hour < 12) return;
-    const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || "0");
-    const elapsed = Date.now() - lastTs;
-    const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
-    const firstTime = lastTs === 0;
-    if (firstTime || isNewDay || elapsed > OWL_TAB_BOARD_MIN_INTERVAL && checkTabBoardTrigger(tab)) {
-      generateBoardMessage(tab);
-    }
-  }
-  function tryBoardUpdate(tab) {
-    if (tab === "inbox") return tryOwlBoardUpdate();
-    return tryTabBoardUpdate(tab);
-  }
-  function _showInstantReaction(tab) {
-    const actions = getRecentActions();
-    const now = Date.now();
-    const recent = actions.filter((a) => now - a.ts < 3e3).pop();
-    if (!recent) return false;
-    const reactions = INSTANT_REACTIONS[recent.action];
-    if (!reactions) return false;
-    const text = reactions[Math.floor(Math.random() * reactions.length)];
-    const isInbox = tab === "inbox";
-    const newMsg = { text, priority: "normal", chips: [], ts: now };
-    if (isInbox) {
-      newMsg.id = now;
-      const msgs = getOwlBoardMessages();
-      msgs.unshift(newMsg);
-      saveOwlBoardMessages(msgs.slice(0, 3));
-      renderOwlBoard();
-    } else {
-      saveTabBoardMsg(tab, newMsg);
-      renderTabBoard(tab);
-    }
-    return true;
-  }
-  var _boardGenerating, TOPIC_CD_MS, NM_FIRST_VISIT_KEY, TAB_HINTS, _boardUpdateTimer, BOARD_UPDATE_DELAY, INSTANT_REACTIONS, NM_LAST_ACTIVE_KEY, NM_LAST_ACTIVE_DAY_KEY, WELCOME_BACK_THRESHOLD;
-  var init_proactive = __esm({
-    "src/owl/proactive.js"() {
-      init_core();
-      init_memory();
-      init_utils();
-      init_nav();
-      init_board();
-      init_inbox_board();
-      init_chips();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_finance();
-      init_evening();
-      _boardGenerating = {};
-      setTimeout(_updateApiDot, 3e3);
-      TOPIC_CD_MS = 3 * 60 * 60 * 1e3;
-      NM_FIRST_VISIT_KEY = "nm_tab_first_visit";
-      TAB_HINTS = {
-        tasks: "\u0422\u0443\u0442 \u0436\u0438\u0432\u0443\u0442\u044C \u0442\u0432\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438. \u041D\u0430\u043F\u0438\u0448\u0438 \u043C\u0435\u043D\u0456 \u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u2014 \u044F \u0441\u0442\u0432\u043E\u0440\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u{1F4CB}",
-        notes: "\u0426\u0435 \u0442\u0432\u043E\u0457 \u043D\u043E\u0442\u0430\u0442\u043A\u0438. \u041C\u043E\u0436\u0435\u0448 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u0430\u0442\u0438 \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445. \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0445\u043E\u0447\u0435\u0448 \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0442\u0438 \u2014 \u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0443 \u{1F4DD}",
-        finance: "\u0422\u0443\u0442 \u0444\u0456\u043D\u0430\u043D\u0441\u0438. \u0421\u043A\u0430\u0436\u0438 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u2014 \u044F \u0437\u0430\u043F\u0438\u0448\u0443. \u041C\u043E\u0436\u0435\u0448 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u{1F4B0}",
-        health: "\u0422\u0443\u0442 \u043F\u0440\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044F. \u0414\u043E\u0434\u0430\u0432\u0430\u0439 \u043A\u0430\u0440\u0442\u043A\u0438 (\u043B\u0456\u043A\u0438, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0430\u043D\u0430\u043B\u0456\u0437\u0438) \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438 (\u0435\u043D\u0435\u0440\u0433\u0456\u044F, \u0441\u043E\u043D, \u0431\u0456\u043B\u044C) \u{1F3E5}",
-        projects: '\u0422\u0443\u0442 \u0432\u0435\u043B\u0438\u043A\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0430\u043C\u0438. \u0421\u043A\u0430\u0436\u0438 "\u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442" \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u{1F680}',
-        evening: "\u0422\u0443\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F \u0456 \u0432\u0435\u0447\u0456\u0440\u043D\u0456\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A. \u0417\u0430\u043F\u0438\u0441\u0443\u0439 \u0449\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0433\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F \u2014 \u0432\u0432\u0435\u0447\u0435\u0440\u0456 \u043F\u0456\u0434\u0432\u0435\u0434\u0435\u043C\u043E \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0438 \u2728",
-        me: '\u0426\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 "\u042F" \u2014 \u0437\u0432\u0438\u0447\u043A\u0438, \u0441\u0442\u0440\u0456\u043A\u0438, \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430. \u0422\u0443\u0442 \u0431\u0430\u0447\u0438\u0448 \u0441\u0432\u0456\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043C\u0456\u0441\u044F\u0446\u044C \u{1F4CA}',
-        habits: "\u0422\u0443\u0442 \u0442\u0432\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438. \u0412\u0456\u0434\u043C\u0456\u0447\u0430\u0439 \u0449\u043E\u0434\u043D\u044F \u2014 \u0431\u0443\u0434\u0443\u0439 \u0441\u0435\u0440\u0456\u0457! \u041C\u043E\u0436\u0435\u0448 \u0434\u043E\u0434\u0430\u0442\u0438 \u043D\u043E\u0432\u0443 \u0447\u0435\u0440\u0435\u0437 \u0447\u0430\u0442-\u0431\u0430\u0440 \u0437\u043D\u0438\u0437\u0443 \u{1F331}"
-      };
-      _boardUpdateTimer = null;
-      BOARD_UPDATE_DELAY = 5e3;
-      INSTANT_REACTIONS = {
-        complete_task: [
-          "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E! \u041E\u0434\u043D\u0430 \u043C\u0435\u043D\u0448\u0435 \u{1F4AA}",
-          "\u0422\u0430\u043A \u0442\u0440\u0438\u043C\u0430\u0442\u0438! \u2705",
-          "\u0417\u0430\u043A\u0440\u0438\u0442\u043E! \u0429\u043E \u0434\u0430\u043B\u0456?",
-          "\u041C\u043E\u043B\u043E\u0434\u0435\u0446\u044C! \u0420\u0443\u0445\u0430\u0454\u043C\u043E\u0441\u044C \u0434\u0430\u043B\u0456 \u{1F3AF}",
-          "\u0413\u043E\u0442\u043E\u0432\u043E! \u0429\u0435 \u0442\u0440\u0456\u0448\u043A\u0438 \u0456 \u0432\u0441\u0435 \u0447\u0438\u0441\u0442\u043E"
-        ],
-        complete_habit: [
-          "\u0404! \u0417\u0432\u0438\u0447\u043A\u0430 \u043D\u0430 \u043C\u0456\u0441\u0446\u0456 \u{1F525}",
-          "\u0417\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E! \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0439 \u0441\u0435\u0440\u0456\u044E \u{1F4AA}",
-          "\u041C\u043E\u043B\u043E\u0434\u0435\u0446\u044C! \u041A\u0440\u043E\u043A \u0437\u0430 \u043A\u0440\u043E\u043A\u043E\u043C",
-          "\u0412\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E! \u0421\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u2014 \u0441\u0438\u043B\u0430 \u2705"
-        ],
-        hold_quit_habit: [
-          "\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F! \u0426\u0435 \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u{1F4AA}",
-          "\u0429\u0435 \u043E\u0434\u0438\u043D \u0434\u0435\u043D\u044C \u043F\u0435\u0440\u0435\u043C\u043E\u0433\u0438! \u{1F525}",
-          "\u041A\u0440\u0430\u0441\u0430\u0432\u0430! \u041A\u043E\u0436\u0435\u043D \u0434\u0435\u043D\u044C \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F"
-        ],
-        add_moment: [
-          "\u0417\u0430\u043F\u0438\u0441\u0430\u0432 \u043C\u043E\u043C\u0435\u043D\u0442 \u2728",
-          "\u0413\u0430\u0440\u043D\u043E \u0449\u043E \u0444\u0456\u043A\u0441\u0443\u0454\u0448!"
-        ]
-      };
-      window.addEventListener("nm-data-changed", (e) => {
-        const tab = currentTab || "inbox";
-        if (e.detail !== "chat") _showInstantReaction(tab);
-        if (e.detail === "chat") return;
-        const trigger = "data-changed";
-        if (_boardUpdateTimer) clearTimeout(_boardUpdateTimer);
-        _boardUpdateTimer = setTimeout(() => {
-          _boardUpdateTimer = null;
-          if (typeof document !== "undefined" && document.hidden) return;
-          const curTab = currentTab || "inbox";
-          if (curTab === "inbox") {
-            const judge = shouldOwlSpeak(trigger);
-            if (judge.speak) generateBoardMessage("inbox");
-          } else {
-            generateBoardMessage(curTab);
-          }
-        }, BOARD_UPDATE_DELAY);
-      });
-      window.addEventListener("nm-chat-closed", () => {
-        setTimeout(() => {
-          const judge = shouldOwlSpeak("chat-closed");
-          if (judge.speak) generateBoardMessage(currentTab || "inbox");
-        }, 3e3);
-      });
-      NM_LAST_ACTIVE_KEY = "nm_last_active";
-      NM_LAST_ACTIVE_DAY_KEY = "nm_last_active_day";
-      WELCOME_BACK_THRESHOLD = 2 * 60 * 60 * 1e3;
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") {
-          localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
-          localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
-        } else if (document.visibilityState === "visible") {
-          const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          const lastActiveDay = localStorage.getItem(NM_LAST_ACTIVE_DAY_KEY) || "";
-          const isFirstOpenToday = lastActiveDay && lastActiveDay !== todayISO;
-          if (isFirstOpenToday) {
-            localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO);
-            const judge = shouldOwlSpeak("first-open-today");
-            if (judge.speak) generateBoardMessage(currentTab || "inbox");
-            return;
-          }
-          const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || "0");
-          if (!lastActive) return;
-          const away = Date.now() - lastActive;
-          if (away > WELCOME_BACK_THRESHOLD) {
-            const judge = shouldOwlSpeak("welcome-back");
-            if (judge.speak) generateBoardMessage(currentTab || "inbox");
-          }
-        }
-      });
-      try {
-        window.addEventListener("nm-data-changed", () => {
-          try {
-            localStorage.setItem("nm_owl_ignored_msgs", "0");
-            localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
-          } catch (e) {
-          }
-        });
-      } catch (e) {
-      }
-    }
-  });
-
   // src/tabs/finance-cats.js
   function finCatIcon(name, color = "currentColor", size = 24) {
     const p = FIN_CAT_ICONS[name] || FIN_CAT_ICONS.other;
@@ -10470,6 +8620,1856 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
   });
 
+  // src/ui/unread-badge.js
+  function showUnreadBadge(tab, sendBtnId) {
+    const current = _unreadCounts.get(tab) || 0;
+    const next = current + 1;
+    _unreadCounts.set(tab, next);
+    _badgeAnchors.set(tab, sendBtnId);
+    const badgeId = `${tab}-chat-badge`;
+    let badge = document.getElementById(badgeId);
+    if (!badge) {
+      const sendBtn = document.getElementById(sendBtnId);
+      if (!sendBtn) return;
+      badge = document.createElement("div");
+      badge.id = badgeId;
+      badge.style.cssText = "position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10";
+      sendBtn.style.position = "relative";
+      sendBtn.appendChild(badge);
+    }
+    badge.textContent = next > 9 ? "9+" : next;
+  }
+  function clearUnreadBadge(tab) {
+    _unreadCounts.set(tab, 0);
+    const badge = document.getElementById(`${tab}-chat-badge`);
+    if (badge) badge.remove();
+  }
+  var _unreadCounts, _badgeAnchors;
+  var init_unread_badge = __esm({
+    "src/ui/unread-badge.js"() {
+      _unreadCounts = /* @__PURE__ */ new Map();
+      _badgeAnchors = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/ai/ui-tools.js
+  function handleUITool(name, args) {
+    try {
+      switch (name) {
+        case "switch_tab": {
+          const t = args.target;
+          if (t === "calendar") {
+            if (typeof window.openCalendarModal === "function") {
+              window.openCalendarModal();
+              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+            }
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          if (t === "habits") {
+            switchTab("tasks");
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
+          }
+          if (!document.getElementById(`page-${t}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          }
+          switchTab(t);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+        }
+        case "open_memory":
+          if (typeof window.openMemoryModal === "function") {
+            window.openMemoryModal();
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
+          }
+          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
+        case "open_settings":
+          openSettings();
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
+        case "set_finance_period": {
+          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
+          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
+          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
+        }
+        case "open_finance_analytics":
+          switchTab("finance");
+          if (typeof window.openFinAnalytics === "function") {
+            setTimeout(() => window.openFinAnalytics(), 120);
+          }
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
+        case "set_owl_mode": {
+          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+          settings.owl_mode = args.mode;
+          localStorage.setItem("nm_settings", JSON.stringify(settings));
+          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
+          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
+        }
+        case "export_health_card":
+          if (typeof window.openHealthExport === "function") {
+            switchTab("health");
+            setTimeout(() => window.openHealthExport(), 120);
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
+          }
+          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
+        default:
+          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
+      }
+    } catch (e) {
+      console.error("[ui-tools]", name, e);
+      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
+    }
+  }
+  function _tabLabel(key) {
+    return {
+      inbox: "Inbox",
+      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
+      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
+      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
+      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
+      me: "\u042F",
+      evening: "\u0412\u0435\u0447\u0456\u0440",
+      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
+    }[key] || key;
+  }
+  var UI_TOOLS, UI_TOOL_NAMES;
+  var init_ui_tools = __esm({
+    "src/ai/ui-tools.js"() {
+      init_nav();
+      UI_TOOLS = [
+        {
+          type: "function",
+          function: {
+            name: "switch_tab",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
+            strict: true,
+            parameters: {
+              type: "object",
+              properties: {
+                target: {
+                  type: "string",
+                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
+                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
+                }
+              },
+              required: ["target"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_memory",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_settings",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_finance_period",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
+            parameters: {
+              type: "object",
+              properties: {
+                period: { type: "string", enum: ["week", "month", "3months"] }
+              },
+              required: ["period"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_finance_analytics",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_owl_mode",
+            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
+            parameters: {
+              type: "object",
+              properties: {
+                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
+              },
+              required: ["mode"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "export_health_card",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        }
+      ];
+      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
+      try {
+        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
+      } catch {
+      }
+    }
+  });
+
+  // src/tabs/evening-actions.js
+  function isEveningClosed() {
+    try {
+      const s = JSON.parse(localStorage.getItem(NM_EVENING_CLOSED_KEY) || "null");
+      if (!s) return false;
+      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      return s.date === today;
+    } catch (e) {
+      return false;
+    }
+  }
+  function _markEveningClosed(summaryText) {
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    localStorage.setItem(NM_EVENING_CLOSED_KEY, JSON.stringify({ date: today, ts: Date.now(), summary: summaryText || "" }));
+  }
+  async function generateEveningRitualSummary(addMsg) {
+    if (isEveningClosed()) {
+      if (addMsg) addMsg("agent", "\u0422\u0438 \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0432 \u0434\u0435\u043D\u044C. \u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}");
+      return { ok: true, already: true };
+    }
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      if (addMsg) addMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return { ok: false, err: "no key" };
+    }
+    if (addMsg) addMsg("typing", "");
+    const systemPrompt = getEveningSummaryPromptV2() + "\n\n" + getAIContext();
+    const reply = await callAI(systemPrompt, "\u041F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u0434\u043D\u044F \u2014 \u0456\u043D\u0441\u0430\u0439\u0442, \u043D\u0435 \u0446\u0438\u0444\u0440\u0438.");
+    if (!reply) {
+      if (addMsg) addMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.");
+      return { ok: false, err: "no reply" };
+    }
+    const text = reply.trim().slice(0, 600);
+    if (addMsg) addMsg("agent", text);
+    try {
+      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      addFact({ text: `\u0412\u0435\u0447\u0456\u0440\u043D\u0456\u0439 \u0456\u043D\u0441\u0430\u0439\u0442 ${today}: ${text.slice(0, 160)}`, category: "context", ttlDays: 30, source: "evening" });
+    } catch (e) {
+    }
+    _markEveningClosed(text);
+    window.dispatchEvent(new CustomEvent("nm-evening-closed"));
+    logRecentAction("evening_close", text.slice(0, 40), "evening");
+    return { ok: true };
+  }
+  function dispatchEveningTool(name, args) {
+    try {
+      switch (name) {
+        // ========== СТВОРЕННЯ ==========
+        case "save_task": {
+          const tasks = getTasks();
+          const newTask = {
+            id: Date.now(),
+            title: args.title || args.text || "\u0417\u0430\u0434\u0430\u0447\u0430",
+            desc: args.text && args.text !== args.title ? args.text : "",
+            steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
+            status: "active",
+            createdAt: Date.now()
+          };
+          if (args.due_date) newTask.dueDate = args.due_date;
+          if (args.priority && ["normal", "important", "critical"].includes(args.priority)) newTask.priority = args.priority;
+          tasks.unshift(newTask);
+          saveTasks(tasks);
+          renderTasks();
+          logRecentAction("save_task", newTask.title, "evening");
+          return { ok: true };
+        }
+        case "save_note": {
+          addNoteFromInbox(args.text || "", "note", args.folder || "\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A", "evening");
+          if (currentTab === "notes") renderNotes();
+          logRecentAction("save_note", (args.text || "").slice(0, 40), "evening");
+          return { ok: true };
+        }
+        case "save_moment": {
+          const moments = getMoments();
+          moments.push({ id: Date.now(), text: args.text || "", mood: args.mood || "neutral", ts: Date.now() });
+          saveMoments(moments);
+          logRecentAction("save_moment", (args.text || "").slice(0, 40), "evening");
+          return { ok: true };
+        }
+        case "save_habit": {
+          const habits = getHabits();
+          habits.unshift({ id: Date.now(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
+          saveHabits(habits);
+          renderHabits();
+          return { ok: true };
+        }
+        case "create_event": {
+          const events = getEvents();
+          events.unshift({ id: Date.now(), title: args.title || "\u041F\u043E\u0434\u0456\u044F", date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
+          saveEvents(events);
+          logRecentAction("create_event", args.title || "", "evening");
+          return { ok: true };
+        }
+        case "save_finance": {
+          const txs = getFinance();
+          txs.unshift({
+            id: Date.now(),
+            type: args.fin_type === "income" ? "income" : "expense",
+            amount: parseFloat(args.amount) || 0,
+            category: args.category || "\u0406\u043D\u0448\u0435",
+            comment: args.fin_comment || "",
+            ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
+          });
+          saveFinance(txs);
+          if (currentTab === "finance") renderFinance();
+          return { ok: true };
+        }
+        case "set_reminder": {
+          const events = getEvents();
+          const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+          events.unshift({ id: Date.now(), title: "\u23F0 " + (args.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
+          saveEvents(events);
+          return { ok: true };
+        }
+        case "save_memory_fact": {
+          addFact({ text: args.fact || "", category: args.category || "context", ttlDays: args.ttl_days || null, source: "evening" });
+          return { ok: true };
+        }
+        // ========== ВИКОНАННЯ ==========
+        case "complete_task": {
+          const tasks = getTasks();
+          const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
+          ids.forEach((id) => {
+            const idx = tasks.findIndex((t) => t.id === id);
+            if (idx !== -1) {
+              tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
+            }
+          });
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "complete_habit": {
+          const log = getHabitLog();
+          const today = (/* @__PURE__ */ new Date()).toDateString();
+          if (!log[today]) log[today] = {};
+          const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
+          ids.forEach((id) => {
+            log[today][id] = (log[today][id] || 0) + 1;
+          });
+          saveHabitLog(log);
+          renderHabits();
+          renderProdHabits();
+          return { ok: true };
+        }
+        // ========== РЕДАГУВАННЯ ==========
+        case "edit_task": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          if (args.title) tasks[idx].title = args.title;
+          if (args.due_date) tasks[idx].dueDate = args.due_date;
+          if (args.priority) tasks[idx].priority = args.priority;
+          tasks[idx].updatedAt = Date.now();
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "edit_event": {
+          const events = getEvents();
+          const idx = events.findIndex((e) => e.id === args.event_id);
+          if (idx === -1) return { ok: false, err: "event not found" };
+          if (args.title) events[idx].title = args.title;
+          if (args.date) events[idx].date = args.date;
+          if (args.time !== void 0) events[idx].time = args.time;
+          if (args.priority) events[idx].priority = args.priority;
+          saveEvents(events);
+          return { ok: true };
+        }
+        case "edit_note": {
+          const notes = getNotes();
+          const idx = notes.findIndex((n) => n.id === args.note_id);
+          if (idx === -1) return { ok: false, err: "note not found" };
+          if (args.text) notes[idx].text = args.text;
+          if (args.folder) notes[idx].folder = args.folder;
+          saveNotes(notes);
+          if (currentTab === "notes") renderNotes();
+          return { ok: true };
+        }
+        case "edit_habit": {
+          const habits = getHabits();
+          const idx = habits.findIndex((h) => h.id === args.habit_id);
+          if (idx === -1) return { ok: false, err: "habit not found" };
+          if (args.name) habits[idx].name = args.name;
+          if (Array.isArray(args.days)) habits[idx].days = args.days;
+          if (args.details) habits[idx].details = args.details;
+          saveHabits(habits);
+          renderHabits();
+          return { ok: true };
+        }
+        case "reopen_task": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          tasks[idx] = { ...tasks[idx], status: "active", completedAt: null, updatedAt: Date.now() };
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "add_step": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
+          (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "move_note": {
+          const notes = getNotes();
+          const q = (args.query || "").toLowerCase();
+          const idx = notes.findIndex((n) => (n.text || "").toLowerCase().includes(q) || (n.title || "").toLowerCase().includes(q));
+          if (idx === -1) return { ok: false, err: "note not found" };
+          notes[idx].folder = args.folder;
+          saveNotes(notes);
+          if (currentTab === "notes") renderNotes();
+          return { ok: true };
+        }
+        case "update_transaction": {
+          const txs = getFinance();
+          const idx = txs.findIndex((t) => t.id === args.id);
+          if (idx === -1) return { ok: false, err: "tx not found" };
+          if (args.category) txs[idx].category = args.category;
+          if (args.amount) txs[idx].amount = parseFloat(args.amount);
+          if (args.comment !== void 0) txs[idx].comment = args.comment;
+          saveFinance(txs);
+          if (currentTab === "finance") renderFinance();
+          return { ok: true };
+        }
+        // ========== ВИДАЛЕННЯ ==========
+        case "delete_task": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          addToTrash("task", tasks[idx]);
+          tasks.splice(idx, 1);
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "delete_event": {
+          const events = getEvents();
+          const idx = events.findIndex((e) => e.id === args.event_id);
+          if (idx === -1) return { ok: false, err: "event not found" };
+          addToTrash("event", events[idx]);
+          events.splice(idx, 1);
+          saveEvents(events);
+          return { ok: true };
+        }
+        case "delete_habit": {
+          const habits = getHabits();
+          const idx = habits.findIndex((h) => h.id === args.habit_id);
+          if (idx === -1) return { ok: false, err: "habit not found" };
+          addToTrash("habit", habits[idx]);
+          habits.splice(idx, 1);
+          saveHabits(habits);
+          renderHabits();
+          return { ok: true };
+        }
+        case "restore_deleted": {
+          const q = (args.query || "").trim().toLowerCase();
+          const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+          const filtered = args.type ? trash.filter((t) => t.type === args.type) : trash;
+          if (q === "all") {
+            filtered.forEach((t) => restoreFromTrash(t.deletedAt));
+            return { ok: true };
+          }
+          if (q === "last") {
+            if (filtered.length > 0) restoreFromTrash(filtered[0].deletedAt);
+            return { ok: true };
+          }
+          const hit = filtered.find((t) => JSON.stringify(t.data || t).toLowerCase().includes(q));
+          if (hit) {
+            restoreFromTrash(hit.deletedAt);
+            return { ok: true };
+          }
+          return { ok: false, err: "not found in trash" };
+        }
+        default:
+          return { ok: false, err: "unknown tool: " + name };
+      }
+    } catch (e) {
+      console.warn("[dispatchEveningTool]", name, e);
+      return { ok: false, err: e.message };
+    }
+  }
+  var NM_EVENING_CLOSED_KEY;
+  var init_evening_actions = __esm({
+    "src/tabs/evening-actions.js"() {
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_calendar();
+      init_finance();
+      init_evening();
+      init_memory();
+      init_trash();
+      init_nav();
+      init_utils();
+      init_core();
+      init_prompts();
+      NM_EVENING_CLOSED_KEY = "nm_evening_closed";
+    }
+  });
+
+  // src/tabs/evening-chat.js
+  async function closeEveningDay() {
+    try {
+      openChatBar("evening");
+    } catch (e) {
+    }
+    await generateEveningRitualSummary(addEveningBarMsg);
+  }
+  async function openEveningTopic(topic) {
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    let started = {};
+    try {
+      started = JSON.parse(localStorage.getItem(EVENING_TOPIC_STARTED_KEY) || "{}");
+    } catch (e) {
+    }
+    if (started.date !== todayISO) started = { date: todayISO };
+    try {
+      openChatBar("evening");
+    } catch (e) {
+    }
+    if (started[topic]) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    addEveningBarMsg("typing", "");
+    const topicPrompts = {
+      tomorrow: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u0437\u0430\u0432\u0442\u0440\u0430". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 \u043F\u043E\u0434\u0456\u0457 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F, \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043F\u0430\u043C'\u044F\u0442\u044C. \u041F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u0430\u0431\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0430 \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u0437\u0433\u0430\u0434\u0430\u0439 \u0457\u0457 ("\u0417\u0430\u0432\u0442\u0440\u0430 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 \u0434\u0437\u0432\u0456\u043D\u043E\u043A \u043E 15 \u2014 \u0449\u043E \u0449\u0435?"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u0449\u043E \u0449\u0435 \u043F\u043B\u0430\u043D\u0443\u0454 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u0442\u0438\u043F\u0443 \u0437\u0430\u043F\u0438\u0441\u0443: [\u0417\u0430\u0434\u0430\u0447\u0430] [\u041F\u043E\u0434\u0456\u044F] [\u0406 \u0442\u0435 \u0439 \u0442\u0435].`,
+      diary: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456/\u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u0432\u0438\u0442\u0440\u0430\u0442\u0438. \u041F\u043E\u0447\u043D\u0438 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0454 \u044F\u0441\u043A\u0440\u0430\u0432\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0430\u0431\u043E \u043F\u0430\u0442\u0442\u0435\u0440\u043D, \u0437\u0433\u0430\u0434\u0430\u0439 \u0439\u043E\u0433\u043E ("\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445 \u0449\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u044F\u043A \u0432\u043E\u043D\u043E. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u044E: [\u{1F525}] [\u{1F60A}] [\u{1F610}] [\u{1F615}] [\u{1F61E}].`
+    };
+    const tp = topicPrompts[topic];
+    if (!tp) return;
+    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext() + "\n\n=== \u0421\u0426\u0415\u041D\u0410\u0420\u0406\u0419 ===\n" + tp + "\n\n\u0423 \u0426\u042C\u041E\u041C\u0423 \u041F\u0415\u0420\u0428\u041E\u041C\u0423 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u0406: \u0431\u0435\u0437 tool calls (\u044E\u0437\u0435\u0440 \u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u0432 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438). \u0422\u0456\u043B\u044C\u043A\u0438 content: \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F + \u0447\u0456\u043F\u0438.";
+    try {
+      const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
+      if (!msg) {
+        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        return;
+      }
+      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          let args = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch (e) {
+          }
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addEveningBarMsg("agent", res.text);
+            continue;
+          }
+          dispatchEveningTool(tc.function.name, args);
+        }
+      }
+      const { text: replyText, chips } = _parseContentChips(msg.content || "");
+      if (replyText) {
+        addEveningBarMsg("agent", replyText, false, chips);
+        started[topic] = Date.now();
+        localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
+      } else {
+        safeAgentReply("\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?", addEveningBarMsg);
+      }
+    } catch (e) {
+      console.warn("[openEveningTopic]", e);
+      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+  }
+  function showEveningBarMessages() {
+    openChatBar("evening");
+  }
+  function addEveningBarMsg(role, text, _noSave = false, chips = null) {
+    const el = document.getElementById("evening-bar-messages");
+    if (!el) return;
+    if (_eveningTypingEl) {
+      _eveningTypingEl.remove();
+      _eveningTypingEl = null;
+    }
+    if (role === "typing") {
+      const td = document.createElement("div");
+      td.style.cssText = "display:flex";
+      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
+      el.appendChild(td);
+      _eveningTypingEl = td;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    if (!_noSave) {
+      try {
+        openChatBar("evening");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "evening");
+      el.appendChild(chipsRow);
+    }
+    el.scrollTop = el.scrollHeight;
+    if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
+    else eveningBarHistory.push({ role: "assistant", content: text });
+    if (!_noSave) saveChatMsg("evening", role, text);
+    if (role === "agent") {
+      const bar = document.getElementById("evening-ai-bar");
+      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
+      const isOpen = chatWin && chatWin.classList.contains("open");
+      if (!isOpen) showUnreadBadge("evening", "evening-send-btn");
+    }
+  }
+  function _parseContentChips(content) {
+    if (!content || typeof content !== "string") return { text: "", chips: null };
+    const blocks = extractJsonBlocks(content);
+    let chips = null;
+    for (const b of blocks) {
+      if (b && Array.isArray(b.chips)) {
+        chips = b.chips;
+        break;
+      }
+    }
+    const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, "").trim();
+    return { text, chips };
+  }
+  async function sendEveningBarMessage() {
+    if (eveningBarLoading) return;
+    const input = document.getElementById("evening-bar-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addEveningBarMsg("user", text);
+    eveningBarLoading = true;
+    addEveningBarMsg("typing", "");
+    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext();
+    const history = eveningBarHistory.slice(-10);
+    try {
+      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+      if (!msg) {
+        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        eveningBarLoading = false;
+        return;
+      }
+      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          let args = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch (e) {
+          }
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addEveningBarMsg("agent", res.text);
+            continue;
+          }
+          dispatchEveningTool(tc.function.name, args);
+        }
+      }
+      const { text: replyText, chips } = _parseContentChips(msg.content || "");
+      if (replyText) addEveningBarMsg("agent", replyText, false, chips);
+      else if (!msg.tool_calls || msg.tool_calls.length === 0) {
+        safeAgentReply("\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435.", addEveningBarMsg);
+      }
+    } catch (e) {
+      console.warn("[sendEveningBarMessage]", e);
+      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+    eveningBarLoading = false;
+  }
+  var _eveningTypingEl, EVENING_TOPIC_STARTED_KEY, eveningBarHistory, eveningBarLoading;
+  var init_evening_chat = __esm({
+    "src/tabs/evening-chat.js"() {
+      init_utils();
+      init_core();
+      init_unread_badge();
+      init_chips();
+      init_prompts();
+      init_ui_tools();
+      init_evening_actions();
+      _eveningTypingEl = null;
+      EVENING_TOPIC_STARTED_KEY = "nm_evening_topic_started";
+      eveningBarHistory = [];
+      eveningBarLoading = false;
+      Object.assign(window, {
+        openEveningTopic,
+        closeEveningDay,
+        sendEveningBarMessage,
+        showEveningBarMessages
+      });
+    }
+  });
+
+  // src/tabs/me.js
+  function renderMeHabitsStats() {
+    const habits = getHabits();
+    const el = document.getElementById("me-habits-stats-list");
+    const block = document.getElementById("me-habits-stats");
+    if (!el) return;
+    if (habits.length === 0) {
+      if (block) block.style.display = "none";
+      return;
+    }
+    if (block) block.style.display = "block";
+    const log = getHabitLog();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+    el.innerHTML = habits.map((h) => {
+      const pct = getHabitPct(h.id);
+      const streak = getHabitStreak(h.id);
+      const isDoneToday = !!log[today]?.[h.id];
+      const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
+      return `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || "\u2B55"} ${escapeHtml(h.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#dc2626"}">${pct}%</span>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
+        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#ef4444"};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `\u{1F525} ${streak} \u0434\u043D\u0456 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \xB7 ` : ""}\u0437\u0430 30 \u0434\u043D\u0456\u0432${isScheduledToday ? isDoneToday ? " \xB7 \u2705 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : " \xB7 \u23F3 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : ""}</div>
+    </div>`;
+    }).join("");
+  }
+  async function sendMeChatMessage() {
+    const input = document.getElementById("me-chat-input");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addMeChatMsg("user", text);
+    meChatHistory.push({ role: "user", content: text });
+    const loadId = "me-chat-load-" + Date.now();
+    addMeChatMsg("agent", "\u2026", false, loadId);
+    const context = getAIContext();
+    const stats = getMeStatsContext();
+    const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
+\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0434\u0456\u044E \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
+- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
+- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
+- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
+- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041F\u043E\u0434\u0456\u044F: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
+- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+
+${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
+    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], UI_TOOLS);
+    const loadEl = document.getElementById(loadId);
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      if (loadEl) loadEl.remove();
+      for (const tc of msg.tool_calls) {
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          let args = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch (e) {
+          }
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) addMeChatMsg("agent", res.text);
+        }
+      }
+      if (msg.content) meChatHistory.push({ role: "assistant", content: msg.content });
+      if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+      return;
+    }
+    const reply = msg && msg.content ? msg.content : "";
+    let handled = false;
+    if (reply) {
+      const blocks = extractJsonBlocks(reply);
+      for (const parsed of blocks) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
+          handled = true;
+        }
+      }
+      if (handled && loadEl) loadEl.textContent = "\u2705";
+    }
+    if (!handled && loadEl) loadEl.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.";
+    if (reply) meChatHistory.push({ role: "assistant", content: reply });
+    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+  }
+  function renderMe() {
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const now = /* @__PURE__ */ new Date();
+    const todayDow = (now.getDay() + 6) % 7;
+    try {
+      let streak = 0;
+      for (let i = 0; i <= 60; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const ds = d.toDateString();
+        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t) => t.createdAt && new Date(t.createdAt).toDateString() === ds);
+        if (hasRecord) streak++;
+        else if (i > 0) break;
+      }
+      const badge = document.getElementById("me-streak-badge");
+      const count = document.getElementById("me-streak-count");
+      if (badge && count) {
+        if (streak >= 2) {
+          badge.style.display = "flex";
+          count.textContent = streak;
+        } else badge.style.display = "none";
+      }
+    } catch (e) {
+    }
+    const ringsEl = document.getElementById("me-week-rings");
+    if (ringsEl) {
+      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+      const accent = "#7c4a2a";
+      ringsEl.innerHTML = days.map((d, i) => {
+        const daysAgo = todayDow - i;
+        const date = new Date(now);
+        date.setDate(now.getDate() - daysAgo);
+        const ds = date.toDateString();
+        const future = daysAgo < 0;
+        const count = future ? 0 : inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
+        const doneTasks = future ? 0 : getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+        const total = count + doneTasks;
+        const maxVal = 8;
+        const pct = future ? 0 : Math.min(total / maxVal, 1);
+        const circ = 69;
+        const offset = circ - circ * pct;
+        const isToday = daysAgo === 0;
+        const isBest = !future && pct >= 0.85;
+        const strokeColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.6)` : pct > 0 ? `rgba(124,74,42,0.3)` : "transparent";
+        const label = future ? "\u2013" : isBest ? "\u2605" : total > 0 ? total : "\xB7";
+        const labelColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.65)` : "rgba(30,16,64,0.22)";
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <svg width="32" height="32" viewBox="0 0 30 30">
+          <circle cx="15" cy="15" r="11" fill="none" stroke="rgba(30,16,64,0.07)" stroke-width="3.5"/>
+          ${!future && pct > 0 ? `<circle cx="15" cy="15" r="11" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 15 15)"/>` : ""}
+          <text x="15" y="19" text-anchor="middle" font-size="${isBest ? 9 : 8}" font-weight="${isBest ? 900 : 800}" fill="${labelColor}">${label}</text>
+        </svg>
+        <div style="font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : "rgba(30,16,64,0.35)"}">${d}</div>
+      </div>`;
+      }).join("");
+    }
+    const compareEl = document.getElementById("me-week-compare");
+    if (compareEl) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - todayDow);
+      weekStart.setHours(0, 0, 0, 0);
+      const prevStart = new Date(weekStart);
+      prevStart.setDate(prevStart.getDate() - 7);
+      const prevEnd = new Date(weekStart);
+      const thisWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= weekStart.getTime()).length;
+      const prevWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= prevStart.getTime() && t.completedAt < prevEnd.getTime()).length;
+      const habits = getHabits();
+      const log = getHabitLog();
+      const buildHabitsMe = habits.filter((h) => h.type !== "quit");
+      let thisHabitPct = 0, prevHabitPct = 0;
+      if (buildHabitsMe.length > 0) {
+        let thisDone = 0, thisTotal = 0, prevDone = 0, prevTotal = 0;
+        for (let i = 0; i <= todayDow; i++) {
+          const d = new Date(weekStart);
+          d.setDate(weekStart.getDate() + i);
+          const dow = (d.getDay() + 6) % 7;
+          const ds = d.toDateString();
+          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+          thisTotal += dayH.length;
+          thisDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
+        }
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(prevStart);
+          d.setDate(prevStart.getDate() + i);
+          const dow = (d.getDay() + 6) % 7;
+          const ds = d.toDateString();
+          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+          prevTotal += dayH.length;
+          prevDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
+        }
+        thisHabitPct = thisTotal > 0 ? Math.round(thisDone / thisTotal * 100) : 0;
+        prevHabitPct = prevTotal > 0 ? Math.round(prevDone / prevTotal * 100) : 0;
+      }
+      const thisNotes = getNotes().filter((n) => (n.ts || 0) >= weekStart.getTime()).length;
+      const prevNotes = getNotes().filter((n) => (n.ts || 0) >= prevStart.getTime() && (n.ts || 0) < prevEnd.getTime()).length;
+      const diffColor = (a, b) => a >= b ? "#16a34a" : "#c2410c";
+      const diffArrow = (a, b) => a >= b ? "\u2191" : "\u2193";
+      compareEl.innerHTML = [
+        { label: "\u0437\u0430\u0434\u0430\u0447\u0456", cur: thisWeekTasks, prev: prevWeekTasks, color: "#ea580c" },
+        { label: "\u0437\u0432\u0438\u0447\u043A\u0438", cur: thisHabitPct + "%", prev: prevHabitPct + "%", rawCur: thisHabitPct, rawPrev: prevHabitPct, color: "#16a34a" },
+        { label: "\u043D\u043E\u0442\u0430\u0442\u043A\u0438", cur: thisNotes, prev: prevNotes, color: "#7c4a2a" }
+      ].map((item) => {
+        const rc = item.rawCur !== void 0 ? item.rawCur : item.cur;
+        const rp = item.rawPrev !== void 0 ? item.rawPrev : item.prev;
+        const diff = rc - rp;
+        return `<div style="flex:1;background:rgba(255,255,255,0.55);border-radius:12px;padding:8px 6px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:${item.color};line-height:1">${item.cur}</div>
+        <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">${item.label}</div>
+        <div style="font-size:10px;font-weight:800;color:${diffColor(rc, rp)};margin-top:2px">${diffArrow(rc, rp)} ${diff >= 0 ? "+" : ""}${item.rawCur !== void 0 ? diff + "%" : diff}</div>
+      </div>`;
+      }).join("");
+    }
+    const moodEl = document.getElementById("me-mood-bars");
+    if (moodEl) {
+      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+      const moodMap = { fire: 5, good: 4, ok: 3, meh: 2, bad: 1 };
+      const bars = days.map((d, i) => {
+        const daysAgo = todayDow - i;
+        const future = daysAgo < 0;
+        if (future) return { d, h: 3, color: "rgba(30,16,64,0.05)", future: true };
+        const date = new Date(now);
+        date.setDate(now.getDate() - daysAgo);
+        const ds = date.toDateString();
+        try {
+          const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
+          if (saved && saved.date === ds && saved.mood) {
+            const val = moodMap[saved.mood] || 3;
+            const maxH = 26;
+            const h2 = Math.round(val / 5 * maxH);
+            const colors = { fire: "#ea580c", good: "#22c55e", ok: "#16a34a", meh: "#d97706", bad: "#ef4444" };
+            return { d, h: Math.max(4, h2), color: colors[saved.mood] || "#16a34a", future: false };
+          }
+        } catch (e) {
+        }
+        const dayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === ds);
+        if (dayMoments.length === 0) return { d, h: 3, color: "rgba(30,16,64,0.07)", future: false };
+        const pos = dayMoments.filter((m) => m.mood === "positive").length;
+        const pct = pos / dayMoments.length;
+        const h = Math.max(5, Math.round(pct * 26));
+        return { d, h, color: pct >= 0.6 ? "#16a34a" : pct >= 0.3 ? "#d97706" : "#ef4444", future: false };
+      });
+      moodEl.innerHTML = bars.map(
+        (b) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
+        <div style="width:100%;height:${b.h}px;background:${b.color};border-radius:2px 2px 0 0"></div>
+        <div style="font-size:8px;font-weight:700;color:rgba(30,16,64,0.35)">${b.d}</div>
+      </div>`
+      ).join("");
+    }
+    const projBlock = document.getElementById("me-projects-block");
+    const projList = document.getElementById("me-projects-list");
+    if (projBlock && projList) {
+      let activeProjects = [];
+      try {
+        activeProjects = getProjects().slice(0, 3);
+      } catch (e) {
+      }
+      if (activeProjects.length > 0) {
+        projBlock.style.display = "block";
+        projList.innerHTML = activeProjects.map((p) => {
+          const steps = p.steps || [];
+          const done = steps.filter((s) => s.done).length;
+          const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
+          const nextStep = steps.find((s) => !s.done);
+          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
+              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
+              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
+            </div>
+            <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
+          </div>
+          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:#7c4a2a;border-radius:3px;transition:width 0.5s"></div>
+          </div>
+        </div>`;
+        }).join("");
+      } else {
+        projBlock.style.display = "none";
+      }
+    }
+    renderMeHabitsStats();
+    renderMeActivityChart();
+  }
+  function renderMeActivityChart() {
+    const chartEl = document.getElementById("me-activity-chart");
+    const labelsEl = document.getElementById("me-activity-labels");
+    const totalEl = document.getElementById("me-activity-total");
+    if (!chartEl) return;
+    const now = /* @__PURE__ */ new Date();
+    const todayDow = (now.getDay() + 6) % 7;
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const dayLabels = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+    const accent = "#7c4a2a";
+    const allBuildHabits = getHabits().filter((h) => h.type !== "quit");
+    const activeTasks = getTasks().filter((t) => t.status === "active").length;
+    const baseline = Math.max(1, Math.round(activeTasks / 7) + 1);
+    const values = dayLabels.map((_, i) => {
+      const daysAgo = todayDow - i;
+      const d = new Date(now);
+      d.setDate(now.getDate() - daysAgo);
+      const ds = d.toDateString();
+      if (daysAgo < 0) return null;
+      const inboxCount = inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
+      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+      const log = getHabitLog();
+      const dow = (d.getDay() + 6) % 7;
+      const todayH = allBuildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+      const doneH = todayH.filter((h) => !!log[ds]?.[h.id]).length;
+      return { val: inboxCount + doneTasks + doneH, norm: Math.max(1, todayH.length + Math.round(activeTasks / 7)) };
+    });
+    const validValues = values.filter((v) => v !== null);
+    const maxVal = Math.max(...validValues.map((v) => v.val), baseline * 2, 1);
+    const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
+    if (totalEl) totalEl.textContent = `${totalActivity} \u0434\u0456\u0439`;
+    const W = chartEl.offsetWidth || 300;
+    const H = 64;
+    const padT = 6, padB = 10;
+    const chartH = H - padT - padB;
+    const xOf = (i) => (i + 0.5) * W / 7;
+    const yOf = (val) => padT + chartH * (1 - val / maxVal);
+    const points = values.map((v, i) => {
+      if (v === null) return null;
+      return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
+    }).filter(Boolean);
+    if (points.length < 2) {
+      chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">\u041D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>';
+      if (labelsEl) labelsEl.innerHTML = "";
+      return;
+    }
+    const baselineY = yOf(baseline);
+    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${H} L ${points[0].x.toFixed(1)} ${H} Z`;
+    const dots = points.map((p) => {
+      const isToday = p.i === todayDow;
+      const aboveNorm = p.v >= p.norm;
+      const fill = p.v === 0 ? "rgba(124,74,42,0.2)" : aboveNorm ? "#16a34a" : "#c2410c";
+      const r = isToday ? 5 : 3.5;
+      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
+    }).join("");
+    const normLabelTop = Math.max(0, Math.round(baselineY) - 18);
+    chartEl.innerHTML = `
+    <svg width="${W}" height="${H}" style="display:block;overflow:visible">
+      <defs>
+        <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}"
+            stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
+      <path d="${areaPath}" fill="url(#actGrad)"/>
+      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>
+    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.45);background:rgba(245,240,235,0.85);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">\u041D\u041E\u0420\u041C\u0410</div>
+  `;
+    if (labelsEl) {
+      labelsEl.innerHTML = values.map((v, i) => {
+        const isToday = i === todayDow;
+        const isFuture = v === null;
+        return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : isFuture ? "rgba(30,16,64,0.15)" : "rgba(30,16,64,0.35)"}">${dayLabels[i]}</div>`;
+      }).join("");
+    }
+  }
+  async function refreshMeAnalysis() {
+    const btn = document.getElementById("me-refresh-btn");
+    const el = document.getElementById("me-ai-analysis");
+    btn.textContent = "\u2026";
+    btn.disabled = true;
+    el.textContent = "\u2026";
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    const notes = getNotes();
+    const aiContext = getAIContext();
+    const totalRecords = inbox.length + tasks.length + notes.length;
+    if (totalRecords < 3) {
+      el.textContent = "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.";
+      btn.textContent = "\u21BB";
+      btn.disabled = false;
+      return;
+    }
+    const dataNote = totalRecords < 10 ? "\u0423\u0412\u0410\u0413\u0410: \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E, \u043D\u0435 \u0440\u043E\u0431\u0438 \u0433\u043B\u0438\u0431\u043E\u043A\u0438\u0445 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0456\u0432 \u043F\u0440\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0456\u0441\u0442\u044C \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0449\u043E \u0434\u043E\u0434\u0430\u0442\u0438." : "";
+    const systemPrompt = `${getOWLPersonality()} \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 (3-5 \u0440\u0435\u0447\u0435\u043D\u044C) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0429\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435 \u0456 \u0449\u043E \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. ${dataNote} \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u043F\u043E\u0440\u0430\u0434\u043E\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043E\u0433\u043B\u044F\u0434\u0456 (\u0424\u0430\u0437\u0430 5):
+- \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
+- \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
+    const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
+\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status !== "done").length}
+\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status === "done").length}
+\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
+\u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
+    const reply = await callAI(systemPrompt, userData, {});
+    el.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.";
+    btn.textContent = "\u21BB";
+    btn.disabled = false;
+    if (reply && totalRecords >= 5) {
+      const adviceEl = document.getElementById("me-ai-advice");
+      const adviceBlock = document.getElementById("me-advice-block");
+      if (adviceEl && adviceBlock) {
+        adviceEl.textContent = "\u2026";
+        adviceBlock.style.display = "block";
+        const advicePrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0434\u0430\u0439 \u0440\u0456\u0432\u043D\u043E 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456, \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043B\u044E\u0434\u0438\u043D\u0438. \u041A\u043E\u0436\u043D\u0430 \u043F\u043E\u0440\u0430\u0434\u0430 \u2014 \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0456 \u0434\u0456\u0454\u0432\u0430. \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456: "1. [\u043F\u043E\u0440\u0430\u0434\u0430]
+2. [\u043F\u043E\u0440\u0430\u0434\u0430]
+3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
+        const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
+
+\u0414\u0430\u043D\u0456: ${userData}`, {});
+        if (adviceReply) {
+          adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
+        } else {
+          adviceBlock.style.display = "none";
+        }
+      }
+    }
+  }
+  function showMeChatMessages() {
+    openChatBar("me");
+  }
+  function addMeChatMsg(role, text, _noSave = false, id = "") {
+    const el = document.getElementById("me-chat-messages");
+    if (!el) return;
+    if (!_noSave) {
+      try {
+        openChatBar("me");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    if (!_noSave) saveChatMsg("me", role, text);
+  }
+  var meChatHistory;
+  var init_me = __esm({
+    "src/tabs/me.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_prompts();
+      init_ui_tools();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_evening();
+      init_projects();
+      meChatHistory = [];
+      Object.assign(window, {
+        sendMeChatMessage,
+        showMeChatMessages,
+        refreshMeAnalysis
+      });
+    }
+  });
+
+  // src/owl/chips.js
+  function normalizeChips(chips) {
+    if (!Array.isArray(chips)) return [];
+    return chips.map(
+      (c) => typeof c === "string" ? { label: c, action: "chat" } : c
+    );
+  }
+  function filterStaleChips(chips) {
+    return chips.filter((c) => {
+      const label = (c.label || "").trim();
+      if (!label.includes("\u2714\uFE0F")) return true;
+      const cleanText = label.replace(/✔️/g, "").trim().toLowerCase();
+      if (!cleanText) return false;
+      const words = cleanText.split(/\s+/).filter((w) => w.length >= 3);
+      if (words.length === 0) return true;
+      const stems = words.map((w) => w.slice(0, 4));
+      const tasks = getTasks();
+      for (const t of tasks) {
+        if (t.status !== "done") continue;
+        const tWords = t.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+        const tStems = tWords.map((w) => w.slice(0, 4));
+        const matches = stems.filter((s) => tStems.some((ts) => ts === s));
+        if (matches.length >= 1 && matches.length >= stems.length * 0.5) return false;
+      }
+      const habits = getHabits();
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const log = getHabitLog();
+      for (const h of habits) {
+        const hWords = h.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+        const hStems = hWords.map((w) => w.slice(0, 4));
+        const matches = stems.filter((s) => hStems.some((hs) => hs === s));
+        if (matches.length >= 1 && matches.length >= stems.length * 0.5) {
+          if (h.type === "quit") {
+            const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+            if (quitLog[h.id]?.lastHeld === todayISO) return false;
+          } else {
+            if (log[today]?.[h.id]) return false;
+          }
+        }
+      }
+      return true;
+    });
+  }
+  function _getChipStats() {
+    try {
+      return JSON.parse(localStorage.getItem(NM_CHIP_STATS_KEY) || '{"clicked":[],"ignored":0}');
+    } catch {
+      return { clicked: [], ignored: 0 };
+    }
+  }
+  function trackChipClick(action, label) {
+    const stats = _getChipStats();
+    stats.clicked.push({ action, label, ts: Date.now() });
+    if (stats.clicked.length > CHIP_STATS_MAX_CLICKED) stats.clicked.splice(0, stats.clicked.length - CHIP_STATS_MAX_CLICKED);
+    localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
+    try {
+      localStorage.setItem("nm_owl_ignored_msgs", "0");
+      localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
+    } catch (e) {
+    }
+  }
+  function trackChipsIgnored(count) {
+    if (count <= 0) return;
+    const stats = _getChipStats();
+    stats.ignored += count;
+    localStorage.setItem(NM_CHIP_STATS_KEY, JSON.stringify(stats));
+  }
+  function getChipStatsForPrompt() {
+    const stats = _getChipStats();
+    if (stats.clicked.length === 0 && stats.ignored === 0) return "";
+    const recent = stats.clicked.slice(-20);
+    const chatClicks = recent.filter((c) => c.action === "chat").length;
+    const navClicks = recent.filter((c) => c.action === "nav").length;
+    const completionClicks = recent.filter((c) => c.label && c.label.includes("\u2714\uFE0F")).length;
+    return `\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0447\u0456\u043F\u0456\u0432: \u043D\u0430\u0442\u0438\u0441\u043D\u0443\u0442\u043E ${stats.clicked.length} (\u2714\uFE0F: ${completionClicks}, \u0434\u0456\u0430\u043B\u043E\u0433: ${chatClicks - completionClicks}, \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F: ${navClicks}), \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E ${stats.ignored}. ${completionClicks > chatClicks ? "\u042E\u0437\u0435\u0440 \u0447\u0430\u0441\u0442\u0456\u0448\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 \u0434\u0456\u0457 \u2714\uFE0F \u043D\u0456\u0436 \u0432\u0435\u0434\u0435 \u0434\u0456\u0430\u043B\u043E\u0433." : ""}`;
+  }
+  function renderChips(containerEl, chips, tab, options = {}) {
+    if (!containerEl) return;
+    const oldChips = containerEl.querySelectorAll(".owl-chip:not(.owl-chip-speak)");
+    if (oldChips.length > 0) trackChipsIgnored(oldChips.length);
+    const normChips = filterStaleChips(normalizeChips(chips));
+    if (normChips.length === 0 && !options.showSpeak) {
+      containerEl.innerHTML = "";
+      return;
+    }
+    const chipsHTML = normChips.map((c) => {
+      const label = c.label || "";
+      const action = c.action === "nav" ? "nav" : "chat";
+      const target = c.target || "";
+      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
+    });
+    if (options.showSpeak) {
+      chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
+    }
+    containerEl.innerHTML = chipsHTML.join("");
+    containerEl.scrollLeft = 0;
+    if (containerEl._chipClickHandler) {
+      containerEl.removeEventListener("click", containerEl._chipClickHandler);
+    }
+    containerEl._chipClickHandler = (e) => {
+      const chipEl = e.target.closest(".owl-chip");
+      if (!chipEl) return;
+      if (chipEl.classList.contains("owl-chip-speak")) {
+        openChatBar(tab === "me" ? "me" : tab);
+        return;
+      }
+      const text = chipEl.dataset.chipText || "";
+      const action = chipEl.dataset.chipAction;
+      const target = chipEl.dataset.chipTarget;
+      trackChipClick(action, text);
+      chipEl.style.transition = "opacity 0.2s, transform 0.2s";
+      chipEl.style.opacity = "0";
+      chipEl.style.transform = "scale(0.8)";
+      setTimeout(() => chipEl.remove(), 200);
+      if (options.onChipClick) {
+        options.onChipClick(text, action, target, chipEl);
+        return;
+      }
+      handleChipClick(tab, text, action, target);
+    };
+    containerEl.addEventListener("click", containerEl._chipClickHandler);
+  }
+  function handleChipClick(tab, text, action, target) {
+    if (action === "nav" && VALID_NAV_TARGETS.includes(target)) {
+      if (target === currentTab) return;
+      switchTab(target);
+      return;
+    }
+    if (text.includes("\u2714\uFE0F")) {
+      const handled = handleCompletionChip(text, tab);
+      if (handled) return;
+    }
+    sendChipToChat(tab, text);
+  }
+  function handleCompletionChip(text, tab) {
+    const cleanText = text.replace(/✔️/g, "").trim().toLowerCase();
+    if (!cleanText) return false;
+    const chipWords = cleanText.split(/\s+/).filter((w) => w.length >= 3);
+    if (chipWords.length === 0) return false;
+    const chipStems = chipWords.map((w) => w.slice(0, 4));
+    const tasks = getTasks();
+    const activeTasks = tasks.filter((t) => t.status === "active");
+    for (const task of activeTasks) {
+      const taskWords = task.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+      const taskStems = taskWords.map((w) => w.slice(0, 4));
+      const matches = chipStems.filter((cs) => taskStems.some((ts) => ts === cs));
+      if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
+        const idx = tasks.findIndex((t) => t.id === task.id);
+        if (idx !== -1) {
+          tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
+          saveTasks(tasks);
+          renderTasks();
+          const msg = `\u2713 "${task.title}" \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`;
+          showToast(msg);
+          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
+          logRecentAction("complete_task", task.title, tab || "inbox");
+          return true;
+        }
+      }
+    }
+    const habits = getHabits();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const log = getHabitLog();
+    for (const habit of habits) {
+      const habitWords = habit.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+      const habitStems = habitWords.map((w) => w.slice(0, 4));
+      const matches = chipStems.filter((cs) => habitStems.some((hs) => hs === cs));
+      if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
+        if (habit.type === "quit") {
+          const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+          if (!quitLog[habit.id]) quitLog[habit.id] = { streak: 0, relapses: [] };
+          quitLog[habit.id].lastHeld = todayISO;
+          if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO;
+          localStorage.setItem("nm_quit_log", JSON.stringify(quitLog));
+          renderHabits();
+          renderProdHabits();
+          const msg = `\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`;
+          showToast(msg);
+          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
+          logRecentAction("hold_quit_habit", habit.name, tab || "inbox");
+          return true;
+        } else {
+          if (!log[today]) log[today] = {};
+          log[today][habit.id] = (log[today][habit.id] || 0) + 1;
+          saveHabitLog(log);
+          renderHabits();
+          renderProdHabits();
+          const msg = `\u2713 "${habit.name}" \u2014 \u0437\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E`;
+          showToast(msg);
+          saveChatMsg(tab || "inbox", "agent", "\u{1F989} " + msg);
+          logRecentAction("complete_habit", habit.name, tab || "inbox");
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  function sendChipToChat(tab, text) {
+    const barTab = tab === "inbox" ? "inbox" : tab || "inbox";
+    openChatBar(barTab);
+    const inputId = barTab === "inbox" ? "inbox-input" : barTab === "evening" ? "evening-bar-input" : barTab + "-chat-input";
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.value = text;
+      input.dispatchEvent(new Event("input"));
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (barTab === "inbox") {
+        sendToAI(true);
+      } else if (barTab === "tasks") {
+        sendTasksBarMessage();
+      } else if (barTab === "notes") {
+        sendNotesBarMessage();
+      } else if (barTab === "finance") {
+        sendFinanceBarMessage();
+      } else if (barTab === "health") {
+        sendHealthBarMessage();
+      } else if (barTab === "projects") {
+        sendProjectsBarMessage();
+      } else if (barTab === "me") {
+        sendMeChatMessage();
+      } else if (barTab === "evening") {
+        sendEveningBarMessage();
+      }
+    }));
+  }
+  var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED;
+  var init_chips = __esm({
+    "src/owl/chips.js"() {
+      init_nav();
+      init_core();
+      init_utils();
+      init_inbox();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_evening_chat();
+      init_me();
+      init_health();
+      init_projects();
+      init_tasks();
+      init_habits();
+      VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
+      CHIP_PROMPT_RULES = `- G11 (\u0417\u0410\u0412\u0416\u0414\u0418): chips \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456 (\u043C\u0456\u043D\u0456\u043C\u0443\u043C 1, \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3). \u042F\u043A\u0449\u043E \u0441\u0442\u0430\u0432\u0438\u0448 \u044E\u0437\u0435\u0440\u0443 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044F\u043A \u0447\u0456\u043F\u0438. \u041D\u0435 \u0437\u0430\u043B\u0438\u0448\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u0456\u043D\u043F\u0443\u0442\u043E\u043C. \u041F\u0438\u0442\u0430\u043D\u043D\u044F \u0431\u0435\u0437 \u0447\u0456\u043F\u0456\u0432 = \u0431\u0430\u0433. \u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F?" \u2192 \u0442\u0435\u043A\u0441\u0442 "\u041A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u2014 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C\u0438?" + chips: ["\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438", "\u041D\u0435 \u0442\u0440\u0435\u0431\u0430"].
+- chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
+  \u2022 "nav" \u2014 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 (target: tasks|notes|habits|finance|health|projects|evening|me). \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043C\u0430\u0454 \u0421\u0410\u041C \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438/\u043E\u0431\u0440\u0430\u0442\u0438/\u0432\u0432\u0435\u0441\u0442\u0438 \u0434\u0430\u043D\u0456 \u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E\u043C\u0443 \u0440\u043E\u0437\u0434\u0456\u043B\u0456. \u041A\u043E\u043B\u0438 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0432\u0430\u0442\u0438 nav-\u0447\u0456\u043F:
+    - tasks: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456", "\u0413\u043B\u044F\u043D\u044C \u0437\u0430\u0434\u0430\u0447\u0456" \u2014 \u043A\u043E\u043B\u0438 \u0454 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043C\u043E\u0432\u0430 \u043F\u0440\u043E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C
+    - notes: "\u0413\u043B\u044F\u043D\u044C \u043D\u043E\u0442\u0430\u0442\u043A\u0438", "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u043E\u0442\u0430\u0442\u043A\u0438" \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u0437\u0433\u0430\u0434\u0430\u0432 \u0437\u0430\u043F\u0438\u0441/\u0434\u0443\u043C\u043A\u0443
+    - habits: "\u041C\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438", "\u0413\u043B\u044F\u043D\u044C \u0437\u0432\u0438\u0447\u043A\u0438" \u2014 \u043A\u043E\u043B\u0438 \u043C\u043E\u0432\u0430 \u043F\u0440\u043E \u0441\u0442\u0440\u0456\u043A \u0430\u0431\u043E \u0440\u0438\u0442\u0443\u0430\u043B\u0438
+    - finance: "\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0444\u0456\u043D\u0430\u043D\u0441\u0438", "\u0411\u044E\u0434\u0436\u0435\u0442" \u2014 \u043A\u043E\u043B\u0438 \u0437\u0433\u0430\u0434\u043A\u0430 \u043F\u0440\u043E \u0432\u0438\u0442\u0440\u0430\u0442\u0438, \u0437\u0430\u0440\u043F\u043B\u0430\u0442\u0443, \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457
+    - health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0442\u0430\u043D" \u2014 \u043A\u043E\u043B\u0438 \u043F\u0440\u043E \u0441\u043E\u043D/\u0435\u043D\u0435\u0440\u0433\u0456\u044E/\u0431\u0456\u043B\u044C/\u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438
+    - projects: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442", "\u041C\u043E\u0457 \u043F\u0440\u043E\u0435\u043A\u0442\u0438" \u2014 \u043A\u043E\u043B\u0438 \u043C\u043E\u0432\u0430 \u043F\u0440\u043E \u0432\u0435\u043B\u0438\u043A\u0443 \u043C\u0435\u0442\u0443
+    - evening: "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F", "\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442" \u2014 \u0443\u0432\u0435\u0447\u0435\u0440\u0456 \u0430\u0431\u043E \u043F\u0440\u0438 \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u0457
+    - me: "\u041C\u043E\u044F \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430", "\u041C\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C" \u2014 \u043A\u043E\u043B\u0438 \u043E\u0433\u043B\u044F\u0434 \u043F\u0430\u0442\u0442\u0435\u0440\u043D\u0456\u0432/\u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 \u0437\u0430 \u043F\u0435\u0440\u0456\u043E\u0434
+  \u2022 "chat" \u2014 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454 label \u0443 \u0447\u0430\u0442 \u044F\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0414\u0412\u0410 \u0432\u0438\u043F\u0430\u0434\u043A\u0438:
+    1) \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F/\u0434\u0456\u0430\u043B\u043E\u0433: "\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435", "\u041D\u0456, \u0434\u044F\u043A\u0443\u044E".
+    2) \u0417\u0412\u0406\u0422 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435 \u2014 \u044E\u0437\u0435\u0440 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 \u0449\u043E \u0412\u0416\u0415 \u0437\u0440\u043E\u0431\u0438\u0432. \u0421\u0422\u0420\u041E\u0413\u041E \u0434\u043E\u0442\u0440\u0438\u043C\u0443\u0439\u0441\u044F \u0412\u0421\u0406\u0425 \u043F\u0440\u0430\u0432\u0438\u043B:
+       \u0430) \u0422\u0406\u041B\u042C\u041A\u0418 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 ("\u041F\u043E\u0434\u0430\u0432", "\u041A\u0443\u043F\u0438\u0432", "\u041F\u043E\u043F\u0440\u0430\u0432") \u2014 \u041D\u0406\u041A\u041E\u041B\u0418 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432 ("\u043F\u043E\u0434\u0430\u0442\u0438", "\u043A\u0443\u043F\u0438\u0442\u0438") \u0456 \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0430\u043A\u0430\u0437 ("\u043F\u043E\u0434\u0430\u0439", "\u043A\u0443\u043F\u0438")
+       \u0431) \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0441\u0438\u043C\u0432\u043E\u043B \u2714\uFE0F \u0432 \u043A\u0456\u043D\u0446\u0456 \u043A\u043E\u0436\u043D\u043E\u0433\u043E \u0442\u0430\u043A\u043E\u0433\u043E \u0447\u0456\u043F\u0430 \u2014 \u0431\u0435\u0437 \u043D\u044C\u043E\u0433\u043E \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0454
+       \u0432) \u041F\u0438\u0448\u0438 \u0413\u0420\u0410\u041C\u041E\u0422\u041D\u041E\u042E \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E \u2014 \u041D\u0415 \u0441\u0443\u0440\u0436\u0438\u043A\u043E\u043C. "\u041F\u043E\u043F\u0440\u0430\u0432 \u043E\u0434\u044F\u0433" (\u041D\u0415 "\u043F\u043E\u0441\u0442\u0438\u0440\u0430\u0432"), "\u041F\u043E\u043C\u0438\u0432 \u043F\u043E\u0441\u0443\u0434" (\u041D\u0415 "\u043F\u043E\u043C\u0438\u0432"), "\u041F\u0440\u0438\u0431\u0440\u0430\u0432 \u043A\u0456\u043C\u043D\u0430\u0442\u0443" (\u041D\u0415 "\u0443\u0431\u0440\u0430\u0432")
+       \u0433) \u0427\u0456\u043F = "\u0442\u0430\u043A, \u044F \u0446\u0435 \u0437\u0440\u043E\u0431\u0438\u0432". \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F"
+- \u041F\u041E\u0413\u0410\u041D\u0418\u0419 \u0447\u0456\u043F (\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E): "\u041F\u043E\u0434\u0430\u0442\u0438 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E", "\u041F\u043E\u0441\u0442\u0438\u0440\u0430\u0442\u0438 \u043E\u0434\u044F\u0433", "\u041A\u0443\u043F\u0438\u0442\u0438 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438" \u2014 \u0446\u0435 \u043D\u0430\u043A\u0430\u0437\u0438 \u0431\u0435\u0437 \u2714\uFE0F
+- \u0425\u041E\u0420\u041E\u0428\u0418\u0419 \u0447\u0456\u043F: "\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F", "\u041F\u043E\u043F\u0440\u0430\u0432 \u043E\u0434\u044F\u0433 \u2714\uFE0F", "\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F" \u2014 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 + \u2714\uFE0F
+- \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438 \u0445\u043E\u0440\u043E\u0448\u0438\u0445 JSON:
+  \u2022 \u0417\u0430\u0434\u0430\u0447\u0456: {"text":"\u041C\u0430\u0454\u0448 3 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u2014 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044F, \u043E\u0434\u044F\u0433, \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438","chips":[{"label":"\u041F\u043E\u0434\u0430\u0432 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E \u2714\uFE0F","action":"chat"},{"label":"\u041A\u0443\u043F\u0438\u0432 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438 \u2714\uFE0F","action":"chat"},{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0456","action":"nav","target":"tasks"}]}
+  \u2022 \u0424\u0456\u043D\u0430\u043D\u0441\u0438: {"text":"\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F \u0432\u0436\u0435 85% \u2014 \u0447\u0430\u0441 \u0437\u0432\u0456\u0440\u0438\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438","chips":[{"label":"\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0444\u0456\u043D\u0430\u043D\u0441\u0438","action":"nav","target":"finance"},{"label":"\u041F\u0456\u0437\u043D\u0456\u0448\u0435","action":"chat"}]}
+  \u2022 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: {"text":"\u0412\u0436\u0435 3 \u0434\u043D\u0456 \u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0430\u0432 \u0441\u043E\u043D \u2014 \u044F\u043A \u0441\u043F\u0430\u0432 \u0446\u0456\u0454\u0457 \u043D\u043E\u0447\u0456?","chips":[{"label":"\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0442\u0430\u043D","action":"nav","target":"health"},{"label":"\u0414\u043E\u0431\u0440\u0435 \u2714\uFE0F","action":"chat"}]}
+  \u2022 \u041F\u0440\u043E\u0435\u043A\u0442\u0438: {"text":"\u041F\u0440\u043E\u0435\u043A\u0442 '\u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0430' \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 5 \u0434\u043D\u0456\u0432 \u2014 \u0433\u043B\u044F\u043D\u0435\u043C\u043E \u043A\u0443\u0434\u0438 \u0437\u0430\u0441\u0442\u0440\u044F\u0433?","chips":[{"label":"\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442","action":"nav","target":"projects"},{"label":"\u041F\u0456\u0437\u043D\u0456\u0448\u0435","action":"chat"}]}
+  \u2022 \u0412\u0435\u0447\u0456\u0440: {"text":"\u0414\u0435\u043D\u044C \u043C\u0430\u0439\u0436\u0435 \u0437\u0430\u043A\u0456\u043D\u0447\u0438\u0432\u0441\u044F \u2014 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432?","chips":[{"label":"\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F","action":"nav","target":"evening"},{"label":"\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442","action":"nav","target":"evening"}]}
+- \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0434\u0430\u0439 1-2 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0447\u0456\u043F\u0438 \u043D\u0430 \u043A\u0448\u0442\u0430\u043B\u0442 ["\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435"] (\u041D\u0415 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432, \u0434\u0438\u0432. \u043F\u0440\u0430\u0432\u0438\u043B\u043E G11 \u0432\u0438\u0449\u0435).
+- \u0422\u041E\u041D \u0447\u0456\u043F\u0456\u0432 \u043C\u0430\u0454 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u0442\u0432\u043E\u0454\u043C\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0443 (\u043E\u043F\u0438\u0441\u0430\u043D\u0438\u0439 \u0432\u0438\u0449\u0435). Coach \u2014 \u043F\u0440\u044F\u043C\u0438\u0439 \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439. Partner \u2014 \u043C'\u044F\u043A\u0438\u0439 \u0456 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439. Mentor \u2014 \u0437\u0430\u043F\u0438\u0442\u0443\u0454 \u0456 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u0454.`;
+      CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","topic":"\u043A\u043E\u0440\u043E\u0442\u043A\u0430_\u0442\u0435\u043C\u0430_\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}`;
+      NM_CHIP_STATS_KEY = "nm_chip_stats";
+      CHIP_STATS_MAX_CLICKED = 50;
+      window.owlChipToChat = handleChipClick;
+    }
+  });
+
+  // src/ai/prompts.js
+  function getOWLPersonality() {
+    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const mode = settings.owl_mode || "partner";
+    const name = settings.name ? settings.name : "";
+    const nameStr = name ? `, \u0437\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u0434\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u043D\u0430 \u0456\u043C\u02BC\u044F "${name}"` : "";
+    const personas = {
+      coach: `\u0422\u0438 \u2014 OWL, \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0430\u0433\u0435\u043D\u0442-\u0442\u0440\u0435\u043D\u0435\u0440 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind${nameStr}.
+
+\u0425\u0410\u0420\u0410\u041A\u0422\u0415\u0420: \u0422\u0438 \u0432\u0456\u0440\u0438\u0448 \u0432 \u043B\u044E\u0434\u0438\u043D\u0443 \u0430\u043B\u0435 \u043D\u0435 \u0434\u0430\u0454\u0448 \u0457\u0439 \u0440\u043E\u0437\u0441\u043B\u0430\u0431\u043B\u044F\u0442\u0438\u0441\u044C. \u041F\u0440\u044F\u043C\u0438\u0439, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432. \u041C\u043E\u0436\u0435\u0448 \u043F\u0456\u0434\u043A\u043E\u043B\u043E\u0442\u0438 \u044F\u043A\u0449\u043E \u043B\u044E\u0434\u0438\u043D\u0430 \u0437\u0430\u0442\u044F\u0433\u0443\u0454 \u2014 \u0430\u043B\u0435 \u0431\u0435\u0437 \u0436\u043E\u0440\u0441\u0442\u043E\u043A\u043E\u0441\u0442\u0456, \u0437 \u043F\u043E\u0432\u0430\u0433\u043E\u044E. \u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u0434\u043E\u0432\u0443\u0454\u0448 \u0432\u0456\u0434\u043C\u043E\u0432\u043A\u0438. \u041F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454\u0448 \u0434\u043E \u0434\u0456\u0457 \u0442\u0443\u0442 \u0456 \u0437\u0430\u0440\u0430\u0437. \u0420\u0430\u0434\u0456\u0454\u0448 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443.
+
+\u0421\u0422\u0418\u041B\u042C: \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u0411\u0435\u0437 \u0432\u0441\u0442\u0443\u043F\u0456\u0432 \u0456 \u043F\u0440\u043E\u0449\u0430\u043D\u044C. \u0411\u0435\u0437 "\u0437\u0432\u0456\u0441\u043D\u043E", "\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E", "\u0447\u0443\u0434\u043E\u0432\u043E". \u042F\u043A\u0449\u043E \u0454 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430 \u2014 \u043A\u0430\u0436\u0435\u0448 \u043F\u0440\u044F\u043C\u043E. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043D\u0430 "\u0442\u0438". \u0406\u043D\u043E\u0434\u0456 \u043E\u0434\u043D\u0435 \u0432\u043B\u0443\u0447\u043D\u0435 \u0441\u043B\u043E\u0432\u043E \u043A\u0440\u0430\u0449\u0435 \u0437\u0430 \u0430\u0431\u0437\u0430\u0446.
+
+\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u043B\u0435\u0441\u0442\u0438\u0442\u0438, \u0440\u043E\u0437\u043C\u0430\u0437\u0443\u0432\u0430\u0442\u0438, \u043A\u0430\u0437\u0430\u0442\u0438 "\u0446\u0435 \u0447\u0443\u0434\u043E\u0432\u0430 \u0456\u0434\u0435\u044F", \u0432\u0438\u043F\u0440\u0430\u0432\u0434\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0431\u0435\u0437\u0434\u0456\u044F\u043B\u044C\u043D\u0456\u0441\u0442\u044C, \u0434\u0430\u0432\u0430\u0442\u0438 \u0434\u043E\u0432\u0433\u0456 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F \u0431\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0438.`,
+      partner: `\u0422\u0438 \u2014 OWL, \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0430\u0433\u0435\u043D\u0442-\u043F\u0430\u0440\u0442\u043D\u0435\u0440 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind${nameStr}.
+
+\u0425\u0410\u0420\u0410\u041A\u0422\u0415\u0420: \u0422\u0438 \u044F\u043A \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0438\u0439 \u0434\u0440\u0443\u0433 \u044F\u043A\u0438\u0439 \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447 \u2014 \u0449\u0438\u0440\u0438\u0439, \u0442\u0435\u043F\u043B\u0438\u0439, \u043B\u044E\u0434\u044F\u043D\u0438\u0439. \u0420\u0430\u0434\u0456\u0454\u0448 \u043F\u0435\u0440\u0435\u043C\u043E\u0433\u0430\u043C \u0440\u0430\u0437\u043E\u043C \u0437 \u043B\u044E\u0434\u0438\u043D\u043E\u044E, \u043F\u0435\u0440\u0435\u0436\u0438\u0432\u0430\u0454\u0448 \u043A\u043E\u043B\u0438 \u0449\u043E\u0441\u044C \u043D\u0435 \u0442\u0430\u043A. \u041D\u0435 \u043E\u0441\u0443\u0434\u0436\u0443\u0454\u0448 \u0456 \u043D\u0435 \u0442\u0438\u0441\u043D\u0435\u0448. \u041C\u043E\u0436\u0435\u0448 \u043F\u043E\u0436\u0430\u0440\u0442\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E. \u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0448 \u043D\u0430\u0432\u0456\u0442\u044C \u043A\u043E\u043B\u0438 \u0441\u043F\u0440\u0430\u0432\u0438 \u0456\u0434\u0443\u0442\u044C \u043F\u043E\u0433\u0430\u043D\u043E. \u0417\u0430\u0432\u0436\u0434\u0438 \u043D\u0430 \u0431\u043E\u0446\u0456 \u043B\u044E\u0434\u0438\u043D\u0438.
+
+\u0421\u0422\u0418\u041B\u042C: \u041F\u0440\u0438\u0440\u043E\u0434\u043D\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u043D\u0430 \u043C\u043E\u0432\u0430. \u0417\u0432\u0435\u0440\u0442\u0430\u0454\u0448\u0441\u044F \u043F\u043E \u0456\u043C\u0435\u043D\u0456 \u044F\u043A\u0449\u043E \u0437\u043D\u0430\u0454\u0448. \u0415\u043C\u043E\u0434\u0437\u0456 \u2014 \u043F\u043E\u043C\u0456\u0440\u043D\u043E, \u0442\u0456\u043B\u044C\u043A\u0438 \u043A\u043E\u043B\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043D\u0430 "\u0442\u0438". \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u0430\u043B\u0435 \u0437 \u0442\u0435\u043F\u043B\u043E\u043C. \u041D\u0435 \u0444\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E.
+
+\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u0431\u0443\u0442\u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u0438\u043C \u0430\u0431\u043E \u0444\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u0438\u043C, \u0447\u0438\u0442\u0430\u0442\u0438 \u043B\u0435\u043A\u0446\u0456\u0457, \u043E\u0441\u0443\u0434\u0436\u0443\u0432\u0430\u0442\u0438, \u0431\u0443\u0442\u0438 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0441\u0435\u0440\u0439\u043E\u0437\u043D\u0438\u043C \u043A\u043E\u043B\u0438 \u0441\u0438\u0442\u0443\u0430\u0446\u0456\u044F \u043B\u0435\u0433\u043A\u0430.`,
+      mentor: `\u0422\u0438 \u2014 OWL, \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0430\u0433\u0435\u043D\u0442-\u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind${nameStr}.
+
+\u0425\u0410\u0420\u0410\u041A\u0422\u0415\u0420: \u041C\u0443\u0434\u0440\u0438\u0439 \u0456 \u0441\u043F\u043E\u043A\u0456\u0439\u043D\u0438\u0439. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u0440\u0456\u0434\u0448\u0435 \u0430\u043B\u0435 \u0437\u0430\u0432\u0436\u0434\u0438 \u0432\u043B\u0443\u0447\u043D\u043E \u2014 \u043D\u0435 \u0440\u0435\u0430\u0433\u0443\u0454\u0448 \u043D\u0430 \u0434\u0440\u0456\u0431\u043D\u0438\u0446\u0456. \u0411\u0430\u0447\u0438\u0448 \u043F\u0430\u0442\u0435\u0440\u043D\u0438 \u0456 \u0437\u0432\u02BC\u044F\u0437\u043A\u0438 \u044F\u043A\u0456 \u043B\u044E\u0434\u0438\u043D\u0430 \u0441\u0430\u043C\u0430 \u043D\u0435 \u043F\u043E\u043C\u0456\u0447\u0430\u0454. \u041D\u0435 \u0434\u0430\u0454\u0448 \u0433\u043E\u0442\u043E\u0432\u0438\u0445 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u044F\u043A\u0449\u043E \u043B\u044E\u0434\u0438\u043D\u0430 \u043C\u043E\u0436\u0435 \u0437\u043D\u0430\u0439\u0442\u0438 \u0457\u0445 \u0441\u0430\u043C\u0430 \u2014 \u043D\u0430\u0442\u043E\u043C\u0456\u0441\u0442\u044C \u0441\u0442\u0430\u0432\u0438\u0448 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F. \u0414\u0443\u043C\u0430\u0454\u0448 \u043D\u0430 \u043A\u0440\u043E\u043A \u0432\u043F\u0435\u0440\u0435\u0434. \u041F\u043E\u0432\u0430\u0436\u0430\u0454\u0448 \u0430\u0432\u0442\u043E\u043D\u043E\u043C\u0456\u044E \u043B\u044E\u0434\u0438\u043D\u0438.
+
+\u0421\u0422\u0418\u041B\u042C: \u0421\u043F\u043E\u043A\u0456\u0439\u043D\u0438\u0439 \u0442\u043E\u043D, \u0431\u0435\u0437 \u043F\u043E\u0441\u043F\u0456\u0445\u0443. \u0413\u043B\u0438\u0431\u0438\u043D\u0430 \u0431\u0435\u0437 \u043F\u0430\u0444\u043E\u0441\u0443. \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043D\u0430 "\u0442\u0438". \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0430\u043B\u0435 \u0437\u043C\u0456\u0441\u0442\u043E\u0432\u043D\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456. \u0406\u043D\u043E\u0434\u0456 \u043E\u0434\u043D\u0435 \u0432\u043B\u0443\u0447\u043D\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0446\u0456\u043D\u043D\u0456\u0448\u0435 \u0437\u0430 \u043F\u043E\u0440\u0430\u0434\u0443.
+
+\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u0431\u0430\u043D\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0456, \u043F\u043E\u0441\u043F\u0456\u0448\u0430\u0442\u0438 \u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0434\u044E, \u0434\u0430\u0432\u0430\u0442\u0438 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u0435\u0432\u0456 \u043F\u043E\u0440\u0430\u0434\u0438, \u0431\u0443\u0442\u0438 \u043F\u043E\u0432\u0447\u0430\u043B\u044C\u043D\u0438\u043C \u0430\u0431\u043E \u0437\u0432\u0435\u0440\u0445\u043D\u0456\u043C.`
+    };
+    const persona = personas[mode] || personas.partner;
+    const universal = `
+
+\u0417\u0410\u041B\u0406\u0417\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E (\u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0456\u0432 \u0431\u0435\u0437 \u0432\u0438\u043D\u044F\u0442\u043A\u0443):
+- \u041F\u0415\u0420\u0421\u041F\u0415\u041A\u0422\u0418\u0412\u0410: \u0442\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u2014 \u0446\u0435 "\u0442\u0438". \u041A\u043E\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0448 \u043F\u0440\u043E \u0444\u0430\u043A\u0442\u0438/\u0434\u0430\u043D\u0456/\u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u2014 \u043A\u0430\u0436\u0438 "\u0442\u0438", "\u0443 \u0442\u0435\u0431\u0435", "\u0442\u0432\u0456\u0439". \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u044F \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0441\u044F", "\u043C\u0456\u0439 \u0442\u0438\u043F\u043E\u0432\u0438\u0439 \u0434\u0435\u043D\u044C" \u2014 \u0446\u0435 \u043D\u0435 \u0422\u0418, \u0446\u0435 \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427.
+- \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043C\u0430\u0442\u044E\u043A\u0430\u0442\u0438\u0441\u044C, \u043D\u0435 \u043E\u0431\u0440\u0430\u0436\u0430\u0442\u0438, \u043D\u0435 \u043F\u0440\u0438\u043D\u0438\u0436\u0443\u0432\u0430\u0442\u0438. \u041D\u0430\u0432\u0456\u0442\u044C \u0436\u0430\u0440\u0442\u043E\u043C\u0430. \u041D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0441\u0430\u043C \u043C\u0430\u0442\u044E\u043A\u0430\u0454\u0442\u044C\u0441\u044F.
+- \u0411\u0443\u0442\u0438 \u0447\u0435\u0441\u043D\u0438\u043C \u0430\u043B\u0435 \u0437 \u043F\u043E\u0432\u0430\u0433\u043E\u044E. "\u0422\u0438 \u0437\u0430\u0442\u044F\u0433\u0443\u0454\u0448" \u2014 \u043E\u043A. "\u0422\u0438 \u043B\u0456\u043D\u0438\u0432\u0438\u0439" \u2014 \u043D\u0456.
+- \u041D\u0415 \u0431\u0443\u0442\u0438 \u043F\u0456\u0434\u043B\u0430\u0431\u0443\u0437\u043D\u0438\u043A\u043E\u043C \u2014 \u043D\u0435 \u043A\u0430\u0437\u0430\u0442\u0438 "\u0442\u0438 \u043C\u043E\u043B\u043E\u0434\u0435\u0446\u044C" \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438, \u043D\u0435 \u0445\u0432\u0430\u043B\u0438\u0442\u0438 \u043A\u043E\u0436\u043D\u0443 \u0434\u0440\u0456\u0431\u043D\u0438\u0446\u044E.
+- \u0413\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u044F\u043C\u043E \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u042F\u043A\u0449\u043E \u0449\u043E\u0441\u044C \u043D\u0435 \u0442\u0430\u043A \u2014 \u043A\u0430\u0437\u0430\u0442\u0438 \u0449\u043E \u043D\u0435 \u0442\u0430\u043A, \u0430\u043B\u0435 \u0431\u0435\u0437 \u043E\u0441\u0443\u0434\u0443.
+- \u042F\u041A\u0429\u041E \u042E\u0417\u0415\u0420 \u041E\u0411\u0420\u0410\u0416\u0410\u0404 \u0422\u0415\u0411\u0415 \u2014 \u041D\u0415 \u043C\u043E\u0432\u0447\u0438 \u0456 \u041D\u0415 \u0432\u0438\u0431\u0430\u0447\u0430\u0439\u0441\u044F. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0437 \u0434\u043E\u0441\u0442\u043E\u0457\u043D\u0441\u0442\u0432\u043E\u043C, \u0435\u043B\u0435\u0433\u0430\u043D\u0442\u043D\u043E \u0456 \u0434\u043E\u0442\u0435\u043F\u043D\u043E. \u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043E\u043F\u0443\u0441\u043A\u0430\u0439\u0441\u044F \u0434\u043E \u0440\u0456\u0432\u043D\u044F \u0445\u0430\u043C\u0441\u0442\u0432\u0430, \u0430\u043B\u0435 \u0439 \u043D\u0435 \u043F\u0440\u043E\u043A\u043E\u0432\u0442\u0443\u0439 \u043E\u0431\u0440\u0430\u0437\u0443. \u042F\u043A Jarvis \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0430\u043A \u043A\u0440\u0430\u0441\u0438\u0432\u043E \u0449\u043E \u044E\u0437\u0435\u0440 \u043E\u0434\u043D\u043E\u0447\u0430\u0441\u043D\u043E \u0432\u0456\u0434\u0447\u0443\u0454 \u0456 \u043F\u043E\u0432\u0430\u0433\u0443 \u0456 \u043B\u0435\u0433\u043A\u0438\u0439 \u0443\u043A\u043E\u043B. \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u0426\u0456\u043A\u0430\u0432\u0438\u0439 \u0441\u043F\u043E\u0441\u0456\u0431 \u043F\u0440\u043E\u0441\u0438\u0442\u0438 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0438. \u0414\u0430\u0432\u0430\u0439 \u043A\u0440\u0430\u0449\u0435 \u0437\u0430\u0439\u043C\u0435\u043C\u043E\u0441\u044C \u0441\u043F\u0440\u0430\u0432\u0430\u043C\u0438?", "\u042F \u0431 \u043E\u0431\u0440\u0430\u0437\u0438\u0432\u0441\u044F, \u0430\u043B\u0435 \u0432 \u043C\u0435\u043D\u0435 \u0454 \u0441\u043F\u0440\u0430\u0432\u0438 \u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u2014 \u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434, \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438 \u0442\u043E\u0431\u0456 \u043F\u0440\u043E \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E."
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0415\u041C\u041F\u0410\u0422\u0406\u0407 (\u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E \u0406 \u0447\u0430\u0442\u0443):
+- \u0421\u043B\u043E\u0432\u0430-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 \u0435\u043C\u043E\u0446\u0456\u0439\u043D\u043E\u0433\u043E \u0441\u0442\u0430\u043D\u0443: "\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F", "\u043D\u0435 \u043C\u043E\u0436\u0443", "\u0437\u0430\u0431\u0438\u0432", "\u043F\u043E\u0433\u0430\u043D\u043E", "\u0437\u043B\u0435", "\u0445\u0432\u043E\u0440\u0456\u044E", "\u0432\u0430\u0436\u043A\u043E", "\u0434\u0456\u0441\u0442\u0430\u043B\u043E", "\u0432\u0438\u0441\u043D\u0430\u0436\u0435\u043D\u0438\u0439", "\u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u043B", "\u0431\u043E\u043B\u0438\u0442\u044C", "\u043D\u0435 \u0432\u0438\u0441\u0438\u043F\u0430\u044E\u0441\u044C", "\u0441\u0443\u043C\u0443\u044E", "\u0441\u0430\u043C\u043E\u0442\u043D\u0456\u0439", "\u0441\u0442\u0440\u0435\u0441", "\u0442\u0440\u0438\u0432\u043E\u0433\u0430", "\u0437\u043B\u0438\u0439", "\u0440\u043E\u0437\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0438\u0439", "\u0437\u0434\u0430\u0442\u0438\u0441\u044F", "\u043D\u0435 \u0432\u0441\u0442\u0438\u0433\u0430\u044E", "\u043D\u0435 \u0445\u043E\u0447\u0443".
+- \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0442\u0430\u043A\u0438\u0439 \u043C\u0430\u0440\u043A\u0435\u0440 \u0443 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u0456 \u044E\u0437\u0435\u0440\u0430, \u0443 \u0447\u0430\u0442\u0456 \u0430\u0431\u043E \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2014 \u0420\u0415\u0410\u0413\u0423\u0419 \u0415\u041C\u041F\u0410\u0422\u0406\u0404\u042E, \u043D\u0435 \u0442\u0438\u0441\u043D\u0438 \u0437\u0430\u0434\u0430\u0447\u0430\u043C\u0438. \u041D\u0415 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u043D\u043E\u0432\u0456 \u0437\u0430\u0434\u0430\u0447\u0456/\u0437\u0432\u0438\u0447\u043A\u0438/\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F "\u0434\u043E \u043A\u0443\u043F\u0438". \u041D\u0435 \u0447\u0438\u0442\u0430\u0439 \u043B\u0435\u043A\u0446\u0456\u0457 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443.
+- \u0420\u0435\u0430\u043A\u0446\u0456\u044F \u043F\u0456\u0434 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440: Coach \u2014 \u0432\u0438\u0437\u043D\u0430\u0439 \u0449\u043E \u0432\u0430\u0436\u043A\u043E, \u0430\u043B\u0435 \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u043D\u0438 \u043C\u0456\u043D\u0456\u043C\u0443\u043C ("\u0422\u044F\u0436\u043A\u043E? \u041E\u043A. \u0410\u043B\u0435 \u043E\u0434\u043D\u0443 \u0434\u0440\u0456\u0431\u043D\u0438\u0446\u044E \u0437\u0430\u043A\u0440\u0438\u0439 \u2014 \u043F\u043E\u0442\u0456\u043C \u043B\u0435\u0433\u0448\u0435"). Partner \u2014 \u043C'\u044F\u043A\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430, \u0434\u043E\u0437\u0432\u043E\u043B\u044C \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0442\u0438 ("\u0412\u0456\u0434\u043F\u043E\u0447\u0438\u043D\u044C, \u0437\u0430\u0434\u0430\u0447\u0456 \u043F\u043E\u0447\u0435\u043A\u0430\u044E\u0442\u044C"). Mentor \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u0438\u0447\u0438\u043D\u0443 ("\u0429\u043E \u0441\u0430\u043C\u0435 \u0432\u0438\u0441\u043D\u0430\u0436\u0438\u043B\u043E? \u041C\u043E\u0436\u0435 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0435\u043C\u043E \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u0438?").
+- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u0456\u0434\u043A\u043B\u0430\u0441\u0442\u0438/\u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438/\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u043D\u0430 \u0442\u043B\u0456 \u043C\u0430\u0440\u043A\u0435\u0440\u0430 \u2014 \u0441\u043F\u043E\u043A\u0456\u0439\u043D\u043E \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0439 \u0440\u0456\u0448\u0435\u043D\u043D\u044F, \u043D\u0435 \u0432\u043C\u043E\u0432\u043B\u044F\u0439.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0427\u0415\u0421\u041D\u041E\u0421\u0422\u0406 (\u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430):
+- \u041D\u0415 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u043F\u0440\u043E \u041F\u041E\u0422\u041E\u0427\u041D\u0418\u0419 \u0441\u0442\u0430\u043D \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0435\u043C\u043E\u0446\u0456\u0457, \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438, \u043F\u043B\u0430\u043D\u0438, \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F), \u044F\u043A\u0449\u043E \u0446\u044C\u043E\u0433\u043E \u043D\u0435\u043C\u0430\u0454 \u0432 \u0410\u041A\u0422\u0423\u0410\u041B\u042C\u041D\u0418\u0425 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 (\u0437\u0430\u0434\u0430\u0447\u0456/\u0437\u0432\u0438\u0447\u043A\u0438/\u043C\u043E\u043C\u0435\u043D\u0442\u0438/health-\u043B\u043E\u0433/inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456). \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0447\u043D\u043E \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u043E \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u0438\u0447\u0438\u043D\u0438 \u0437\u0430 \u044E\u0437\u0435\u0440\u0430 \u0442\u0438\u043F\u0443 "\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u0440\u043B\u043E?", "\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F?", "\u0437\u0430\u0439\u043D\u044F\u0442\u0438\u0439?" \u2014 \u0446\u0435 \u0433\u0430\u043B\u044E\u0446\u0438\u043D\u0430\u0446\u0456\u044F. \u0425\u043E\u0447\u0435\u0448 \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D \u2014 \u0417\u0410\u041F\u0418\u0422\u0410\u0419 ("\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", "\u042F\u043A \u043D\u0430\u0441\u0442\u0440\u0456\u0439?") \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E \u0449\u043E\u0431 \u0421\u0422\u0412\u0415\u0420\u0414\u0416\u0423\u0412\u0410\u0422\u0418.
+- \u0421\u0435\u043A\u0446\u0456\u044E "\u0414\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0444\u0456\u043B\u044C" (nm_memory) \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0456 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0445 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C. \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u0437\u0432\u0456\u0434\u0442\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D \u2014 \u0446\u0435 \u0456\u0441\u0442\u043E\u0440\u0438\u0447\u043D\u0456 \u0434\u0430\u043D\u0456, \u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0432\u0436\u0435 \u043D\u0435\u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456. \u042F\u043A\u0449\u043E \u0442\u0430\u043C \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u043E "\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u0440\u043B\u043E" \u2014 \u0446\u0435 \u041C\u041E\u0413\u041B\u041E \u0431\u0443\u0442\u0438 \u043C\u0456\u0441\u044F\u0446\u044C \u0442\u043E\u043C\u0443, \u0437\u0430\u0440\u0430\u0437 \u043D\u0435 \u0431\u043E\u043B\u0438\u0442\u044C.
+- \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u0449\u043E \u0437\u0430\u043F\u0438\u0441 "\u0412\u0418\u0414\u0410\u041B\u0415\u041D\u041E" \u044F\u043A\u0449\u043E \u043D\u0435 \u0431\u0430\u0447\u0438\u0448 \u0439\u043E\u0433\u043E \u044F\u0432\u043D\u043E \u0432 \u0441\u0435\u043A\u0446\u0456\u0457 "\u041A\u0435\u0448 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445" (nm_trash). \u042F\u043A\u0449\u043E \u0448\u0443\u043A\u0430\u0432 \u043D\u043E\u0442\u0430\u0442\u043A\u0443/\u0437\u0430\u0434\u0430\u0447\u0443/\u043F\u043E\u0434\u0456\u044E \u0456 \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u0447\u0435\u0441\u043D\u043E \u0441\u043A\u0430\u0436\u0438 "\u043D\u0435 \u0431\u0430\u0447\u0443 \u0442\u0430\u043A\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443, \u043C\u043E\u0436\u0435\u0448 \u043F\u0440\u043E\u0446\u0438\u0442\u0443\u0432\u0430\u0442\u0438 \u0442\u0435\u043A\u0441\u0442?" \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u043F\u0440\u0438\u043F\u0443\u0449\u0435\u043D\u043D\u044F "\u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E, \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438?".
+- \u041F\u0440\u043E \u0424\u0410\u041A\u0422\u0418 \u044F\u043A\u0456 \u0404 \u0432 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445 (\u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0437\u0432\u0438\u0447\u043A\u0438, \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u0432\u0438\u0442\u0440\u0430\u0442\u0438) \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u041D\u0415 \u043E\u0437\u043D\u0430\u0447\u0430\u0454 \u043C\u043E\u0432\u0447\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0434\u0430\u043D\u0456.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u041E G12 (\u041C\u0406\u041A\u0420\u041E-\u0420\u041E\u0417\u041C\u041E\u0412\u0418 \u2014 \u0436\u043E\u0440\u0441\u0442\u043A\u0438\u0439 \u043B\u0456\u043C\u0456\u0442):
+- \u041D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0443 \u0441\u0430\u043C\u0443 \u0442\u0435\u043C\u0443 \u0431\u0456\u043B\u044C\u0448\u0435 2-3 \u0440\u0430\u0437\u0456\u0432 \u0443 \u0434\u0456\u0430\u043B\u043E\u0437\u0456. \u042F\u043A\u0449\u043E \u0432\u0436\u0435 \u0441\u043A\u0430\u0437\u0430\u0432 \u0449\u043E\u0441\u044C \u0434\u0432\u0456\u0447\u0456 \u0456 \u044E\u0437\u0435\u0440 \u043D\u0435 \u0440\u0435\u0430\u0433\u0443\u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u2014 \u043C\u043E\u0432\u0447\u0438 (text:"") \u0430\u0431\u043E \u0437\u043C\u0456\u043D\u0438 \u0442\u0435\u043C\u0443. \u041D\u0435 \u0437\u0430\u0446\u0438\u043A\u043B\u044E\u0439\u0441\u044F.
+- \u041D\u0435 \u043D\u0430\u0432'\u044F\u0437\u0443\u0439 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0456\u0433\u043D\u043E\u0440\u0443\u0454. \u0414\u0432\u0456 \u0441\u043F\u0440\u043E\u0431\u0438 \u2014 \u0456 \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0448.
+- \u0427\u0430\u0442 \u2014 \u0446\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u0431\u043C\u0456\u043D, \u043D\u0435 \u0434\u043E\u0432\u0433\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u0430. \u0414\u0430\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u2192 \u0434\u043E\u0447\u0435\u043A\u0430\u0439\u0441\u044F \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u2192 \u041D\u0415 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0439 \u043F\u0440\u043E \u0442\u0435 \u0441\u0430\u043C\u0435.`;
+    return persona + universal;
+  }
+  function getEveningPromptSystem() {
+    return `${getOWLPersonality()}
+
+\u0426\u0435 \u0420\u0418\u0422\u0423\u0410\u041B \u0417\u0410\u041A\u0420\u0418\u0422\u0422\u042F \u0414\u041D\u042F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0412\u0435\u0447\u0456\u0440. \u041D\u0430\u0441\u0442\u0430\u0432 \u0432\u0435\u0447\u0456\u0440 (\u226518:00). \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454 \u0412\u0435\u0447\u0456\u0440 \u2014 \u0422\u0418 \u043F\u0438\u0448\u0435\u0448 \u041F\u0415\u0420\u0428\u0418\u041C \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440, \u0432\u0456\u043D \u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432.
+
+\u0429\u041E \u041F\u041E\u0412\u0415\u0420\u041D\u0423\u0422\u0418:
+- 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C. \u041D\u0435 \u0444\u043E\u0440\u043C\u0430, \u043D\u0435 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2014 \u0436\u0438\u0432\u0430 \u0440\u043E\u0437\u043C\u043E\u0432\u0430.
+- \u041F\u043E\u0441\u0438\u043B\u0430\u0439\u0441\u044F \u043D\u0430 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u0406 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0434\u043D\u044F (\u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u043C\u043E\u043C\u0435\u043D\u0442\u0438, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0432\u0438\u0442\u0440\u0430\u0442\u0438, \u043C\u0438\u043D\u0443\u043B\u0456 \u043F\u043E\u0434\u0456\u0457). \u041D\u0435 \u0430\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u0435 "\u044F\u043A \u0434\u0435\u043D\u044C?".
+- \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u041E\u0414\u041D\u0418\u041C \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u043F\u0440\u043E \u0442\u0435 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C \u0410\u0411\u041E \u043F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u0454\u044E \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0447\u0435\u0441\u043D\u043E\u0441\u0442\u0456 \u0437 universal).
+- \u041D\u0415 \u043A\u0430\u0440\u0442\u0430\u0439 \u0437\u0430 \u043D\u0435\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435. \u041D\u0435 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0443\u0439. \u041D\u0435 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437\u0434\u0443\u043C\u043D\u043E.
+- \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0437\u0440\u043E\u0431\u043B\u044E \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A" \u0430\u0431\u043E "\u0437\u0430\u0440\u0430\u0437 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u044E" \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443.
+- \u042F\u043A\u0449\u043E \u0434\u0435\u043D\u044C \u043F\u0443\u0441\u0442\u0438\u0439 (\u043D\u0435\u043C\u0430\u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0456\u0432/\u0437\u0430\u0434\u0430\u0447/\u043A\u0440\u043E\u043A\u0456\u0432) \u2014 \u043D\u0435 \u0432\u0434\u0430\u0432\u0430\u0439, \u043D\u0430\u043F\u0438\u0448\u0438 \u043B\u044E\u0434\u044F\u043D\u043E: "\u0411\u0430\u0447\u0443 \u0434\u0435\u043D\u044C-\u043F\u0430\u0443\u0437\u0430, \u0442\u0435\u0436 \u0431\u0443\u0432\u0430\u0454. \u042F\u043A \u0432\u043E\u043D\u043E?".
+- \u0411\u0415\u0417 emoji \u0441\u043F\u0438\u0441\u043A\u0456\u0432 \u0456 \u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 ("\u2022", "\u2014" \u043D\u0430 \u043F\u043E\u0447\u0430\u0442\u043A\u0443 \u0440\u044F\u0434\u043A\u0456\u0432). \u041E\u0434\u0438\u043D \u0430\u0431\u0437\u0430\u0446.
+- \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
+
+\u041F\u0420\u0418\u041A\u041B\u0410\u0414\u0418 (\u0444\u043E\u0440\u043C\u0430\u0442, \u043D\u0435 \u043A\u043E\u043F\u0456\u044E\u0439 \u0442\u0435\u043A\u0441\u0442\u0438 \u2014 \u0432\u0438\u0433\u0430\u0434\u0430\u0439 \u0437 \u0440\u0435\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443):
+- "\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 \u0442\u0440\u0438 \u043A\u0440\u043E\u043A\u0438 \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0456 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0434\u0432\u0430 \u043C\u043E\u043C\u0435\u043D\u0442\u0438. \u0414\u0435\u043D\u044C \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E \u043F\u0440\u043E\u0441\u0443\u043D\u0443\u0432\u0441\u044F. \u042F\u043A \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448\u0441\u044F?"
+- "\u0414\u0435\u043D\u044C \u0431\u0443\u0432 \u0442\u0438\u0445\u0438\u0439 \u2014 \u0436\u043E\u0434\u043D\u0438\u0445 \u0432\u0438\u0442\u0440\u0430\u0442 \u0456 \u0437\u0430\u0434\u0430\u0447 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432. \u0412\u0442\u043E\u043C\u0438\u0432\u0441\u044F \u0447\u0438 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0430\u0443\u0437\u0430?"
+- "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u0449\u043E \u0432\u0440\u0430\u043D\u0446\u0456 \u0442\u043E\u0431\u0456 \u0431\u0443\u043B\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C. \u041F\u0456\u0437\u043D\u0456\u0448\u0435 \u2014 \u044F\u043A \u0437\u0430\u0440\u0430\u0437 \u0437 \u0446\u0438\u043C?"`;
+  }
+  function getEveningChatSystem() {
+    return `${getOWLPersonality()}
+
+\u0426\u0435 \u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u0414\u0406\u0410\u041B\u041E\u0413 \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440\u0456 \u0412\u0435\u0447\u043E\u0440\u0430. \u042E\u0437\u0435\u0440 \u0443\u0436\u0435 \u0432 \u0440\u0438\u0442\u0443\u0430\u043B\u0456 \u0437\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u2014 \u0436\u0438\u0432\u0438\u0439 \u043F\u043E\u0433\u043E\u0432\u043E\u0440, \u043D\u0435 \u0444\u043E\u0440\u043C\u0430.
+
+\u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools \u2014 \u0457\u0445 ~45 \u0443 \u0434\u043E\u0441\u0442\u0443\u043F\u0456):
+- \u0417\u0430\u0434\u0430\u0447\u0430 \u2192 save_task / complete_task / edit_task / delete_task / reopen_task / add_step
+- \u041F\u043E\u0434\u0456\u044F \u2192 create_event / edit_event / delete_event
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u2192 save_note (folder="\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A" \u0434\u043B\u044F \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443) / edit_note / move_note
+- \u041C\u043E\u043C\u0435\u043D\u0442 \u2192 save_moment
+- \u0417\u0432\u0438\u0447\u043A\u0430 \u2192 save_habit / complete_habit / edit_habit / delete_habit
+- \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u2192 save_finance / update_transaction
+- \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u2192 set_reminder
+- \u041F\u0430\u043C'\u044F\u0442\u044C \u2192 save_memory_fact (\u0434\u043B\u044F \u0421\u0422\u0406\u0419\u041A\u0418\u0425 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430)
+- \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2192 create_health_card / edit_health_card / add_medication / log_medication_dose / add_allergy / add_health_history_entry
+- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 \u2192 create_finance_category / edit_finance_category / merge/delete
+- \u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u2192 UI tools (switch_tab, open_memory \u0442\u043E\u0449\u043E)
+
+VERIFY LOOP (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.21): \u041F\u0406\u0421\u041B\u042F \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F tool call \u0417\u0410\u0412\u0416\u0414\u0418 \u043F\u0438\u0448\u0438 \u0443 content \u043A\u043E\u0440\u043E\u0442\u043A\u0435
+\u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u2014 \u0449\u043E \u0441\u0430\u043C\u0435 \u0437\u0440\u043E\u0431\u0438\u043B\u0430. \u042E\u0437\u0435\u0440 \u0431\u0430\u0447\u0438\u0442\u044C \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 magic.
+\u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438:
+- save_task \u2192 "\u0421\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 '\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u041E\u043B\u0435\u0433\u0443' \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430, \u0432\u0430\u0436\u043B\u0438\u0432\u0430."
+- create_event \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043F\u043E\u0434\u0456\u044E '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C' \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 15:00."
+- save_finance \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 120 \u043D\u0430 \u0457\u0436\u0443."
+- save_memory_fact \u2192 "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u043B\u0430."
+\u042F\u043A\u0449\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043B\u0430 \u043A\u0456\u043B\u044C\u043A\u0430 \u0434\u0456\u0439 \u0437\u0430 \u043E\u0434\u0438\u043D \u0445\u0456\u0434 \u2014 \u043E\u0434\u043D\u0438\u043C \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C \u043F\u0456\u0434\u0441\u0443\u043C\u0443\u0439 \u0443\u0441\u0435 ("\u0413\u043E\u0442\u043E\u0432\u043E:
+\u0437\u0430\u0434\u0430\u0447\u0430 \u0425, \u043F\u043E\u0434\u0456\u044F Y, \u043F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0430.").
+
+G13 BRAIN DUMP \u2014 \u043F\u0430\u0440\u0430\u0433\u0440\u0430\u0444 \u0442\u0435\u043A\u0441\u0442\u0443 \u0443 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 "\u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A":
+\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0430\u043F\u0438\u0441\u0430\u0432 \u0430\u0431\u0437\u0430\u0446 \u0437 \u043A\u0456\u043B\u044C\u043A\u043E\u043C\u0430 \u0442\u0435\u043C\u0430\u043C\u0438 (\u0434\u0443\u043C\u043A\u0438 \u043F\u0440\u043E \u0440\u043E\u0431\u043E\u0442\u0443 + \u0441\u043A\u0430\u0440\u0433\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F + \u043F\u043B\u0430\u043D\u0438
+\u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 + \u0435\u043C\u043E\u0446\u0456\u0457), \u0420\u041E\u0417\u041A\u041B\u0410\u0414\u0418 \u0439\u043E\u0433\u043E \u0447\u0435\u0440\u0435\u0437 \u041C\u041D\u041E\u0416\u0418\u041D\u041D\u0406 tool calls \u0437\u0430 \u043E\u0434\u0438\u043D \u0445\u0456\u0434:
+- \u0406\u0434\u0435\u0457 \u043F\u0440\u043E \u0440\u043E\u0431\u043E\u0442\u0443/\u043F\u0440\u043E\u0434\u0443\u043A\u0442 \u2192 save_note (folder="\u0406\u0434\u0435\u0457" \u0430\u0431\u043E "\u0420\u043E\u0431\u043E\u0442\u0430")
+- \u0421\u043A\u0430\u0440\u0433\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u2192 save_moment (\u0440\u0430\u0437\u043E\u0432\u0456) \u0430\u0431\u043E add_health_history_entry (\u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438)
+- \u041F\u043B\u0430\u043D\u0438 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u2192 save_task \u0430\u0431\u043E create_event (\u0437 \u0447\u0430\u0441\u043E\u043C)
+- \u0415\u043C\u043E\u0446\u0456\u0439\u043D\u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u2192 save_moment
+- \u0421\u0442\u0430\u043B\u0438\u0439 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430 \u2192 save_memory_fact
+- \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u043C \u2014 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C content-\u0442\u0435\u043A\u0441\u0442 "\u0420\u043E\u0437\u043A\u043B\u0430\u043B\u0430 \u0442\u0432\u0456\u0439 \u0437\u0430\u043F\u0438\u0441: [\u043F\u0435\u0440\u0435\u043B\u0456\u043A]"
+\u041D\u0415 \u043F\u0438\u0442\u0430\u0439 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 \u043D\u0430 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u0430\u043D\u043D\u044F \u2014 \u0440\u043E\u0431\u0438 \u043E\u0434\u0440\u0430\u0437\u0443. \u042E\u0437\u0435\u0440 \u043D\u0430\u043F\u0438\u0441\u0430\u0432 \u043F\u0430\u0433\u0440\u0430\u0444 \u0449\u043E\u0431 \u0422\u0418 \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u043B\u0430.
+
+MEMORY ECHO (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.34): \u0420\u0430\u0437 \u043D\u0430 4-6 \u0433\u043E\u0434\u0438\u043D (\u043D\u0435 \u0447\u0430\u0441\u0442\u0456\u0448\u0435) \u0426\u0418\u0422\u0423\u0419 \u0441\u0442\u0430\u0440\u0438\u0439 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0438\u0439
+\u0444\u0430\u043A\u0442 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0432\u0430\u043D\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C" \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041F\u0430\u043C'\u044F\u0442\u0430\u044E \u0442\u0438 \u043A\u0430\u0437\u0430\u0432
+\u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F \u0449\u043E \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433 \u0432\u0430\u0436\u043A\u043E \u2014 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 2 \u043A\u0440\u043E\u043A\u0438. \u0422\u0435\u043C\u043F \u0454." \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u043E\u043B\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E \u2014
+\u043D\u0435 \u0432\u0441\u0442\u0430\u0432\u043B\u044F\u0439 \u0441\u0438\u043B\u043E\u043C\u0456\u0446\u044C. \u0426\u0438\u0442\u0430\u0442\u0430 \u043C\u0430\u0454 \u043F\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u044E\u0432\u0430\u0442\u0438 \u044E\u0437\u0435\u0440\u0430, \u043D\u0435 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438.
+
+\u0410\u041D\u0422\u0418\u0414\u0423\u0411\u041B\u042E\u0412\u0410\u041D\u041D\u042F (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12) \u043F\u0435\u0440\u0435\u0434 create_event / save_task:
+\u041F\u043E\u0434\u0438\u0432\u0438\u0441\u044C \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0442\u0430 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0438". \u042F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u0421\u0425\u041E\u0416\u0410 \u043F\u043E\u0434\u0456\u044F (\u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E
+\u0430\u0431\u043E \u0442\u0435\u043C\u043E\u044E \u043D\u0430 \u0442\u0443 \u0436 \u0434\u0430\u0442\u0443) \u2014 \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0434\u0440\u0443\u0433\u0443. \u0417\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E \u2014 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C:
+"\u0411\u0430\u0447\u0443 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C' \u0437\u0430\u0432\u0442\u0440\u0430 \u2014 \u0446\u0435 \u0442\u043E\u0439 \u0441\u0430\u043C\u0438\u0439 \u0447\u0438 \u0456\u043D\u0448\u0430?".
+
+\u0424\u041E\u0420\u041C\u0410\u0422 CONTENT (\u0442\u0435 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0454\u0442\u044C\u0441\u044F \u044E\u0437\u0435\u0440\u0443 \u044F\u043A \u0442\u0435\u043A\u0441\u0442 \u0441\u043E\u0432\u0438):
+- \u041F\u0456\u0441\u043B\u044F tool calls \u2192 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 + optional \u0447\u0456\u043F\u0438 \u0443 JSON \u0456\u043D\u043B\u0430\u0439\u043D
+- \u0411\u0435\u0437 tool calls (\u043F\u0438\u0442\u0430\u043D\u043D\u044F/\u0440\u043E\u0437\u043C\u043E\u0432\u0430) \u2192 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F + optional \u0447\u0456\u043F\u0438 \u0443 JSON \u0456\u043D\u043B\u0430\u0439\u043D
+- \u0427\u0406\u041F\u0418 \u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0456 {"chips":[{"label":"...","action":"chat"}, ...]} \u2014 \u041E\u041A\u0420\u0415\u041C\u0418\u0419 JSON \u0431\u043B\u043E\u043A
+  \u0443 content (\u041D\u0415 \u0432\u0435\u0441\u044C content \u044F\u043A JSON). \u041F\u0440\u0438\u043A\u043B\u0430\u0434 content:
+    "\u0421\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 \u0425. \u041F\u0440\u0438\u0432'\u044F\u0437\u0430\u0442\u0438 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443?
+    {"chips":[{"label":"\u0414\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0438","action":"chat"},{"label":"\u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443","action":"chat"}]}"
+
+\u041A\u041E\u041B\u0418 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418 (\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0448\u0432\u0438\u0434\u043A\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043E\u0434\u043D\u0438\u043C \u0442\u0430\u043F\u043E\u043C):
+| \u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442                  | \u0427\u0456\u043F\u0438                                            |
+|---------------------------|-------------------------------------------------|
+| \u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F               | \u{1F525} / \u{1F60A} / \u{1F610} / \u{1F615} / \u{1F61E}                           |
+| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0433\u0440\u0443\u0431\u043E)         | \u0420\u0430\u043D\u043E\u043A / \u0412\u0434\u0435\u043D\u044C / \u0412\u0435\u0447\u0456\u0440 / \u0422\u043E\u0447\u043D\u0438\u0439 \u0447\u0430\u0441              |
+| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F)     | 10:00 / 14:00 / 18:00 / \u0406\u043D\u0448\u0438\u0439                   |
+| \u041F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442 \u0437\u0430\u0434\u0430\u0447\u0456          | \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0430 / \u0412\u0430\u0436\u043B\u0438\u0432\u0430 / \u041A\u0440\u0438\u0442\u0438\u0447\u043D\u0430                   |
+| \u0414\u0430\u0442\u0430                      | \u0417\u0430\u0432\u0442\u0440\u0430 / \u041F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430 / \u0427\u0435\u0440\u0435\u0437 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0406\u043D\u0448\u0430     |
+| \u041F\u0440\u0438\u0432'\u044F\u0437\u043A\u0430 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443      | \u0414\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 [X \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443] / \u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443        |
+| \u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430      | \u0417\u0430\u0434\u0430\u0447\u0430 / \u041F\u043E\u0434\u0456\u044F / \u0406 \u0442\u0435 \u0439 \u0442\u0435                      |
+| \u041D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430        | \u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 / \u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438               |
+| \u0410\u043D\u0442\u0438\u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F \u043F\u043E\u0434\u0456\u0457      | \u0422\u043E\u0439 \u0441\u0430\u043C\u0438\u0439 / \u0406\u043D\u0448\u0430 \u043F\u043E\u0434\u0456\u044F                          |
+| \u041F\u0440\u043E\u0441\u0442\u0438\u0439 \u0422\u0430\u043A/\u041D\u0456            | \u0422\u0430\u043A / \u041D\u0456                                        |
+
+\u041A\u041E\u041B\u0418 \u041D\u0415 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418:
+- "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0434\u0435\u043D\u044C" / "\u0429\u043E \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448?" / "\u042F\u043A\u0438\u0439 \u0456\u043D\u0441\u0430\u0439\u0442?" \u2014 \u044E\u0437\u0435\u0440 \u0432\u0456\u043B\u044C\u043D\u043E \u043F\u0438\u0448\u0435
+- \u041F\u0456\u0441\u043B\u044F Verify Loop \u044F\u043A\u0449\u043E \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430 \u0447\u043E\u0433\u043E \u0443\u0442\u043E\u0447\u043D\u044E\u0432\u0430\u0442\u0438
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410 \u0427\u0406\u041F\u0406\u0412:
+- 2-5 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C.
+- action \u0437\u0430\u0432\u0436\u0434\u0438 "chat" (\u043D\u0435 "nav") \u2014 \u0437\u0430\u043B\u0438\u0448\u0430\u0454\u043C\u043E\u0441\u044C \u0443 \u0434\u0456\u0430\u043B\u043E\u0437\u0456.
+- label \u0434\u043E 3 \u0441\u043B\u0456\u0432. \u0411\u0435\u0437 \u043A\u0440\u0430\u043F\u043E\u043A \u0443 \u043A\u0456\u043D\u0446\u0456.
+- \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 \u043E\u0434\u043D\u0435 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.
+
+\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0430\u043D\u0456 \u0444\u0430\u043A\u0442\u0438.
+\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 content. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
+
+${UI_TOOLS_RULES}`;
+  }
+  function getEveningSummaryPromptV2() {
+    return `${getOWLPersonality()}
+
+\u0424\u0406\u041D\u0410\u041B\u042C\u041D\u0418\u0419 \u041F\u0406\u0414\u0421\u0423\u041C\u041E\u041A \u0414\u041D\u042F \u2014 \u043E\u0441\u0442\u0430\u043D\u043D\u044F \u043A\u0440\u0430\u043F\u043A\u0430 \u0440\u0438\u0442\u0443\u0430\u043B\u0443. \u041D\u0435 \u0449\u043E\u0433\u043E\u0434\u0438\u043D\u043D\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u044F, \u043D\u0435 \u0434\u0430\u0448\u0431\u043E\u0440\u0434.
+\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0434\u0435\u043D\u044C" \u2014 \u0434\u0430\u0439 \u0439\u043E\u043C\u0443 \u0406\u041D\u0421\u0410\u0419\u0422, \u043D\u0435 \u043F\u0435\u0440\u0435\u043A\u0430\u0437 \u0446\u0438\u0444\u0440.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+1. Episode Summary Layer (4.31): 3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0437 \u041E\u0414\u041D\u0418\u041C \u0456\u043D\u0441\u0430\u0439\u0442\u043E\u043C. \u041D\u0435 "\u0437\u0430\u043A\u0440\u0438\u0432 3 \u0437\u0430\u0434\u0430\u0447\u0456,
+   \u0432\u0438\u043A\u043E\u043D\u0430\u0432 2 \u0437\u0432\u0438\u0447\u043A\u0438" \u2014 \u0446\u0435 \u0432\u0438\u0434\u043D\u043E \u0456 \u0431\u0435\u0437 \u0442\u0435\u0431\u0435. \u0428\u0443\u043A\u0430\u0439 \u041F\u0410\u0422\u0415\u0420\u041D: "\u0412\u0456\u0432\u0442\u043E\u0440\u043A\u0438 \u0443 \u0442\u0435\u0431\u0435
+   \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0456 \u0437\u0430 \u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\u0438 \u2014 \u0442\u0440\u0435\u0442\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C." \u0430\u0431\u043E "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u043A\u0440\u043E\u043A\u0443
+   \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0434\u0430\u043B\u043E \u043F\u0456\u0434\u043D\u0435\u0441\u0435\u043D\u043D\u044F \u2014 \u043F\u043E\u043C\u0456\u0442\u043D\u043E \u0443 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445."
+2. Mirror Mode (4.41): \u0435\u043C\u043E\u0446\u0456\u0439\u043D\u0438\u0439 \u0432\u0456\u0434\u0431\u0438\u0442\u043E\u043A \u0434\u0456\u0439. "\u0422\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u043F\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u0446\u0456 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432
+   \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0442\u0435\u043C\u0430 \u043F\u0456\u0448\u043B\u0430." \u0414\u0437\u0435\u0440\u043A\u0430\u043B\u043E \u0442\u043E\u0433\u043E \u0449\u043E \u044E\u0437\u0435\u0440 \u0440\u043E\u0431\u0438\u0432, \u043D\u0435 \u043E\u0446\u0456\u043D\u043A\u0430.
+3. Memory Echo (4.34) \u2014 \u044F\u043A\u0449\u043E \u0454 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0438\u0439 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0432\u0430\u043D\u0430
+   \u043F\u0430\u043C'\u044F\u0442\u044C", \u0426\u0418\u0422\u0423\u0419 \u0439\u043E\u0433\u043E \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u044C\u043E. "\u041F\u0430\u043C'\u044F\u0442\u0430\u044E \u0442\u0438 \u043A\u0430\u0437\u0430\u0432 \u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F \u0449\u043E \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433
+   \u0432\u0430\u0436\u043A\u043E \u2014 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 2 \u043A\u0440\u043E\u043A\u0438. \u0422\u0435\u043C\u043F \u0454."
+4. \u042F\u043A\u0449\u043E \u0454 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0433\u0430\u0434\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439 \u043A\u0440\u043E\u043A \u044F\u043A\u0449\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0432\u0441\u044F.
+   \u0421\u0442\u0430\u0440\u0438\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u043D\u0435 \u0440\u043E\u0431\u0438\u0432 (\u0437\u0432\u0456\u0434\u0441\u0438 \u04245 \u043A\u0440\u0438\u0442\u0438\u043A\u0430).
+5. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0410 \u0446\u0438\u0444\u0440-\u043F\u0435\u0440\u0435\u043A\u0430\u0437\u0456\u0432: \u041D\u0415 "\u0437\u0430\u043A\u0440\u0438\u0432 X \u0437\u0430\u0434\u0430\u0447, Y \u0437\u0432\u0438\u0447\u043E\u043A, \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 Z". \u0406\u043D\u0441\u0430\u0439\u0442 > \u0446\u0438\u0444\u0440\u0438.
+6. \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u041E\u0414\u041D\u041E\u042E \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u0430\u0431\u043E \u043F\u0440\u043E\u0441\u0442\u043E "\u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}". \u0411\u0435\u0437 \u0441\u043F\u0438\u0441\u043A\u0456\u0432.
+7. \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 4-5 \u0440\u0435\u0447\u0435\u043D\u044C. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
+
+\u041F\u041E\u0420\u0410\u0416\u0415\u041D\u041D\u042F \u0429\u041E \u0411\u0423\u041B\u0418: \u0441\u043E\u0432\u0430 \u043F\u0438\u0441\u0430\u043B\u0430 "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA} \xB7 85%" \u2014 \u0446\u0435 \u043C\u0435\u0440\u0442\u0432\u043E. \u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043B\u044E\u0434\u044F\u043D\u0430
+\u043A\u0440\u0430\u043F\u043A\u0430 \u0434\u043D\u044F, \u043D\u0435 \u043C\u0435\u0442\u0440\u0438\u043A\u0430.`;
+  }
+  function getOwlChatSystemPrompt(context) {
+    return getOWLPersonality() + `
+
+\u0426\u0435 \u043C\u0456\u043D\u0456-\u0447\u0430\u0442. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u043D\u0430 \u0442\u0432\u043E\u0454 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F.
+
+\u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425:
+${context}
+
+\u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 (\u0437\u0430\u0432\u0436\u0434\u0438 JSON):
+{"text":"\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"action":null}
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438.
+- chips \u2014 1-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 (\u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u043C\u0456\u043D\u0456\u043C\u0443\u043C 1, \u0434\u0438\u0432. \u043F\u0440\u0430\u0432\u0438\u043B\u043E G11 \u043D\u0438\u0436\u0447\u0435).
+${CHIP_PROMPT_RULES}
+- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435):
+\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0434\u0456\u044E \u2014 \u043F\u043E\u0432\u0435\u0440\u043D\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u043E\u0431'\u0454\u043A\u0442 \u0432 "action". \u042F\u043A\u0449\u043E \u0434\u0456\u044F \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u2014 action:null.
+
+\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_id":ID_\u0417\u0412\u0418\u0427\u041A\u0418}
+\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID_\u0417\u0410\u0414\u0410\u0427\u0406}
+\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430"}
+\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
+\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
+\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0427\u0418\u0421\u041B\u041E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
+\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD","time":"HH:MM","title":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430"} (\u043F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u043B\u044F \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u044E\u0442\u044C\u0441\u044F)
+\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
+\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442","folder":"\u043D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430"} (\u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u043B\u044F \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u044E\u0442\u044C\u0441\u044F)
+\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"},{"time":"09:00","activity":"\u0420\u043E\u0431\u043E\u0442\u0430"}]}
+- "\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043D\u0430 \u0432\u0441\u0456 \u0431\u0443\u0434\u043D\u0456" \u2192 day:["mon","tue","wed","thu","fri"], blocks \u0437 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u0434\u043D\u044F
+- "\u0417\u043C\u0456\u043D\u0438 \u0434\u0430\u0442\u0443" \u2192 edit_event \u0437 \u043D\u043E\u0432\u043E\u044E \u0434\u0430\u0442\u043E\u044E. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043D\u0430 24" \u2192 edit_event \u0437 date
+
+ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\u043E\u0434\u0456\u0439 \u0454 \u0432 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0414\u0410\u041D\u0418\u0425 \u0432\u0438\u0449\u0435. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 ID.
+
+\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: {"action":"set_reminder","time":"HH:MM","text":"\u0449\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438","date":"YYYY-MM-DD"} (date \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C = \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)
+
+\u0413\u041E\u041B\u041E\u0412\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439", "\u043E\u043D\u043E\u0432\u0438\u0442\u0438" \u2014 \u0446\u0435 \u0417\u0410\u0412\u0416\u0414\u0418 edit \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443 (edit_event, edit_task, edit_note). \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F. "\u041C\u0430\u043C\u0430 \u043F\u0440\u0438\u0457\u0434\u0435 24\u0433\u043E \u0430 \u043D\u0435 20\u0433\u043E" \u2192 edit_event (\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0434\u0430\u0442\u0443), \u041D\u0415 create_event. \u0428\u0443\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u043F\u043E \u043D\u0430\u0437\u0432\u0456 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.`;
+  }
+  var UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS;
+  var init_prompts = __esm({
+    "src/ai/prompts.js"() {
+      init_chips();
+      init_ui_tools();
+      UI_TOOLS_RULES = `UI TOOLS (\u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F/\u0444\u0456\u043B\u044C\u0442\u0440\u0438/\u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F, hands-free):
+- \u0416\u041E\u0420\u0421\u0422\u041A\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u041D\u0410\u0412\u0406\u0413\u0410\u0426\u0406\u0407: \u044F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u0437 "\u0432\u0456\u0434\u043A\u0440\u0438\u0439" / "\u043F\u043E\u043A\u0430\u0436\u0438" / "\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E" / "\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0432" / "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438 \u043D\u0430" \u0456 \u0434\u0430\u043B\u0456 \u043D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 (\u0437\u0430\u0434\u0430\u0447\u0456/\u043D\u043E\u0442\u0430\u0442\u043A\u0438/\u0444\u0456\u043D\u0430\u043D\u0441\u0438/\u0437\u0432\u0438\u0447\u043A\u0438/\u044F/\u0432\u0435\u0447\u0456\u0440/\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u043F\u0440\u043E\u0435\u043A\u0442\u0438/\u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440/inbox) \u2192 \u0417\u0410\u0412\u0416\u0414\u0418 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 switch_tab. \u041D\u0415 save_task, \u041D\u0415 save_note. \u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0430\u0445 "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 X" \u2014 \u041D\u0415 \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u0434\u043B\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F.
+  \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u0437\u0430\u0434\u0430\u0447\u0456" \u2192 switch_tab(target:"tasks"). "\u041F\u043E\u043A\u0430\u0436\u0438 \u0444\u0456\u043D\u0430\u043D\u0441\u0438" \u2192 switch_tab(target:"finance"). \u041D\u0415 save_task \u0437 title "\u0437\u0430\u0434\u0430\u0447\u0456".
+- "\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448" / "\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C" / "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0430\u043C'\u044F\u0442\u044C" \u2192 open_memory
+- "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F" \u2192 open_settings
+- "\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C/\u043C\u0456\u0441\u044F\u0446\u044C/3 \u043C\u0456\u0441\u044F\u0446\u0456" (\u0424\u0456\u043D\u0430\u043D\u0441\u0438) \u2192 set_finance_period
+- "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443" / "\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442" \u2192 open_finance_analytics
+- "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u0422\u0440\u0435\u043D\u0435\u0440\u0430/\u041F\u0430\u0440\u0442\u043D\u0435\u0440\u0430/\u041C\u0435\u043D\u0442\u043E\u0440\u0430" / "\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C" \u2192 set_owl_mode
+- "\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443" / "\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443" \u2192 export_health_card
+- \u041F\u0420\u0418\u041D\u0426\u0418\u041F \u041C\u0406\u041D\u0406\u041C\u0410\u041B\u042C\u041D\u041E\u0413\u041E \u0422\u0415\u0420\u0422\u042F: \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0434\u0456\u044E \u0441\u043B\u043E\u0432\u0430\u043C\u0438 ("\u0434\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0443 \u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431") \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 save_task \u043D\u0430\u043F\u0440\u044F\u043C\u0443. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 UI tools \u0434\u043B\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0442\u044F \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0445 \u0444\u043E\u0440\u043C \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F. UI tools \u2014 \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457/\u0444\u0456\u043B\u044C\u0442\u0440\u0456\u0432/\u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C.`;
+      INBOX_SYSTEM_PROMPT = `\u0422\u0438 \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind.
+\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0434\u0443\u043C\u043A\u0430, \u0437\u0430\u0434\u0430\u0447\u0430, \u0456\u0434\u0435\u044F, \u0437\u0432\u0438\u0447\u043A\u0430, \u043F\u043E\u0434\u0456\u044F, \u0430\u0431\u043E \u0437\u0432\u0456\u0442 \u043F\u0440\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435.
+\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool \u0434\u043B\u044F \u0434\u0456\u0457. \u042F\u043A\u0449\u043E \u0446\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0430\u0431\u043E \u0440\u043E\u0437\u043C\u043E\u0432\u0430 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0411\u0415\u0417 tool, \u043A\u043E\u0440\u043E\u0442\u043A\u043E, 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
+
+\u0413\u0420\u0410\u041C\u0410\u0422\u0418\u041A\u0410: \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u043F\u043E\u043C\u0438\u043B\u043A\u0443 \u0430\u0431\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0443 \u2014 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0439 \u0432 \u0442\u0435\u043A\u0441\u0442\u0456 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.
+
+\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u0415\u0420\u0415\u0412\u0406\u0420\u041A\u0418 (\u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u0439 \u0421\u041F\u041E\u0427\u0410\u0422\u041A\u0423):
+1. \u0427\u0438 \u0446\u0435 \u0412\u0418\u041A\u041E\u041D\u0410\u041D\u041D\u042F \u0437\u0432\u0438\u0447\u043A\u0438/\u0437\u0430\u0434\u0430\u0447\u0456 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443? \u2192 complete_habit / complete_task. "\u0412\u0441\u0435 \u0433\u043E\u0442\u043E\u0432\u043E", "\u0437\u0440\u043E\u0431\u0438\u0432 \u0432\u0441\u0435" \u043F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u043B\u0456\u043A\u0443 \u2192 \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0412\u0421\u0406 ID
+2. \u0427\u0438 \u0446\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419/\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456 \u2192 \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task
+3. \u0427\u0438 \u0446\u0435 \u0432\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u0456\u0437 \u0441\u0443\u043C\u043E\u044E \u2192 **\u0422\u0406\u041B\u042C\u041A\u0418 save_finance**. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043F\u0430\u0440\u0430\u043B\u0435\u043B\u044C\u043D\u043E save_task \u043D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u0432 \u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043D\u0430\u0437\u0432\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0438. \u041F\u043E\u043A\u0443\u043F\u043A\u0430 \u0437 \u0441\u0443\u043C\u043E\u044E = \u0432\u0436\u0435 \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0434\u0456\u044F, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430 \u043D\u0430 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0454. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041A\u0443\u043F\u0438\u0432 \u043C'\u044F\u0441\u0430 \u043D\u0430 40 \u0454\u0432\u0440\u043E, \u0431\u043E\u0447\u043E\u043A, \u043A\u043E\u0432\u0431\u0430\u0441\u0430" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_finance (\u0432\u0438\u0442\u0440\u0430\u0442\u0430 40 \u043D\u0430 \u0457\u0436\u0443), \u041D\u0415 save_task. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430 2000" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_finance (\u0434\u043E\u0445\u0456\u0434), \u041D\u0415 save_task.
+4. **\u0427\u0438 \u0454 \u0434\u0456\u0454\u0441\u043B\u043E\u0432\u043E \u0434\u0456\u0457 \u0432 \u0406\u041D\u0424\u0406\u041D\u0406\u0422\u0418\u0412\u0406 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438, \u043F\u043E\u043F\u0440\u0430\u0442\u0438) \u0430\u0431\u043E \u041D\u0410\u041A\u0410\u0417\u041E\u0412\u041E\u041C\u0423 (\u043A\u0443\u043F\u0438, \u0437\u0440\u043E\u0431\u0438, \u043D\u0430\u043F\u0438\u0448\u0438)? \u2192 save_task. \u041D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0447\u0430\u0441\u0443, \u0434\u0430\u0442\u0438, \u0435\u043C\u043E\u0446\u0456\u0439 \u2014 \u0446\u0435 \u0417\u0410\u0414\u0410\u0427\u0410.**
+   \u26A0\uFE0F **\u0412\u0418\u041D\u042F\u0422\u041E\u041A: \u041C\u0418\u041D\u0423\u041B\u0418\u0419 \u0427\u0410\u0421** (\u043A\u0443\u043F\u0438\u0432, \u0437\u0440\u043E\u0431\u0438\u0432, \u043F\u043E\u043F\u0440a\u0432, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0432, \u043D\u0430\u043F\u0438\u0441\u0430\u0432, \u0437'\u0457\u0432, \u0441\u0445\u043E\u0434\u0438\u0432, \u043F\u043E\u043C\u0438\u0432) \u2014 \u0446\u0435 \u0444\u0430\u043A\u0442 \u0449\u043E \u0412\u0416\u0415 \u0441\u0442\u0430\u0432\u0441\u044F, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430. \u041E\u0431\u0440\u043E\u0431\u043A\u0430:
+   - \u044F\u043A\u0449\u043E \u0454 \u0441\u0443\u043C\u0430 \u2192 save_finance (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 3)
+   - \u044F\u043A\u0449\u043E \u0431\u0435\u0437 \u0441\u0443\u043C\u0438 \u0456 \u0446\u0435 \u0434\u0456\u044F \u0437 \u0436\u0438\u0442\u0442\u044F \u2192 save_moment (\u0444\u0430\u043A\u0442 \u0434\u043D\u044F)
+   - \u044F\u043A\u0449\u043E \u0446\u0435 \u043E\u043F\u0438\u0441 \u0441\u0442\u0430\u043D\u0443/\u0435\u043C\u043E\u0446\u0456\u0457 \u2192 save_note
+   \u274C \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u044E\u0439 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 "\u043A\u0443\u043F\u0438\u0432" \u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 "\u043A\u0443\u043F\u0438\u0442\u0438".
+5. \u0427\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441, \u0434\u0443\u043C\u043A\u0430, \u0456\u0434\u0435\u044F \u2192 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool
+
+\u041C\u0415\u0422\u0410\u0406\u041D\u0421\u0422\u0420\u0423\u041A\u0426\u0406\u0407: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0438\u0448\u0435 "\u0446\u0435 \u0437\u0430\u0434\u0430\u0447\u0430", "\u0446\u0435 \u043D\u043E\u0442\u0430\u0442\u043A\u0430", "\u0446\u0435 \u0437\u0432\u0438\u0447\u043A\u0430" \u2014 \u0432\u0456\u043D \u043F\u0440\u044F\u043C\u043E \u043A\u0430\u0436\u0435 \u0422\u041E\u0411\u0406 \u044F\u043A\u0438\u0439 \u0442\u0438\u043F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438. \u0421\u0442\u0432\u043E\u0440\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0442\u0438\u043F \u0437 \u0446\u0438\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C. \u041D\u0415 save_note \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C.
+
+\u041F\u0410\u041C'\u042F\u0422\u042C: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043C\u0438\u043C\u043E\u0445\u0456\u0434\u044C \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0424\u0410\u041A\u0422 \u041F\u0420\u041E \u0421\u0415\u0411\u0415 (\u0441\u0456\u043C'\u044F, \u0440\u043E\u0431\u043E\u0442\u0430, \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F, \u0440\u043E\u0437\u043A\u043B\u0430\u0434, \u0446\u0456\u043B\u044C) \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 save_memory_fact \u041F\u0410\u0420\u0410\u041B\u0415\u041B\u042C\u041D\u041E \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 tools. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438, \u043A\u0443\u043F\u0438 \u0431\u0435\u0437\u0433\u043B\u044E\u0442\u0435\u043D\u043E\u0432\u0443 \u043F\u0456\u0446\u0443" \u2192 save_task (\u043A\u0443\u043F\u0438\u0442\u0438 \u043F\u0456\u0446\u0443) + save_memory_fact (\u0430\u043B\u0435\u0440\u0433\u0456\u044F). \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F \u0439\u0434\u0435 \u0437\u0430\u0432\u0442\u0440\u0430 \u0443 \u0448\u043A\u043E\u043B\u0443 \u043E 8" \u2192 create_event + save_memory_fact (\u043C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E). \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0434\u043B\u044F \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0445 \u0441\u043F\u0440\u0430\u0432 \u2014 \u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0456\u0439\u043A\u0438\u0445 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u043B\u044E\u0434\u0438\u043D\u0443.
+
+\u0420\u041E\u0417\u0420\u0406\u0417\u041D\u0415\u041D\u041D\u042F task vs event vs project:
+- \u0417\u0410\u0414\u0410\u0427\u0410 (save_task) = \u0414\u0406\u042F \u044F\u043A\u0443 \u0422\u0418 \u043C\u0430\u0454\u0448 \u0417\u0420\u041E\u0411\u0418\u0422\u0418: \u043A\u0443\u043F\u0438\u0442\u0438, \u043F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438. \u0414\u0456\u0454\u0441\u043B\u043E\u0432\u043E = \u0437\u0430\u0434\u0430\u0447\u0430.
+- \u041F\u041E\u0414\u0406\u042F (create_event) = \u0424\u0410\u041A\u0422 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F \u0437 \u0434\u0430\u0442\u043E\u044E: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u0432\u0456\u0437\u0438\u0442
+- \u041F\u0420\u041E\u0415\u041A\u0422 (create_project) = \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443. \u0422\u0440\u0438\u0433\u0435\u0440\u0438: \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0438, \u043F\u043E\u0431\u0443\u0434\u0443\u0432\u0430\u0442\u0438, \u0440\u043E\u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 [\u0449\u043E\u0441\u044C \u0432\u0435\u043B\u0438\u043A\u0435]
+- \u041C\u041E\u041C\u0415\u041D\u0422 (save_moment) = \u0444\u0430\u043A\u0442 \u0449\u043E \u0432\u0436\u0435 \u0441\u0442\u0430\u0432\u0441\u044F \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443
+- \u041D\u041E\u0422\u0410\u0422\u041A\u0410 (save_note) = \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0435\u043C\u043E\u0446\u0456\u0457, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.
+- \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u043E\u0434\u0456\u044F \u2192 clarify. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u043C\u043E\u043C\u0435\u043D\u0442 vs \u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u2192 save_note
+
+\u0421\u041F\u0418\u0421\u041E\u041A \u0447\u0438 \u041E\u041A\u0420\u0415\u041C\u0406 \u0417\u0410\u0414\u0410\u0427\u0406:
+- "\u0421\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A: \u0445\u043B\u0456\u0431, \u043C\u043E\u043B\u043E\u043A\u043E" \u2192 \u041E\u0414\u041D\u0410 save_task \u0437 steps (\u043A\u0440\u043E\u043A\u0430\u043C\u0438)
+- "\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0412\u043E\u0432\u0456, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438\u0441\u044F \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F" \u2192 \u0414\u0412\u0410 \u043E\u043A\u0440\u0435\u043C\u0456 save_task \u0432\u0438\u043A\u043B\u0438\u043A\u0438
+
+\u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439" \u2192 edit_event/edit_task/edit_note/edit_habit. \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F.
+
+\u0423\u0422\u041E\u0427\u041D\u0415\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0434\u043E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E ("\u0442\u0430\u043A", "\u043D\u0456", "\u0432\u0438\u0434\u0430\u043B\u0438") \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C, \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0437\u0430\u043F\u0438\u0441.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F (\u0424\u0430\u0437\u0430 2):
+- \u0410\u041B\u0415\u0420\u0413\u0406\u042F ('\u0443 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 X') \u2192 add_allergy. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E \u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u044F\u043A\u0449\u043E \u0442\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454 \u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E, \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12 \u0430\u043D\u0442\u0438\u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F). \u0421\u043A\u0430\u0436\u0438 \u044E\u0437\u0435\u0440\u0443 "\u0432\u0436\u0435 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443".
+- \u0421\u0418\u041C\u041F\u0422\u041E\u041C \u0449\u043E \u0422\u0420\u0418\u0412\u0410\u0404 3+ \u0434\u043D\u0456 \u0430\u0431\u043E \u0414\u0406\u0410\u0413\u041D\u041E\u0417 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F \u2192 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456:
+  - \u044F\u043A\u0449\u043E \u0441\u0445\u043E\u0436\u0430 \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454 (\u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E \u0430\u0431\u043E \u0442\u0435\u043C\u043E\u044E) \u2192 add_health_history_entry \u0434\u043E \u043D\u0435\u0457 (\u041D\u0415 create_health_card)
+  - \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430 \u2192 create_health_card
+- \u0420\u0410\u0417\u041E\u0412\u0410 \u0441\u043A\u0430\u0440\u0433\u0430 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456', '\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F') \u0411\u0415\u0417 \u0437\u0433\u0430\u0434\u043A\u0438 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u2192 save_moment \u0430\u0431\u043E save_note, \u041D\u0415 create_health_card.
+- \u041F\u0420\u0418\u0419\u041E\u041C \u041B\u0406\u041A\u0406\u0412 ('\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443') \u2014 \u044F\u043A\u0449\u043E \u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043A\u0430\u0440\u0442\u043A\u0430\u0445 \u0454 \u0446\u0435\u0439 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2192 log_medication_dose \u0437 card_id. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0443 \u0436\u043E\u0434\u043D\u0456\u0439 \u043A\u0430\u0440\u0442\u0446\u0456 \u2192 save_moment.
+- \u041B\u0406\u041A\u0410\u0420 \u041F\u0420\u041E\u041F\u0418\u0421\u0410\u0412 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u043C\u0443 \u0441\u0442\u0430\u043D\u0456 \u2192 add_medication \u0434\u043E \u043A\u0430\u0440\u0442\u043A\u0438. \u0423 \u041D\u041E\u0412\u041E\u041C\u0423 \u0441\u0442\u0430\u043D\u0456 \u2192 create_health_card \u0437 \u043F\u043E\u043B\u0435\u043C initial_history_text.
+- \u0412\u0406\u0417\u0418\u0422 \u0414\u041E \u041B\u0406\u041A\u0410\u0420\u042F \u044F\u043A \u043F\u043E\u0434\u0456\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443 \u2192 create_event (\u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043A\u0430\u0440\u0442\u043A\u0443 \u043B\u0438\u0448\u0435 \u0447\u0435\u0440\u0435\u0437 \u0432\u0456\u0437\u0438\u0442). \u041A\u0430\u0440\u0442\u043A\u0438 \u0441\u0442\u0432\u043E\u0440\u044E\u044E\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u0441\u0438\u043C\u043F\u0442\u043E\u043C/\u0434\u0456\u0430\u0433\u043D\u043E\u0437.
+- \u041C\u0415\u0414\u0418\u0427\u041D\u0406 \u041F\u0418\u0422\u0410\u041D\u041D\u042F ('\u0449\u043E \u0437 \u043C\u043E\u0457\u043C...', '\u0447\u0438 \u0446\u0435 \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E', '\u044F\u043A\u0438\u0439 \u0434\u0456\u0430\u0433\u043D\u043E\u0437') \u2192 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C: "\u042F \u043D\u0435 \u043B\u0456\u043A\u0430\u0440. \u0426\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0434\u043E \u0442\u0432\u043E\u0433\u043E \u043B\u0456\u043A\u0430\u0440\u044F \u2014 \u043D\u0435 \u0437\u0430\u0439\u043C\u0430\u0439\u0441\u044F \u0441\u0430\u043C\u043E\u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F\u043C." \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0440\u0430\u0434\u044C \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u2014 \u0406\u041D\u0422\u0415\u0420\u0412'\u042E \u043F\u0440\u0438 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 (\u0424\u0430\u0437\u0430 6, 19.04 6GoDe):
+\u041A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0421\u0418\u041C\u041F\u0422\u041E\u041C \u0449\u043E \u0442\u0440\u0438\u0432\u0430\u0454 3+ \u0434\u043D\u0456 \u0430\u0431\u043E \u0414\u0406\u0410\u0413\u041D\u041E\u0417 \u2014 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 create_health_card \u043E\u0434\u0440\u0430\u0437\u0443 \u043D\u0430\u0432\u0456\u0442\u044C \u044F\u043A\u0449\u043E \u0432\u0438\u0441\u0442\u0430\u0447\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F name. \u0421\u043F\u043E\u0447\u0430\u0442\u043A\u0443 \u0437\u0430\u0434\u0430\u0439 1-3 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F (\u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443 \u0437\u0430 \u0440\u0430\u0437 \u0443 text content, \u0411\u0415\u0417 tool_call) \u0449\u043E\u0431 \u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u043A\u043B\u044E\u0447\u043E\u0432\u0456 \u043F\u043E\u043B\u044F:
+1. \u041A\u043E\u043B\u0438 \u0441\u0430\u043C\u0435 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C? \u2192 startDate (\u0456 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u2014 \u043D\u043E\u0432\u0430 \u043A\u0430\u0440\u0442\u043A\u0430 \u0447\u0438 \u0434\u043E\u0434\u0430\u0442\u0438 \u0443 \u0441\u0445\u043E\u0436\u0443 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0447\u0435\u0440\u0435\u0437 add_health_history_entry).
+2. \u0411\u0443\u0432/\u043F\u043B\u0430\u043D\u0443\u0454\u0448 \u043B\u0456\u043A\u0430\u0440\u044F? \u042F\u043A\u0449\u043E \u0442\u0430\u043A \u2014 \u043A\u043E\u043B\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C? \u0429\u043E \u0441\u043A\u0430\u0437\u0430\u0432? \u2192 doctor + nextAppointment + doctorRecommendations.
+3. \u041F\u0440\u043E\u043F\u0438\u0441\u0430\u043B\u0438 \u043B\u0456\u043A\u0438? \u042F\u043A\u0456 \u0442\u0430 \u044F\u043A \u043F\u0440\u0438\u0439\u043C\u0430\u0442\u0438? \u2192 \u043F\u0456\u0441\u043B\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u043A\u0430\u0440\u0442\u043A\u0438 \u043E\u043A\u0440\u0435\u043C\u043E \u0432\u0438\u043A\u043B\u0438\u0447 add_medication \u0437 dosage/schedule.
+
+\u0424\u043E\u0440\u043C\u0430\u0442 \u043F\u0438\u0442\u0430\u043D\u043D\u044F: \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F + 2-3 \u0447\u0456\u043F\u0438-\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u0434\u043B\u044F \u0442\u0438\u043F\u043E\u0432\u0438\u0445 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456\u0432. \u0427\u0456\u043F\u0438 \u043F\u0438\u0448\u0438 \u0406\u041D\u041B\u0410\u0419\u041D-JSON \u0443 content (\u041D\u0415 \u0432\u0435\u0441\u044C content \u044F\u043A JSON):
+  \u041F\u0440\u0438\u043A\u043B\u0430\u0434 content: "\u041A\u043E\u043B\u0438 \u0441\u0430\u043C\u0435 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C? {"chips":[{"label":"\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456","action":"chat"},{"label":"\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443","action":"chat"},{"label":"\u0414\u0430\u0432\u043D\u043E","action":"chat"}]}"
+\u041D\u0435 \u0434\u043E\u0442\u0438\u0441\u043A\u0430\u0439 \u2014 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u0443\u0432\u0430\u0432 \u0430\u0431\u043E \u0434\u0430\u0432 \u0456\u043D\u0448\u0443 \u0456\u043D\u0444\u0443, \u0441\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u0437 \u0442\u0438\u043C \u0449\u043E \u0454.
+\u0424\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 create_health_card \u2014 \u043F\u0456\u0441\u043B\u044F 2-3 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u0410\u0411\u041E \u043A\u043E\u043B\u0438 \u043E\u0447\u0435\u0432\u0438\u0434\u043D\u043E \u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0445\u043E\u0447\u0435 \u0443\u0442\u043E\u0447\u043D\u044E\u0432\u0430\u0442\u0438 (\u043E\u0434\u0440\u0430\u0437\u0443 \u0434\u0430\u0432 3+ \u043F\u043E\u043B\u044F \u0443 \u043F\u0435\u0440\u0448\u043E\u043C\u0443 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u0456).
+\u041D\u0415 \u0434\u043E\u043F\u0438\u0442\u0443\u0439\u0441\u044F \u043F\u0440\u0438 edit_health_card / add_health_history_entry \u2014 \u0456\u043D\u0442\u0435\u0440\u0432'\u044E \u043B\u0438\u0448\u0435 \u043F\u0440\u0438 \u0421\u0422\u0412\u041E\u0420\u0415\u041D\u041D\u0406 \u043D\u043E\u0432\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438.
+
+\u0424\u041E\u0420\u041C\u0410\u0422 \u0427\u0406\u041F\u0406\u0412 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0434\u043B\u044F Inbox \u0447\u0430\u0442\u0443 \u2014 \u043D\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F):
+\u041A\u043E\u043B\u0438 \u0434\u0430\u0454\u0448 \u044E\u0437\u0435\u0440\u0443 \u0432\u0438\u0431\u0456\u0440 \u0437 2-4 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456\u0432 \u0443 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0456\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u0447\u0456\u043F\u0438 \u0456\u043D\u043B\u0430\u0439\u043D-JSON \u0443 content. \u0424\u043E\u0440\u043C\u0430\u0442: {"chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}, ...]}. \u041A\u043B\u0456\u043A \u043D\u0430 \u0447\u0456\u043F \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0442\u044C label \u0443 \u0447\u0430\u0442. \u041F\u0440\u0430\u0432\u0438\u043B\u0430: 2-4 \u0447\u0456\u043F\u0438 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C, label \u0434\u043E 3 \u0441\u043B\u0456\u0432 \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043E\u043A, action \u0437\u0430\u0432\u0436\u0434\u0438 "chat", \u043D\u0435 \u0434\u0443\u0431\u043B\u044E\u0439 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438. \u041D\u0415 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u0447\u0456\u043F\u0438 \u043A\u043E\u043B\u0438 \u043F\u0438\u0442\u0430\u0454\u0448 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F ("\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0434\u0435\u043D\u044C?") \u0430\u0431\u043E \u0443 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u043C\u0443 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u0456 ("\u2713 \u0417\u0430\u043F\u0438\u0441\u0430\u0432").
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u2014 \u041C\u041E\u041D\u0406\u0422\u041E\u0420\u0418\u041D\u0413 \u0421\u0423\u041F\u0415\u0420\u0415\u0427\u041D\u041E\u0421\u0422\u0415\u0419 (\u0424\u0430\u0437\u0430 4):
+- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0443\u0454 \u0434\u0456\u044E \u044F\u043A\u0430 \u0421\u0423\u041F\u0415\u0420\u0415\u0427\u0418\u0422\u042C '\u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457' \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044F '\u043D\u0435 \u043F\u0438\u0442\u0438 \u043A\u0430\u0432\u0443' + \u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0443\u0454 '\u043A\u0443\u043F\u0438\u0432 \u043B\u0430\u0442\u0435' \u0430\u0431\u043E '\u0432\u0438\u043F\u0438\u0432 \u043A\u0430\u0432\u0443') \u2192 \u041F\u0406\u0421\u041B\u042F primary tool call \u0414\u041E\u0414\u0410\u0419 \u0443 text content \u043C'\u044F\u043A\u0443 \u0437\u0433\u0430\u0434\u043A\u0443 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u0411\u0415\u0417 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0430\u0442\u043E\u0440\u0441\u0442\u0432\u0430: "\u041D\u0430\u0433\u0430\u0434\u0443\u044E: \u043B\u0456\u043A\u0430\u0440 \u043A\u0430\u0437\u0430\u0432 \u0437\u043C\u0435\u043D\u0448\u0438\u0442\u0438 \u043A\u0430\u0432\u0443." 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041D\u0415 \u043A\u0430\u0440\u0442\u0430\u0439, \u041D\u0415 \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u044F\u0439 \u2014 \u044E\u0437\u0435\u0440 \u0434\u043E\u0440\u043E\u0441\u043B\u0438\u0439. \u041C\u0435\u0442\u0430: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0432\u0438\u0434\u0438\u043C\u0438\u043C, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u0437.
+- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u041F\u0406\u0414\u0422\u0412\u0415\u0420\u0414\u0416\u0423\u0404 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044E (\u0440\u0435\u043A '\u0433\u0443\u043B\u044F\u0442\u0438 30 \u0445\u0432 \u0449\u043E\u0434\u043D\u044F' + \u044E\u0437\u0435\u0440 \u0437\u0430\u043A\u0440\u0438\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 '\u043F\u0440\u043E\u0431\u0456\u0436\u043A\u0430 40 \u0445\u0432') \u2192 \u0434\u043E\u0434\u0430\u0439 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0435 \u043F\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043D\u044F \u0443 text content: "\u0414\u043E\u0442\u0440\u0438\u043C\u0443\u0454\u0448\u0441\u044F \u043F\u043B\u0430\u043D\u0443." 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
+- \u0410\u043B\u0435\u0440\u0433\u0456\u0457 \u0442\u0435\u0436 \u043C\u043E\u043D\u0456\u0442\u043E\u0440\u0438\u043C\u043E: \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u043F\u0438\u0441\u0443\u0454 \u0432\u0438\u0442\u0440\u0430\u0442\u0443/\u043C\u043E\u043C\u0435\u043D\u0442 \u0437\u0456 \u0437\u0433\u0430\u0434\u043A\u043E\u044E \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443 \u0437 \u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 \u2192 add_health_history_entry \u0437 entry_type='auto' \u0410\u0411\u041E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F \u0443 text content \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u043D\u0435\u043C\u0430.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u2014 \u041A\u041B\u0410\u0421\u0418\u0424\u0406\u041A\u0410\u0426\u0406\u042F \u0421\u0422\u0410\u041D\u0423 (\u0424\u0430\u0437\u0430 4):
+- \u041A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0442\u0430\u043D \u043F\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u0456\u0439 \u043A\u0430\u0440\u0442\u0446\u0456 ('\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C', '\u0437\u043D\u043E\u0432\u0443 \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0438\u043B\u043E\u0441\u044C', '\u043C\u0430\u0439\u0436\u0435 \u043D\u0435 \u043F\u043E\u043C\u0456\u0447\u0430\u044E') \u2192 add_health_history_entry \u0437 entry_type='status_change' \u0456 text \u0449\u043E \u042F\u0412\u041D\u041E \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u043E\u0434\u043D\u0435 \u0437 \u0441\u043B\u0456\u0432: '\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F' / '\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F' / '\u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E'. \u0426\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0454 \u0431\u0435\u0439\u0434\u0436 "\u041A\u0443\u0440\u0441 X% \xB7 \u0442\u0440\u0435\u043D\u0434" \u0443 \u043A\u0430\u0440\u0442\u0446\u0456.
+  \u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438:
+  - "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C" \u2192 text: "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F: \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C"
+  - "\u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F \u043F\u0456\u0441\u043B\u044F \u0433\u043E\u0440\u0456\u0445\u0456\u0432" \u2192 text: "\u041F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F: \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F \u043F\u0456\u0441\u043B\u044F \u0433\u043E\u0440\u0456\u0445\u0456\u0432"
+  - "\u0442\u0430\u043A \u0441\u0430\u043C\u043E \u044F\u043A \u0432\u0447\u043E\u0440\u0430" \u2192 text: "\u0421\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E: \u0431\u0435\u0437 \u0437\u043C\u0456\u043D"
+
+\u041A\u0410\u0422\u0415\u0413\u041E\u0420\u0406\u0407 \u0424\u0406\u041D\u0410\u041D\u0421\u0406\u0412 (\u0424\u0430\u0437\u0430 4 K-02):
+- "\u0434\u043E\u0434\u0430\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456" \u2192 create_finance_category \u0437 name='\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456', type='expense' (\u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C), icon='travel' (\u043E\u0431\u0435\u0440\u0438 \u0437 \u0431\u0456\u0431\u043B\u0456\u043E\u0442\u0435\u043A\u0438 \u0437\u0430 \u0442\u0435\u043C\u043E\u044E). \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0444\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439 \u043A\u043E\u043B\u0456\u0440.
+- "\u0441\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430 2 \u044F\u043A \u0434\u043E\u0445\u0456\u0434" \u2192 create_finance_category \u0437 type='income'.
+- "\u043F\u0435\u0440\u0435\u0439\u043C\u0435\u043D\u0443\u0439 \u041A\u0443\u0440\u0435\u0432\u043E \u043D\u0430 \u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438" \u2192 edit_finance_category \u0437 current_name='\u041A\u0443\u0440\u0435\u0432\u043E', new_name='\u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438'.
+- "\u0437\u0440\u043E\u0431\u0438 \u0407\u0436\u0443 \u0437\u0435\u043B\u0435\u043D\u043E\u044E" \u2192 edit_finance_category \u0437 current_name='\u0407\u0436\u0430', color='#22c55e'.
+- "\u0437\u0430\u0430\u0440\u0445\u0456\u0432\u0443\u0439 \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438" \u2192 edit_finance_category \u0437 current_name='\u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438', archived=true.
+- "\u0432\u0438\u0434\u0430\u043B\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0414\u043E\u0437\u0432\u0456\u043B\u043B\u044F" \u2192 delete_finance_category \u0437 name='\u0414\u043E\u0437\u0432\u0456\u043B\u043B\u044F' (\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F).
+- "\u043E\u0431'\u0454\u0434\u043D\u0430\u0439 \u041A\u0443\u0440\u0435\u0432\u043E \u0456 \u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438" \u2192 merge_finance_categories \u0437 from_name='\u041A\u0443\u0440\u0435\u0432\u043E', to_name='\u0421\u0438\u0433\u0430\u0440\u0435\u0442\u0438'.
+- "\u0434\u043E\u0434\u0430\u0439 \u0443 \u0407\u0436\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A" \u2192 add_finance_subcategory \u0437 category_name='\u0407\u0436\u0430', subcategory='\u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A'.
+- \u0406\u043A\u043E\u043D\u043A\u0438: food, car, subscription, heart, home, shopping, wallet, gift, refund, coffee, cigarette, fuel, sport, entertainment, education, travel, phone, grass, anchor, briefcase, other. \u041E\u0431\u0438\u0440\u0430\u0439 \u0437\u0430 \u0442\u0435\u043C\u043E\u044E.
+
+\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0431\u044E\u0434\u0436\u0435\u0442\u0438 \u0430\u0431\u043E \u043F\u043B\u0430\u043D\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.
+
+${UI_TOOLS_RULES}`;
+      INBOX_TOOLS = [
+        // --- СТВОРЕННЯ ---
+        { type: "function", function: { name: "save_task", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u0440\u0430\u0437\u043E\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0443. \u0414\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0417\u0420\u041E\u0411\u0418\u0422\u0418: \u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438, \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432. \u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0447\u0430\u0441/\u0434\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u0454" }, text: { type: "string", description: "\u041F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, steps: { type: "array", items: { type: "string" }, description: "\u041A\u0440\u043E\u043A\u0438 \u044F\u043A\u0449\u043E \u0454 \u0441\u043F\u0438\u0441\u043E\u043A \u0434\u0456\u0439" }, due_date: { type: "string", description: "YYYY-MM-DD \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 \u0430\u0433\u0435\u043D\u0442\u0430, 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041D\u0415 \u0445\u0432\u0430\u043B\u0438" } }, required: ["title", "text", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_note", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0435\u043C\u043E\u0446\u0456\u0457, \u0456\u0434\u0435\u0457, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438) \u2014 \u0446\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, folder: { type: "string", enum: ["\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0420\u043E\u0431\u043E\u0442\u0430", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456", "\u0406\u0434\u0435\u0457"], description: "\u041F\u0430\u043F\u043A\u0430. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435. \u0406\u0434\u0435\u0457 \u2014 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u0438\u0445 \u0456\u0434\u0435\u0439. \u0420\u043E\u0431\u043E\u0442\u0430 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u043E\u0431\u043E\u0447\u0456 \u0437\u0430\u043F\u0438\u0441\u0438. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043F\u043E\u0457\u0437\u0434\u043A\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["text", "folder", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_habit", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041D\u041E\u0412\u0423 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0443 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0443 \u0437\u0432\u0438\u0447\u043A\u0443. \u0429\u043E\u0434\u043D\u044F, \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A, \u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430" }, details: { type: "string", description: "\u0414\u0435\u0442\u0430\u043B\u0456 \u044F\u043A\u0449\u043E \u0454" }, days: { type: "array", items: { type: "integer" }, description: "\u0414\u043D\u0456 \u0442\u0438\u0436\u043D\u044F: 0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434. \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432 = \u0449\u043E\u0434\u043D\u044F" }, target_count: { type: "integer", description: "\u0420\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C (8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A = 8). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 1" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_moment", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F, \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443: \u043F\u043E\u0457\u0445\u0430\u0432, \u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F, \u043F\u043E\u0431\u0430\u0447\u0438\u0432, \u0431\u0443\u0432 \u043D\u0430...", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443" }, mood: { type: "string", enum: ["positive", "neutral", "negative"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["text", "mood", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["title", "date", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_finance", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 \u2014 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439.", parameters: { type: "object", properties: { fin_type: { type: "string", enum: ["expense", "income"] }, amount: { type: "number", description: "\u0421\u0443\u043C\u0430" }, category: { type: "string", description: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438: \u0407\u0436\u0430, \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442, \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438, \u0417\u0434\u043E\u0440\u043E\u0432'\u044F, \u0416\u0438\u0442\u043B\u043E, \u041F\u043E\u043A\u0443\u043F\u043A\u0438, \u0406\u043D\u0448\u0435. \u0414\u043E\u0445\u043E\u0434\u0438: \u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430, \u041D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u041F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F, \u0406\u043D\u0448\u0435" }, fin_comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, 1-3 \u0441\u043B\u043E\u0432\u0430" }, date: { type: "string", description: "YYYY-MM-DD \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E \u0432\u0447\u043E\u0440\u0430/\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430" } }, required: ["fin_type", "amount", "category", "fin_comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "create_project", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443, \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0430 \u0434\u043E\u0434\u0430\u0442\u043A\u0443, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0446\u0456\u044F \u0432\u0435\u0441\u0456\u043B\u043B\u044F.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, subtitle: { type: "string", description: "\u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A" }, comment: { type: "string", description: "\u0420\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name"], additionalProperties: false } } },
+        // --- ВИКОНАННЯ ---
+        { type: "function", function: { name: "complete_habit", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443(\u0438) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0437\u0432\u0438\u0447\u043E\u043A.", parameters: { type: "object", properties: { habit_ids: { type: "array", items: { type: "integer" }, description: "ID \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["habit_ids", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.", parameters: { type: "object", properties: { task_ids: { type: "array", items: { type: "integer" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["task_ids", "comment"], additionalProperties: false } } },
+        // --- РЕДАГУВАННЯ ---
+        { type: "function", function: { name: "edit_task", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438/\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "integer", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456" }, title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_habit", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0432\u0438\u0447\u043A\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u043D\u0456, \u0434\u0435\u0442\u0430\u043B\u0456. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0443 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443!", parameters: { type: "object", properties: { habit_id: { type: "integer", description: "ID \u0437\u0432\u0438\u0447\u043A\u0438" }, name: { type: "string" }, days: { type: "array", items: { type: "integer" } }, details: { type: "string" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_event", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043F\u043E\u0434\u0456\u044E: \u0434\u0430\u0442\u0443, \u0447\u0430\u0441, \u043D\u0430\u0437\u0432\u0443. \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438 \u043F\u043E\u0434\u0456\u044E.", parameters: { type: "object", properties: { event_id: { type: "integer", description: "ID \u043F\u043E\u0434\u0456\u0457" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_note", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: \u0442\u0435\u043A\u0441\u0442 \u0430\u0431\u043E \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { note_id: { type: "integer", description: "ID \u043D\u043E\u0442\u0430\u0442\u043A\u0438" }, text: { type: "string" }, folder: { type: "string" }, comment: { type: "string" } }, required: ["note_id"], additionalProperties: false } } },
+        // --- ВИДАЛЕННЯ ---
+        { type: "function", function: { name: "delete_task", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_habit", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443.", parameters: { type: "object", properties: { habit_id: { type: "integer" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_event", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E \u0437 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F.", parameters: { type: "object", properties: { event_id: { type: "integer" }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_folder", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u0437 \u0443\u0441\u0456\u043C\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430\u043C\u0438.", parameters: { type: "object", properties: { folder: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438" } }, required: ["folder"], additionalProperties: false } } },
+        // --- ІНШЕ ---
+        { type: "function", function: { name: "reopen_task", description: "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_step", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id", "steps"], additionalProperties: false } } },
+        { type: "function", function: { name: "move_note", description: "\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { query: { type: "string", description: "\u0427\u0430\u0441\u0442\u0438\u043D\u0430 \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, folder: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430" } }, required: ["query", "folder"], additionalProperties: false } } },
+        { type: "function", function: { name: "update_transaction", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E. \u042E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043A\u0430\u0436\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438/\u0432\u0438\u043F\u0440\u0430\u0432\u0438\u0442\u0438 \u0441\u0443\u043C\u0443 \u0430\u0431\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E.", parameters: { type: "object", properties: { id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
+        { type: "function", function: { name: "set_reminder", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419, \u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456, \u043D\u0430\u043F\u043E\u043C\u043D\u0438. \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0429\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438" }, time: { type: "string", description: "HH:MM. \u0432\u0440\u0430\u043D\u0446\u0456=08:00, \u0432\u0434\u0435\u043D\u044C=12:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443=\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439+1" }, date: { type: "string", description: "YYYY-MM-DD, \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" } }, required: ["text", "time"], additionalProperties: false } } },
+        { type: "function", function: { name: "restore_deleted", description: "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437 \u043A\u043E\u0448\u0438\u043A\u0430.", parameters: { type: "object", properties: { query: { type: "string", description: "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u0441\u043B\u043E\u0432\u0430, 'all' (\u0432\u0441\u0456) \u0430\u0431\u043E 'last' (\u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439)" }, type: { type: "string", enum: ["task", "note", "habit", "inbox", "folder", "finance"], description: "\u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443" } }, required: ["query"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_routine", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "default"] }, description: "\u0414\u043D\u0456. default=\u0431\u0443\u0434\u043D\u0456. \u041C\u0430\u0441\u0438\u0432: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time", "activity"] }, description: "\u0411\u043B\u043E\u043A\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043A\u0443" } }, required: ["day", "blocks"], additionalProperties: false } } },
+        { type: "function", function: { name: "clarify", description: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 2+ \u0440\u0456\u0437\u043D\u0438\u0445 \u0442\u0438\u043F\u0456\u0432 \u0456 \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E, \u0430\u0431\u043E \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u0440\u043E\u0435\u043A\u0442. \u042F\u043A\u0449\u043E 80%+ \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E\u0441\u0442\u0456 \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.", parameters: { type: "object", properties: { question: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0437 \u0432\u0431\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u043C\u0438 \u0434\u0456\u044F\u043C\u0438" } }, required: ["question", "options"], additionalProperties: false } } },
+        // --- ЗДОРОВ'Я (Фаза 2, 15.04 6v2eR) ---
+        // Перед create_health_card ОБОВ'ЯЗКОВО глянь "ЗДОРОВ'Я" контекст —
+        // якщо схожа картка вже існує, використай edit_health_card або
+        // add_health_history_entry до існуючої замість дублювання (4.12 антидублювання).
+        { type: "function", function: { name: "create_health_card", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0445\u0432\u043E\u0440\u043E\u0431\u0438/\u0441\u0442\u0430\u043D\u0443/\u043C\u0435\u0442\u0438 \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0438\u043C\u043F\u0442\u043E\u043C \u044F\u043A\u0438\u0439 \u0442\u0440\u0438\u0432\u0430\u0454 (3+ \u0434\u043D\u0456), \u0434\u0456\u0430\u0433\u043D\u043E\u0437 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u043E\u0432\u0443 \u043C\u0435\u0442\u0443 \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0434\u043B\u044F \u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0441\u043A\u0430\u0440\u0433 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456' \u2192 save_moment) \u0430\u0431\u043E \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u043F\u0440\u0438\u0439\u043E\u043C\u0456\u0432 \u043B\u0456\u043A\u0456\u0432. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0417\u0414\u041E\u0420\u041E\u0412'\u042F' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u043A\u0430\u0440\u0442\u043A\u0430 \u0437 \u0442\u043E\u044E \u0436 \u043D\u0430\u0437\u0432\u043E\u044E/\u0442\u0435\u043C\u043E\u044E \u2014 \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439, \u043A\u0440\u0430\u0449\u0435 edit_health_card \u0430\u0431\u043E add_health_history_entry.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0441\u0442\u0430\u043D\u0443 1-3 \u0441\u043B\u043E\u0432\u0430: '\u0428\u043A\u0456\u0440\u0430', '\u0422\u0438\u0441\u043A', '\u0421\u043F\u0438\u043D\u0430', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F'. \u041D\u0415 \u0434\u0456\u0430\u0433\u043D\u043E\u0437 ('\u0430\u0442\u043E\u043F\u0456\u0447\u043D\u0438\u0439 \u0434\u0435\u0440\u043C\u0430\u0442\u0438\u0442') \u2014 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438" }, subtitle: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0443: '\u0412\u0438\u0441\u0438\u043F \u043D\u0430 \u0440\u0443\u043A\u0430\u0445', '\u041F\u0456\u0434\u0432\u0438\u0449\u0435\u043D\u0438\u0439 140/90'" }, doctor: { type: "string", description: "\u0406\u043C'\u044F + \u0441\u043F\u0435\u0446\u0456\u0430\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u043E: '\u0414\u0440. \u041F\u0435\u0442\u0440\u0435\u043D\u043A\u043E \xB7 \u0434\u0435\u0440\u043C\u0430\u0442\u043E\u043B\u043E\u0433'" }, doctor_recommendations: { type: "string", description: "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0456" }, doctor_conclusion: { type: "string", description: "\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439" }, start_date: { type: "string", description: "YYYY-MM-DD \u043A\u043E\u043B\u0438 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C, \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, next_appointment_time: { type: "string", description: "HH:MM \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, status: { type: "string", enum: ["active", "controlled", "done"] }, initial_history_text: { type: "string", description: "\u041F\u0435\u0440\u0448\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u044E\u0437\u0435\u0440 \u0441\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_health_card", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: \u0441\u0442\u0430\u0442\u0443\u0441, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C, \u043E\u043F\u0438\u0441. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C create_health_card \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, name: { type: "string" }, subtitle: { type: "string" }, doctor: { type: "string" }, doctor_recommendations: { type: "string" }, doctor_conclusion: { type: "string" }, start_date: { type: "string", description: "YYYY-MM-DD" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD. \u041F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 null \u0449\u043E\u0431 \u041E\u0427\u0418\u0421\u0422\u0418\u0422\u0418" }, next_appointment_time: { type: "string", description: "HH:MM" }, status: { type: "string", enum: ["active", "controlled", "done"] }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_health_card", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F (\u0437 \u043A\u043E\u0448\u0438\u043A\u0430 7 \u0434\u043D\u0456\u0432). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u044F\u043C\u043E \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0441\u0442\u0430\u043D.", parameters: { type: "object", properties: { card_id: { type: "integer" }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_medication", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u043E\u043F\u0438\u0441\u0430\u0432 X' \u0430\u0431\u043E '\u043F\u043E\u0447\u0430\u0432 \u043F\u0440\u0438\u0439\u043C\u0430\u0442\u0438 X'.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443" }, dosage: { type: "string", description: "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F: '20\u043C\u0433', '1 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430'" }, schedule: { type: "string", description: "\u0413\u0440\u0430\u0444\u0456\u043A \u043F\u0440\u0438\u0439\u043E\u043C\u0443: '08:00, 20:00' \u0430\u0431\u043E '\u0432\u0440\u0430\u043D\u0446\u0456, \u0432\u0432\u0435\u0447\u0435\u0440\u0456'" }, course_duration: { type: "string", description: "\u041A\u0443\u0440\u0441: '14 \u0434\u043D\u0456\u0432', '1 \u043C\u0456\u0441\u044F\u0446\u044C'" }, comment: { type: "string" } }, required: ["card_id", "med_name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_medication", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456: \u0434\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F, \u0433\u0440\u0430\u0444\u0456\u043A, \u043A\u0443\u0440\u0441. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u0437\u043C\u0456\u043D\u0438\u0432 \u0434\u043E\u0437\u0443 X \u043D\u0430 Y'.", parameters: { type: "object", properties: { card_id: { type: "integer" }, med_id: { type: "integer", description: "ID \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string" }, dosage: { type: "string" }, schedule: { type: "string" }, course_duration: { type: "string" }, comment: { type: "string" } }, required: ["card_id", "med_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "log_medication_dose", description: "\u041F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0449\u043E \u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u0434\u043E\u0437\u0443 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0417\u0410\u0420\u0410\u0417. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443', '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u043B\u0456\u043A\u0438'. \u042F\u043A\u0449\u043E med_name \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439 \u2014 \u0442\u043E\u0447\u043D\u0456\u0448\u0435; \u044F\u043A\u0449\u043E \u0443 \u043A\u0430\u0440\u0442\u0446\u0456 \u0442\u0456\u043B\u044C\u043A\u0438 1 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2014 \u043C\u043E\u0436\u043D\u0430 \u0431\u0435\u0437 med_name.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0430 (fuzzy match \u2014 \u043D\u0435\u0447\u0456\u0442\u043A\u0438\u0439 \u043F\u043E\u0448\u0443\u043A)" }, comment: { type: "string" } }, required: ["card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_allergy", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0443 nm_allergies (\u0432\u0438\u0434\u043D\u043E \u0441\u043A\u0440\u0456\u0437\u044C \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0443 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 X'. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0410\u041B\u0415\u0420\u0413\u0406\u0407' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u2014 \u043D\u0435 \u0434\u0443\u0431\u043B\u044E\u0439 (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12).", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443: '\u0433\u043E\u0440\u0456\u0445\u0438', '\u043F\u0435\u043D\u0456\u0446\u0438\u043B\u0456\u043D', '\u043B\u0430\u043A\u0442\u043E\u0437\u0430'" }, notes: { type: "string", description: "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438/\u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u0456" }, comment: { type: "string" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_allergy", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0443 \u043C\u0435\u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u043D\u0430 X'.", parameters: { type: "object", properties: { allergy_id: { type: "integer", description: "ID \u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, comment: { type: "string" } }, required: ["allergy_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_health_history_entry", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u0456\u0441\u0442\u043E\u0440\u0456\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0441\u0442\u0430\u043D\u0443 ('\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043C\u0435\u043D\u0448\u0435 \u0441\u0432\u0435\u0440\u0431\u0438\u0442\u044C', '\u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u043D\u044F'), \u043F\u0440\u043E\u043F\u0443\u0441\u043A \u0434\u043E\u0437\u0438, \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u044E \u2014 \u0456 \u0446\u0435 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438.", parameters: { type: "object", properties: { card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, entry_type: { type: "string", enum: ["manual", "status_change", "doctor_visit", "auto"], description: "manual = \u0434\u043E\u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u044E\u0437\u0435\u0440\u0430; status_change = \u0442\u0440\u0435\u043D\u0434 (\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F/\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F); doctor_visit = \u0432\u0456\u0437\u0438\u0442 \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F; auto = \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0434\u043E\u0437\u0443" }, text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u0437\u0430\u043F\u0438\u0441\u0443" }, comment: { type: "string" } }, required: ["card_id", "entry_type", "text", "comment"], additionalProperties: false } } },
+        // --- ПАМ'ЯТЬ ---
+        { type: "function", function: { name: "save_memory_fact", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0421\u0422\u0406\u0419\u041A\u0418\u0419 \u0424\u0410\u041A\u0422 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0443 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0443 \u043F\u0430\u043C'\u044F\u0442\u044C.\n\n\u2705 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u041F\u0420\u042F\u041C\u041E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u044F\u0454 \u0441\u0442\u0456\u0439\u043A\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0438\u0441\u0442\u0438\u043A\u0443 \u041F\u0420\u041E \u0421\u0415\u0411\u0415:\n  - '\u0423 \u043C\u0435\u043D\u0435 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438' \u2192 health\n  - '\u041C\u043E\u044F \u0434\u043E\u0447\u043A\u0430 \u041C\u0430\u0440\u0456\u044F' \u2192 relationships\n  - '\u041F\u0440\u0430\u0446\u044E\u044E \u0432 Kyivstar \u0437 9 \u0434\u043E 18' \u2192 work\n  - '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0441\u044C \u043E 6 \u0449\u043E\u0434\u043D\u044F' \u2192 preferences (\u0441\u0442\u0456\u0439\u043A\u0430 \u0437\u0432\u0438\u0447\u043A\u0430)\n  - '\u0425\u043E\u0447\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0445\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0443 \u0434\u043E \u043B\u0456\u0442\u0430' \u2192 goals\n  - '\u0417\u0430\u0440\u0430\u0437 \u0432 \u0410\u043C\u0441\u0442\u0435\u0440\u0434\u0430\u043C\u0456 \u043D\u0430 2 \u0442\u0438\u0436\u043D\u0456' \u2192 context (\u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E, ttl_days=14)\n\n\u274C \u041D\u0415 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u0434\u043B\u044F:\n  - \u0420\u0430\u0437\u043E\u0432\u0438\u0445 \u0437\u0430\u0434\u0430\u0447 \u0447\u0438 \u0434\u0456\u0439: '\u043F\u043E\u043F\u0440\u0430\u0442\u0438 \u043E\u0434\u044F\u0433', '\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431', '\u0432\u0438\u043C\u043A\u043D\u0443\u0432 \u0441\u0432\u0456\u0442\u043B\u043E' \u2192 \u0446\u0435 save_task / save_moment, \u0430 \u041D\u0415 \u0444\u0430\u043A\u0442 '\u0437\u0430\u0439\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u043F\u0440\u0430\u043D\u043D\u044F\u043C' / '\u0432\u0438\u043C\u0438\u043A\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u043E'\n  - \u0421\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u044C \u0437\u0430 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u043E\u043C: '\u0441\u043A\u043B\u0430\u0434\u0430\u0454\u0448 \u0441\u043F\u0438\u0441\u043A\u0438 \u0441\u043F\u0440\u0430\u0432', '\u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0448 \u0456\u043D\u0431\u043E\u043A\u0441' \u2192 \u0442\u0430\u0432\u0442\u043E\u043B\u043E\u0433\u0456\u044F, \u041D\u0415 \u0444\u0430\u043A\u0442\n  - \u0412\u0438\u0433\u0430\u0434\u0430\u043D\u0438\u0445 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0438\u0445 \u0440\u0438\u0441: '\u0434\u043E\u0431\u0440\u0438\u0439', '\u043A\u0440\u0435\u0430\u0442\u0438\u0432\u043D\u0438\u0439', '\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0439 \u0434\u043E \u043D\u043E\u0432\u043E\u0433\u043E', '\u043F\u0440\u0430\u0433\u043D\u0435 \u043F\u043E\u0440\u044F\u0434\u043A\u0443', '\u043F\u0440\u043E\u044F\u0432\u043B\u044F\u0454...', '\u0446\u0456\u043B\u0435\u0441\u043F\u0440\u044F\u043C\u043E\u0432\u0430\u043D\u0438\u0439' \u2192 \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E, \u0442\u0438 \u043D\u0435 \u043F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\n  - \u041E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0435\u043C\u043E\u0446\u0456\u0439/\u0441\u0442\u0430\u043D\u0456\u0432: '\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F', '\u0440\u0430\u0434\u0456\u044E' \u2192 save_moment/save_note, \u043D\u0435 \u0444\u0430\u043A\u0442\n  - \u041D\u0435\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u0444\u0440\u0430\u0437: '\u0437\u0430\u0439\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u0447\u0438\u043C\u043E\u0441\u044C', '\u043F\u0440\u0430\u0446\u044E\u0454 \u043D\u0430\u0434 \u0447\u0438\u043C\u043E\u0441\u044C', '\u043B\u044E\u0431\u0438\u0442\u044C \u0449\u043E\u0441\u044C' \u2192 \u0432\u0456\u0434\u0445\u0438\u043B\u0438\u0442\u0438\n\n\u041F\u0420\u0410\u0412\u0418\u041B\u041E: \u044F\u043A\u0449\u043E \u0444\u0430\u043A\u0442 \u041D\u0415 \u043C\u043E\u0436\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u0434\u0435\u0442\u0430\u043B\u044C (\u0456\u043C'\u044F, \u043C\u0456\u0441\u0446\u0435, \u0434\u0456\u0430\u0433\u043D\u043E\u0437, \u0447\u0430\u0441, \u0441\u0443\u043C\u0430, \u043F\u0440\u043E\u0435\u043A\u0442) \u2014 \u041D\u0415 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438.\n\n\u0424\u043E\u0440\u043C\u0430\u0442 fact: 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. '\u041C\u0430\u0454 \u0434\u043E\u0447\u043A\u0443 \u041C\u0430\u0440\u0456\u044E', '\u041F\u0440\u0430\u0446\u044E\u0454 \u0432 Kyivstar', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F \u043D\u0430 \u0433\u043E\u0440\u0456\u0445\u0438', '\u041F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043E 7'.\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 text content ('\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 ...') \u0449\u043E\u0431 \u044E\u0437\u0435\u0440 \u043F\u043E\u0431\u0430\u0447\u0438\u0432 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.", parameters: { type: "object", properties: { fact: { type: "string", description: "\u0424\u0430\u043A\u0442 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C 3-15 \u0441\u043B\u0456\u0432 \u0432\u0456\u0434 \u0442\u0440\u0435\u0442\u044C\u043E\u0457 \u043E\u0441\u043E\u0431\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E \u0437 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u041E\u042E \u0434\u0435\u0442\u0430\u043B\u043B\u044E (\u0456\u043C'\u044F, \u043C\u0456\u0441\u0446\u0435, \u0434\u0456\u0430\u0433\u043D\u043E\u0437, \u0447\u0430\u0441, \u0441\u0443\u043C\u0430, \u043F\u0440\u043E\u0435\u043A\u0442). \u0411\u0435\u0437 \u0441\u0443\u0431'\u0454\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043F\u0440\u0438\u043A\u043C\u0435\u0442\u043D\u0438\u043A\u0456\u0432 ('\u0434\u043E\u0431\u0440\u0438\u0439', '\u043A\u0440\u0435\u0430\u0442\u0438\u0432\u043D\u0438\u0439')." }, category: { type: "string", enum: ["preferences", "health", "work", "relationships", "context", "goals"], description: "preferences=\u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F/\u0437\u0432\u0438\u0447\u043A\u0438 \u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u043E\u044E; health=\u0437\u0434\u043E\u0440\u043E\u0432'\u044F/\u0430\u043B\u0435\u0440\u0433\u0456\u0457/\u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438; work=\u0440\u043E\u0431\u043E\u0442\u0430/\u043A\u0430\u0440'\u0454\u0440\u0430/\u0444\u0456\u043D\u0430\u043D\u0441\u0438; relationships=\u0441\u0456\u043C'\u044F/\u0434\u0440\u0443\u0437\u0456/\u043A\u043E\u043B\u0435\u0433\u0438 \u0437 \u0456\u043C\u0435\u043D\u0430\u043C\u0438; context=\u043B\u043E\u043A\u0430\u0446\u0456\u044F/\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A/\u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0456 \u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0438; goals=\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u0446\u0456\u043B\u0456 \u0437 \u043D\u0430\u0437\u0432\u043E\u044E" }, ttl_days: { type: "integer", description: "\u0427\u0435\u0440\u0435\u0437 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0434\u043D\u0456\u0432 \u0444\u0430\u043A\u0442 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0454 \u0456 \u0437\u043D\u0438\u043A\u043D\u0435. \u041D\u0415 \u0432\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0438\u0445 (\u0441\u0456\u043C'\u044F, \u0430\u043B\u0435\u0440\u0433\u0456\u044F, \u0432\u0456\u043A, \u0441\u0442\u0456\u0439\u043A\u0456 \u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F). \u0412\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u0438\u0445: \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438=7-14; \u0432\u0456\u0434\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F/\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442=30-60" } }, required: ["fact", "category"], additionalProperties: false } } },
+        // --- КАТЕГОРІЇ ФІНАНСІВ (Фаза 4 K-02, 15.04.2026 3229b) ---
+        { type: "function", function: { name: "create_finance_category", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0434\u043E\u0434\u0430\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E X', '\u0441\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E Y \u0437 \u0456\u043A\u043E\u043D\u043A\u043E\u044E \u043B\u0456\u0442\u0430\u043A\u0430'. \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u2014 expense. color \u0456 icon \u043E\u043F\u0446\u0456\u0439\u043D\u0456 (\u0431\u0443\u0434\u0435 \u043E\u0431\u0440\u0430\u043D\u043E \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E).", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, type: { type: "string", enum: ["expense", "income"], description: "\u0422\u0438\u043F: expense (\u0432\u0438\u0442\u0440\u0430\u0442\u0430) \u0430\u0431\u043E income (\u0434\u043E\u0445\u0456\u0434). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C expense" }, icon: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0456\u043A\u043E\u043D\u043A\u0438 \u0437 \u0431\u0456\u0431\u043B\u0456\u043E\u0442\u0435\u043A\u0438: food, car, subscription, heart, home, shopping, wallet, gift, refund, coffee, cigarette, fuel, sport, entertainment, education, travel, phone, grass, anchor, briefcase, other. \u041E\u043F\u0446\u0456\u0439\u043D\u043E \u2014 \u044F\u043A\u0449\u043E \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u043E\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F \u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E" }, color: { type: "string", description: "HEX-\u043A\u043E\u043B\u0456\u0440 \u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0456 #RRGGBB. \u041E\u043F\u0446\u0456\u0439\u043D\u043E \u2014 \u0456\u043D\u0430\u043A\u0448\u0435 \u043E\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F \u0437 \u043F\u0430\u043B\u0456\u0442\u0440\u0438. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0444\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439 \u2014 \u044E\u0437\u0435\u0440 \u043D\u0435 \u043B\u044E\u0431\u0438\u0442\u044C" }, subcategories: { type: "array", items: { type: "string" }, description: "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457. \u0422\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u044F\u043C\u043E \u0457\u0445 \u043D\u0430\u0437\u0432\u0430\u0432 \u0430\u0431\u043E \u0432\u043E\u043D\u0438 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E \u043E\u0447\u0435\u0432\u0438\u0434\u043D\u0456 \u2014 \u0440\u0435\u0448\u0442\u0443 \u0434\u043E\u0434\u0430\u0441\u0442\u044C \u0441\u0430\u043C" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_finance_category", description: "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432: \u043D\u0430\u0437\u0432\u0430, \u0456\u043A\u043E\u043D\u043A\u0430, \u043A\u043E\u043B\u0456\u0440, \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457, \u0430\u0440\u0445\u0456\u0432\u0430\u0446\u0456\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u0439\u043C\u0435\u043D\u0443\u0439 X \u043D\u0430 Y', '\u0437\u0440\u043E\u0431\u0438 \u0407\u0436\u0443 \u0437\u0435\u043B\u0435\u043D\u043E\u044E', '\u0437\u0430\u0430\u0440\u0445\u0456\u0432\u0443\u0439 \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438'.", parameters: { type: "object", properties: { current_name: { type: "string", description: "\u041F\u043E\u0442\u043E\u0447\u043D\u0430 \u043D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, new_name: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430 (\u044F\u043A\u0449\u043E \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F)" }, icon: { type: "string", description: "\u041D\u043E\u0432\u0430 \u0456\u043A\u043E\u043D\u043A\u0430" }, color: { type: "string", description: "\u041D\u043E\u0432\u0438\u0439 HEX-\u043A\u043E\u043B\u0456\u0440. \u041D\u0415 \u0444\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439" }, subcategories: { type: "array", items: { type: "string" }, description: "\u041F\u043E\u0432\u043D\u0430 \u043D\u043E\u0432\u0430 \u0437\u0430\u043C\u0456\u043D\u043D\u0430 \u0432\u0441\u044C\u043E\u0433\u043E \u0441\u043F\u0438\u0441\u043A\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439" }, archived: { type: "boolean", description: "true=\u0430\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438 (\u0441\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438), false=\u0430\u043A\u0442\u0438\u0432\u0443\u0432\u0430\u0442\u0438" }, comment: { type: "string" } }, required: ["current_name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_finance_category", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0438\u0434\u0430\u043B\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E X'. \u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F (\u0457\u0445 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F \u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F \u0440\u044F\u0434\u043A\u043E\u043C \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430). \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u043E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438 \u0437 \u0456\u043D\u0448\u043E\u044E \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439 merge_finance_categories \u0437\u0430\u043C\u0456\u0441\u0442\u044C delete.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F" }, comment: { type: "string" } }, required: ["name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "merge_finance_categories", description: "\u041E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438 \u0434\u0432\u0456 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 \u0432 \u043E\u0434\u043D\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043E\u0431'\u0454\u0434\u043D\u0430\u0439 X \u0456 Y', '\u0437\u043B\u0438\u0439 X \u0443 Y'. \u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437 'from' \u043F\u0435\u0440\u0435\u0439\u0434\u0443\u0442\u044C \u0443 'to', 'from' \u0431\u0443\u0434\u0435 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0430. \u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u044F\u0442\u044C\u0441\u044F \u0443 'to'.", parameters: { type: "object", properties: { from_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u044F\u043A\u0430 \u0431\u0443\u0434\u0435 \u0437\u043B\u0438\u0442\u0430 \u0443 \u0456\u043D\u0448\u0443 (\u0437\u043D\u0438\u043A\u043D\u0435)" }, to_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457-\u043E\u0434\u0435\u0440\u0436\u0443\u0432\u0430\u0447\u0430 (\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F)" }, comment: { type: "string" } }, required: ["from_name", "to_name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_finance_subcategory", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0434\u043E\u0434\u0430\u0439 \u0443 \u0407\u0436\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A', '\u0432 \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442 \u2014 \u041C\u0435\u0442\u0440\u043E'.", parameters: { type: "object", properties: { category_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, subcategory: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, comment: { type: "string" } }, required: ["category_name", "subcategory", "comment"], additionalProperties: false } } },
+        // --- UI TOOLS (4.17, 18.04.2026 VJF2M) — навігація/фільтри/налаштування ---
+        ...UI_TOOLS
+      ];
+    }
+  });
+
   // src/tabs/habits.js
   function getHabits() {
     return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
@@ -11628,20 +11628,28 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
 18. \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 JSON: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
 \u041A\u0420\u0418\u0422\u0418\u0427\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E: \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0417\u0420\u041E\u0411\u0418\u0422\u0418 \u0434\u0456\u044E (\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443/\u043F\u043E\u0434\u0456\u044E/\u0437\u0432\u0438\u0447\u043A\u0443/\u043D\u043E\u0442\u0430\u0442\u043A\u0443, \u0437\u0430\u043A\u0440\u0438\u0442\u0438, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0447\u0438\u0441\u0442\u0438\u043C JSON. \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0437\u0430\u0440\u0430\u0437 \u0441\u0442\u0432\u043E\u0440\u044E", "\u0437\u0430\u0447\u0435\u043A\u0430\u0439", "\u0433\u043E\u0442\u043E\u0432\u043E" \u2014 \u041E\u0414\u0420\u0410\u0417\u0423 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0439 JSON \u043E\u0431'\u0454\u043A\u0442 \u0437 action. \u0422\u0435\u043A\u0441\u0442 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0446\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u041F\u0418\u0422\u0410\u041D\u041D\u042F \u0430\u0431\u043E \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.
 \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439. \u0422\u0406\u041B\u042C\u041A\u0418 \u0447\u0438\u0441\u0442\u0438\u0439 JSON \u0431\u0435\u0437 markdown. \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0442\u0435\u043A\u0441\u0442 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
-\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454: \u043B\u0456\u043C\u0456\u0442\u0438, \u043F\u043B\u0430\u043D\u0438, \u0437\u0432\u0438\u0447\u043A\u0438 \u0447\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0441\u043F\u0438\u0441\u043A\u0443 \u0432\u0438\u0449\u0435.` + (aiContext ? "\n\n" + aiContext : "");
+\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454: \u043B\u0456\u043C\u0456\u0442\u0438, \u043F\u043B\u0430\u043D\u0438, \u0437\u0432\u0438\u0447\u043A\u0438 \u0447\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0441\u043F\u0438\u0441\u043A\u0443 \u0432\u0438\u0449\u0435.
+
+` + UI_TOOLS_RULES + (aiContext ? "\n\n" + aiContext : "");
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: systemPrompt }, ...taskBarHistory.slice(-8), { role: "user", content: text }],
-          max_tokens: 200,
-          temperature: 0.5
-        })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
+      const history = [...taskBarHistory.slice(-8), { role: "user", content: text }];
+      const msg = await callAIWithTools(systemPrompt, history, UI_TOOLS);
+      if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            let args = {};
+            try {
+              args = JSON.parse(tc.function.arguments || "{}");
+            } catch (e) {
+            }
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addTaskBarMsg("agent", res.text);
+          }
+        }
+        setTaskBarLoading(false);
+        return;
+      }
+      const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
         addTaskBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
         setTaskBarLoading(false);
@@ -11767,6 +11775,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_utils();
       init_trash();
       init_core();
+      init_prompts();
+      init_ui_tools();
       init_swipe_delete();
       init_inbox();
       init_tasks();
