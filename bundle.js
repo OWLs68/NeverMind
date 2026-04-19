@@ -7159,7 +7159,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (tEl) tEl.textContent = msg.text;
     if (cEl) cEl.textContent = msg.text;
     if (tmEl) tmEl.textContent = "";
-    if (tab === "inbox") setOwlMascotState("alert", 12e3);
     const chipsEl = document.getElementById("owl-tab-chips-" + tab);
     if (chipsEl) {
       renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
@@ -7169,29 +7168,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
       setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
     }
   }
-  function setOwlMascotState(state, autoRevertMs = 0) {
-    const el = document.getElementById("owl-mascot-main");
-    if (!el) return;
-    if (!(state in OWL_PRIORITY)) return;
-    const currentState = el.getAttribute("data-state") || "idle";
-    if (state !== "idle" && OWL_PRIORITY[state] < OWL_PRIORITY[currentState]) return;
-    if (_owlMascotRevertTimer) {
-      clearTimeout(_owlMascotRevertTimer);
-      _owlMascotRevertTimer = null;
-    }
-    el.setAttribute("data-state", state);
-    _owlMascotTicket++;
-    const myTicket = _owlMascotTicket;
-    if (state === "idle") return;
-    const duration = autoRevertMs > 0 ? autoRevertMs : 3e4;
-    _owlMascotRevertTimer = setTimeout(() => {
-      if (_owlMascotTicket === myTicket) {
-        el.setAttribute("data-state", "idle");
-      }
-      _owlMascotRevertTimer = null;
-    }, duration);
-  }
-  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes, OWL_PRIORITY, _owlMascotRevertTimer, _owlMascotTicket;
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
   var init_board = __esm({
     "src/owl/board.js"() {
       init_core();
@@ -7208,18 +7185,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
         scrollOwlTabChips,
         openChatBar
       });
-      OWL_PRIORITY = { error: 100, alert: 80, thinking: 60, greeting: 40, idle: 0 };
-      _owlMascotRevertTimer = null;
-      _owlMascotTicket = 0;
-      if (typeof document !== "undefined") {
-        document.addEventListener("visibilitychange", () => {
-          const el = document.getElementById("owl-mascot-main");
-          if (!el) return;
-          if (document.hidden) el.classList.add("is-paused");
-          else el.classList.remove("is-paused");
-        });
-      }
-      Object.assign(window, { setOwlMascotState });
     }
   });
 
@@ -11505,42 +11470,22 @@ ${routineParts.join("\n")}${nextHint}
     }
     const body = { model: "gpt-4o-mini", messages, max_tokens: 400, temperature };
     if (tools && tools.length > 0) body.tools = tools;
-    try {
-      window.setOwlMascotState && window.setOwlMascotState("thinking");
-    } catch {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const data2 = await res.json().catch(() => ({}));
+      showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
+      return null;
     }
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        signal,
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        const data2 = await res.json().catch(() => ({}));
-        showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
-        try {
-          window.setOwlMascotState && window.setOwlMascotState("error", 6e3);
-        } catch {
-        }
-        return null;
-      }
-      const data = await res.json();
-      const msg = data.choices?.[0]?.message;
-      try {
-        window.setOwlMascotState && window.setOwlMascotState("idle");
-      } catch {
-      }
-      if (!msg) return null;
-      if (tools) return msg;
-      return msg.content || null;
-    } catch (e) {
-      try {
-        window.setOwlMascotState && window.setOwlMascotState("error", 6e3);
-      } catch {
-      }
-      throw e;
-    }
+    const data = await res.json();
+    const msg = data.choices?.[0]?.message;
+    if (!msg) return null;
+    if (tools) return msg;
+    return msg.content || null;
   }
   async function callAI(systemPrompt, userMessage, contextData = {}) {
     const context = Object.keys(contextData).length > 0 ? `
@@ -15296,12 +15241,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     }
     const delay = document.readyState === "complete" ? 300 : 500;
     setTimeout(showApp, delay);
-    setTimeout(() => {
-      try {
-        window.setOwlMascotState && window.setOwlMascotState("greeting", 6e3);
-      } catch {
-      }
-    }, delay + 1500);
   }
   var currentTabForAnim, NM_KEYS;
   var init_boot = __esm({
