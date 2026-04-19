@@ -6,6 +6,53 @@
 
 ---
 
+## 🔧 Сесія dIooU — Вечір 2.0 MVP виконаний цілком (Ф1-8, 3 сесії функціоналу) (19.04.2026)
+
+### Зроблено
+
+**Фаза 1 (коміт `dfb1800`)** — блокування вкладки до 18:00 матовим склом (backdrop-filter blur(18px) + -webkit- + @supports fallback), анімація .melting (600ms opacity+translateY+blur→0), авто-розмикання о 18:00 і замикання о 23:59 через setInterval 60с + visibilitychange listener. Нові: isEveningLocked(), updateEveningLock() у `evening.js` + overlay `#evening-lock-overlay` у `index.html` + стилі у `style.css`.
+
+**Фаза 2 (коміт `f8d98a9`)** — `getEveningContext()` у `evening.js`: настрій, недороблені задачі з dueDate=today, закриті кроки проектів, звички summary, quit-звички статус, минулі події календаря, витрати дня топ-3. Підключено у `getAIContext()` → сова бачить вечірній зріз у ВСІХ чатах.
+
+**Фаза 3 (коміт `3479344`)** — тригер `_checkEveningPrompt` у `followups.js` (18-23, cooldown 24 год, contentHasContent guard), новий `getEveningPromptSystem()` промпт, TRIGGER_TO_TAB+=`evening-prompt:evening`. У `addEveningBarMsg` для role=agent + closed chat → showUnreadBadge('evening','evening-send-btn'). У `openChatBar` — централізований clearUnreadBadge для БУДЬ-ЯКОЇ вкладки.
+
+**Фаза 4 (коміт `b7e3070`)** — `getEveningChatSystem()` з JSON {text, chips} + таблиця 10 контекстів коли чіпи обов'язкові. Парсер JSON у `sendEveningBarMessage`. Рендер chips-pills під bubble через renderChips(container, chips, 'evening'). CSS `.chat-chips-row + .chat-chip` amber. Fix у `chips.js` sendChipToChat: inputId для evening тепер `evening-bar-input`.
+
+**Фаза 5 (коміт `bc847bb`)** — переробка вмісту `#evening-scroll`. Видалено: #evening-stats-row (3 плитки), "Продуктивність дня" з кільцем 0%, #evening-finance-block, #evening-summary-block, EVENING_SUMMARY_PROMPT, generateEveningSummary, autoEveningSummary, setupAutoEveningSummary, виклик з boot.js. Додано: `renderEveningUndoneTasks()` з чіпами [На завтра]/[На тиждень], `renderEveningQuitHabits()` з [Тримався 💪]/[Зірвався] (після тапу "Тримався" показує "Тримаєшся сьогодні ✓ стрік N дн" без чіпів), локальні `_rescheduleTask(id, daysAhead)`. Emoji настрою 40→44px.
+
+**Фаза 6 (коміт `6a99372`)** — дві CTA в `#evening-scroll` знизу: amber "📅 Поговорити про завтра" + біла "📔 Записати свій день". `openEveningTopic(topic)` — один раз на день/топік через nm_evening_topic_started. Видалено фуллскрін `#evening-dialog` + openEveningDialog/closeEveningDialog/sendDialogMessage як dead code.
+
+**Фаза 7 (коміт `f957e94`)** — повний перехід на OpenAI tool calling (callAIWithTools + INBOX_TOOLS ~45). Новий `src/tabs/evening-actions.js::dispatchEveningTool` — 22 tools (save_task/note/moment/habit, create_event, save_finance, set_reminder, save_memory_fact, complete_task/habit, edit_*, delete_*, reopen_task, add_step, move_note, update_transaction, restore_deleted) БЕЗ Inbox side-effects. Промпт: Verify Loop (4.21), Memory Echo (4.34), G13 Brain Dump, 4.12 антидублювання. Formatчіпів — окремий JSON блок у content (не весь content як JSON). Новий `_parseContentChips(content)`.
+
+**Фаза 8 (коміт `83e42a0`)** — фінальний ритуал закриття дня. `getEveningSummaryPromptV2()` з Episode Summary (4.31) + Mirror Mode (4.41) + Memory Echo (4.34), ЗАБОРОНА цифр-переказів. `generateEveningRitualSummary(addMsg)` + `isEveningClosed()` + `_markEveningClosed(text)` у evening-actions.js (стан у nm_evening_closed {date,ts,summary}, addFact ttlDays:30). Третя темна CTA "🌙 Закрити день" з amber-бордером. Значок "✓ День закрито" у header (evening-day-closed-badge). Listener `nm-evening-closed` → updateEveningClosedBadge у evening.js. Fix: addFact приймав позиційні args, виправлено на об'єкт `{text, category, ttlDays, source}`.
+
+### Ключові рішення
+
+- **Порядок фаз 4→5→6** за плановим (не 5→6→4) — щоб Ф4 підготувала AI-чіпи до часу коли Ф6 CTA preloaded діалог.
+- **`add_routine_block` пропущено** — конфлікт зі схемою `nm_routine['mon']` (по дню тижня). Повна реалізація Динамічного розпорядку — окрема фіча у ROADMAP.
+- **Окремий dispatcher у evening-actions.js** замість реюзу `processSaveAction` з inbox.js — щоб вечірні дії НЕ засмічували nm_inbox стрічку (Inbox створює картку як side-effect).
+- **Блок "OWL · підсумок дня" видалено у Ф5** замість Ф8 — бо Ф3 вже дає совушці ритуальне повідомлення у чат-бар, дві картки одночасно = шум. Роман підтвердив "прибирай".
+- **Chips-формат у content як JSON інлайн** (не весь content JSON) — щоб tool_calls + Verify Loop текст + чіпи співіснували без конфлікту парсера.
+
+### Інциденти
+
+- Без reset/force push. 8 чистих комітів `dfb1800 → f8d98a9 → 3479344 → b7e3070 → bc847bb → 6a99372 → f957e94 → 83e42a0`.
+- Один Stream idle timeout під час /finish (скрін Романа) — продовжив компактніше.
+- Edit-помилка у index.html під час Ф3 (видалив SVG кнопки Надіслати) — одразу виправив наступним edit.
+- Видалив коментар `<!-- TAB BAR -->` ненавмисно → відновив.
+
+### Метрики
+
+- **Коміти:** `dfb1800 → ... → 83e42a0` (8 комітів Ф1-8)
+- **Гілка:** `claude/start-session-dIooU`
+- **Версії:** v291 → v298+ (CI мержить)
+- **CACHE_NAME:** `nm-20260419-1708`
+- **Нові файли:** немає (всі зміни в існуючих)
+- **Змінено:** `index.html`, `style.css`, `sw.js`, `src/core/boot.js`, `src/ai/core.js`, `src/ai/prompts.js`, `src/owl/chips.js`, `src/owl/followups.js`, `src/tabs/evening.js`, `src/tabs/evening-chat.js`, `src/tabs/evening-actions.js` (з заготовки 30 рядків → ~280), `src/ui/unread-badge.js` (фактично використано)
+- **Build:** локально зелений після кожної фази
+
+---
+
 ## 🔧 Сесія QV1n2 — Планування Вечір 2.0: концепція + 3-рівнева документація (19.04.2026)
 
 ### Зроблено
