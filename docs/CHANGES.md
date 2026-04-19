@@ -6,6 +6,76 @@
 
 ---
 
+## 2026-04-19 — 🦉 Owl animation Phase 0 + research + V2 plan (сесія NFtzw)
+
+### Контекст
+Після сесії uDZmz залишився debug-блок у `style.css` (SVG-крило з червоною пунктирною рамкою, вічне махання). Роман попросив глибоке дослідження інших підходів до анімації + план на ранок. Результат: відмовились від Fiverr-дизайнера ($100-200), обрали самостійний шлях через Nano Banana (Gemini AI image editor зі збереженням персонажа) покадрово. Фаза 0 очищення debug + підготовка 5-frame flipbook skeleton виконана у коді.
+
+### Зроблено
+
+**1. Дослідження анімаційних підходів — `handoff/OWL_ANIMATION_RESEARCH.md` (177 рядків)**
+- Порівняння CSS/PNG (5 МБ, стеля 6/10), Lottie (240 КБ, 17 FPS, без state machine), Rive (16 КБ, 60 FPS, 1:1 до нашого priority).
+- Індустріальне джерело: Duolingo перейшли з Lottie на Rive саме через такі ж обмеження як у нас.
+- 3 початкові tier'и з чесними tradeoff'ами.
+
+**2. V2 план — самостійний шлях — `handoff/OWL_ANIMATION_PLAN_V2.md` (219 рядків)**
+- Відмова від Fiverr дизайнера. Принцип: усе самі з AI-сервісами.
+- 4 фази: 0 стабілізація → 1 Nano Banana покадрово (22 кадри × 4 анімації) → 2 вторинна анімація завжди → 3 Rive editor learning паралельно.
+- Base prompt + 8 add-on промптів + 3 gap-fill.
+- Skill tree для Романа і Claude.
+
+**3. Фаза 0 у коді**
+- `style.css`: прибрано `.owl-wing-overlay` + debug outline + `@keyframes wing-wave-premium`. Додано `.owl-wave-frame` + `@keyframes owl-wave-1..5` (600мс, `steps(1,end)`).
+- `index.html`: прибрано `<svg class="owl-wing-overlay">`, додано 5 `<img data-wave="1..5">` що вказують на `assets/owl/wave/frame-{1..5}.png`.
+- Fallback: статичний `owl-greeting.png` не ховається — broken-img wave-PNG не створює порожнечі.
+- `sw.js`: `CACHE_NAME nm-20260419-0438` → `nm-20260419-0918`.
+
+**4. Workflow Nano Banana задокументовано**
+- Compound degradation проблема: якість падає з кожною послідовною правкою. Рішення — завжди оригінал idle PNG як референс, НЕ чейнити.
+- Bg-removal pipeline: `erase.bg` як топ (5000×5000 безкоштовно), відкинуто remove.bg (ріже до 500px), Canva (Pro only), Claude Design (артефакти).
+- Промпт-хак "green/black screen" для чистого фону.
+
+### Обговорено (без виконання)
+
+- **Rive learning trek** — паралельний, 3-4 сесії × 45 хв на ноутбуці. Після Nano Banana покадрово — як майбутній upgrade-шлях.
+- **5 vs 8 кадрів** — вирішили стартувати з 5 (що вже генерує Роман). Якщо flipbook виглядатиме надто різко — 3 gap-fill промпти у чаті.
+- **Секвенційна генерація кадрів** замість сітки — кожен кадр на 1024×1024 замість ~340×340 у мозаїці.
+
+### Ключові рішення
+
+- Відмова від Lottie і зовнішнього дизайнера — Роман прямо попросив "побудуй план де ми самі навчимося і зробимо все самі з допомогою сервісів".
+- Покадрова PNG — основний шлях, Rive — майбутнє.
+- Fallback у CSS greeting — не ховати статичний PNG, щоб broken-img не давав порожнечу.
+
+### Інциденти
+
+- **2× stream idle timeout** під час першого Write на `OWL_ANIMATION_RESEARCH.md` — перейшов на компактніший (177 рядків) single-Write.
+- **Гілка нестандартного формату** — `claude/owl-animation-research-NFtzw` (Claude Code runtime створив під задачу, не `start-session-NFtzw`).
+- **Stop hook push** — після Фази 0 наполягав на push. Додав fallback щоб не ризикувати порожнечею greeting на продакшені, пушнув.
+- Без reset/force push. 4 коміти чистих + docs коміти.
+
+### Файли
+
+- `handoff/OWL_ANIMATION_RESEARCH.md` — новий, дослідження
+- `handoff/OWL_ANIMATION_PLAN_V2.md` — новий, план
+- `style.css` — прибрано SVG-крило debug, додано flipbook CSS
+- `index.html` — 5 нових `<img>` wave-frames, прибрано `<svg>` крила
+- `sw.js` — CACHE_NAME bump
+- `assets/owl/wave/` — нова папка (порожня, чекає на 5 PNG)
+- `_ai-tools/SESSION_STATE.md` — ротація w3ISi → архів, NFtzw вгорі
+- `_archive/SESSION_STATE_archive.md` — додано w3ISi
+- `ROADMAP.md` — запис NFtzw у Done
+- `docs/CHANGES.md` — цей запис
+
+### Метрики
+
+- **Коміти:** `f16685b` → `af90d41` → `6266c17` → `7e5b479` (+ docs)
+- **Гілка:** `claude/owl-animation-research-NFtzw`
+- **Версії:** v277 → v278+ (після мержу)
+- **CACHE_NAME:** `nm-20260419-0918`
+
+---
+
 ## 2026-04-18 — 📝 Скіл `/finish` + стиснення CLAUDE.md + хук правил (сесія FMykK)
 
 ### Контекст

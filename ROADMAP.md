@@ -360,6 +360,12 @@
 
 > Повна історія "що мозок вже вміє" (з датами реалізації) → `_archive/FEATURES_ROADMAP.md` секція "Що мозок вже вміє".
 
+**19.04.2026** (сесія NFtzw — research + V2 plan + Phase 0 flipbook skeleton, 5 комітів)
+- **Дослідження анімаційних підходів** — `handoff/OWL_ANIMATION_RESEARCH.md` (Rive vs Lottie vs CSS/PNG; Duolingo перехід на Rive; file-size і FPS порівняння). Коміт `f16685b`.
+- **V2 план — самостійний шлях** — `handoff/OWL_ANIMATION_PLAN_V2.md`. Відмова від Fiverr дизайнера. 4 фази: стабілізація → Nano Banana покадрово (22 кадри) → вторинна анімація завжди → Rive editor learning. Коміт `af90d41`.
+- **Phase 0: очищення debug + flipbook skeleton** — прибрано SVG-крило (червона дашована рамка), додано 5 `.owl-wave-frame` з `@keyframes owl-wave-1..5` (600мс, `steps(1,end)`). Fallback — статичний greeting PNG не ховається щоб broken-img не давав порожнечу. Коміти `6266c17`, `7e5b479`.
+- **Workflow Nano Banana** — base prompt + 8 add-on промптів + 3 gap-fill, рішення compound degradation (оригінал як референс кожного разу), bg-removal pipeline через erase.bg.
+
 **19.04.2026** (сесія uDZmz — анімація сови: етап 2, 5 комітів)
 - **Priority state-machine сови** (`src/owl/board.js`) — `OWL_PRIORITY` (error/alert/thinking/greeting/idle) + ticket-лічильник + failsafe 30с. Вирішує w3ISi "моргання" між greeting і alert. Коміт `5ed8d05`.
 - **`visibilitychange` pause** — клас `.is-paused` на `#owl-mascot-main` коли PWA у фоні → всі анімації сови на паузу через `animation-play-state: paused !important`. Економія батареї iOS.
