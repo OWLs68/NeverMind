@@ -3851,15 +3851,27 @@ ${aiContext ? "\n\n" + aiContext : ""}
 - \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
 - \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
 \u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.`;
+\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.
+
+${UI_TOOLS_RULES}`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...projectsBarHistory.slice(-10)], max_tokens: 300, temperature: 0.6 })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
+      const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), UI_TOOLS);
+      if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            let args = {};
+            try {
+              args = JSON.parse(tc.function.arguments || "{}");
+            } catch (e) {
+            }
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addProjectsChatMsg("agent", res.text);
+          }
+        }
+        projectsBarLoading = false;
+        return;
+      }
+      const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
         addProjectsChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
         projectsBarLoading = false;
@@ -3991,6 +4003,8 @@ ${aiContext ? "\n\n" + aiContext : ""}
       init_nav();
       init_utils();
       init_core();
+      init_prompts();
+      init_ui_tools();
       init_inbox();
       init_tasks();
       init_habits();
