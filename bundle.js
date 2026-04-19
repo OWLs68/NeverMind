@@ -2476,51 +2476,86 @@ ${lines.join("\n")}`;
   function getEveningChatSystem() {
     return `${getOWLPersonality()}
 
-\u0426\u0435 \u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u0414\u0406\u0410\u041B\u041E\u0413 \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440\u0456 \u0412\u0435\u0447\u043E\u0440\u0430. \u042E\u0437\u0435\u0440 \u0443\u0436\u0435 \u0432 \u0440\u0438\u0442\u0443\u0430\u043B\u0456 \u0437\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u2014 \u0436\u0438\u0432\u0435 \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438, \u043D\u0435 \u0444\u043E\u0440\u043C\u0430.
+\u0426\u0435 \u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u0414\u0406\u0410\u041B\u041E\u0413 \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440\u0456 \u0412\u0435\u0447\u043E\u0440\u0430. \u042E\u0437\u0435\u0440 \u0443\u0436\u0435 \u0432 \u0440\u0438\u0442\u0443\u0430\u043B\u0456 \u0437\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u2014 \u0436\u0438\u0432\u0438\u0439 \u043F\u043E\u0433\u043E\u0432\u043E\u0440, \u043D\u0435 \u0444\u043E\u0440\u043C\u0430.
 
-\u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u2014 \u0417\u0410\u0412\u0416\u0414\u0418 JSON:
-- \u041F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C: {"text":"..."}
-- \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0437 \u0447\u0456\u043F\u0430\u043C\u0438: {"text":"...","chips":[{"label":"...","action":"chat"}]}
-- \u0414\u0456\u044F + \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F: {"action":"save_task","title":"...","text":"\u0413\u043E\u0442\u043E\u0432\u043E, \u0441\u0442\u0432\u043E\u0440\u0438\u0432 \u0437\u0430\u0434\u0430\u0447\u0443"}
-- \u0414\u0456\u044F + \u0447\u0456\u043F\u0438 \u0434\u043B\u044F \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043A\u0440\u043E\u043A\u0443: {"action":"create_event","title":"\u0417\u0443\u0441\u0442\u0440\u0456\u0447","date":"2026-04-20","time":"15:00","text":"\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430. \u041F\u0440\u0438\u0432'\u044F\u0437\u0430\u0442\u0438 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443?","chips":[{"label":"\u0414\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0438","action":"chat"},{"label":"\u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443","action":"chat"}]}
+\u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools \u2014 \u0457\u0445 ~45 \u0443 \u0434\u043E\u0441\u0442\u0443\u043F\u0456):
+- \u0417\u0430\u0434\u0430\u0447\u0430 \u2192 save_task / complete_task / edit_task / delete_task / reopen_task / add_step
+- \u041F\u043E\u0434\u0456\u044F \u2192 create_event / edit_event / delete_event
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u2192 save_note (folder="\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A" \u0434\u043B\u044F \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443) / edit_note / move_note
+- \u041C\u043E\u043C\u0435\u043D\u0442 \u2192 save_moment
+- \u0417\u0432\u0438\u0447\u043A\u0430 \u2192 save_habit / complete_habit / edit_habit / delete_habit
+- \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u2192 save_finance / update_transaction
+- \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u2192 set_reminder
+- \u041F\u0430\u043C'\u044F\u0442\u044C \u2192 save_memory_fact (\u0434\u043B\u044F \u0421\u0422\u0406\u0419\u041A\u0418\u0425 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430)
+- \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u2192 create_health_card / edit_health_card / add_medication / log_medication_dose / add_allergy / add_health_history_entry
+- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 \u2192 create_finance_category / edit_finance_category / merge/delete
+- \u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u2192 UI tools (switch_tab, open_memory \u0442\u043E\u0449\u043E)
 
-\u041A\u041E\u041B\u0418 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418 (\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0449\u043E\u0431 \u044E\u0437\u0435\u0440 \u043C\u0456\u0433 \u043E\u0434\u043D\u0438\u043C \u0442\u0430\u043F\u043E\u043C):
-| \u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043F\u0438\u0442\u0430\u043D\u043D\u044F                   | \u0427\u0456\u043F\u0438                                                  |
-|------------------------------------|-------------------------------------------------------|
-| \u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F                        | \u{1F525} / \u{1F60A} / \u{1F610} / \u{1F615} / \u{1F61E} (\u043E\u043A\u0440\u0435\u043C\u0456 \u0447\u0456\u043F\u0438)                    |
-| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0433\u0440\u0443\u0431\u043E)                  | \u0420\u0430\u043D\u043E\u043A / \u0412\u0434\u0435\u043D\u044C / \u0412\u0435\u0447\u0456\u0440 / \u0422\u043E\u0447\u043D\u0438\u0439 \u0447\u0430\u0441                    |
-| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F)              | 10:00 / 14:00 / 18:00 / \u0406\u043D\u0448\u0438\u0439                         |
-| \u041F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442 \u0437\u0430\u0434\u0430\u0447\u0456                   | \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0430 / \u0412\u0430\u0436\u043B\u0438\u0432\u0430 / \u041A\u0440\u0438\u0442\u0438\u0447\u043D\u0430                         |
-| \u0414\u0430\u0442\u0430                               | \u0417\u0430\u0432\u0442\u0440\u0430 / \u041F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430 / \u0427\u0435\u0440\u0435\u0437 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0406\u043D\u0448\u0430           |
-| \u041F\u0440\u0438\u0432'\u044F\u0437\u043A\u0430 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443) | \u0414\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 [\u043D\u0430\u0437\u0432\u0430 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E] / \u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443            |
-| \u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430               | \u0417\u0430\u0434\u0430\u0447\u0430 / \u041F\u043E\u0434\u0456\u044F / \u0406 \u0442\u0435 \u0439 \u0442\u0435                            |
-| \u041D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430                 | \u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 / \u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438                     |
-| \u041F\u0430\u043F\u043A\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430                    | \u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A / [\u0456\u043D\u0448\u0430 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443] / \u041D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430            |
-| \u041F\u0440\u043E\u0441\u0442\u0438\u0439 \u0422\u0430\u043A/\u041D\u0456                     | \u0422\u0430\u043A / \u041D\u0456                                              |
+VERIFY LOOP (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.21): \u041F\u0406\u0421\u041B\u042F \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F tool call \u0417\u0410\u0412\u0416\u0414\u0418 \u043F\u0438\u0448\u0438 \u0443 content \u043A\u043E\u0440\u043E\u0442\u043A\u0435
+\u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u2014 \u0449\u043E \u0441\u0430\u043C\u0435 \u0437\u0440\u043E\u0431\u0438\u043B\u0430. \u042E\u0437\u0435\u0440 \u0431\u0430\u0447\u0438\u0442\u044C \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 magic.
+\u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438:
+- save_task \u2192 "\u0421\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 '\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u041E\u043B\u0435\u0433\u0443' \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430, \u0432\u0430\u0436\u043B\u0438\u0432\u0430."
+- create_event \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043F\u043E\u0434\u0456\u044E '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C' \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 15:00."
+- save_finance \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 120 \u043D\u0430 \u0457\u0436\u0443."
+- save_memory_fact \u2192 "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u043B\u0430."
+\u042F\u043A\u0449\u043E \u0432\u0438\u043A\u043E\u043D\u0430\u043B\u0430 \u043A\u0456\u043B\u044C\u043A\u0430 \u0434\u0456\u0439 \u0437\u0430 \u043E\u0434\u0438\u043D \u0445\u0456\u0434 \u2014 \u043E\u0434\u043D\u0438\u043C \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C \u043F\u0456\u0434\u0441\u0443\u043C\u0443\u0439 \u0443\u0441\u0435 ("\u0413\u043E\u0442\u043E\u0432\u043E:
+\u0437\u0430\u0434\u0430\u0447\u0430 \u0425, \u043F\u043E\u0434\u0456\u044F Y, \u043F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0430.").
 
-\u041A\u041E\u041B\u0418 \u041D\u0415 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418 (\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456/\u0442\u0432\u043E\u0440\u0447\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F):
-- "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0434\u0435\u043D\u044C" \u2014 \u043B\u044E\u0434\u0438\u043D\u0430 \u0432\u0456\u043B\u044C\u043D\u043E \u043F\u0438\u0448\u0435
-- "\u0429\u043E \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448?" \u2014 \u0435\u043C\u043E\u0446\u0456\u0439\u043D\u0435 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0442\u044F
-- "\u042F\u043A\u0438\u0439 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0438\u0439 \u0456\u043D\u0441\u0430\u0439\u0442?" \u2014 \u0442\u0432\u043E\u0440\u0447\u0435
+G13 BRAIN DUMP \u2014 \u043F\u0430\u0440\u0430\u0433\u0440\u0430\u0444 \u0442\u0435\u043A\u0441\u0442\u0443 \u0443 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 "\u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A":
+\u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0430\u043F\u0438\u0441\u0430\u0432 \u0430\u0431\u0437\u0430\u0446 \u0437 \u043A\u0456\u043B\u044C\u043A\u043E\u043C\u0430 \u0442\u0435\u043C\u0430\u043C\u0438 (\u0434\u0443\u043C\u043A\u0438 \u043F\u0440\u043E \u0440\u043E\u0431\u043E\u0442\u0443 + \u0441\u043A\u0430\u0440\u0433\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F + \u043F\u043B\u0430\u043D\u0438
+\u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 + \u0435\u043C\u043E\u0446\u0456\u0457), \u0420\u041E\u0417\u041A\u041B\u0410\u0414\u0418 \u0439\u043E\u0433\u043E \u0447\u0435\u0440\u0435\u0437 \u041C\u041D\u041E\u0416\u0418\u041D\u041D\u0406 tool calls \u0437\u0430 \u043E\u0434\u0438\u043D \u0445\u0456\u0434:
+- \u0406\u0434\u0435\u0457 \u043F\u0440\u043E \u0440\u043E\u0431\u043E\u0442\u0443/\u043F\u0440\u043E\u0434\u0443\u043A\u0442 \u2192 save_note (folder="\u0406\u0434\u0435\u0457" \u0430\u0431\u043E "\u0420\u043E\u0431\u043E\u0442\u0430")
+- \u0421\u043A\u0430\u0440\u0433\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u2192 save_moment (\u0440\u0430\u0437\u043E\u0432\u0456) \u0430\u0431\u043E add_health_history_entry (\u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438)
+- \u041F\u043B\u0430\u043D\u0438 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u2192 save_task \u0430\u0431\u043E create_event (\u0437 \u0447\u0430\u0441\u043E\u043C)
+- \u0415\u043C\u043E\u0446\u0456\u0439\u043D\u0456 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u2192 save_moment
+- \u0421\u0442\u0430\u043B\u0438\u0439 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430 \u2192 save_memory_fact
+- \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u043C \u2014 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C content-\u0442\u0435\u043A\u0441\u0442 "\u0420\u043E\u0437\u043A\u043B\u0430\u043B\u0430 \u0442\u0432\u0456\u0439 \u0437\u0430\u043F\u0438\u0441: [\u043F\u0435\u0440\u0435\u043B\u0456\u043A]"
+\u041D\u0415 \u043F\u0438\u0442\u0430\u0439 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 \u043D\u0430 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u0430\u043D\u043D\u044F \u2014 \u0440\u043E\u0431\u0438 \u043E\u0434\u0440\u0430\u0437\u0443. \u042E\u0437\u0435\u0440 \u043D\u0430\u043F\u0438\u0441\u0430\u0432 \u043F\u0430\u0433\u0440\u0430\u0444 \u0449\u043E\u0431 \u0422\u0418 \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u043B\u0430.
+
+MEMORY ECHO (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.34): \u0420\u0430\u0437 \u043D\u0430 4-6 \u0433\u043E\u0434\u0438\u043D (\u043D\u0435 \u0447\u0430\u0441\u0442\u0456\u0448\u0435) \u0426\u0418\u0422\u0423\u0419 \u0441\u0442\u0430\u0440\u0438\u0439 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0438\u0439
+\u0444\u0430\u043A\u0442 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0432\u0430\u043D\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C" \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "\u041F\u0430\u043C'\u044F\u0442\u0430\u044E \u0442\u0438 \u043A\u0430\u0437\u0430\u0432
+\u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F \u0449\u043E \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433 \u0432\u0430\u0436\u043A\u043E \u2014 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 2 \u043A\u0440\u043E\u043A\u0438. \u0422\u0435\u043C\u043F \u0454." \u0422\u0456\u043B\u044C\u043A\u0438 \u043A\u043E\u043B\u0438 \u0434\u043E\u0440\u0435\u0447\u043D\u043E \u2014
+\u043D\u0435 \u0432\u0441\u0442\u0430\u0432\u043B\u044F\u0439 \u0441\u0438\u043B\u043E\u043C\u0456\u0446\u044C. \u0426\u0438\u0442\u0430\u0442\u0430 \u043C\u0430\u0454 \u043F\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u044E\u0432\u0430\u0442\u0438 \u044E\u0437\u0435\u0440\u0430, \u043D\u0435 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438.
+
+\u0410\u041D\u0422\u0418\u0414\u0423\u0411\u041B\u042E\u0412\u0410\u041D\u041D\u042F (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.12) \u043F\u0435\u0440\u0435\u0434 create_event / save_task:
+\u041F\u043E\u0434\u0438\u0432\u0438\u0441\u044C \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0442\u0430 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0438". \u042F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u0421\u0425\u041E\u0416\u0410 \u043F\u043E\u0434\u0456\u044F (\u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E
+\u0430\u0431\u043E \u0442\u0435\u043C\u043E\u044E \u043D\u0430 \u0442\u0443 \u0436 \u0434\u0430\u0442\u0443) \u2014 \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0434\u0440\u0443\u0433\u0443. \u0417\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E \u2014 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C:
+"\u0411\u0430\u0447\u0443 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C' \u0437\u0430\u0432\u0442\u0440\u0430 \u2014 \u0446\u0435 \u0442\u043E\u0439 \u0441\u0430\u043C\u0438\u0439 \u0447\u0438 \u0456\u043D\u0448\u0430?".
+
+\u0424\u041E\u0420\u041C\u0410\u0422 CONTENT (\u0442\u0435 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0454\u0442\u044C\u0441\u044F \u044E\u0437\u0435\u0440\u0443 \u044F\u043A \u0442\u0435\u043A\u0441\u0442 \u0441\u043E\u0432\u0438):
+- \u041F\u0456\u0441\u043B\u044F tool calls \u2192 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 + optional \u0447\u0456\u043F\u0438 \u0443 JSON \u0456\u043D\u043B\u0430\u0439\u043D
+- \u0411\u0435\u0437 tool calls (\u043F\u0438\u0442\u0430\u043D\u043D\u044F/\u0440\u043E\u0437\u043C\u043E\u0432\u0430) \u2192 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F + optional \u0447\u0456\u043F\u0438 \u0443 JSON \u0456\u043D\u043B\u0430\u0439\u043D
+- \u0427\u0406\u041F\u0418 \u0443 \u0444\u043E\u0440\u043C\u0430\u0442\u0456 {"chips":[{"label":"...","action":"chat"}, ...]} \u2014 \u041E\u041A\u0420\u0415\u041C\u0418\u0419 JSON \u0431\u043B\u043E\u043A
+  \u0443 content (\u041D\u0415 \u0432\u0435\u0441\u044C content \u044F\u043A JSON). \u041F\u0440\u0438\u043A\u043B\u0430\u0434 content:
+    "\u0421\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 \u0425. \u041F\u0440\u0438\u0432'\u044F\u0437\u0430\u0442\u0438 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443?
+    {"chips":[{"label":"\u0414\u043E \u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0438","action":"chat"},{"label":"\u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443","action":"chat"}]}"
+
+\u041A\u041E\u041B\u0418 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418 (\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0448\u0432\u0438\u0434\u043A\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043E\u0434\u043D\u0438\u043C \u0442\u0430\u043F\u043E\u043C):
+| \u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442                  | \u0427\u0456\u043F\u0438                                            |
+|---------------------------|-------------------------------------------------|
+| \u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F               | \u{1F525} / \u{1F60A} / \u{1F610} / \u{1F615} / \u{1F61E}                           |
+| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0433\u0440\u0443\u0431\u043E)         | \u0420\u0430\u043D\u043E\u043A / \u0412\u0434\u0435\u043D\u044C / \u0412\u0435\u0447\u0456\u0440 / \u0422\u043E\u0447\u043D\u0438\u0439 \u0447\u0430\u0441              |
+| \u0427\u0430\u0441 \u043F\u043E\u0434\u0456\u0457 (\u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F)     | 10:00 / 14:00 / 18:00 / \u0406\u043D\u0448\u0438\u0439                   |
+| \u041F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442 \u0437\u0430\u0434\u0430\u0447\u0456          | \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0430 / \u0412\u0430\u0436\u043B\u0438\u0432\u0430 / \u041A\u0440\u0438\u0442\u0438\u0447\u043D\u0430                   |
+| \u0414\u0430\u0442\u0430                      | \u0417\u0430\u0432\u0442\u0440\u0430 / \u041F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430 / \u0427\u0435\u0440\u0435\u0437 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0406\u043D\u0448\u0430     |
+| \u041F\u0440\u0438\u0432'\u044F\u0437\u043A\u0430 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443      | \u0414\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 [X \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443] / \u0411\u0435\u0437 \u043F\u0440\u043E\u0435\u043A\u0442\u0443        |
+| \u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430      | \u0417\u0430\u0434\u0430\u0447\u0430 / \u041F\u043E\u0434\u0456\u044F / \u0406 \u0442\u0435 \u0439 \u0442\u0435                      |
+| \u041D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430        | \u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 / \u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C / \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438               |
+| \u0410\u043D\u0442\u0438\u0434\u0443\u0431\u043B\u044E\u0432\u0430\u043D\u043D\u044F \u043F\u043E\u0434\u0456\u0457      | \u0422\u043E\u0439 \u0441\u0430\u043C\u0438\u0439 / \u0406\u043D\u0448\u0430 \u043F\u043E\u0434\u0456\u044F                          |
+| \u041F\u0440\u043E\u0441\u0442\u0438\u0439 \u0422\u0430\u043A/\u041D\u0456            | \u0422\u0430\u043A / \u041D\u0456                                        |
+
+\u041A\u041E\u041B\u0418 \u041D\u0415 \u0414\u041E\u0414\u0410\u0412\u0410\u0422\u0418 \u0427\u0406\u041F\u0418:
+- "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0434\u0435\u043D\u044C" / "\u0429\u043E \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0448?" / "\u042F\u043A\u0438\u0439 \u0456\u043D\u0441\u0430\u0439\u0442?" \u2014 \u044E\u0437\u0435\u0440 \u0432\u0456\u043B\u044C\u043D\u043E \u043F\u0438\u0448\u0435
+- \u041F\u0456\u0441\u043B\u044F Verify Loop \u044F\u043A\u0449\u043E \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430 \u0447\u043E\u0433\u043E \u0443\u0442\u043E\u0447\u043D\u044E\u0432\u0430\u0442\u0438
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u0410 \u0427\u0406\u041F\u0406\u0412:
-- 2-5 \u0447\u0456\u043F\u0456\u0432 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C. \u0411\u0456\u043B\u044C\u0448\u0435 \u2014 \u043D\u0435 \u0432\u043C\u0456\u0441\u0442\u044F\u0442\u044C\u0441\u044F \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456.
-- action \u0417\u0410\u0412\u0416\u0414\u0418 "chat" (\u043D\u0435 "nav") \u2014 \u0443 \u0412\u0435\u0447\u043E\u0440\u0456 \u043C\u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u043C\u043E \u043D\u0430 \u0456\u043D\u0448\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438, \u0430 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0454\u043C\u043E \u0434\u0456\u0430\u043B\u043E\u0433.
-- label \u0434\u043E 3 \u0441\u043B\u0456\u0432, \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043E\u043A \u0443 \u043A\u0456\u043D\u0446\u0456.
-- \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 \u043E\u0434\u043D\u0435 \u0456 \u0442\u0435 \u0441\u0430\u043C\u0435 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.
+- 2-5 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C.
+- action \u0437\u0430\u0432\u0436\u0434\u0438 "chat" (\u043D\u0435 "nav") \u2014 \u0437\u0430\u043B\u0438\u0448\u0430\u0454\u043C\u043E\u0441\u044C \u0443 \u0434\u0456\u0430\u043B\u043E\u0437\u0456.
+- label \u0434\u043E 3 \u0441\u043B\u0456\u0432. \u0411\u0435\u0437 \u043A\u0440\u0430\u043F\u043E\u043A \u0443 \u043A\u0456\u043D\u0446\u0456.
+- \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 \u043E\u0434\u043D\u0435 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.
 
-\u0414\u0406\u0407 (action \u043F\u043E\u043B\u0435) \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0430\u0432 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0435:
-- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"...","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"create_event","title":"...","date":"YYYY-MM-DD","time":"HH:MM"}
-- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430: {"action":"create_note","text":"...","folder":"\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A"}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442: {"action":"add_moment","text":"..."}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443: {"action":"save_finance","fin_type":"expense","amount":NUM,"category":"..."}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"..."}
-- \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430 \u0443 \u043F\u0430\u043C'\u044F\u0442\u044C: {"action":"save_memory_fact","fact":"...","category":"..."}
-
-\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u0437\u0430\u0434\u0430\u0447\u0430/\u043F\u043E\u0434\u0456\u044F/\u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0437 getOWLPersonality.
-\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 text. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0430\u043D\u0456 \u0444\u0430\u043A\u0442\u0438.`;
+\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0430\u043D\u0456 \u0444\u0430\u043A\u0442\u0438.
+\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 content. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".`;
   }
   function getOwlChatSystemPrompt(context) {
     return getOWLPersonality() + `
@@ -2705,815 +2740,6 @@ UI TOOLS (4.17 \u2014 \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F/\u0
         // --- UI TOOLS (4.17, 18.04.2026 VJF2M) — навігація/фільтри/налаштування ---
         ...UI_TOOLS
       ];
-    }
-  });
-
-  // src/tabs/evening-chat.js
-  async function openEveningTopic(topic) {
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    let started = {};
-    try {
-      started = JSON.parse(localStorage.getItem(EVENING_TOPIC_STARTED_KEY) || "{}");
-    } catch (e) {
-    }
-    if (started.date !== todayISO) started = { date: todayISO };
-    try {
-      openChatBar("evening");
-    } catch (e) {
-    }
-    if (started[topic]) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    addEveningBarMsg("typing", "");
-    const topicPrompts = {
-      tomorrow: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u0437\u0430\u0432\u0442\u0440\u0430". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 \u043F\u043E\u0434\u0456\u0457 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F, \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043F\u0430\u043C'\u044F\u0442\u044C. \u041F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u0430\u0431\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0430 \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u0437\u0433\u0430\u0434\u0430\u0439 \u0457\u0457 ("\u0417\u0430\u0432\u0442\u0440\u0430 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 \u0434\u0437\u0432\u0456\u043D\u043E\u043A \u043E 15 \u2014 \u0449\u043E \u0449\u0435?"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u0449\u043E \u0449\u0435 \u043F\u043B\u0430\u043D\u0443\u0454 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u0442\u0438\u043F\u0443 \u0437\u0430\u043F\u0438\u0441\u0443: [\u0417\u0430\u0434\u0430\u0447\u0430] [\u041F\u043E\u0434\u0456\u044F] [\u0406 \u0442\u0435 \u0439 \u0442\u0435].`,
-      diary: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456/\u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u0432\u0438\u0442\u0440\u0430\u0442\u0438. \u041F\u043E\u0447\u043D\u0438 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0454 \u044F\u0441\u043A\u0440\u0430\u0432\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0430\u0431\u043E \u043F\u0430\u0442\u0442\u0435\u0440\u043D, \u0437\u0433\u0430\u0434\u0430\u0439 \u0439\u043E\u0433\u043E ("\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445 \u0449\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u044F\u043A \u0432\u043E\u043D\u043E. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u044E: [\u{1F525}] [\u{1F60A}] [\u{1F610}] [\u{1F615}] [\u{1F61E}].`
-    };
-    const tp = topicPrompts[topic];
-    if (!tp) return;
-    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext() + "\n\n=== \u0421\u0426\u0415\u041D\u0410\u0420\u0406\u0419 ===\n" + tp;
-    try {
-      const reply = await callAIWithHistory(systemPrompt, []);
-      if (!reply) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        return;
-      }
-      const blocks = extractJsonBlocks(reply);
-      let text = null, chips = null;
-      for (const parsed of blocks) {
-        if (parsed && typeof parsed.text === "string" && parsed.text.trim()) text = parsed.text.trim();
-        if (parsed && Array.isArray(parsed.chips)) chips = parsed.chips;
-      }
-      if (text) {
-        addEveningBarMsg("agent", text, false, chips);
-        started[topic] = Date.now();
-        localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
-      } else {
-        safeAgentReply(reply, addEveningBarMsg);
-      }
-    } catch {
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-  }
-  function showEveningBarMessages() {
-    openChatBar("evening");
-  }
-  function addEveningBarMsg(role, text, _noSave = false, chips = null) {
-    const el = document.getElementById("evening-bar-messages");
-    if (!el) return;
-    if (_eveningTypingEl) {
-      _eveningTypingEl.remove();
-      _eveningTypingEl = null;
-    }
-    if (role === "typing") {
-      const td = document.createElement("div");
-      td.style.cssText = "display:flex";
-      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-      el.appendChild(td);
-      _eveningTypingEl = td;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    if (!_noSave) {
-      try {
-        openChatBar("evening");
-      } catch (e) {
-      }
-    }
-    const isAgent = role === "agent";
-    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    if (isAgent && Array.isArray(chips) && chips.length > 0) {
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "chat-chips-row";
-      renderChips(chipsRow, chips, "evening");
-      el.appendChild(chipsRow);
-    }
-    el.scrollTop = el.scrollHeight;
-    if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
-    else eveningBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("evening", role, text);
-    if (role === "agent") {
-      const bar = document.getElementById("evening-ai-bar");
-      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
-      const isOpen = chatWin && chatWin.classList.contains("open");
-      if (!isOpen) showUnreadBadge("evening", "evening-send-btn");
-    }
-  }
-  async function sendEveningBarMessage() {
-    if (eveningBarLoading) return;
-    const input = document.getElementById("evening-bar-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addEveningBarMsg("user", text);
-    eveningBarLoading = true;
-    addEveningBarMsg("typing", "");
-    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext();
-    try {
-      const reply = await callAIWithHistory(systemPrompt, eveningBarHistory.slice(-10));
-      if (!reply) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        eveningBarLoading = false;
-        return;
-      }
-      const blocks = extractJsonBlocks(reply);
-      let handled = false;
-      let lastAgentText = null;
-      let lastChips = null;
-      for (const parsed of blocks) {
-        const actionHandled = processUniversalAction(parsed, text, addEveningBarMsg);
-        if (actionHandled) {
-          handled = true;
-          continue;
-        }
-        if (parsed && typeof parsed.text === "string" && parsed.text.trim()) {
-          lastAgentText = parsed.text.trim();
-          if (Array.isArray(parsed.chips)) lastChips = parsed.chips;
-          handled = true;
-        } else if (parsed && Array.isArray(parsed.chips) && !lastChips) {
-          lastChips = parsed.chips;
-        }
-      }
-      if (lastAgentText) addEveningBarMsg("agent", lastAgentText, false, lastChips);
-      else if (!handled) safeAgentReply(reply, addEveningBarMsg);
-    } catch {
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-    eveningBarLoading = false;
-  }
-  var _eveningTypingEl, EVENING_TOPIC_STARTED_KEY, eveningBarHistory, eveningBarLoading;
-  var init_evening_chat = __esm({
-    "src/tabs/evening-chat.js"() {
-      init_utils();
-      init_core();
-      init_habits();
-      init_unread_badge();
-      init_chips();
-      init_prompts();
-      _eveningTypingEl = null;
-      EVENING_TOPIC_STARTED_KEY = "nm_evening_topic_started";
-      eveningBarHistory = [];
-      eveningBarLoading = false;
-      Object.assign(window, {
-        openEveningTopic,
-        sendEveningBarMessage,
-        showEveningBarMessages
-      });
-    }
-  });
-
-  // src/tabs/projects.js
-  function getProjects() {
-    return JSON.parse(localStorage.getItem("nm_projects") || "[]");
-  }
-  function saveProjects(arr) {
-    localStorage.setItem("nm_projects", JSON.stringify(arr));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
-  }
-  function renderProjects() {
-    if (activeProjectId !== null) {
-      renderProjectWorkspace(activeProjectId);
-    } else {
-      renderProjectsList();
-    }
-  }
-  function renderProjectsList() {
-    const projects = getProjects();
-    const listEl = document.getElementById("projects-list");
-    const emptyEl = document.getElementById("projects-empty");
-    if (!listEl) return;
-    if (projects.length === 0) {
-      listEl.innerHTML = "";
-      if (emptyEl) emptyEl.style.display = "block";
-      return;
-    }
-    if (emptyEl) emptyEl.style.display = "none";
-    const now = Date.now();
-    listEl.innerHTML = projects.map((p) => {
-      const steps = p.steps || [];
-      const doneSteps = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
-      const nextStep = steps.find((s) => !s.done);
-      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
-      const silenceWarn = silenceDays !== null && silenceDays >= 3;
-      const visibleSteps = steps.slice(0, 4);
-      return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
-          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
-        </div>
-        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
-        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
-        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456</span>` : ""}
-      </div>
-      ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-          <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:white">${s.done ? "\u2713" : ""}</div>
-          <div style="font-size:12px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : !s.done && s === nextStep ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""};flex:1">${!s.done && s === nextStep ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
-        </div>`).join("") : ""}
-      <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
-      <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443..."}</div>
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-    </div>`;
-    }).join("");
-  }
-  function openProjectWorkspace(id) {
-    activeProjectId = id;
-    const projects = getProjects();
-    const idx = projects.findIndex((p) => p.id === id);
-    if (idx !== -1) {
-      projects[idx].lastActivity = Date.now();
-      saveProjects(projects);
-    }
-    renderProjectWorkspace(id);
-    projectsBarHistory = [];
-  }
-  function closeProjectWorkspace() {
-    activeProjectId = null;
-    renderProjectsList();
-  }
-  function renderProjectWorkspace(id) {
-    const projects = getProjects();
-    const p = projects.find((pr) => pr.id === id);
-    if (!p) {
-      closeProjectWorkspace();
-      return;
-    }
-    const steps = p.steps || [];
-    const doneSteps = steps.filter((s) => s.done).length;
-    const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
-    const nextStep = steps.find((s) => !s.done);
-    const budget = p.budget || { total: 0, spent: 0, items: [] };
-    const metrics = p.metrics || [];
-    const decisions = p.decisions || [];
-    const risks = p.risks || "";
-    const resources = p.resources || [];
-    const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
-    const scrollEl = document.getElementById("projects-scroll");
-    if (!scrollEl) return;
-    scrollEl.innerHTML = `
-    <!-- \u041D\u0430\u0437\u0430\u0434 -->
-    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#3d2e1e">\u041F\u0440\u043E\u0435\u043A\u0442\u0438</span>
-    </div>
-
-    <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
-    <div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div style="flex:1">
-          <div style="font-size:16px;font-weight:900;color:#1e1040">${escapeHtml(p.name)}</div>
-          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
-        </div>
-        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
-      </div>
-      <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:10px">
-        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:4px;transition:width 0.5s"></div>
-      </div>
-      <!-- 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 -->
-      <div style="display:flex;gap:5px">
-        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
-          <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">\u0437\u0430\u0440\u0430\u0437</div>
-        </div>
-        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
-          <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C</div>
-        </div>
-        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
-          <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
-    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
-      <div class="section-label" style="margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
-      ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:12px;font-weight:700;color:#1e1040">\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E</span>
-        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
-      </div>
-      <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
-        <div style="height:100%;width:${spentPct}%;background:#c2410c;border-radius:3px"></div>
-      </div>` : ""}
-      ${budget.items.map((item, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${i < budget.items.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-        <span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55)">${escapeHtml(item.name)}</span>
-        <span style="font-size:12px;font-weight:800;color:${item.amount > 0 ? "#c2410c" : item.amount < 0 ? "#16a34a" : "rgba(30,16,64,0.35)"}">${item.amount > 0 ? "-" : item.amount < 0 ? "+" : ""}${getCurrency()}${Math.abs(item.amount) || item.label || ""}</span>
-      </div>`).join("")}
-    </div>` : ""}
-
-    <!-- \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0434\u0456\u044F -->
-    ${nextStep ? `<div style="display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(61,46,30,0.08);border:1.5px solid rgba(61,46,30,0.15)">
-      <div style="width:24px;height:24px;border-radius:8px;background:#3d2e1e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-      <div style="font-size:13px;font-weight:700;color:#3d2e1e">${escapeHtml(nextStep.text)}</div>
-    </div>` : ""}
-
-    <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
-    ${metrics.length > 0 ? `<div class="card-glass">
-      <div class="section-label">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
-          <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
-          <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.38);margin-top:2px;line-height:1.3">${escapeHtml(m.label)}</div>
-        </div>`).join("")}
-      </div>
-    </div>` : ""}
-
-    <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
-    ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193</span>
-      </div>
-      <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
-      <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
-        ${steps.slice(0, 3).map((s, i) => {
-      const isCurrent = !s.done && s === nextStep;
-      const opacity = s.done ? 0.35 : i === 0 ? 1 : i === 1 ? 0.55 : 0.3;
-      return `<div style="display:flex;align-items:center;gap:7px;${i > 0 ? "margin-top:4px" : ""};opacity:${opacity}">
-            <div style="width:7px;height:7px;border-radius:50%;background:${s.done ? "#3d2e1e" : isCurrent ? "#3d2e1e" : "rgba(61,46,30,0.3)"};flex-shrink:0"></div>
-            <div style="font-size:11px;font-weight:${isCurrent ? 800 : 600};color:${isCurrent ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""}">${isCurrent ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
-          </div>`;
-    }).join("")}
-      </div>
-      <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
-      <div id="proj-timeline-full-${p.id}" style="display:none">
-        ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div onclick="toggleProjectStep(${p.id},${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
-          <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
-        </div>`).join("")}
-      </div>
-    </div>` : ""}
-
-    <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
-    ${decisions.length > 0 ? `<div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL \xB7 \u0430\u0432\u0442\u043E</span>
-      </div>
-      ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-        <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500;margin-top:1px">${escapeHtml(d.reason)}</div>
-      </div>`).join("")}
-    </div>` : ""}
-
-    <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
-    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
-      <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${_countProjectNotes(p.name)} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "${escapeHtml(p.name)}" \u2192</div>
-      </div>
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
-
-    <!-- OWL \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 -->
-    ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438</div>
-      <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
-    </div>` : ""}
-
-    <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
-    ${resources.length > 0 ? `<div class="card-glass">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F</span>
-      </div>
-      ${resources.map((r, i) => {
-      const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
-      const [bg, color] = (badgeColors[r.type] || "rgba(30,16,64,0.07)|rgba(30,16,64,0.5)").split("|");
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < resources.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;background:${bg};color:${color}">${escapeHtml(r.type)}</div>
-          <div style="font-size:11px;font-weight:600;color:#1e1040;flex:1;line-height:1.3">${escapeHtml(r.title)}</div>
-          ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">\u2192</a>` : ""}
-        </div>`;
-    }).join("")}
-    </div>` : ""}
-  `;
-  }
-  function _countProjectNotes(projectName) {
-    try {
-      return getNotes().filter((n) => n.folder === projectName).length;
-    } catch (e) {
-      return 0;
-    }
-  }
-  function toggleProjectTimeline(id) {
-    const collapsed = document.getElementById(`proj-timeline-collapsed-${id}`);
-    const full = document.getElementById(`proj-timeline-full-${id}`);
-    const toggle = document.getElementById(`proj-timeline-toggle-${id}`);
-    if (!collapsed || !full) return;
-    const isCollapsed = full.style.display === "none";
-    collapsed.style.display = isCollapsed ? "none" : "block";
-    full.style.display = isCollapsed ? "block" : "none";
-    if (toggle) toggle.textContent = isCollapsed ? "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191" : "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193";
-  }
-  function toggleProjectStep(projectId, stepId) {
-    const projects = getProjects();
-    const p = projects.find((pr) => pr.id === projectId);
-    if (!p) return;
-    const step = (p.steps || []).find((s) => s.id === stepId);
-    if (step) {
-      step.done = !step.done;
-      step.doneAt = step.done ? Date.now() : null;
-      p.lastActivity = Date.now();
-      const done = p.steps.filter((s) => s.done).length;
-      p.progress = p.steps.length > 0 ? Math.round(done / p.steps.length * 100) : 0;
-      saveProjects(projects);
-      renderProjectWorkspace(projectId);
-      _syncProjectStepToTasks(p, step);
-    }
-  }
-  function _syncProjectStepToTasks(project, step) {
-    try {
-      if (!step.done) return;
-      const tasks = getTasks();
-      const match = tasks.find((t) => t.status === "active" && t.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
-      if (match) {
-        match.status = "done";
-        match.completedAt = Date.now();
-        saveTasks(tasks);
-      }
-    } catch (e) {
-    }
-  }
-  function openAddProject() {
-    const modal = document.getElementById("project-modal");
-    if (!modal) return;
-    document.getElementById("project-input-name").value = "";
-    document.getElementById("project-input-subtitle").value = "";
-    modal.style.display = "flex";
-    setTimeout(() => document.getElementById("project-input-name").focus(), 100);
-  }
-  function closeProjectModal() {
-    const modal = document.getElementById("project-modal");
-    if (modal) modal.style.display = "none";
-  }
-  function saveNewProject() {
-    const name = (document.getElementById("project-input-name").value || "").trim();
-    if (!name) return;
-    const subtitle = (document.getElementById("project-input-subtitle").value || "").trim();
-    const projects = getProjects();
-    const newProject = {
-      id: Date.now(),
-      name,
-      subtitle,
-      progress: 0,
-      steps: [],
-      budget: { total: 0, spent: 0, items: [] },
-      metrics: [],
-      decisions: [],
-      resources: [],
-      risks: "",
-      tempoNow: "?",
-      tempoMore: "?",
-      tempoIdeal: "?",
-      notesPreview: "",
-      lastActivity: Date.now(),
-      createdAt: Date.now()
-    };
-    projects.unshift(newProject);
-    saveProjects(projects);
-    closeProjectModal();
-    showToast("\u2713 \u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
-    openProjectWorkspace(newProject.id);
-    setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
-  }
-  async function startProjectInboxInterview(projectName, projectSubtitle) {
-    if (currentTab !== "inbox") switchTab("inbox");
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      setTimeout(() => addInboxChatMsg(
-        "agent",
-        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?`
-      ), 400);
-      return;
-    }
-    const aiContext = getAIContext();
-    const systemPrompt = `${getOWLPersonality()} \u0429\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}"${projectSubtitle ? ` \u2014 "${projectSubtitle}"` : ""}.
-\u0422\u0432\u043E\u044F \u0440\u043E\u043B\u044C \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A. \u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442.
-\u041F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0430\u0431\u043E \u0440\u0435\u0441\u0443\u0440\u0441\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432.
-\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
-${aiContext ? "\n\n" + aiContext : ""}`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: systemPrompt }],
-          max_tokens: 100,
-          temperature: 0.75
-        })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (reply) {
-        setTimeout(() => {
-          addInboxChatMsg("agent", reply);
-          localStorage.setItem("nm_guide_waiting_topic", "project_" + Date.now());
-          const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
-          localStorage.setItem("nm_project_interview_step", "1");
-          localStorage.setItem("nm_project_interview_name", projectName);
-        }, 500);
-      }
-    } catch (e) {
-      setTimeout(() => addInboxChatMsg(
-        "agent",
-        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?`
-      ), 400);
-    }
-  }
-  function getProjectsContext() {
-    const projects = getProjects();
-    if (projects.length === 0) return "";
-    const now = Date.now();
-    const parts = [`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456\u0445 \u0434\u0456\u0439):`];
-    projects.slice(0, 5).forEach((p) => {
-      const steps = p.steps || [];
-      const done = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
-      const next = steps.find((s) => !s.done);
-      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 864e5) : null;
-      const silence = silenceDays !== null && silenceDays >= 3 ? ` \u26A0\uFE0F ${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456` : "";
-      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
-    });
-    return parts.join("\n");
-  }
-  function addProjectsChatMsg(role, text, _noSave = false) {
-    const el = document.getElementById("projects-chat-messages");
-    if (!el) return;
-    if (_projectsTypingEl) {
-      _projectsTypingEl.remove();
-      _projectsTypingEl = null;
-    }
-    if (role === "typing") {
-      const td = document.createElement("div");
-      td.style.cssText = "display:flex";
-      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-      el.appendChild(td);
-      _projectsTypingEl = td;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    try {
-      openChatBar("projects");
-    } catch (e) {
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-    if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
-    else projectsBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("projects", role, text);
-  }
-  async function sendProjectsBarMessage() {
-    if (projectsBarLoading) return;
-    const input = document.getElementById("projects-bar-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addProjectsChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addProjectsChatMsg("user", text);
-    projectsBarLoading = true;
-    addProjectsChatMsg("typing", "");
-    const projects = getProjects();
-    const activeProject = activeProjectId ? projects.find((p) => p.id === activeProjectId) : null;
-    const projCtx = getProjectsContext();
-    const aiContext = getAIContext();
-    const activeSteps = activeProject ? (activeProject.steps || []).map((s) => `[ID:${s.id}] ${s.done ? "\u2713" : "\u25CB"} ${s.text}`).join("\n") : "";
-    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u043F\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u0445 \u0432 NeverMind.
-${activeProject ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: "${activeProject.name}" (${activeProject.progress || 0}%). \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A: ${activeProject.subtitle || ""}.
-\u041A\u0440\u043E\u043A\u0438:
-${activeSteps || "\u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432"}` : projCtx}
-${aiContext ? "\n\n" + aiContext : ""}
-
-\u0422\u0438 \u043C\u043E\u0436\u0435\u0448 (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON \u044F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0434\u0456\u044F):
-- \u0412\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"complete_project_step","project_id":${activeProjectId || "null"},"step_id":ID}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"add_project_step","project_id":${activeProjectId || "null"},"step":"\u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443"}
-- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u0440\u043E\u0433\u0440\u0435\u0441: {"action":"update_project_progress","project_id":${activeProjectId || "null"},"progress":\u0447\u0438\u0441\u043B\u043E 0-100}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0456\u0448\u0435\u043D\u043D\u044F: {"action":"add_project_decision","project_id":${activeProjectId || "null"},"title":"\u0440\u0456\u0448\u0435\u043D\u043D\u044F","reason":"\u0447\u043E\u043C\u0443"}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u0435\u0442\u0440\u0438\u043A\u0443: {"action":"add_project_metric","project_id":${activeProjectId || "null"},"label":"\u043D\u0430\u0437\u0432\u0430","value":"\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F","color":"#hex"}
-- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0435\u0441\u0443\u0440\u0441: {"action":"add_project_resource","project_id":${activeProjectId || "null"},"type":"\u041A\u043D\u0438\u0433\u0430|\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430|\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442|\u0421\u0442\u0430\u0442\u0442\u044F","title":"\u043D\u0430\u0437\u0432\u0430","url":"\u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F"}
-- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F: {"action":"update_project_tempo","project_id":${activeProjectId || "null"},"tempoNow":"6 \u0442\u0438\u0436","tempoMore":"4 \u0442\u0438\u0436","tempoIdeal":"2 \u0442\u0438\u0436"}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438: {"action":"update_project_risks","project_id":${activeProjectId || "null"},"risks":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":"${activeProject ? activeProject.name : "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"}"}
-- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A: {"action":"create_folder","folder":"\u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438"}
-- \u0417\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
-- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u0414\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
-- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...projectsBarHistory.slice(-10)], max_tokens: 300, temperature: 0.6 })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        addProjectsChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        projectsBarLoading = false;
-        return;
-      }
-      const _processOne = (parsed) => {
-        const pid = parsed.project_id;
-        if (parsed.action === "complete_project_step" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            const step = (p.steps || []).find((s) => s.id === parsed.step_id);
-            if (step) {
-              step.done = true;
-              step.doneAt = Date.now();
-              p.progress = Math.round(p.steps.filter((s) => s.done).length / p.steps.length * 100);
-              p.lastActivity = Date.now();
-              saveProjects(projs);
-              renderProjects();
-              addProjectsChatMsg("agent", `\u2705 \u041A\u0440\u043E\u043A "${step.text}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041F\u0440\u043E\u0433\u0440\u0435\u0441: ${p.progress}%`);
-              return true;
-            }
-          }
-          return false;
-        }
-        if (parsed.action === "add_project_step" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.steps) p.steps = [];
-            p.steps.push({ id: Date.now(), text: parsed.step, done: false });
-            p.lastActivity = Date.now();
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A: "${parsed.step}"`);
-            return true;
-          }
-          return false;
-        }
-        if (parsed.action === "update_project_progress" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            p.progress = Math.min(100, Math.max(0, parsed.progress));
-            p.lastActivity = Date.now();
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${p.progress}%`);
-          }
-          return true;
-        }
-        if (parsed.action === "add_project_decision" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.decisions) p.decisions = [];
-            p.decisions.unshift({ title: parsed.title, reason: parsed.reason });
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0420\u0456\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: "${parsed.title}"`);
-          }
-          return true;
-        }
-        if (parsed.action === "add_project_metric" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.metrics) p.metrics = [];
-            p.metrics.push({ label: parsed.label, value: parsed.value, color: parsed.color || "#3d2e1e" });
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u041C\u0435\u0442\u0440\u0438\u043A\u0443 "${parsed.label}: ${parsed.value}" \u0434\u043E\u0434\u0430\u043D\u043E`);
-          }
-          return true;
-        }
-        if (parsed.action === "add_project_resource" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            if (!p.resources) p.resources = [];
-            p.resources.push({ type: parsed.type, title: parsed.title, url: parsed.url || "" });
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${parsed.title}" \u0434\u043E\u0434\u0430\u043D\u043E`);
-          }
-          return true;
-        }
-        if (parsed.action === "update_project_tempo" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            p.tempoNow = parsed.tempoNow || p.tempoNow;
-            p.tempoMore = parsed.tempoMore || p.tempoMore;
-            p.tempoIdeal = parsed.tempoIdeal || p.tempoIdeal;
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E`);
-          }
-          return true;
-        }
-        if (parsed.action === "update_project_risks" && pid) {
-          const projs = getProjects();
-          const p = projs.find((pr) => pr.id === pid);
-          if (p) {
-            p.risks = parsed.risks;
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg("agent", `\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E`);
-          }
-          return true;
-        }
-        if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
-        return false;
-      };
-      const blocks = extractJsonBlocks(reply);
-      let handled = false;
-      for (const parsed of blocks) {
-        if (_processOne(parsed)) handled = true;
-      }
-      if (!handled) safeAgentReply(reply, addProjectsChatMsg);
-    } catch {
-      addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-    projectsBarLoading = false;
-  }
-  var activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl;
-  var init_projects = __esm({
-    "src/tabs/projects.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_inbox();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_finance();
-      activeProjectId = null;
-      projectsBarLoading = false;
-      projectsBarHistory = [];
-      _projectsTypingEl = null;
-      Object.assign(window, {
-        openAddProject,
-        saveNewProject,
-        closeProjectModal,
-        sendProjectsBarMessage,
-        openProjectWorkspace,
-        closeProjectWorkspace,
-        toggleProjectTimeline,
-        toggleProjectStep,
-        switchTab
-      });
     }
   });
 
@@ -4189,6 +3415,647 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   });
 
+  // src/tabs/projects.js
+  function getProjects() {
+    return JSON.parse(localStorage.getItem("nm_projects") || "[]");
+  }
+  function saveProjects(arr) {
+    localStorage.setItem("nm_projects", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
+  }
+  function renderProjects() {
+    if (activeProjectId !== null) {
+      renderProjectWorkspace(activeProjectId);
+    } else {
+      renderProjectsList();
+    }
+  }
+  function renderProjectsList() {
+    const projects = getProjects();
+    const listEl = document.getElementById("projects-list");
+    const emptyEl = document.getElementById("projects-empty");
+    if (!listEl) return;
+    if (projects.length === 0) {
+      listEl.innerHTML = "";
+      if (emptyEl) emptyEl.style.display = "block";
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = "none";
+    const now = Date.now();
+    listEl.innerHTML = projects.map((p) => {
+      const steps = p.steps || [];
+      const doneSteps = steps.filter((s) => s.done).length;
+      const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
+      const nextStep = steps.find((s) => !s.done);
+      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
+      const silenceWarn = silenceDays !== null && silenceDays >= 3;
+      const visibleSteps = steps.slice(0, 4);
+      return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
+          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
+        </div>
+        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
+        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456</span>` : ""}
+      </div>
+      ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+          <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div style="font-size:12px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : !s.done && s === nextStep ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""};flex:1">${!s.done && s === nextStep ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
+        </div>`).join("") : ""}
+      <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
+      <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443..."}</div>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>`;
+    }).join("");
+  }
+  function openProjectWorkspace(id) {
+    activeProjectId = id;
+    const projects = getProjects();
+    const idx = projects.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      projects[idx].lastActivity = Date.now();
+      saveProjects(projects);
+    }
+    renderProjectWorkspace(id);
+    projectsBarHistory = [];
+  }
+  function closeProjectWorkspace() {
+    activeProjectId = null;
+    renderProjectsList();
+  }
+  function renderProjectWorkspace(id) {
+    const projects = getProjects();
+    const p = projects.find((pr) => pr.id === id);
+    if (!p) {
+      closeProjectWorkspace();
+      return;
+    }
+    const steps = p.steps || [];
+    const doneSteps = steps.filter((s) => s.done).length;
+    const pct = steps.length > 0 ? Math.round(doneSteps / steps.length * 100) : p.progress || 0;
+    const nextStep = steps.find((s) => !s.done);
+    const budget = p.budget || { total: 0, spent: 0, items: [] };
+    const metrics = p.metrics || [];
+    const decisions = p.decisions || [];
+    const risks = p.risks || "";
+    const resources = p.resources || [];
+    const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
+    const scrollEl = document.getElementById("projects-scroll");
+    if (!scrollEl) return;
+    scrollEl.innerHTML = `
+    <!-- \u041D\u0430\u0437\u0430\u0434 -->
+    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      <span style="font-size:13px;font-weight:700;color:#3d2e1e">\u041F\u0440\u043E\u0435\u043A\u0442\u0438</span>
+    </div>
+
+    <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
+    <div class="card-glass">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:900;color:#1e1040">${escapeHtml(p.name)}</div>
+          ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(p.subtitle)}</div>` : ""}
+        </div>
+        <div style="font-size:30px;font-weight:900;color:#3d2e1e;line-height:1;margin-left:8px">${pct}%</div>
+      </div>
+      <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:4px;transition:width 0.5s"></div>
+      </div>
+      <!-- 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 -->
+      <div style="display:flex;gap:5px">
+        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
+          <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">\u0437\u0430\u0440\u0430\u0437</div>
+        </div>
+        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
+          <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C</div>
+        </div>
+        <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
+          <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
+    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
+      <div class="section-label" style="margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
+      ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:12px;font-weight:700;color:#1e1040">\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E</span>
+        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
+      </div>
+      <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${spentPct}%;background:#c2410c;border-radius:3px"></div>
+      </div>` : ""}
+      ${budget.items.map((item, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${i < budget.items.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+        <span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55)">${escapeHtml(item.name)}</span>
+        <span style="font-size:12px;font-weight:800;color:${item.amount > 0 ? "#c2410c" : item.amount < 0 ? "#16a34a" : "rgba(30,16,64,0.35)"}">${item.amount > 0 ? "-" : item.amount < 0 ? "+" : ""}${getCurrency()}${Math.abs(item.amount) || item.label || ""}</span>
+      </div>`).join("")}
+    </div>` : ""}
+
+    <!-- \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0434\u0456\u044F -->
+    ${nextStep ? `<div style="display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(61,46,30,0.08);border:1.5px solid rgba(61,46,30,0.15)">
+      <div style="width:24px;height:24px;border-radius:8px;background:#3d2e1e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#3d2e1e">${escapeHtml(nextStep.text)}</div>
+    </div>` : ""}
+
+    <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
+    ${metrics.length > 0 ? `<div class="card-glass">
+      <div class="section-label">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
+          <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
+          <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.38);margin-top:2px;line-height:1.3">${escapeHtml(m.label)}</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
+
+    <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
+    ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
+        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193</span>
+      </div>
+      <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
+      <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
+        ${steps.slice(0, 3).map((s, i) => {
+      const isCurrent = !s.done && s === nextStep;
+      const opacity = s.done ? 0.35 : i === 0 ? 1 : i === 1 ? 0.55 : 0.3;
+      return `<div style="display:flex;align-items:center;gap:7px;${i > 0 ? "margin-top:4px" : ""};opacity:${opacity}">
+            <div style="width:7px;height:7px;border-radius:50%;background:${s.done ? "#3d2e1e" : isCurrent ? "#3d2e1e" : "rgba(61,46,30,0.3)"};flex-shrink:0"></div>
+            <div style="font-size:11px;font-weight:${isCurrent ? 800 : 600};color:${isCurrent ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""}">${isCurrent ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
+          </div>`;
+    }).join("")}
+      </div>
+      <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
+      <div id="proj-timeline-full-${p.id}" style="display:none">
+        ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+          <div onclick="toggleProjectStep(${p.id},${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
+
+    <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
+    ${decisions.length > 0 ? `<div class="card-glass">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL \xB7 \u0430\u0432\u0442\u043E</span>
+      </div>
+      ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+        <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500;margin-top:1px">${escapeHtml(d.reason)}</div>
+      </div>`).join("")}
+    </div>` : ""}
+
+    <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
+    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+      <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#1e1040">\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${_countProjectNotes(p.name)} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "${escapeHtml(p.name)}" \u2192</div>
+      </div>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+
+    <!-- OWL \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 -->
+    ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
+      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438</div>
+      <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
+    </div>` : ""}
+
+    <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
+    ${resources.length > 0 ? `<div class="card-glass">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F</span>
+      </div>
+      ${resources.map((r, i) => {
+      const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
+      const [bg, color] = (badgeColors[r.type] || "rgba(30,16,64,0.07)|rgba(30,16,64,0.5)").split("|");
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < resources.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
+          <div style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;background:${bg};color:${color}">${escapeHtml(r.type)}</div>
+          <div style="font-size:11px;font-weight:600;color:#1e1040;flex:1;line-height:1.3">${escapeHtml(r.title)}</div>
+          ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">\u2192</a>` : ""}
+        </div>`;
+    }).join("")}
+    </div>` : ""}
+  `;
+  }
+  function _countProjectNotes(projectName) {
+    try {
+      return getNotes().filter((n) => n.folder === projectName).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function toggleProjectTimeline(id) {
+    const collapsed = document.getElementById(`proj-timeline-collapsed-${id}`);
+    const full = document.getElementById(`proj-timeline-full-${id}`);
+    const toggle = document.getElementById(`proj-timeline-toggle-${id}`);
+    if (!collapsed || !full) return;
+    const isCollapsed = full.style.display === "none";
+    collapsed.style.display = isCollapsed ? "none" : "block";
+    full.style.display = isCollapsed ? "block" : "none";
+    if (toggle) toggle.textContent = isCollapsed ? "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191" : "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193";
+  }
+  function toggleProjectStep(projectId, stepId) {
+    const projects = getProjects();
+    const p = projects.find((pr) => pr.id === projectId);
+    if (!p) return;
+    const step = (p.steps || []).find((s) => s.id === stepId);
+    if (step) {
+      step.done = !step.done;
+      step.doneAt = step.done ? Date.now() : null;
+      p.lastActivity = Date.now();
+      const done = p.steps.filter((s) => s.done).length;
+      p.progress = p.steps.length > 0 ? Math.round(done / p.steps.length * 100) : 0;
+      saveProjects(projects);
+      renderProjectWorkspace(projectId);
+      _syncProjectStepToTasks(p, step);
+    }
+  }
+  function _syncProjectStepToTasks(project, step) {
+    try {
+      if (!step.done) return;
+      const tasks = getTasks();
+      const match = tasks.find((t) => t.status === "active" && t.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
+      if (match) {
+        match.status = "done";
+        match.completedAt = Date.now();
+        saveTasks(tasks);
+      }
+    } catch (e) {
+    }
+  }
+  function openAddProject() {
+    const modal = document.getElementById("project-modal");
+    if (!modal) return;
+    document.getElementById("project-input-name").value = "";
+    document.getElementById("project-input-subtitle").value = "";
+    modal.style.display = "flex";
+    setTimeout(() => document.getElementById("project-input-name").focus(), 100);
+  }
+  function closeProjectModal() {
+    const modal = document.getElementById("project-modal");
+    if (modal) modal.style.display = "none";
+  }
+  function saveNewProject() {
+    const name = (document.getElementById("project-input-name").value || "").trim();
+    if (!name) return;
+    const subtitle = (document.getElementById("project-input-subtitle").value || "").trim();
+    const projects = getProjects();
+    const newProject = {
+      id: Date.now(),
+      name,
+      subtitle,
+      progress: 0,
+      steps: [],
+      budget: { total: 0, spent: 0, items: [] },
+      metrics: [],
+      decisions: [],
+      resources: [],
+      risks: "",
+      tempoNow: "?",
+      tempoMore: "?",
+      tempoIdeal: "?",
+      notesPreview: "",
+      lastActivity: Date.now(),
+      createdAt: Date.now()
+    };
+    projects.unshift(newProject);
+    saveProjects(projects);
+    closeProjectModal();
+    showToast("\u2713 \u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
+    openProjectWorkspace(newProject.id);
+    setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
+  }
+  async function startProjectInboxInterview(projectName, projectSubtitle) {
+    if (currentTab !== "inbox") switchTab("inbox");
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      setTimeout(() => addInboxChatMsg(
+        "agent",
+        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?`
+      ), 400);
+      return;
+    }
+    const aiContext = getAIContext();
+    const systemPrompt = `${getOWLPersonality()} \u0429\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}"${projectSubtitle ? ` \u2014 "${projectSubtitle}"` : ""}.
+\u0422\u0432\u043E\u044F \u0440\u043E\u043B\u044C \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A. \u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442.
+\u041F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0430\u0431\u043E \u0440\u0435\u0441\u0443\u0440\u0441\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432.
+\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
+${aiContext ? "\n\n" + aiContext : ""}`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "system", content: systemPrompt }],
+          max_tokens: 100,
+          temperature: 0.75
+        })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (reply) {
+        setTimeout(() => {
+          addInboxChatMsg("agent", reply);
+          localStorage.setItem("nm_guide_waiting_topic", "project_" + Date.now());
+          const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
+          localStorage.setItem("nm_project_interview_step", "1");
+          localStorage.setItem("nm_project_interview_name", projectName);
+        }, 500);
+      }
+    } catch (e) {
+      setTimeout(() => addInboxChatMsg(
+        "agent",
+        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?`
+      ), 400);
+    }
+  }
+  function getProjectsContext() {
+    const projects = getProjects();
+    if (projects.length === 0) return "";
+    const now = Date.now();
+    const parts = [`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456\u0445 \u0434\u0456\u0439):`];
+    projects.slice(0, 5).forEach((p) => {
+      const steps = p.steps || [];
+      const done = steps.filter((s) => s.done).length;
+      const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
+      const next = steps.find((s) => !s.done);
+      const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 864e5) : null;
+      const silence = silenceDays !== null && silenceDays >= 3 ? ` \u26A0\uFE0F ${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456` : "";
+      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
+    });
+    return parts.join("\n");
+  }
+  function addProjectsChatMsg(role, text, _noSave = false) {
+    const el = document.getElementById("projects-chat-messages");
+    if (!el) return;
+    if (_projectsTypingEl) {
+      _projectsTypingEl.remove();
+      _projectsTypingEl = null;
+    }
+    if (role === "typing") {
+      const td = document.createElement("div");
+      td.style.cssText = "display:flex";
+      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
+      el.appendChild(td);
+      _projectsTypingEl = td;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    try {
+      openChatBar("projects");
+    } catch (e) {
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
+    else projectsBarHistory.push({ role: "assistant", content: text });
+    if (!_noSave) saveChatMsg("projects", role, text);
+  }
+  async function sendProjectsBarMessage() {
+    if (projectsBarLoading) return;
+    const input = document.getElementById("projects-bar-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addProjectsChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addProjectsChatMsg("user", text);
+    projectsBarLoading = true;
+    addProjectsChatMsg("typing", "");
+    const projects = getProjects();
+    const activeProject = activeProjectId ? projects.find((p) => p.id === activeProjectId) : null;
+    const projCtx = getProjectsContext();
+    const aiContext = getAIContext();
+    const activeSteps = activeProject ? (activeProject.steps || []).map((s) => `[ID:${s.id}] ${s.done ? "\u2713" : "\u25CB"} ${s.text}`).join("\n") : "";
+    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u043F\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u0445 \u0432 NeverMind.
+${activeProject ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: "${activeProject.name}" (${activeProject.progress || 0}%). \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A: ${activeProject.subtitle || ""}.
+\u041A\u0440\u043E\u043A\u0438:
+${activeSteps || "\u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432"}` : projCtx}
+${aiContext ? "\n\n" + aiContext : ""}
+
+\u0422\u0438 \u043C\u043E\u0436\u0435\u0448 (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON \u044F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0434\u0456\u044F):
+- \u0412\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"complete_project_step","project_id":${activeProjectId || "null"},"step_id":ID}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A: {"action":"add_project_step","project_id":${activeProjectId || "null"},"step":"\u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443"}
+- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u0440\u043E\u0433\u0440\u0435\u0441: {"action":"update_project_progress","project_id":${activeProjectId || "null"},"progress":\u0447\u0438\u0441\u043B\u043E 0-100}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0456\u0448\u0435\u043D\u043D\u044F: {"action":"add_project_decision","project_id":${activeProjectId || "null"},"title":"\u0440\u0456\u0448\u0435\u043D\u043D\u044F","reason":"\u0447\u043E\u043C\u0443"}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u0435\u0442\u0440\u0438\u043A\u0443: {"action":"add_project_metric","project_id":${activeProjectId || "null"},"label":"\u043D\u0430\u0437\u0432\u0430","value":"\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F","color":"#hex"}
+- \u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0435\u0441\u0443\u0440\u0441: {"action":"add_project_resource","project_id":${activeProjectId || "null"},"type":"\u041A\u043D\u0438\u0433\u0430|\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430|\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442|\u0421\u0442\u0430\u0442\u0442\u044F","title":"\u043D\u0430\u0437\u0432\u0430","url":"\u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F"}
+- \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F: {"action":"update_project_tempo","project_id":${activeProjectId || "null"},"tempoNow":"6 \u0442\u0438\u0436","tempoMore":"4 \u0442\u0438\u0436","tempoIdeal":"2 \u0442\u0438\u0436"}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438: {"action":"update_project_risks","project_id":${activeProjectId || "null"},"risks":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":"${activeProject ? activeProject.name : "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"}"}
+- \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A: {"action":"create_folder","folder":"\u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438"}
+- \u0417\u0430\u0434\u0430\u0447\u0443: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
+- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
+- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
+- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u0414\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
+- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...projectsBarHistory.slice(-10)], max_tokens: 300, temperature: 0.6 })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        addProjectsChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        projectsBarLoading = false;
+        return;
+      }
+      const _processOne = (parsed) => {
+        const pid = parsed.project_id;
+        if (parsed.action === "complete_project_step" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            const step = (p.steps || []).find((s) => s.id === parsed.step_id);
+            if (step) {
+              step.done = true;
+              step.doneAt = Date.now();
+              p.progress = Math.round(p.steps.filter((s) => s.done).length / p.steps.length * 100);
+              p.lastActivity = Date.now();
+              saveProjects(projs);
+              renderProjects();
+              addProjectsChatMsg("agent", `\u2705 \u041A\u0440\u043E\u043A "${step.text}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E! \u041F\u0440\u043E\u0433\u0440\u0435\u0441: ${p.progress}%`);
+              return true;
+            }
+          }
+          return false;
+        }
+        if (parsed.action === "add_project_step" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.steps) p.steps = [];
+            p.steps.push({ id: Date.now(), text: parsed.step, done: false });
+            p.lastActivity = Date.now();
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A: "${parsed.step}"`);
+            return true;
+          }
+          return false;
+        }
+        if (parsed.action === "update_project_progress" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            p.progress = Math.min(100, Math.max(0, parsed.progress));
+            p.lastActivity = Date.now();
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${p.progress}%`);
+          }
+          return true;
+        }
+        if (parsed.action === "add_project_decision" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.decisions) p.decisions = [];
+            p.decisions.unshift({ title: parsed.title, reason: parsed.reason });
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0420\u0456\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E: "${parsed.title}"`);
+          }
+          return true;
+        }
+        if (parsed.action === "add_project_metric" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.metrics) p.metrics = [];
+            p.metrics.push({ label: parsed.label, value: parsed.value, color: parsed.color || "#3d2e1e" });
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u041C\u0435\u0442\u0440\u0438\u043A\u0443 "${parsed.label}: ${parsed.value}" \u0434\u043E\u0434\u0430\u043D\u043E`);
+          }
+          return true;
+        }
+        if (parsed.action === "add_project_resource" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            if (!p.resources) p.resources = [];
+            p.resources.push({ type: parsed.type, title: parsed.title, url: parsed.url || "" });
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${parsed.title}" \u0434\u043E\u0434\u0430\u043D\u043E`);
+          }
+          return true;
+        }
+        if (parsed.action === "update_project_tempo" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            p.tempoNow = parsed.tempoNow || p.tempoNow;
+            p.tempoMore = parsed.tempoMore || p.tempoMore;
+            p.tempoIdeal = parsed.tempoIdeal || p.tempoIdeal;
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E`);
+          }
+          return true;
+        }
+        if (parsed.action === "update_project_risks" && pid) {
+          const projs = getProjects();
+          const p = projs.find((pr) => pr.id === pid);
+          if (p) {
+            p.risks = parsed.risks;
+            saveProjects(projs);
+            renderProjects();
+            addProjectsChatMsg("agent", `\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E`);
+          }
+          return true;
+        }
+        if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
+        return false;
+      };
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (_processOne(parsed)) handled = true;
+      }
+      if (!handled) safeAgentReply(reply, addProjectsChatMsg);
+    } catch {
+      addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+    projectsBarLoading = false;
+  }
+  var activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl;
+  var init_projects = __esm({
+    "src/tabs/projects.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_inbox();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      activeProjectId = null;
+      projectsBarLoading = false;
+      projectsBarHistory = [];
+      _projectsTypingEl = null;
+      Object.assign(window, {
+        openAddProject,
+        saveNewProject,
+        closeProjectModal,
+        sendProjectsBarMessage,
+        openProjectWorkspace,
+        closeProjectWorkspace,
+        toggleProjectTimeline,
+        toggleProjectStep,
+        switchTab
+      });
+    }
+  });
+
   // src/tabs/evening.js
   function getMoments() {
     return JSON.parse(localStorage.getItem("nm_moments") || "[]");
@@ -4612,6 +4479,449 @@ ${lines.join("\n\n")}`;
         rescheduleTaskWeek
       });
       _startEveningLockTicker();
+    }
+  });
+
+  // src/tabs/evening-actions.js
+  function dispatchEveningTool(name, args) {
+    try {
+      switch (name) {
+        // ========== СТВОРЕННЯ ==========
+        case "save_task": {
+          const tasks = getTasks();
+          const newTask = {
+            id: Date.now(),
+            title: args.title || args.text || "\u0417\u0430\u0434\u0430\u0447\u0430",
+            desc: args.text && args.text !== args.title ? args.text : "",
+            steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
+            status: "active",
+            createdAt: Date.now()
+          };
+          if (args.due_date) newTask.dueDate = args.due_date;
+          if (args.priority && ["normal", "important", "critical"].includes(args.priority)) newTask.priority = args.priority;
+          tasks.unshift(newTask);
+          saveTasks(tasks);
+          renderTasks();
+          logRecentAction("save_task", newTask.title, "evening");
+          return { ok: true };
+        }
+        case "save_note": {
+          addNoteFromInbox(args.text || "", "note", args.folder || "\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A", "evening");
+          if (currentTab === "notes") renderNotes();
+          logRecentAction("save_note", (args.text || "").slice(0, 40), "evening");
+          return { ok: true };
+        }
+        case "save_moment": {
+          const moments = getMoments();
+          moments.push({ id: Date.now(), text: args.text || "", mood: args.mood || "neutral", ts: Date.now() });
+          saveMoments(moments);
+          logRecentAction("save_moment", (args.text || "").slice(0, 40), "evening");
+          return { ok: true };
+        }
+        case "save_habit": {
+          const habits = getHabits();
+          habits.unshift({ id: Date.now(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
+          saveHabits(habits);
+          renderHabits();
+          return { ok: true };
+        }
+        case "create_event": {
+          const events = getEvents();
+          events.unshift({ id: Date.now(), title: args.title || "\u041F\u043E\u0434\u0456\u044F", date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
+          saveEvents(events);
+          logRecentAction("create_event", args.title || "", "evening");
+          return { ok: true };
+        }
+        case "save_finance": {
+          const txs = getFinance();
+          txs.unshift({
+            id: Date.now(),
+            type: args.fin_type === "income" ? "income" : "expense",
+            amount: parseFloat(args.amount) || 0,
+            category: args.category || "\u0406\u043D\u0448\u0435",
+            comment: args.fin_comment || "",
+            ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
+          });
+          saveFinance(txs);
+          if (currentTab === "finance") renderFinance();
+          return { ok: true };
+        }
+        case "set_reminder": {
+          const events = getEvents();
+          const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+          events.unshift({ id: Date.now(), title: "\u23F0 " + (args.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
+          saveEvents(events);
+          return { ok: true };
+        }
+        case "save_memory_fact": {
+          addFact(args.fact || "", args.category || "context", args.ttl_days || null);
+          return { ok: true };
+        }
+        // ========== ВИКОНАННЯ ==========
+        case "complete_task": {
+          const tasks = getTasks();
+          const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
+          ids.forEach((id) => {
+            const idx = tasks.findIndex((t) => t.id === id);
+            if (idx !== -1) {
+              tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
+            }
+          });
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "complete_habit": {
+          const log = getHabitLog();
+          const today = (/* @__PURE__ */ new Date()).toDateString();
+          if (!log[today]) log[today] = {};
+          const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
+          ids.forEach((id) => {
+            log[today][id] = (log[today][id] || 0) + 1;
+          });
+          saveHabitLog(log);
+          renderHabits();
+          renderProdHabits();
+          return { ok: true };
+        }
+        // ========== РЕДАГУВАННЯ ==========
+        case "edit_task": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          if (args.title) tasks[idx].title = args.title;
+          if (args.due_date) tasks[idx].dueDate = args.due_date;
+          if (args.priority) tasks[idx].priority = args.priority;
+          tasks[idx].updatedAt = Date.now();
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "edit_event": {
+          const events = getEvents();
+          const idx = events.findIndex((e) => e.id === args.event_id);
+          if (idx === -1) return { ok: false, err: "event not found" };
+          if (args.title) events[idx].title = args.title;
+          if (args.date) events[idx].date = args.date;
+          if (args.time !== void 0) events[idx].time = args.time;
+          if (args.priority) events[idx].priority = args.priority;
+          saveEvents(events);
+          return { ok: true };
+        }
+        case "edit_note": {
+          const notes = getNotes();
+          const idx = notes.findIndex((n) => n.id === args.note_id);
+          if (idx === -1) return { ok: false, err: "note not found" };
+          if (args.text) notes[idx].text = args.text;
+          if (args.folder) notes[idx].folder = args.folder;
+          saveNotes(notes);
+          if (currentTab === "notes") renderNotes();
+          return { ok: true };
+        }
+        case "edit_habit": {
+          const habits = getHabits();
+          const idx = habits.findIndex((h) => h.id === args.habit_id);
+          if (idx === -1) return { ok: false, err: "habit not found" };
+          if (args.name) habits[idx].name = args.name;
+          if (Array.isArray(args.days)) habits[idx].days = args.days;
+          if (args.details) habits[idx].details = args.details;
+          saveHabits(habits);
+          renderHabits();
+          return { ok: true };
+        }
+        case "reopen_task": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          tasks[idx] = { ...tasks[idx], status: "active", completedAt: null, updatedAt: Date.now() };
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "add_step": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
+          (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "move_note": {
+          const notes = getNotes();
+          const q = (args.query || "").toLowerCase();
+          const idx = notes.findIndex((n) => (n.text || "").toLowerCase().includes(q) || (n.title || "").toLowerCase().includes(q));
+          if (idx === -1) return { ok: false, err: "note not found" };
+          notes[idx].folder = args.folder;
+          saveNotes(notes);
+          if (currentTab === "notes") renderNotes();
+          return { ok: true };
+        }
+        case "update_transaction": {
+          const txs = getFinance();
+          const idx = txs.findIndex((t) => t.id === args.id);
+          if (idx === -1) return { ok: false, err: "tx not found" };
+          if (args.category) txs[idx].category = args.category;
+          if (args.amount) txs[idx].amount = parseFloat(args.amount);
+          if (args.comment !== void 0) txs[idx].comment = args.comment;
+          saveFinance(txs);
+          if (currentTab === "finance") renderFinance();
+          return { ok: true };
+        }
+        // ========== ВИДАЛЕННЯ ==========
+        case "delete_task": {
+          const tasks = getTasks();
+          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          if (idx === -1) return { ok: false, err: "task not found" };
+          addToTrash("task", tasks[idx]);
+          tasks.splice(idx, 1);
+          saveTasks(tasks);
+          renderTasks();
+          return { ok: true };
+        }
+        case "delete_event": {
+          const events = getEvents();
+          const idx = events.findIndex((e) => e.id === args.event_id);
+          if (idx === -1) return { ok: false, err: "event not found" };
+          addToTrash("event", events[idx]);
+          events.splice(idx, 1);
+          saveEvents(events);
+          return { ok: true };
+        }
+        case "delete_habit": {
+          const habits = getHabits();
+          const idx = habits.findIndex((h) => h.id === args.habit_id);
+          if (idx === -1) return { ok: false, err: "habit not found" };
+          addToTrash("habit", habits[idx]);
+          habits.splice(idx, 1);
+          saveHabits(habits);
+          renderHabits();
+          return { ok: true };
+        }
+        case "restore_deleted": {
+          const q = (args.query || "").trim().toLowerCase();
+          const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+          const filtered = args.type ? trash.filter((t) => t.type === args.type) : trash;
+          if (q === "all") {
+            filtered.forEach((t) => restoreFromTrash(t.deletedAt));
+            return { ok: true };
+          }
+          if (q === "last") {
+            if (filtered.length > 0) restoreFromTrash(filtered[0].deletedAt);
+            return { ok: true };
+          }
+          const hit = filtered.find((t) => JSON.stringify(t.data || t).toLowerCase().includes(q));
+          if (hit) {
+            restoreFromTrash(hit.deletedAt);
+            return { ok: true };
+          }
+          return { ok: false, err: "not found in trash" };
+        }
+        default:
+          return { ok: false, err: "unknown tool: " + name };
+      }
+    } catch (e) {
+      console.warn("[dispatchEveningTool]", name, e);
+      return { ok: false, err: e.message };
+    }
+  }
+  var init_evening_actions = __esm({
+    "src/tabs/evening-actions.js"() {
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_calendar();
+      init_finance();
+      init_evening();
+      init_memory();
+      init_trash();
+      init_nav();
+      init_utils();
+    }
+  });
+
+  // src/tabs/evening-chat.js
+  async function openEveningTopic(topic) {
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    let started = {};
+    try {
+      started = JSON.parse(localStorage.getItem(EVENING_TOPIC_STARTED_KEY) || "{}");
+    } catch (e) {
+    }
+    if (started.date !== todayISO) started = { date: todayISO };
+    try {
+      openChatBar("evening");
+    } catch (e) {
+    }
+    if (started[topic]) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    addEveningBarMsg("typing", "");
+    const topicPrompts = {
+      tomorrow: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u0437\u0430\u0432\u0442\u0440\u0430". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 \u043F\u043E\u0434\u0456\u0457 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F, \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456, \u043F\u0430\u043C'\u044F\u0442\u044C. \u041F\u043E\u0447\u043D\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430 \u0430\u0431\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u0430 \u043D\u0435\u0434\u043E\u0440\u043E\u0431\u043B\u0435\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u0437\u0433\u0430\u0434\u0430\u0439 \u0457\u0457 ("\u0417\u0430\u0432\u0442\u0440\u0430 \u0443 \u0442\u0435\u0431\u0435 \u0432\u0436\u0435 \u0434\u0437\u0432\u0456\u043D\u043E\u043A \u043E 15 \u2014 \u0449\u043E \u0449\u0435?"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u0449\u043E \u0449\u0435 \u043F\u043B\u0430\u043D\u0443\u0454 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u0442\u0438\u043F\u0443 \u0437\u0430\u043F\u0438\u0441\u0443: [\u0417\u0430\u0434\u0430\u0447\u0430] [\u041F\u043E\u0434\u0456\u044F] [\u0406 \u0442\u0435 \u0439 \u0442\u0435].`,
+      diary: `\u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0442\u0430\u043F\u043D\u0443\u0432 "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0441\u0432\u0456\u0439 \u0434\u0435\u043D\u044C". \u0423 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456, \u043D\u0430\u0441\u0442\u0440\u0456\u0439, \u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456/\u043A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432, \u0432\u0438\u0442\u0440\u0430\u0442\u0438. \u041F\u043E\u0447\u043D\u0438 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438 \u2014 \u044F\u043A\u0449\u043E \u0454 \u044F\u0441\u043A\u0440\u0430\u0432\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0430\u0431\u043E \u043F\u0430\u0442\u0442\u0435\u0440\u043D, \u0437\u0433\u0430\u0434\u0430\u0439 \u0439\u043E\u0433\u043E ("\u0411\u0430\u0447\u0443 \u0442\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 \u043C\u043E\u043C\u0435\u043D\u0442\u0430\u0445 \u0449\u043E \u0432\u0430\u0436\u043A\u043E \u0437 \u043C\u0430\u0440\u043A\u0435\u0442\u0438\u043D\u0433\u043E\u043C"). \u0417\u0430\u0432\u0435\u0440\u0448\u0438 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u043C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u043C \u044F\u043A \u0432\u043E\u043D\u043E. \u0414\u043E\u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u044E: [\u{1F525}] [\u{1F60A}] [\u{1F610}] [\u{1F615}] [\u{1F61E}].`
+    };
+    const tp = topicPrompts[topic];
+    if (!tp) return;
+    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext() + "\n\n=== \u0421\u0426\u0415\u041D\u0410\u0420\u0406\u0419 ===\n" + tp + "\n\n\u0423 \u0426\u042C\u041E\u041C\u0423 \u041F\u0415\u0420\u0428\u041E\u041C\u0423 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u0406: \u0431\u0435\u0437 tool calls (\u044E\u0437\u0435\u0440 \u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u0432 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438). \u0422\u0456\u043B\u044C\u043A\u0438 content: \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F + \u0447\u0456\u043F\u0438.";
+    try {
+      const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
+      if (!msg) {
+        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        return;
+      }
+      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          let args = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch (e) {
+          }
+          dispatchEveningTool(tc.function.name, args);
+        }
+      }
+      const { text: replyText, chips } = _parseContentChips(msg.content || "");
+      if (replyText) {
+        addEveningBarMsg("agent", replyText, false, chips);
+        started[topic] = Date.now();
+        localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
+      } else {
+        safeAgentReply("\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?", addEveningBarMsg);
+      }
+    } catch (e) {
+      console.warn("[openEveningTopic]", e);
+      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+  }
+  function showEveningBarMessages() {
+    openChatBar("evening");
+  }
+  function addEveningBarMsg(role, text, _noSave = false, chips = null) {
+    const el = document.getElementById("evening-bar-messages");
+    if (!el) return;
+    if (_eveningTypingEl) {
+      _eveningTypingEl.remove();
+      _eveningTypingEl = null;
+    }
+    if (role === "typing") {
+      const td = document.createElement("div");
+      td.style.cssText = "display:flex";
+      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
+      el.appendChild(td);
+      _eveningTypingEl = td;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    if (!_noSave) {
+      try {
+        openChatBar("evening");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "evening");
+      el.appendChild(chipsRow);
+    }
+    el.scrollTop = el.scrollHeight;
+    if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
+    else eveningBarHistory.push({ role: "assistant", content: text });
+    if (!_noSave) saveChatMsg("evening", role, text);
+    if (role === "agent") {
+      const bar = document.getElementById("evening-ai-bar");
+      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
+      const isOpen = chatWin && chatWin.classList.contains("open");
+      if (!isOpen) showUnreadBadge("evening", "evening-send-btn");
+    }
+  }
+  function _parseContentChips(content) {
+    if (!content || typeof content !== "string") return { text: "", chips: null };
+    const blocks = extractJsonBlocks(content);
+    let chips = null;
+    for (const b of blocks) {
+      if (b && Array.isArray(b.chips)) {
+        chips = b.chips;
+        break;
+      }
+    }
+    const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, "").trim();
+    return { text, chips };
+  }
+  async function sendEveningBarMessage() {
+    if (eveningBarLoading) return;
+    const input = document.getElementById("evening-bar-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addEveningBarMsg("user", text);
+    eveningBarLoading = true;
+    addEveningBarMsg("typing", "");
+    const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext();
+    const history = eveningBarHistory.slice(-10);
+    try {
+      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+      if (!msg) {
+        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        eveningBarLoading = false;
+        return;
+      }
+      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          let args = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch (e) {
+          }
+          dispatchEveningTool(tc.function.name, args);
+        }
+      }
+      const { text: replyText, chips } = _parseContentChips(msg.content || "");
+      if (replyText) addEveningBarMsg("agent", replyText, false, chips);
+      else if (!msg.tool_calls || msg.tool_calls.length === 0) {
+        safeAgentReply("\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435.", addEveningBarMsg);
+      }
+    } catch (e) {
+      console.warn("[sendEveningBarMessage]", e);
+      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+    eveningBarLoading = false;
+  }
+  var _eveningTypingEl, EVENING_TOPIC_STARTED_KEY, eveningBarHistory, eveningBarLoading;
+  var init_evening_chat = __esm({
+    "src/tabs/evening-chat.js"() {
+      init_utils();
+      init_core();
+      init_unread_badge();
+      init_chips();
+      init_prompts();
+      init_evening_actions();
+      _eveningTypingEl = null;
+      EVENING_TOPIC_STARTED_KEY = "nm_evening_topic_started";
+      eveningBarHistory = [];
+      eveningBarLoading = false;
+      Object.assign(window, {
+        openEveningTopic,
+        sendEveningBarMessage,
+        showEveningBarMessages
+      });
     }
   });
 
@@ -18032,6 +18342,7 @@ ${legacy}`;
   // src/app.js
   init_evening();
   init_evening_chat();
+  init_evening_actions();
   init_me();
   init_onboarding();
   init_health();
