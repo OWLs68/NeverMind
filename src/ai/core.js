@@ -334,33 +334,24 @@ async function _fetchAI(messages, signal, tools, temperature = 0.7) {
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
   const body = { model: 'gpt-4o-mini', messages, max_tokens: 400, temperature };
   if (tools && tools.length > 0) body.tools = tools;
-  // Mascot "thinking" state (no auto-revert — ми самі знімемо після відповіді/помилки)
-  try { window.setOwlMascotState && window.setOwlMascotState('thinking'); } catch {}
-  try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      signal,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);
-      try { window.setOwlMascotState && window.setOwlMascotState('error', 6000); } catch {}
-      return null;
-    }
-    const data = await res.json();
-    const msg = data.choices?.[0]?.message;
-    try { window.setOwlMascotState && window.setOwlMascotState('idle'); } catch {}
-    if (!msg) return null;
-    // Якщо tools передані — повертаємо повний message object
-    if (tools) return msg;
-    // Інакше — backward compat, тільки content string
-    return msg.content || null;
-  } catch (e) {
-    try { window.setOwlMascotState && window.setOwlMascotState('error', 6000); } catch {}
-    throw e;
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    signal,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);
+    return null;
   }
+  const data = await res.json();
+  const msg = data.choices?.[0]?.message;
+  if (!msg) return null;
+  // Якщо tools передані — повертаємо повний message object
+  if (tools) return msg;
+  // Інакше — backward compat, тільки content string
+  return msg.content || null;
 }
 
 export async function callAI(systemPrompt, userMessage, contextData = {}) {

@@ -395,10 +395,6 @@ function bootApp() {
   // Show app after brief splash — use both timer and readyState check
   const delay = document.readyState === 'complete' ? 300 : 500;
   setTimeout(showApp, delay);
-  // One-shot greeting animation at boot (6s) — sprite sheet test
-  setTimeout(() => {
-    try { window.setOwlMascotState && window.setOwlMascotState('greeting', 6000); } catch {}
-  }, delay + 1500);
 }
 
 if (document.readyState === 'loading') {
