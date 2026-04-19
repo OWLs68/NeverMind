@@ -8001,7 +8001,7 @@ ${aiContext ? "\n\n" + aiContext : ""}
     if (phase === "silent") return;
     const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
     if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1e3) {
-      console.warn("[OWL board] stale message detected, forcing generation");
+      console.log("[OWL board] stale message detected, forcing generation");
       Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
       return;
     }
@@ -9099,7 +9099,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     all.unshift(newMsg);
     saveOwlBoardMessages(all.slice(0, 3));
     renderOwlBoard();
-    console.warn("[OWL board] smart fallback:", text);
+    console.log("[OWL board] smart fallback:", text);
   }
   function _tryTabLocalFallback(tab) {
     const msgs = getTabBoardMsgs(tab);
@@ -9140,7 +9140,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const newMsg = { text, priority: "normal", chips, ts: Date.now(), id: Date.now() };
     saveTabBoardMsg(tab, newMsg);
     renderTabBoard(tab);
-    console.warn(`[OWL ${tab} board] tab fallback:`, text);
+    console.log(`[OWL ${tab} board] tab fallback:`, text);
   }
   function _showFirstVisitHint(tab) {
     if (!TAB_HINTS[tab]) return false;
