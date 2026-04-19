@@ -6,6 +6,32 @@
 
 ---
 
+## 🔧 Сесія VJF2M — Голосовий ввід + 4.17 UI Tools Suite + AI_TOOLS.md (18.04.2026)
+
+### Зроблено
+
+**1. Голосовий ввід у всіх 8 чат-барах (`src/ui/voice-input.js`, 137 рядків) — коміт `76fe682`**
+- Web Speech API, `lang='uk-UA'`, кнопка 🎤 у кожному `.ai-bar-input-box`.
+- Interim results live у textarea, пауза → автостоп, червоне пульсування.
+
+**2. Довідник `docs/AI_TOOLS.md` — коміт `313279c`** — єдине місце правди для 47 tools.
+
+**3. 4.17 UI Tools Suite — 8 tools (`src/ai/ui-tools.js`, 210 рядків) — коміт `6f128b1`**
+- switch_tab, open_memory, open_settings, set_finance_period, open_finance_analytics, set_theme, set_owl_mode, export_health_card.
+- 6 заблоковано — винесено у ROADMAP 4.17.B.
+
+**4. 3 фікси після тесту:** зламаний імпорт openMemoryModal, switch_tab aliases, send-button під час voice запису, прибрано toast UI tools.
+
+### Ключові рішення
+- UI tools НЕ відкривають порожні форми — принцип мінімального тертя.
+- Довідник tools окремо від промптів — `docs/AI_TOOLS.md` описовий.
+
+### Метрики
+- **Коміти:** 8 (3ec8bb5 → 31eeeb8). **Версії:** v243 → v250+. **CACHE_NAME:** nm-20260418-1508.
+- **Нові файли:** voice-input.js, ui-tools.js, AI_TOOLS.md.
+
+---
+
 ## 🔧 Сесія Vydqm — Хук контексту + фікси звичок і свайпу (18.04.2026)
 
 ### Зроблено

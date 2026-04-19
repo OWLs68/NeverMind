@@ -2,31 +2,89 @@
 
 > **Правило ротації:** у файлі детально описані **2 останні активні сесії**.
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
-> Попередні сесії до VJF2M — в архіві (Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
+> Попередні сесії до w3ISi — в архіві (VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-19 (сесія **w3ISi** — handoff дизайну сови + базова інтеграція PNG-маскота)
+**Оновлено:** 2026-04-19 (сесія **uDZmz** — priority state-machine + SVG-крило + нові PNG сови)
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. СОВА АНІМОВАНА НА ТАБЛО INBOX (w3ISi)** — PNG-сова з 4 автоматичними станами: alert при новому Inbox board повідомленні (12с), thinking під час AI запиту, error при fail (6с), idle за замовчуванням + постійне покачування 4с. Sprite-sheet анімація greeting (6 кадрів, 1536×256) при boot на 6 секунд (тимчасовий тригер). Код у `src/owl/board.js` (setOwlMascotState), `src/ai/core.js` (hook у _fetchAI), `src/core/boot.js` (auto-trigger). Коміти `53e64fd`, `a35db21`, `ac274fd`.
+**1. ПЕРШИЙ КРОК У НАСТУПНІЙ СЕСІЇ — FLIPBOOK-МАХАННЯ.** У `style.css` зараз DEBUG-блок: SVG-крило махає постійно з червоною пунктирною рамкою (`outline: 2px dashed red`). Треба: (а) прибрати debug-блок, (б) прибрати SVG-крило взагалі (`<svg class="owl-wing-overlay">` в index.html + `@keyframes wing-wave-premium` у style.css), (в) замість нього — flipbook: CSS-анімація яка при `[data-state="greeting"]` швидко перемикає `opacity` між `owl-idle.png` і `owl-greeting.png` 3 рази × 150мс, потім залишається idle. Нові PNG вже завантажені правильно (див. пункт 3). Деталі плану в блоці сесії uDZmz "Обговорено".
 
-**2. GREETING КОНФЛІКТУЄ З ALERT** — при boot сова починає махати крилом, але якщо Inbox board одразу показує повідомлення → alert state перебиває greeting через 1-2 сек. Виглядає як "моргання". Треба у наступній сесії: або priority (greeting > alert), або відкласти board update на 10+ сек, або прибрати auto-trigger і підключити умову "перший вхід за день" через `localStorage.nm_last_greet_date`.
+**2. PRIORITY STATE-MACHINE ГОТОВА** — `setOwlMascotState` у `src/owl/board.js` має `OWL_PRIORITY` (error=100, alert=80, thinking=60, greeting=40, idle=0) + ticket-лічильник + failsafe 30с. Нижчий пріоритет не перебиває вищий. `visibilitychange` → клас `.is-paused` на батьку ставить на паузу всі анімації. Це вирішує w3ISi "моргання" між greeting і alert.
 
-**3. PNG-пакет від дизайнера (handoff/) — з питанням прозорості.** 5 файлів переміщено у `assets/owl/`, виглядають прозорими у моєму переглядачі. На скріншоті PWA з iPhone видно шаховий візерунок на бежевому фоні Inbox — я припустив "запечений у PNG", але Роман показав що PNG мають альфа-канал. Невирішено — причина може бути: (а) iOS Safari артефакт, (б) CSS issue, (в) було помилкою моїх очей. **Треба перевірити на телефоні після деплою v259+**. Якщо шаховий зник — значить було тимчасово, все OK.
+**3. НОВІ PNG СОВИ ЗАВАНТАЖЕНІ:** `owl-idle.png` (спокій) + `owl-greeting.png` (з піднятим крилом) у стилі amber/brown з прозорим фоном. Використай ці два файли для flipbook. Файли `owl-alert.png`, `owl-thinking.png`, `owl-error.png` ще старі ("здивовані") — Роман замінюватиме пізніше.
 
-**4. Роман генерує нові сови через Gemini** — промпт я дав у сесії. 5 станів, прозорий фон, amber/brown палітра. Коли отримає — завантажить заміною у `assets/owl/` на GitHub. Код уже готовий.
+**4. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-0438`. При наступній зміні коду — оновити на нову мітку (`date +"nm-%Y%m%d-%H%M"`).
 
-**5. AGENT КЕРУЄ UI (4.17)** — 8 UI tools готових у `src/ai/ui-tools.js`. Повний довідник + 6 заблокованих → `docs/AI_TOOLS.md`.
+**5. AGENT КЕРУЄ UI (4.17)** — 8 UI tools готових у `src/ai/ui-tools.js`. Довідник + 6 заблокованих → `docs/AI_TOOLS.md`.
 
-**6. ГОЛОСОВИЙ ВВІД (Web Speech API)** у всіх 8 чат-барах — `src/ui/voice-input.js`, `lang='uk-UA'`, кнопка 🎤 поруч з send-btn.
+**6. ГОЛОСОВИЙ ВВІД (Web Speech API)** у всіх 8 чат-барах — `src/ui/voice-input.js`, `lang='uk-UA'`.
 
 **7. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази.
 
 **8. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати підтвердження.
 
 **9. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`.
+
+---
+
+## 🔧 Сесія uDZmz — Priority state-machine + SVG-крило + нові PNG сови (19.04.2026)
+
+### Зроблено
+
+**1. Priority state-machine сови (Крок 1) — коміт `5ed8d05`**
+- Замінено `setOwlMascotState` у `src/owl/board.js`: додано `OWL_PRIORITY` (error=100 > alert=80 > thinking=60 > greeting=40 > idle=0). Нижчий пріоритет не перебиває вищий — **вирішує w3ISi пункт 2 (greeting↔alert конфлікт)**.
+- **Ticket-лічильник `_owlMascotTicket`** + **failsafe 30 сек** для станів без autoRevertMs. Реверт у idle — лише якщо за час таймера не було нового виклику (захист від race condition при швидких переключеннях).
+- `visibilitychange` listener додає клас `.is-paused` на `#owl-mascot-main` коли PWA у фоні → CSS `animation-play-state: paused !important` зупиняє всі дочірні анімації. Економія батареї.
+
+**2. SVG-крило overlay замість sprite-sheet (Крок 2) — коміт `585cbbd`**
+- Видалено `<div class="owl-mascot-sprite">` з `index.html`, додано `<svg class="owl-wing-overlay" viewBox="0 0 120 120">` з path крила.
+- Видалено CSS блок sprite + `@keyframes owl-wave-sprite` + правило ховання greeting frame.
+- Додано `@keyframes wing-wave-premium` (безшовний 0%=100%, cubic-bezier easing) + `@keyframes owl-head-tilt` 8° для thinking.
+- `prefers-reduced-motion`: SVG-крило і head-tilt вимкнені.
+
+**3. Debug-режим діагностики позиції — коміт `e4bba2d`**
+- `.owl-wing-overlay { opacity: 1 !important; animation: infinite; outline: 2px dashed red }` — щоб бачити на телефоні чи SVG рендериться і де. **Тимчасово, прибрати у наступній сесії.**
+
+**4. Нові PNG сови від Романа — коміти `a49d1eb`, `3ffd627`**
+- Роман завантажив через GitHub Web 2 нові PNG у стилі amber/brown з прозорим фоном як `1.png` (помах крила) і `2.png` (спокій).
+- `git mv`: `2.png`→`owl-idle.png`, `1.png`→`owl-greeting.png` (замінили старі "здивовані").
+- `owl-alert.png`, `owl-thinking.png`, `owl-error.png`, `owl-greeting-sprite.png` — **ще старі**, чекають заміни.
+
+**5. 4 раунди промпт-інжинірингу з Gemini через `/gemini`**
+- Послідовні запити для архітектури (priority state-machine → hybrid SVG → ticket-pattern → performance checklist).
+- Знайдено і виправлено 4 баги у пропозиціях Gemini: `infinite` + auto-revert, `filter: brightness` на iOS, зиґзаг очей не коло, ticket-захист не покривав циклічні стани.
+
+### Обговорено (без виконання)
+
+- **Flipbook-махання для greeting (план на наступну сесію):** прибрати debug, замінити SVG-крило на швидке перемикання `opacity` між `owl-idle.png` і `owl-greeting.png` 3 рази × 150 мс при `data-state="greeting"`. SVG-крило не підходить візуально — живе SVG на статичній PNG-сові ріже око. З новими парою PNG (спокій + з піднятим крилом) flipbook природньо виглядатиме як махання.
+- **Заміна решти 3 PNG** (alert/thinking/error) — Роман генеруватиме через Gemini/Claude Design, коли буде час.
+- **Claude Design як інструмент handoff** — спробували, але generate обривається помилками. Не підходить для художніх ассетів. Claude з Artifacts кращий.
+
+### Ключові рішення
+
+- **Гібрид PNG+SVG краще повного SVG** — зберегти PNG дизайн, накладати SVG для анімованих частин. АЛЕ для "махання" не працює гарно: контраст живого SVG і статичної PNG-сови ріже око. Перехід на flipbook з PNG — природніше.
+- **Priority + ticket pattern** — кращі за `setTimeout` захист від race conditions.
+- **Debug через `outline: dashed red`** — швидкий спосіб побачити невидимий елемент на мобільному без DevTools.
+- **CSS `animation-play-state: paused` через клас на батьку** — один селектор ставить на паузу всі дочірні анімації.
+
+### Інциденти
+
+- **Контекст критично переповнений (220%+ за сесію)** — 30+ нагадувань `/finish`. Stream-обриви у Gemini → перейшли на копіпаст через AI Studio.
+- **Крок 2 у 2 етапи:** спочатку state-machine закомічено і задеплоєно, `git stash pop` → SVG-крило окремим комітом.
+- **PNG з неправильними іменами** (`1.png`, `2.png`) — Роман завантажив через GitHub Web без префікса owl-. `git mv` + видалення старих файлів.
+- **Без git reset / force push.** Всі 5 комітів нормальні.
+
+### Метрики
+
+- **Коміти:** `5ed8d05` → `585cbbd` → `e4bba2d` → `a49d1eb` → `3ffd627`. **5 комітів.**
+- **Гілка:** `claude/bird-wing-animation-uDZmz` (не стандартний `start-session-*` формат — створилась під задачу)
+- **Версії:** v272 → v274+ (на момент /finish деплой в процесі)
+- **CACHE_NAME:** `nm-20260419-0438`
+- **Build:** чистий (локальний `node build.js` зелений)
+- **Оновлені файли:** `src/owl/board.js`, `style.css`, `sw.js`, `index.html`, `assets/owl/owl-idle.png`, `assets/owl/owl-greeting.png`
 
 ---
 
@@ -101,72 +159,15 @@
 
 ---
 
-## 🔧 Сесія VJF2M — Голосовий ввід + 4.17 UI Tools Suite + AI_TOOLS.md (18.04.2026)
-
-### Зроблено
-
-**1. Голосовий ввід у всіх 8 чат-барах (`src/ui/voice-input.js`, 137 рядків) — коміт `76fe682`**
-- Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`), `lang='uk-UA'`.
-- Автоматично додає кнопку 🎤 у кожен `.ai-bar-input-box` при DOMContentLoaded.
-- Inbox: активує існуючу `disabled` кнопку. Решта 7: створює нову перед send-btn.
-- Interim results → live-оновлення textarea під час запису. Пауза → автостоп (`onend`).
-- Червоне пульсування (`.voice-btn.recording` + `@keyframes voice-pulse`).
-- Fallback: якщо браузер без підтримки — кнопка не з'являється.
-
-**2. Довідник `docs/AI_TOOLS.md` — коміт `313279c`**
-- Єдине місце правди для 47 tools (39 існуючих INBOX_TOOLS + 8 нових UI).
-- Категорії: CREATE/COMPLETE/EDIT/DELETE/ІНШЕ/ЗДОРОВ'Я/ПАМ'ЯТЬ/КАТ.ФІНАНСІВ. UI: A/C/D/E.
-- Посилання додані у CLAUDE.md (Карта документації + Писати коли), START_HERE.md, `.claude/commands/prompt-engineer.md`.
-- Бонус: виправлено rot у `/prompt-engineer` — `src/ai/core.js` → `src/ai/prompts.js` (після винесення промптів 17.04 14zLe).
-
-**3. 4.17 UI Tools Suite — 8 tools (`src/ai/ui-tools.js`, 210 рядків) — коміт `6f128b1`**
-- `switch_tab`, `open_memory`, `open_settings`, `set_finance_period`, `open_finance_analytics`, `set_theme`, `set_owl_mode`, `export_health_card`.
-- Dispatcher `handleUITool(name, args)` повертає `{text}` для чат-відповіді.
-- Імпорт `UI_TOOLS` у `prompts.js` → spread у `INBOX_TOOLS` (єдиний список для AI).
-- Нова секція "UI TOOLS" в `INBOX_SYSTEM_PROMPT` з принципом мінімального тертя.
-- У `inbox.js` dispatch: `UI_TOOL_NAMES.has(...)` check ДО `_toolCallToAction` → `handleUITool` → `addInboxChatMsg`.
-- 6 заблоковано (open_record, open_trash, calendar_jump_to, filter_tasks, clear_chat, toggle_owl_board) — винесено у ROADMAP 4.17.B.
-
-**4. 3 фікси після тесту на живому пристрої:**
-- **`b0c41a5`:** зламаний імпорт `openMemoryModal` (є тільки у window). Фікс — виклик через `window.openMemoryModal()`. Причина провалу деплою v247.
-- **`ca5981d`:** `switchTab('calendar')` падав бо немає `page-calendar`. Календар — модалка. Додано aliases: `calendar` → `openCalendarModal()`, `habits` → `switchTab('tasks')`.
-- **`fcb9306`:** натиск send-btn під час запису → `pendingSendClick=true` + `stopRecording()` → у `onend` через 60мс програмний `sendBtn.click()`. Перехоплення у capture phase з `preventDefault` + `stopImmediate`.
-- **`31eeeb8`:** прибрано toast підтвердження UI tools (Роман: "бабл що знизу появляється і зникає"). У чаті Inbox reply лишається.
-
-### Обговорено (без виконання)
-- Розширений список UI tools — 14 варіантів (A/B/C/D/E). Роман відкинув Блок B (відкриття порожніх форм створення) через принцип мінімального тертя.
-- 6 заблокованих tools — потребують нової інфраструктури (search API, UI модалка кошика, per-chat storage, toggle state), винесено у 4.17.B як окремі підзадачі.
-- Структура документа `docs/AI_TOOLS.md` — узгоджено з Романом: робимо єдиний довідник 47 tools з категоризацією + промпт-правилами + зв'язками.
-
-### Ключові рішення
-- **4.17 vs 4.15 `switch_tab`:** 4.17 консолідує 4.15 (пункт 4.15 залишений як історична довідка).
-- **UI tools НЕ відкривають порожні форми** — принцип мінімального тертя. Агент використовує CRUD tools напряму.
-- **Довідник tools окремо від промптів** — `docs/AI_TOOLS.md` описовий (для людей + Claude при читанні), `src/ai/prompts.js` + `src/ai/ui-tools.js` виконавчі.
-
-### Інциденти
-- **Деплой v247 провалився** — зламаний імпорт, локального `node build.js` не запускав. Після виправлення (`b0c41a5`) — OK.
-- **2 спроби тестування на пристрої** з помилками: "не можу відкрити календар" (AI не бачив tools через старий кеш) і "Не вдалось виконати: switch_tab" (TypeError з `page-calendar`). Обидві виправлено.
-- **Без git reset / force push.** Всі 8 комітів — normal.
-
-### Метрики
-- **Коміти:** `3ec8bb5` (roadmap) → `76fe682` (voice) → `313279c` (AI_TOOLS.md) → `6f128b1` (UI tools) → `b0c41a5` (fix import) → `ca5981d` (fix switch_tab) → `fcb9306` (voice+send) → `31eeeb8` (remove toast). **8 комітів.**
-- **Гілка:** `claude/start-session-VJF2M`
-- **Версії:** v243 (перед) → v250+ (після)
-- **CACHE_NAME:** `nm-20260418-1508` (останнє оновлення у toast-fix)
-- **Build:** чистий після фіксів (локальний `node build.js` зелений)
-- **Нові файли:** `src/ui/voice-input.js`, `src/ai/ui-tools.js`, `docs/AI_TOOLS.md`
-
----
-
 ## Проект
 
 | | |
 |--|--|
-| **Версія** | v268+ (після w3ISi — handoff сови + 4 стани + sprite greeting) |
+| **Версія** | v274+ (після uDZmz — priority state-machine + SVG-крило debug + нові PNG сови) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
-| **Гілка** | `claude/start-session-w3ISi` |
-| **CACHE_NAME** | `nm-20260419-0200` |
+| **Гілка** | `claude/bird-wing-animation-uDZmz` |
+| **CACHE_NAME** | `nm-20260419-0438` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -219,4 +220,4 @@
 
 ## 📦 Попередні сесії
 
-Детальні описи FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m → [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
+Детальні описи VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m → [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).

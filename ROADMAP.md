@@ -360,6 +360,13 @@
 
 > Повна історія "що мозок вже вміє" (з датами реалізації) → `_archive/FEATURES_ROADMAP.md` секція "Що мозок вже вміє".
 
+**19.04.2026** (сесія uDZmz — анімація сови: етап 2, 5 комітів)
+- **Priority state-machine сови** (`src/owl/board.js`) — `OWL_PRIORITY` (error/alert/thinking/greeting/idle) + ticket-лічильник + failsafe 30с. Вирішує w3ISi "моргання" між greeting і alert. Коміт `5ed8d05`.
+- **`visibilitychange` pause** — клас `.is-paused` на `#owl-mascot-main` коли PWA у фоні → всі анімації сови на паузу через `animation-play-state: paused !important`. Економія батареї iOS.
+- **SVG-крило overlay + `@keyframes wing-wave-premium`** — коміт `585cbbd`. Видалено sprite-sheet CSS і HTML. Thinking переведено на нахил голови 8° (`@keyframes owl-head-tilt`) замість неробочої орбіти очей.
+- **Debug-режим постійного махання** — коміт `e4bba2d`. Тимчасово, прибрати в наступній сесії.
+- **Заміна PNG сови** — нові `owl-idle.png` (спокій) + `owl-greeting.png` (з піднятим крилом) у стилі amber/brown. Коміти `a49d1eb`, `3ffd627`.
+
 **13.04.2026** (сесія PBybp — **Блок 1 повністю закритий**, 7 коммітів)
 - **`set_reminder` фікси** — тап на картку reminder у стрічці Inbox → відкриває Calendar modal; іконка ⏰ (reminder) / 📅 (event) / 📌 (task) у закріплених картках `_renderUpcoming`. (Основна логіка з 10.04 `f1ab11f`, дотягнуто 13.04.) Файли: `src/tabs/inbox.js`.
 - **4.5 Блокування табло поки чат відкритий** — жорсткий `return { speak: false }` у `_judgeBoard` коли `activeChatBar` відкритий, +10 сек cooldown після закриття. Винятки: `hasCritical` (reminder-due / deadline-soon) і тригер `chat-closed` пробивають. Новий експорт `lastChatClosedTs` у `ai/core.js` + константа `CHAT_CLOSE_COOLDOWN_MS` у `inbox-board.js`.
