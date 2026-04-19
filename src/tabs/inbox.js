@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, saveOffline } from '../core/utils.js';
+import { escapeHtml, saveOffline, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
@@ -22,6 +22,7 @@ import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
 import { getProjects, saveProjects, startProjectInboxInterview } from './projects.js';
 import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
+import { renderChips } from '../owl/chips.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
 import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry } from './health.js';
 // Unread badge (універсальна червона крапка — QV1n2 19.04 Фаза 0)
@@ -30,12 +31,16 @@ import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
 // === INBOX CHAT MESSAGES ===
 let _inboxTypingEl = null;
 
-export function addInboxChatMsg(role, text) {
+export function addInboxChatMsg(role, text, chips = null) {
   const el = document.getElementById('inbox-chat-messages');
   if (!el) return;
 
   // Видаляємо typing індикатор якщо є
   if (_inboxTypingEl) { _inboxTypingEl.remove(); _inboxTypingEl = null; }
+
+  // Чистимо застарілі чіпи попередніх повідомлень сови —
+  // чіпи релевантні тільки останньому питанню (як у evening-chat)
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
 
   if (role === 'typing') {
     const div = document.createElement('div');
@@ -75,6 +80,16 @@ export function addInboxChatMsg(role, text) {
     div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
   }
   el.appendChild(div);
+
+  // Чіпи під бульбою сови — рендер через спільний chips.js.
+  // Клік на чіп кладе label у textarea і викликає sendToAI(true).
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'inbox');
+    el.appendChild(chipsRow);
+  }
+
   el.scrollTop = el.scrollHeight;
   saveChatMsg('inbox', role, text);
 
@@ -91,6 +106,20 @@ export function addInboxChatMsg(role, text) {
 // Після Фази 0 це просто обгортка над універсальним clearUnreadBadge('inbox').
 export function _clearInboxUnreadBadge() {
   clearUnreadBadge('inbox');
+}
+
+// Парсер content AI-відповіді: витягує optional JSON блок {chips:[...]} і
+// повертає { text, chips } — text БЕЗ JSON частини. Формат описаний
+// у INBOX_SYSTEM_PROMPT (секція Health Interview + загальне правило).
+function _parseContentChips(content) {
+  if (!content || typeof content !== 'string') return { text: '', chips: null };
+  const blocks = extractJsonBlocks(content);
+  let chips = null;
+  for (const b of blocks) {
+    if (b && Array.isArray(b.chips)) { chips = b.chips; break; }
+  }
+  const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, '').trim();
+  return { text, chips };
 }
 
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
@@ -816,14 +845,16 @@ ${aiContext}`;
       }
       // Якщо AI також надіслав текст (follow-up питання) — показуємо
       if (msg.content) {
-        addInboxChatMsg('agent', msg.content);
+        const { text: replyText, chips } = _parseContentChips(msg.content);
+        if (replyText) addInboxChatMsg('agent', replyText, chips);
       } else if (msg.tool_calls.every(tc => tc.function.name === 'save_memory_fact')) {
         // Якщо AI викликав ТІЛЬКИ save_memory_fact без тексту — показати fallback
         addInboxChatMsg('agent', 'Запам\'ятав ✓');
       }
     } else if (msg.content) {
       // Текстова відповідь без tool calls = reply
-      addInboxChatMsg('agent', msg.content);
+      const { text: replyText, chips } = _parseContentChips(msg.content);
+      if (replyText) addInboxChatMsg('agent', replyText, chips);
     } else {
       saveOffline(text);
       addInboxChatMsg('agent', '✓ Збережено');
@@ -913,7 +944,8 @@ async function sendClarifyText() {
       // msg.content показуємо ЗАВЖДИ якщо є (і з tool_calls, і без) —
       // AI при save_memory_fact має надіслати "Запам'ятав..."
       if (msg.content) {
-        addInboxChatMsg('agent', msg.content);
+        const { text: replyText, chips } = _parseContentChips(msg.content);
+        if (replyText) addInboxChatMsg('agent', replyText, chips);
       } else if (!primaryHandled) {
         addInboxChatMsg('agent', 'Запам\'ятав ✓');
       }
