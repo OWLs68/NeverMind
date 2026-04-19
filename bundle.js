@@ -2213,6 +2213,9 @@ ${lines.join("\n")}`;
             switchTab("tasks");
             return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
           }
+          if (!document.getElementById(`page-${t}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          }
           switchTab(t);
           return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
         }
@@ -2291,7 +2294,8 @@ ${lines.join("\n")}`;
           type: "function",
           function: {
             name: "switch_tab",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'.",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
+            strict: true,
             parameters: {
               type: "object",
               properties: {
@@ -15985,6 +15989,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   // src/core/nav.js
   function switchTab(tab) {
     if (tab === currentTab) return;
+    const pageEl = document.getElementById(`page-${tab}`);
+    if (!pageEl) {
+      console.warn("[switchTab] unknown tab:", tab);
+      return;
+    }
     animateTabSwitch(tab);
     currentTab = tab;
     try {
@@ -15992,7 +16001,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     } catch (e) {
     }
     document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
-    document.getElementById(`page-${tab}`).classList.add("active");
+    pageEl.classList.add("active");
     updateDrumTabbar(tab);
     applyTheme(tab);
     ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
