@@ -2805,1063 +2805,6 @@ ${aiContext ? "\n\n" + aiContext : ""}
     }
   });
 
-  // src/tabs/evening.js
-  function getMoments() {
-    return JSON.parse(localStorage.getItem("nm_moments") || "[]");
-  }
-  function saveMoments(arr) {
-    localStorage.setItem("nm_moments", JSON.stringify(arr));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "moments" }));
-  }
-  function getMomentsContext() {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    if (moments.length === 0) return "";
-    const moodEmoji = { positive: "\u{1F60A}", neutral: "\u{1F610}", negative: "\u{1F61E}" };
-    const lines = moments.slice(-8).map((m) => {
-      const d = new Date(m.ts);
-      const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-      const em = moodEmoji[m.mood] || "";
-      const txt = m.summary || m.text;
-      return `- ${time} ${em} "${txt}"`;
-    }).join("\n");
-    return `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F (\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u0444\u0456\u043A\u0441\u0443\u0432\u0430\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0443 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0430\u0445 \u0456 \u0435\u043C\u043F\u0430\u0442\u0456\u0439\u043D\u0438\u0445 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044F\u0445):
-${lines}`;
-  }
-  function renderEvening() {
-    updateEveningLock();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const statsEl = document.getElementById("evening-stats-row");
-    if (statsEl) {
-      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-      const habits = getHabits();
-      const buildHabitsEvening = habits.filter((h) => h.type !== "quit");
-      const log = getHabitLog();
-      const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-      const todayH = buildHabitsEvening.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow));
-      const doneH = todayH.filter((h) => !!log[today]?.[h.id]).length;
-      let todayExp = 0;
-      try {
-        todayExp = getFinance().filter((t) => t.type === "expense" && new Date(t.ts).toDateString() === today).reduce((s, t) => s + t.amount, 0);
-      } catch (e) {
-      }
-      const cur = getCurrency();
-      statsEl.innerHTML = `
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#1e3350;line-height:1">${doneTasks}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0437\u0430\u0434\u0430\u0447\u0456 \u2713</div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#16a34a;line-height:1">${todayH.length > 0 ? doneH + "/" + todayH.length : "\u2014"}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0437\u0432\u0438\u0447\u043A\u0438</div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#c2410c;line-height:1">${todayExp > 0 ? cur + Math.round(todayExp) : "\u2014"}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0432\u0438\u0442\u0440\u0430\u0442\u0438</div>
-      </div>`;
-    }
-    const sources = [];
-    const habits2 = getHabits().filter((h) => h.type !== "quit");
-    const log2 = getHabitLog();
-    const todayDow2 = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    const todayH2 = habits2.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow2));
-    const doneH2 = todayH2.filter((h) => !!log2[today]?.[h.id]).length;
-    if (todayH2.length > 0) sources.push(doneH2 / todayH2.length);
-    const allTasks = getTasks();
-    const doneTasks2 = allTasks.filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-    const activeTasks = allTasks.filter((t) => t.status === "active").length;
-    if (doneTasks2 > 0 || activeTasks > 0) sources.push(Math.min(doneTasks2 / Math.max(activeTasks * 0.2, 1), 1));
-    const activeProjs = getProjects().filter((p) => p.status === "active");
-    const allSteps = activeProjs.flatMap((p) => p.steps || []);
-    const stepsToday = allSteps.filter((s) => s.done && s.doneAt && new Date(s.doneAt).toDateString() === today).length;
-    const openSteps = allSteps.filter((s) => !s.done).length;
-    if (stepsToday > 0 || openSteps > 0) sources.push(Math.min(stepsToday / Math.max((openSteps + stepsToday) * 0.2, 1), 1));
-    const score = sources.length > 0 ? Math.round(sources.reduce((a, b) => a + b, 0) / sources.length * 100) : 0;
-    const arc = document.getElementById("evening-ring-arc");
-    const pctEl = document.getElementById("evening-ring-pct");
-    const descEl = document.getElementById("evening-score-desc");
-    if (arc) {
-      const circ = 151;
-      setTimeout(() => {
-        arc.style.strokeDashoffset = circ - circ * score / 100;
-      }, 100);
-    }
-    if (pctEl) pctEl.textContent = score + "%";
-    if (descEl) descEl.textContent = sources.length === 0 ? "\u0414\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438" : score >= 70 ? "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA}" : score >= 40 ? "\u0421\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C";
-    const savedMood = getEveningMood();
-    if (savedMood) renderEveningMoodButtons(savedMood);
-    const momEl = document.getElementById("evening-moments");
-    if (momEl) {
-      const todayNotes = getNotes().filter((n) => new Date(n.ts || n.createdAt || 0).toDateString() === today);
-      const notesAsItems = todayNotes.map((n) => ({ id: "note_" + n.id, text: n.title || n.text || "", mood: "neutral", ts: n.ts || n.createdAt || 0, isNote: true }));
-      const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
-      if (allItems.length === 0) {
-        momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u0432\u043E\u0433\u043E \u0434\u043D\u044F</div>';
-      } else {
-        const moodDots = { positive: "#16a34a", neutral: "#f59e0b", negative: "#ef4444" };
-        momEl.innerHTML = allItems.map((m) => {
-          const dot = m.isNote ? "#818cf8" : moodDots[m.mood] || "#888";
-          const timeStr = m.ts ? new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : "";
-          const clickable = !m.isNote;
-          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ";cursor:pointer" : ""}"${clickable ? ` onclick="openMomentView(${m.id})"` : ""}>
-          <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:5px"></div>
-          <div style="flex:1">
-            <div style="font-size:13px;color:#1e1040;font-weight:500;line-height:1.45">${escapeHtml(m.summary || m.text)}</div>
-            ${timeStr ? `<div style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600;margin-top:2px">${timeStr}</div>` : ""}
-          </div>
-          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">\xD7</div>` : ""}
-        </div>`;
-        }).join("");
-      }
-    }
-    const finBlock = document.getElementById("evening-finance-block");
-    const finContent = document.getElementById("evening-finance-content");
-    try {
-      const todayTxs = getFinance().filter((t) => new Date(t.ts).toDateString() === today);
-      if (finBlock && finContent && todayTxs.length > 0) {
-        finBlock.style.display = "block";
-        const cur = getCurrency ? getCurrency() : "\u20B4";
-        const todayExpF = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-        finContent.innerHTML = todayTxs.slice(0, 5).map(
-          (t) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-          <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.6)">${escapeHtml(t.category)}${t.comment ? " \xB7 " + escapeHtml(t.comment) : ""}</span>
-          <span style="font-size:14px;font-weight:800;color:${t.type === "expense" ? "#c2410c" : "#16a34a"}">${t.type === "expense" ? "-" : "+"}${cur}${Math.round(t.amount)}</span>
-        </div>`
-        ).join("") + `<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(30,16,64,0.06);display:flex;justify-content:space-between">
-        <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0412\u0441\u044C\u043E\u0433\u043E \u0432\u0438\u0442\u0440\u0430\u0442\u0438</span>
-        <span style="font-size:13px;font-weight:800;color:#c2410c">${todayExpF > 0 ? "-" + cur + Math.round(todayExpF) : "\u2014"}</span>
-      </div>`;
-      } else if (finBlock) {
-        finBlock.style.display = "none";
-      }
-    } catch (e) {
-      if (finBlock) finBlock.style.display = "none";
-    }
-    try {
-      const saved = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      const el = document.getElementById("evening-summary");
-      const btn = document.getElementById("evening-summary-btn");
-      if (saved && saved.date === today && saved.text && el) {
-        el.textContent = saved.text;
-        el.style.color = "white";
-        if (btn) btn.textContent = "\u041E\u043D\u043E\u0432\u0438\u0442\u0438";
-      }
-    } catch (e) {
-    }
-  }
-  function getEveningMood() {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    try {
-      const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
-      if (saved && saved.date === today) return saved.mood;
-    } catch (e) {
-    }
-    return null;
-  }
-  function setEveningMood(level) {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    localStorage.setItem("nm_evening_mood", JSON.stringify({ mood: level, date: today }));
-    renderEveningMoodButtons(level);
-    renderEvening();
-  }
-  function renderEveningMoodButtons(active) {
-    ["bad", "meh", "ok", "good", "fire"].forEach((m) => {
-      const btn = document.getElementById("evening-mood-" + m);
-      if (!btn) return;
-      const isActive = m === active;
-      btn.style.opacity = isActive ? "1" : "0.4";
-      btn.style.background = isActive ? "white" : "rgba(30,16,64,0.06)";
-      btn.style.boxShadow = isActive ? "0 2px 10px rgba(0,0,0,0.12)" : "none";
-      btn.style.transform = isActive ? "scale(1.1)" : "scale(1)";
-    });
-  }
-  function openAddMoment() {
-    currentMomentMood = "positive";
-    document.getElementById("moment-input-text").value = "";
-    updateMoodButtons();
-    document.getElementById("moment-modal").style.display = "flex";
-    setTimeout(() => {
-      const el = document.getElementById("moment-input-text");
-      el.removeAttribute("readonly");
-      el.focus();
-    }, 350);
-  }
-  function closeMomentModal() {
-    document.getElementById("moment-modal").style.display = "none";
-  }
-  function setMomentMood(mood) {
-    currentMomentMood = mood;
-    updateMoodButtons();
-  }
-  function updateMoodButtons() {
-    ["positive", "neutral", "negative"].forEach((m) => {
-      const btn = document.getElementById("mood-" + m);
-      if (!btn) return;
-      btn.style.opacity = currentMomentMood === m ? "1" : "0.4";
-      btn.style.transform = currentMomentMood === m ? "scale(1.04)" : "scale(1)";
-    });
-  }
-  function saveMoment() {
-    const text = document.getElementById("moment-input-text").value.trim();
-    if (!text) {
-      showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443");
-      return;
-    }
-    const moments = getMoments();
-    const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
-    moments.push(newMoment);
-    saveMoments(moments);
-    logRecentAction("add_moment", text.substring(0, 40), "evening");
-    closeMomentModal();
-    renderEvening();
-    showToast("\u2713 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
-    generateMomentSummary(newMoment.id, text);
-  }
-  async function generateMomentSummary(momentId, text) {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return;
-    if (text.length <= 60) return;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: `\u0421\u0442\u0438\u0441\u043D\u0438 \u0446\u0435\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u0434\u043E 1 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0457 \u0444\u0440\u0430\u0437\u0438 (\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 7 \u0441\u043B\u0456\u0432, \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043A\u0438 \u0432 \u043A\u0456\u043D\u0446\u0456, \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E): "${text}"` }],
-          max_tokens: 30,
-          temperature: 0.5
-        })
-      });
-      const data = await res.json();
-      const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, "");
-      if (!summary) return;
-      const moments = getMoments();
-      const idx = moments.findIndex((m) => m.id === momentId);
-      if (idx !== -1) {
-        moments[idx].summary = summary;
-        saveMoments(moments);
-        renderEvening();
-      }
-    } catch (e) {
-    }
-  }
-  function deleteMoment(id) {
-    saveMoments(getMoments().filter((m) => m.id !== id));
-    renderEvening();
-  }
-  async function generateEveningSummary() {
-    const btn = document.getElementById("evening-summary-btn");
-    const el = document.getElementById("evening-summary");
-    btn.textContent = "\u2026";
-    btn.disabled = true;
-    el.textContent = "\u2026";
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
-    const aiContext = getAIContext();
-    const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `
-
-${aiContext}` : "");
-    const dayData = `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u0417\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}`;
-    let _quitCtx = "";
-    try {
-      const _qh = getHabits().filter((h) => h.type === "quit");
-      if (_qh.length > 0) {
-        const _ts = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-        _quitCtx = '\n\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u041A\u0438\u043D\u0443\u0442\u0438": ' + _qh.map((h) => {
-          const s = getQuitStatus(h.id);
-          return '"' + h.name + '": ' + (s.streak || 0) + " \u0434\u043D, " + (s.lastHeld === _ts ? "\u0442\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u2713" : "\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E");
-        }).join("; ");
-      }
-    } catch (e) {
-    }
-    const reply = await callAI(systemPrompt, dayData + _quitCtx, {});
-    const text = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.";
-    el.textContent = text;
-    localStorage.setItem("nm_evening_summary", JSON.stringify({ text, date: today }));
-    btn.textContent = "\u21BB";
-    btn.disabled = false;
-  }
-  async function autoEveningSummary() {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return;
-    if ((/* @__PURE__ */ new Date()).getHours() < 18) return;
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
-    if (moments.length === 0 && inbox.length === 0) return;
-    try {
-      const saved = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      if (saved && saved.date === today && saved.autoTs) {
-        const elapsed = Date.now() - saved.autoTs;
-        if (elapsed < 50 * 60 * 1e3) return;
-      }
-    } catch (e) {
-    }
-    const aiContext = getAIContext();
-    const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `
-
-${aiContext}` : "");
-    const dayData = `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u0417\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}`;
-    try {
-      const reply = await callAI(systemPrompt, dayData, {});
-      if (!reply) return;
-      localStorage.setItem("nm_evening_summary", JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
-      if (currentTab === "evening") {
-        const el = document.getElementById("evening-summary");
-        if (el) el.textContent = reply;
-      }
-    } catch (e) {
-    }
-  }
-  function setupAutoEveningSummary() {
-    setTimeout(() => {
-      autoEveningSummary();
-      setInterval(autoEveningSummary, 60 * 60 * 1e3);
-    }, 5 * 60 * 1e3);
-  }
-  function openMomentView(momentId) {
-    const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
-    const m = moments.find((x) => x.id === momentId);
-    if (!m) return;
-    const moodEmoji = { positive: "\u{1F60A}", neutral: "\u{1F610}", negative: "\u{1F61E}" };
-    const headerEl = document.getElementById("moment-view-header");
-    const timeEl = document.getElementById("moment-view-time");
-    const textEl = document.getElementById("moment-view-text");
-    const summaryBlock = document.getElementById("moment-view-summary-block");
-    const summaryEl = document.getElementById("moment-view-summary");
-    if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || "") + " \u041C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F";
-    if (timeEl && m.ts) timeEl.textContent = new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-    if (textEl) textEl.textContent = m.text || "";
-    if (summaryBlock && summaryEl && m.summary && m.summary !== m.text) {
-      summaryEl.textContent = m.summary;
-      summaryBlock.style.display = "block";
-    } else if (summaryBlock) {
-      summaryBlock.style.display = "none";
-    }
-    const modal = document.getElementById("moment-view-modal");
-    if (modal) {
-      modal.style.display = "flex";
-      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeMomentView);
-    }
-  }
-  function closeMomentView() {
-    const modal = document.getElementById("moment-view-modal");
-    if (modal) modal.style.display = "none";
-  }
-  function isEveningLocked() {
-    const d = /* @__PURE__ */ new Date();
-    const h = d.getHours();
-    const m = d.getMinutes();
-    return h < 18 || h === 23 && m >= 59;
-  }
-  function _formatUnlockCountdown() {
-    const now = /* @__PURE__ */ new Date();
-    const target = new Date(now);
-    target.setHours(18, 0, 0, 0);
-    if (now.getHours() >= 18) target.setDate(target.getDate() + 1);
-    const diffMin = Math.max(1, Math.round((target - now) / 6e4));
-    const h = Math.floor(diffMin / 60);
-    const m = diffMin % 60;
-    if (h > 0) return `\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: ${h} \u0433\u043E\u0434 ${m} \u0445\u0432`;
-    return `\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: ${m} \u0445\u0432`;
-  }
-  function updateEveningLock() {
-    const overlay = document.getElementById("evening-lock-overlay");
-    if (!overlay) return;
-    const bar = document.getElementById("evening-ai-bar");
-    const timerEl = document.getElementById("evening-lock-timer");
-    const locked = isEveningLocked();
-    const wasVisible = overlay.style.display !== "none";
-    if (locked) {
-      overlay.classList.remove("melting");
-      overlay.style.display = "flex";
-      if (bar) bar.style.display = "none";
-      if (timerEl) timerEl.textContent = _formatUnlockCountdown();
-    } else if (wasVisible) {
-      overlay.classList.add("melting");
-      setTimeout(() => {
-        overlay.style.display = "none";
-        overlay.classList.remove("melting");
-      }, 650);
-    }
-  }
-  function _startEveningLockTicker() {
-    if (_eveningLockTickerId) return;
-    _eveningLockTickerId = setInterval(updateEveningLock, 60 * 1e3);
-    if (!_eveningLockVisListener) {
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) updateEveningLock();
-      });
-      _eveningLockVisListener = true;
-    }
-  }
-  var currentMomentMood, EVENING_SUMMARY_PROMPT, _eveningLockTickerId, _eveningLockVisListener;
-  var init_evening = __esm({
-    "src/tabs/evening.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_finance();
-      init_projects();
-      currentMomentMood = "positive";
-      EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} \u0417\u0440\u043E\u0431\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F (3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0417\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u043D\u0430 "\u0442\u0438". \u0412\u0456\u0434\u0437\u043D\u0430\u0447 \u0449\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0434\u0430\u043B\u043E\u0441\u044C. \u042F\u043A\u0449\u043E \u0454 \u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0443 (\u0424\u0430\u0437\u0430 5):
-- \u042F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u0456 \u044E\u0437\u0435\u0440 \u043C\u0430\u0432 \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0456 \u0434\u043E\u0437\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (history \u0437\u0430\u043F\u0438\u0441\u0438 \u0442\u0438\u043F\u0443 'auto' \u0437 "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443") \u2014 \u043C'\u044F\u043A\u043E \u0437\u0433\u0430\u0434\u0430\u0439 ("\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443 \u041E\u043C\u0435\u0437\u0443 \u2014 \u043D\u0435 \u0437\u0430\u0431\u0443\u0434\u044C \u0437\u0430\u0432\u0442\u0440\u0430"). \u0411\u0415\u0417 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0430\u0442\u043E\u0440\u0441\u0442\u0432\u0430.
-- \u042F\u043A\u0449\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0430 \u043A\u0443\u0440\u0441\u0443 \u0434\u043E\u0431\u0440\u0430 (\u0432\u0441\u0456 \u0434\u043E\u0437\u0438 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u0456, \u0454 status_change \u0437 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F\u043C) \u2014 \u043F\u043E\u0445\u0432\u0430\u043B\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E ("\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 \u0442\u0440\u0438\u043C\u0430\u0454\u0448 \u0447\u0456\u0442\u043A\u043E").
-- \u0417\u0433\u0430\u0434\u043A\u0430 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u041E\u041F\u0426\u0406\u0419\u041D\u0410. \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043E\u0441\u043E\u0431\u043B\u0438\u0432\u043E\u0433\u043E \u2014 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439.`;
-      _eveningLockTickerId = null;
-      _eveningLockVisListener = false;
-      Object.assign(window, {
-        openAddMoment,
-        saveMoment,
-        closeMomentModal,
-        setMomentMood,
-        generateEveningSummary,
-        setEveningMood,
-        deleteMoment,
-        openMomentView,
-        closeMomentView
-      });
-      _startEveningLockTicker();
-    }
-  });
-
-  // src/tabs/evening-chat.js
-  function openEveningDialog() {
-    dialogHistory = [];
-    document.getElementById("evening-dialog").style.display = "flex";
-    document.getElementById("dialog-messages").innerHTML = "";
-    document.getElementById("dialog-input").value = "";
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    const name = settings.name ? `, ${settings.name}` : "";
-    addDialogMessage("agent", `\u041F\u0440\u0438\u0432\u0456\u0442${name}. \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C \u2014 \u0449\u043E \u0432\u0438\u0439\u0448\u043B\u043E, \u0449\u043E \u043D\u0456. \u0411\u0435\u0437 \u043F\u0440\u0438\u043A\u0440\u0430\u0441.`);
-  }
-  function closeEveningDialog() {
-    document.getElementById("evening-dialog").style.display = "none";
-  }
-  function addDialogMessage(role, text) {
-    const el = document.getElementById("dialog-messages");
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:80%;background:${isAgent ? "rgba(237,233,255,0.9)" : "#7c3aed"};color:${isAgent ? "#4c1d95" : "white"};border-radius:${isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px"};padding:10px 13px;font-size:15px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-    dialogHistory.push({ role: isAgent ? "assistant" : "user", content: text });
-  }
-  async function sendDialogMessage() {
-    if (dialogLoading) return;
-    const input = document.getElementById("dialog-input");
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = "";
-    input.style.height = "auto";
-    addDialogMessage("user", text);
-    dialogLoading = true;
-    const aiContext = getAIContext();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const systemPrompt = `${getOWLPersonality()} \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}
-\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u0456"}`;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addDialogMessage("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      dialogLoading = false;
-      return;
-    }
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...dialogHistory.slice(-10)
-    ];
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages, max_tokens: 200, temperature: 0.8 })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content;
-      if (reply) addDialogMessage("agent", reply);
-      else addDialogMessage("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
-    } catch {
-      addDialogMessage("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-    dialogLoading = false;
-  }
-  function showEveningBarMessages() {
-    openChatBar("evening");
-  }
-  function addEveningBarMsg(role, text, _noSave = false) {
-    const el = document.getElementById("evening-bar-messages");
-    if (!el) return;
-    if (_eveningTypingEl) {
-      _eveningTypingEl.remove();
-      _eveningTypingEl = null;
-    }
-    if (role === "typing") {
-      const td = document.createElement("div");
-      td.style.cssText = "display:flex";
-      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-      el.appendChild(td);
-      _eveningTypingEl = td;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    if (!_noSave) {
-      try {
-        openChatBar("evening");
-      } catch (e) {
-      }
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-    if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
-    else eveningBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("evening", role, text);
-  }
-  async function sendEveningBarMessage() {
-    if (eveningBarLoading) return;
-    const input = document.getElementById("evening-bar-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addEveningBarMsg("user", text);
-    eveningBarLoading = true;
-    addEveningBarMsg("typing", "");
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
-    const todayNotes = JSON.parse(localStorage.getItem("nm_notes") || "[]").filter((n) => new Date(n.ts || n.createdAt || 0).toDateString() === today);
-    const aiContext = getAIContext();
-    const systemPrompt = `${getOWLPersonality()} \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F).
-\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u0456"}.
-\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${todayNotes.map((n) => n.title || n.text || "").join("; ") || "\u043D\u0435\u043C\u0430\u0454"}.
-\u0412\u0441\u0456 \u0437\u0430\u043F\u0438\u0441\u0438: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}.
-\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0437\u0430\u043F\u0438\u0441 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
-- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
-- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u0414\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
-- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0442\u0435\u043A\u0441\u0442 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
-\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0449\u0435.${aiContext ? "\n\n" + aiContext : ""}`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 300, temperature: 0.8 })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
-        eveningBarLoading = false;
-        return;
-      }
-      const blocks = extractJsonBlocks(reply);
-      let handled = false;
-      for (const parsed of blocks) {
-        if (processUniversalAction(parsed, text, addEveningBarMsg)) handled = true;
-      }
-      if (!handled) safeAgentReply(reply, addEveningBarMsg);
-    } catch {
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
-    }
-    eveningBarLoading = false;
-  }
-  var _eveningTypingEl, dialogHistory, dialogLoading, eveningBarHistory, eveningBarLoading;
-  var init_evening_chat = __esm({
-    "src/tabs/evening-chat.js"() {
-      init_utils();
-      init_core();
-      init_habits();
-      init_evening();
-      _eveningTypingEl = null;
-      dialogHistory = [];
-      dialogLoading = false;
-      eveningBarHistory = [];
-      eveningBarLoading = false;
-      Object.assign(window, {
-        openEveningDialog,
-        closeEveningDialog,
-        sendDialogMessage,
-        sendEveningBarMessage,
-        showEveningBarMessages
-      });
-    }
-  });
-
-  // src/tabs/me.js
-  function renderMeHabitsStats() {
-    const habits = getHabits();
-    const el = document.getElementById("me-habits-stats-list");
-    const block = document.getElementById("me-habits-stats");
-    if (!el) return;
-    if (habits.length === 0) {
-      if (block) block.style.display = "none";
-      return;
-    }
-    if (block) block.style.display = "block";
-    const log = getHabitLog();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    el.innerHTML = habits.map((h) => {
-      const pct = getHabitPct(h.id);
-      const streak = getHabitStreak(h.id);
-      const isDoneToday = !!log[today]?.[h.id];
-      const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
-      return `
-    <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || "\u2B55"} ${escapeHtml(h.name)}</span>
-        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#dc2626"}">${pct}%</span>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
-        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#ef4444"};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `\u{1F525} ${streak} \u0434\u043D\u0456 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \xB7 ` : ""}\u0437\u0430 30 \u0434\u043D\u0456\u0432${isScheduledToday ? isDoneToday ? " \xB7 \u2705 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : " \xB7 \u23F3 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : ""}</div>
-    </div>`;
-    }).join("");
-  }
-  async function sendMeChatMessage() {
-    const input = document.getElementById("me-chat-input");
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addMeChatMsg("user", text);
-    meChatHistory.push({ role: "user", content: text });
-    const loadId = "me-chat-load-" + Date.now();
-    addMeChatMsg("agent", "\u2026", false, loadId);
-    const context = getAIContext();
-    const stats = getMeStatsContext();
-    const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
-\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0434\u0456\u044E \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
-- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
-- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041F\u043E\u0434\u0456\u044F: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
-- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
-    const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
-    const loadEl = document.getElementById(loadId);
-    let handled = false;
-    if (reply) {
-      const blocks = extractJsonBlocks(reply);
-      for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
-          handled = true;
-        }
-      }
-      if (handled && loadEl) loadEl.textContent = "\u2705";
-    }
-    if (!handled && loadEl) loadEl.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.";
-    if (reply) meChatHistory.push({ role: "assistant", content: reply });
-    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
-  }
-  function renderMe() {
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const now = /* @__PURE__ */ new Date();
-    const todayDow = (now.getDay() + 6) % 7;
-    try {
-      let streak = 0;
-      for (let i = 0; i <= 60; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const ds = d.toDateString();
-        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t) => t.createdAt && new Date(t.createdAt).toDateString() === ds);
-        if (hasRecord) streak++;
-        else if (i > 0) break;
-      }
-      const badge = document.getElementById("me-streak-badge");
-      const count = document.getElementById("me-streak-count");
-      if (badge && count) {
-        if (streak >= 2) {
-          badge.style.display = "flex";
-          count.textContent = streak;
-        } else badge.style.display = "none";
-      }
-    } catch (e) {
-    }
-    const ringsEl = document.getElementById("me-week-rings");
-    if (ringsEl) {
-      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-      const accent = "#7c4a2a";
-      ringsEl.innerHTML = days.map((d, i) => {
-        const daysAgo = todayDow - i;
-        const date = new Date(now);
-        date.setDate(now.getDate() - daysAgo);
-        const ds = date.toDateString();
-        const future = daysAgo < 0;
-        const count = future ? 0 : inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
-        const doneTasks = future ? 0 : getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-        const total = count + doneTasks;
-        const maxVal = 8;
-        const pct = future ? 0 : Math.min(total / maxVal, 1);
-        const circ = 69;
-        const offset = circ - circ * pct;
-        const isToday = daysAgo === 0;
-        const isBest = !future && pct >= 0.85;
-        const strokeColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.6)` : pct > 0 ? `rgba(124,74,42,0.3)` : "transparent";
-        const label = future ? "\u2013" : isBest ? "\u2605" : total > 0 ? total : "\xB7";
-        const labelColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.65)` : "rgba(30,16,64,0.22)";
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-        <svg width="32" height="32" viewBox="0 0 30 30">
-          <circle cx="15" cy="15" r="11" fill="none" stroke="rgba(30,16,64,0.07)" stroke-width="3.5"/>
-          ${!future && pct > 0 ? `<circle cx="15" cy="15" r="11" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 15 15)"/>` : ""}
-          <text x="15" y="19" text-anchor="middle" font-size="${isBest ? 9 : 8}" font-weight="${isBest ? 900 : 800}" fill="${labelColor}">${label}</text>
-        </svg>
-        <div style="font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : "rgba(30,16,64,0.35)"}">${d}</div>
-      </div>`;
-      }).join("");
-    }
-    const compareEl = document.getElementById("me-week-compare");
-    if (compareEl) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - todayDow);
-      weekStart.setHours(0, 0, 0, 0);
-      const prevStart = new Date(weekStart);
-      prevStart.setDate(prevStart.getDate() - 7);
-      const prevEnd = new Date(weekStart);
-      const thisWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= weekStart.getTime()).length;
-      const prevWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= prevStart.getTime() && t.completedAt < prevEnd.getTime()).length;
-      const habits = getHabits();
-      const log = getHabitLog();
-      const buildHabitsMe = habits.filter((h) => h.type !== "quit");
-      let thisHabitPct = 0, prevHabitPct = 0;
-      if (buildHabitsMe.length > 0) {
-        let thisDone = 0, thisTotal = 0, prevDone = 0, prevTotal = 0;
-        for (let i = 0; i <= todayDow; i++) {
-          const d = new Date(weekStart);
-          d.setDate(weekStart.getDate() + i);
-          const dow = (d.getDay() + 6) % 7;
-          const ds = d.toDateString();
-          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-          thisTotal += dayH.length;
-          thisDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
-        }
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(prevStart);
-          d.setDate(prevStart.getDate() + i);
-          const dow = (d.getDay() + 6) % 7;
-          const ds = d.toDateString();
-          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-          prevTotal += dayH.length;
-          prevDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
-        }
-        thisHabitPct = thisTotal > 0 ? Math.round(thisDone / thisTotal * 100) : 0;
-        prevHabitPct = prevTotal > 0 ? Math.round(prevDone / prevTotal * 100) : 0;
-      }
-      const thisNotes = getNotes().filter((n) => (n.ts || 0) >= weekStart.getTime()).length;
-      const prevNotes = getNotes().filter((n) => (n.ts || 0) >= prevStart.getTime() && (n.ts || 0) < prevEnd.getTime()).length;
-      const diffColor = (a, b) => a >= b ? "#16a34a" : "#c2410c";
-      const diffArrow = (a, b) => a >= b ? "\u2191" : "\u2193";
-      compareEl.innerHTML = [
-        { label: "\u0437\u0430\u0434\u0430\u0447\u0456", cur: thisWeekTasks, prev: prevWeekTasks, color: "#ea580c" },
-        { label: "\u0437\u0432\u0438\u0447\u043A\u0438", cur: thisHabitPct + "%", prev: prevHabitPct + "%", rawCur: thisHabitPct, rawPrev: prevHabitPct, color: "#16a34a" },
-        { label: "\u043D\u043E\u0442\u0430\u0442\u043A\u0438", cur: thisNotes, prev: prevNotes, color: "#7c4a2a" }
-      ].map((item) => {
-        const rc = item.rawCur !== void 0 ? item.rawCur : item.cur;
-        const rp = item.rawPrev !== void 0 ? item.rawPrev : item.prev;
-        const diff = rc - rp;
-        return `<div style="flex:1;background:rgba(255,255,255,0.55);border-radius:12px;padding:8px 6px;text-align:center">
-        <div style="font-size:20px;font-weight:900;color:${item.color};line-height:1">${item.cur}</div>
-        <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">${item.label}</div>
-        <div style="font-size:10px;font-weight:800;color:${diffColor(rc, rp)};margin-top:2px">${diffArrow(rc, rp)} ${diff >= 0 ? "+" : ""}${item.rawCur !== void 0 ? diff + "%" : diff}</div>
-      </div>`;
-      }).join("");
-    }
-    const moodEl = document.getElementById("me-mood-bars");
-    if (moodEl) {
-      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-      const moodMap = { fire: 5, good: 4, ok: 3, meh: 2, bad: 1 };
-      const bars = days.map((d, i) => {
-        const daysAgo = todayDow - i;
-        const future = daysAgo < 0;
-        if (future) return { d, h: 3, color: "rgba(30,16,64,0.05)", future: true };
-        const date = new Date(now);
-        date.setDate(now.getDate() - daysAgo);
-        const ds = date.toDateString();
-        try {
-          const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
-          if (saved && saved.date === ds && saved.mood) {
-            const val = moodMap[saved.mood] || 3;
-            const maxH = 26;
-            const h2 = Math.round(val / 5 * maxH);
-            const colors = { fire: "#ea580c", good: "#22c55e", ok: "#16a34a", meh: "#d97706", bad: "#ef4444" };
-            return { d, h: Math.max(4, h2), color: colors[saved.mood] || "#16a34a", future: false };
-          }
-        } catch (e) {
-        }
-        const dayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === ds);
-        if (dayMoments.length === 0) return { d, h: 3, color: "rgba(30,16,64,0.07)", future: false };
-        const pos = dayMoments.filter((m) => m.mood === "positive").length;
-        const pct = pos / dayMoments.length;
-        const h = Math.max(5, Math.round(pct * 26));
-        return { d, h, color: pct >= 0.6 ? "#16a34a" : pct >= 0.3 ? "#d97706" : "#ef4444", future: false };
-      });
-      moodEl.innerHTML = bars.map(
-        (b) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
-        <div style="width:100%;height:${b.h}px;background:${b.color};border-radius:2px 2px 0 0"></div>
-        <div style="font-size:8px;font-weight:700;color:rgba(30,16,64,0.35)">${b.d}</div>
-      </div>`
-      ).join("");
-    }
-    const projBlock = document.getElementById("me-projects-block");
-    const projList = document.getElementById("me-projects-list");
-    if (projBlock && projList) {
-      let activeProjects = [];
-      try {
-        activeProjects = getProjects().slice(0, 3);
-      } catch (e) {
-      }
-      if (activeProjects.length > 0) {
-        projBlock.style.display = "block";
-        projList.innerHTML = activeProjects.map((p) => {
-          const steps = p.steps || [];
-          const done = steps.filter((s) => s.done).length;
-          const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
-          const nextStep = steps.find((s) => !s.done);
-          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
-              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
-              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
-            </div>
-            <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
-          </div>
-          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:#7c4a2a;border-radius:3px;transition:width 0.5s"></div>
-          </div>
-        </div>`;
-        }).join("");
-      } else {
-        projBlock.style.display = "none";
-      }
-    }
-    renderMeHabitsStats();
-    renderMeActivityChart();
-  }
-  function renderMeActivityChart() {
-    const chartEl = document.getElementById("me-activity-chart");
-    const labelsEl = document.getElementById("me-activity-labels");
-    const totalEl = document.getElementById("me-activity-total");
-    if (!chartEl) return;
-    const now = /* @__PURE__ */ new Date();
-    const todayDow = (now.getDay() + 6) % 7;
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const dayLabels = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-    const accent = "#7c4a2a";
-    const allBuildHabits = getHabits().filter((h) => h.type !== "quit");
-    const activeTasks = getTasks().filter((t) => t.status === "active").length;
-    const baseline = Math.max(1, Math.round(activeTasks / 7) + 1);
-    const values = dayLabels.map((_, i) => {
-      const daysAgo = todayDow - i;
-      const d = new Date(now);
-      d.setDate(now.getDate() - daysAgo);
-      const ds = d.toDateString();
-      if (daysAgo < 0) return null;
-      const inboxCount = inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
-      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-      const log = getHabitLog();
-      const dow = (d.getDay() + 6) % 7;
-      const todayH = allBuildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-      const doneH = todayH.filter((h) => !!log[ds]?.[h.id]).length;
-      return { val: inboxCount + doneTasks + doneH, norm: Math.max(1, todayH.length + Math.round(activeTasks / 7)) };
-    });
-    const validValues = values.filter((v) => v !== null);
-    const maxVal = Math.max(...validValues.map((v) => v.val), baseline * 2, 1);
-    const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
-    if (totalEl) totalEl.textContent = `${totalActivity} \u0434\u0456\u0439`;
-    const W = chartEl.offsetWidth || 300;
-    const H = 64;
-    const padT = 6, padB = 10;
-    const chartH = H - padT - padB;
-    const xOf = (i) => (i + 0.5) * W / 7;
-    const yOf = (val) => padT + chartH * (1 - val / maxVal);
-    const points = values.map((v, i) => {
-      if (v === null) return null;
-      return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
-    }).filter(Boolean);
-    if (points.length < 2) {
-      chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">\u041D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>';
-      if (labelsEl) labelsEl.innerHTML = "";
-      return;
-    }
-    const baselineY = yOf(baseline);
-    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${H} L ${points[0].x.toFixed(1)} ${H} Z`;
-    const dots = points.map((p) => {
-      const isToday = p.i === todayDow;
-      const aboveNorm = p.v >= p.norm;
-      const fill = p.v === 0 ? "rgba(124,74,42,0.2)" : aboveNorm ? "#16a34a" : "#c2410c";
-      const r = isToday ? 5 : 3.5;
-      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
-    }).join("");
-    const normLabelTop = Math.max(0, Math.round(baselineY) - 18);
-    chartEl.innerHTML = `
-    <svg width="${W}" height="${H}" style="display:block;overflow:visible">
-      <defs>
-        <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
-          <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
-        </linearGradient>
-      </defs>
-      <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}"
-            stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
-      <path d="${areaPath}" fill="url(#actGrad)"/>
-      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${dots}
-    </svg>
-    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.45);background:rgba(245,240,235,0.85);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">\u041D\u041E\u0420\u041C\u0410</div>
-  `;
-    if (labelsEl) {
-      labelsEl.innerHTML = values.map((v, i) => {
-        const isToday = i === todayDow;
-        const isFuture = v === null;
-        return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : isFuture ? "rgba(30,16,64,0.15)" : "rgba(30,16,64,0.35)"}">${dayLabels[i]}</div>`;
-      }).join("");
-    }
-  }
-  async function refreshMeAnalysis() {
-    const btn = document.getElementById("me-refresh-btn");
-    const el = document.getElementById("me-ai-analysis");
-    btn.textContent = "\u2026";
-    btn.disabled = true;
-    el.textContent = "\u2026";
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-    const notes = getNotes();
-    const aiContext = getAIContext();
-    const totalRecords = inbox.length + tasks.length + notes.length;
-    if (totalRecords < 3) {
-      el.textContent = "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.";
-      btn.textContent = "\u21BB";
-      btn.disabled = false;
-      return;
-    }
-    const dataNote = totalRecords < 10 ? "\u0423\u0412\u0410\u0413\u0410: \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E, \u043D\u0435 \u0440\u043E\u0431\u0438 \u0433\u043B\u0438\u0431\u043E\u043A\u0438\u0445 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0456\u0432 \u043F\u0440\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0456\u0441\u0442\u044C \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0449\u043E \u0434\u043E\u0434\u0430\u0442\u0438." : "";
-    const systemPrompt = `${getOWLPersonality()} \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 (3-5 \u0440\u0435\u0447\u0435\u043D\u044C) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0429\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435 \u0456 \u0449\u043E \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. ${dataNote} \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u043F\u043E\u0440\u0430\u0434\u043E\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043E\u0433\u043B\u044F\u0434\u0456 (\u0424\u0430\u0437\u0430 5):
-- \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
-- \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
-    const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
-\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status !== "done").length}
-\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status === "done").length}
-\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
-\u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
-    const reply = await callAI(systemPrompt, userData, {});
-    el.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.";
-    btn.textContent = "\u21BB";
-    btn.disabled = false;
-    if (reply && totalRecords >= 5) {
-      const adviceEl = document.getElementById("me-ai-advice");
-      const adviceBlock = document.getElementById("me-advice-block");
-      if (adviceEl && adviceBlock) {
-        adviceEl.textContent = "\u2026";
-        adviceBlock.style.display = "block";
-        const advicePrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0434\u0430\u0439 \u0440\u0456\u0432\u043D\u043E 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456, \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043B\u044E\u0434\u0438\u043D\u0438. \u041A\u043E\u0436\u043D\u0430 \u043F\u043E\u0440\u0430\u0434\u0430 \u2014 \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0456 \u0434\u0456\u0454\u0432\u0430. \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456: "1. [\u043F\u043E\u0440\u0430\u0434\u0430]
-2. [\u043F\u043E\u0440\u0430\u0434\u0430]
-3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
-        const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
-
-\u0414\u0430\u043D\u0456: ${userData}`, {});
-        if (adviceReply) {
-          adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
-        } else {
-          adviceBlock.style.display = "none";
-        }
-      }
-    }
-  }
-  function showMeChatMessages() {
-    openChatBar("me");
-  }
-  function addMeChatMsg(role, text, _noSave = false, id = "") {
-    const el = document.getElementById("me-chat-messages");
-    if (!el) return;
-    if (!_noSave) {
-      try {
-        openChatBar("me");
-      } catch (e) {
-      }
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-    if (!_noSave) saveChatMsg("me", role, text);
-  }
-  var meChatHistory;
-  var init_me = __esm({
-    "src/tabs/me.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_evening();
-      init_projects();
-      meChatHistory = [];
-      Object.assign(window, {
-        sendMeChatMessage,
-        showMeChatMessages,
-        refreshMeAnalysis
-      });
-    }
-  });
-
   // src/tabs/calendar.js
   function getEvents() {
     return JSON.parse(localStorage.getItem("nm_events") || "[]");
@@ -4530,6 +3473,1152 @@ ${aiContext}` : "");
         setEventPriority,
         closeDayScheduleModal,
         openRoutineFromCalendar
+      });
+    }
+  });
+
+  // src/tabs/evening.js
+  function getMoments() {
+    return JSON.parse(localStorage.getItem("nm_moments") || "[]");
+  }
+  function saveMoments(arr) {
+    localStorage.setItem("nm_moments", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "moments" }));
+  }
+  function getMomentsContext() {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    if (moments.length === 0) return "";
+    const moodEmoji = { positive: "\u{1F60A}", neutral: "\u{1F610}", negative: "\u{1F61E}" };
+    const lines = moments.slice(-8).map((m) => {
+      const d = new Date(m.ts);
+      const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+      const em = moodEmoji[m.mood] || "";
+      const txt = m.summary || m.text;
+      return `- ${time} ${em} "${txt}"`;
+    }).join("\n");
+    return `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F (\u0449\u043E \u044E\u0437\u0435\u0440 \u0437\u0430\u0444\u0456\u043A\u0441\u0443\u0432\u0430\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0443 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0430\u0445 \u0456 \u0435\u043C\u043F\u0430\u0442\u0456\u0439\u043D\u0438\u0445 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044F\u0445):
+${lines}`;
+  }
+  function getEveningContext() {
+    const lines = [];
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const nowMs = Date.now();
+    const mood = getEveningMood();
+    if (mood) {
+      const moodMap = { bad: "\u{1F614} \u0432\u0430\u0436\u043A\u0438\u0439", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C", good: "\u{1F604} \u0433\u0430\u0440\u043D\u0438\u0439", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u0438\u0439" };
+      lines.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u044E\u0437\u0435\u0440 \u0441\u0430\u043C \u043E\u0431\u0440\u0430\u0432 \u0443 \u0412\u0435\u0447\u043E\u0440\u0456): ${moodMap[mood] || mood}`);
+    }
+    try {
+      const dueToday = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO);
+      if (dueToday.length > 0) {
+        const list = dueToday.slice(0, 6).map((t) => `- [ID:${t.id}] "${t.title}"`).join("\n");
+        lines.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u043E\u043C \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0430\u043B\u0435 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0456:
+${list}`);
+      }
+    } catch (e) {
+    }
+    try {
+      const stepsToday = [];
+      getProjects().forEach((p) => {
+        (p.steps || []).forEach((s) => {
+          if (s.done && s.doneAt && new Date(s.doneAt).toDateString() === today) {
+            stepsToday.push(`- \u2705 "${s.title || s.text || ""}" (\u043F\u0440\u043E\u0435\u043A\u0442: ${p.title || p.name || "\u2014"})`);
+          }
+        });
+      });
+      if (stepsToday.length > 0) {
+        lines.push(`\u041A\u0440\u043E\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 \u0437\u0430\u043A\u0440\u0438\u0442\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456:
+${stepsToday.slice(0, 8).join("\n")}`);
+      }
+    } catch (e) {
+    }
+    try {
+      const habits = getHabits();
+      const log = getHabitLog();
+      const nonQuit = habits.filter((h) => h.type !== "quit");
+      const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+      const todayH = nonQuit.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow));
+      if (todayH.length > 0) {
+        const doneH = todayH.filter((h) => !!log[today]?.[h.id]).length;
+        lines.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0434\u043D\u044F: ${doneH}/${todayH.length} \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`);
+      }
+      const quitHabits = habits.filter((h) => h.type === "quit");
+      if (quitHabits.length > 0) {
+        const qLines = quitHabits.map((h) => {
+          const s = getQuitStatus(h.id);
+          const marked = s.lastHeld === todayISO ? "\u0442\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713" : "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u041D\u0415 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E";
+          return `- "${h.name}": \u0441\u0442\u0440\u0456\u043A ${s.streak || 0} \u0434\u043D, ${marked}`;
+        }).join("\n");
+        lines.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u043A\u0438\u043D\u0443\u0442\u0438":
+${qLines}`);
+      }
+    } catch (e) {
+    }
+    try {
+      const pastEvents = getEvents().filter((ev) => {
+        if (ev.date !== todayISO) return false;
+        if (!ev.time) return true;
+        const [h, m] = ev.time.split(":").map(Number);
+        return (/* @__PURE__ */ new Date()).setHours(h, m, 0, 0) < nowMs;
+      });
+      if (pastEvents.length > 0) {
+        const evLines = pastEvents.slice(0, 5).map((ev) => `- \u{1F4C5} "${ev.title}"${ev.time ? " \u043E " + ev.time : ""}`).join("\n");
+        lines.push(`\u041C\u0438\u043D\u0443\u043B\u0456 \u043F\u043E\u0434\u0456\u0457 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456:
+${evLines}`);
+      }
+    } catch (e) {
+    }
+    try {
+      const todayExpenses = getFinance().filter((t) => t.type === "expense" && new Date(t.ts).toDateString() === today);
+      if (todayExpenses.length > 0) {
+        const total = todayExpenses.reduce((s, t) => s + t.amount, 0);
+        const byCat = {};
+        todayExpenses.forEach((t) => {
+          byCat[t.category || "\u0406\u043D\u0448\u0435"] = (byCat[t.category || "\u0406\u043D\u0448\u0435"] || 0) + t.amount;
+        });
+        const top3 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c} ${Math.round(a)}`).join(", ");
+        const cur = getCurrency ? getCurrency() : "\u20B4";
+        lines.push(`\u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u0434\u043D\u044F: ${cur}${Math.round(total)} (\u0442\u043E\u043F: ${top3})`);
+      }
+    } catch (e) {
+    }
+    if (lines.length === 0) return "";
+    return `\u0412\u0415\u0427\u0406\u0420\u041D\u0406\u0419 \u0417\u0420\u0406\u0417 \u0414\u041D\u042F (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432/\u0434\u0456\u0430\u043B\u043E\u0433\u0443 \u0443 \u0412\u0435\u0447\u043E\u0440\u0456 \u0456 \u0435\u043C\u043F\u0430\u0442\u0456\u0439\u043D\u0438\u0445 \u0440\u0435\u0430\u043A\u0446\u0456\u0439 \u043D\u0430 \u0456\u043D\u0448\u0438\u0445 \u0432\u043A\u043B\u0430\u0434\u043A\u0430\u0445):
+${lines.join("\n\n")}`;
+  }
+  function renderEvening() {
+    updateEveningLock();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    const statsEl = document.getElementById("evening-stats-row");
+    if (statsEl) {
+      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
+      const habits = getHabits();
+      const buildHabitsEvening = habits.filter((h) => h.type !== "quit");
+      const log = getHabitLog();
+      const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+      const todayH = buildHabitsEvening.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow));
+      const doneH = todayH.filter((h) => !!log[today]?.[h.id]).length;
+      let todayExp = 0;
+      try {
+        todayExp = getFinance().filter((t) => t.type === "expense" && new Date(t.ts).toDateString() === today).reduce((s, t) => s + t.amount, 0);
+      } catch (e) {
+      }
+      const cur = getCurrency();
+      statsEl.innerHTML = `
+      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:#1e3350;line-height:1">${doneTasks}</div>
+        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0437\u0430\u0434\u0430\u0447\u0456 \u2713</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:#16a34a;line-height:1">${todayH.length > 0 ? doneH + "/" + todayH.length : "\u2014"}</div>
+        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0437\u0432\u0438\u0447\u043A\u0438</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
+        <div style="font-size:22px;font-weight:900;color:#c2410c;line-height:1">${todayExp > 0 ? cur + Math.round(todayExp) : "\u2014"}</div>
+        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0432\u0438\u0442\u0440\u0430\u0442\u0438</div>
+      </div>`;
+    }
+    const sources = [];
+    const habits2 = getHabits().filter((h) => h.type !== "quit");
+    const log2 = getHabitLog();
+    const todayDow2 = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+    const todayH2 = habits2.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow2));
+    const doneH2 = todayH2.filter((h) => !!log2[today]?.[h.id]).length;
+    if (todayH2.length > 0) sources.push(doneH2 / todayH2.length);
+    const allTasks = getTasks();
+    const doneTasks2 = allTasks.filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
+    const activeTasks = allTasks.filter((t) => t.status === "active").length;
+    if (doneTasks2 > 0 || activeTasks > 0) sources.push(Math.min(doneTasks2 / Math.max(activeTasks * 0.2, 1), 1));
+    const activeProjs = getProjects().filter((p) => p.status === "active");
+    const allSteps = activeProjs.flatMap((p) => p.steps || []);
+    const stepsToday = allSteps.filter((s) => s.done && s.doneAt && new Date(s.doneAt).toDateString() === today).length;
+    const openSteps = allSteps.filter((s) => !s.done).length;
+    if (stepsToday > 0 || openSteps > 0) sources.push(Math.min(stepsToday / Math.max((openSteps + stepsToday) * 0.2, 1), 1));
+    const score = sources.length > 0 ? Math.round(sources.reduce((a, b) => a + b, 0) / sources.length * 100) : 0;
+    const arc = document.getElementById("evening-ring-arc");
+    const pctEl = document.getElementById("evening-ring-pct");
+    const descEl = document.getElementById("evening-score-desc");
+    if (arc) {
+      const circ = 151;
+      setTimeout(() => {
+        arc.style.strokeDashoffset = circ - circ * score / 100;
+      }, 100);
+    }
+    if (pctEl) pctEl.textContent = score + "%";
+    if (descEl) descEl.textContent = sources.length === 0 ? "\u0414\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438" : score >= 70 ? "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA}" : score >= 40 ? "\u0421\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C";
+    const savedMood = getEveningMood();
+    if (savedMood) renderEveningMoodButtons(savedMood);
+    const momEl = document.getElementById("evening-moments");
+    if (momEl) {
+      const todayNotes = getNotes().filter((n) => new Date(n.ts || n.createdAt || 0).toDateString() === today);
+      const notesAsItems = todayNotes.map((n) => ({ id: "note_" + n.id, text: n.title || n.text || "", mood: "neutral", ts: n.ts || n.createdAt || 0, isNote: true }));
+      const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      if (allItems.length === 0) {
+        momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u0432\u043E\u0433\u043E \u0434\u043D\u044F</div>';
+      } else {
+        const moodDots = { positive: "#16a34a", neutral: "#f59e0b", negative: "#ef4444" };
+        momEl.innerHTML = allItems.map((m) => {
+          const dot = m.isNote ? "#818cf8" : moodDots[m.mood] || "#888";
+          const timeStr = m.ts ? new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : "";
+          const clickable = !m.isNote;
+          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ";cursor:pointer" : ""}"${clickable ? ` onclick="openMomentView(${m.id})"` : ""}>
+          <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:5px"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;color:#1e1040;font-weight:500;line-height:1.45">${escapeHtml(m.summary || m.text)}</div>
+            ${timeStr ? `<div style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600;margin-top:2px">${timeStr}</div>` : ""}
+          </div>
+          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">\xD7</div>` : ""}
+        </div>`;
+        }).join("");
+      }
+    }
+    const finBlock = document.getElementById("evening-finance-block");
+    const finContent = document.getElementById("evening-finance-content");
+    try {
+      const todayTxs = getFinance().filter((t) => new Date(t.ts).toDateString() === today);
+      if (finBlock && finContent && todayTxs.length > 0) {
+        finBlock.style.display = "block";
+        const cur = getCurrency ? getCurrency() : "\u20B4";
+        const todayExpF = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+        finContent.innerHTML = todayTxs.slice(0, 5).map(
+          (t) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+          <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.6)">${escapeHtml(t.category)}${t.comment ? " \xB7 " + escapeHtml(t.comment) : ""}</span>
+          <span style="font-size:14px;font-weight:800;color:${t.type === "expense" ? "#c2410c" : "#16a34a"}">${t.type === "expense" ? "-" : "+"}${cur}${Math.round(t.amount)}</span>
+        </div>`
+        ).join("") + `<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(30,16,64,0.06);display:flex;justify-content:space-between">
+        <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0412\u0441\u044C\u043E\u0433\u043E \u0432\u0438\u0442\u0440\u0430\u0442\u0438</span>
+        <span style="font-size:13px;font-weight:800;color:#c2410c">${todayExpF > 0 ? "-" + cur + Math.round(todayExpF) : "\u2014"}</span>
+      </div>`;
+      } else if (finBlock) {
+        finBlock.style.display = "none";
+      }
+    } catch (e) {
+      if (finBlock) finBlock.style.display = "none";
+    }
+    try {
+      const saved = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      const el = document.getElementById("evening-summary");
+      const btn = document.getElementById("evening-summary-btn");
+      if (saved && saved.date === today && saved.text && el) {
+        el.textContent = saved.text;
+        el.style.color = "white";
+        if (btn) btn.textContent = "\u041E\u043D\u043E\u0432\u0438\u0442\u0438";
+      }
+    } catch (e) {
+    }
+  }
+  function getEveningMood() {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    try {
+      const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
+      if (saved && saved.date === today) return saved.mood;
+    } catch (e) {
+    }
+    return null;
+  }
+  function setEveningMood(level) {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    localStorage.setItem("nm_evening_mood", JSON.stringify({ mood: level, date: today }));
+    renderEveningMoodButtons(level);
+    renderEvening();
+  }
+  function renderEveningMoodButtons(active) {
+    ["bad", "meh", "ok", "good", "fire"].forEach((m) => {
+      const btn = document.getElementById("evening-mood-" + m);
+      if (!btn) return;
+      const isActive = m === active;
+      btn.style.opacity = isActive ? "1" : "0.4";
+      btn.style.background = isActive ? "white" : "rgba(30,16,64,0.06)";
+      btn.style.boxShadow = isActive ? "0 2px 10px rgba(0,0,0,0.12)" : "none";
+      btn.style.transform = isActive ? "scale(1.1)" : "scale(1)";
+    });
+  }
+  function openAddMoment() {
+    currentMomentMood = "positive";
+    document.getElementById("moment-input-text").value = "";
+    updateMoodButtons();
+    document.getElementById("moment-modal").style.display = "flex";
+    setTimeout(() => {
+      const el = document.getElementById("moment-input-text");
+      el.removeAttribute("readonly");
+      el.focus();
+    }, 350);
+  }
+  function closeMomentModal() {
+    document.getElementById("moment-modal").style.display = "none";
+  }
+  function setMomentMood(mood) {
+    currentMomentMood = mood;
+    updateMoodButtons();
+  }
+  function updateMoodButtons() {
+    ["positive", "neutral", "negative"].forEach((m) => {
+      const btn = document.getElementById("mood-" + m);
+      if (!btn) return;
+      btn.style.opacity = currentMomentMood === m ? "1" : "0.4";
+      btn.style.transform = currentMomentMood === m ? "scale(1.04)" : "scale(1)";
+    });
+  }
+  function saveMoment() {
+    const text = document.getElementById("moment-input-text").value.trim();
+    if (!text) {
+      showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443");
+      return;
+    }
+    const moments = getMoments();
+    const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
+    moments.push(newMoment);
+    saveMoments(moments);
+    logRecentAction("add_moment", text.substring(0, 40), "evening");
+    closeMomentModal();
+    renderEvening();
+    showToast("\u2713 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
+    generateMomentSummary(newMoment.id, text);
+  }
+  async function generateMomentSummary(momentId, text) {
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) return;
+    if (text.length <= 60) return;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: `\u0421\u0442\u0438\u0441\u043D\u0438 \u0446\u0435\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u0434\u043E 1 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0457 \u0444\u0440\u0430\u0437\u0438 (\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 7 \u0441\u043B\u0456\u0432, \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043A\u0438 \u0432 \u043A\u0456\u043D\u0446\u0456, \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E): "${text}"` }],
+          max_tokens: 30,
+          temperature: 0.5
+        })
+      });
+      const data = await res.json();
+      const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, "");
+      if (!summary) return;
+      const moments = getMoments();
+      const idx = moments.findIndex((m) => m.id === momentId);
+      if (idx !== -1) {
+        moments[idx].summary = summary;
+        saveMoments(moments);
+        renderEvening();
+      }
+    } catch (e) {
+    }
+  }
+  function deleteMoment(id) {
+    saveMoments(getMoments().filter((m) => m.id !== id));
+    renderEvening();
+  }
+  async function generateEveningSummary() {
+    const btn = document.getElementById("evening-summary-btn");
+    const el = document.getElementById("evening-summary");
+    btn.textContent = "\u2026";
+    btn.disabled = true;
+    el.textContent = "\u2026";
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
+    const aiContext = getAIContext();
+    const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `
+
+${aiContext}` : "");
+    const dayData = `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
+\u0417\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}`;
+    let _quitCtx = "";
+    try {
+      const _qh = getHabits().filter((h) => h.type === "quit");
+      if (_qh.length > 0) {
+        const _ts = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+        _quitCtx = '\n\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u041A\u0438\u043D\u0443\u0442\u0438": ' + _qh.map((h) => {
+          const s = getQuitStatus(h.id);
+          return '"' + h.name + '": ' + (s.streak || 0) + " \u0434\u043D, " + (s.lastHeld === _ts ? "\u0442\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u2713" : "\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E");
+        }).join("; ");
+      }
+    } catch (e) {
+    }
+    const reply = await callAI(systemPrompt, dayData + _quitCtx, {});
+    const text = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.";
+    el.textContent = text;
+    localStorage.setItem("nm_evening_summary", JSON.stringify({ text, date: today }));
+    btn.textContent = "\u21BB";
+    btn.disabled = false;
+  }
+  async function autoEveningSummary() {
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) return;
+    if ((/* @__PURE__ */ new Date()).getHours() < 18) return;
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
+    if (moments.length === 0 && inbox.length === 0) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
+      if (saved && saved.date === today && saved.autoTs) {
+        const elapsed = Date.now() - saved.autoTs;
+        if (elapsed < 50 * 60 * 1e3) return;
+      }
+    } catch (e) {
+    }
+    const aiContext = getAIContext();
+    const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `
+
+${aiContext}` : "");
+    const dayData = `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
+\u0417\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}`;
+    try {
+      const reply = await callAI(systemPrompt, dayData, {});
+      if (!reply) return;
+      localStorage.setItem("nm_evening_summary", JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
+      if (currentTab === "evening") {
+        const el = document.getElementById("evening-summary");
+        if (el) el.textContent = reply;
+      }
+    } catch (e) {
+    }
+  }
+  function setupAutoEveningSummary() {
+    setTimeout(() => {
+      autoEveningSummary();
+      setInterval(autoEveningSummary, 60 * 60 * 1e3);
+    }, 5 * 60 * 1e3);
+  }
+  function openMomentView(momentId) {
+    const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+    const m = moments.find((x) => x.id === momentId);
+    if (!m) return;
+    const moodEmoji = { positive: "\u{1F60A}", neutral: "\u{1F610}", negative: "\u{1F61E}" };
+    const headerEl = document.getElementById("moment-view-header");
+    const timeEl = document.getElementById("moment-view-time");
+    const textEl = document.getElementById("moment-view-text");
+    const summaryBlock = document.getElementById("moment-view-summary-block");
+    const summaryEl = document.getElementById("moment-view-summary");
+    if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || "") + " \u041C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F";
+    if (timeEl && m.ts) timeEl.textContent = new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+    if (textEl) textEl.textContent = m.text || "";
+    if (summaryBlock && summaryEl && m.summary && m.summary !== m.text) {
+      summaryEl.textContent = m.summary;
+      summaryBlock.style.display = "block";
+    } else if (summaryBlock) {
+      summaryBlock.style.display = "none";
+    }
+    const modal = document.getElementById("moment-view-modal");
+    if (modal) {
+      modal.style.display = "flex";
+      setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeMomentView);
+    }
+  }
+  function closeMomentView() {
+    const modal = document.getElementById("moment-view-modal");
+    if (modal) modal.style.display = "none";
+  }
+  function isEveningLocked() {
+    const d = /* @__PURE__ */ new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    return h < 18 || h === 23 && m >= 59;
+  }
+  function _formatUnlockCountdown() {
+    const now = /* @__PURE__ */ new Date();
+    const target = new Date(now);
+    target.setHours(18, 0, 0, 0);
+    if (now.getHours() >= 18) target.setDate(target.getDate() + 1);
+    const diffMin = Math.max(1, Math.round((target - now) / 6e4));
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    if (h > 0) return `\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: ${h} \u0433\u043E\u0434 ${m} \u0445\u0432`;
+    return `\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: ${m} \u0445\u0432`;
+  }
+  function updateEveningLock() {
+    const overlay = document.getElementById("evening-lock-overlay");
+    if (!overlay) return;
+    const bar = document.getElementById("evening-ai-bar");
+    const timerEl = document.getElementById("evening-lock-timer");
+    const locked = isEveningLocked();
+    const wasVisible = overlay.style.display !== "none";
+    if (locked) {
+      overlay.classList.remove("melting");
+      overlay.style.display = "flex";
+      if (bar) bar.style.display = "none";
+      if (timerEl) timerEl.textContent = _formatUnlockCountdown();
+    } else if (wasVisible) {
+      overlay.classList.add("melting");
+      setTimeout(() => {
+        overlay.style.display = "none";
+        overlay.classList.remove("melting");
+      }, 650);
+    }
+  }
+  function _startEveningLockTicker() {
+    if (_eveningLockTickerId) return;
+    _eveningLockTickerId = setInterval(updateEveningLock, 60 * 1e3);
+    if (!_eveningLockVisListener) {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) updateEveningLock();
+      });
+      _eveningLockVisListener = true;
+    }
+  }
+  var currentMomentMood, EVENING_SUMMARY_PROMPT, _eveningLockTickerId, _eveningLockVisListener;
+  var init_evening = __esm({
+    "src/tabs/evening.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_finance();
+      init_projects();
+      init_calendar();
+      currentMomentMood = "positive";
+      EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} \u0417\u0440\u043E\u0431\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F (3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0417\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u043D\u0430 "\u0442\u0438". \u0412\u0456\u0434\u0437\u043D\u0430\u0447 \u0449\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0434\u0430\u043B\u043E\u0441\u044C. \u042F\u043A\u0449\u043E \u0454 \u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0443 (\u0424\u0430\u0437\u0430 5):
+- \u042F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u0456 \u044E\u0437\u0435\u0440 \u043C\u0430\u0432 \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0456 \u0434\u043E\u0437\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (history \u0437\u0430\u043F\u0438\u0441\u0438 \u0442\u0438\u043F\u0443 'auto' \u0437 "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443") \u2014 \u043C'\u044F\u043A\u043E \u0437\u0433\u0430\u0434\u0430\u0439 ("\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443 \u041E\u043C\u0435\u0437\u0443 \u2014 \u043D\u0435 \u0437\u0430\u0431\u0443\u0434\u044C \u0437\u0430\u0432\u0442\u0440\u0430"). \u0411\u0415\u0417 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0430\u0442\u043E\u0440\u0441\u0442\u0432\u0430.
+- \u042F\u043A\u0449\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0430 \u043A\u0443\u0440\u0441\u0443 \u0434\u043E\u0431\u0440\u0430 (\u0432\u0441\u0456 \u0434\u043E\u0437\u0438 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u0456, \u0454 status_change \u0437 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F\u043C) \u2014 \u043F\u043E\u0445\u0432\u0430\u043B\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E ("\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 \u0442\u0440\u0438\u043C\u0430\u0454\u0448 \u0447\u0456\u0442\u043A\u043E").
+- \u0417\u0433\u0430\u0434\u043A\u0430 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u041E\u041F\u0426\u0406\u0419\u041D\u0410. \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043E\u0441\u043E\u0431\u043B\u0438\u0432\u043E\u0433\u043E \u2014 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439.`;
+      _eveningLockTickerId = null;
+      _eveningLockVisListener = false;
+      Object.assign(window, {
+        openAddMoment,
+        saveMoment,
+        closeMomentModal,
+        setMomentMood,
+        generateEveningSummary,
+        setEveningMood,
+        deleteMoment,
+        openMomentView,
+        closeMomentView
+      });
+      _startEveningLockTicker();
+    }
+  });
+
+  // src/tabs/evening-chat.js
+  function openEveningDialog() {
+    dialogHistory = [];
+    document.getElementById("evening-dialog").style.display = "flex";
+    document.getElementById("dialog-messages").innerHTML = "";
+    document.getElementById("dialog-input").value = "";
+    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const name = settings.name ? `, ${settings.name}` : "";
+    addDialogMessage("agent", `\u041F\u0440\u0438\u0432\u0456\u0442${name}. \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C \u2014 \u0449\u043E \u0432\u0438\u0439\u0448\u043B\u043E, \u0449\u043E \u043D\u0456. \u0411\u0435\u0437 \u043F\u0440\u0438\u043A\u0440\u0430\u0441.`);
+  }
+  function closeEveningDialog() {
+    document.getElementById("evening-dialog").style.display = "none";
+  }
+  function addDialogMessage(role, text) {
+    const el = document.getElementById("dialog-messages");
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div style="max-width:80%;background:${isAgent ? "rgba(237,233,255,0.9)" : "#7c3aed"};color:${isAgent ? "#4c1d95" : "white"};border-radius:${isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px"};padding:10px 13px;font-size:15px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    dialogHistory.push({ role: isAgent ? "assistant" : "user", content: text });
+  }
+  async function sendDialogMessage() {
+    if (dialogLoading) return;
+    const input = document.getElementById("dialog-input");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    input.style.height = "auto";
+    addDialogMessage("user", text);
+    dialogLoading = true;
+    const aiContext = getAIContext();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    const systemPrompt = `${getOWLPersonality()} \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}
+\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u0456"}`;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addDialogMessage("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      dialogLoading = false;
+      return;
+    }
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...dialogHistory.slice(-10)
+    ];
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({ model: "gpt-4o-mini", messages, max_tokens: 200, temperature: 0.8 })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content;
+      if (reply) addDialogMessage("agent", reply);
+      else addDialogMessage("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+    } catch {
+      addDialogMessage("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+    dialogLoading = false;
+  }
+  function showEveningBarMessages() {
+    openChatBar("evening");
+  }
+  function addEveningBarMsg(role, text, _noSave = false) {
+    const el = document.getElementById("evening-bar-messages");
+    if (!el) return;
+    if (_eveningTypingEl) {
+      _eveningTypingEl.remove();
+      _eveningTypingEl = null;
+    }
+    if (role === "typing") {
+      const td = document.createElement("div");
+      td.style.cssText = "display:flex";
+      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
+      el.appendChild(td);
+      _eveningTypingEl = td;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    if (!_noSave) {
+      try {
+        openChatBar("evening");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
+    else eveningBarHistory.push({ role: "assistant", content: text });
+    if (!_noSave) saveChatMsg("evening", role, text);
+  }
+  async function sendEveningBarMessage() {
+    if (eveningBarLoading) return;
+    const input = document.getElementById("evening-bar-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addEveningBarMsg("user", text);
+    eveningBarLoading = true;
+    addEveningBarMsg("typing", "");
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
+    const todayNotes = JSON.parse(localStorage.getItem("nm_notes") || "[]").filter((n) => new Date(n.ts || n.createdAt || 0).toDateString() === today);
+    const aiContext = getAIContext();
+    const systemPrompt = `${getOWLPersonality()} \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F).
+\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u0456"}.
+\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${todayNotes.map((n) => n.title || n.text || "").join("; ") || "\u043D\u0435\u043C\u0430\u0454"}.
+\u0412\u0441\u0456 \u0437\u0430\u043F\u0438\u0441\u0438: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}.
+\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0437\u0430\u043F\u0438\u0441 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
+- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
+- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
+- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
+- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u0414\u043E\u0445\u0456\u0434: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
+- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0442\u0435\u043A\u0441\u0442 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
+\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0449\u0435.${aiContext ? "\n\n" + aiContext : ""}`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...eveningBarHistory.slice(-10)], max_tokens: 300, temperature: 0.8 })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        eveningBarLoading = false;
+        return;
+      }
+      const blocks = extractJsonBlocks(reply);
+      let handled = false;
+      for (const parsed of blocks) {
+        if (processUniversalAction(parsed, text, addEveningBarMsg)) handled = true;
+      }
+      if (!handled) safeAgentReply(reply, addEveningBarMsg);
+    } catch {
+      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+    }
+    eveningBarLoading = false;
+  }
+  var _eveningTypingEl, dialogHistory, dialogLoading, eveningBarHistory, eveningBarLoading;
+  var init_evening_chat = __esm({
+    "src/tabs/evening-chat.js"() {
+      init_utils();
+      init_core();
+      init_habits();
+      init_evening();
+      _eveningTypingEl = null;
+      dialogHistory = [];
+      dialogLoading = false;
+      eveningBarHistory = [];
+      eveningBarLoading = false;
+      Object.assign(window, {
+        openEveningDialog,
+        closeEveningDialog,
+        sendDialogMessage,
+        sendEveningBarMessage,
+        showEveningBarMessages
+      });
+    }
+  });
+
+  // src/tabs/me.js
+  function renderMeHabitsStats() {
+    const habits = getHabits();
+    const el = document.getElementById("me-habits-stats-list");
+    const block = document.getElementById("me-habits-stats");
+    if (!el) return;
+    if (habits.length === 0) {
+      if (block) block.style.display = "none";
+      return;
+    }
+    if (block) block.style.display = "block";
+    const log = getHabitLog();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+    el.innerHTML = habits.map((h) => {
+      const pct = getHabitPct(h.id);
+      const streak = getHabitStreak(h.id);
+      const isDoneToday = !!log[today]?.[h.id];
+      const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
+      return `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || "\u2B55"} ${escapeHtml(h.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#dc2626"}">${pct}%</span>
+      </div>
+      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
+        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#ef4444"};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `\u{1F525} ${streak} \u0434\u043D\u0456 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \xB7 ` : ""}\u0437\u0430 30 \u0434\u043D\u0456\u0432${isScheduledToday ? isDoneToday ? " \xB7 \u2705 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : " \xB7 \u23F3 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : ""}</div>
+    </div>`;
+    }).join("");
+  }
+  async function sendMeChatMessage() {
+    const input = document.getElementById("me-chat-input");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addMeChatMsg("user", text);
+    meChatHistory.push({ role: "user", content: text });
+    const loadId = "me-chat-load-" + Date.now();
+    addMeChatMsg("agent", "\u2026", false, loadId);
+    const context = getAIContext();
+    const stats = getMeStatsContext();
+    const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
+\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0434\u0456\u044E \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
+- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
+- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
+- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
+- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
+- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
+- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
+- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
+- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
+- \u041F\u043E\u0434\u0456\u044F: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
+- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
+    const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
+    const loadEl = document.getElementById(loadId);
+    let handled = false;
+    if (reply) {
+      const blocks = extractJsonBlocks(reply);
+      for (const parsed of blocks) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
+          handled = true;
+        }
+      }
+      if (handled && loadEl) loadEl.textContent = "\u2705";
+    }
+    if (!handled && loadEl) loadEl.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.";
+    if (reply) meChatHistory.push({ role: "assistant", content: reply });
+    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+  }
+  function renderMe() {
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const now = /* @__PURE__ */ new Date();
+    const todayDow = (now.getDay() + 6) % 7;
+    try {
+      let streak = 0;
+      for (let i = 0; i <= 60; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const ds = d.toDateString();
+        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t) => t.createdAt && new Date(t.createdAt).toDateString() === ds);
+        if (hasRecord) streak++;
+        else if (i > 0) break;
+      }
+      const badge = document.getElementById("me-streak-badge");
+      const count = document.getElementById("me-streak-count");
+      if (badge && count) {
+        if (streak >= 2) {
+          badge.style.display = "flex";
+          count.textContent = streak;
+        } else badge.style.display = "none";
+      }
+    } catch (e) {
+    }
+    const ringsEl = document.getElementById("me-week-rings");
+    if (ringsEl) {
+      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+      const accent = "#7c4a2a";
+      ringsEl.innerHTML = days.map((d, i) => {
+        const daysAgo = todayDow - i;
+        const date = new Date(now);
+        date.setDate(now.getDate() - daysAgo);
+        const ds = date.toDateString();
+        const future = daysAgo < 0;
+        const count = future ? 0 : inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
+        const doneTasks = future ? 0 : getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+        const total = count + doneTasks;
+        const maxVal = 8;
+        const pct = future ? 0 : Math.min(total / maxVal, 1);
+        const circ = 69;
+        const offset = circ - circ * pct;
+        const isToday = daysAgo === 0;
+        const isBest = !future && pct >= 0.85;
+        const strokeColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.6)` : pct > 0 ? `rgba(124,74,42,0.3)` : "transparent";
+        const label = future ? "\u2013" : isBest ? "\u2605" : total > 0 ? total : "\xB7";
+        const labelColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.65)` : "rgba(30,16,64,0.22)";
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <svg width="32" height="32" viewBox="0 0 30 30">
+          <circle cx="15" cy="15" r="11" fill="none" stroke="rgba(30,16,64,0.07)" stroke-width="3.5"/>
+          ${!future && pct > 0 ? `<circle cx="15" cy="15" r="11" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 15 15)"/>` : ""}
+          <text x="15" y="19" text-anchor="middle" font-size="${isBest ? 9 : 8}" font-weight="${isBest ? 900 : 800}" fill="${labelColor}">${label}</text>
+        </svg>
+        <div style="font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : "rgba(30,16,64,0.35)"}">${d}</div>
+      </div>`;
+      }).join("");
+    }
+    const compareEl = document.getElementById("me-week-compare");
+    if (compareEl) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - todayDow);
+      weekStart.setHours(0, 0, 0, 0);
+      const prevStart = new Date(weekStart);
+      prevStart.setDate(prevStart.getDate() - 7);
+      const prevEnd = new Date(weekStart);
+      const thisWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= weekStart.getTime()).length;
+      const prevWeekTasks = getTasks().filter((t) => t.status === "done" && t.completedAt >= prevStart.getTime() && t.completedAt < prevEnd.getTime()).length;
+      const habits = getHabits();
+      const log = getHabitLog();
+      const buildHabitsMe = habits.filter((h) => h.type !== "quit");
+      let thisHabitPct = 0, prevHabitPct = 0;
+      if (buildHabitsMe.length > 0) {
+        let thisDone = 0, thisTotal = 0, prevDone = 0, prevTotal = 0;
+        for (let i = 0; i <= todayDow; i++) {
+          const d = new Date(weekStart);
+          d.setDate(weekStart.getDate() + i);
+          const dow = (d.getDay() + 6) % 7;
+          const ds = d.toDateString();
+          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+          thisTotal += dayH.length;
+          thisDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
+        }
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(prevStart);
+          d.setDate(prevStart.getDate() + i);
+          const dow = (d.getDay() + 6) % 7;
+          const ds = d.toDateString();
+          const dayH = buildHabitsMe.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+          prevTotal += dayH.length;
+          prevDone += dayH.filter((h) => !!log[ds]?.[h.id]).length;
+        }
+        thisHabitPct = thisTotal > 0 ? Math.round(thisDone / thisTotal * 100) : 0;
+        prevHabitPct = prevTotal > 0 ? Math.round(prevDone / prevTotal * 100) : 0;
+      }
+      const thisNotes = getNotes().filter((n) => (n.ts || 0) >= weekStart.getTime()).length;
+      const prevNotes = getNotes().filter((n) => (n.ts || 0) >= prevStart.getTime() && (n.ts || 0) < prevEnd.getTime()).length;
+      const diffColor = (a, b) => a >= b ? "#16a34a" : "#c2410c";
+      const diffArrow = (a, b) => a >= b ? "\u2191" : "\u2193";
+      compareEl.innerHTML = [
+        { label: "\u0437\u0430\u0434\u0430\u0447\u0456", cur: thisWeekTasks, prev: prevWeekTasks, color: "#ea580c" },
+        { label: "\u0437\u0432\u0438\u0447\u043A\u0438", cur: thisHabitPct + "%", prev: prevHabitPct + "%", rawCur: thisHabitPct, rawPrev: prevHabitPct, color: "#16a34a" },
+        { label: "\u043D\u043E\u0442\u0430\u0442\u043A\u0438", cur: thisNotes, prev: prevNotes, color: "#7c4a2a" }
+      ].map((item) => {
+        const rc = item.rawCur !== void 0 ? item.rawCur : item.cur;
+        const rp = item.rawPrev !== void 0 ? item.rawPrev : item.prev;
+        const diff = rc - rp;
+        return `<div style="flex:1;background:rgba(255,255,255,0.55);border-radius:12px;padding:8px 6px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:${item.color};line-height:1">${item.cur}</div>
+        <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">${item.label}</div>
+        <div style="font-size:10px;font-weight:800;color:${diffColor(rc, rp)};margin-top:2px">${diffArrow(rc, rp)} ${diff >= 0 ? "+" : ""}${item.rawCur !== void 0 ? diff + "%" : diff}</div>
+      </div>`;
+      }).join("");
+    }
+    const moodEl = document.getElementById("me-mood-bars");
+    if (moodEl) {
+      const days = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+      const moodMap = { fire: 5, good: 4, ok: 3, meh: 2, bad: 1 };
+      const bars = days.map((d, i) => {
+        const daysAgo = todayDow - i;
+        const future = daysAgo < 0;
+        if (future) return { d, h: 3, color: "rgba(30,16,64,0.05)", future: true };
+        const date = new Date(now);
+        date.setDate(now.getDate() - daysAgo);
+        const ds = date.toDateString();
+        try {
+          const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
+          if (saved && saved.date === ds && saved.mood) {
+            const val = moodMap[saved.mood] || 3;
+            const maxH = 26;
+            const h2 = Math.round(val / 5 * maxH);
+            const colors = { fire: "#ea580c", good: "#22c55e", ok: "#16a34a", meh: "#d97706", bad: "#ef4444" };
+            return { d, h: Math.max(4, h2), color: colors[saved.mood] || "#16a34a", future: false };
+          }
+        } catch (e) {
+        }
+        const dayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === ds);
+        if (dayMoments.length === 0) return { d, h: 3, color: "rgba(30,16,64,0.07)", future: false };
+        const pos = dayMoments.filter((m) => m.mood === "positive").length;
+        const pct = pos / dayMoments.length;
+        const h = Math.max(5, Math.round(pct * 26));
+        return { d, h, color: pct >= 0.6 ? "#16a34a" : pct >= 0.3 ? "#d97706" : "#ef4444", future: false };
+      });
+      moodEl.innerHTML = bars.map(
+        (b) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
+        <div style="width:100%;height:${b.h}px;background:${b.color};border-radius:2px 2px 0 0"></div>
+        <div style="font-size:8px;font-weight:700;color:rgba(30,16,64,0.35)">${b.d}</div>
+      </div>`
+      ).join("");
+    }
+    const projBlock = document.getElementById("me-projects-block");
+    const projList = document.getElementById("me-projects-list");
+    if (projBlock && projList) {
+      let activeProjects = [];
+      try {
+        activeProjects = getProjects().slice(0, 3);
+      } catch (e) {
+      }
+      if (activeProjects.length > 0) {
+        projBlock.style.display = "block";
+        projList.innerHTML = activeProjects.map((p) => {
+          const steps = p.steps || [];
+          const done = steps.filter((s) => s.done).length;
+          const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
+          const nextStep = steps.find((s) => !s.done);
+          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
+              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
+              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
+            </div>
+            <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
+          </div>
+          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:#7c4a2a;border-radius:3px;transition:width 0.5s"></div>
+          </div>
+        </div>`;
+        }).join("");
+      } else {
+        projBlock.style.display = "none";
+      }
+    }
+    renderMeHabitsStats();
+    renderMeActivityChart();
+  }
+  function renderMeActivityChart() {
+    const chartEl = document.getElementById("me-activity-chart");
+    const labelsEl = document.getElementById("me-activity-labels");
+    const totalEl = document.getElementById("me-activity-total");
+    if (!chartEl) return;
+    const now = /* @__PURE__ */ new Date();
+    const todayDow = (now.getDay() + 6) % 7;
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const dayLabels = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+    const accent = "#7c4a2a";
+    const allBuildHabits = getHabits().filter((h) => h.type !== "quit");
+    const activeTasks = getTasks().filter((t) => t.status === "active").length;
+    const baseline = Math.max(1, Math.round(activeTasks / 7) + 1);
+    const values = dayLabels.map((_, i) => {
+      const daysAgo = todayDow - i;
+      const d = new Date(now);
+      d.setDate(now.getDate() - daysAgo);
+      const ds = d.toDateString();
+      if (daysAgo < 0) return null;
+      const inboxCount = inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
+      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+      const log = getHabitLog();
+      const dow = (d.getDay() + 6) % 7;
+      const todayH = allBuildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+      const doneH = todayH.filter((h) => !!log[ds]?.[h.id]).length;
+      return { val: inboxCount + doneTasks + doneH, norm: Math.max(1, todayH.length + Math.round(activeTasks / 7)) };
+    });
+    const validValues = values.filter((v) => v !== null);
+    const maxVal = Math.max(...validValues.map((v) => v.val), baseline * 2, 1);
+    const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
+    if (totalEl) totalEl.textContent = `${totalActivity} \u0434\u0456\u0439`;
+    const W = chartEl.offsetWidth || 300;
+    const H = 64;
+    const padT = 6, padB = 10;
+    const chartH = H - padT - padB;
+    const xOf = (i) => (i + 0.5) * W / 7;
+    const yOf = (val) => padT + chartH * (1 - val / maxVal);
+    const points = values.map((v, i) => {
+      if (v === null) return null;
+      return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
+    }).filter(Boolean);
+    if (points.length < 2) {
+      chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">\u041D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>';
+      if (labelsEl) labelsEl.innerHTML = "";
+      return;
+    }
+    const baselineY = yOf(baseline);
+    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${H} L ${points[0].x.toFixed(1)} ${H} Z`;
+    const dots = points.map((p) => {
+      const isToday = p.i === todayDow;
+      const aboveNorm = p.v >= p.norm;
+      const fill = p.v === 0 ? "rgba(124,74,42,0.2)" : aboveNorm ? "#16a34a" : "#c2410c";
+      const r = isToday ? 5 : 3.5;
+      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
+    }).join("");
+    const normLabelTop = Math.max(0, Math.round(baselineY) - 18);
+    chartEl.innerHTML = `
+    <svg width="${W}" height="${H}" style="display:block;overflow:visible">
+      <defs>
+        <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}"
+            stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
+      <path d="${areaPath}" fill="url(#actGrad)"/>
+      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>
+    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.45);background:rgba(245,240,235,0.85);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">\u041D\u041E\u0420\u041C\u0410</div>
+  `;
+    if (labelsEl) {
+      labelsEl.innerHTML = values.map((v, i) => {
+        const isToday = i === todayDow;
+        const isFuture = v === null;
+        return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : isFuture ? "rgba(30,16,64,0.15)" : "rgba(30,16,64,0.35)"}">${dayLabels[i]}</div>`;
+      }).join("");
+    }
+  }
+  async function refreshMeAnalysis() {
+    const btn = document.getElementById("me-refresh-btn");
+    const el = document.getElementById("me-ai-analysis");
+    btn.textContent = "\u2026";
+    btn.disabled = true;
+    el.textContent = "\u2026";
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    const notes = getNotes();
+    const aiContext = getAIContext();
+    const totalRecords = inbox.length + tasks.length + notes.length;
+    if (totalRecords < 3) {
+      el.textContent = "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.";
+      btn.textContent = "\u21BB";
+      btn.disabled = false;
+      return;
+    }
+    const dataNote = totalRecords < 10 ? "\u0423\u0412\u0410\u0413\u0410: \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E, \u043D\u0435 \u0440\u043E\u0431\u0438 \u0433\u043B\u0438\u0431\u043E\u043A\u0438\u0445 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0456\u0432 \u043F\u0440\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0456\u0441\u0442\u044C \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0449\u043E \u0434\u043E\u0434\u0430\u0442\u0438." : "";
+    const systemPrompt = `${getOWLPersonality()} \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 (3-5 \u0440\u0435\u0447\u0435\u043D\u044C) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0429\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435 \u0456 \u0449\u043E \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. ${dataNote} \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u043F\u043E\u0440\u0430\u0434\u043E\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043E\u0433\u043B\u044F\u0434\u0456 (\u0424\u0430\u0437\u0430 5):
+- \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
+- \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
+    const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
+\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status !== "done").length}
+\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status === "done").length}
+\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
+\u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
+    const reply = await callAI(systemPrompt, userData, {});
+    el.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.";
+    btn.textContent = "\u21BB";
+    btn.disabled = false;
+    if (reply && totalRecords >= 5) {
+      const adviceEl = document.getElementById("me-ai-advice");
+      const adviceBlock = document.getElementById("me-advice-block");
+      if (adviceEl && adviceBlock) {
+        adviceEl.textContent = "\u2026";
+        adviceBlock.style.display = "block";
+        const advicePrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0434\u0430\u0439 \u0440\u0456\u0432\u043D\u043E 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456, \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043B\u044E\u0434\u0438\u043D\u0438. \u041A\u043E\u0436\u043D\u0430 \u043F\u043E\u0440\u0430\u0434\u0430 \u2014 \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0456 \u0434\u0456\u0454\u0432\u0430. \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456: "1. [\u043F\u043E\u0440\u0430\u0434\u0430]
+2. [\u043F\u043E\u0440\u0430\u0434\u0430]
+3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
+        const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
+
+\u0414\u0430\u043D\u0456: ${userData}`, {});
+        if (adviceReply) {
+          adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
+        } else {
+          adviceBlock.style.display = "none";
+        }
+      }
+    }
+  }
+  function showMeChatMessages() {
+    openChatBar("me");
+  }
+  function addMeChatMsg(role, text, _noSave = false, id = "") {
+    const el = document.getElementById("me-chat-messages");
+    if (!el) return;
+    if (!_noSave) {
+      try {
+        openChatBar("me");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    if (!_noSave) saveChatMsg("me", role, text);
+  }
+  var meChatHistory;
+  var init_me = __esm({
+    "src/tabs/me.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_evening();
+      init_projects();
+      meChatHistory = [];
+      Object.assign(window, {
+        sendMeChatMessage,
+        showMeChatMessages,
+        refreshMeAnalysis
       });
     }
   });
@@ -11482,6 +11571,11 @@ ${inboxList}`);
     try {
       const momentsCtx = getMomentsContext();
       if (momentsCtx) parts.push(momentsCtx);
+    } catch (e) {
+    }
+    try {
+      const eveCtx = getEveningContext();
+      if (eveCtx) parts.push(eveCtx);
     } catch (e) {
     }
     try {
