@@ -2,31 +2,87 @@
 
 > **Правило ротації:** у файлі детально описані **2 останні активні сесії**.
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
-> Попередні сесії до dIooU — в архіві (QV1n2, NFtzw, uDZmz, rSTLV, w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
+> Попередні сесії до 6GoDe — в архіві (dIooU, QV1n2, NFtzw, uDZmz, rSTLV, w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-19 (сесія **6GoDe** — **8 фіксів якості + Здоров'я 100%**: switch_tab guard, sw.js noise, Auto-silence softer, legacy шкал cleanup 3 фази, health interview prompt)
+**Оновлено:** 2026-04-19 (сесія **JvzDi** — **3 фікси з iPhone-тесту v307**: `switch_tab` жорстке правило, видалення плацебо `set_theme`, порт парсера чіпів у Inbox chat. Виявлено потребу "Один мозок" — UI tools тільки в Inbox, решта 7 чатів ізольовані.)
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. 🛠️ СЕСІЯ 6GoDe — чищення логу + Здоров'я 100%.** 8 комітів: виправлено помилку `switch_tab` (сова більше не падає на вигаданих вкладках), прибрано фантомний "sw.js load failed" (тиші `.catch()` на `reg.update()`), 3 ×`console.warn`→`log` (stale/smart/tab fallback більше не як попередження), пом'якшено Auto-silence 4.40 (5→7 поріг, 4→2 год тиша, `nm-data-changed` скидає лічильник), прибрано legacy `nm_health_log` (UI шкал 1-10 видалено 15.04 — тепер і код що читав те видалено: `getHealthContext`, 2 кореляції, cross-tab listener, міграція v6), додано інтерв'ю перед `create_health_card` (сова питає 1-3 питання про дату/лікаря/ліки).
+**1. 🧭 СЕСІЯ JvzDi — 3 фікси + знайдено великий архітектурний запит "Один мозок".** 2 коміти `240a0b5` + `0bf3d37`. Закрито з iPhone-тесту v307: (а) "Відкрий задачі" в Inbox більше не створює задачу-назву, а перемикає вкладку (жорстке правило промпту); (б) `set_theme` tool видалено — плацебо, темної теми у застосунку нема; (в) чіпи у Health-інтерв'ю тепер рендеряться як справжні кнопки під бульбашкою сови (портовано `_parseContentChips` з evening-chat + правило формату у INBOX_SYSTEM_PROMPT).
 
-**2. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1912`.
+**2. 🚨 НАЙБІЛЬШИЙ ВИДКРИТИЙ НАПРЯМ — "Один мозок" (UI tools у всі 7 чатів).** iPhone-тест після мержу v308 показав: "Відкрий задачі" у чаті Здоров'я → сова "Не можу відкрити задачі" (хоча знає про задачу). "Відкрий аналітику" у чаті Задач → "Не бачу такого запису". Порушення принципу "один мозок" з CLAUDE.md. Причина: UI tools (`switch_tab`, `open_memory`, `open_settings` тощо) підключені ТІЛЬКИ в Inbox chat. Решта 7 чатів (Вечір, Задачі, Нотатки, Фінанси, Звички, Я, Здоров'я, Проекти) — ізольовані локальні обробники. **Роман дав "Роби" на виправлення але просив не ламати** — відклали у наступну сесію з чистим контекстом.
 
-**3. НАСТУПНИЙ КРОК — ВИБІР ІЗ ROADMAP.** Active порожній (Вечір 2.0 MVP і Здоров'я закрито). Варіанти:
-- **A. 👤 Я 65→100%** (1-2 сесії) — теплова карта 14/30 днів, автопатерни тижня
-- **B. 📁 Проекти 65→100%** (2 сесії) — глибоке інтерв'ю 4 питання, стагнація, синк Витрати→Фінанси
-- **C. 4.17.B — 6 заблокованих UI tools** (2-3 сесії) — open_record, open_trash, calendar_jump_to, filter_tasks, clear_chat, toggle_owl_board
-- **D. Пост-MVP Вечора** (див. `docs/EVENING_2.0_PLAN.md` секція "Після MVP") — Ритуал неділі, інтелект-карта дня, розкатка чат-двигуна на інші 7 чатів
+**3. 📋 ПЛАН НАСТУПНОЇ СЕСІЇ — "Один мозок #1 мінімум".** Підключити UI tools у всі 7 чатів (1 сесія, ~60 хв, 7-8 комітів):
+  - **Чати на tool calling** (1): Вечір (`evening-chat.js`) — додати UI_TOOLS до INBOX_TOOLS у `callAIWithTools` + dispatch через `handleUITool`. Простий.
+  - **Чати на text JSON** (6): Задачі (`habits.js::sendTasksBarMessage`), Нотатки (`notes.js::sendNotesBarMessage`), Фінанси (`finance-chat.js::sendFinanceBarMessage`), Здоров'я (`health.js::sendHealthBarMessage`), Проекти (`projects.js::sendProjectsBarMessage`), Я (`me.js::sendMeChatMessage`). Переключити на `callAIWithTools(UI_TOOLS_ONLY)` АБО додати паралельний tool call + парсер. **Методологія:** один чат → коміт → тест → наступний.
+  - **Перед стартом прочитати:** `src/tabs/inbox.js::sendToAI` рядки 468-480 (зразок UI tools dispatch), `src/ai/ui-tools.js` (UI_TOOL_NAMES, handleUITool).
 
-**4. ТЕСТУВАННЯ НА iPhone** — перевірити після деплою v301+: (а) команди голосом 8 UI tools реально працюють, (б) якщо сова вигадає вкладку — не падає, (в) після 18:00 Вечір 2.0 розблокований і тригер evening-prompt з червоною крапкою спрацьовує, (г) `create_health_card` через Inbox дає 1-3 питання перед створенням.
+**4. 🔜 ПІСЛЯ "Один мозок #1" — окремі задачі з ROADMAP:**
+  - **👤 Я 65→100%** (1-2 сесії) — теплова карта, автопатерни тижня
+  - **📁 Проекти 65→100%** (2 сесії) — глибоке інтерв'ю, стагнація, синк Витрати→Фінанси
+  - **"Один мозок #2 повний" (2-3 сесії)** — переробити 7 чатів на повний `INBOX_TOOLS` (не тільки UI), щоб юзер міг створити/редагувати/видалити будь-який тип запису з будь-якого чату
 
-**5. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. 6 заблокованих винесено у 4.17.B. Довідник → `docs/AI_TOOLS.md`.
+**5. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1951`.
 
-**6. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази.
+**6. ТЕСТУВАННЯ НА iPhone v308+ після мержу** — перевірити: (а) "Відкрий задачі" в Inbox перемикає вкладку, (б) "Темна тема" у Inbox — сова просто відповідає текстом бо tool нема, (в) "Болить горло 3 дні" в Inbox — сова питає 1-3 питання і під бульбашкою справжні кнопки-чіпи (не текст у дужках).
 
-**7. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати.
+**7. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати. **Файли >250 рядків — skeleton+Edit, checkpoint-коміт після кожної фази.**
+
+---
+
+## 🔧 Сесія JvzDi — 3 фікси з iPhone-тесту v307 + виявлена проблема "Один мозок" (19.04.2026)
+
+### Зроблено
+
+**1. Жорстке правило `switch_tab` у промпті — коміт `240a0b5`.** iPhone-тест v307: "Відкрий задачі" у Inbox повертав "✓ Збережено" (AI інтерпретував як save_task з title="задачі"). Корінь — м'яке правило "відкрий X → switch_tab" без заборони альтернатив. Переписав правило у `prompts.js` UI TOOLS секція як ЖОРСТКЕ з прикладами: повідомлення що починається з "відкрий/покажи/перейди до/переключи на + назва вкладки" → ЗАВЖДИ switch_tab, НЕ save_task. Додано примітку "назва вкладки у командах 'відкрий X' — НЕ контент для збереження".
+
+**2. Видалено плацебо `set_theme` — коміт `240a0b5` (той самий).** iPhone-тест: "Зроби темну тему" → сова "Темна тема." але нічого не змінилось. Причина: `applyTheme()` у `nav.js` лише фарбує колір таб-бару за поточною вкладкою, глобальної темної теми не існує. Tool був ілюзією. Прибрав: (а) визначення з `UI_TOOLS` масиву; (б) case з `handleUITool` dispatcher; (в) рядок з `INBOX_SYSTEM_PROMPT`; (г) невикористаний імпорт `applyTheme` з `ui-tools.js`. Повернемо коли буде реальна темна тема.
+
+**3. Портовано парсер чіпів `_parseContentChips` у Inbox chat — коміт `0bf3d37`.** iPhone-тест: "Болить горло 2 дні" → сова "Коли саме почалося? ('Сьогодні' / 'Тиждень тому' / 'Давно')" — варіанти текстом у дужках, не кнопки. Причина: Health-інтерв'ю промпт (додано 6GoDe) обіцяв чіпи, але Inbox chat не мав парсера JSON блоку `{chips:[...]}` — тільки evening-chat мав. Зміни у `src/tabs/inbox.js`: (а) `addInboxChatMsg(role, text, chips = null)` — новий третій параметр; (б) імпорт `renderChips` з `owl/chips.js` + `extractJsonBlocks` з `core/utils.js`; (в) після бульбашки сови — `<div class="chat-chips-row">` з чіпами; (г) перед кожним agent-повідомленням видаляються застарілі чіпи попередніх (релевантні лише останньому питанню); (д) helper `_parseContentChips(content)` — повертає `{text, chips}` з content, text без JSON; (е) 3 точки показу `msg.content` (sendToAI без tool_calls, sendToAI з tool_calls, sendClarifyText) замінено на парсинг+рендер з чіпами. Промпт у `prompts.js`: Health-інтерв'ю приклад тепер показує `{"chips":[{"label":"Сьогодні","action":"chat"}, ...]}` формат, плюс загальне правило "ФОРМАТ ЧІПІВ" для всього Inbox чату (2-4 чіпи, label до 3 слів, action завжди "chat", не додавати при відкритих питаннях або коротких підтвердженнях).
+
+**4. CACHE_NAME bump:** `nm-20260419-1912` → `nm-20260419-1951`.
+
+### Обговорено (без виконання)
+
+- **Архітектурний запит "Один мозок" (Роман чітко сформулював):** UI tools і tool calling підключені ТІЛЬКИ в Inbox. Решта 7 чатів (Вечір, Задачі, Нотатки, Фінанси, Звички, Я, Здоров'я, Проекти) — ізольовані локальні обробники. "Відкрий задачі" у чаті Здоров'я не перемикає вкладку, "Відкрий аналітику" у чаті Задач — сова шукає задачу з назвою "аналітику". Порушення принципу "один мозок" з CLAUDE.md. Роман: "В нас один мозок перевір усі вкладки". Два рівні вирішення:
+  - **#1 Мінімум (наступна сесія, ~60 хв):** додати UI tools у всі 7 чатів. Голосом/текстом з будь-якого чату можна відкрити будь-яку вкладку, аналітику, пам'ять, налаштування.
+  - **#2 Повний (окремо 2-3 сесії):** переробити 7 чатів на `callAIWithTools` з повним INBOX_TOOLS. Юзер з будь-якого чату може створити/редагувати/видалити будь-який тип запису. Це пункти 4.9+4.10 з ROADMAP ("розкатка чат-двигуна").
+  - Додатковий баг глибший: чат Задач жорстко замкнений на задачну логіку в промпті ("Болить горло 3 дні" → "Що саме виснажило? Може переглянемо пріоритети?" — зовсім не про здоров'я). Потребує або переадресації на save_note/create_health_card, або м'якшого промпту.
+
+- **Пост-MVP Вечора (4 напрямки з `EVENING_2.0_PLAN.md`):** посилення ритуалу (неділя/автомоменти/інтелект-карта/заспокоєння), розширення автосинхронізації (AI-роутинг щоденника/зворотний розпорядок/Google Calendar), інтеграція з вкладками (ліки у підсумку/календар-дзеркало/проекти), розкатка чат-двигуна. Роман обрав підхід "по порядку як запропонував" — спочатку iPhone-тест, потім розкатка двигуна. Тест виявив проблему "Один мозок" — вона стала пріоритетом над пост-MVP фічами.
+
+- **Результати iPhone-тесту v307 крім 3 фіксів:** (а) лог діагностики 9/9 smoke зелені; (б) `sw.js load failed` не з'являється після v307 (6GoDe .catch() фікс працює); (в) `stale message detected` тепер як `log` не `warn` (6GoDe downgrade працює); (г) Auto-silence активний 12 хв очікувано — Роман читав/тестував без CRUD; (д) 1 fail запит з 12 — короткочасний glitch.
+
+### Ключові рішення
+
+- **Прибрати `set_theme` замість додати dark theme.** Плацебо-tool руйнує довіру гірше ніж відсутність фічі. Повертаємо коли буде реальна темна тема.
+- **Портувати `_parseContentChips` з evening-chat, не винаходити новий.** Evening-chat перевірений патерн з 8 фаз MVP Вечора. Принцип "один двигун" — якщо закритий тест у Вечорі, має закривати і в Inbox.
+- **Не чіпати "Один мозок" у цьому чаті через контекст 90%.** Роман: "треба зробити але так щоб не поламати". Правильне рішення — зафіксувати план у SESSION_STATE і почати свіжу сесію. 3 фікси цієї сесії вже на проді і стабільні — добра точка зупинки.
+- **Жорстке формулювання промпту > м'яке.** AI краще слухається категоричних правил з прикладами ("ЗАВЖДИ switch_tab, НЕ save_task") ніж ввічливих натяків. Це повторюється для всіх крайніх випадків.
+
+### Інциденти
+
+- Без reset/force push. 2 чистих коміти `240a0b5 → 0bf3d37`.
+- Не обривалось (stream idle timeout не траплявся).
+- Одна `npm install` перед локальним build (esbuild не був встановлений у робочій директорії).
+
+### Метрики
+
+- **Коміти:** `240a0b5 → 0bf3d37` (2 коміти)
+- **Гілка:** `claude/start-session-JvzDi`
+- **Версії:** v307 (старт) → v308+ після мержу
+- **CACHE_NAME:** `nm-20260419-1912` → `nm-20260419-1951`
+- **Файли змінені:** `src/ai/prompts.js`, `src/ai/ui-tools.js`, `src/tabs/inbox.js`, `sw.js`
+- **Build:** локально зелений (node build.js без помилок після npm install)
+- **Тестування:** на iPhone v307 — 3 баги виявлено і виправлено. Тест v308+ після мержу чекаємо.
+
+### Наступні кроки
+
+- **[Пріоритет 1]** Сесія "Один мозок #1 мінімум" — UI tools у всі 7 чатів. Починати з простіших (Нотатки, Я). Checkpoint-коміт після кожного чату.
+- **[Пріоритет 2]** Тест на iPhone v308+ — підтвердити що "Відкрий задачі" перемикає вкладку і чіпи у Health-інтерв'ю клікабельні.
+- **[Пріоритет 3]** Після "Один мозок #1" — вибір напрямку з ROADMAP (Я 65→100%, Проекти 65→100%, "Один мозок #2 повний").
 
 ---
 
@@ -86,61 +142,15 @@
 
 ---
 
-## 🔧 Сесія dIooU — Вечір 2.0 MVP виконаний цілком (Ф1-8, 3 сесії функціоналу) (19.04.2026)
-
-### Зроблено
-
-**Фаза 1 (коміт `dfb1800`)** — блокування вкладки до 18:00 матовим склом (backdrop-filter blur(18px) + -webkit- + @supports fallback), анімація .melting (600ms opacity+translateY+blur→0), авто-розмикання о 18:00 і замикання о 23:59 через setInterval 60с + visibilitychange listener. Нові: isEveningLocked(), updateEveningLock() у `evening.js` + overlay `#evening-lock-overlay` у `index.html` + стилі у `style.css`.
-
-**Фаза 2 (коміт `f8d98a9`)** — `getEveningContext()` у `evening.js`: настрій, недороблені задачі з dueDate=today, закриті кроки проектів, звички summary, quit-звички статус, минулі події календаря, витрати дня топ-3. Підключено у `getAIContext()` → сова бачить вечірній зріз у ВСІХ чатах.
-
-**Фаза 3 (коміт `3479344`)** — тригер `_checkEveningPrompt` у `followups.js` (18-23, cooldown 24 год, contentHasContent guard), новий `getEveningPromptSystem()` промпт, TRIGGER_TO_TAB+=`evening-prompt:evening`. У `addEveningBarMsg` для role=agent + closed chat → showUnreadBadge('evening','evening-send-btn'). У `openChatBar` — централізований clearUnreadBadge для БУДЬ-ЯКОЇ вкладки.
-
-**Фаза 4 (коміт `b7e3070`)** — `getEveningChatSystem()` з JSON {text, chips} + таблиця 10 контекстів коли чіпи обов'язкові. Парсер JSON у `sendEveningBarMessage`. Рендер chips-pills під bubble через renderChips(container, chips, 'evening'). CSS `.chat-chips-row + .chat-chip` amber. Fix у `chips.js` sendChipToChat: inputId для evening тепер `evening-bar-input`.
-
-**Фаза 5 (коміт `bc847bb`)** — переробка вмісту `#evening-scroll`. Видалено: #evening-stats-row (3 плитки), "Продуктивність дня" з кільцем 0%, #evening-finance-block, #evening-summary-block, EVENING_SUMMARY_PROMPT, generateEveningSummary, autoEveningSummary, setupAutoEveningSummary, виклик з boot.js. Додано: `renderEveningUndoneTasks()` з чіпами [На завтра]/[На тиждень], `renderEveningQuitHabits()` з [Тримався 💪]/[Зірвався] (після тапу "Тримався" показує "Тримаєшся сьогодні ✓ стрік N дн" без чіпів), локальні `_rescheduleTask(id, daysAhead)`. Emoji настрою 40→44px.
-
-**Фаза 6 (коміт `6a99372`)** — дві CTA в `#evening-scroll` знизу: amber "📅 Поговорити про завтра" + біла "📔 Записати свій день". `openEveningTopic(topic)` — один раз на день/топік через nm_evening_topic_started. Видалено фуллскрін `#evening-dialog` + openEveningDialog/closeEveningDialog/sendDialogMessage як dead code.
-
-**Фаза 7 (коміт `f957e94`)** — повний перехід на OpenAI tool calling (callAIWithTools + INBOX_TOOLS ~45). Новий `src/tabs/evening-actions.js::dispatchEveningTool` — 22 tools (save_task/note/moment/habit, create_event, save_finance, set_reminder, save_memory_fact, complete_task/habit, edit_*, delete_*, reopen_task, add_step, move_note, update_transaction, restore_deleted) БЕЗ Inbox side-effects. Промпт: Verify Loop (4.21), Memory Echo (4.34), G13 Brain Dump, 4.12 антидублювання. Formatчіпів — окремий JSON блок у content (не весь content як JSON). Новий `_parseContentChips(content)`.
-
-**Фаза 8 (коміт `83e42a0`)** — фінальний ритуал закриття дня. `getEveningSummaryPromptV2()` з Episode Summary (4.31) + Mirror Mode (4.41) + Memory Echo (4.34), ЗАБОРОНА цифр-переказів. `generateEveningRitualSummary(addMsg)` + `isEveningClosed()` + `_markEveningClosed(text)` у evening-actions.js (стан у nm_evening_closed {date,ts,summary}, addFact ttlDays:30). Третя темна CTA "🌙 Закрити день" з amber-бордером. Значок "✓ День закрито" у header (evening-day-closed-badge). Listener `nm-evening-closed` → updateEveningClosedBadge у evening.js. Fix: addFact приймав позиційні args, виправлено на об'єкт `{text, category, ttlDays, source}`.
-
-### Ключові рішення
-
-- **Порядок фаз 4→5→6** за плановим (не 5→6→4) — щоб Ф4 підготувала AI-чіпи до часу коли Ф6 CTA preloaded діалог.
-- **`add_routine_block` пропущено** — конфлікт зі схемою `nm_routine['mon']` (по дню тижня). Повна реалізація Динамічного розпорядку — окрема фіча у ROADMAP.
-- **Окремий dispatcher у evening-actions.js** замість реюзу `processSaveAction` з inbox.js — щоб вечірні дії НЕ засмічували nm_inbox стрічку (Inbox створює картку як side-effect).
-- **Блок "OWL · підсумок дня" видалено у Ф5** замість Ф8 — бо Ф3 вже дає совушці ритуальне повідомлення у чат-бар, дві картки одночасно = шум. Роман підтвердив "прибирай".
-- **Chips-формат у content як JSON інлайн** (не весь content JSON) — щоб tool_calls + Verify Loop текст + чіпи співіснували без конфлікту парсера.
-
-### Інциденти
-
-- Без reset/force push. 8 чистих комітів `dfb1800 → f8d98a9 → 3479344 → b7e3070 → bc847bb → 6a99372 → f957e94 → 83e42a0`.
-- Один Stream idle timeout під час /finish (скрін Романа) — продовжив компактніше.
-- Edit-помилка у index.html під час Ф3 (видалив SVG кнопки Надіслати) — одразу виправив наступним edit.
-- Видалив коментар `<!-- TAB BAR -->` ненавмисно → відновив.
-
-### Метрики
-
-- **Коміти:** `dfb1800 → ... → 83e42a0` (8 комітів Ф1-8)
-- **Гілка:** `claude/start-session-dIooU`
-- **Версії:** v291 → v298+ (CI мержить)
-- **CACHE_NAME:** `nm-20260419-1708`
-- **Нові файли:** немає (всі зміни в існуючих)
-- **Змінено:** `index.html`, `style.css`, `sw.js`, `src/core/boot.js`, `src/ai/core.js`, `src/ai/prompts.js`, `src/owl/chips.js`, `src/owl/followups.js`, `src/tabs/evening.js`, `src/tabs/evening-chat.js`, `src/tabs/evening-actions.js` (з заготовки 30 рядків → ~280), `src/ui/unread-badge.js` (фактично використано)
-- **Build:** локально зелений після кожної фази
-
-
 ## Проект
 
 | | |
 |--|--|
-| **Версія** | v300 на проді. Після мержу 6GoDe — v301+ з 8 фіксами |
+| **Версія** | v307 на проді. Після мержу JvzDi — v308+ з 3 фіксами |
 | **URL** | owls68.github.io/NeverMind |
-| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
-| **Гілка** | `claude/start-session-6GoDe` (8 комітів, push зелений) |
-| **CACHE_NAME** | `nm-20260419-1912` |
+| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**46 tools:** 31 INBOX + 7 UI [set_theme видалено] + 8 health/memory/cat) |
+| **Гілка** | `claude/start-session-JvzDi` (2 коміти, push зелений) |
+| **CACHE_NAME** | `nm-20260419-1951` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -153,15 +163,17 @@
 
 ---
 
-## 🎯 НАСТУПНИЙ КРОК — Вибір напрямку з ROADMAP
+## 🎯 НАСТУПНИЙ КРОК — "Один мозок #1 мінімум"
 
-**Active порожній.** Вечір 2.0 MVP закритий (dIooU), Здоров'я закрите до 100% (6GoDe). Варіанти:
+**🚨 НОВИЙ ACTIVE після JvzDi:** підключити UI tools у всі 7 чатів окрім Inbox (Вечір, Задачі, Нотатки, Фінанси, Здоров'я, Проекти, Я). Обсяг: 1 сесія, ~60 хвилин, 7-8 checkpoint-комітів (один на чат). Детальний план у секції "ДЛЯ НОВОГО ЧАТУ — найважливіше" пункт 3.
 
-- **A. 👤 Я 65→100%** (1-2 сесії) — теплова карта активності 14/30 днів, автопатерни тижня раз на тиждень, мікровізуалізація виконаних звичок
-- **B. 📁 Проекти 65→100%** (2 сесії) — глибоке інтерв'ю 4 питання при створенні проекту, детектор стагнації (7+ днів без руху → питання від сови), синк Витрати проекту → Фінанси
-- **C. 🚧 4.17.B — 6 заблокованих UI tools** (2-3 сесії) — open_record, open_trash, calendar_jump_to, filter_tasks, clear_chat, toggle_owl_board. ⚠️ Перед стартом — перевірити на iPhone що 8 існуючих реально юзаються.
-- **D. Пост-MVP Вечора** (див. `docs/EVENING_2.0_PLAN.md` секція "Після MVP") — Ритуал неділі (тижневий підсумок), інтелект-карта дня, розкатка чат-двигуна на інші 7 чатів
-- **E. Тест на iPhone v301+** — перевірити 8 UI tools голосом, переконатись що баг `switch_tab` зник, Auto-silence м'якший, інтерв'ю перед `create_health_card` працює
+**Після "Один мозок #1":**
+- **👤 Я 65→100%** (1-2 сесії) — теплова карта активності, автопатерни тижня, мікровізуалізація виконаних звичок
+- **📁 Проекти 65→100%** (2 сесії) — глибоке інтерв'ю, детектор стагнації, синк Витрати проекту → Фінанси
+- **"Один мозок #2 повний"** (2-3 сесії) — переробити 7 чатів на повний INBOX_TOOLS (не тільки UI), відповідає пунктам 4.9+4.10 з ROADMAP
+- **Пост-MVP Вечора** — Ритуал неділі, інтелект-карта дня, AI-роутинг щоденника (див. `docs/EVENING_2.0_PLAN.md`)
+
+**Перед будь-якою роботою — тест на iPhone v308+** (після мержу JvzDi) підтвердити що 3 фікси працюють.
 
 ---
 
@@ -177,4 +189,4 @@
 
 ## 📦 Попередні сесії
 
-Детальні описи QV1n2, NFtzw, uDZmz, rSTLV, w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m → [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
+Детальні описи dIooU, QV1n2, NFtzw, uDZmz, rSTLV, w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m → [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
