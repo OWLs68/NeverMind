@@ -18,7 +18,8 @@ import {
   getLegacyMemoryText,
 } from '../ai/memory.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
-import { renderEvening, renderMe, renderMeHabitsStats } from '../tabs/evening.js';
+import { renderEvening } from '../tabs/evening.js';
+import { renderMe, renderMeHabitsStats } from '../tabs/me.js';
 import { getFinBudget, renderFinance, saveFinBudget, setCurrency } from '../tabs/finance.js';
 import { currentProdTab, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
 import { renderHealth } from '../tabs/health.js';

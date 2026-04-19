@@ -12,7 +12,8 @@ import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
-import { renderMeHabitsStats, getMoments, saveMoments } from './evening.js';
+import { getMoments, saveMoments } from './evening.js';
+import { renderMeHabitsStats } from './me.js';
 import { getEvents, saveEvents, getRoutine, saveRoutine } from './calendar.js';
 
 // === HABITS ===

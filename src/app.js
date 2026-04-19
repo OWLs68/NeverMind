@@ -36,6 +36,7 @@ import './tabs/finance-insight.js';
 import './tabs/finance-chat.js';
 import './tabs/finance-modals.js';
 import './tabs/evening.js';
+import './tabs/me.js';
 import './tabs/onboarding.js';
 import './tabs/health.js';
 import './tabs/projects.js';
