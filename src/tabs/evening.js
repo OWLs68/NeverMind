@@ -140,6 +140,7 @@ export function getEveningContext() {
 
 export function renderEvening() {
   updateEveningLock();
+  updateEveningClosedBadge();
   const today = new Date().toDateString();
   const todayMoments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
 
@@ -460,6 +461,20 @@ function _startEveningLockTicker() {
     _eveningLockVisListener = true;
   }
 }
+
+// Значок "✓ День закрито" у верхньому куті вкладки (Фаза 8).
+// Перевіряємо nm_evening_closed: якщо date === сьогодні — показуємо бейдж.
+export function updateEveningClosedBadge() {
+  const badge = document.getElementById('evening-day-closed-badge');
+  if (!badge) return;
+  try {
+    const s = JSON.parse(localStorage.getItem('nm_evening_closed') || 'null');
+    const todayISO = new Date().toISOString().slice(0, 10);
+    badge.style.display = (s && s.date === todayISO) ? 'inline-block' : 'none';
+  } catch(e) { badge.style.display = 'none'; }
+}
+
+window.addEventListener('nm-evening-closed', updateEveningClosedBadge);
 
 // === WINDOW EXPORTS (HTML handlers only) ===
 // sendEveningBarMessage, openEveningTopic, showEveningBarMessages

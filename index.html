@@ -509,7 +509,8 @@
       <div id="evening-fixed-top" style="flex-shrink:0;padding:0 14px">
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:white">Вечір</span>
-          <div class="header-actions">
+          <div class="header-actions" style="display:flex;align-items:center;gap:8px">
+            <span id="evening-day-closed-badge" style="display:none;font-size:11px;font-weight:700;color:#86efac;background:rgba(22,163,74,0.15);border:1px solid rgba(22,163,74,0.4);border-radius:999px;padding:3px 9px;letter-spacing:0.02em">✓ День закрито</span>
             <button class="icon-btn" onclick="openHelp('evening')" style="color:rgba(255,255,255,0.6)">?</button>
             <button class="icon-btn" onclick="openSettings()" style="color:rgba(255,255,255,0.6)">⚙️</button>
           </div>
@@ -570,6 +571,13 @@
             <div style="flex:1">
               <div style="font-size:15px;font-weight:800;color:#1e1040;letter-spacing:-0.01em">Записати свій день</div>
               <div style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55);margin-top:2px">Розкажи як воно — сова розкладе</div>
+            </div>
+          </button>
+          <button onclick="closeEveningDay()" style="display:flex;align-items:center;gap:14px;background:rgba(12,6,28,0.85);border:1.5px solid rgba(251,191,36,0.4);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
+            <div style="font-size:28px;line-height:1">🌙</div>
+            <div style="flex:1">
+              <div style="font-size:15px;font-weight:800;color:white;letter-spacing:-0.01em">Закрити день</div>
+              <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:2px">Підсумок-інсайт + запис у пам'ять сови</div>
             </div>
           </button>
         </div>
