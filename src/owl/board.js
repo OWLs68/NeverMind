@@ -156,21 +156,47 @@ Object.assign(window, {
 });
 
 // === OWL MASCOT STATE CONTROL ===
-// Керує data-state на #owl-mascot-main. Змінює картинку сови (idle/alert/thinking/greeting/error).
-// Якщо autoRevertMs > 0 — через стільки мс автоматично повернеться у idle.
+// Priority-based state machine — стан з нижчим пріоритетом не перебиває стан з вищим.
+// Порядок: error (100) > alert (80) > thinking (60) > greeting (40) > idle (0).
+// Ticket-лічильник: реверт у idle спрацьовує тільки якщо за час таймера не було нового виклику.
+// Failsafe: будь-який стан (включно з thinking без явного autoRevertMs) має ліміт 30с.
+const OWL_PRIORITY = { error: 100, alert: 80, thinking: 60, greeting: 40, idle: 0 };
 let _owlMascotRevertTimer = null;
+let _owlMascotTicket = 0;
+
 export function setOwlMascotState(state, autoRevertMs = 0) {
   const el = document.getElementById('owl-mascot-main');
   if (!el) return;
-  const valid = ['idle','alert','thinking','greeting','error'];
-  if (!valid.includes(state)) return;
+  if (!(state in OWL_PRIORITY)) return;
+
+  const currentState = el.getAttribute('data-state') || 'idle';
+  // idle скидає будь-що (AI завершив thinking → явний idle дозволений).
+  // Інакше — нижчий пріоритет не перебиває вищий.
+  if (state !== 'idle' && OWL_PRIORITY[state] < OWL_PRIORITY[currentState]) return;
+
   if (_owlMascotRevertTimer) { clearTimeout(_owlMascotRevertTimer); _owlMascotRevertTimer = null; }
   el.setAttribute('data-state', state);
-  if (autoRevertMs > 0 && state !== 'idle') {
-    _owlMascotRevertTimer = setTimeout(() => {
-      const cur = el.getAttribute('data-state');
-      if (cur === state) el.setAttribute('data-state', 'idle');
-    }, autoRevertMs);
-  }
+  _owlMascotTicket++;
+  const myTicket = _owlMascotTicket;
+
+  if (state === 'idle') return;
+  const duration = autoRevertMs > 0 ? autoRevertMs : 30000;
+  _owlMascotRevertTimer = setTimeout(() => {
+    if (_owlMascotTicket === myTicket) {
+      el.setAttribute('data-state', 'idle');
+    }
+    _owlMascotRevertTimer = null;
+  }, duration);
 }
+
+// Пауза анімацій коли PWA у фоні — економія батареї на iOS.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    const el = document.getElementById('owl-mascot-main');
+    if (!el) return;
+    if (document.hidden) el.classList.add('is-paused');
+    else el.classList.remove('is-paused');
+  });
+}
+
 Object.assign(window, { setOwlMascotState });

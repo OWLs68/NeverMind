@@ -1303,6 +1303,12 @@ body {
   .owl-mascot-frame { transition: opacity 0.2s linear !important; transform: none !important; }
 }
 
+/* Пауза всіх анімацій коли PWA у фоні (visibilitychange → додається .is-paused). Економія батареї iOS. */
+.owl-mascot.is-paused,
+.owl-mascot.is-paused * {
+  animation-play-state: paused !important;
+}
+
 /* Sprite-sheet animation for greeting wave (6 frames horizontal) */
 .owl-mascot-sprite {
   position: absolute;
