@@ -10,7 +10,7 @@ import { renderTasks, setupModalSwipeClose } from '../tabs/tasks.js';
 import { renderHabits, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
 import { renderNotes } from '../tabs/notes.js';
 import { renderFinance } from '../tabs/finance.js';
-import { renderEvening, setupAutoEveningSummary } from '../tabs/evening.js';
+import { renderEvening } from '../tabs/evening.js';
 import { renderMe, renderMeHabitsStats } from '../tabs/me.js';
 import { checkOnboarding, showFirstVisitTip } from '../tabs/onboarding.js';
 import { renderHealth } from '../tabs/health.js';
@@ -371,7 +371,9 @@ function init() {
   try { requestAnimationFrame(() => requestAnimationFrame(applyBoardOverlays)); } catch(e) {}
   try { setTimeout(applyBoardOverlays, 500); } catch(e) {}
   setTimeout(() => { try { autoRefreshMemory(); } catch(e) {} }, 3000);
-  try { setupAutoEveningSummary(); } catch(e) {}
+  // setupAutoEveningSummary() видалено у Фазі 5 Вечора 2.0 — сова пише першою
+  // у чат о 18:00 через тригер evening-prompt (src/owl/followups.js). Щогодинний
+  // автопідсумок у картці став дублем і зайвим шумом.
   try { cleanupTrash(); } catch(e) {}
   // Показуємо кешований OWL Board одразу (без затримки)
   try { const _msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]'); if (_msgs.length > 0) renderOwlBoard(); } catch(e) {}
