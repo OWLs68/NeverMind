@@ -804,6 +804,181 @@ ${logLines}
     }
   });
 
+  // src/ai/ui-tools.js
+  function handleUITool(name, args) {
+    try {
+      switch (name) {
+        case "switch_tab": {
+          const t = args.target;
+          if (t === "calendar") {
+            if (typeof window.openCalendarModal === "function") {
+              window.openCalendarModal();
+              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+            }
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          if (t === "habits") {
+            switchTab("tasks");
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
+          }
+          if (!document.getElementById(`page-${t}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          }
+          switchTab(t);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+        }
+        case "open_memory":
+          if (typeof window.openMemoryModal === "function") {
+            window.openMemoryModal();
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
+          }
+          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
+        case "open_settings":
+          openSettings();
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
+        case "set_finance_period": {
+          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
+          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
+          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
+        }
+        case "open_finance_analytics":
+          switchTab("finance");
+          if (typeof window.openFinAnalytics === "function") {
+            setTimeout(() => window.openFinAnalytics(), 120);
+          }
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
+        case "set_owl_mode": {
+          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+          settings.owl_mode = args.mode;
+          localStorage.setItem("nm_settings", JSON.stringify(settings));
+          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
+          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
+        }
+        case "export_health_card":
+          if (typeof window.openHealthExport === "function") {
+            switchTab("health");
+            setTimeout(() => window.openHealthExport(), 120);
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
+          }
+          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
+        default:
+          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
+      }
+    } catch (e) {
+      console.error("[ui-tools]", name, e);
+      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
+    }
+  }
+  function _tabLabel(key) {
+    return {
+      inbox: "Inbox",
+      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
+      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
+      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
+      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
+      me: "\u042F",
+      evening: "\u0412\u0435\u0447\u0456\u0440",
+      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
+    }[key] || key;
+  }
+  var UI_TOOLS, UI_TOOL_NAMES;
+  var init_ui_tools = __esm({
+    "src/ai/ui-tools.js"() {
+      init_nav();
+      UI_TOOLS = [
+        {
+          type: "function",
+          function: {
+            name: "switch_tab",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
+            strict: true,
+            parameters: {
+              type: "object",
+              properties: {
+                target: {
+                  type: "string",
+                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
+                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
+                }
+              },
+              required: ["target"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_memory",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_settings",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_finance_period",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
+            parameters: {
+              type: "object",
+              properties: {
+                period: { type: "string", enum: ["week", "month", "3months"] }
+              },
+              required: ["period"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_finance_analytics",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_owl_mode",
+            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
+            parameters: {
+              type: "object",
+              properties: {
+                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
+              },
+              required: ["mode"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "export_health_card",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        }
+      ];
+      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
+      try {
+        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
+      } catch {
+      }
+    }
+  });
+
   // src/ui/swipe-delete.js
   function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
     if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
@@ -1729,15 +1904,27 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
 - \u041F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438: \u0442\u0435\u043A\u0441\u0442 (1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)
 \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0434\u043B\u044F open_folder \u2014 fuzzy match \u043D\u0430\u0437\u0432\u0438, \u0434\u043B\u044F search_notes \u2014 \u0448\u0443\u043A\u0430\u0439 \u043F\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A.
 \u041D\u0430\u044F\u0432\u043D\u0456 \u043F\u0430\u043F\u043A\u0438: ${[...new Set(getNotes().map((n) => n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))].join(", ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.` + (aiContext ? "\n\n" + aiContext : "");
+\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.
+
+${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, ...notesBarHistory.slice(-8)], max_tokens: 300, temperature: 0.7 })
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
+      const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), UI_TOOLS);
+      if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        for (const tc of msg.tool_calls) {
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            let args = {};
+            try {
+              args = JSON.parse(tc.function.arguments || "{}");
+            } catch (e) {
+            }
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addNotesChatMsg("agent", res.text);
+          }
+        }
+        notesBarLoading = false;
+        return;
+      }
+      const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
         addNotesChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
         notesBarLoading = false;
@@ -1818,6 +2005,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       init_utils();
       init_trash();
       init_core();
+      init_prompts();
+      init_ui_tools();
       init_swipe_delete();
       init_habits();
       editingNoteId = null;
@@ -8649,181 +8838,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     "src/ui/unread-badge.js"() {
       _unreadCounts = /* @__PURE__ */ new Map();
       _badgeAnchors = /* @__PURE__ */ new Map();
-    }
-  });
-
-  // src/ai/ui-tools.js
-  function handleUITool(name, args) {
-    try {
-      switch (name) {
-        case "switch_tab": {
-          const t = args.target;
-          if (t === "calendar") {
-            if (typeof window.openCalendarModal === "function") {
-              window.openCalendarModal();
-              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
-            }
-            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
-          }
-          if (t === "habits") {
-            switchTab("tasks");
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
-          }
-          if (!document.getElementById(`page-${t}`)) {
-            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
-          }
-          switchTab(t);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
-        }
-        case "open_memory":
-          if (typeof window.openMemoryModal === "function") {
-            window.openMemoryModal();
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
-          }
-          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
-        case "open_settings":
-          openSettings();
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
-        case "set_finance_period": {
-          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
-          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
-          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
-        }
-        case "open_finance_analytics":
-          switchTab("finance");
-          if (typeof window.openFinAnalytics === "function") {
-            setTimeout(() => window.openFinAnalytics(), 120);
-          }
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
-        case "set_owl_mode": {
-          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-          settings.owl_mode = args.mode;
-          localStorage.setItem("nm_settings", JSON.stringify(settings));
-          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
-          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
-        }
-        case "export_health_card":
-          if (typeof window.openHealthExport === "function") {
-            switchTab("health");
-            setTimeout(() => window.openHealthExport(), 120);
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
-          }
-          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
-        default:
-          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
-      }
-    } catch (e) {
-      console.error("[ui-tools]", name, e);
-      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
-    }
-  }
-  function _tabLabel(key) {
-    return {
-      inbox: "Inbox",
-      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
-      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
-      me: "\u042F",
-      evening: "\u0412\u0435\u0447\u0456\u0440",
-      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
-      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
-    }[key] || key;
-  }
-  var UI_TOOLS, UI_TOOL_NAMES;
-  var init_ui_tools = __esm({
-    "src/ai/ui-tools.js"() {
-      init_nav();
-      UI_TOOLS = [
-        {
-          type: "function",
-          function: {
-            name: "switch_tab",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
-            strict: true,
-            parameters: {
-              type: "object",
-              properties: {
-                target: {
-                  type: "string",
-                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
-                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
-                }
-              },
-              required: ["target"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_memory",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_settings",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_finance_period",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
-            parameters: {
-              type: "object",
-              properties: {
-                period: { type: "string", enum: ["week", "month", "3months"] }
-              },
-              required: ["period"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_finance_analytics",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_owl_mode",
-            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
-            parameters: {
-              type: "object",
-              properties: {
-                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
-              },
-              required: ["mode"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "export_health_card",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        }
-      ];
-      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
-      try {
-        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
-      } catch {
-      }
     }
   });
 
