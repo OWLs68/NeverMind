@@ -1494,3 +1494,68 @@ button:active,
 [onclick]:active {
   transform: scale(0.87);
 }
+
+/* =====================================================================
+   EVENING LOCK OVERLAY — матове скло поверх вкладки Вечір до 18:00
+   Вкладка блокується ритуалом: видно силует вмісту крізь розмиття,
+   але ніщо не клікабельне. Анімація "скло тане" — при розблокуванні
+   о 18:00 overlay отримує клас .melting (opacity+transform+blur → 0).
+   ===================================================================== */
+.evening-lock-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(12, 6, 28, 0.42);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: not-allowed;
+  transition: opacity 600ms ease-out, transform 600ms ease-out,
+              backdrop-filter 600ms ease-out, -webkit-backdrop-filter 600ms ease-out;
+}
+/* iPhone без backdrop-filter (старі Safari) → суцільний темний шар замість скла */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .evening-lock-overlay {
+    background: rgba(12, 6, 28, 0.88);
+  }
+}
+.evening-lock-overlay.melting {
+  opacity: 0;
+  transform: translateY(-24%);
+  backdrop-filter: blur(0) saturate(100%);
+  -webkit-backdrop-filter: blur(0) saturate(100%);
+  pointer-events: none;
+}
+.evening-lock-owl {
+  font-size: 64px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 14px rgba(194, 121, 10, 0.5));
+}
+.evening-lock-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.01em;
+}
+.evening-lock-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+  max-width: 260px;
+}
+.evening-lock-timer {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}

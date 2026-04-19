@@ -40,6 +40,7 @@ export function getMomentsContext() {
 }
 
 export function renderEvening() {
+  updateEveningLock();
   const today = new Date().toDateString();
   const todayMoments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
 
@@ -403,6 +404,67 @@ function closeMomentView() {
   if (modal) modal.style.display = 'none';
 }
 
+// ============================================================
+// EVENING LOCK — вкладка заблокована до 18:00 (ритуал закриття дня)
+// Матове скло поверх вмісту, таймер "до розблокування", о 18:00
+// скло "тане" і з'являється вміст. Знову замикається о 23:59.
+// План → docs/EVENING_2.0_PLAN.md Фаза 1.
+// ============================================================
+let _eveningLockTickerId = null;
+let _eveningLockVisListener = false;
+
+export function isEveningLocked() {
+  const d = new Date();
+  const h = d.getHours();
+  const m = d.getMinutes();
+  return h < 18 || (h === 23 && m >= 59);
+}
+
+function _formatUnlockCountdown() {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(18, 0, 0, 0);
+  if (now.getHours() >= 18) target.setDate(target.getDate() + 1);
+  const diffMin = Math.max(1, Math.round((target - now) / 60000));
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  if (h > 0) return `до розблокування: ${h} год ${m} хв`;
+  return `до розблокування: ${m} хв`;
+}
+
+export function updateEveningLock() {
+  const overlay = document.getElementById('evening-lock-overlay');
+  if (!overlay) return;
+  const bar = document.getElementById('evening-ai-bar');
+  const timerEl = document.getElementById('evening-lock-timer');
+  const locked = isEveningLocked();
+  const wasVisible = overlay.style.display !== 'none';
+
+  if (locked) {
+    overlay.classList.remove('melting');
+    overlay.style.display = 'flex';
+    if (bar) bar.style.display = 'none';
+    if (timerEl) timerEl.textContent = _formatUnlockCountdown();
+  } else if (wasVisible) {
+    overlay.classList.add('melting');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      overlay.classList.remove('melting');
+    }, 650);
+  }
+}
+
+function _startEveningLockTicker() {
+  if (_eveningLockTickerId) return;
+  _eveningLockTickerId = setInterval(updateEveningLock, 60 * 1000);
+  if (!_eveningLockVisListener) {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) updateEveningLock();
+    });
+    _eveningLockVisListener = true;
+  }
+}
+
 // === WINDOW EXPORTS (HTML handlers only) ===
 // sendEveningBarMessage, sendDialogMessage, openEveningDialog, closeEveningDialog
 // → переїхали у evening-chat.js (їхній власний window.assign).
@@ -411,3 +473,5 @@ Object.assign(window, {
   generateEveningSummary, setEveningMood,
   deleteMoment, openMomentView, closeMomentView,
 });
+
+_startEveningLockTicker();

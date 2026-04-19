@@ -503,7 +503,7 @@
     </div>
 
     <!-- PAGE: EVENING -->
-    <div class="page" id="page-evening" style="display:flex;flex-direction:column;height:100%">
+    <div class="page" id="page-evening" style="display:flex;flex-direction:column;height:100%;position:relative">
 
       <!-- FIXED TOP: header + OWL board -->
       <div id="evening-fixed-top" style="flex-shrink:0;padding:0 14px">
@@ -595,6 +595,14 @@
         </div>
 
       </div><!-- /scroll -->
+
+      <!-- LOCK OVERLAY: показується до 18:00 і після 23:59 (керується renderEvening()) -->
+      <div id="evening-lock-overlay" class="evening-lock-overlay" style="display:none">
+        <div class="evening-lock-owl">🦉</div>
+        <div class="evening-lock-title">День ще триває</div>
+        <div class="evening-lock-subtitle">Повернись після 18:00 — підіб'ємо разом</div>
+        <div id="evening-lock-timer" class="evening-lock-timer">до розблокування: —</div>
+      </div>
     </div>
 
     <!-- PAGE: FINANCE -->
