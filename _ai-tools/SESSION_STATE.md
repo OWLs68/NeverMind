@@ -10,7 +10,9 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. ЧЕКАЄМО 5 PNG ВІД РОМАНА у `assets/owl/wave/`.** Кадри махання крилом для flipbook greeting — `frame-1.png` (idle, крило вниз) ... `frame-5.png` (крило 100°, усміх). Роман генерує через Nano Banana покадрово. HTML і CSS вже готові — як тільки PNG будуть залиті у гілку через GitHub Web, flipbook сам оживе при наступному деплої. **Fallback:** поки немає PNG — показується статичний `owl-greeting.png` (як було).
+**1. СОВА НЕ МАХАЄ — ГІПОТЕЗА PRIORITY STATE-MACHINE БЛОКУЄ GREETING.** Перевірено v284 на телефоні: сова залишається idle, махання крилом не спрацьовує. Причина ймовірно: у `src/owl/board.js` `OWL_PRIORITY` має `alert=80 > greeting=40`. При відкритті PWA `renderTabBoard` ставить Inbox у `alert` через `setOwlMascotState('alert', 12000)`. Через 1.5 сек boot auto-trigger у `src/core/boot.js:400` викликає `setOwlMascotState('greeting', 6000)` — але greeting (40) нижчий за alert (80), state-machine ігнорує. **Фікс (у новому чаті, ~10хв):** (а) підняти greeting до пріоритету 90 у `OWL_PRIORITY`, або (б) додати параметр `force: true` у `setOwlMascotState` який обходить priority check, або (в) у `boot.js` перед greeting явно ставити idle щоб скинути alert.
+
+**2. PNG МАЄ ЗАПЕЧЕНИЙ ШАХОВИЙ ФОН.** На скріншоті v284 ліворуч від сови видно сірі шахові клітинки в області маскота. Причина: Nano Banana згенерувала PNG з шаховим візерунком як "візуалізацію прозорості" — це запечено в пікселях, а не альфа-канал. **Фікс:** прогнати проблемні PNG (або один `owl-idle.png`, або всі 5 `frame-*.png`) через `erase.bg` (безкоштовно до 5000×5000) і перезалити.
 
 **2. NANO BANANA WORKFLOW задокументовано** у `handoff/OWL_ANIMATION_PLAN_V2.md` (план + 4 фази + skill tree) і `handoff/OWL_ANIMATION_RESEARCH.md` (дослідження Rive vs Lottie vs CSS/PNG). Критичний нюанс: **compound degradation** у Nano Banana — завжди новий чат + оригінальна idle PNG як референс для кожного кадру, НЕ чейнити.
 
@@ -18,7 +20,7 @@
 
 **4. PRIORITY STATE-MACHINE ГОТОВА** — `setOwlMascotState` у `src/owl/board.js` (error=100 > alert=80 > thinking=60 > greeting=40 > idle=0) + ticket + failsafe 30с. `visibilitychange` ставить на паузу у фоні.
 
-**5. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-0918`. При наступній зміні коду — оновити (`date +"nm-%Y%m%d-%H%M"`).
+**5. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1044`. При наступній зміні коду — оновити (`date +"nm-%Y%m%d-%H%M"`).
 
 **6. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. Довідник → `docs/AI_TOOLS.md`.
 
@@ -73,15 +75,23 @@
 - **Stop hook наполягав на push** після Фази 0 — пофіксив через додавання fallback (статичний greeting не ховається при broken wave-PNG), пушнув без ризику порожнечі на продакшені.
 - Без reset/force push. 4 коміти чистих.
 
+### Оновлення після першого /finish (повторний виклик)
+
+- **`adf508f` fix path:** Роман залив 5 PNG без `wave/` префіксу у `assets/owl/`. Замість переробки upload — виправлено HTML на `src="assets/owl/frame-{1..5}.png"`. CACHE_NAME bump `nm-20260419-0918` → `nm-20260419-1044`.
+- **Роман залив 5 PNG** через GitHub Web (коміт `215a8f7 Add files via upload`).
+- **Деплой v284** на `main` (12:45) — підтверджено `git fetch`.
+- **ТЕСТУВАННЯ НА ТЕЛЕФОНІ v284:** сова залишається idle, **махання не спрацьовує**. Виявлено дві проблеми:
+  1. Priority state-machine блокує greeting (гіпотеза: alert=80 перебиває greeting=40 boot-тригер)
+  2. Шахові клітинки ліворуч від сови — запечений шаховий фон у PNG (не прозорість)
+
 ### Метрики
 
-- **Коміти:** `f16685b` (research) → `af90d41` (V2 plan) → `6266c17` (Phase 0 code) → `7e5b479` (fallback fix). **4 коміти.**
+- **Коміти:** `f16685b` → `af90d41` → `6266c17` → `7e5b479` → `c59eacd` (docs) → `bdd610e` (docs) → `adf508f` (path fix). **7 комітів сесії** + коміт Романа `215a8f7` з 5 PNG.
 - **Гілка:** `claude/owl-animation-research-NFtzw` (нестандартний формат)
-- **Версії:** v277 (на момент /finish деплой ще не запущений — новий деплой v278+ піде від docs-комітів)
-- **CACHE_NAME:** `nm-20260419-0918`
+- **Версії:** v277 → v284 на production
+- **CACHE_NAME:** `nm-20260419-1044`
 - **Build:** чистий (локальний `node build.js` зелений)
-- **Нові файли:** `handoff/OWL_ANIMATION_RESEARCH.md`, `handoff/OWL_ANIMATION_PLAN_V2.md`
-- **Нова папка:** `assets/owl/wave/` (порожня, чекає на 5 PNG)
+- **Нові файли:** `handoff/OWL_ANIMATION_RESEARCH.md`, `handoff/OWL_ANIMATION_PLAN_V2.md`, `assets/owl/frame-{1..5}.png` (від Романа)
 
 ---
 
@@ -147,11 +157,11 @@
 
 | | |
 |--|--|
-| **Версія** | v277+ (після NFtzw — research + V2 plan + Phase 0 flipbook skeleton) |
+| **Версія** | v284 (після NFtzw + 5 PNG Романа — махання НЕ спрацьовує, треба фікс priority) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (**47 tools:** 31 INBOX + 8 UI + 8 health/memory/cat) |
 | **Гілка** | `claude/owl-animation-research-NFtzw` |
-| **CACHE_NAME** | `nm-20260419-0918` |
+| **CACHE_NAME** | `nm-20260419-1044` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
