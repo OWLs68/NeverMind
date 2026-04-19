@@ -349,7 +349,11 @@ function sendChipToChat(tab, text) {
   const barTab = tab === 'inbox' ? 'inbox' : (tab || 'inbox');
   openChatBar(barTab);
 
-  const inputId = barTab === 'inbox' ? 'inbox-input' : barTab + '-chat-input';
+  // evening-чат-бар має textarea id="evening-bar-input" (не evening-chat-input).
+  // Решта вкладок — <tab>-chat-input. Inbox — inbox-input.
+  const inputId = barTab === 'inbox' ? 'inbox-input'
+                 : barTab === 'evening' ? 'evening-bar-input'
+                 : barTab + '-chat-input';
   const input = document.getElementById(inputId);
   if (input) {
     input.value = text;

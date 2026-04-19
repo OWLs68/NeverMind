@@ -1559,3 +1559,41 @@ button:active,
   letter-spacing: 0.06em;
   margin-top: 6px;
 }
+
+/* =====================================================================
+   CHAT CHIPS — універсальні чіпи під бульбою сови у чат-барах
+   (Фаза 4 Вечора 2.0). Стилізація: світло-амбер фон, темний текст,
+   горизонтальна стрічка з прокруткою якщо не вміщується.
+   Використовується через renderChips(containerEl, chips, tab) з chips.js —
+   сам .owl-chip селектор вже стилізований у системі табло, ми додаємо
+   тільки контейнер і невеликі налаштування для in-chat варіанту.
+   ===================================================================== */
+.chat-chips-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 6px 2px;
+  margin: 2px 0 4px 0;
+  max-width: 92%;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-chips-row::-webkit-scrollbar { display: none; }
+.chat-chips-row .owl-chip {
+  flex-shrink: 0;
+  background: rgba(255, 236, 196, 0.95);
+  color: #5b3d12;
+  border: 1px solid rgba(194, 121, 10, 0.35);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s, background 0.15s;
+}
+.chat-chips-row .owl-chip:active {
+  background: rgba(255, 221, 164, 1);
+}
