@@ -21,6 +21,7 @@ import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
 import { getEveningChatSystem } from '../ai/prompts.js';
+import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { dispatchEveningTool, generateEveningRitualSummary } from './evening-actions.js';
 
 // CTA "🌙 Закрити день" (Фаза 8) — відкриває чат-бар Вечора і викликає
@@ -76,6 +77,11 @@ async function openEveningTopic(topic) {
       for (const tc of msg.tool_calls) {
         let args = {};
         try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) addEveningBarMsg('agent', res.text);
+          continue;
+        }
         dispatchEveningTool(tc.function.name, args);
       }
     }
@@ -187,10 +193,16 @@ export async function sendEveningBarMessage() {
     if (!msg) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
 
     // Виконуємо tool calls через локальний dispatcher (без Inbox side effects)
+    // UI tools ("Один мозок #1") — навігація/фільтри доступні з Вечора.
     if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       for (const tc of msg.tool_calls) {
         let args = {};
         try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) addEveningBarMsg('agent', res.text);
+          continue;
+        }
         dispatchEveningTool(tc.function.name, args);
       }
     }
