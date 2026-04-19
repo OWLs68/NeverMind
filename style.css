@@ -1309,32 +1309,44 @@ body {
   animation-play-state: paused !important;
 }
 
-/* Sprite-sheet animation for greeting wave (6 frames horizontal) */
-.owl-mascot-sprite {
+/* SVG-крило поверх PNG-тіла для greeting (гібрид, 19.04 bird-wing) */
+.owl-wing-overlay {
   position: absolute;
-  inset: 0;
-  background-image: url('assets/owl/owl-greeting-sprite.png');
-  background-repeat: no-repeat;
-  background-size: 600% 100%;
-  background-position: 0% 0%;
+  width: 38%;               /* приблизно третина ширини маскота */
+  height: 38%;
+  top: 32%;                 /* точка плеча на PNG сови */
+  right: 8%;
+  transform-origin: 15% 50%; /* вісь обертання біля лівого краю SVG (плече) */
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.3s ease;
+  z-index: 3;
+  will-change: transform, opacity;
 }
-.owl-mascot[data-state="greeting"] .owl-mascot-sprite {
+.owl-mascot[data-state="greeting"] .owl-wing-overlay {
   opacity: 1;
-  animation: owl-wave-sprite 0.9s steps(6) infinite;
+  animation: wing-wave-premium 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
-/* Hide static greeting frame when sprite active (avoid doubled image) */
-.owl-mascot[data-state="greeting"] .owl-mascot-frame[data-frame="greeting"] {
-  opacity: 0 !important;
+/* Нахил голови у thinking (замість sprite-орбіти очей яка не працює на PNG). */
+.owl-mascot[data-state="thinking"] .owl-mascot-frame[data-frame="thinking"] {
+  animation: owl-head-tilt 2s ease-in-out infinite;
+  transform-origin: center bottom;
 }
-@keyframes owl-wave-sprite {
-  from { background-position: 0% 0%; }
-  to   { background-position: -600% 0%; }
+@keyframes wing-wave-premium {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  30%      { transform: rotate(-45deg) scaleX(1.1); }   /* швидкий підйом */
+  50%      { transform: rotate(-15deg) scale(1.05); }   /* зависання */
+  80%      { transform: rotate(-35deg) scaleX(1.08); }  /* другий мікро-мах */
+}
+@keyframes owl-head-tilt {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50%      { transform: scale(1) rotate(8deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .owl-mascot-sprite { animation: none !important; background-position: 0% 0% !important; }
+  .owl-wing-overlay { animation: none !important; opacity: 0 !important; }
+  .owl-mascot[data-state="thinking"] .owl-mascot-frame[data-frame="thinking"] {
+    animation: none !important;
+  }
 }
 .owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .owl-speech-bubble {
