@@ -1038,7 +1038,7 @@ export function tryOwlBoardUpdate() {
   // SAFETY NET: якщо повідомлення на табло > 60 хв — примусова генерація
   const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
   if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1000) {
-    console.warn('[OWL board] stale message detected, forcing generation');
+    console.log('[OWL board] stale message detected, forcing generation');
     import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
     return;
   }
