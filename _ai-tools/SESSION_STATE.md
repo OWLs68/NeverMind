@@ -41,12 +41,21 @@
 - Видалено 11 PNG у `assets/owl/` + вся папка `assets/`
 - `sw.js:10` — CACHE_NAME `nm-20260419-1044` → `nm-20260419-1131`
 
-**2. Видалення handoff + оновлення документації — коміт `<наступний>`**
+**2. Видалення handoff + оновлення основних документів — коміт `d29a595`**
 - `handoff/` повністю (README.md, OWL_ANIMATION_PLAN_V2.md, OWL_ANIMATION_RESEARCH.md, components/Owl.html/.js/.jsx/.css)
 - `CLAUDE.md` секція "Анімація OWL" скорочена до 2 рядків (статус "відкладено")
 - `ROADMAP.md` — два блоки Done 19.04 (NFtzw + uDZmz) замінено на один запис rSTLV
 - `docs/CHANGES.md` — детальний аудит-запис з повним переліком того що і звідки видалено + таблиця історичних комітів для відновлення
 - `_ai-tools/SESSION_STATE.md` — оновлено заголовок і секцію "Для нового чату"
+
+**3. Повний аудит документів (Роман попросив) — коміт `77f59ba`**
+- `.claude/commands/owl-motion.md` — додано header "⏸️ ВІДКЛАДЕНО" з контекстом (скіл не видалено, заготовка на випадок повернення)
+- `_ai-tools/SKILLS_PLAN.md` — статус скіла `/owl-motion` змінено на "ВІДКЛАДЕНО, сесія rSTLV 19.04"
+- `CLAUDE.md` → перелік скілів: `/owl-motion` 🟢 → ⏸️
+- `ROADMAP.md` → у списку 7 скілів біля `/owl-motion` додано позначку ⏸️
+- `START_HERE.md` → опис скіла `/owl-motion` оновлено
+- `NEVERMIND_BUGS.md` → "2 активні сесії" оновлено (NFtzw+rSTLV замість w3ISi+uDZmz)
+- Greps показали: всі живі згадки маскот-коду — тільки у `docs/CHANGES.md` (історичні записи + rSTLV аудит) і `_ai-tools/SESSION_STATE.md` (описи відкочених сесій). Жодних orphan посилань на мертвий код.
 
 ### Ключові рішення
 
@@ -54,16 +63,24 @@
 - **Документація детально збережена** — у `docs/CHANGES.md` таблиця з 13 історичних комітів з інструкцією як відновити будь-який шматок (`git revert`, `git cherry-pick`, `git checkout <hash> -- <path>`). На випадок "раптом щось зламається".
 - **Скіл `/owl-motion` НЕ видалено** — лежить у `.claude/commands/` як заготовка на випадок повернення.
 - **handoff/ повністю видалено** — це документи для інтеграції React-компоненту сови, мертві без самого маскота.
+- **`.claude/commands/gamification-engine.md` не чіпали** — там посилання на `/owl-motion` як стиль-еталон. Буде актуально коли маскот повернеться.
+
+### Інциденти
+
+- **Без reset/force push.** 3 чисті коміти прямо у `claude/start-session-rSTLV`.
+- **Локальний `node build.js` не запустився** — `Cannot find module 'esbuild'`. Не критично: CI збере bundle.js після мержу автоматично.
+- **Kategoriальне "Треба стерти нахуй"** від Романа після мого першого звіту з 3 варіантами — скоротив план, прийняв широке видалення без питань-по-кожному-пункту.
 
 ### Метрики
 
-- **Коміти:** `897bc9a` (код+ассети) + `<наступний>` (handoff+docs). **2 коміти.**
+- **Коміти:** `897bc9a` → `d29a595` → `77f59ba`. **3 коміти.**
 - **Гілка:** `claude/start-session-rSTLV`
-- **Версії:** v285 → v286+ (після деплою)
+- **Версії:** v285 → v286+ (після CI мержу і деплою)
 - **CACHE_NAME:** `nm-20260419-1131`
-- **Файлів видалено:** 15 (11 PNG + 4 handoff top-level + 4 handoff/components) = 19
-- **Файлів змінено:** 6 (index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js)
-- **Рядків видалено:** ~650 коду + ~200 документів = **~850 рядків**
+- **Файлів видалено:** 19 (11 PNG + 4 handoff top-level + 4 handoff/components)
+- **Файлів змінено:** 12 (код: index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js + доки: CLAUDE.md, ROADMAP.md, START_HERE.md, SESSION_STATE.md, SKILLS_PLAN.md, NEVERMIND_BUGS.md, owl-motion.md, docs/CHANGES.md)
+- **Рядків видалено:** ~650 коду + ~472 документації = **~1120 рядків**
+- **Build:** локально esbuild не встановлено, CI збере
 
 ### Наступні кроки
 
