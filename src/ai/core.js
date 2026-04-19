@@ -21,6 +21,7 @@ import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-bo
 import { getBoardContext } from '../owl/proactive.js';
 import { formatFactsForContext, getFacts } from './memory.js';
 import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPrompt } from './prompts.js';
+import { clearUnreadBadge } from '../ui/unread-badge.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
 // які імпортують ці константи з './ai/core.js' продовжували працювати без змін.
@@ -595,8 +596,9 @@ export function openChatBar(tab) {
 
   activeChatBar = tab;
 
-  // Очищуємо бейдж непрочитаних для Inbox
+  // Очищуємо бейдж непрочитаних — юзер відкрив чат, повідомлення прочитано
   if (tab === 'inbox') { try { _clearInboxUnreadBadge(); } catch(e) {} }
+  else { try { clearUnreadBadge(tab); } catch(e) {} }
 
   const bar = document.getElementById(tab + '-ai-bar');
   if (!bar) return;

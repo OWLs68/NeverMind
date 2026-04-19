@@ -20,9 +20,11 @@
 //   followup_event_<eventId>    → 365 днів per-event (≈ одноразово, перевіряється тут)
 // ============================================================
 
-import { callAI, addMsgForTab } from '../ai/core.js';
+import { callAI, addMsgForTab, getAIContext } from '../ai/core.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getEvents } from '../tabs/calendar.js';
+import { getEveningContext, getMomentsContext } from '../tabs/evening.js';
+import { getEveningPromptSystem } from '../ai/prompts.js';
 import { owlCdExpired, setOwlCd, shouldOwlSpeak } from './inbox-board.js';
 
 // === КОНСТАНТИ ===
@@ -31,11 +33,13 @@ const FOLLOWUP_DEBOUNCE       = 5 * 1000;            // 5 сек — debounce н
 const STUCK_TASK_DAYS         = 3;
 const STUCK_TASK_CD           = 24 * 60 * 60 * 1000; // 24 год per-task
 const EVENT_PASSED_CD         = 365 * 24 * 60 * 60 * 1000; // ≈ одноразово per-event
+const EVENING_PROMPT_CD       = 24 * 60 * 60 * 1000; // 24 год — 1 раз на день
 
 // Куди писати для якого тригера (правило "один мозок")
 const TRIGGER_TO_TAB = {
-  'stuck-task':    'tasks',
-  'event-passed':  'tasks',   // календар зараз живе всередині Продуктивності
+  'stuck-task':     'tasks',
+  'event-passed':   'tasks',   // календар зараз живе всередині Продуктивності
+  'evening-prompt': 'evening', // Фаза 3 Вечора 2.0 — сова пише першою о 18:00
 };
 
 // Внутрішній стан
@@ -59,6 +63,7 @@ export async function checkFollowups() {
     // Перевіряємо тригери у порядку пріоритету.
     // Детекція (per-item cooldowns) тут, глобальні блокери — у Judge Layer.
     const triggers = [
+      _checkEveningPrompt,
       _checkStuckTasks,
       _checkPassedEvents,
     ];
@@ -99,6 +104,19 @@ function _checkStuckTasks() {
   return { type: 'stuck-task', item: tasks[0] };
 }
 
+// Повертає { type, item } або null — тригер вечірнього ритуалу (Фаза 3 Вечора 2.0)
+// Умови: локальний час 18:00-22:59, за день ще не писали, у дні був хоч якийсь контент
+function _checkEveningPrompt() {
+  const h = new Date().getHours();
+  if (h < 18 || h >= 23) return null;
+  if (!owlCdExpired('evening_prompt_daily', EVENING_PROMPT_CD)) return null;
+  // Блокер: якщо день зовсім пустий (ні моментів, ні вечірнього зрізу) — не писати
+  // щоб сова не спамила коли юзер застосунок вперше відкрив надвечір
+  const hasContent = (getMomentsContext() || '').length > 0 || (getEveningContext() || '').length > 0;
+  if (!hasContent) return null;
+  return { type: 'evening-prompt', item: null };
+}
+
 // Повертає { type, item } або null
 function _checkPassedEvents() {
   const now = Date.now();
@@ -125,7 +143,9 @@ function _checkPassedEvents() {
 // ============================================================
 
 async function _sendFollowupToChat(tab, type, item) {
-  const text = await _generateFollowupText(type, item);
+  const text = type === 'evening-prompt'
+    ? await _generateEveningPrompt()
+    : await _generateFollowupText(type, item);
   if (!text) return;
 
   // Вставляємо у чат через диспатчер (core.js)
@@ -135,6 +155,21 @@ async function _sendFollowupToChat(tab, type, item) {
   setOwlCd('followup_global');
   if (type === 'stuck-task') setOwlCd(`followup_stuck_${item.id}`);
   if (type === 'event-passed') setOwlCd(`followup_event_${item.id}`);
+  if (type === 'evening-prompt') setOwlCd('evening_prompt_daily');
+}
+
+// Генерація вечірнього привітання сови (Фаза 3 Вечора 2.0)
+// Повний контекст дня приходить через getAIContext (включно з getEveningContext)
+async function _generateEveningPrompt() {
+  try {
+    const systemPrompt = getEveningPromptSystem() + '\n\n' + getAIContext();
+    const reply = await callAI(systemPrompt, 'Привітайся з юзером у чаті Вечора — він щойно відкриє вкладку.');
+    if (!reply || typeof reply !== 'string') return null;
+    return reply.trim().slice(0, 400);
+  } catch (e) {
+    console.warn('[followups] evening-prompt generation failed:', e);
+    return null;
+  }
 }
 
 async function _generateFollowupText(type, item) {

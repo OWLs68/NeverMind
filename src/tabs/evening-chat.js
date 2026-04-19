@@ -21,6 +21,7 @@ import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { processUniversalAction } from './habits.js';
 import { getMoments } from './evening.js';
+import { showUnreadBadge } from '../ui/unread-badge.js';
 
 // Typing indicator (локальний стейт для вечірнього чату)
 let _eveningTypingEl = null;
@@ -126,6 +127,15 @@ export function addEveningBarMsg(role, text, _noSave = false) {
   if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
   else eveningBarHistory.push({ role: 'assistant', content: text });
   if (!_noSave) saveChatMsg('evening', role, text);
+
+  // Червона крапка на кнопці Надіслати — якщо агент написав а чат закритий
+  // (типовий кейс: сова поклала evening-prompt о 18:00 а юзер ще не заходив)
+  if (role === 'agent') {
+    const bar = document.getElementById('evening-ai-bar');
+    const chatWin = bar ? bar.querySelector('.ai-bar-chat-window') : null;
+    const isOpen = chatWin && chatWin.classList.contains('open');
+    if (!isOpen) showUnreadBadge('evening', 'evening-send-btn');
+  }
 }
 
 export async function sendEveningBarMessage() {
