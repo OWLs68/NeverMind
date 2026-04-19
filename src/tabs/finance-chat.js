@@ -5,7 +5,9 @@
 
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
-import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox } from './inbox.js';
 import { processUniversalAction } from './habits.js';
@@ -104,16 +106,29 @@ export async function sendFinanceBarMessage() {
 Якщо користувач просить змінити категорію або опис існуючої операції — використовуй update_transaction з її id. НЕ створюй нову операцію і НЕ видаляй стару окремо.
 ВАЖЛИВО: НЕ вигадуй ліміти, бюджети або плани яких немає в даних вище. Якщо бюджет "не встановлено" — не згадуй перевищення. Тільки реальні цифри.
 Також вмієш: створити задачу {"action":"create_task","title":"назва","steps":[]}, звичку {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}, редагувати звичку {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}, нотатку {"action":"create_note","text":"текст","folder":null}, заплановану подію {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}, закрити задачу {"action":"complete_task","task_id":ID}, відмітити звичку {"action":"complete_habit","habit_name":"назва"}, редагувати задачу {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}, видалити задачу {"action":"delete_task","task_id":ID}, видалити звичку {"action":"delete_habit","habit_id":ID}, перевідкрити задачу {"action":"reopen_task","task_id":ID}, записати момент дня {"action":"add_moment","text":"текст"}. ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
-Також: змінити подію {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, видалити подію {"action":"delete_event","event_id":ID}, змінити нотатку {"action":"edit_note","note_id":ID,"text":"текст"}, розпорядок {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}.${aiContext ? '\n\n' + aiContext : ''}`;
+Також: змінити подію {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, видалити подію {"action":"delete_event","event_id":ID}, змінити нотатку {"action":"edit_note","note_id":ID,"text":"текст"}, розпорядок {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}.
+
+${UI_TOOLS_RULES}${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: FINANCE_BAR_PROMPT }, ...financeBarHistory.slice(-10)], max_tokens: 300, temperature: 0.5 })
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim();
+    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
+    // фінансові CRUD і універсальні actions — через текстовий JSON як раніше.
+    const msg = await callAIWithTools(FINANCE_BAR_PROMPT, financeBarHistory.slice(-10), UI_TOOLS);
+
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      for (const tc of msg.tool_calls) {
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          let args = {};
+          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) addFinanceChatMsg('agent', res.text);
+        }
+      }
+      financeBarLoading = false;
+      return;
+    }
+
+    const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
 
     // Обробка одного JSON блоку. Повертає true якщо оброблено, false якщо невідомий action.
