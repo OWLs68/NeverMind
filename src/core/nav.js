@@ -95,6 +95,11 @@ export let currentTab = 'inbox';
 // === SWITCH TAB ===
 export function switchTab(tab) {
   if (tab === currentTab) return;
+  const pageEl = document.getElementById(`page-${tab}`);
+  if (!pageEl) {
+    console.warn('[switchTab] unknown tab:', tab);
+    return;
+  }
   animateTabSwitch(tab);
   currentTab = tab;
 
@@ -103,7 +108,7 @@ export function switchTab(tab) {
 
   // Update pages
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(`page-${tab}`).classList.add('active');
+  pageEl.classList.add('active');
 
   // Update tab items — drum tabbar
   updateDrumTabbar(tab);

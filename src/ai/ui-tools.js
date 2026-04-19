@@ -22,7 +22,8 @@ export const UI_TOOLS = [
     type: "function",
     function: {
       name: "switch_tab",
-      description: "Перемкнути активну вкладку у застосунку. Юзер каже 'відкрий календар', 'покажи задачі', 'перейди до фінансів'.",
+      description: "Перемкнути активну вкладку у застосунку. Юзер каже 'відкрий календар', 'покажи задачі', 'перейди до фінансів'. ВИКОРИСТОВУЙ ЛИШЕ значення з enum target — інші недоступні.",
+      strict: true,
       parameters: {
         type: "object",
         properties: {
@@ -135,6 +136,9 @@ export function handleUITool(name, args) {
         if (t === 'habits') {
           switchTab('tasks');
           return { text: 'Відкрив Задачі/Звички.' };
+        }
+        if (!document.getElementById(`page-${t}`)) {
+          return { text: `Вкладка "${t}" недоступна.` };
         }
         switchTab(t);
         return { text: `Відкрив ${_tabLabel(t)}.` };
