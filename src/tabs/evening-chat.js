@@ -21,7 +21,16 @@ import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
 import { getEveningChatSystem } from '../ai/prompts.js';
-import { dispatchEveningTool } from './evening-actions.js';
+import { dispatchEveningTool, generateEveningRitualSummary } from './evening-actions.js';
+
+// CTA "🌙 Закрити день" (Фаза 8) — відкриває чат-бар Вечора і викликає
+// фінальний підсумок ритуалу. Одноразово за день (повторний тап покаже
+// "Ти вже закрив день"). Значок "✓ День закрито" зʼявляється у верхньому
+// куті вкладки — керується подією nm-evening-closed з evening-actions.js.
+async function closeEveningDay() {
+  try { openChatBar('evening'); } catch(e) {}
+  await generateEveningRitualSummary(addEveningBarMsg);
+}
 
 // Typing indicator (локальний стейт для вечірнього чату)
 let _eveningTypingEl = null;
@@ -203,6 +212,7 @@ export async function sendEveningBarMessage() {
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openEveningTopic,
+  closeEveningDay,
   sendEveningBarMessage,
   showEveningBarMessages,
 });

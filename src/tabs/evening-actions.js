@@ -31,6 +31,62 @@ import { addFact } from '../ai/memory.js';
 import { addToTrash, restoreFromTrash, getTrash } from '../core/trash.js';
 import { currentTab } from '../core/nav.js';
 import { logRecentAction } from '../core/utils.js';
+import { callAI, getAIContext } from '../ai/core.js';
+import { getEveningSummaryPromptV2 } from '../ai/prompts.js';
+
+// === EVENING DAY-CLOSED STATE (Фаза 8) ===
+const NM_EVENING_CLOSED_KEY = 'nm_evening_closed';
+
+export function isEveningClosed() {
+  try {
+    const s = JSON.parse(localStorage.getItem(NM_EVENING_CLOSED_KEY) || 'null');
+    if (!s) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return s.date === today;
+  } catch(e) { return false; }
+}
+
+function _markEveningClosed(summaryText) {
+  const today = new Date().toISOString().slice(0, 10);
+  localStorage.setItem(NM_EVENING_CLOSED_KEY, JSON.stringify({ date: today, ts: Date.now(), summary: summaryText || '' }));
+}
+
+// Фінальний підсумок ритуалу (Фаза 8). Викликається з CTA "🌙 Закрити день".
+// Одноразово за день — повторний тап показує "Ти вже закрив день".
+// Сама функція: AI → підсумок у чат Вечора + save_memory_fact + значок активується.
+export async function generateEveningRitualSummary(addMsg) {
+  if (isEveningClosed()) {
+    if (addMsg) addMsg('agent', 'Ти вже закрив день. До завтра. 🌙');
+    return { ok: true, already: true };
+  }
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    if (addMsg) addMsg('agent', 'Введи OpenAI ключ в налаштуваннях.');
+    return { ok: false, err: 'no key' };
+  }
+  if (addMsg) addMsg('typing', '');
+
+  const systemPrompt = getEveningSummaryPromptV2() + '\n\n' + getAIContext();
+  const reply = await callAI(systemPrompt, 'Підведи підсумок цього дня — інсайт, не цифри.');
+  if (!reply) {
+    if (addMsg) addMsg('agent', 'Не вдалось сформулювати підсумок.');
+    return { ok: false, err: 'no reply' };
+  }
+  const text = reply.trim().slice(0, 600);
+  if (addMsg) addMsg('agent', text);
+
+  // Записуємо факт дня у пам'ять — зранку Inbox знатиме про вчорашній інсайт
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    addFact({ text: `Вечірній інсайт ${today}: ${text.slice(0, 160)}`, category: 'context', ttlDays: 30, source: 'evening' });
+  } catch(e) {}
+
+  _markEveningClosed(text);
+  // Повідомляємо UI про закриття дня — щоб значок "✓ День закрито" зʼявився
+  window.dispatchEvent(new CustomEvent('nm-evening-closed'));
+  logRecentAction('evening_close', text.slice(0, 40), 'evening');
+  return { ok: true };
+}
 
 // Головний dispatcher. Приймає OpenAI tool call ім'я + args → виконує дію
 // через save-функції модулів. Повертає { ok: true } або { ok: false, err }.
@@ -108,7 +164,7 @@ export function dispatchEveningTool(name, args) {
         return { ok: true };
       }
       case 'save_memory_fact': {
-        addFact(args.fact || '', args.category || 'context', args.ttl_days || null);
+        addFact({ text: args.fact || '', category: args.category || 'context', ttlDays: args.ttl_days || null, source: 'evening' });
         return { ok: true };
       }
 
