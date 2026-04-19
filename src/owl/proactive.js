@@ -947,7 +947,7 @@ function _tryLocalFallback(tab) {
   // НЕ оновлюємо nm_owl_board_ts — fallback не рахується як повноцінна генерація,
   // інакше Judge Layer штрафує наступну спробу API
   renderOwlBoard();
-  console.warn('[OWL board] smart fallback:', text);
+  console.log('[OWL board] smart fallback:', text);
 }
 
 // B-41: fallback для tab-boards (finance, tasks, health тощо)
@@ -988,7 +988,7 @@ function _tryTabLocalFallback(tab) {
   const newMsg = { text, priority: 'normal', chips, ts: Date.now(), id: Date.now() };
   saveTabBoardMsg(tab, newMsg);
   renderTabBoard(tab);
-  console.warn(`[OWL ${tab} board] tab fallback:`, text);
+  console.log(`[OWL ${tab} board] tab fallback:`, text);
 }
 
 // === Контекстні підказки при першому відвідуванні вкладки ===
