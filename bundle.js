@@ -8997,16 +8997,17 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       }
       try {
         const MIN_VISIBLE_MS = 10 * 60 * 1e3;
-        const IGNORE_THRESHOLD = 5;
+        const IGNORE_THRESHOLD = 7;
+        const SILENCE_MS = 2 * 60 * 60 * 1e3;
         const lastBoardTs = parseInt(localStorage.getItem("nm_owl_last_board_ts") || "0");
         const lastClickTs = parseInt(localStorage.getItem("nm_owl_last_chip_click_ts") || "0");
         const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
         if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
           const ignored = parseInt(localStorage.getItem("nm_owl_ignored_msgs") || "0") + 1;
           if (ignored >= IGNORE_THRESHOLD) {
-            localStorage.setItem("nm_owl_silence_until", String(Date.now() + 4 * 60 * 60 * 1e3));
+            localStorage.setItem("nm_owl_silence_until", String(Date.now() + SILENCE_MS));
             localStorage.setItem("nm_owl_ignored_msgs", "0");
-            console.log("[OWL 4.40] Auto-silence 4 \u0433\u043E\u0434 \u2014", IGNORE_THRESHOLD, "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
+            console.log("[OWL 4.40] Auto-silence 2 \u0433\u043E\u0434 \u2014", IGNORE_THRESHOLD, "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
           } else {
             localStorage.setItem("nm_owl_ignored_msgs", String(ignored));
           }
@@ -9308,6 +9309,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           }
         }
       });
+      try {
+        window.addEventListener("nm-data-changed", () => {
+          try {
+            localStorage.setItem("nm_owl_ignored_msgs", "0");
+            localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
+          } catch (e) {
+          }
+        });
+      } catch (e) {
+      }
     }
   });
 
