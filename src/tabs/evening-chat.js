@@ -17,11 +17,11 @@
 // ============================================================
 
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
-import { callAIWithHistory, getAIContext, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { processUniversalAction } from './habits.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
 import { getEveningChatSystem } from '../ai/prompts.js';
+import { dispatchEveningTool } from './evening-actions.js';
 
 // Typing indicator (локальний стейт для вечірнього чату)
 let _eveningTypingEl = null;
@@ -56,25 +56,32 @@ async function openEveningTopic(topic) {
   const tp = topicPrompts[topic];
   if (!tp) return;
 
-  const systemPrompt = getEveningChatSystem() + '\n\n' + getAIContext() + '\n\n=== СЦЕНАРІЙ ===\n' + tp;
+  const systemPrompt = getEveningChatSystem() + '\n\n' + getAIContext() + '\n\n=== СЦЕНАРІЙ ===\n' + tp + '\n\nУ ЦЬОМУ ПЕРШОМУ ПОВІДОМЛЕННІ: без tool calls (юзер ще не просив створювати). Тільки content: стартове питання + чіпи.';
 
   try {
-    const reply = await callAIWithHistory(systemPrompt, []);
-    if (!reply) { addEveningBarMsg('agent', 'Щось пішло не так.'); return; }
-    const blocks = extractJsonBlocks(reply);
-    let text = null, chips = null;
-    for (const parsed of blocks) {
-      if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) text = parsed.text.trim();
-      if (parsed && Array.isArray(parsed.chips)) chips = parsed.chips;
+    const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
+    if (!msg) { addEveningBarMsg('agent', 'Щось пішло не так.'); return; }
+    // Стартове повідомлення не має виконувати tool calls, але якщо AI все ж
+    // дав — виконуємо (bонус); основне — content + чіпи
+    if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      for (const tc of msg.tool_calls) {
+        let args = {};
+        try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+        dispatchEveningTool(tc.function.name, args);
+      }
     }
-    if (text) {
-      addEveningBarMsg('agent', text, false, chips);
+    const { text: replyText, chips } = _parseContentChips(msg.content || '');
+    if (replyText) {
+      addEveningBarMsg('agent', replyText, false, chips);
       started[topic] = Date.now();
       localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
     } else {
-      safeAgentReply(reply, addEveningBarMsg);
+      safeAgentReply('Розкажи як воно?', addEveningBarMsg);
     }
-  } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
+  } catch (e) {
+    console.warn('[openEveningTopic]', e);
+    addEveningBarMsg('agent', 'Мережева помилка.');
+  }
 }
 
 // === EVENING AI BAR (чат-бар знизу вкладки) ===
@@ -134,6 +141,21 @@ export function addEveningBarMsg(role, text, _noSave = false, chips = null) {
   }
 }
 
+// Парсер content AI-відповіді: витягує optional JSON блок {chips:[...]} і
+// повертає { text, chips } — text БЕЗ JSON частини. Якщо JSON не знайдено —
+// chips=null. Формат content описаний у EVENING_CHAT_SYSTEM.
+function _parseContentChips(content) {
+  if (!content || typeof content !== 'string') return { text: '', chips: null };
+  const blocks = extractJsonBlocks(content);
+  let chips = null;
+  for (const b of blocks) {
+    if (b && Array.isArray(b.chips)) { chips = b.chips; break; }
+  }
+  // Прибираємо JSON блок з тексту (залишаємо тільки природню частину)
+  const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, '').trim();
+  return { text, chips };
+}
+
 export async function sendEveningBarMessage() {
   if (eveningBarLoading) return;
   const input = document.getElementById('evening-bar-input');
@@ -147,41 +169,34 @@ export async function sendEveningBarMessage() {
   eveningBarLoading = true;
   addEveningBarMsg('typing', '');
 
-  // Новий промпт Фази 4: чіпи у діалозі + контекст через getAIContext
-  // (який вже містить getEveningContext з Фази 2 — моменти, задачі, проекти,
-  // витрати, настрій, quit-звички). Окремі блоки "моменти/нотатки/inbox" тут
-  // більше не потрібні — все у aiContext.
+  // Фаза 7: tool calling. getAIContext вже містить вечірній зріз дня (Фаза 2).
   const systemPrompt = getEveningChatSystem() + '\n\n' + getAIContext();
+  const history = eveningBarHistory.slice(-10);
 
   try {
-    const reply = await callAIWithHistory(systemPrompt, eveningBarHistory.slice(-10));
-    if (!reply) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
+    const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+    if (!msg) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
 
-    // Розбираємо AI-відповідь: JSON блоки з {text, chips, action} + можливий сирий текст.
-    const blocks = extractJsonBlocks(reply);
-    let handled = false;
-    let lastAgentText = null;
-    let lastChips = null;
-
-    for (const parsed of blocks) {
-      // Спроба обробити як дію (save_task, complete_habit тощо)
-      const actionHandled = processUniversalAction(parsed, text, addEveningBarMsg);
-      if (actionHandled) { handled = true; continue; }
-
-      // Блок з текстом + можливими чіпами (типова відповідь з Фази 4)
-      if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) {
-        lastAgentText = parsed.text.trim();
-        if (Array.isArray(parsed.chips)) lastChips = parsed.chips;
-        handled = true;
-      } else if (parsed && Array.isArray(parsed.chips) && !lastChips) {
-        // Рідкий випадок: чіпи без тексту (наприклад після action)
-        lastChips = parsed.chips;
+    // Виконуємо tool calls через локальний dispatcher (без Inbox side effects)
+    if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      for (const tc of msg.tool_calls) {
+        let args = {};
+        try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+        dispatchEveningTool(tc.function.name, args);
       }
     }
 
-    if (lastAgentText) addEveningBarMsg('agent', lastAgentText, false, lastChips);
-    else if (!handled) safeAgentReply(reply, addEveningBarMsg);
-  } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
+    // Показуємо Verify Loop текст + чіпи якщо AI їх дав
+    const { text: replyText, chips } = _parseContentChips(msg.content || '');
+    if (replyText) addEveningBarMsg('agent', replyText, false, chips);
+    else if (!msg.tool_calls || msg.tool_calls.length === 0) {
+      // Нема ні tool calls ні тексту — fallback щоб юзер щось побачив
+      safeAgentReply('Не зрозумів. Спробуй інакше.', addEveningBarMsg);
+    }
+  } catch (e) {
+    console.warn('[sendEveningBarMessage]', e);
+    addEveningBarMsg('agent', 'Мережева помилка.');
+  }
   eveningBarLoading = false;
 }
 
