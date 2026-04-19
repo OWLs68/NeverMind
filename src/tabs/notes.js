@@ -7,7 +7,9 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, formatTime } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAI, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { processUniversalAction } from './habits.js';
 
@@ -1034,16 +1036,29 @@ export async function sendNotesBarMessage() {
 - Просто відповісти: текст (1-3 речення)
 ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
 Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
-НЕ вигадуй дані яких немає в контексті.` + (aiContext ? ('\n\n' + aiContext) : '');
+НЕ вигадуй дані яких немає в контексті.
+
+${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, ...notesBarHistory.slice(-8)], max_tokens: 300, temperature: 0.7 })
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim();
+    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
+    // CRUD через існуючий текстовий JSON.
+    const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), UI_TOOLS);
+
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      for (const tc of msg.tool_calls) {
+        if (UI_TOOL_NAMES.has(tc.function.name)) {
+          let args = {};
+          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+          const res = handleUITool(tc.function.name, args);
+          if (res && res.text) addNotesChatMsg('agent', res.text);
+        }
+      }
+      notesBarLoading = false;
+      return;
+    }
+
+    const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addNotesChatMsg('agent', 'Щось пішло не так.'); notesBarLoading = false; return; }
 
     try {
