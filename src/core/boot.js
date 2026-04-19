@@ -71,18 +71,18 @@ function setupSW() {
   // тому register().then() вже виконався раніше. Але реєструємо слухач ТУТ (синхронно),
   // щоб він був готовий ще до .then().
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && _swReg) _swReg.update();
+    if (document.visibilityState === 'visible' && _swReg) _swReg.update().catch(() => {});
   });
 
   // pageshow з persisted=true — iOS bfcache відновлення (окремий від visibilitychange кейс)
   window.addEventListener('pageshow', e => {
-    if (e.persisted && _swReg) _swReg.update();
+    if (e.persisted && _swReg) _swReg.update().catch(() => {});
   });
 
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
     .then(reg => {
       _swReg = reg;
-      reg.update();
+      reg.update().catch(() => {});
 
       // B-73: якщо вже є waiting SW (попередня сесія не активувала) — форсуємо skipWaiting
       if (reg.waiting && navigator.serviceWorker.controller) {
