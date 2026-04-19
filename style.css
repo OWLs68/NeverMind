@@ -1309,50 +1309,48 @@ body {
   animation-play-state: paused !important;
 }
 
-/* SVG-крило поверх PNG-тіла для greeting (гібрид, 19.04 bird-wing) */
-.owl-wing-overlay {
-  position: absolute;
-  width: 38%;               /* приблизно третина ширини маскота */
-  height: 38%;
-  top: 32%;                 /* точка плеча на PNG сови */
-  right: 8%;
-  transform-origin: 15% 50%; /* вісь обертання біля лівого краю SVG (плече) */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  z-index: 3;
-  will-change: transform, opacity;
-}
-/* DEBUG: постійне махання щоб перевірити позицію SVG-крила. Повернути після тесту. */
-.owl-wing-overlay {
-  opacity: 1 !important;
-  animation: wing-wave-premium 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-  outline: 2px dashed red;  /* візуальна рамка щоб бачити де прямокутник SVG */
-}
-.owl-mascot[data-state="greeting"] .owl-wing-overlay {
-  opacity: 1;
-  animation: wing-wave-premium 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-}
-/* Нахил голови у thinking (замість sprite-орбіти очей яка не працює на PNG). */
+/* Нахил голови у thinking. */
 .owl-mascot[data-state="thinking"] .owl-mascot-frame[data-frame="thinking"] {
   animation: owl-head-tilt 2s ease-in-out infinite;
   transform-origin: center bottom;
-}
-@keyframes wing-wave-premium {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  30%      { transform: rotate(-45deg) scaleX(1.1); }   /* швидкий підйом */
-  50%      { transform: rotate(-15deg) scale(1.05); }   /* зависання */
-  80%      { transform: rotate(-35deg) scaleX(1.08); }  /* другий мікро-мах */
 }
 @keyframes owl-head-tilt {
   0%, 100% { transform: scale(1) rotate(0deg); }
   50%      { transform: scale(1) rotate(8deg); }
 }
+
+/* === GREETING WAVE FLIPBOOK (5 кадрів Nano Banana, NFtzw 19.04) === */
+/* 5 PNG по черзі при data-state="greeting". Крило 0→45°→70°→90°→100°, очі: широкі→закриті.
+   Цикл: 5×120мс = 600мс. steps(1,end) — жорсткий стрибок між кадрами без блендингу. */
+.owl-wave-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  z-index: 2;
+}
+.owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="1"] { animation: owl-wave-1 600ms steps(1,end); }
+.owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="2"] { animation: owl-wave-2 600ms steps(1,end); }
+.owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="3"] { animation: owl-wave-3 600ms steps(1,end); }
+.owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="4"] { animation: owl-wave-4 600ms steps(1,end); }
+.owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="5"] { animation: owl-wave-5 600ms steps(1,end) forwards; }
+/* greeting статичний PNG прибираємо — flipbook його замінює */
+.owl-mascot[data-state="greeting"] .owl-mascot-frame[data-frame="greeting"] { opacity: 0; }
+
+@keyframes owl-wave-1 { 0%,19.99% { opacity: 1 } 20%,100% { opacity: 0 } }
+@keyframes owl-wave-2 { 0%,19.99% { opacity: 0 } 20%,39.99% { opacity: 1 } 40%,100% { opacity: 0 } }
+@keyframes owl-wave-3 { 0%,39.99% { opacity: 0 } 40%,59.99% { opacity: 1 } 60%,100% { opacity: 0 } }
+@keyframes owl-wave-4 { 0%,59.99% { opacity: 0 } 60%,79.99% { opacity: 1 } 80%,100% { opacity: 0 } }
+@keyframes owl-wave-5 { 0%,79.99% { opacity: 0 } 80%,100% { opacity: 1 } }
+
 @media (prefers-reduced-motion: reduce) {
-  .owl-wing-overlay { animation: none !important; opacity: 0 !important; }
-  .owl-mascot[data-state="thinking"] .owl-mascot-frame[data-frame="thinking"] {
-    animation: none !important;
-  }
+  .owl-mascot[data-state="thinking"] .owl-mascot-frame[data-frame="thinking"] { animation: none !important; }
+  .owl-wave-frame { animation: none !important; opacity: 0 !important; }
+  .owl-mascot[data-state="greeting"] .owl-mascot-frame[data-frame="greeting"] { opacity: 1 !important; }
 }
 .owl-tab-avatar { width: 20px; height: 20px; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .owl-speech-bubble {
