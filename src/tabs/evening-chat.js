@@ -6,21 +6,19 @@
 //
 // Містить:
 //   • sendEveningBarMessage() / addEveningBarMsg() — чат-бар Вечора
-//   • openEveningDialog() / closeEveningDialog() / sendDialogMessage() — вечірній діалог (фуллскрін)
+//   • openEveningTopic(topic) — CTA "Поговорити про завтра" / "Записати свій день"
+//     (Фаза 6 — preload стартового повідомлення сови з чіпами, 1×/день/топік)
 //
-// У Фазах 3-7 Вечора 2.0 цей файл отримає:
-//   • Старт-повідомлення від сови о 18:00 (тригер evening-prompt)
-//   • Чіпи у діалозі
-//   • Tool calling для автосинхронізації
+// Фаза 7 Вечора 2.0 додасть:
+//   • Tool calling для автосинхронізації (задача + подія + розпорядок + пам'ять)
 //
-// Залежності: core/nav, core/utils, ai/core, tabs/habits (processUniversalAction),
-//             tabs/evening (getMoments, getMomentsContext — без циклу).
+// Залежності: core/utils, ai/core, ai/prompts, tabs/habits (processUniversalAction),
+//             owl/chips, ui/unread-badge.
 // ============================================================
 
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
-import { callAI, callAIWithHistory, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAIWithHistory, getAIContext, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { processUniversalAction } from './habits.js';
-import { getMoments } from './evening.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
 import { getEveningChatSystem } from '../ai/prompts.js';
@@ -28,74 +26,55 @@ import { getEveningChatSystem } from '../ai/prompts.js';
 // Typing indicator (локальний стейт для вечірнього чату)
 let _eveningTypingEl = null;
 
-// === EVENING DIALOG (фуллскрін модалка) ===
-let dialogHistory = [];
-let dialogLoading = false;
+// === EVENING TOPIC START (Фаза 6 Вечора 2.0) ===
+// CTA-кнопки "Поговорити про завтра" і "Записати свій день" викликають цю функцію.
+// Вона відкриває чат-бар Вечора і кладе preload-повідомлення сови з чіпами.
+// Один раз на день на топік — повторний тап просто відкриває чат без спаму.
+const EVENING_TOPIC_STARTED_KEY = 'nm_evening_topic_started';
 
-function openEveningDialog() {
-  dialogHistory = [];
-  document.getElementById('evening-dialog').style.display = 'flex';
-  document.getElementById('dialog-messages').innerHTML = '';
-  document.getElementById('dialog-input').value = '';
+async function openEveningTopic(topic) {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  let started = {};
+  try { started = JSON.parse(localStorage.getItem(EVENING_TOPIC_STARTED_KEY) || '{}'); } catch(e) {}
+  if (started.date !== todayISO) started = { date: todayISO };
 
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  const name = settings.name ? `, ${settings.name}` : '';
-  addDialogMessage('agent', `Привіт${name}. Розкажи як пройшов день — що вийшло, що ні. Без прикрас.`);
-}
+  // Відкриваємо чат-бар знизу
+  try { openChatBar('evening'); } catch(e) {}
 
-function closeEveningDialog() {
-  document.getElementById('evening-dialog').style.display = 'none';
-}
-
-function addDialogMessage(role, text) {
-  const el = document.getElementById('dialog-messages');
-  const isAgent = role === 'agent';
-  const div = document.createElement('div');
-  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div style="max-width:80%;background:${isAgent ? 'rgba(237,233,255,0.9)' : '#7c3aed'};color:${isAgent ? '#4c1d95' : 'white'};border-radius:${isAgent ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};padding:10px 13px;font-size:15px;line-height:1.55;font-weight:500">${escapeHtml(text)}</div>`;
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
-  dialogHistory.push({ role: isAgent ? 'assistant' : 'user', content: text });
-}
-
-async function sendDialogMessage() {
-  if (dialogLoading) return;
-  const input = document.getElementById('dialog-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  input.style.height = 'auto';
-  addDialogMessage('user', text);
-  dialogLoading = true;
-
-  const aiContext = getAIContext();
-  const today = new Date().toDateString();
-  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const systemPrompt = `${getOWLPersonality()} Короткі відповіді (1-3 речення). Конкретно і по ділу. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}
-Контекст дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'моменти не додані'}`;
+  if (started[topic]) return; // сценарій вже стартував сьогодні — не дублюємо
 
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addDialogMessage('agent', 'Введи OpenAI ключ в налаштуваннях.'); dialogLoading = false; return; }
+  if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...dialogHistory.slice(-10)
-  ];
+  addEveningBarMsg('typing', '');
+
+  const topicPrompts = {
+    tomorrow: `Юзер щойно тапнув "Поговорити про завтра". У контексті є майбутні події календаря, недороблені задачі, пам'ять. Почни розмову 1-2 реченнями — якщо у контексті є конкретна подія на завтра або важлива недороблена задача, згадай її ("Завтра у тебе вже дзвінок о 15 — що ще?"). Заверши питанням що ще планує на завтра. Додай чіпи типу запису: [Задача] [Подія] [І те й те].`,
+    diary: `Юзер щойно тапнув "Записати свій день". У контексті є моменти сьогодні, настрій, закриті задачі/кроки проектів, витрати. Почни 1-2 реченнями — якщо є яскравий момент або паттерн, згадай його ("Бачу ти записав у моментах що важко з маркетингом"). Заверши відкритим питанням як воно. Додай чіпи настрою: [🔥] [😊] [😐] [😕] [😞].`,
+  };
+
+  const tp = topicPrompts[topic];
+  if (!tp) return;
+
+  const systemPrompt = getEveningChatSystem() + '\n\n' + getAIContext() + '\n\n=== СЦЕНАРІЙ ===\n' + tp;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 200, temperature: 0.8 })
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content;
-    if (reply) addDialogMessage('agent', reply);
-    else addDialogMessage('agent', 'Щось пішло не так. Спробуй ще раз.');
-  } catch {
-    addDialogMessage('agent', 'Мережева помилка.');
-  }
-  dialogLoading = false;
+    const reply = await callAIWithHistory(systemPrompt, []);
+    if (!reply) { addEveningBarMsg('agent', 'Щось пішло не так.'); return; }
+    const blocks = extractJsonBlocks(reply);
+    let text = null, chips = null;
+    for (const parsed of blocks) {
+      if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) text = parsed.text.trim();
+      if (parsed && Array.isArray(parsed.chips)) chips = parsed.chips;
+    }
+    if (text) {
+      addEveningBarMsg('agent', text, false, chips);
+      started[topic] = Date.now();
+      localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
+    } else {
+      safeAgentReply(reply, addEveningBarMsg);
+    }
+  } catch { addEveningBarMsg('agent', 'Мережева помилка.'); }
 }
 
 // === EVENING AI BAR (чат-бар знизу вкладки) ===
@@ -208,9 +187,7 @@ export async function sendEveningBarMessage() {
 
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  openEveningDialog,
-  closeEveningDialog,
-  sendDialogMessage,
+  openEveningTopic,
   sendEveningBarMessage,
   showEveningBarMessages,
 });

@@ -462,8 +462,8 @@ function _startEveningLockTicker() {
 }
 
 // === WINDOW EXPORTS (HTML handlers only) ===
-// sendEveningBarMessage, sendDialogMessage, openEveningDialog, closeEveningDialog
-// → переїхали у evening-chat.js (їхній власний window.assign).
+// sendEveningBarMessage, openEveningTopic, showEveningBarMessages
+// → живуть у evening-chat.js (їхній власний window.assign).
 Object.assign(window, {
   openAddMoment, saveMoment, closeMomentModal, setMomentMood,
   setEveningMood,
