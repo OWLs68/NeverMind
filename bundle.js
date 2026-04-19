@@ -2534,7 +2534,9 @@ MEMORY ECHO (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.34): \u0420\u0430\u043
 - \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439 \u043E\u0434\u043D\u0435 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.
 
 \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u0417\u0430\u0431\u043E\u0440\u043E\u043D\u0430 \u043D\u0430 \u0432\u0438\u0433\u0430\u0434\u0430\u043D\u0456 \u0444\u0430\u043A\u0442\u0438.
-\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 content. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".`;
+\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 content. \u041F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u043D\u0430 "\u0442\u0438".
+
+${UI_TOOLS_RULES}`;
   }
   function getEveningSummaryPromptV2() {
     return `${getOWLPersonality()}
@@ -4868,6 +4870,11 @@ ${lines.join("\n\n")}`;
             args = JSON.parse(tc.function.arguments || "{}");
           } catch (e) {
           }
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addEveningBarMsg("agent", res.text);
+            continue;
+          }
           dispatchEveningTool(tc.function.name, args);
         }
       }
@@ -4977,6 +4984,11 @@ ${lines.join("\n\n")}`;
             args = JSON.parse(tc.function.arguments || "{}");
           } catch (e) {
           }
+          if (UI_TOOL_NAMES.has(tc.function.name)) {
+            const res = handleUITool(tc.function.name, args);
+            if (res && res.text) addEveningBarMsg("agent", res.text);
+            continue;
+          }
           dispatchEveningTool(tc.function.name, args);
         }
       }
@@ -4999,6 +5011,7 @@ ${lines.join("\n\n")}`;
       init_unread_badge();
       init_chips();
       init_prompts();
+      init_ui_tools();
       init_evening_actions();
       _eveningTypingEl = null;
       EVENING_TOPIC_STARTED_KEY = "nm_evening_topic_started";
