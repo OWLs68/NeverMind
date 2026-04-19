@@ -12,7 +12,7 @@ import { getHabits, getHabitLog } from '../tabs/habits.js';
 import { getNotes, addNotesChatMsg, getNotesContext } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, addFinanceChatMsg } from '../tabs/finance.js';
 import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
-import { getEveningMood, getMomentsContext } from '../tabs/evening.js';
+import { getEveningMood, getMomentsContext, getEveningContext } from '../tabs/evening.js';
 import { addEveningBarMsg } from '../tabs/evening-chat.js';
 import { addMeChatMsg } from '../tabs/me.js';
 import { getHealthContext } from '../tabs/health.js';
@@ -177,6 +177,14 @@ export function getAIContext() {
   try {
     const momentsCtx = getMomentsContext();
     if (momentsCtx) parts.push(momentsCtx);
+  } catch(e) {}
+
+  // === Вечірній зріз дня (19.04 Фаза 2 Вечора 2.0) — настрій, недороблені
+  // задачі, закриті кроки проектів, quit-звички, минулі події, витрати дня.
+  // Принцип "один мозок": сова на ВСІХ вкладках бачить вечірній контекст.
+  try {
+    const eveCtx = getEveningContext();
+    if (eveCtx) parts.push(eveCtx);
   } catch(e) {}
 
   // === Нотатки (18.04 pvZG1) — щоб OWL не вигадував неіснуючі нотатки ===
