@@ -6,9 +6,8 @@
 // Детальний план → docs/EVENING_2.0_PLAN.md
 // ============================================================
 
-import { currentTab, showToast } from '../core/nav.js';
+import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
-import { callAI, getAIContext, getOWLPersonality } from '../ai/core.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
 import { getNotes } from './notes.js';
@@ -144,72 +143,11 @@ export function renderEvening() {
   const today = new Date().toDateString();
   const todayMoments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
 
-  // === 1. Три статки ===
-  const statsEl = document.getElementById('evening-stats-row');
-  if (statsEl) {
-    const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-    const habits = getHabits();
-    const buildHabitsEvening = habits.filter(h => h.type !== 'quit');
-    const log = getHabitLog();
-    const todayDow = (new Date().getDay() + 6) % 7;
-    const todayH = buildHabitsEvening.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow));
-    const doneH = todayH.filter(h => !!log[today]?.[h.id]).length;
-    let todayExp = 0;
-    try { todayExp = getFinance().filter(t => t.type === 'expense' && new Date(t.ts).toDateString() === today).reduce((s, t) => s + t.amount, 0); } catch(e) {}
-    const cur = getCurrency();
-    statsEl.innerHTML = `
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#1e3350;line-height:1">${doneTasks}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">задачі ✓</div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#16a34a;line-height:1">${todayH.length > 0 ? doneH + '/' + todayH.length : '—'}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">звички</div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#c2410c;line-height:1">${todayExp > 0 ? cur + Math.round(todayExp) : '—'}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">витрати</div>
-      </div>`;
-  }
-
-  // === 2. Кільце продуктивності (динамічна формула) ===
-  // Кожне джерело дає 0..1, скор = середнє тих що мають дані
-  const sources = [];
-
-  // Звички: % виконаних за сьогодні
-  const habits2 = getHabits().filter(h => h.type !== 'quit'); const log2 = getHabitLog();
-  const todayDow2 = (new Date().getDay() + 6) % 7;
-  const todayH2 = habits2.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow2));
-  const doneH2 = todayH2.filter(h => !!log2[today]?.[h.id]).length;
-  if (todayH2.length > 0) sources.push(doneH2 / todayH2.length);
-
-  // Задачі: closedToday / max(totalActive * 0.2, 1)
-  const allTasks = getTasks();
-  const doneTasks2 = allTasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-  const activeTasks = allTasks.filter(t => t.status === 'active').length;
-  if (doneTasks2 > 0 || activeTasks > 0) sources.push(Math.min(doneTasks2 / Math.max(activeTasks * 0.2, 1), 1));
-
-  // Проекти: stepsClosedToday / max(totalOpenSteps * 0.2, 1)
-  const activeProjs = getProjects().filter(p => p.status === 'active');
-  const allSteps = activeProjs.flatMap(p => p.steps || []);
-  const stepsToday = allSteps.filter(s => s.done && s.doneAt && new Date(s.doneAt).toDateString() === today).length;
-  const openSteps = allSteps.filter(s => !s.done).length;
-  if (stepsToday > 0 || openSteps > 0) sources.push(Math.min(stepsToday / Math.max((openSteps + stepsToday) * 0.2, 1), 1));
-
-  const score = sources.length > 0 ? Math.round((sources.reduce((a, b) => a + b, 0) / sources.length) * 100) : 0;
-
-  const arc = document.getElementById('evening-ring-arc');
-  const pctEl = document.getElementById('evening-ring-pct');
-  const descEl = document.getElementById('evening-score-desc');
-  if (arc) { const circ = 151; setTimeout(() => { arc.style.strokeDashoffset = circ - (circ * score / 100); }, 100); }
-  if (pctEl) pctEl.textContent = score + '%';
-  if (descEl) descEl.textContent = sources.length === 0 ? 'Додай задачі або звички' : score >= 70 ? 'Гарний день 💪' : score >= 40 ? 'Середній день' : 'Важкий день';
-
-  // === 3. Настрій ===
+  // === Настрій (піднято вище у Фазі 5, не об'єднаний з кільцем — кільце видалено)
   const savedMood = getEveningMood();
   if (savedMood) renderEveningMoodButtons(savedMood);
 
-  // === 4. Моменти дня ===
+  // === Моменти дня + нотатки (маркер кольору відрізняється)
   const momEl = document.getElementById('evening-moments');
   if (momEl) {
     const todayNotes = getNotes().filter(n => new Date(n.ts || n.createdAt || 0).toDateString() === today);
@@ -217,7 +155,7 @@ export function renderEvening() {
     const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
 
     if (allItems.length === 0) {
-      momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">Додай моменти свого дня</div>';
+      momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">Моменти і нотатки за сьогодні зʼявляться тут</div>';
     } else {
       const moodDots = { positive: '#16a34a', neutral: '#f59e0b', negative: '#ef4444' };
       momEl.innerHTML = allItems.map(m => {
@@ -236,38 +174,91 @@ export function renderEvening() {
     }
   }
 
-  // === 5. Фінанси сьогодні ===
-  const finBlock = document.getElementById('evening-finance-block');
-  const finContent = document.getElementById('evening-finance-content');
-  try {
-    const todayTxs = getFinance().filter(t => new Date(t.ts).toDateString() === today);
-    if (finBlock && finContent && todayTxs.length > 0) {
-      finBlock.style.display = 'block';
-      const cur = getCurrency ? getCurrency() : '₴';
-      const todayExpF = todayTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-      finContent.innerHTML = todayTxs.slice(0, 5).map(t =>
-        `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-          <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.6)">${escapeHtml(t.category)}${t.comment ? ' · ' + escapeHtml(t.comment) : ''}</span>
-          <span style="font-size:14px;font-weight:800;color:${t.type === 'expense' ? '#c2410c' : '#16a34a'}">${t.type === 'expense' ? '-' : '+'}${cur}${Math.round(t.amount)}</span>
-        </div>`
-      ).join('') + `<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(30,16,64,0.06);display:flex;justify-content:space-between">
-        <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">Всього витрати</span>
-        <span style="font-size:13px;font-weight:800;color:#c2410c">${todayExpF > 0 ? '-' + cur + Math.round(todayExpF) : '—'}</span>
-      </div>`;
-    } else if (finBlock) { finBlock.style.display = 'none'; }
-  } catch(e) { if (finBlock) finBlock.style.display = 'none'; }
+  renderEveningUndoneTasks();
+  renderEveningQuitHabits();
+}
 
-  // === 6. Відновлюємо підсумок OWL ===
-  try {
-    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
-    const el = document.getElementById('evening-summary');
-    const btn = document.getElementById('evening-summary-btn');
-    if (saved && saved.date === today && saved.text && el) {
-      el.textContent = saved.text;
-      el.style.color = 'white';
-      if (btn) btn.textContent = 'Оновити';
+// === НЕДОРОБЛЕНІ ЗАДАЧІ (Фаза 5) ===
+// Задачі з dueDate=today + status=active. Біля кожної — чіпи
+// [На завтра] [На тиждень]. Один тап = переніс + закрив питання.
+function renderEveningUndoneTasks() {
+  const container = document.getElementById('evening-undone');
+  if (!container) return;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const undone = getTasks().filter(t => t.status === 'active' && t.dueDate === todayISO);
+  const wrapBlock = document.getElementById('evening-undone-block');
+  if (undone.length === 0) {
+    if (wrapBlock) wrapBlock.style.display = 'none';
+    return;
+  }
+  if (wrapBlock) wrapBlock.style.display = 'block';
+  const top = undone.slice(0, 5);
+  const more = undone.length - top.length;
+  container.innerHTML = top.map(t => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t.title)}</div>
+      <button onclick="rescheduleTaskTomorrow(${t.id})" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На завтра</button>
+      <button onclick="rescheduleTaskWeek(${t.id})" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На тиждень</button>
+    </div>
+  `).join('') + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">і ще ${more}</div>` : '');
+}
+
+function _rescheduleTask(taskId, daysAhead) {
+  const tasks = getTasks();
+  const idx = tasks.findIndex(t => t.id === taskId);
+  if (idx === -1) return;
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  tasks[idx].dueDate = d.toISOString().slice(0, 10);
+  tasks[idx].updatedAt = Date.now();
+  // saveTasks не експортований з цього модуля, але localStorage пишемо напряму
+  localStorage.setItem('nm_tasks', JSON.stringify(tasks));
+  window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' }));
+  showToast(daysAhead === 1 ? '📅 На завтра' : '📅 Через ' + daysAhead + ' дн');
+  renderEvening();
+}
+
+function rescheduleTaskTomorrow(taskId) { _rescheduleTask(taskId, 1); }
+function rescheduleTaskWeek(taskId) { _rescheduleTask(taskId, 7); }
+
+// === QUIT-ЗВИЧКИ ВІДМІТКА (Фаза 5) ===
+// Вечір = обовʼязкова точка щоденної відмітки для збереження стріку.
+// Чіпи [Тримався 💪] [Зірвався] по кожній активній quit-звичці.
+function renderEveningQuitHabits() {
+  const container = document.getElementById('evening-quit');
+  if (!container) return;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const quits = getHabits().filter(h => h.type === 'quit');
+  const wrapBlock = document.getElementById('evening-quit-block');
+  if (quits.length === 0) {
+    if (wrapBlock) wrapBlock.style.display = 'none';
+    return;
+  }
+  if (wrapBlock) wrapBlock.style.display = 'block';
+  container.innerHTML = quits.map(h => {
+    const s = getQuitStatus(h.id);
+    const heldToday = s.lastHeld === todayISO;
+    const streak = s.streak || 0;
+    const streakText = streak > 0 ? `стрік ${streak} дн` : 'новий старт';
+    if (heldToday) {
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+          <div style="flex:1">
+            <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">Тримаєшся сьогодні ✓ · ${streakText}</div>
+          </div>
+        </div>`;
     }
-  } catch(e) {}
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+        <div style="flex:1">
+          <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
+        </div>
+        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Тримався 💪</button>
+        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Зірвався</button>
+      </div>`;
+  }).join('');
 }
 
 export function getEveningMood() {
@@ -373,101 +364,6 @@ function deleteMoment(id) {
   renderEvening();
 }
 
-const EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} Зроби підсумок дня (3-4 речення) у своєму стилі. Звертайся на "ти". Відзнач що сьогодні вдалось. Якщо є що покращити — скажи конкретно. Завершуй думкою на завтра. Відповідай українською.
-
-ЗДОРОВ'Я у підсумку (Фаза 5):
-- Якщо у контексті є "Активні стани здоров'я" і юзер мав пропущені дози сьогодні (history записи типу 'auto' з "Пропустив дозу") — м'яко згадай ("Пропустив дозу Омезу — не забудь завтра"). БЕЗ моралізаторства.
-- Якщо дисципліна курсу добра (всі дози прийняті, є status_change з покращенням) — похвали конкретно ("Курс Омезу тримаєш чітко").
-- Згадка здоров'я — ОПЦІЙНА. Якщо нічого особливого — не вигадуй.`;
-
-async function generateEveningSummary() {
-  const btn = document.getElementById('evening-summary-btn');
-  const el = document.getElementById('evening-summary');
-  btn.textContent = '…';
-  btn.disabled = true;
-  el.textContent = '…';
-
-  const today = new Date().toDateString();
-  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
-  const aiContext = getAIContext();
-
-  const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
-
-  const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
-Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
-
-  // Quit звички в контексті вечора
-  let _quitCtx = '';
-  try {
-    const _qh = getHabits().filter(h => h.type === 'quit');
-    if (_qh.length > 0) {
-      const _ts = new Date().toISOString().slice(0, 10);
-      _quitCtx = '\nЧеленджі "Кинути": ' + _qh.map(h => {
-        const s = getQuitStatus(h.id);
-        return '"' + h.name + '": ' + (s.streak||0) + ' дн, ' + (s.lastHeld===_ts ? 'тримався ✓' : 'не відмічено');
-      }).join('; ');
-    }
-  } catch(e) {}
-  const reply = await callAI(systemPrompt, dayData + _quitCtx, {});
-  const text = reply || 'Не вдалось отримати підсумок.';
-  el.textContent = text;
-  // Зберігаємо підсумок в localStorage — відновиться після перезапуску
-  localStorage.setItem('nm_evening_summary', JSON.stringify({ text, date: today }));
-  btn.textContent = '↻';
-  btn.disabled = false;
-}
-
-// === АВТОПІДСУМОК ВЕЧОРА ЩОГОДИНИ ===
-async function autoEveningSummary() {
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return;
-
-  // Підсумок дня має сенс тільки з вечора — до 18:00 не генеруємо
-  if (new Date().getHours() < 18) return;
-
-  // Перевіряємо чи є взагалі записи за сьогодні
-  const today = new Date().toDateString();
-  const moments = getMoments().filter(m => new Date(m.ts).toDateString() === today);
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]').filter(i => new Date(i.ts).toDateString() === today);
-  if (moments.length === 0 && inbox.length === 0) return; // нема чого підсумовувати
-
-  // Перевіряємо чи не оновлювали менше ніж 50 хвилин тому
-  try {
-    const saved = JSON.parse(localStorage.getItem('nm_evening_summary') || 'null');
-    if (saved && saved.date === today && saved.autoTs) {
-      const elapsed = Date.now() - saved.autoTs;
-      if (elapsed < 50 * 60 * 1000) return; // 50 хвилин
-    }
-  } catch(e) {}
-
-  const aiContext = getAIContext();
-  const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `\n\n${aiContext}` : '');
-  const dayData = `Моменти дня: ${moments.map(m=>`[${m.mood}] ${m.text}`).join('; ') || 'немає'}
-Записи в Inbox за сьогодні: ${inbox.map(i=>`[${i.category}] ${i.text}`).join('; ') || 'немає'}`;
-
-  try {
-    const reply = await callAI(systemPrompt, dayData, {});
-    if (!reply) return;
-    // Зберігаємо з позначкою autoTs — щоб не запускати занадто часто
-    localStorage.setItem('nm_evening_summary', JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
-    // Якщо зараз відкрита вкладка Вечір — оновлюємо UI
-    if (currentTab === 'evening') {
-      const el = document.getElementById('evening-summary');
-      if (el) el.textContent = reply;
-    }
-  } catch(e) {}
-}
-
-export function setupAutoEveningSummary() {
-  // Перший раз — через 5 хвилин після старту
-  setTimeout(() => {
-    autoEveningSummary();
-    // Далі — кожну годину
-    setInterval(autoEveningSummary, 60 * 60 * 1000);
-  }, 5 * 60 * 1000);
-}
-
 // === MOMENT VIEW MODAL ===
 function openMomentView(momentId) {
   const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
@@ -570,8 +466,9 @@ function _startEveningLockTicker() {
 // → переїхали у evening-chat.js (їхній власний window.assign).
 Object.assign(window, {
   openAddMoment, saveMoment, closeMomentModal, setMomentMood,
-  generateEveningSummary, setEveningMood,
+  setEveningMood,
   deleteMoment, openMomentView, closeMomentView,
+  rescheduleTaskTomorrow, rescheduleTaskWeek,
 });
 
 _startEveningLockTicker();
