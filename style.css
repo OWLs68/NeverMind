@@ -1338,8 +1338,10 @@ body {
 .owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="3"] { animation: owl-wave-3 600ms steps(1,end); }
 .owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="4"] { animation: owl-wave-4 600ms steps(1,end); }
 .owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="5"] { animation: owl-wave-5 600ms steps(1,end) forwards; }
-/* greeting статичний PNG прибираємо — flipbook його замінює */
-.owl-mascot[data-state="greeting"] .owl-mascot-frame[data-frame="greeting"] { opacity: 0; }
+/* Статичний greeting PNG залишаємо видимим як fallback — якщо 5 wave-PNG
+   ще не залиті у репо, flipbook не спрацює і око бачитиме статичний greeting
+   замість порожнечі. Коли wave-PNG завантажаться — вони поверх (z-index:2)
+   перекриватимуть статичний повністю. */
 
 @keyframes owl-wave-1 { 0%,19.99% { opacity: 1 } 20%,100% { opacity: 0 } }
 @keyframes owl-wave-2 { 0%,19.99% { opacity: 0 } 20%,39.99% { opacity: 1 } 40%,100% { opacity: 0 } }
