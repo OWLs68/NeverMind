@@ -812,17 +812,18 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     // і тільки ті що провисіли >10хв рахуються як проігноровані.
     try {
       const MIN_VISIBLE_MS = 10 * 60 * 1000; // 10 хв — мінімум щоб повідомлення вважалось "поміченим"
-      const IGNORE_THRESHOLD = 5;            // було 3 — агресивно
+      const IGNORE_THRESHOLD = 7;            // 5 було агресивно — дає тишу після 50 хв неактивності
+      const SILENCE_MS = 2 * 60 * 60 * 1000; // 2 год (було 4) — повертаємо сову швидше якщо правило помилилось
       const lastBoardTs = parseInt(localStorage.getItem('nm_owl_last_board_ts') || '0');
       const lastClickTs = parseInt(localStorage.getItem('nm_owl_last_chip_click_ts') || '0');
       const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
-      // Рахуємо як ignored ТІЛЬКИ якщо попереднє прожило >10хв і не було кліку за цей час
+      // Рахуємо як ignored ТІЛЬКИ якщо попереднє прожило >10хв і не було кліку/активності за цей час
       if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
         const ignored = parseInt(localStorage.getItem('nm_owl_ignored_msgs') || '0') + 1;
         if (ignored >= IGNORE_THRESHOLD) {
-          localStorage.setItem('nm_owl_silence_until', String(Date.now() + 4 * 60 * 60 * 1000));
+          localStorage.setItem('nm_owl_silence_until', String(Date.now() + SILENCE_MS));
           localStorage.setItem('nm_owl_ignored_msgs', '0');
-          console.log('[OWL 4.40] Auto-silence 4 год —', IGNORE_THRESHOLD, 'повідомлень поспіль проігноровано');
+          console.log('[OWL 4.40] Auto-silence 2 год —', IGNORE_THRESHOLD, 'повідомлень поспіль проігноровано');
         } else {
           localStorage.setItem('nm_owl_ignored_msgs', String(ignored));
         }
@@ -1177,5 +1178,17 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+// 4.40 — розширені сигнали активності юзера: будь-яка зміна даних (CRUD з Inbox,
+// edit задачі, додавання звички тощо) скидає лічильник ignored. Не полагодженими
+// лишаються випадки "тільки дивлюсь без дії" — для них допомагає знижений silence 2 год.
+try {
+  window.addEventListener('nm-data-changed', () => {
+    try {
+      localStorage.setItem('nm_owl_ignored_msgs', '0');
+      localStorage.setItem('nm_owl_last_chip_click_ts', String(Date.now()));
+    } catch(e) {}
+  });
+} catch(e) {}
 
 // No window globals needed — all consumed via imports
