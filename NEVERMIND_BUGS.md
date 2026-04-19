@@ -23,7 +23,6 @@ _Наразі порожньо._
 
 | # | Файл | Опис | Деталі |
 |---|------|------|--------|
-| B-65 | `sw.js` | SW load failed — Service Worker не завантажився | Одноразова помилка, не критично |
 | B-80 | `src/tabs/notes.js` | Layout glitch при видаленні папки через свайп | Чіпи під OWL-баблом на частку секунди перекриваються першою папкою, потім само-виправляється (~250мс). Гіпотеза: layout race між анімацією закриття свайпу (transition 0.25s) і `renderNotes()`. Косметика, не ламає функціонал. Виявлено 18.04.2026 Vydqm. |
 
 ---
@@ -32,9 +31,13 @@ _Наразі порожньо._
 
 _Зберігаються закриті у 2 останніх активних сесіях. Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_У сесіях NFtzw і rSTLV (поточні активні) жоден старий баг не закривався — NFtzw займалась research + V2 план анімації сови (відкочено у rSTLV), rSTLV — повним відкатом маскот-сови до емодзі 🦉._
+### Сесія 6GoDe (19.04.2026)
 
-_Закриті у сесіях до NFtzw (w3ISi, uDZmz, VJF2M, Vydqm, FMykK, KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-65 | `src/core/boot.js` | "SW load failed" у логах 7+ разів на добу | Корінь — `reg.update()` у `setupSW()` викликався 3 рази без `.catch()` (register, visibilitychange, pageshow). Коли iPhone офлайн/повільний — update() rejects з "Script load failed" → `window.unhandledrejection` → логер. Додав тихі `.catch(() => {})` на всі 3 виклики. Коміт `e634b12`. |
+
+_У сесіях до 6GoDe (dIooU, QV1n2, NFtzw, rSTLV, w3ISi, uDZmz, VJF2M, Vydqm, FMykK, KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
