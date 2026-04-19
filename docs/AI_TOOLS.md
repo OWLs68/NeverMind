@@ -147,7 +147,7 @@
 
 | Tool | Статус |
 |------|--------|
-| `set_theme` | ✅ "темна / світла" |
+| ~~`set_theme`~~ | ❌ **ВИДАЛЕНО 19.04.2026 (JvzDi)** — плацебо tool. `applyTheme()` лише фарбує таб-бар за поточною вкладкою, глобальної темної теми у застосунку нема. Повернемо коли буде реальна темна тема. |
 | `set_owl_mode` | ✅ "Тренер / Партнер / Наставник" |
 
 ### E. Операційні
@@ -194,4 +194,5 @@
 |------|-------|-------|
 | 18.04.2026 | VJF2M | Створено документ. 39 готових tools + 14 у планах (4.17). |
 | 18.04.2026 | VJF2M | Реалізовано 8 з 14 UI Tools (`src/ai/ui-tools.js`): switch_tab, open_memory, open_settings, set_finance_period, open_finance_analytics, set_theme, set_owl_mode, export_health_card. 6 заблокованих (open_record/open_trash/calendar_jump_to/filter_tasks/clear_chat/toggle_owl_board) — винесено у підпункти 4.17.B (потребують нової інфраструктури). **Загалом 47 tools живих.** |
+| 19.04.2026 | JvzDi | **Видалено `set_theme`** — плацебо tool без реальної темної теми у застосунку. UI tools: 8 → **7 живих.** Загалом: 47 → **46 tools.** Також посилено правило `switch_tab` у промпті (ЖОРСТКЕ правило "відкрий X → switch_tab, НЕ save_task") і додано загальне правило ФОРМАТ ЧІПІВ для Inbox chat (чіпи як JSON блок у content, парсер `_parseContentChips` портовано з evening-chat). |
 | 19.04.2026 | 6GoDe | **`switch_tab` — три шари захисту** від TypeError (guard у `switchTab()` у `nav.js`, DOM-check у `handleUITool`, `strict:true` у definition). **Фаза 6 Здоров'я — інтерв'ю перед `create_health_card`:** нове правило у `INBOX_SYSTEM_PROMPT` що сова питає 1-3 короткі питання з чіпами (коли почалось, був у лікаря, які ліки) перед створенням нової картки. НЕ допитується при edit/history_entry. |
