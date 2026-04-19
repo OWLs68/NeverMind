@@ -14,6 +14,7 @@ import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
 import { getNotes } from './notes.js';
 import { getCurrency, getFinance } from './finance.js';
 import { getProjects } from './projects.js';
+import { getEvents } from './calendar.js';
 
 // === EVENING TAB ===
 let currentMomentMood = 'positive';
@@ -37,6 +38,105 @@ export function getMomentsContext() {
     return `- ${time} ${em} "${txt}"`;
   }).join('\n');
   return `Моменти дня (що юзер зафіксував сьогодні — використовуй у підсумках і емпатійних відповідях):\n${lines}`;
+}
+
+// Вечірній зріз дня для AI-контексту (Фаза 2 Вечора 2.0).
+// Доповнює getAIContext() тим чого там немає: настрій, недороблені
+// сьогоднішні задачі, закриті кроки проектів, quit-звички статус,
+// минулі події календаря, витрати дня. Не дублюємо моменти/ліки/нотатки
+// (вони додаються окремими функціями у core.js).
+export function getEveningContext() {
+  const lines = [];
+  const today = new Date().toDateString();
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const nowMs = Date.now();
+
+  // Настрій дня (5 рівнів, юзер сам тапнув)
+  const mood = getEveningMood();
+  if (mood) {
+    const moodMap = { bad: '😔 важкий', meh: '😐 так собі', ok: '🙂 норм', good: '😄 гарний', fire: '🔥 чудовий' };
+    lines.push(`Настрій дня (юзер сам обрав у Вечорі): ${moodMap[mood] || mood}`);
+  }
+
+  // Недороблені задачі з дедлайном === сьогодні
+  try {
+    const dueToday = getTasks().filter(t => t.status === 'active' && t.dueDate === todayISO);
+    if (dueToday.length > 0) {
+      const list = dueToday.slice(0, 6).map(t => `- [ID:${t.id}] "${t.title}"`).join('\n');
+      lines.push(`Задачі з дедлайном СЬОГОДНІ але не закриті:\n${list}`);
+    }
+  } catch(e) {}
+
+  // Кроки проектів закриті сьогодні
+  try {
+    const stepsToday = [];
+    getProjects().forEach(p => {
+      (p.steps || []).forEach(s => {
+        if (s.done && s.doneAt && new Date(s.doneAt).toDateString() === today) {
+          stepsToday.push(`- ✅ "${s.title || s.text || ''}" (проект: ${p.title || p.name || '—'})`);
+        }
+      });
+    });
+    if (stepsToday.length > 0) {
+      lines.push(`Кроки проектів закриті сьогодні:\n${stepsToday.slice(0, 8).join('\n')}`);
+    }
+  } catch(e) {}
+
+  // Звички — короткий summary за сьогодні
+  try {
+    const habits = getHabits();
+    const log = getHabitLog();
+    const nonQuit = habits.filter(h => h.type !== 'quit');
+    const todayDow = (new Date().getDay() + 6) % 7;
+    const todayH = nonQuit.filter(h => (h.days || [0,1,2,3,4,5,6]).includes(todayDow));
+    if (todayH.length > 0) {
+      const doneH = todayH.filter(h => !!log[today]?.[h.id]).length;
+      lines.push(`Звички дня: ${doneH}/${todayH.length} виконано`);
+    }
+    // Quit-звички статус сьогодні (челенджі кинути)
+    const quitHabits = habits.filter(h => h.type === 'quit');
+    if (quitHabits.length > 0) {
+      const qLines = quitHabits.map(h => {
+        const s = getQuitStatus(h.id);
+        const marked = s.lastHeld === todayISO ? 'тримався сьогодні ✓' : 'сьогодні НЕ відмічено';
+        return `- "${h.name}": стрік ${s.streak || 0} дн, ${marked}`;
+      }).join('\n');
+      lines.push(`Челенджі "кинути":\n${qLines}`);
+    }
+  } catch(e) {}
+
+  // Минулі події календаря сьогодні (по часу)
+  try {
+    const pastEvents = getEvents().filter(ev => {
+      if (ev.date !== todayISO) return false;
+      if (!ev.time) return true;
+      const [h, m] = ev.time.split(':').map(Number);
+      return new Date().setHours(h, m, 0, 0) < nowMs;
+    });
+    if (pastEvents.length > 0) {
+      const evLines = pastEvents.slice(0, 5)
+        .map(ev => `- 📅 "${ev.title}"${ev.time ? ' о ' + ev.time : ''}`).join('\n');
+      lines.push(`Минулі події сьогодні:\n${evLines}`);
+    }
+  } catch(e) {}
+
+  // Витрати дня — сума + топ-3 категорії
+  try {
+    const todayExpenses = getFinance()
+      .filter(t => t.type === 'expense' && new Date(t.ts).toDateString() === today);
+    if (todayExpenses.length > 0) {
+      const total = todayExpenses.reduce((s, t) => s + t.amount, 0);
+      const byCat = {};
+      todayExpenses.forEach(t => { byCat[t.category || 'Інше'] = (byCat[t.category || 'Інше'] || 0) + t.amount; });
+      const top3 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([c, a]) => `${c} ${Math.round(a)}`).join(', ');
+      const cur = getCurrency ? getCurrency() : '₴';
+      lines.push(`Витрати дня: ${cur}${Math.round(total)} (топ: ${top3})`);
+    }
+  } catch(e) {}
+
+  if (lines.length === 0) return '';
+  return `ВЕЧІРНІЙ ЗРІЗ ДНЯ (використовуй для підсумків/діалогу у Вечорі і емпатійних реакцій на інших вкладках):\n${lines.join('\n\n')}`;
 }
 
 export function renderEvening() {
