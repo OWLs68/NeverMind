@@ -4,29 +4,79 @@
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 > Попередні сесії до uDZmz — в архіві (w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-19 (сесія **QV1n2** — планування **Вечір 2.0** + **Фаза 0 рефакторингу** виконана: 6 комітів, evening.js 1054→413 рядків + 4 нові модулі)
+**Оновлено:** 2026-04-19 (сесія **dIooU** — **Вечір 2.0 MVP ПОВНІСТЮ ВИКОНАНО**: усі 8 фаз у 3 сесіях, 9 комітів від dfb1800 до 83e42a0)
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. 🚀 ACTIVE = ВЕЧІР 2.0.** Повна переробка концепції вкладки з дашборду цифр на ритуал закриття дня з совою. **Детальний план на 3 сесії** → [`docs/EVENING_2.0_PLAN.md`](../docs/EVENING_2.0_PLAN.md) (544 рядки: 10 блоків концепції, 8 фаз, діалоги, метрики, ризики, перехресні посилання з ROADMAP).
+**1. 🎉 ВЕЧІР 2.0 MVP ЗАВЕРШЕНО.** Всі 8 фаз з `docs/EVENING_2.0_PLAN.md` виконано за 3 сесії: QV1n2 (Ф0 рефакторинг), dIooU (Ф1-8 функціонал). Вкладка заблокована матовим склом до 18:00 → о 18:00 тане → сова пише першою у чат з контекстом дня + червона крапка на Надіслати → ритуал (настрій, моменти, недороблені задачі з чіпами [На завтра]/[На тиждень], quit-звички [Тримався 💪]/[Зірвався]) → три CTA "📅 Про завтра" / "📔 Записати день" / "🌙 Закрити день" → AI-чат з tool calling (45 tools) + chips-pills у JSON інлайн + Verify Loop + G13 Brain Dump + Memory Echo + антидублювання → фінальний інсайт (не цифри) + значок "✓ День закрито" + запис факту у `nm_facts` (30 днів).
 
-**2. ФАЗА 0 РЕФАКТОРИНГУ ЗАВЕРШЕНА ✅.** `src/tabs/evening.js` (1054 рядки) розбитий на 5 модулів: **`evening.js`** (413, core), **`me.js`** (480, вкладка Я), **`evening-chat.js`** (204, чат-бар + фуллскрін діалог), **`evening-actions.js`** (30, заготовка для Фази 7), **`src/ui/unread-badge.js`** (67, універсальна червона крапка). Імпорти оновлено у 6 файлах (nav/boot/habits/chips/core.js/inbox.js) — прямі імпорти без re-exports щоб уникнути циклічних залежностей. Build зелений.
+**2. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1708`.
 
-**3. НАСТУПНИЙ КРОК — ФАЗИ 1-3 Сесії 1.** Фаза 1 — блокування Вечора матовим склом до 18:00 + авто-закриття о 23:59 + анімація танучого скла. Фаза 2 — нова функція `getEveningContext()` + підключення у `getAIContext`. Фаза 3 — тригер `evening-prompt` у followups.js + активація universal unread-badge у чат-барі Вечора. Детальний план → `docs/EVENING_2.0_PLAN.md` секція "8 фаз реалізації".
-
-**4. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1131` (від rSTLV). Чіпати треба **у Фазі 1** коли буде перша зміна коду що впливає на UI (блокування вкладки). Команда: `date +"nm-%Y%m%d-%H%M"`.
+**3. НАСТУПНИЙ КРОК — ВИБІР ІЗ ROADMAP.** Active виконано. Варіанти:
+- **A. 👤 Я 65→100%** (1-2 сесії) — теплова карта 14/30 днів, автопатерни тижня
+- **B. 📁 Проекти 65→100%** (2 сесії) — глибоке інтерв'ю 4 питання, стагнація, синк Витрати→Фінанси
+- **C. 🏥 Здоров'я Фаза 2+3** (1-2 сесії) — CRUD через Inbox, прибрати legacy шкали
+- **D. 4.17.B — 6 заблокованих UI tools** (2-3 сесії) — open_record, filter_tasks тощо
+- **E. Пост-MVP Вечора** (див. `docs/EVENING_2.0_PLAN.md` секція "Після MVP") — Ритуал неділі, інтелект-карта дня, розкатка чат-двигуна на інші 7 чатів
 
 **4. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. Довідник → `docs/AI_TOOLS.md`.
 
-**5. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази. Фаза 0 вже зроблена — тепер кожен модуль <500 рядків.
+**5. НОВИЙ DISPATCHER** — `src/tabs/evening-actions.js::dispatchEveningTool` — 22 tools без Inbox side-effects. Передумова для пілота універсального чат-двигуна (4.10 з ROADMAP).
 
-**6. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати. Усі технічні рішення обговорені у QV1n2 — не перевідкривати концепцію у Сесії 1, йти по плану.
+**6. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази.
 
-**7. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`. Для продовження Сесії 1 буде активація `/ux-ui` (Фаза 1 — матове скло + анімація розмикання о 18:00) і `/pwa-ios-fix` (backdrop-filter fallback для iOS Safari).
+**7. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати.
 
-**8. Маскот відкочено (rSTLV).** Наразі скрізь 🦉 як емодзі. У Вечорі 2.0 використовуємо той самий емодзі — **не повертаємось** до PNG маскота. Деталі: `docs/CHANGES.md` 19.04 (rSTLV).
+**8. Тестування:** після 18:00 потрібен real-device тест iPhone — переконатись що матове скло, танення, тригер evening-prompt з червоною крапкою, чіпи у діалозі і CTA кнопки працюють як очікується.
+
+---
+
+## 🔧 Сесія dIooU — Вечір 2.0 MVP виконаний цілком (Ф1-8, 3 сесії функціоналу) (19.04.2026)
+
+### Зроблено
+
+**Фаза 1 (коміт `dfb1800`)** — блокування вкладки до 18:00 матовим склом (backdrop-filter blur(18px) + -webkit- + @supports fallback), анімація .melting (600ms opacity+translateY+blur→0), авто-розмикання о 18:00 і замикання о 23:59 через setInterval 60с + visibilitychange listener. Нові: isEveningLocked(), updateEveningLock() у `evening.js` + overlay `#evening-lock-overlay` у `index.html` + стилі у `style.css`.
+
+**Фаза 2 (коміт `f8d98a9`)** — `getEveningContext()` у `evening.js`: настрій, недороблені задачі з dueDate=today, закриті кроки проектів, звички summary, quit-звички статус, минулі події календаря, витрати дня топ-3. Підключено у `getAIContext()` → сова бачить вечірній зріз у ВСІХ чатах.
+
+**Фаза 3 (коміт `3479344`)** — тригер `_checkEveningPrompt` у `followups.js` (18-23, cooldown 24 год, contentHasContent guard), новий `getEveningPromptSystem()` промпт, TRIGGER_TO_TAB+=`evening-prompt:evening`. У `addEveningBarMsg` для role=agent + closed chat → showUnreadBadge('evening','evening-send-btn'). У `openChatBar` — централізований clearUnreadBadge для БУДЬ-ЯКОЇ вкладки.
+
+**Фаза 4 (коміт `b7e3070`)** — `getEveningChatSystem()` з JSON {text, chips} + таблиця 10 контекстів коли чіпи обов'язкові. Парсер JSON у `sendEveningBarMessage`. Рендер chips-pills під bubble через renderChips(container, chips, 'evening'). CSS `.chat-chips-row + .chat-chip` amber. Fix у `chips.js` sendChipToChat: inputId для evening тепер `evening-bar-input`.
+
+**Фаза 5 (коміт `bc847bb`)** — переробка вмісту `#evening-scroll`. Видалено: #evening-stats-row (3 плитки), "Продуктивність дня" з кільцем 0%, #evening-finance-block, #evening-summary-block, EVENING_SUMMARY_PROMPT, generateEveningSummary, autoEveningSummary, setupAutoEveningSummary, виклик з boot.js. Додано: `renderEveningUndoneTasks()` з чіпами [На завтра]/[На тиждень], `renderEveningQuitHabits()` з [Тримався 💪]/[Зірвався] (після тапу "Тримався" показує "Тримаєшся сьогодні ✓ стрік N дн" без чіпів), локальні `_rescheduleTask(id, daysAhead)`. Emoji настрою 40→44px.
+
+**Фаза 6 (коміт `6a99372`)** — дві CTA в `#evening-scroll` знизу: amber "📅 Поговорити про завтра" + біла "📔 Записати свій день". `openEveningTopic(topic)` — один раз на день/топік через nm_evening_topic_started. Видалено фуллскрін `#evening-dialog` + openEveningDialog/closeEveningDialog/sendDialogMessage як dead code.
+
+**Фаза 7 (коміт `f957e94`)** — повний перехід на OpenAI tool calling (callAIWithTools + INBOX_TOOLS ~45). Новий `src/tabs/evening-actions.js::dispatchEveningTool` — 22 tools (save_task/note/moment/habit, create_event, save_finance, set_reminder, save_memory_fact, complete_task/habit, edit_*, delete_*, reopen_task, add_step, move_note, update_transaction, restore_deleted) БЕЗ Inbox side-effects. Промпт: Verify Loop (4.21), Memory Echo (4.34), G13 Brain Dump, 4.12 антидублювання. Formatчіпів — окремий JSON блок у content (не весь content як JSON). Новий `_parseContentChips(content)`.
+
+**Фаза 8 (коміт `83e42a0`)** — фінальний ритуал закриття дня. `getEveningSummaryPromptV2()` з Episode Summary (4.31) + Mirror Mode (4.41) + Memory Echo (4.34), ЗАБОРОНА цифр-переказів. `generateEveningRitualSummary(addMsg)` + `isEveningClosed()` + `_markEveningClosed(text)` у evening-actions.js (стан у nm_evening_closed {date,ts,summary}, addFact ttlDays:30). Третя темна CTA "🌙 Закрити день" з amber-бордером. Значок "✓ День закрито" у header (evening-day-closed-badge). Listener `nm-evening-closed` → updateEveningClosedBadge у evening.js. Fix: addFact приймав позиційні args, виправлено на об'єкт `{text, category, ttlDays, source}`.
+
+### Ключові рішення
+
+- **Порядок фаз 4→5→6** за плановим (не 5→6→4) — щоб Ф4 підготувала AI-чіпи до часу коли Ф6 CTA preloaded діалог.
+- **`add_routine_block` пропущено** — конфлікт зі схемою `nm_routine['mon']` (по дню тижня). Повна реалізація Динамічного розпорядку — окрема фіча у ROADMAP.
+- **Окремий dispatcher у evening-actions.js** замість реюзу `processSaveAction` з inbox.js — щоб вечірні дії НЕ засмічували nm_inbox стрічку (Inbox створює картку як side-effect).
+- **Блок "OWL · підсумок дня" видалено у Ф5** замість Ф8 — бо Ф3 вже дає совушці ритуальне повідомлення у чат-бар, дві картки одночасно = шум. Роман підтвердив "прибирай".
+- **Chips-формат у content як JSON інлайн** (не весь content JSON) — щоб tool_calls + Verify Loop текст + чіпи співіснували без конфлікту парсера.
+
+### Інциденти
+
+- Без reset/force push. 8 чистих комітів `dfb1800 → f8d98a9 → 3479344 → b7e3070 → bc847bb → 6a99372 → f957e94 → 83e42a0`.
+- Один Stream idle timeout під час /finish (скрін Романа) — продовжив компактніше.
+- Edit-помилка у index.html під час Ф3 (видалив SVG кнопки Надіслати) — одразу виправив наступним edit.
+- Видалив коментар `<!-- TAB BAR -->` ненавмисно → відновив.
+
+### Метрики
+
+- **Коміти:** `dfb1800 → ... → 83e42a0` (8 комітів Ф1-8)
+- **Гілка:** `claude/start-session-dIooU`
+- **Версії:** v291 → v298+ (CI мержить)
+- **CACHE_NAME:** `nm-20260419-1708`
+- **Нові файли:** немає (всі зміни в існуючих)
+- **Змінено:** `index.html`, `style.css`, `sw.js`, `src/core/boot.js`, `src/ai/core.js`, `src/ai/prompts.js`, `src/owl/chips.js`, `src/owl/followups.js`, `src/tabs/evening.js`, `src/tabs/evening-chat.js`, `src/tabs/evening-actions.js` (з заготовки 30 рядків → ~280), `src/ui/unread-badge.js` (фактично використано)
+- **Build:** локально зелений після кожної фази
 
 ---
 
@@ -145,67 +195,6 @@
   - Фаза 3 — новий тригер `_checkEveningPrompt()` у `followups.js` (вікно 18-22:59, cooldown 24 год) + активація `showUnreadBadge('evening', 'evening-send-btn')` коли сова кладе повідомлення
 - Після Сесії 1 — Роман тестує на iPhone: до 18:00 скло з таймером, о 18:00 тане + сова пише перше повідомлення, червона крапка на Надіслати
 - Сесії 2-3 — Фази 4-8 (чіпи у діалозі, контент ритуалу, дві CTA кнопки, tool calling автосинх, фінальний підсумок v2 + чистка старого)
-
----
-
-## 🔧 Сесія rSTLV — Повний відкат маскот-сови до емодзі 🦉 (19.04.2026)
-
-### Зроблено
-
-**1. Видалення коду маскот-системи — коміт `897bc9a`**
-- `index.html:275-287` — блок `.owl-mascot` з 10 `<img>` замінено на простий `<div class="owl-speech-avatar">🦉</div>`
-- `style.css:1271-1356` — прибрано ~85 рядків: `.owl-mascot`, `.owl-mascot-frame`, `.owl-wave-frame`, `@keyframes owl-float/owl-head-tilt/owl-wave-1..5`, `.is-paused`, prefers-reduced-motion
-- `src/owl/board.js:139-202` — прибрано виклик `setOwlMascotState('alert', 12000)` у `_renderTabBoard` + весь priority state-machine блок (OWL_PRIORITY, ticket, failsafe, visibilitychange listener, window export)
-- `src/core/boot.js:398-401` — прибрано `setTimeout` з greeting-тригером (6 сек one-shot)
-- `src/ai/core.js _fetchAI` — прибрано 4 виклики `setOwlMascotState` (thinking/error/idle/error) + зовнішній try/catch
-- Видалено 11 PNG у `assets/owl/` + вся папка `assets/`
-- `sw.js:10` — CACHE_NAME `nm-20260419-1044` → `nm-20260419-1131`
-
-**2. Видалення handoff + оновлення основних документів — коміт `d29a595`**
-- `handoff/` повністю (README.md, OWL_ANIMATION_PLAN_V2.md, OWL_ANIMATION_RESEARCH.md, components/Owl.html/.js/.jsx/.css)
-- `CLAUDE.md` секція "Анімація OWL" скорочена до 2 рядків (статус "відкладено")
-- `ROADMAP.md` — два блоки Done 19.04 (NFtzw + uDZmz) замінено на один запис rSTLV
-- `docs/CHANGES.md` — детальний аудит-запис з повним переліком того що і звідки видалено + таблиця історичних комітів для відновлення
-- `_ai-tools/SESSION_STATE.md` — оновлено заголовок і секцію "Для нового чату"
-
-**3. Повний аудит документів (Роман попросив) — коміт `77f59ba`**
-- `.claude/commands/owl-motion.md` — додано header "⏸️ ВІДКЛАДЕНО" з контекстом (скіл не видалено, заготовка на випадок повернення)
-- `_ai-tools/SKILLS_PLAN.md` — статус скіла `/owl-motion` змінено на "ВІДКЛАДЕНО, сесія rSTLV 19.04"
-- `CLAUDE.md` → перелік скілів: `/owl-motion` 🟢 → ⏸️
-- `ROADMAP.md` → у списку 7 скілів біля `/owl-motion` додано позначку ⏸️
-- `START_HERE.md` → опис скіла `/owl-motion` оновлено
-- `NEVERMIND_BUGS.md` → "2 активні сесії" оновлено (NFtzw+rSTLV замість w3ISi+uDZmz)
-- Greps показали: всі живі згадки маскот-коду — тільки у `docs/CHANGES.md` (історичні записи + rSTLV аудит) і `_ai-tools/SESSION_STATE.md` (описи відкочених сесій). Жодних orphan посилань на мертвий код.
-
-### Ключові рішення
-
-- **Повне видалення, не половинчасте** — Роман прямо сказав "стерти все нахуй", включно з попутними налаштуваннями (priority state-machine, visibilitychange pause, head-tilt, boot auto-trigger). Все це виросло з маскот-концепту і без маскота — мертвий код.
-- **Документація детально збережена** — у `docs/CHANGES.md` таблиця з 13 історичних комітів з інструкцією як відновити будь-який шматок (`git revert`, `git cherry-pick`, `git checkout <hash> -- <path>`). На випадок "раптом щось зламається".
-- **Скіл `/owl-motion` НЕ видалено** — лежить у `.claude/commands/` як заготовка на випадок повернення.
-- **handoff/ повністю видалено** — це документи для інтеграції React-компоненту сови, мертві без самого маскота.
-- **`.claude/commands/gamification-engine.md` не чіпали** — там посилання на `/owl-motion` як стиль-еталон. Буде актуально коли маскот повернеться.
-
-### Інциденти
-
-- **Без reset/force push.** 3 чисті коміти прямо у `claude/start-session-rSTLV`.
-- **Локальний `node build.js` не запустився** — `Cannot find module 'esbuild'`. Не критично: CI збере bundle.js після мержу автоматично.
-- **Kategoriальне "Треба стерти нахуй"** від Романа після мого першого звіту з 3 варіантами — скоротив план, прийняв широке видалення без питань-по-кожному-пункту.
-
-### Метрики
-
-- **Коміти:** `897bc9a` → `d29a595` → `77f59ba`. **3 коміти.**
-- **Гілка:** `claude/start-session-rSTLV`
-- **Версії:** v285 → v286+ (після CI мержу і деплою)
-- **CACHE_NAME:** `nm-20260419-1131`
-- **Файлів видалено:** 19 (11 PNG + 4 handoff top-level + 4 handoff/components)
-- **Файлів змінено:** 12 (код: index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js + доки: CLAUDE.md, ROADMAP.md, START_HERE.md, SESSION_STATE.md, SKILLS_PLAN.md, NEVERMIND_BUGS.md, owl-motion.md, docs/CHANGES.md)
-- **Рядків видалено:** ~650 коду + ~472 документації = **~1120 рядків**
-- **Build:** локально esbuild не встановлено, CI збере
-
-### Наступні кроки
-
-- Деплой v286+ → переконатись що Inbox виглядає як інші вкладки (просто 🦉)
-- Наступна задача: **Вечір доробка** (варіант A) або **Проекти** (B) — обрати після тесту деплою
 
 ---
 
