@@ -3592,63 +3592,6 @@ ${lines.join("\n\n")}`;
     updateEveningLock();
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const todayMoments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const statsEl = document.getElementById("evening-stats-row");
-    if (statsEl) {
-      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-      const habits = getHabits();
-      const buildHabitsEvening = habits.filter((h) => h.type !== "quit");
-      const log = getHabitLog();
-      const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-      const todayH = buildHabitsEvening.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow));
-      const doneH = todayH.filter((h) => !!log[today]?.[h.id]).length;
-      let todayExp = 0;
-      try {
-        todayExp = getFinance().filter((t) => t.type === "expense" && new Date(t.ts).toDateString() === today).reduce((s, t) => s + t.amount, 0);
-      } catch (e) {
-      }
-      const cur = getCurrency();
-      statsEl.innerHTML = `
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#1e3350;line-height:1">${doneTasks}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0437\u0430\u0434\u0430\u0447\u0456 \u2713</div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#16a34a;line-height:1">${todayH.length > 0 ? doneH + "/" + todayH.length : "\u2014"}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0437\u0432\u0438\u0447\u043A\u0438</div>
-      </div>
-      <div style="flex:1;background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:12px;padding:10px 6px;text-align:center">
-        <div style="font-size:22px;font-weight:900;color:#c2410c;line-height:1">${todayExp > 0 ? cur + Math.round(todayExp) : "\u2014"}</div>
-        <div style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">\u0432\u0438\u0442\u0440\u0430\u0442\u0438</div>
-      </div>`;
-    }
-    const sources = [];
-    const habits2 = getHabits().filter((h) => h.type !== "quit");
-    const log2 = getHabitLog();
-    const todayDow2 = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    const todayH2 = habits2.filter((h) => (h.days || [0, 1, 2, 3, 4, 5, 6]).includes(todayDow2));
-    const doneH2 = todayH2.filter((h) => !!log2[today]?.[h.id]).length;
-    if (todayH2.length > 0) sources.push(doneH2 / todayH2.length);
-    const allTasks = getTasks();
-    const doneTasks2 = allTasks.filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === today).length;
-    const activeTasks = allTasks.filter((t) => t.status === "active").length;
-    if (doneTasks2 > 0 || activeTasks > 0) sources.push(Math.min(doneTasks2 / Math.max(activeTasks * 0.2, 1), 1));
-    const activeProjs = getProjects().filter((p) => p.status === "active");
-    const allSteps = activeProjs.flatMap((p) => p.steps || []);
-    const stepsToday = allSteps.filter((s) => s.done && s.doneAt && new Date(s.doneAt).toDateString() === today).length;
-    const openSteps = allSteps.filter((s) => !s.done).length;
-    if (stepsToday > 0 || openSteps > 0) sources.push(Math.min(stepsToday / Math.max((openSteps + stepsToday) * 0.2, 1), 1));
-    const score = sources.length > 0 ? Math.round(sources.reduce((a, b) => a + b, 0) / sources.length * 100) : 0;
-    const arc = document.getElementById("evening-ring-arc");
-    const pctEl = document.getElementById("evening-ring-pct");
-    const descEl = document.getElementById("evening-score-desc");
-    if (arc) {
-      const circ = 151;
-      setTimeout(() => {
-        arc.style.strokeDashoffset = circ - circ * score / 100;
-      }, 100);
-    }
-    if (pctEl) pctEl.textContent = score + "%";
-    if (descEl) descEl.textContent = sources.length === 0 ? "\u0414\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438" : score >= 70 ? "\u0413\u0430\u0440\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u{1F4AA}" : score >= 40 ? "\u0421\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C";
     const savedMood = getEveningMood();
     if (savedMood) renderEveningMoodButtons(savedMood);
     const momEl = document.getElementById("evening-moments");
@@ -3657,7 +3600,7 @@ ${lines.join("\n\n")}`;
       const notesAsItems = todayNotes.map((n) => ({ id: "note_" + n.id, text: n.title || n.text || "", mood: "neutral", ts: n.ts || n.createdAt || 0, isNote: true }));
       const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
       if (allItems.length === 0) {
-        momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u0432\u043E\u0433\u043E \u0434\u043D\u044F</div>';
+        momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0442\u0443\u0442</div>';
       } else {
         const moodDots = { positive: "#16a34a", neutral: "#f59e0b", negative: "#ef4444" };
         momEl.innerHTML = allItems.map((m) => {
@@ -3675,40 +3618,84 @@ ${lines.join("\n\n")}`;
         }).join("");
       }
     }
-    const finBlock = document.getElementById("evening-finance-block");
-    const finContent = document.getElementById("evening-finance-content");
-    try {
-      const todayTxs = getFinance().filter((t) => new Date(t.ts).toDateString() === today);
-      if (finBlock && finContent && todayTxs.length > 0) {
-        finBlock.style.display = "block";
-        const cur = getCurrency ? getCurrency() : "\u20B4";
-        const todayExpF = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-        finContent.innerHTML = todayTxs.slice(0, 5).map(
-          (t) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-          <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.6)">${escapeHtml(t.category)}${t.comment ? " \xB7 " + escapeHtml(t.comment) : ""}</span>
-          <span style="font-size:14px;font-weight:800;color:${t.type === "expense" ? "#c2410c" : "#16a34a"}">${t.type === "expense" ? "-" : "+"}${cur}${Math.round(t.amount)}</span>
-        </div>`
-        ).join("") + `<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(30,16,64,0.06);display:flex;justify-content:space-between">
-        <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4)">\u0412\u0441\u044C\u043E\u0433\u043E \u0432\u0438\u0442\u0440\u0430\u0442\u0438</span>
-        <span style="font-size:13px;font-weight:800;color:#c2410c">${todayExpF > 0 ? "-" + cur + Math.round(todayExpF) : "\u2014"}</span>
+    renderEveningUndoneTasks();
+    renderEveningQuitHabits();
+  }
+  function renderEveningUndoneTasks() {
+    const container = document.getElementById("evening-undone");
+    if (!container) return;
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const undone = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO);
+    const wrapBlock = document.getElementById("evening-undone-block");
+    if (undone.length === 0) {
+      if (wrapBlock) wrapBlock.style.display = "none";
+      return;
+    }
+    if (wrapBlock) wrapBlock.style.display = "block";
+    const top = undone.slice(0, 5);
+    const more = undone.length - top.length;
+    container.innerHTML = top.map((t) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t.title)}</div>
+      <button onclick="rescheduleTaskTomorrow(${t.id})" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430</button>
+      <button onclick="rescheduleTaskWeek(${t.id})" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</button>
+    </div>
+  `).join("") + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">\u0456 \u0449\u0435 ${more}</div>` : "");
+  }
+  function _rescheduleTask(taskId, daysAhead) {
+    const tasks = getTasks();
+    const idx = tasks.findIndex((t) => t.id === taskId);
+    if (idx === -1) return;
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(d.getDate() + daysAhead);
+    tasks[idx].dueDate = d.toISOString().slice(0, 10);
+    tasks[idx].updatedAt = Date.now();
+    localStorage.setItem("nm_tasks", JSON.stringify(tasks));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "tasks" }));
+    showToast(daysAhead === 1 ? "\u{1F4C5} \u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430" : "\u{1F4C5} \u0427\u0435\u0440\u0435\u0437 " + daysAhead + " \u0434\u043D");
+    renderEvening();
+  }
+  function rescheduleTaskTomorrow(taskId) {
+    _rescheduleTask(taskId, 1);
+  }
+  function rescheduleTaskWeek(taskId) {
+    _rescheduleTask(taskId, 7);
+  }
+  function renderEveningQuitHabits() {
+    const container = document.getElementById("evening-quit");
+    if (!container) return;
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const quits = getHabits().filter((h) => h.type === "quit");
+    const wrapBlock = document.getElementById("evening-quit-block");
+    if (quits.length === 0) {
+      if (wrapBlock) wrapBlock.style.display = "none";
+      return;
+    }
+    if (wrapBlock) wrapBlock.style.display = "block";
+    container.innerHTML = quits.map((h) => {
+      const s = getQuitStatus(h.id);
+      const heldToday = s.lastHeld === todayISO;
+      const streak = s.streak || 0;
+      const streakText = streak > 0 ? `\u0441\u0442\u0440\u0456\u043A ${streak} \u0434\u043D` : "\u043D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u0440\u0442";
+      if (heldToday) {
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+          <div style="flex:1">
+            <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713 \xB7 ${streakText}</div>
+          </div>
+        </div>`;
+      }
+      return `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
+        <div style="flex:1">
+          <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
+        </div>
+        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u0422\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u{1F4AA}</button>
+        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button>
       </div>`;
-      } else if (finBlock) {
-        finBlock.style.display = "none";
-      }
-    } catch (e) {
-      if (finBlock) finBlock.style.display = "none";
-    }
-    try {
-      const saved = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      const el = document.getElementById("evening-summary");
-      const btn = document.getElementById("evening-summary-btn");
-      if (saved && saved.date === today && saved.text && el) {
-        el.textContent = saved.text;
-        el.style.color = "white";
-        if (btn) btn.textContent = "\u041E\u043D\u043E\u0432\u0438\u0442\u0438";
-      }
-    } catch (e) {
-    }
+    }).join("");
   }
   function getEveningMood() {
     const today = (/* @__PURE__ */ new Date()).toDateString();
@@ -3810,79 +3797,6 @@ ${lines.join("\n\n")}`;
     saveMoments(getMoments().filter((m) => m.id !== id));
     renderEvening();
   }
-  async function generateEveningSummary() {
-    const btn = document.getElementById("evening-summary-btn");
-    const el = document.getElementById("evening-summary");
-    btn.textContent = "\u2026";
-    btn.disabled = true;
-    el.textContent = "\u2026";
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
-    const aiContext = getAIContext();
-    const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `
-
-${aiContext}` : "");
-    const dayData = `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u0417\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}`;
-    let _quitCtx = "";
-    try {
-      const _qh = getHabits().filter((h) => h.type === "quit");
-      if (_qh.length > 0) {
-        const _ts = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-        _quitCtx = '\n\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u041A\u0438\u043D\u0443\u0442\u0438": ' + _qh.map((h) => {
-          const s = getQuitStatus(h.id);
-          return '"' + h.name + '": ' + (s.streak || 0) + " \u0434\u043D, " + (s.lastHeld === _ts ? "\u0442\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u2713" : "\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E");
-        }).join("; ");
-      }
-    } catch (e) {
-    }
-    const reply = await callAI(systemPrompt, dayData + _quitCtx, {});
-    const text = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.";
-    el.textContent = text;
-    localStorage.setItem("nm_evening_summary", JSON.stringify({ text, date: today }));
-    btn.textContent = "\u21BB";
-    btn.disabled = false;
-  }
-  async function autoEveningSummary() {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) return;
-    if ((/* @__PURE__ */ new Date()).getHours() < 18) return;
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const moments = getMoments().filter((m) => new Date(m.ts).toDateString() === today);
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today);
-    if (moments.length === 0 && inbox.length === 0) return;
-    try {
-      const saved = JSON.parse(localStorage.getItem("nm_evening_summary") || "null");
-      if (saved && saved.date === today && saved.autoTs) {
-        const elapsed = Date.now() - saved.autoTs;
-        if (elapsed < 50 * 60 * 1e3) return;
-      }
-    } catch (e) {
-    }
-    const aiContext = getAIContext();
-    const systemPrompt = EVENING_SUMMARY_PROMPT + (aiContext ? `
-
-${aiContext}` : "");
-    const dayData = `\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F: ${moments.map((m) => `[${m.mood}] ${m.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u0417\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${inbox.map((i) => `[${i.category}] ${i.text}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}`;
-    try {
-      const reply = await callAI(systemPrompt, dayData, {});
-      if (!reply) return;
-      localStorage.setItem("nm_evening_summary", JSON.stringify({ text: reply, date: today, autoTs: Date.now() }));
-      if (currentTab === "evening") {
-        const el = document.getElementById("evening-summary");
-        if (el) el.textContent = reply;
-      }
-    } catch (e) {
-    }
-  }
-  function setupAutoEveningSummary() {
-    setTimeout(() => {
-      autoEveningSummary();
-      setInterval(autoEveningSummary, 60 * 60 * 1e3);
-    }, 5 * 60 * 1e3);
-  }
   function openMomentView(momentId) {
     const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
     const m = moments.find((x) => x.id === momentId);
@@ -3959,12 +3873,11 @@ ${aiContext}` : "");
       _eveningLockVisListener = true;
     }
   }
-  var currentMomentMood, EVENING_SUMMARY_PROMPT, _eveningLockTickerId, _eveningLockVisListener;
+  var currentMomentMood, _eveningLockTickerId, _eveningLockVisListener;
   var init_evening = __esm({
     "src/tabs/evening.js"() {
       init_nav();
       init_utils();
-      init_core();
       init_tasks();
       init_habits();
       init_notes();
@@ -3972,12 +3885,6 @@ ${aiContext}` : "");
       init_projects();
       init_calendar();
       currentMomentMood = "positive";
-      EVENING_SUMMARY_PROMPT = `${getOWLPersonality()} \u0417\u0440\u043E\u0431\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F (3-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0417\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u043D\u0430 "\u0442\u0438". \u0412\u0456\u0434\u0437\u043D\u0430\u0447 \u0449\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0434\u0430\u043B\u043E\u0441\u044C. \u042F\u043A\u0449\u043E \u0454 \u0449\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u0434\u0443\u043C\u043A\u043E\u044E \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0443 (\u0424\u0430\u0437\u0430 5):
-- \u042F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u0456 \u044E\u0437\u0435\u0440 \u043C\u0430\u0432 \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0456 \u0434\u043E\u0437\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (history \u0437\u0430\u043F\u0438\u0441\u0438 \u0442\u0438\u043F\u0443 'auto' \u0437 "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443") \u2014 \u043C'\u044F\u043A\u043E \u0437\u0433\u0430\u0434\u0430\u0439 ("\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443 \u041E\u043C\u0435\u0437\u0443 \u2014 \u043D\u0435 \u0437\u0430\u0431\u0443\u0434\u044C \u0437\u0430\u0432\u0442\u0440\u0430"). \u0411\u0415\u0417 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u0430\u0442\u043E\u0440\u0441\u0442\u0432\u0430.
-- \u042F\u043A\u0449\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0430 \u043A\u0443\u0440\u0441\u0443 \u0434\u043E\u0431\u0440\u0430 (\u0432\u0441\u0456 \u0434\u043E\u0437\u0438 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u0456, \u0454 status_change \u0437 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F\u043C) \u2014 \u043F\u043E\u0445\u0432\u0430\u043B\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E ("\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 \u0442\u0440\u0438\u043C\u0430\u0454\u0448 \u0447\u0456\u0442\u043A\u043E").
-- \u0417\u0433\u0430\u0434\u043A\u0430 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u2014 \u041E\u041F\u0426\u0406\u0419\u041D\u0410. \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043E\u0441\u043E\u0431\u043B\u0438\u0432\u043E\u0433\u043E \u2014 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439.`;
       _eveningLockTickerId = null;
       _eveningLockVisListener = false;
       Object.assign(window, {
@@ -3985,11 +3892,12 @@ ${aiContext}` : "");
         saveMoment,
         closeMomentModal,
         setMomentMood,
-        generateEveningSummary,
         setEveningMood,
         deleteMoment,
         openMomentView,
-        closeMomentView
+        closeMomentView,
+        rescheduleTaskTomorrow,
+        rescheduleTaskWeek
       });
       _startEveningLockTicker();
     }
@@ -15554,10 +15462,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       } catch (e) {
       }
     }, 3e3);
-    try {
-      setupAutoEveningSummary();
-    } catch (e) {
-    }
     try {
       cleanupTrash();
     } catch (e) {
