@@ -12,6 +12,7 @@ import './core/diagnostics.js';
 import './ui/keyboard.js';
 import './ui/swipe-delete.js';
 import './ui/voice-input.js';
+import './ui/unread-badge.js';
 
 // AI (штучний інтелект)
 import './ai/ui-tools.js';
@@ -36,6 +37,8 @@ import './tabs/finance-insight.js';
 import './tabs/finance-chat.js';
 import './tabs/finance-modals.js';
 import './tabs/evening.js';
+import './tabs/evening-chat.js';
+import './tabs/evening-actions.js';
 import './tabs/me.js';
 import './tabs/onboarding.js';
 import './tabs/health.js';

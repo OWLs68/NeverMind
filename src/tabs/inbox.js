@@ -24,6 +24,8 @@ import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
 import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry } from './health.js';
+// Unread badge (універсальна червона крапка — QV1n2 19.04 Фаза 0)
+import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
 
 // === INBOX CHAT MESSAGES ===
 let _inboxTypingEl = null;
@@ -81,30 +83,14 @@ export function addInboxChatMsg(role, text) {
     const bar = document.getElementById('inbox-ai-bar');
     const chatWin = bar ? bar.querySelector('.ai-bar-chat-window') : null;
     const isOpen = chatWin && chatWin.classList.contains('open');
-    if (!isOpen) _showInboxUnreadBadge();
+    if (!isOpen) showUnreadBadge('inbox', 'ai-send-btn');
   }
 }
 
-let _inboxUnreadCount = 0;
-function _showInboxUnreadBadge() {
-  _inboxUnreadCount++;
-  let badge = document.getElementById('inbox-chat-badge');
-  if (!badge) {
-    const sendBtn = document.getElementById('ai-send-btn');
-    if (!sendBtn) return;
-    badge = document.createElement('div');
-    badge.id = 'inbox-chat-badge';
-    badge.style.cssText = 'position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10';
-    sendBtn.style.position = 'relative';
-    sendBtn.appendChild(badge);
-  }
-  badge.textContent = _inboxUnreadCount > 9 ? '9+' : _inboxUnreadCount;
-}
-
+// Backward-compat: core.js викликає _clearInboxUnreadBadge коли юзер відкриває чат.
+// Після Фази 0 це просто обгортка над універсальним clearUnreadBadge('inbox').
 export function _clearInboxUnreadBadge() {
-  _inboxUnreadCount = 0;
-  const badge = document.getElementById('inbox-chat-badge');
-  if (badge) badge.remove();
+  clearUnreadBadge('inbox');
 }
 
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
