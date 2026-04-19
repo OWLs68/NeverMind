@@ -138,7 +138,6 @@ function setupSync() {
     'nm_finance_budget':  () => { if (currentTab === 'finance')  try { renderFinance(); } catch(e) {} },
     'nm_finance_cats':    () => { if (currentTab === 'finance')  try { renderFinance(); } catch(e) {} },
     'nm_health_cards':    () => { if (currentTab === 'health')   try { renderHealth(); } catch(e) {} },
-    'nm_health_log':      () => { if (currentTab === 'health')   try { renderHealth(); } catch(e) {} },
     'nm_projects':        () => { if (currentTab === 'projects') try { renderProjects(); } catch(e) {} },
     'nm_evening_summary': () => { if (currentTab === 'evening')  try { renderEvening(); } catch(e) {} },
     'nm_evening_mood':    () => { if (currentTab === 'evening')  try { renderEvening(); } catch(e) {} },
@@ -312,7 +311,13 @@ function runMigrations() {
     ['nm_owl_silence_until','nm_owl_ignored_msgs','nm_owl_last_board_ts','nm_owl_last_chip_click_ts'].forEach(k => localStorage.removeItem(k));
     localStorage.setItem('nm_owl_silence_reset_v5', '1');
   }
-  // v6: нові міграції додавати тут
+  // v6 (19.04.2026 сесія 6GoDe): прибрати legacy nm_health_log — UI шкал 1-10
+  // видалено 15.04 (B-31), дані вже не записуються і код що їх читав видалений.
+  if (!localStorage.getItem('nm_health_log_cleared_v6')) {
+    localStorage.removeItem('nm_health_log');
+    localStorage.setItem('nm_health_log_cleared_v6', '1');
+  }
+  // v7: нові міграції додавати тут
 }
 
 // === INIT ===
