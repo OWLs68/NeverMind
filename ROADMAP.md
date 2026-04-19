@@ -631,7 +631,7 @@
 
 ## 🛠 Інструменти розробки (поза продуктовим roadmap)
 
-**Скіли Claude Code** — всі 7 скілів **написані** (VAP6z + W6MDn + hHIlZ, 16-17.04.2026): `/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/owl-motion`, `/supabase-prep`, `/a11y-enforcer`, `/gamification-engine`. Це НЕ фічі NeverMind — інструменти самої розробки. Далі — впровадження їх інструкцій у код за пріоритетами.
+**Скіли Claude Code** — всі 7 скілів **написані** (VAP6z + W6MDn + hHIlZ, 16-17.04.2026): `/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/owl-motion` (⏸️ відкладено rSTLV 19.04), `/supabase-prep`, `/a11y-enforcer`, `/gamification-engine`. Це НЕ фічі NeverMind — інструменти самої розробки. Далі — впровадження їх інструкцій у код за пріоритетами.
 
 → Короткий індекс коли який активувати: [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md)
 

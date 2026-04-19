@@ -102,7 +102,7 @@ Claude пушить → claude/** гілка
 | `/ux-ui` | UI-задача (модалка / новий компонент / стилізація) |
 | `/prompt-engineer` | Зміна промптів OWL (тон / антигалюцинації) |
 | `/pwa-ios-fix` | iOS Safari баги (bfcache / SW / keyboard / overscroll) |
-| `/owl-motion` | Анімація сови (заблоковано — потрібна SVG від Романа) |
+| `/owl-motion` | Анімація сови (⏸️ відкладено rSTLV 19.04 — маскот видалено, чекає ресурс + художній ассет) |
 | `/supabase-prep` | Перед першою міграцією на Supabase |
 | `/a11y-enforcer` | Перед публічним релізом (після стрес-тесту) |
 | `/gamification-engine` | Коли ROADMAP дійде до Блока 3 |
