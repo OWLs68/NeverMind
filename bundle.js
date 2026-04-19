@@ -15481,14 +15481,17 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     });
     let _swReg = null;
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && _swReg) _swReg.update();
+      if (document.visibilityState === "visible" && _swReg) _swReg.update().catch(() => {
+      });
     });
     window.addEventListener("pageshow", (e) => {
-      if (e.persisted && _swReg) _swReg.update();
+      if (e.persisted && _swReg) _swReg.update().catch(() => {
+      });
     });
     navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg) => {
       _swReg = reg;
-      reg.update();
+      reg.update().catch(() => {
+      });
       if (reg.waiting && navigator.serviceWorker.controller) {
         reg.waiting.postMessage({ type: "SKIP_WAITING" });
       }
