@@ -17,7 +17,9 @@
 
 import { showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
-import { callAI, callAIWithHistory, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
+import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
+import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { getTasks } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, processUniversalAction } from './habits.js';
 import { getNotes } from './notes.js';
@@ -94,10 +96,33 @@ export async function sendMeChatMessage() {
 - Видалити подію: {"action":"delete_event","event_id":ID}
 - Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
 - Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
-ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
 
-  const reply = await callAIWithHistory(systemPrompt, [...meChatHistory]);
+${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
+
+  // "Один мозок #1": додаємо UI_TOOLS щоб з чату Я можна було "Відкрий задачі",
+  // "Покажи пам'ять" тощо. CRUD-дії залишаються у текстовому JSON.
+  const msg = await callAIWithTools(systemPrompt, [...meChatHistory], UI_TOOLS);
   const loadEl = document.getElementById(loadId);
+
+  // UI tools dispatch — якщо AI обрав навігацію
+  if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+    if (loadEl) loadEl.remove();
+    for (const tc of msg.tool_calls) {
+      if (UI_TOOL_NAMES.has(tc.function.name)) {
+        let args = {};
+        try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+        const res = handleUITool(tc.function.name, args);
+        if (res && res.text) addMeChatMsg('agent', res.text);
+      }
+    }
+    if (msg.content) meChatHistory.push({ role: 'assistant', content: msg.content });
+    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+    return;
+  }
+
+  // Fallback на існуючий текст-JSON флоу (CRUD через processUniversalAction)
+  const reply = msg && msg.content ? msg.content : '';
 
   // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
   let handled = false;
