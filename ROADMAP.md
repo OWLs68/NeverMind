@@ -360,18 +360,10 @@
 
 > Повна історія "що мозок вже вміє" (з датами реалізації) → `_archive/FEATURES_ROADMAP.md` секція "Що мозок вже вміє".
 
-**19.04.2026** (сесія NFtzw — research + V2 plan + Phase 0 flipbook skeleton, 5 комітів)
-- **Дослідження анімаційних підходів** — `handoff/OWL_ANIMATION_RESEARCH.md` (Rive vs Lottie vs CSS/PNG; Duolingo перехід на Rive; file-size і FPS порівняння). Коміт `f16685b`.
-- **V2 план — самостійний шлях** — `handoff/OWL_ANIMATION_PLAN_V2.md`. Відмова від Fiverr дизайнера. 4 фази: стабілізація → Nano Banana покадрово (22 кадри) → вторинна анімація завжди → Rive editor learning. Коміт `af90d41`.
-- **Phase 0: очищення debug + flipbook skeleton** — прибрано SVG-крило (червона дашована рамка), додано 5 `.owl-wave-frame` з `@keyframes owl-wave-1..5` (600мс, `steps(1,end)`). Fallback — статичний greeting PNG не ховається щоб broken-img не давав порожнечу. Коміти `6266c17`, `7e5b479`.
-- **Workflow Nano Banana** — base prompt + 8 add-on промптів + 3 gap-fill, рішення compound degradation (оригінал як референс кожного разу), bg-removal pipeline через erase.bg.
-
-**19.04.2026** (сесія uDZmz — анімація сови: етап 2, 5 комітів)
-- **Priority state-machine сови** (`src/owl/board.js`) — `OWL_PRIORITY` (error/alert/thinking/greeting/idle) + ticket-лічильник + failsafe 30с. Вирішує w3ISi "моргання" між greeting і alert. Коміт `5ed8d05`.
-- **`visibilitychange` pause** — клас `.is-paused` на `#owl-mascot-main` коли PWA у фоні → всі анімації сови на паузу через `animation-play-state: paused !important`. Економія батареї iOS.
-- **SVG-крило overlay + `@keyframes wing-wave-premium`** — коміт `585cbbd`. Видалено sprite-sheet CSS і HTML. Thinking переведено на нахил голови 8° (`@keyframes owl-head-tilt`) замість неробочої орбіти очей.
-- **Debug-режим постійного махання** — коміт `e4bba2d`. Тимчасово, прибрати в наступній сесії.
-- **Заміна PNG сови** — нові `owl-idle.png` (спокій) + `owl-greeting.png` (з піднятим крилом) у стилі amber/brown. Коміти `a49d1eb`, `3ffd627`.
+**19.04.2026** (сесія rSTLV — **відкат маскот-сови, повернення до емодзі 🦉**)
+- **Повне видалення OWL маскот-системи** (всі експерименти 18-19.04 — sprite-sheet, PNG станів, SVG-крило, priority state-machine, 5-frame flipbook махання, Nano Banana workflow). У Inbox повернуто простий `<div class="owl-speech-avatar">🦉</div>` як на всіх інших вкладках. Причина: анімація складна, час витрачений не виправдовує результат.
+- **Видалено:** 11 PNG у `assets/owl/`, ~85 рядків CSS (`.owl-mascot`, `.owl-mascot-frame`, `.owl-wave-frame`, `@keyframes owl-float/owl-head-tilt/owl-wave-1..5`, `.is-paused`), ~45 рядків JS (priority state-machine у `src/owl/board.js`), boot auto-trigger greeting у `src/core/boot.js`, 4 виклики `setOwlMascotState` у `src/ai/core.js _fetchAI`, папка `handoff/` з документами для інтеграції (OWL_ANIMATION_PLAN_V2.md, OWL_ANIMATION_RESEARCH.md, components/Owl.*, README.md).
+- **Повернемось до анімації коли:** буде готовий нормальний художній ассет (багатошарова SVG або Rive-файл) і ресурс на впровадження.
 
 **13.04.2026** (сесія PBybp — **Блок 1 повністю закритий**, 7 коммітів)
 - **`set_reminder` фікси** — тап на картку reminder у стрічці Inbox → відкриває Calendar modal; іконка ⏰ (reminder) / 📅 (event) / 📌 (task) у закріплених картках `_renderUpcoming`. (Основна логіка з 10.04 `f1ab11f`, дотягнуто 13.04.) Файли: `src/tabs/inbox.js`.

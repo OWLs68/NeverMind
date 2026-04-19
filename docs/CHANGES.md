@@ -6,6 +6,111 @@
 
 ---
 
+## 2026-04-19 — 🗑️ Повний відкат маскот-сови в Inbox до емодзі 🦉 (сесія rSTLV)
+
+### Контекст
+Експерименти 18-19.04.2026 (сесії KTQZA → w3ISi → uDZmz → NFtzw) додали PNG-маскот, sprite-sheet, SVG-крило, priority state-machine і 5-frame flipbook махання. Результат на v284/v285 — махання не спрацьовує, запечений шаховий фон у PNG. Роман вирішив: анімація складна, результат не виправдовує часу. Повернути Inbox до простого емодзі 🦉 як у всіх інших вкладках.
+
+### Видалено (ПОВНИЙ ПЕРЕЛІК щоб потім знайти якщо щось зламається)
+
+**1. HTML `index.html:275-287` (13 рядків):**
+- Блок `<div class="owl-mascot" id="owl-mascot-main" data-state="idle">` з **10 `<img>`** всередині (5 `.owl-mascot-frame` для idle/alert/thinking/greeting/error + 5 `.owl-wave-frame` для кадрів махання)
+- **Замінено на:** простий `<div class="owl-speech-avatar">🦉 ... </div>` (api-dot індикатор залишився)
+
+**2. CSS `style.css:1271-1356` (~85 рядків):**
+- `.owl-mascot` (position + `animation: owl-float 4s`)
+- `@keyframes owl-float` (колихання -4px)
+- `.owl-mascot-frame` (position, opacity, transition)
+- Селектори `.owl-mascot[data-state="..."] .owl-mascot-frame[data-frame="..."]` (5 станів)
+- `prefers-reduced-motion` правила для маскота (2 блоки)
+- `.owl-mascot.is-paused` (pause-animation при PWA у фоні)
+- `.owl-mascot[data-state="thinking"] ... animation: owl-head-tilt` + `@keyframes owl-head-tilt` (нахил голови 8°)
+- `.owl-wave-frame` (position, opacity, z-index)
+- 5 `.owl-mascot[data-state="greeting"] .owl-wave-frame[data-wave="1..5"]` animation rules
+- `@keyframes owl-wave-1..5` (по opacity 0/1 з кроком 20%)
+- Коментарі "GREETING WAVE FLIPBOOK", "Статичний greeting PNG як fallback"
+
+**3. JS `src/owl/board.js:139-202` (~50 рядків):**
+- Рядок 140: `if (tab === 'inbox') setOwlMascotState('alert', 12000);` у `_renderTabBoard` (виклик alert при новому board повідомленні в Inbox)
+- Блок 158-202: **вся priority state-machine** — `OWL_PRIORITY = { error: 100, alert: 80, thinking: 60, greeting: 40, idle: 0 }`, функція `setOwlMascotState(state, autoRevertMs)` з ticket-лічильником і failsafe 30с, `visibilitychange` listener (додає/прибирає `.is-paused`), `Object.assign(window, { setOwlMascotState })`
+
+**4. JS `src/core/boot.js:398-401` (4 рядки):**
+- `setTimeout(() => { try { window.setOwlMascotState && window.setOwlMascotState('greeting', 6000); } catch {} }, delay + 1500);` — one-shot greeting на 6 сек при старті застосунку
+
+**5. JS `src/ai/core.js` у функції `_fetchAI` (4 try/catch виклики, ~10 рядків):**
+- Рядок 338: `setOwlMascotState('thinking')` перед fetch
+- Рядок 349: `setOwlMascotState('error', 6000)` при HTTP помилці
+- Рядок 354: `setOwlMascotState('idle')` після успішної відповіді
+- Рядок 361: `setOwlMascotState('error', 6000)` у catch (re-throw)
+- Зовнішній try/catch блок прибрано (fetch throws тепер bubble up напряму)
+
+**6. Файли у `assets/owl/` (11 PNG ~16.4 MB загалом):**
+- `owl-idle.png`, `owl-alert.png`, `owl-thinking.png`, `owl-greeting.png`, `owl-error.png` (5 станів, amber/brown палітра від Романа)
+- `owl-greeting-sprite.png` (1536×256 sprite 6 кадрів)
+- `frame-1.png` … `frame-5.png` (5 кадрів махання, Nano Banana, 8.6 MB)
+- **Папка `assets/owl/` видалена повністю, папка `assets/` теж (була порожня)**
+
+**7. Папка `handoff/` (повністю):**
+- `handoff/README.md` (опис handoff пакету)
+- `handoff/OWL_ANIMATION_PLAN_V2.md` (V2 план — 4 фази Nano Banana, 219 рядків)
+- `handoff/OWL_ANIMATION_RESEARCH.md` (Rive vs Lottie vs CSS/PNG, 177 рядків)
+- `handoff/components/Owl.html`, `Owl.js`, `OwlReact.jsx`, `Owl.css` (приклади інтеграції)
+
+**8. `sw.js:10` — CACHE_NAME bump:**
+- `nm-20260419-1044` → `nm-20260419-1131`
+
+**9. `CLAUDE.md` — секція "Анімація OWL (TODO)" скорочена:**
+- Прибрано 4 блоки ("Рішення", "Заблоковано", "Варіант 3 Gemini", "Поведінка сови без бабла")
+- Замінено на короткий опис "відкладено" + коли повертатись
+
+**10. `ROADMAP.md` — два блоки секції "Done" 19.04.2026 (NFtzw + uDZmz) замінено на один підсумковий запис rSTLV про видалення**
+
+### Історичні коміти з яких видалявся код (якщо захочеш відновити конкретний шматок)
+
+| Коміт | Що робив | Де можна подивитись |
+|-------|----------|---------------------|
+| `a58104b` | Базова інтеграція PNG-маскот (idle state, float 4s) | `git show a58104b` |
+| `53e64fd` | Автоматична зміна станів alert/thinking/error | `git show 53e64fd` |
+| `4d98985` | Перенесено PNG у `assets/owl/` | `git show 4d98985` |
+| `ac274fd` | Sprite 1536×256 + boot auto-trigger greeting | `git show ac274fd` |
+| `5ed8d05` | Priority state-machine + visibilitychange pause | `git show 5ed8d05` |
+| `585cbbd` | SVG-крило overlay + `@keyframes wing-wave-premium` | `git show 585cbbd` |
+| `e4bba2d` | Debug червона рамка (вже прибрано у NFtzw) | `git show e4bba2d` |
+| `a49d1eb` | Upload: `1.png`, `2.png` → перейменовані | `git show a49d1eb` |
+| `3ffd627` | Перейменування: 2→owl-idle, 1→owl-greeting | `git show 3ffd627` |
+| `6266c17` | 5-frame flipbook skeleton (wave-frame + @keyframes) | `git show 6266c17` |
+| `7e5b479` | Fallback — не ховати статичний greeting при broken wave | `git show 7e5b479` |
+| `adf508f` | Fix path: `wave/frame-*` → `frame-*` | `git show adf508f` |
+| `215a8f7` | Upload Романа: 5 frame-*.png | `git show 215a8f7` |
+
+### Як відновити якщо раптом треба
+
+1. **Повний відкіт повернути:** `git revert 897bc9a` (цей коміт видалення)
+2. **Тільки один коміт повернути:** `git cherry-pick <hash>` з таблиці вище
+3. **Конкретний файл з конкретного коміта:** `git checkout <hash> -- <path>`
+4. **Переглянути старий стан без змін:** `git show <hash>:<path>`
+
+### Файли які залишились без змін (щоб зекономити час пошуку)
+
+- `src/owl/chips.js`, `src/owl/proactive.js`, `src/owl/inbox-board.js`, `src/owl/followups.js` — ВСІ інші OWL-модулі не зачеплені
+- `src/owl/board.js` — тільки прибрано рядок 140 (alert-виклик) і блок 158-202 (state-machine). Функціональність OWL Tab Boards (рендер, свайпи, чіпи) ЗБЕРЕЖЕНА повністю
+- `src/ai/core.js` — тільки прибрано 4 виклики `setOwlMascotState` у `_fetchAI`. Вся решта AI-логіки (`callAI`, `callAIWithHistory`, `callAIWithTools`, `callOwlChat`, chat storage, tool calling) НЕ ЗАЧЕПЛЕНА
+- `src/core/boot.js` — прибрано тільки один `setTimeout` з greeting-тригером. Вся решта boot-логіки (PWA, cross-tab sync, SW registration, splash) ЗБЕРЕЖЕНА
+- Всі 8 вкладок (`tabs/*.js`), ai/prompts/memory/ui-tools, chips logic, trash, calendar — **НЕ ЗАЧЕПЛЕНО**
+- Скіл `.claude/commands/owl-motion.md` — НЕ видаляв (лежить у скілах на випадок повернення до анімації)
+
+### Метрики
+- **Коміти:** `897bc9a` (видалення коду+ассетів) + `<наступний>` (видалення handoff + доки)
+- **Файлів змінено:** 6 (index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js)
+- **Файлів видалено:** 15 (11 PNG + 4 handoff файли) + 5 handoff/components/*
+- **Рядків видалено:** ~650 (з першого комміту) + ~200 (документація)
+- **CACHE_NAME:** `nm-20260419-1044` → `nm-20260419-1131`
+
+### Відкладено
+- **Анімація сови повністю** — повернемось коли буде нормальний художній ассет (багатошарова SVG або Rive). До того — текстовий 🦉 на всьому застосунку.
+
+---
+
 ## 2026-04-19 — 🦉 Owl animation Phase 0 + research + V2 plan (сесія NFtzw)
 
 ### Контекст

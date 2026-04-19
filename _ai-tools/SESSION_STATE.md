@@ -4,35 +4,75 @@
 > При виклику `/finish` у новій сесії — найстарша з 2 переноситься у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 > Попередні сесії до uDZmz — в архіві (w3ISi, VJF2M, Vydqm, FMykK, 14zLe, KTQZA, gHCOh, cnTkD, hHIlZ, W6MDn, VAP6z, acZEu, E5O3I, 3229b, 6v2eR, jMR6m).
 
-**Оновлено:** 2026-04-19 (сесія **NFtzw** — research + V2 plan + Phase 0 flipbook skeleton)
+**Оновлено:** 2026-04-19 (сесія **rSTLV** — повний відкат маскот-сови до емодзі 🦉)
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**1. СОВА НЕ МАХАЄ — ГІПОТЕЗА PRIORITY STATE-MACHINE БЛОКУЄ GREETING.** Перевірено v284 на телефоні: сова залишається idle, махання крилом не спрацьовує. Причина ймовірно: у `src/owl/board.js` `OWL_PRIORITY` має `alert=80 > greeting=40`. При відкритті PWA `renderTabBoard` ставить Inbox у `alert` через `setOwlMascotState('alert', 12000)`. Через 1.5 сек boot auto-trigger у `src/core/boot.js:400` викликає `setOwlMascotState('greeting', 6000)` — але greeting (40) нижчий за alert (80), state-machine ігнорує. **Фікс (у новому чаті, ~10хв):** (а) підняти greeting до пріоритету 90 у `OWL_PRIORITY`, або (б) додати параметр `force: true` у `setOwlMascotState` який обходить priority check, або (в) у `boot.js` перед greeting явно ставити idle щоб скинути alert.
+**1. МАСКОТ-СОВА ВИДАЛЕНА ПОВНІСТЮ.** У сесії rSTLV Роман попросив стерти все з OWL-маскота (sprite/PNG/flipbook/SVG-крило/state-machine) — анімація важка, відкладаємо. Inbox повернуто до простого емодзі 🦉 як на інших вкладках. **Детальний перелік що і звідки видалено + таблиця історичних комітів** → `docs/CHANGES.md` 19.04 (сесія rSTLV).
 
-**2. PNG МАЄ ЗАПЕЧЕНИЙ ШАХОВИЙ ФОН.** На скріншоті v284 ліворуч від сови видно сірі шахові клітинки в області маскота. Причина: Nano Banana згенерувала PNG з шаховим візерунком як "візуалізацію прозорості" — це запечено в пікселях, а не альфа-канал. **Фікс:** прогнати проблемні PNG (або один `owl-idle.png`, або всі 5 `frame-*.png`) через `erase.bg` (безкоштовно до 5000×5000) і перезалити.
+**2. БІЛЬШЕ НЕМА:** `assets/owl/` (11 PNG), `handoff/` (документи + React/HTML приклади), `.owl-mascot` CSS, `setOwlMascotState` JS, boot auto-trigger greeting, 4 hook у `_fetchAI`.
 
-**2. NANO BANANA WORKFLOW задокументовано** у `handoff/OWL_ANIMATION_PLAN_V2.md` (план + 4 фази + skill tree) і `handoff/OWL_ANIMATION_RESEARCH.md` (дослідження Rive vs Lottie vs CSS/PNG). Критичний нюанс: **compound degradation** у Nano Banana — завжди новий чат + оригінальна idle PNG як референс для кожного кадру, НЕ чейнити.
+**3. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1131`. При наступній зміні коду — оновити (`date +"nm-%Y%m%d-%H%M"`).
 
-**3. BG-REMOVAL PIPELINE:** `erase.bg` (безкоштовно, до 5000×5000, без кредитів). Промпт Nano Banana просить чорний фон — потім erase.bg зрізає.
+**4. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. Довідник → `docs/AI_TOOLS.md`.
 
-**4. PRIORITY STATE-MACHINE ГОТОВА** — `setOwlMascotState` у `src/owl/board.js` (error=100 > alert=80 > thinking=60 > greeting=40 > idle=0) + ticket + failsafe 30с. `visibilitychange` ставить на паузу у фоні.
+**5. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази.
 
-**5. CACHE_NAME АКТУАЛЬНЕ:** `nm-20260419-1044`. При наступній зміні коду — оновити (`date +"nm-%Y%m%d-%H%M"`).
+**6. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати.
 
-**6. AGENT КЕРУЄ UI (4.17)** — 8 UI tools у `src/ai/ui-tools.js`. Довідник → `docs/AI_TOOLS.md`.
+**7. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`.
 
-**7. Файли >250 рядків — skeleton+Edit.** Checkpoint-коміт після КОЖНОЇ логічної фази.
-
-**8. Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати.
-
-**9. Ти САМ викликаєш скіли за тригер-фразами.** Тригери у `_ai-tools/SKILLS_PLAN.md`.
+**8. Повернення до анімації — лише коли буде якісний художній ассет** (багатошарова SVG або Rive-файл) + ресурс на впровадження. До того — текстовий 🦉 скрізь.
 
 ---
 
-## 🔧 Сесія NFtzw — Research + V2 план + Phase 0 flipbook skeleton (19.04.2026)
+## 🔧 Сесія rSTLV — Повний відкат маскот-сови до емодзі 🦉 (19.04.2026)
+
+### Зроблено
+
+**1. Видалення коду маскот-системи — коміт `897bc9a`**
+- `index.html:275-287` — блок `.owl-mascot` з 10 `<img>` замінено на простий `<div class="owl-speech-avatar">🦉</div>`
+- `style.css:1271-1356` — прибрано ~85 рядків: `.owl-mascot`, `.owl-mascot-frame`, `.owl-wave-frame`, `@keyframes owl-float/owl-head-tilt/owl-wave-1..5`, `.is-paused`, prefers-reduced-motion
+- `src/owl/board.js:139-202` — прибрано виклик `setOwlMascotState('alert', 12000)` у `_renderTabBoard` + весь priority state-machine блок (OWL_PRIORITY, ticket, failsafe, visibilitychange listener, window export)
+- `src/core/boot.js:398-401` — прибрано `setTimeout` з greeting-тригером (6 сек one-shot)
+- `src/ai/core.js _fetchAI` — прибрано 4 виклики `setOwlMascotState` (thinking/error/idle/error) + зовнішній try/catch
+- Видалено 11 PNG у `assets/owl/` + вся папка `assets/`
+- `sw.js:10` — CACHE_NAME `nm-20260419-1044` → `nm-20260419-1131`
+
+**2. Видалення handoff + оновлення документації — коміт `<наступний>`**
+- `handoff/` повністю (README.md, OWL_ANIMATION_PLAN_V2.md, OWL_ANIMATION_RESEARCH.md, components/Owl.html/.js/.jsx/.css)
+- `CLAUDE.md` секція "Анімація OWL" скорочена до 2 рядків (статус "відкладено")
+- `ROADMAP.md` — два блоки Done 19.04 (NFtzw + uDZmz) замінено на один запис rSTLV
+- `docs/CHANGES.md` — детальний аудит-запис з повним переліком того що і звідки видалено + таблиця історичних комітів для відновлення
+- `_ai-tools/SESSION_STATE.md` — оновлено заголовок і секцію "Для нового чату"
+
+### Ключові рішення
+
+- **Повне видалення, не половинчасте** — Роман прямо сказав "стерти все нахуй", включно з попутними налаштуваннями (priority state-machine, visibilitychange pause, head-tilt, boot auto-trigger). Все це виросло з маскот-концепту і без маскота — мертвий код.
+- **Документація детально збережена** — у `docs/CHANGES.md` таблиця з 13 історичних комітів з інструкцією як відновити будь-який шматок (`git revert`, `git cherry-pick`, `git checkout <hash> -- <path>`). На випадок "раптом щось зламається".
+- **Скіл `/owl-motion` НЕ видалено** — лежить у `.claude/commands/` як заготовка на випадок повернення.
+- **handoff/ повністю видалено** — це документи для інтеграції React-компоненту сови, мертві без самого маскота.
+
+### Метрики
+
+- **Коміти:** `897bc9a` (код+ассети) + `<наступний>` (handoff+docs). **2 коміти.**
+- **Гілка:** `claude/start-session-rSTLV`
+- **Версії:** v285 → v286+ (після деплою)
+- **CACHE_NAME:** `nm-20260419-1131`
+- **Файлів видалено:** 15 (11 PNG + 4 handoff top-level + 4 handoff/components) = 19
+- **Файлів змінено:** 6 (index.html, style.css, sw.js, src/owl/board.js, src/core/boot.js, src/ai/core.js)
+- **Рядків видалено:** ~650 коду + ~200 документів = **~850 рядків**
+
+### Наступні кроки
+
+- Деплой v286+ → переконатись що Inbox виглядає як інші вкладки (просто 🦉)
+- Наступна задача: **Вечір доробка** (варіант A) або **Проекти** (B) — обрати після тесту деплою
+
+---
+
+## 🔧 Сесія NFtzw — Research + V2 план + Phase 0 flipbook skeleton (19.04.2026, ВІДКОЧЕНА rSTLV)
 
 ### Зроблено
 
