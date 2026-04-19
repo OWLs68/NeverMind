@@ -466,7 +466,7 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 - 🟢 `/ux-ui` — блокує "дефолтні" модалки, читає `docs/DESIGN_SYSTEM.md`
 - 🟢 `/prompt-engineer` — єдиний формат 12 промптів OWL
 - 🟢 `/pwa-ios-fix` — iOS Safari чеклист (bfcache / SW / keyboard / overscroll)
-- 🟢 `/owl-motion` — анімація сови (заблоковано SVG)
+- ⏸️ `/owl-motion` — анімація сови (відкладено rSTLV 19.04, маскот видалено)
 - 🟡 `/supabase-prep` — міграції / retry / offline (перед Supabase)
 - 🔴 `/a11y-enforcer` — WCAG 2.1 AA (перед публічним релізом)
 - 🔵 `/gamification-engine` — прогрес / streak / ачівки (Блок 3)

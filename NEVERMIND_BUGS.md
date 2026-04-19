@@ -32,9 +32,9 @@ _Наразі порожньо._
 
 _Зберігаються закриті у 2 останніх активних сесіях. Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_У сесіях w3ISi і uDZmz (поточні активні) жоден старий баг не закривався — w3ISi присвячена handoff дизайну сови, uDZmz — priority state-machine + SVG-крило + заміна PNG сови._
+_У сесіях NFtzw і rSTLV (поточні активні) жоден старий баг не закривався — NFtzw займалась research + V2 план анімації сови (відкочено у rSTLV), rSTLV — повним відкатом маскот-сови до емодзі 🦉._
 
-_Закриті у сесіях до w3ISi (VJF2M, Vydqm, FMykK, KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Закриті у сесіях до NFtzw (w3ISi, uDZmz, VJF2M, Vydqm, FMykK, KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
