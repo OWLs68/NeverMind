@@ -12,6 +12,19 @@
 
 ## 🏆 Завершені Active-блоки
 
+### ✅ Рефакторинг документації + «мозок» Claude (сесія g05tu 20.04.2026)
+
+5 фаз, 6 комітів. Навести порядок у документації через переміщення блоків у спеціалізовані файли + створити "мозок" Claude (lessons, INDEX, хуки) щоб у новому чаті швидше орієнтуватись.
+
+- **Фаза 0 `d8ecab1`** — `_ai-tools/REFACTOR_PLAN.md` + snapshot `e64eb58`
+- **Фаза 1 `f579492`** — 5 нових файлів (`ROADMAP_DONE`, `docs/FILE_STRUCTURE`, `docs/GIT_EMERGENCY`, `docs/DO_NOT_TOUCH`, `docs/FINANCE_V2_PLAN`) + скорочено CLAUDE 521→416, ROADMAP 715→539, SESSION_STATE 293→103, START_HERE 114→56 + додано "Один мозок на все" у NEVERMIND_LOGIC
+- **Фаза 2 `80f9846`** — `lessons.md` з 3 секціями (🔄 патерни / ❌ анти-патерни / 📋 журнал рішень)
+- **Фаза 3 `90e0f7f`** — 4 автоматичні хуки у `.claude/hooks/`: `cache-name-reminder`, `md-index-reminder`, `ai-tools-sync`, `skill-triggers` (+"Роби" детекція)
+- **Фаза 4 `004e299`** — `_ai-tools/INDEX.md` семантичний індекс "куди йти за чим"
+- **Фінал `13b843d`** — hash'і фаз у REFACTOR_PLAN + оновлення SESSION_STATE
+
+**Результат:** стартове читання 2164 → 1593 рядки (−26%). З JIT-читанням через INDEX ще −60-80% на глибоких відповідях. Автоматичні нагадування ловлять CACHE_NAME bump, нові .md у INDEX, оновлення AI_TOOLS, тригери скілів, слово "Роби".
+
 ### ✅ Рефакторинг `finance.js` (сесія gHCOh 17.04.2026)
 
 Розбиття `finance.js` на 6 модулів з backward-compat через re-exports. Файли після рефакторингу:
