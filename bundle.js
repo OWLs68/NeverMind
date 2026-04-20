@@ -804,181 +804,6 @@ ${logLines}
     }
   });
 
-  // src/ai/ui-tools.js
-  function handleUITool(name, args) {
-    try {
-      switch (name) {
-        case "switch_tab": {
-          const t = args.target;
-          if (t === "calendar") {
-            if (typeof window.openCalendarModal === "function") {
-              window.openCalendarModal();
-              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
-            }
-            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
-          }
-          if (t === "habits") {
-            switchTab("tasks");
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
-          }
-          if (!document.getElementById(`page-${t}`)) {
-            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
-          }
-          switchTab(t);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
-        }
-        case "open_memory":
-          if (typeof window.openMemoryModal === "function") {
-            window.openMemoryModal();
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
-          }
-          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
-        case "open_settings":
-          openSettings();
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
-        case "set_finance_period": {
-          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
-          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
-          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
-        }
-        case "open_finance_analytics":
-          switchTab("finance");
-          if (typeof window.openFinAnalytics === "function") {
-            setTimeout(() => window.openFinAnalytics(), 120);
-          }
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
-        case "set_owl_mode": {
-          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-          settings.owl_mode = args.mode;
-          localStorage.setItem("nm_settings", JSON.stringify(settings));
-          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
-          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
-        }
-        case "export_health_card":
-          if (typeof window.openHealthExport === "function") {
-            switchTab("health");
-            setTimeout(() => window.openHealthExport(), 120);
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
-          }
-          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
-        default:
-          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
-      }
-    } catch (e) {
-      console.error("[ui-tools]", name, e);
-      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
-    }
-  }
-  function _tabLabel(key) {
-    return {
-      inbox: "Inbox",
-      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
-      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
-      me: "\u042F",
-      evening: "\u0412\u0435\u0447\u0456\u0440",
-      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
-      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
-    }[key] || key;
-  }
-  var UI_TOOLS, UI_TOOL_NAMES;
-  var init_ui_tools = __esm({
-    "src/ai/ui-tools.js"() {
-      init_nav();
-      UI_TOOLS = [
-        {
-          type: "function",
-          function: {
-            name: "switch_tab",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
-            strict: true,
-            parameters: {
-              type: "object",
-              properties: {
-                target: {
-                  type: "string",
-                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
-                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
-                }
-              },
-              required: ["target"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_memory",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_settings",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_finance_period",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
-            parameters: {
-              type: "object",
-              properties: {
-                period: { type: "string", enum: ["week", "month", "3months"] }
-              },
-              required: ["period"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_finance_analytics",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_owl_mode",
-            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
-            parameters: {
-              type: "object",
-              properties: {
-                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
-              },
-              required: ["mode"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "export_health_card",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        }
-      ];
-      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
-      try {
-        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
-      } catch {
-      }
-    }
-  });
-
   // src/ui/swipe-delete.js
   function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
     if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
@@ -1908,19 +1733,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
 
 ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     try {
-      const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), UI_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS);
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-        for (const tc of msg.tool_calls) {
-          if (UI_TOOL_NAMES.has(tc.function.name)) {
-            let args = {};
-            try {
-              args = JSON.parse(tc.function.arguments || "{}");
-            } catch (e) {
-            }
-            const res = handleUITool(tc.function.name, args);
-            if (res && res.text) addNotesChatMsg("agent", res.text);
-          }
-        }
+        dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
         notesBarLoading = false;
         return;
       }
@@ -2006,7 +1821,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_trash();
       init_core();
       init_prompts();
-      init_ui_tools();
+      init_habits();
       init_swipe_delete();
       init_habits();
       editingNoteId = null;
@@ -3370,6 +3185,181 @@ ${lines.join("\n")}`;
         scrollOwlTabChips,
         openChatBar
       });
+    }
+  });
+
+  // src/ai/ui-tools.js
+  function handleUITool(name, args) {
+    try {
+      switch (name) {
+        case "switch_tab": {
+          const t = args.target;
+          if (t === "calendar") {
+            if (typeof window.openCalendarModal === "function") {
+              window.openCalendarModal();
+              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+            }
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          if (t === "habits") {
+            switchTab("tasks");
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
+          }
+          if (!document.getElementById(`page-${t}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          }
+          switchTab(t);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+        }
+        case "open_memory":
+          if (typeof window.openMemoryModal === "function") {
+            window.openMemoryModal();
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
+          }
+          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
+        case "open_settings":
+          openSettings();
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
+        case "set_finance_period": {
+          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
+          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
+          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
+        }
+        case "open_finance_analytics":
+          switchTab("finance");
+          if (typeof window.openFinAnalytics === "function") {
+            setTimeout(() => window.openFinAnalytics(), 120);
+          }
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
+        case "set_owl_mode": {
+          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+          settings.owl_mode = args.mode;
+          localStorage.setItem("nm_settings", JSON.stringify(settings));
+          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
+          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
+        }
+        case "export_health_card":
+          if (typeof window.openHealthExport === "function") {
+            switchTab("health");
+            setTimeout(() => window.openHealthExport(), 120);
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
+          }
+          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
+        default:
+          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
+      }
+    } catch (e) {
+      console.error("[ui-tools]", name, e);
+      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
+    }
+  }
+  function _tabLabel(key) {
+    return {
+      inbox: "Inbox",
+      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
+      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
+      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
+      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
+      me: "\u042F",
+      evening: "\u0412\u0435\u0447\u0456\u0440",
+      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
+    }[key] || key;
+  }
+  var UI_TOOLS, UI_TOOL_NAMES;
+  var init_ui_tools = __esm({
+    "src/ai/ui-tools.js"() {
+      init_nav();
+      UI_TOOLS = [
+        {
+          type: "function",
+          function: {
+            name: "switch_tab",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
+            strict: true,
+            parameters: {
+              type: "object",
+              properties: {
+                target: {
+                  type: "string",
+                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
+                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
+                }
+              },
+              required: ["target"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_memory",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_settings",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_finance_period",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
+            parameters: {
+              type: "object",
+              properties: {
+                period: { type: "string", enum: ["week", "month", "3months"] }
+              },
+              required: ["period"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_finance_analytics",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_owl_mode",
+            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
+            parameters: {
+              type: "object",
+              properties: {
+                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
+              },
+              required: ["mode"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "export_health_card",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        }
+      ];
+      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
+      try {
+        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
+      } catch {
+      }
     }
   });
 
@@ -9438,42 +9428,15 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
     const context = getAIContext();
     const stats = getMeStatsContext();
     const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
-\u042F\u043A\u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 \u0434\u0456\u044E \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 JSON:
-- \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-- \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-- \u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"complete_task","task_id":ID}
-- \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-- \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"delete_task","task_id":ID}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443: {"action":"delete_habit","habit_id":ID}
-- \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443: {"action":"reopen_task","task_id":ID}
-- \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-- \u041D\u043E\u0442\u0430\u0442\u043A\u0430: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
-- \u0412\u0438\u0442\u0440\u0430\u0442\u0430: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-- \u041F\u043E\u0434\u0456\u044F: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
-- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
-- \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418 (save_task). \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F (create_event). "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+\u0414\u043B\u044F CRUD \u0434\u0456\u0439 \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool. \u0414\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443/\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u043F\u0438\u0448\u0438 \u0442\u0435\u043A\u0441\u0442.
 
 ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
-    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], UI_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS);
     const loadEl = document.getElementById(loadId);
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       if (loadEl) loadEl.remove();
-      for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try {
-            args = JSON.parse(tc.function.arguments || "{}");
-          } catch (e) {
-          }
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addMeChatMsg("agent", res.text);
-        }
-      }
+      dispatchChatToolCalls(msg.tool_calls, (r, t) => addMeChatMsg(r, t), text);
       if (msg.content) meChatHistory.push({ role: "assistant", content: msg.content });
       if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
       return;
@@ -9837,7 +9800,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       init_utils();
       init_core();
       init_prompts();
-      init_ui_tools();
+      init_habits();
       init_tasks();
       init_habits();
       init_notes();
@@ -11236,6 +11199,82 @@ ${UI_TOOLS_RULES}`;
         dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     return dp[m][n];
   }
+  function _toolCallToUniversalAction(name, args) {
+    switch (name) {
+      case "save_task":
+        return [{ action: "create_task", title: args.title, desc: args.text, steps: args.steps || [], dueDate: args.due_date, priority: args.priority }];
+      case "save_note":
+        return [{ action: "create_note", text: args.text, folder: args.folder }];
+      case "save_habit":
+        return [{ action: "create_habit", name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
+      case "save_moment":
+        return [{ action: "add_moment", text: args.text, mood: args.mood }];
+      case "create_event":
+        return [{ action: "create_event", title: args.title, date: args.date, time: args.time || null, priority: args.priority || "normal" }];
+      case "save_finance":
+        return [{ action: "save_finance", fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date }];
+      case "complete_task": {
+        const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
+        return ids.map((id) => ({ action: "complete_task", task_id: id }));
+      }
+      case "complete_habit": {
+        const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
+        return ids.map((id) => ({ action: "complete_habit", habit_id: id }));
+      }
+      case "edit_task":
+        return [{ action: "edit_task", task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority }];
+      case "edit_habit":
+        return [{ action: "edit_habit", habit_id: args.habit_id, name: args.name, days: args.days, details: args.details }];
+      case "edit_event":
+        return [{ action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority }];
+      case "edit_note":
+        return [{ action: "edit_note", note_id: args.note_id, text: args.text, folder: args.folder }];
+      case "delete_task":
+        return [{ action: "delete_task", task_id: args.task_id }];
+      case "delete_habit":
+        return [{ action: "delete_habit", habit_id: args.habit_id }];
+      case "delete_event":
+        return [{ action: "delete_event", event_id: args.event_id }];
+      case "delete_folder":
+        return [{ action: "delete_folder", folder: args.folder }];
+      case "reopen_task":
+        return [{ action: "reopen_task", task_id: args.task_id }];
+      case "add_step": {
+        const steps = Array.isArray(args.steps) ? args.steps : [];
+        return steps.map((s) => ({ action: "add_step", task_id: args.task_id, step: s }));
+      }
+      case "move_note":
+        return [{ action: "move_note", query: args.query, folder: args.folder }];
+      case "set_reminder":
+        return [{ action: "set_reminder", time: args.time, text: args.text, date: args.date }];
+      case "save_routine":
+        return [{ action: "save_routine", day: args.day, blocks: args.blocks }];
+      default:
+        return [];
+    }
+  }
+  function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return false;
+    let any = false;
+    for (const tc of toolCalls) {
+      let args = {};
+      try {
+        args = JSON.parse(tc.function.arguments || "{}");
+      } catch (e) {
+      }
+      if (UI_TOOL_NAMES.has(tc.function.name)) {
+        const res = handleUITool(tc.function.name, args);
+        if (res && res.text) addMsg("agent", res.text);
+        any = true;
+        continue;
+      }
+      const acts = _toolCallToUniversalAction(tc.function.name, args);
+      for (const a of acts) {
+        if (processUniversalAction(a, originalText, addMsg)) any = true;
+      }
+    }
+    return any;
+  }
   function processUniversalAction(parsed, originalText, addMsg) {
     const action = parsed.action;
     const _splitReply = (thinking, doWork) => {
@@ -11662,46 +11701,12 @@ ${UI_TOOLS_RULES}`;
       return h.name + (done ? " [\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456]" : " [\u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456]");
     }).join(", ");
     const aiContext = getAIContext();
-    const systemPrompt = getOWLPersonality() + "\n\n\u0417\u0410\u0414\u0410\u0427\u0406:\n" + (tasksSummary || "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447") + "\n\n" + (habitsSummary ? "\u0417\u0412\u0418\u0427\u041A\u0418 \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406:\n" + habitsSummary + "\n\n" : "") + `\u0422\u0438 \u043C\u043E\u0436\u0435\u0448:
-1. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0437\u0430\u0434\u0430\u0447\u0456 \u0442\u0430 \u0437\u0432\u0438\u0447\u043A\u0438
-2. \u0412\u0438\u043A\u043E\u043D\u0430\u0432 \u043A\u0440\u043E\u043A \u2014 JSON: {"action":"complete_step","task_id":ID,"step_text":"\u0442\u0435\u043A\u0441\u0442"}
-3. \u0412\u0438\u043A\u043E\u043D\u0430\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 JSON: {"action":"complete_task","task_id":ID}
-4. \u0412\u0438\u043A\u043E\u043D\u0430\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 \u2014 JSON: {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}
-5. \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 \u2014 JSON: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
-5b. \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u0422\u0418 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0432\u0438\u0447\u043A\u0443 (\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u0430\u0437\u0432\u0443, \u0434\u043D\u0456, \u0434\u0435\u0442\u0430\u043B\u0456) \u2014 JSON: {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u0431\u0456\u0433\u0430\u0442\u0438 \u0432\u0432\u0435\u0447\u0435\u0440\u0456 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0437\u0440\u0430\u043D\u043A\u0443" \u2014 \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0443, \u0430 \u0420\u0415\u0414\u0410\u0413\u0423\u0419 \u0456\u0441\u043D\u0443\u044E\u0447\u0443!
-6. \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 JSON: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
-7. \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041F\u041E\u0414\u0406\u042E (\u0444\u0430\u043A\u0442 \u0449\u043E \u0441\u0442\u0430\u043D\u0435\u0442\u044C\u0441\u044F: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u0432\u0456\u0437\u0438\u0442) \u2014 JSON: {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-   \u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u044F\u043A\u0443 \u0422\u0418 \u043C\u0430\u0454\u0448 \u0417\u0420\u041E\u0411\u0418\u0422\u0418 (\u043A\u0443\u043F\u0438\u0442\u0438, \u043F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438). \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F (\u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0441\u0432\u044F\u0442\u043E, \u0440\u0435\u0439\u0441). "\u043F\u0440\u0438\u0457\u0437\u0434 \u043C\u0430\u043C\u0438 20\u0433\u043E" = create_event. "\u043A\u0443\u043F\u0438\u0442\u0438 \u043C\u043E\u043B\u043E\u043A\u043E" = create_task.
-9. \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A \u2014 JSON: {"action":"add_step","task_id":ID,"step":"\u0442\u0435\u043A\u0441\u0442"}
-10. \u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u043A\u0440\u043E\u043A \u2014 JSON: {"action":"undo_step","task_id":ID,"step_text":"\u0442\u0435\u043A\u0441\u0442"}
-11. \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 JSON: {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}
-12. \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u2014 JSON: {"action":"save_finance","fin_type":"expense","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-13. \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0434\u043E\u0445\u0456\u0434 \u2014 JSON: {"action":"save_finance","fin_type":"income","amount":\u0447\u0438\u0441\u043B\u043E,"category":"\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F","comment":"\u0442\u0435\u043A\u0441\u0442"}
-14. \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 (\u043D\u0430\u0437\u0432\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442) \u2014 JSON: {"action":"edit_task","task_id":ID,"title":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-15. \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 JSON: {"action":"delete_task","task_id":ID}
-16. \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 \u2014 JSON: {"action":"delete_habit","habit_id":ID}
-17. \u041F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 JSON: {"action":"reopen_task","task_id":ID}
-18. \u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 JSON: {"action":"add_moment","text":"\u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F"}
-\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E: \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0417\u0420\u041E\u0411\u0418\u0422\u0418 \u0434\u0456\u044E (\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443/\u043F\u043E\u0434\u0456\u044E/\u0437\u0432\u0438\u0447\u043A\u0443/\u043D\u043E\u0442\u0430\u0442\u043A\u0443, \u0437\u0430\u043A\u0440\u0438\u0442\u0438, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0447\u0438\u0441\u0442\u0438\u043C JSON. \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0437\u0430\u0440\u0430\u0437 \u0441\u0442\u0432\u043E\u0440\u044E", "\u0437\u0430\u0447\u0435\u043A\u0430\u0439", "\u0433\u043E\u0442\u043E\u0432\u043E" \u2014 \u041E\u0414\u0420\u0410\u0417\u0423 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0439 JSON \u043E\u0431'\u0454\u043A\u0442 \u0437 action. \u0422\u0435\u043A\u0441\u0442 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0446\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u041F\u0418\u0422\u0410\u041D\u041D\u042F \u0430\u0431\u043E \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.
-\u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439. \u0422\u0406\u041B\u042C\u041A\u0418 \u0447\u0438\u0441\u0442\u0438\u0439 JSON \u0431\u0435\u0437 markdown. \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0442\u0435\u043A\u0441\u0442 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F.
-\u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454: \u043B\u0456\u043C\u0456\u0442\u0438, \u043F\u043B\u0430\u043D\u0438, \u0437\u0432\u0438\u0447\u043A\u0438 \u0447\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0441\u043F\u0438\u0441\u043A\u0443 \u0432\u0438\u0449\u0435.
-
-` + UI_TOOLS_RULES + (aiContext ? "\n\n" + aiContext : "");
+    const systemPrompt = getOWLPersonality() + "\n\n\u0417\u0410\u0414\u0410\u0427\u0406:\n" + (tasksSummary || "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447") + "\n\n" + (habitsSummary ? "\u0417\u0412\u0418\u0427\u041A\u0418 \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406:\n" + habitsSummary + "\n\n" : "") + '\u0422\u0438 \u043C\u043E\u0436\u0435\u0448:\n1. \u0414\u043B\u044F CRUD \u0434\u0456\u0439 (\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438/\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438/\u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438/\u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443-\u0437\u0432\u0438\u0447\u043A\u0443-\u043F\u043E\u0434\u0456\u044E-\u043D\u043E\u0442\u0430\u0442\u043A\u0443-\u043C\u043E\u043C\u0435\u043D\u0442-\u0432\u0438\u0442\u0440\u0430\u0442\u0443) \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool.\n2. \u0421\u043F\u0435\u0446\u0438\u0444\u0456\u0447\u043D\u0456 fallback-JSON (\u041D\u0415 \u044F\u043A tool): {"action":"complete_step","task_id":ID,"step_text":"\u0442\u0435\u043A\u0441\u0442"} (\u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439 \u043A\u0440\u043E\u043A \u0437\u0430\u0434\u0430\u0447\u0456), {"action":"undo_step","task_id":ID,"step_text":"\u0442\u0435\u043A\u0441\u0442"} (\u0441\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u043A\u0440\u043E\u043A), {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"} (\u043F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 \u0437\u0430 \u043D\u0430\u0437\u0432\u043E\u044E \u043A\u043E\u043B\u0438 ID \u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439).\n\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u044F\u043A\u0443 \u0422\u0418 \u043C\u0430\u0454\u0448 \u0417\u0420\u041E\u0411\u0418\u0422\u0418 (\u043A\u0443\u043F\u0438\u0442\u0438, \u043F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438) \u2192 save_task. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F (\u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0441\u0432\u044F\u0442\u043E, \u0440\u0435\u0439\u0441) \u2192 create_event. "\u043F\u0440\u0438\u0457\u0437\u0434 \u043C\u0430\u043C\u0438 20\u0433\u043E" = create_event. "\u043A\u0443\u043F\u0438\u0442\u0438 \u043C\u043E\u043B\u043E\u043A\u043E" = save_task.\n\u0414\u043B\u044F \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438 (\u0437\u043C\u0456\u043D\u0430 \u0434\u043D\u0456\u0432/\u043D\u0430\u0437\u0432\u0438) \u2014 edit_habit, \u041D\u0415 save_habit \u043D\u043E\u0432\u0443.\n\u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0442\u0435\u043A\u0441\u0442 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0438\u0445 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.\n\n' + UI_TOOLS_RULES + (aiContext ? "\n\n" + aiContext : "");
     try {
       const history = [...taskBarHistory.slice(-8), { role: "user", content: text }];
-      const msg = await callAIWithTools(systemPrompt, history, UI_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-        for (const tc of msg.tool_calls) {
-          if (UI_TOOL_NAMES.has(tc.function.name)) {
-            let args = {};
-            try {
-              args = JSON.parse(tc.function.arguments || "{}");
-            } catch (e) {
-            }
-            const res = handleUITool(tc.function.name, args);
-            if (res && res.text) addTaskBarMsg("agent", res.text);
-          }
-        }
+        dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
         setTaskBarLoading(false);
         return;
       }
