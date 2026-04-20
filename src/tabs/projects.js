@@ -6,9 +6,9 @@
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { dispatchChatToolCalls } from './habits.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
 import { processUniversalAction } from './habits.js';
@@ -528,19 +528,11 @@ ${aiContext ? '\n\n' + aiContext : ''}
 ${UI_TOOLS_RULES}`;
 
   try {
-    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
-    // проектні CRUD — через існуючий текстовий JSON.
-    const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), UI_TOOLS);
+    // "Один мозок #2 A": INBOX_TOOLS — повний CRUD + UI.
+    const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS);
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addProjectsChatMsg('agent', res.text);
-        }
-      }
+      dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
       projectsBarLoading = false;
       return;
     }
