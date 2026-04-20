@@ -16721,6 +16721,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const modal = document.getElementById("memory-modal");
     modal.style.display = "flex";
     renderMemoryCards();
+    const panel = modal.querySelector(":scope > div:last-child");
+    if (panel) setupModalSwipeClose(panel, closeMemoryModal);
   }
   function closeMemoryModal() {
     document.getElementById("memory-modal").style.display = "none";
@@ -17079,6 +17081,7 @@ ${legacy}`;
       init_logger();
       init_utils();
       init_boot();
+      init_tasks();
       init_core();
       init_memory();
       init_proactive();

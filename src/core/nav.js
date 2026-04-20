@@ -4,6 +4,7 @@
 import { updateErrorLogBtn } from './logger.js';
 import { escapeHtml } from './utils.js';
 import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
+import { setupModalSwipeClose } from '../tabs/tasks.js';
 import { callAI, callAIWithTools, INBOX_TOOLS, closeAllChatBars } from '../ai/core.js';
 import {
   addFact,
@@ -810,6 +811,9 @@ function openMemoryModal() {
   const modal = document.getElementById('memory-modal');
   modal.style.display = 'flex';
   renderMemoryCards();
+  // B-92 fix (20.04 NRw8G): свайп вниз закриває модалку, як у інших панелях.
+  const panel = modal.querySelector(':scope > div:last-child');
+  if (panel) setupModalSwipeClose(panel, closeMemoryModal);
 }
 
 function closeMemoryModal() {
