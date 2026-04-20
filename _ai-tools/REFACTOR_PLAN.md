@@ -1,7 +1,37 @@
 # Рефакторинг документації + «мозок» Claude
 
-> **Статус:** в роботі. Сесія `claude/start-session-g05tu` (20.04.2026).
+> **Статус:** ✅ **ЗАВЕРШЕНО 20.04.2026** (сесія g05tu). 5 фаз зроблено, 5 комітів на гілці `claude/start-session-g05tu`.
 > **Попередня точка відкату:** HEAD `e64eb58` (chore: deploy v327 · 20.04 18:22) перед початком рефакторингу.
+
+---
+
+## 📜 Hash'і всіх фаз (для відкату)
+
+| Фаза | Коміт | Опис |
+|---|---|---|
+| 0 | `d8ecab1` | plan + pre-refactor snapshot at e64eb58 |
+| 1 | `f579492` | split CLAUDE/ROADMAP into new docs, shrink SESSION_STATE |
+| 2 | `80f9846` | create lessons.md with patterns/anti-patterns/decisions |
+| 3 | `90e0f7f` | add 4 automation hooks (CACHE_NAME, INDEX, AI_TOOLS, triggers+Роби) |
+| 4 | `004e299` | create _ai-tools/INDEX.md semantic index |
+| Фінал | _див. SESSION_STATE_ | update session state + push |
+
+**Повний відкат (потрібен явний "Роби скид" Романа):**
+```bash
+git reset --hard e64eb58
+```
+
+**Безпечний відкат однієї фази:**
+```bash
+git revert 004e299   # відмінить Фазу 4
+git revert 90e0f7f   # відмінить Фазу 3
+# ...і т.д.
+```
+
+**Повернути один файл у стан ДО:**
+```bash
+git checkout e64eb58 -- CLAUDE.md
+```
 
 ---
 
