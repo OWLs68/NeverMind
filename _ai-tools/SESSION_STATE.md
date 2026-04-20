@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-04-20 (сесія **EWxjG** — **B-93 + B-94 + B-95 закриті, B-94 потребує верифікації на iPhone**).
+**Оновлено:** 2026-04-20 (сесія **EWxjG** — **B-93 + B-94 + B-95 закриті у 3 комітах, B-94 другий підхід з history detox**).
 
 ---
 
@@ -20,7 +20,7 @@
    - Шар 2: єдине табло `nm_owl_board_unified` з призмою вкладки
    - Шар 3: спільна історія `nm_owl_conversation` + event `nm-tab-switched`
 
-4. **CACHE_NAME** актуальне: `nm-20260420-2022` (з EWxjG). При зміні коду у src/**/*.js, style.css, sw.js, index.html — оновлювати.
+4. **CACHE_NAME** актуальне: `nm-20260420-2040` (з EWxjG коміт 3). При зміні коду у src/**/*.js, style.css, sw.js, index.html — оновлювати.
 
 5. **Workflow Романа:** "Роби" → один таск → звіт → пропозиція наступного → чекати. Файли >250 рядків — skeleton+Edit, checkpoint-коміт після кожної фази, ≤25 слів між tool calls.
 
@@ -34,7 +34,7 @@
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (46 tools: 31 INBOX + 7 UI + 8 health/memory/cat) |
 | **Гілка** | `claude/start-session-EWxjG` (B-94/B-95 прoмпт Здоров'я) |
-| **CACHE_NAME** | `nm-20260420-2022` |
+| **CACHE_NAME** | `nm-20260420-2040` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---

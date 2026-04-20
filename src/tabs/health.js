@@ -8,7 +8,6 @@ import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { UI_TOOLS_RULES } from '../ai/prompts.js';
 import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
 import { processUniversalAction } from './habits.js';
@@ -1612,9 +1611,12 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"}. "НАГАДАЙ" = ЗАВЖДИ set_reminder. Маркери: вранці=08:00, вдень=12:00, після обіду=14:00, ввечері=18:00, перед сном=22:00
 - Редагувати/видалити звичку/задачу/подію — відповідні edit_*/delete_* дії з ID.
 
-Інакше — відповідай текстом 1-3 речення українською. НЕ вигадуй медичних рекомендацій.
-
-${UI_TOOLS_RULES}`;
+Інакше — відповідай текстом 1-3 речення українською. НЕ вигадуй медичних рекомендацій.`;
+// Примітка (EWxjG #2, 20.04): ${UI_TOOLS_RULES} навмисно прибрано з кінця
+// промпту Здоров'я — дублював блок "🚫 ЖОРСТКЕ ПРАВИЛО UI-TOOLS" на початку
+// і створював конфлікт (старий блок допускав set_owl_mode на слово "переключись"
+// окремо, новий жорстко каже "тільки команди навігації"). Достатньо одного
+// пріоритетного блоку на початку промпту.
 
   try {
     // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
@@ -1627,7 +1629,15 @@ ${UI_TOOLS_RULES}`;
           let args = {};
           try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
           const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addHealthChatMsg('agent', res.text);
+          if (res && res.text) {
+            addHealthChatMsg('agent', res.text);
+            // History detox (EWxjG #2, 20.04): прибираємо UI-tool acknowledgement
+            // з контексту AI (у storage/UI лишається — юзер бачить відповідь).
+            // Інакше AI копіює патерн: 3 "Характер OWL: Партнер" поспіль → AI
+            // вважає це "правильною" відповіддю на будь-що і продовжує. History
+            // poisoning був реальною причиною B-94 на v337 (скріни 23:29-23:31).
+            healthBarHistory.pop();
+          }
         }
       }
       healthBarLoading = false;
