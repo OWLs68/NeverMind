@@ -5,9 +5,10 @@
 
 import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { _toolCallToUniversalAction, processUniversalAction } from './habits.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox } from './inbox.js';
 import { processUniversalAction } from './habits.js';
@@ -111,18 +112,39 @@ export async function sendFinanceBarMessage() {
 ${UI_TOOLS_RULES}${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
-    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
-    // фінансові CRUD і універсальні actions — через текстовий JSON як раніше.
-    const msg = await callAIWithTools(FINANCE_BAR_PROMPT, financeBarHistory.slice(-10), UI_TOOLS);
+    // "Один мозок #2 A": INBOX_TOOLS — повний CRUD + UI.
+    // Локальний dispatch — update_transaction має кастомний handler (інакше processUniversalAction його не знає).
+    const msg = await callAIWithTools(FINANCE_BAR_PROMPT, financeBarHistory.slice(-10), INBOX_TOOLS);
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       for (const tc of msg.tool_calls) {
+        let args = {};
+        try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+        // UI tool
         if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
           const res = handleUITool(tc.function.name, args);
           if (res && res.text) addFinanceChatMsg('agent', res.text);
+          continue;
         }
+        // update_transaction — локальний handler Фінансів (не в processUniversalAction)
+        if (tc.function.name === 'update_transaction') {
+          const txs2 = getFinance();
+          const idx = txs2.findIndex(t => t.id === args.id);
+          if (idx !== -1) {
+            if (args.category) txs2[idx].category = args.category;
+            if (args.comment !== undefined) txs2[idx].comment = args.comment;
+            if (args.amount) txs2[idx].amount = parseFloat(args.amount);
+            saveFinance(txs2);
+            renderFinance();
+            addFinanceChatMsg('agent', `✓ Оновлено: ${txs2[idx].category} ${formatMoney(txs2[idx].amount)}`);
+          } else {
+            addFinanceChatMsg('agent', 'Транзакцію не знайдено.');
+          }
+          continue;
+        }
+        // CRUD через universal action
+        const acts = _toolCallToUniversalAction(tc.function.name, args);
+        for (const a of acts) processUniversalAction(a, text, addFinanceChatMsg);
       }
       financeBarLoading = false;
       return;
