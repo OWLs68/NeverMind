@@ -17,9 +17,9 @@
 
 import { showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
-import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
+import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { dispatchChatToolCalls } from './habits.js';
 import { getTasks } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, processUniversalAction } from './habits.js';
 import { getNotes } from './notes.js';
@@ -78,44 +78,19 @@ export async function sendMeChatMessage() {
   const context = getAIContext();
   const stats = getMeStatsContext();
   const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською. НЕ вигадуй факти яких немає в даних.
-Якщо треба виконати дію — відповідай JSON:
-- Задача: {"action":"create_task","title":"назва","steps":[]}
-- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
-- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
-- Закрити задачу: {"action":"complete_task","task_id":ID}
-- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
-- Редагувати задачу: {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- Видалити задачу: {"action":"delete_task","task_id":ID}
-- Видалити звичку: {"action":"delete_habit","habit_id":ID}
-- Перевідкрити задачу: {"action":"reopen_task","task_id":ID}
-- Записати момент дня: {"action":"add_moment","text":"що сталося"}
-- Нотатка: {"action":"create_note","text":"текст","folder":null}
-- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
-- Подія: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- Видалити подію: {"action":"delete_event","event_id":ID}
-- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
-- Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
-ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
+ЗАДАЧА = дія ЗРОБИТИ (save_task). ПОДІЯ = факт що СТАНЕТЬСЯ (create_event). "Перенеси подію" = edit_event.
+Для CRUD дій — викликай відповідний tool. Для аналізу/відповіді — пиши текст.
 
 ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
 
-  // "Один мозок #1": додаємо UI_TOOLS щоб з чату Я можна було "Відкрий задачі",
-  // "Покажи пам'ять" тощо. CRUD-дії залишаються у текстовому JSON.
-  const msg = await callAIWithTools(systemPrompt, [...meChatHistory], UI_TOOLS);
+  // "Один мозок #2 A": INBOX_TOOLS (31) + UI tools — повний набір для CRUD і навігації.
+  const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS);
   const loadEl = document.getElementById(loadId);
 
-  // UI tools dispatch — якщо AI обрав навігацію
+  // Tool dispatch — через спільний dispatcher (UI tool OR CRUD через universal action)
   if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
     if (loadEl) loadEl.remove();
-    for (const tc of msg.tool_calls) {
-      if (UI_TOOL_NAMES.has(tc.function.name)) {
-        let args = {};
-        try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-        const res = handleUITool(tc.function.name, args);
-        if (res && res.text) addMeChatMsg('agent', res.text);
-      }
-    }
+    dispatchChatToolCalls(msg.tool_calls, (r, t) => addMeChatMsg(r, t), text);
     if (msg.content) meChatHistory.push({ role: 'assistant', content: msg.content });
     if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
     return;
