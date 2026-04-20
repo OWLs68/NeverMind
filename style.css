@@ -1090,13 +1090,16 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 5px 12px 20px;
+  padding: 5px 12px 28px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-height: 0;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black calc(100% - 16px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black calc(100% - 16px), transparent 100%);
+  /* B-93 fix (20.04 EWxjG): прибрано нижній fade mask — чіпи-кнопки
+     останнім елементом попадали у зону прозорості і виглядали обрізаними.
+     Верхній fade лишається — старі повідомлення плавно зникають з-під handle. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0px, black 10px, black 100%);
   scrollbar-width: none;
 }
 .ai-bar-messages::-webkit-scrollbar { display: none; }
