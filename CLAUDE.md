@@ -174,37 +174,16 @@
 - **Якщо деплой не спрацював:** `git commit --allow-empty -m "ci: retrigger" && git push origin <branch>` (порожній коміт який просто заново запускає CI).
 
 ### Архітектурний принцип: ОДИН МОЗОК НА ВСЕ
-OWL — це не набір окремих фіч. Це **єдиний мозок** застосунку — як Jarvis. Він бачить повну картину життя користувача і реагує на все що відбувається. Табло, чати, чіпи, проактивні поради — це різні "вікна" одного мозку, а не окремі системи.
 
-**Що OWL має знати (повна візія):**
-- **Дані змінились** — задача закрита, звичка відмічена, нотатка додана, витрата записана → миттєва реакція
-- **Поведінка користувача** — які вкладки відкриває, які чіпи натискає/ігнорує, коли заходить і як довго → вчиться і адаптується
-- **Контекст і час** — фаза дня, день тижня, паттерни активності → персоналізовані поради
-- **Емоції і настрій** — розпізнає з тексту, моментів, частоти використання → емоційний інтелект
-- **Довгострокова пам'ять** — що було вчора, минулого тижня, місяць тому → будує діалог, не повторюється
-- **Сумніви і відкати** — видалення, повернення з кошика, редагування → розуміє що користувач не впевнений
+OWL = єдиний Jarvis. Табло, чати, чіпи — різні "вікна" одного мозку. Якщо щось відбувається у застосунку і OWL про це не знає — це баг.
 
-**Головне правило:** Якщо щось відбувається в застосунку і OWL про це НЕ знає — це баг. Кожна нова фіча, кожний новий тип даних, кожна нова взаємодія — OWL має бути в курсі.
-
-**Поточна реалізація (буде розширюватись):**
-- Кожна save-функція dispatch'ає `window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'тип' }))`. Debounce-listeners у `proactive.js` і `inbox-board.js` чекають 3 сек і оновлюють табло.
-- При додаванні нової save-функції — **обов'язково** додати цей dispatch.
-
-**Повний план розвитку мозку** (що вже працює + що в планах по блоках) → `ROADMAP.md` (консолідовано 13.04.2026). Історичні деталі з обговорень Grok/Gemini/DeepSeek — в архіві `_archive/FEATURES_ROADMAP.md`.
+**Повна візія + поточна реалізація (nm-data-changed dispatch) + план розвитку → `NEVERMIND_LOGIC.md` секція "Один мозок на все".**
 
 ### Що не можна змінювати без обговорення
-- **Ручна категоризація в Inbox** — ШІ автоматично визначає тип кожного запису (задача/нотатка/момент/звичка/фінанси), користувач НЕ обирає тип вручну. Це головна фішка NeverMind — мінімальне тертя.
-- **Прибирати чат-бари з вкладок** — чат-бар (поле введення тексту внизу екрану для спілкування з OWL-агентом) має бути на КОЖНІЙ вкладці, не тільки в Inbox.
-- **Копіювати дані між storage-ключами** — localStorage (локальне сховище браузера) має окремі "папки" (`nm_tasks`, `nm_habits2`, `nm_notes` тощо). Вкладка Вечір НЕ копіює звички у свою папку — читає з `nm_habits2` напряму при рендері (під час малювання екрана). Принцип "single source of truth" (одне джерело правди).
-- **Розбивати на кілька HTML файлів** — весь інтерфейс у одному `index.html`. НЕ створювати `tasks.html`, `habits.html` тощо. PWA на iOS краще працює з одним HTML файлом.
-- **`localStorage.setItem` override у `src/core/boot.js`** — це наша **підмінена версія** стандартної функції браузера "зберегти дані у локальне сховище". Замість стандартного збереження наша ще й сповіщає всі інші відкриті вкладки браузера "дані оновились, перемалюйте екран". Потрібно для синхронізації між вкладками (cross-tab sync). **ОНОВЛЕНО 11.04:** поруч із override у тій самій функції `setupSync()` (рядки 146-154) вже живе `BroadcastChannel('nm_sync')` — офіційний браузерний механізм спілкування між вкладками. Override залишається як fallback (резервний механізм). Ідея зняти override повністю — окрема задача в roadmap (див. "BroadcastChannel cleanup" у `ROADMAP.md` секція "Відкладено на окреме обговорення ДО Supabase"). Не чіпати наосліп: якщо видалиш override без перевірки що BroadcastChannel покриває всі кейси — можуть з'явитись фантомні баги cross-tab sync. Шукати через пошук `localStorage.setItem` у файлі `src/core/boot.js`.
-- **Централізована БД-абстракція** (єдиний модуль `db.js` що обгортає весь localStorage) — вже пробували у старій флат-структурі (до рефакторингу), зламало все одразу. Кожна вкладка працює з localStorage напряму через власні функції `get*()` і `save*()` (наприклад `getTasks`, `saveTasks` у `src/tabs/tasks.js`).
-- **Локальні функції** `getTasks()`, `saveNotes()` і т.д. — інші модулі їх імпортують через `import` напряму з відповідного `src/tabs/*.js`. Не створювати проксі-обгорток.
-- **Порядок імпортів у `src/app.js`** — критичний. Повторює порядок старих `<script>` тегів до рефакторингу. Зміна порядку = потенційні circular dependencies (циклічні залежності: модуль A імпортує B, а B імпортує A — JS не знає з чого починати).
-- **Логіка `setupSW()` у `src/core/boot.js`** — функція реєстрації Service Worker (SW — фоновий файл що керує кешем PWA). Кожна строчка всередині вирішує конкретну проблему iOS Safari: `bfcache` (back-forward cache — iPhone кешує сторінки коли ти натискаєш "назад" і потім "вперед", іноді з застарілими даними), оновлення після `reload` (перезавантаження вкладки), режим "додано на головний екран" (коли PWA відкривається як окремий застосунок). Не "причісувати" — кожна лінія коштувала годин дебагу (дебаг — пошук і виправлення помилок).
-- **`attachSwipeDelete` у `src/ui/swipe-delete.js`** (17.04.2026 14zLe) — **базова логіка свайп-видалення** для всього застосунку, як glass-стиль модалок. Нові списки (Здоров'я картки, Проекти кроки, майбутні фічі) ЗОБОВ'ЯЗАНІ використовувати цю функцію, не писати свій свайп. HTML-структура: `<div class="*-wrap" data-id="..." style="position:relative;overflow:hidden">` + картка всередині. Виклик post-render: `attachSwipeDelete(wrap, card, onDelete)`.
-- **`extractJsonBlocks` у `src/core/utils.js`** (17.04.2026 14zLe) — AI у чат-барах тепер гарантовано обробляє множинні дії (не тільки одну). Використовується у Finance/Tasks/Habits/Evening/Health/Projects чатах. Не писати свій regex парсер JSON у нових чатах — це вже буде вирішеним через спільну утиліту.
-- **Глобальна анімація натискання у `style.css`** — `button, [onclick]:active { transform: scale(0.87); transition: transform 0.3s }`. Працює скрізь без винятків. **Не розширювати селектор** (не додавати `.my-class:active`) — сенс у тому щоб правило було широке і універсальне. Якщо треба виключити елемент — додай йому `pointer-events:none` або прибери onclick.
+
+**Повний список священних корів (архітектурні, продуктові, UI-стандарти) → [`docs/DO_NOT_TOUCH.md`](docs/DO_NOT_TOUCH.md).**
+
+Ключові: ручна категоризація Inbox заборонена, чат-бари на ВСІХ вкладках обовʼязкові, localStorage `setItem` override у `boot.js` не чіпати наосліп, централізована БД заборонена, порядок імпортів у `app.js` критичний, `attachSwipeDelete` базова, глобальна анімація натискання у `style.css` не розширювати селектор.
 
 ### Чеклист аудиту
 Детальні пункти перевірки → скіл `/audit`. Запусти після будь-якої нетривіальної зміни або коли Роман каже "перевір роботу".
@@ -293,51 +272,18 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 ## Файлова структура
 
-| Файл | Відповідальність |
-|------|-----------------|
-| `index.html` | Весь UI (~1475 рядків). Один `<script src="bundle.js">` |
-| `style.css` | Всі стилі (~1130 рядків). Винесено з index.html |
-| `sw.js` | Service Worker. **CACHE_NAME треба міняти при кожному деплої** |
-| `bundle.js` | Згенерований esbuild з `src/`. **Не комітити** — генерується CI |
-| `build.js` | Конфіг esbuild (10 рядків) |
-| `package.json` | Одна залежність: esbuild |
-| `src/app.js` | Точка входу — імпортує всі модулі |
-| `src/core/nav.js` | Глобальний стан (`currentTab`), switchTab, теми, налаштування, пам'ять |
-| `src/core/boot.js` | bootApp, PWA setup, cross-tab sync, NM_KEYS, init |
-| `src/core/trash.js` | Кошик (7 днів TTL), showUndoToast, undoDelete |
-| `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml (safe для undefined з B-70), `extractJsonBlocks` (розбивка AI-відповіді на окремі JSON-об'єкти — для множинних дій у чат-барах, 17.04 14zLe) |
-| `src/core/logger.js` | Error logging, console override, UI панель логу, ring buffer юзер-дій (trackUserAction), автолистенер nm-data-changed, stack trace у записах |
-| `src/core/diagnostics.js` | **Діагностична система (B-67 acZEu):** Health Check (9 перевірок стану систем), Smoke Tests (9 авто-тестів), Performance monitor (startup/longtask/fetch monkey-patch). Рендерить 3 блоки у панелі логу. Експорти: runHealthCheck, runSmokeTests, getPerformanceData |
-| `src/ai/core.js` | **AI-логіка (~623 рядки після рефакторингу 17.04 14zLe):** getAIContext(), callAI(), chat storage (6 незалежних чатів), _fetchAI(), HTTP-wrappers (callAIWithHistory, callAIWithTools, callOwlChat), open/closeChatBar. Re-exports з `prompts.js` для backward-compat |
-| `src/ai/prompts.js` | **Промпти OWL (17.04 14zLe):** `getOWLPersonality()` (3 характери coach/partner/mentor + universal правила), `INBOX_SYSTEM_PROMPT` (класифікатор Inbox), `INBOX_TOOLS` (31 function definition), `getOwlChatSystemPrompt(context)` для callOwlChat. **Коли OWL "не так відповідає" — правити ТУТ**, не в core.js. Передумова для майбутніх характерів (Badg/Rabi) |
-| `src/ai/memory.js` | **Структурована пам'ять фактів** — `nm_facts` з часовими мітками (11.04). CRUD, дедуплікація, TTL, категорії (preferences/health/work/relationships/context/goals), formatFactsForContext/Board, міграція legacy nm_memory |
-| `src/owl/inbox-board.js` | OWL Board Inbox (проактивні повідомлення), ChatBar swipe AB-стан |
-| `src/owl/board.js` | OWL Tab Boards (рендер + свайпи для ВСІХ вкладок включно з inbox) |
-| `src/owl/proactive.js` | Генерація проактивних повідомлень, getTabBoardContext |
-| `src/owl/followups.js` | **Live Chat Replies** — follow-up повідомлення агента у контекстний чат (stuck-task, event-passed), 5 хв таймер + nm-data-changed |
-| `src/owl/chips.js` | **Центральний модуль чіпів** — renderChips(), handleChipClick(), fuzzy match ✔️, CHIP_PROMPT_RULES |
-| `src/ui/keyboard.js` | setupKeyboardAvoiding (iOS-specific) |
-| `src/ui/swipe-delete.js` | **Базова логіка свайп-видалення** (як glass-стиль модалок): `attachSwipeDelete(wrapEl, cardEl, onDelete, opts)` — свайп вліво → кнопка-кошик справа → тап=видалення. Використовується у Inbox/Tasks/Notes/Habits/Finance. |
-| `src/ui/voice-input.js` | **Голосовий ввід у всіх 8 чат-барах (18.04 VJF2M)** — Web Speech API з `lang='uk-UA'`. Автоматично додає кнопку 🎤 перед send-btn у кожному `.ai-bar-input-box` при DOMContentLoaded. Interim results → live-текст у textarea. Натискання send-btn під час запису → автостоп + програмна відправка через `pendingSendClick` + `onend` delay 60мс. Fallback: якщо `SpeechRecognition` недоступний — кнопка не з'являється. |
-| `src/ai/ui-tools.js` | **UI Tools (4.17, 18.04 VJF2M)** — 8 hands-free навігаційних tools: `switch_tab` (з aliases calendar→модалка, habits→tasks), `open_memory`, `open_settings`, `set_finance_period`, `open_finance_analytics`, `set_theme`, `set_owl_mode`, `export_health_card`. Масив `UI_TOOLS` + `UI_TOOL_NAMES` (Set) + `handleUITool(name, args)` dispatcher. Імпортується у `prompts.js` (spread у INBOX_TOOLS) і `inbox.js` (dispatch). Повний довідник → `docs/AI_TOOLS.md`. |
-| `src/tabs/inbox.js` | sendToAI(), processSaveAction(), renderInbox(), swipe delete |
-| `src/tabs/tasks.js` | Задачі (CRUD), кроки задач, task chat, setupModalSwipeClose (з drum-col guard) |
-| `src/tabs/habits.js` | Звички + quit-звички, лог виконання, стріки, processUniversalAction (_splitReply) |
-| `src/tabs/notes.js` | Нотатки, папки, note view з чатом, пошук |
-| `src/tabs/finance.js` | Фінанси — ядро (~700 рядків після рефакторингу 17.04 gHCOh): renderFinance, state, getFinanceContext, processFinanceAction, getFinEditMode/setFinEditMode. Re-exports з 5 модулів для backward compat |
-| `src/tabs/finance-cats.js` | Категорії Фінансів — CRUD, 41 SVG-іконка, палітра 14 кольорів, міграція v2, mergeFinCategories, moveFinCategory |
-| `src/tabs/finance-modals.js` | Модалки Фінансів — транзакція з калькулятором, datepicker, бюджет, категорія (icon/color picker, subcategories) |
-| `src/tabs/finance-analytics.js` | Аналітика 📊 — 3 режими графіка (Капітал/Витрати/Доходи), 9 метрик у 3 міні-блоках, 50/30/20 benchmark з кастомними % |
-| `src/tabs/finance-insight.js` | Інсайт дня (AI) — кеш 1год + hash-інвалідація, жорсткі правила точності чисел, temperature 0.3 |
-| `src/tabs/finance-chat.js` | Chat bar Фінансів — AI-бот для фінансових команд (save_expense/income/delete/update/budget/category) |
-| `src/tabs/health.js` | Карточки здоров'я, денні шкали (енергія/сон/біль) |
-| `src/tabs/projects.js` | Проекти, воркспейс, кроки, метрики, темп |
-| `src/tabs/calendar.js` | Календар, події (nm_events), блок "Найближче", Calendar/Routine/Day-schedule модалки, Event-edit modal з drum picker, zoom-анімації, навігаційний стек, SVG іконка з динамічною датою |
-| `src/tabs/evening.js` | Моменти дня, вечірній підсумок, "Я" вкладка, денний скор |
-| `src/tabs/onboarding.js` | Онбординг, слайди, опитування, OWL Guide, help |
+**Повна таблиця файлів з відповідальністю → [`docs/FILE_STRUCTURE.md`](docs/FILE_STRUCTURE.md).**
 
-**Збірка:** `node build.js` → `src/app.js` → `bundle.js` (esbuild, IIFE формат).
-**Порядок імпортів в `src/app.js`** — критичний, відповідає порядку оригінальних `<script>` тегів.
+Коротко:
+- `index.html` + `style.css` + `sw.js` — кореневі
+- `src/app.js` — точка входу (порядок імпортів критичний)
+- `src/core/*` — nav, boot, trash, utils, logger, diagnostics
+- `src/ai/*` — core, prompts, memory, ui-tools
+- `src/owl/*` — inbox-board, board, proactive, followups, chips
+- `src/ui/*` — keyboard, swipe-delete, voice-input, unread-badge
+- `src/tabs/*` — 8 вкладок + їх підмодулі (finance розбитий на 6 файлів, evening на 4)
+
+**Збірка:** `node build.js` → `src/app.js` → `bundle.js` (esbuild, IIFE формат). Порядок імпортів в `src/app.js` — критичний, відповідає порядку оригінальних `<script>` тегів.
 
 ---
 
@@ -350,22 +296,33 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 | Файл | Коли читати |
 |------|-------------|
 | `START_HERE.md` | **Перший файл у кожній новій сесії.** Карта проекту + обов'язкові файли |
-| `CLAUDE.md` *(цей файл)* | Правила процесу, файлова структура, карта документації. Технічні деталі → `docs/TECHNICAL_REFERENCE.md` |
-| `docs/TECHNICAL_REFERENCE.md` | **Технічна довідка** — Система деплою, AI-логіка, Дані localStorage, Структури даних, Міжмодульні залежності. Читати перед роботою з відповідною частиною коду |
-| `docs/AI_TOOLS.md` | **Довідник AI tools** — всі 39 існуючих + 14 у планах (4.17 UI tools). Читати перед додаванням/зміною будь-якого tool. Джерело правди для списку, категорій, промпт-правил |
-| `docs/EVENING_2.0_PLAN.md` | **Детальний план Вечора 2.0** (🚀 Active від QV1n2 19.04) — концепція ритуалу після 18:00, 8 фаз на 3 сесії, живі сценарії діалогів, success metrics, failure modes, перехресні посилання з ROADMAP. Читати перед стартом Сесії 1 Вечора 2.0 (Фаза 0 рефакторинг). Джерело правди для переробки вкладки |
+| `CLAUDE.md` *(цей файл)* | Правила процесу + карта документації. Все інше — через посилання |
 | `РОМАН_ПРОФІЛЬ.md` | Хто такий Роман і як з ним працювати (перша сесія або давно не працювали) |
 | `NEVERMIND_BUGS.md` | Список відомих багів + `/fix B-XX` — виправлення конкретного |
-| `lessons.md` | Щоденник помилок Claude: помилка → причина → правило. Читати на старті сесії |
-| `_ai-tools/SESSION_STATE.md` | Версія, гілка, що робили в останніх сесіях |
-| `NEVERMIND_LOGIC.md` | Базова концепція, OWL принципи (timeless) |
+| `lessons.md` | Щоденник помилок Claude: патерни / анти-патерни / журнал рішень. Читати на старті сесії |
+| `_ai-tools/SESSION_STATE.md` | Версія, гілка, що робили в останніх сесіях (бриф + лінк на CHANGES) |
+| `_ai-tools/INDEX.md` | **Семантичний індекс — "куди йти за чим"** (створено у рамках рефакторингу g05tu 20.04) |
+| `_ai-tools/REFACTOR_PLAN.md` | Активний план рефакторингу документації (g05tu 20.04) |
+| **Концепції і план** | |
+| `NEVERMIND_LOGIC.md` | Базова концепція, принцип "Один мозок на все" (винесено з CLAUDE.md 20.04) |
 | `CONCEPTS_ACTIVE.md` | Реалізовані концепції вкладок (Finance, Evening, Me, Projects, Gamification) |
-| `ROADMAP.md` | **Дорожня карта** — Active / Next (7 блоків) / Done / Ideas / Rejected / After Supabase. Консолідовано з `FEATURES_ROADMAP.md` 13.04.2026 |
-| `_archive/FEATURES_ROADMAP.md` | Архівна повна версія плану з усіма обговореннями (Grok/Gemini/DeepSeek), джерелами, анти-патернами. Читати тільки коли потрібні історичні деталі |
+| `ROADMAP.md` | **Дорожня карта** — Active / Next / Ideas / Rejected / After Supabase |
+| `ROADMAP_DONE.md` | **Виконане** — завершені Active, Блок 1, 6 фаз Здоров'я, хронологія ✅ Done (винесено 20.04) |
+| `docs/EVENING_2.0_PLAN.md` | Детальний план Вечора 2.0 (MVP виконано 19.04) |
+| `docs/FINANCE_V2_PLAN.md` | Фази імплементації Фінансів v2 (винесено з ROADMAP 20.04) |
+| **Технічна довідка** | |
+| `docs/FILE_STRUCTURE.md` | Повна таблиця файлів проекту (винесено з CLAUDE.md 20.04) |
+| `docs/TECHNICAL_REFERENCE.md` | Система деплою, AI-логіка, Дані localStorage, Структури даних |
+| `docs/AI_TOOLS.md` | Довідник AI tools — всі існуючі + у планах. Джерело правди |
 | `docs/ARCHITECTURE.md` | Діаграми потоків даних (Inbox flow, OWL тригери, пам'ять агента) |
 | `docs/DESIGN_SYSTEM.md` | Стилі, модалки, компоненти (кольори, CSS-спеки) |
-| `docs/CHANGES.md` | Історичний журнал (читати рідко, додавати записи в кінець сесії) |
-| `_ai-tools/REFACTORING_PLAN.md` | План ES-Modules рефакторингу (вже виконаний, історична довідка) |
+| `docs/DO_NOT_TOUCH.md` | Священні корови — що не чіпати без обговорення (винесено 20.04) |
+| `docs/GIT_EMERGENCY.md` | Процедура екстреного скиду + історія v54-v130 (винесено 20.04) |
+| `docs/CHANGES.md` | Історичний журнал сесій (читати рідко, додавати записи в кінець сесії) |
+| **Архів** | |
+| `_archive/FEATURES_ROADMAP.md` | Повна історична версія плану (Grok/Gemini/DeepSeek обговорення) — для історичних деталей |
+| `_archive/SESSION_STATE_archive.md` | Детальні описи старих сесій (>2 активних) |
+| `_archive/BUGS_HISTORY.md` | Закриті баги зі старих сесій |
 
 ### ✍️ Писати/оновлювати коли…
 
@@ -442,80 +399,18 @@ OWL — це не набір окремих фіч. Це **єдиний мозо
 
 ## Плани на розвиток
 
-### Характер і особистість агента (TODO)
-Детальна проробка OWL-персонажа: як він говорить, реагує на різні ситуації, які емоції проявляє. Зараз є 3 режими (coach/partner/mentor) з базовим описом — потрібно поглибити до рівня справжнього Jarvis. Включає:
-- Контекстна пам'ять: агент пам'ятає що було вчора, минулого тижня
-- Емоційний інтелект: розпізнає настрій користувача з тексту
-- Індивідуальні реакції: не шаблонні відповіді, а підходящі до конкретної ситуації
-- Мова: завжди людська, зрозуміла, без жаргону і технічних термінів
+**Повна дорожня карта → [`ROADMAP.md`](ROADMAP.md)** (Active / Next / Ideas / Rejected / After Supabase).
 
-### Навчання агента через взаємодію (TODO)
-Агент має вчитись на поведінці користувача і використовувати ці знання:
-- Трекінг чіпів: які чіпи натискають, які ігнорують → агент вчиться що пропонувати
-- Персоналізовані варіанти: чіпи підлаштовуються під конкретну людину на основі `nm_memory` і історії взаємодії
-- Довгострокова пам'ять: агент пам'ятає не тільки дні, а й тижні/місяці (патерни поведінки)
-- Проактивні підказки: агент помічає закономірності ("щопонеділка ти додаєш багато задач — може розпланувати тиждень?")
+**Виконане → [`ROADMAP_DONE.md`](ROADMAP_DONE.md)** (завершені Active, Блок 1, 6 фаз Здоров'я, хронологія).
 
-### Анімація OWL (відкладено)
-**Статус:** всі експерименти 18-19.04.2026 (PNG-маскот, sprite-sheet, SVG-крило, flipbook махання, Nano Banana) **знесені у сесії rSTLV 19.04**. У Inbox повернуто простий емодзі 🦉 як на інших вкладках. Причина: складно, результат не виправдовує зусилля.
-
-**Повертаємось коли:** буде готовий нормальний художній ассет (багатошарова SVG або якісний Rive-файл) і ресурс на впровадження. До того — сова на всьому застосунку = текстовий емодзі.
-
-### Скіли Claude Code (інструменти розробки, НЕ фічі NeverMind)
-**Стан 17.04.2026:** всі 7 скілів **написані** у `.claude/commands/` — див. [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md) для короткого індексу коли який активувати. Далі — впровадження інструкцій у код.
-
-- 🟢 `/ux-ui` — блокує "дефолтні" модалки, читає `docs/DESIGN_SYSTEM.md`
-- 🟢 `/prompt-engineer` — єдиний формат 12 промптів OWL
-- 🟢 `/pwa-ios-fix` — iOS Safari чеклист (bfcache / SW / keyboard / overscroll)
-- ⏸️ `/owl-motion` — анімація сови (відкладено rSTLV 19.04, маскот видалено)
-- 🟡 `/supabase-prep` — міграції / retry / offline (перед Supabase)
-- 🔴 `/a11y-enforcer` — WCAG 2.1 AA (перед публічним релізом)
-- 🔵 `/gamification-engine` — прогрес / streak / ачівки (Блок 3)
-
-Відкинуто: Remotion Master (без React/відео), Social Carousel (не маркетинговий продукт), Anime.js/Lottie (перейшли на чистий CSS).
+Ключові напрямки в Active (20.04.2026):
+- **Один мозок V2** — паритет дій у 8 чатах, єдине табло з призмою вкладки, спільна історія розмов
+- **Рефакторинг документації + «мозок» Claude** — цей чат (план → [`_ai-tools/REFACTOR_PLAN.md`](_ai-tools/REFACTOR_PLAN.md))
 
 ---
 
-## Екстрений скид — ТІЛЬКИ за прямим дозволом Романа
+## Екстрений скид git
 
-> **🚨 ЖОРСТКЕ ПРАВИЛО (додано 17.04.2026 cnTkD після розслідування "зникнення v54-v130"):**
-> Claude **НЕ МАЄ ПРАВА** робити `git reset --hard` + `git push --force` самостійно —
-> **навіть якщо виглядає як "найпростіше рішення" merge conflict / зламаного деплою**.
->
-> **Це підвид загального правила "БЕЗ 'Роби' не змінювати код".** Git-операції що
-> знищують історію **безповоротно** — мають найвищий рівень обережності.
->
-> **Чому:** скид `reset --hard` на main + force push **назавжди знищує** історію комітів
-> з GitHub (через ~30 днів garbage collection). У цьому проекті це вже сталось:
-> між 13.04 і 15.04.2026 попередня сесія Claude **діяла автоматично без "Роби"** —
-> додавала скіли і ймовірно зіштовхнулась з merge conflict → вирішила через reset --hard.
-> Роман свідчить: _"Була сесія де Клод додав два скіла і сам робив без правила Роби.
-> Я зупинив його але він встиг наробити ділов."_ У Obsidian daily notes ні згадки.
-> Втрачено ~80 деплоїв v54-v130. Повна історія → `docs/CHANGES.md` 17.04 "Deploy counter reset".
->
-> **Замість reset використовуй:**
-> - `git revert <hash>` — створює НОВИЙ коміт що відміняє вказаний. Історія цілою.
-> - `git checkout <hash> -- file.js` — повертає ОДИН файл у старий стан без revert
-> - Merge conflict → уважно вирішувати руками, не "обнуляти"
->
-> **Якщо Роман САМ попросив "зроби екстрений скид" / "відкати до X" / "force push":**
-> тільки тоді — за процедурою нижче. І перед force push: (1) TodoWrite з планом,
-> (2) показати Роману точний hash + перелік комітів які втрачаються, (3) чекати
-> підтвердження "Роби" після показу плану.
+**Повна процедура + правило "не робити без дозволу Романа" + історія інциденту v54-v130 → [`docs/GIT_EMERGENCY.md`](docs/GIT_EMERGENCY.md).**
 
-### Процедура екстреного скиду (якщо Роман явно дозволив)
-
-```bash
-git reset --hard <hash> && git push --force origin HEAD:main
-# Стабільний коміт до рефакторингів: a8ae6cb (27.03 07:24)
-```
-
-**⚠️ `git reset --hard` відкочує ВЕСЬ repo — включно з `deploy-counter.txt`.** Якщо не компенсувати — лічильник версій стрибне назад (так і сталось 14.04: втратили v54-v130, деплої почались з v3 замість v131+).
-
-**Перед `git push --force` завжди:**
-1. Знайди останню відому версію: `git log --all --oneline --grep="^chore: deploy v" | head -3`
-2. Онови `deploy-counter.txt` на `ОСТАННЯ_ВЕРСІЯ` (наступний CI-деплой зробить `+1`)
-3. `git add deploy-counter.txt && git commit --amend --no-edit` щоб включити у reset-коміт
-4. Тільки тоді `git push --force`
-
-Повна історія події і reasoning → `docs/CHANGES.md` 17.04.2026 "Deploy counter reset investigation".
+Коротко: `git reset --hard` + `git push --force` Claude **НЕ ВИКОНУЄ** самостійно. Замість — `git revert <hash>` або `git checkout <hash> -- file`. Якщо Роман явно попросив — процедура у GIT_EMERGENCY.md.
