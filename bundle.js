@@ -6694,48 +6694,35 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const txs = getFinance().filter((t) => t.ts >= from);
     const budget = getFinBudget();
     const cats = getFinCats();
-    const aiContext = getAIContext();
-    const FINANCE_BAR_PROMPT = `${getOWLPersonality()} \u0422\u0438 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454\u0448 \u0437 \u0444\u0456\u043D\u0430\u043D\u0441\u0430\u043C\u0438. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E.
-\u0412\u0430\u043B\u044E\u0442\u0430: ${getCurrency()}. \u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C.
-\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 (\u0434\u043E 20 \u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0445): ${txs.slice(0, 20).map((t) => `[${t.type}] ${t.category} ${t.amount}${getCurrency()} ${t.comment || ""}`).join("; ") || "\u043D\u0435\u043C\u0430\u0454"}
-\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442: ${budget.total ? budget.total + getCurrency() : "\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"}
-\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442: ${cats.expense.join(", ")}
-\u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438: \u0407\u0436\u0430(\u043A\u0430\u0432\u0430,\u0440\u0435\u0441\u0442\u043E\u0440\u0430\u043D,\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438), \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442(\u0431\u0435\u043D\u0437\u0438\u043D,\u0442\u0430\u043A\u0441\u0456,Uber), \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438(Netflix,Spotify), \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F(\u0430\u043F\u0442\u0435\u043A\u0430,\u043B\u0456\u043A\u0430\u0440), \u0416\u0438\u0442\u043B\u043E(\u043E\u0440\u0435\u043D\u0434\u0430,\u043A\u043E\u043C\u0443\u043D\u0430\u043B\u043A\u0430), \u041F\u043E\u043A\u0443\u043F\u043A\u0438(\u043E\u0434\u044F\u0433,\u0442\u0435\u0445\u043D\u0456\u043A\u0430)
-\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043E\u0445\u043E\u0434\u0456\u0432: ${cats.income.join(", ")}
-\u042F\u043A\u0449\u043E \u0454 \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u043E\u0431\u0438\u0440\u0430\u0439 \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E, \u041D\u0415 "\u0406\u043D\u0448\u0435".
-
-\u0422\u0438 \u043C\u043E\u0436\u0435\u0448 \u0432\u0438\u043A\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0434\u0456\u0457 \u0447\u0435\u0440\u0435\u0437 JSON (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON \u044F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0434\u0456\u044F):
-{"action":"save_expense","amount":50,"category":"\u0407\u0436\u0430","comment":"\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438"}
-{"action":"save_income","amount":3000,"category":"\u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430","comment":""}
-{"action":"delete_transaction","id":1234567890}
-{"action":"update_transaction","id":1234567890,"category":"\u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442","comment":"\u0437\u0430\u043F\u0440\u0430\u0432\u043A\u0430"}
-{"action":"set_budget","total":2000,"categories":{"\u0407\u0436\u0430":400}}
-{"action":"create_category","type":"expense","name":"\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"}
-
-\u042F\u043A\u0449\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0430\u0431\u043E \u043E\u043F\u0438\u0441 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 update_transaction \u0437 \u0457\u0457 id. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0456 \u041D\u0415 \u0432\u0438\u0434\u0430\u043B\u044F\u0439 \u0441\u0442\u0430\u0440\u0443 \u043E\u043A\u0440\u0435\u043C\u043E.
-\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0431\u044E\u0434\u0436\u0435\u0442\u0438 \u0430\u0431\u043E \u043F\u043B\u0430\u043D\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0449\u0435. \u042F\u043A\u0449\u043E \u0431\u044E\u0434\u0436\u0435\u0442 "\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E" \u2014 \u043D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043D\u044F. \u0422\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0446\u0438\u0444\u0440\u0438.
-\u0422\u0430\u043A\u043E\u0436 \u0432\u043C\u0456\u0454\u0448: \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}, \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}, \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}, \u043D\u043E\u0442\u0430\u0442\u043A\u0443 {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}, \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0443 \u043F\u043E\u0434\u0456\u044E {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}, \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"complete_task","task_id":ID}, \u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}, \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"delete_task","task_id":ID}, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"delete_habit","habit_id":ID}, \u043F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"reopen_task","task_id":ID}, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F {"action":"add_moment","text":"\u0442\u0435\u043A\u0441\u0442"}. \u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-\u0422\u0430\u043A\u043E\u0436: \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E {"action":"delete_event","event_id":ID}, \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 {"action":"edit_note","note_id":ID,"text":"\u0442\u0435\u043A\u0441\u0442"}, \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}.
-
-\u041F\u0410\u041C'\u042F\u0422\u042C (\u041E\u0434\u0438\u043D \u043C\u043E\u0437\u043E\u043A \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u0437 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u0433\u043E \u0447\u0430\u0442\u0443):
-- \u0424\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430: {"action":"save_memory_fact","text":"\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
-- \u0416\u043E\u0440\u0441\u0442\u043A\u0438\u0439 \u0442\u0440\u0438\u0433\u0435\u0440: "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E X" / "\u0417\u0430\u043F\u0438\u0448\u0438 \u0449\u043E X" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_memory_fact, \u0411\u0415\u0417 \u0456\u043D\u0448\u0438\u0445 \u0434\u0456\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0437\u0430\u0434\u0430\u0447\u0456-\u043F\u0440\u043E\u0442\u0438\u043B\u0435\u0436\u043D\u0456\u0441\u0442\u044C.
-
-${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
+    const currency = getCurrency();
+    const txSummary = txs.slice(0, 20).map((t) => `[${t.type}] ${t.category} ${t.amount}${currency} ${t.comment || ""}`).join("; ");
+    const systemPrompt = getFinanceChatSystem({
+      currency,
+      budget,
+      txSummary,
+      expenseCats: (cats.expense || []).map((c) => c.name || c).join(", "),
+      incomeCats: (cats.income || []).map((c) => c.name || c).join(", ")
+    }) + (getAIContext() ? "\n\n" + getAIContext() : "");
     try {
-      const msg = await callAIWithTools(FINANCE_BAR_PROMPT, financeBarHistory.slice(-10), UI_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS);
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
         for (const tc of msg.tool_calls) {
-          if (UI_TOOL_NAMES.has(tc.function.name)) {
-            let args = {};
+          if (tc.function.name === "save_finance") {
             try {
-              args = JSON.parse(tc.function.arguments || "{}");
+              const a = JSON.parse(tc.function.arguments || "{}");
+              if (a.fin_type === "expense") checkFinBudgetWarning("expense", a.category, a.amount);
             } catch (e) {
             }
-            const res = handleUITool(tc.function.name, args);
-            if (res && res.text) addFinanceChatMsg("agent", res.text);
+            try {
+              localStorage.setItem("nm_owl_tab_ts_finance", "0");
+              tryBoardUpdate("finance");
+            } catch (e) {
+            }
           }
         }
+        const reply2 = msg.content ? msg.content.trim() : "";
+        if (reply2) addFinanceChatMsg("agent", reply2);
         financeBarLoading = false;
         return;
       }
@@ -6745,93 +6732,7 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
         financeBarLoading = false;
         return;
       }
-      const _processOne = (parsed) => {
-        if (parsed.action === "save_memory_fact" && parsed.text) {
-          try {
-            addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
-            addFinanceChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
-          } catch (e) {
-            console.warn("[finance save_memory_fact]", e);
-          }
-          return true;
-        }
-        if (processUniversalAction(parsed, text, addFinanceChatMsg)) return true;
-        if (parsed.action === "save_expense" || parsed.action === "save_income") {
-          const type = parsed.action === "save_expense" ? "expense" : "income";
-          const amount = parseFloat(parsed.amount);
-          const category = parsed.category || "\u0406\u043D\u0448\u0435";
-          const comment = parsed.comment || "";
-          const ts = Date.now() + Math.floor(Math.random() * 1e3);
-          const txs2 = getFinance();
-          txs2.unshift({ id: ts, type, amount, category, comment, ts });
-          saveFinance(txs2);
-          try {
-            const items = getInbox();
-            const inboxText = `${type === "expense" ? "-" : "+"}${formatMoney(amount)} \xB7 ${category}${comment ? " \u2014 " + comment : ""}`;
-            items.unshift({ id: ts, text: inboxText, category: "finance", ts, processed: true });
-            saveInbox(items);
-            renderInbox();
-          } catch (e) {
-          }
-          renderFinance();
-          try {
-            localStorage.setItem("nm_owl_tab_ts_finance", "0");
-            tryBoardUpdate("finance");
-          } catch (e) {
-          }
-          addFinanceChatMsg("agent", `\u2713 ${type === "expense" ? "-" : "+"}${formatMoney(amount)} \xB7 ${category}`);
-          checkFinBudgetWarning(type, category, amount);
-          return true;
-        }
-        if (parsed.action === "delete_transaction") {
-          const item = getFinance().find((t) => t.id === parsed.id);
-          if (item) addToTrash("finance", item);
-          saveFinance(getFinance().filter((t) => t.id !== parsed.id));
-          renderFinance();
-          addFinanceChatMsg("agent", `\u{1F5D1} \u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E: ${item ? item.category + " " + formatMoney(item.amount) : "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E"}`);
-          return true;
-        }
-        if (parsed.action === "update_transaction") {
-          const txs2 = getFinance();
-          const idx = txs2.findIndex((t) => t.id === parsed.id);
-          if (idx !== -1) {
-            if (parsed.category) txs2[idx].category = parsed.category;
-            if (parsed.comment !== void 0) txs2[idx].comment = parsed.comment;
-            if (parsed.amount) txs2[idx].amount = parseFloat(parsed.amount);
-            saveFinance(txs2);
-            renderFinance();
-            addFinanceChatMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${txs2[idx].category} ${formatMoney(txs2[idx].amount)}`);
-          } else {
-            addFinanceChatMsg("agent", "\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E.");
-          }
-          return true;
-        }
-        if (parsed.action === "set_budget") {
-          const bdg = getFinBudget();
-          if (parsed.total) bdg.total = parsed.total;
-          if (parsed.categories) Object.assign(bdg.categories, parsed.categories);
-          saveFinBudget(bdg);
-          renderFinance();
-          addFinanceChatMsg("agent", "\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
-          return true;
-        }
-        if (parsed.action === "create_category") {
-          const type = parsed.type === "income" ? "income" : "expense";
-          const c = getFinCats();
-          const exists = (c[type] || []).some((x) => x.name.toLowerCase() === (parsed.name || "").toLowerCase());
-          if (!exists) createFinCategory(type, { name: parsed.name });
-          renderFinance();
-          addFinanceChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${parsed.name}" ${exists ? "\u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0432\u0430\u043B\u0430" : "\u0434\u043E\u0434\u0430\u043D\u043E"}`);
-          return true;
-        }
-        return false;
-      };
-      const blocks = extractJsonBlocks(reply);
-      let handled = false;
-      for (const parsed of blocks) {
-        if (_processOne(parsed)) handled = true;
-      }
-      if (!handled) safeAgentReply(reply, addFinanceChatMsg);
+      safeAgentReply(reply, addFinanceChatMsg);
     } catch {
       addFinanceChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
@@ -6841,14 +6742,10 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
   var init_finance_chat = __esm({
     "src/tabs/finance-chat.js"() {
       init_utils();
-      init_trash();
       init_core();
       init_prompts();
-      init_ui_tools();
-      init_memory();
+      init_tool_dispatcher();
       init_proactive();
-      init_inbox();
-      init_habits();
       init_finance();
       init_finance_cats();
       _financeTypingEl = null;
@@ -8019,6 +7916,37 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
         addMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${args.subcategory}" \u0443 "${cat.name}". ${args.comment || ""}`.trim());
         return true;
       }
+      case "delete_transaction": {
+        const txs = getFinance();
+        const item = txs.find((t) => t.id === args.id);
+        if (!item) {
+          addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
+          return true;
+        }
+        try {
+          addToTrash("finance", item);
+        } catch (e) {
+        }
+        saveFinance(txs.filter((t) => t.id !== args.id));
+        if (currentTab === "finance") renderFinance();
+        addMsg("agent", `\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0432: ${item.category} ${formatMoney(item.amount)}.`);
+        return true;
+      }
+      case "set_finance_budget": {
+        const bdg = getFinBudget();
+        if (args.total !== void 0) bdg.total = args.total;
+        if (args.categories) {
+          if (!bdg.categories) bdg.categories = {};
+          Object.assign(bdg.categories, args.categories);
+        }
+        saveFinBudget(bdg);
+        if (currentTab === "finance") renderFinance();
+        const parts = [];
+        if (args.total !== void 0) parts.push(`\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 ${formatMoney(args.total)}`);
+        if (args.categories) parts.push(Object.entries(args.categories).map(([k, v]) => `${k} ${formatMoney(v)}`).join(", "));
+        addMsg("agent", `\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${parts.join("; ")}.`);
+        return true;
+      }
       default:
         return false;
     }
@@ -8062,6 +7990,8 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
       init_habits();
       init_nav();
       init_finance_cats();
+      init_finance();
+      init_trash();
     }
   });
 
@@ -10580,6 +10510,35 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
 
 \u0413\u041E\u041B\u041E\u0412\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439", "\u043E\u043D\u043E\u0432\u0438\u0442\u0438" \u2014 \u0446\u0435 \u0417\u0410\u0412\u0416\u0414\u0418 edit \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443 (edit_event, edit_task, edit_note). \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F. "\u041C\u0430\u043C\u0430 \u043F\u0440\u0438\u0457\u0434\u0435 24\u0433\u043E \u0430 \u043D\u0435 20\u0433\u043E" \u2192 edit_event (\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0434\u0430\u0442\u0443), \u041D\u0415 create_event. \u0428\u0443\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u043F\u043E \u043D\u0430\u0437\u0432\u0456 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.`;
   }
+  function getFinanceChatSystem({ currency, budget, txSummary, expenseCats, incomeCats }) {
+    return `${getOWLPersonality()} \u0422\u0438 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454\u0448 \u0437 \u0444\u0456\u043D\u0430\u043D\u0441\u0430\u043C\u0438. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E.
+\u0412\u0430\u043B\u044E\u0442\u0430: ${currency}. \u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C.
+\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 (\u0434\u043E 20 \u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0445): ${txSummary || "\u043D\u0435\u043C\u0430\u0454"}
+\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442: ${budget && budget.total ? budget.total + currency : "\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E"}
+\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442: ${expenseCats}
+\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043E\u0445\u043E\u0434\u0456\u0432: ${incomeCats}
+\u041F\u0440\u0438\u043A\u043B\u0430\u0434\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439: \u0407\u0436\u0430(\u043A\u0430\u0432\u0430,\u0440\u0435\u0441\u0442\u043E\u0440\u0430\u043D,\u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438), \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442(\u0431\u0435\u043D\u0437\u0438\u043D,\u0442\u0430\u043A\u0441\u0456,Uber), \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438(Netflix,Spotify), \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F(\u0430\u043F\u0442\u0435\u043A\u0430,\u043B\u0456\u043A\u0430\u0440), \u0416\u0438\u0442\u043B\u043E(\u043E\u0440\u0435\u043D\u0434\u0430,\u043A\u043E\u043C\u0443\u043D\u0430\u043B\u043A\u0430), \u041F\u043E\u043A\u0443\u043F\u043A\u0438(\u043E\u0434\u044F\u0433,\u0442\u0435\u0445\u043D\u0456\u043A\u0430).
+\u042F\u043A\u0449\u043E \u0454 \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u043E\u0431\u0438\u0440\u0430\u0439 \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E, \u041D\u0415 "\u0406\u043D\u0448\u0435".
+
+\u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools):
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u2192 save_finance (fin_type="expense" \u0430\u0431\u043E "income")
+- \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u2192 update_transaction
+- \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u2192 delete_transaction
+- \u0411\u044E\u0434\u0436\u0435\u0442 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0431\u043E \u043F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457) \u2192 set_finance_budget
+- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u2192 create_finance_category / edit_finance_category / delete_finance_category / merge_finance_categories / add_finance_subcategory
+- \u0423\u043D\u0456\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u0456 \u2192 save_task / save_note / save_moment / create_event / set_reminder / save_memory_fact \u0442\u043E\u0449\u043E
+- \u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u2192 UI tools (switch_tab, open_finance_analytics, set_finance_period \u0442\u043E\u0449\u043E)
+
+VERIFY LOOP (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.21): \u041F\u0406\u0421\u041B\u042F tool call \u0417\u0410\u0412\u0416\u0414\u0418 \u043F\u0438\u0448\u0438 \u0443 content \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u041F\u0440\u0438\u043A\u043B\u0430\u0434: save_finance \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u0432 -120\u20B4 \u043D\u0430 \u0407\u0436\u0443 (\u043A\u0430\u0432\u0430)."
+
+\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0431\u044E\u0434\u0436\u0435\u0442\u0438 \u0430\u0431\u043E \u043F\u043B\u0430\u043D\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0449\u0435. \u042F\u043A\u0449\u043E \u0431\u044E\u0434\u0436\u0435\u0442 "\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E" \u2014 \u043D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043D\u044F. \u0422\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0446\u0438\u0444\u0440\u0438.
+
+\u042F\u043A\u0449\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0430\u0431\u043E \u043E\u043F\u0438\u0441 \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u2014 update_transaction \u0437 id. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0443 \u0456 \u041D\u0415 \u0432\u0438\u0434\u0430\u043B\u044F\u0439 \u0441\u0442\u0430\u0440\u0443 \u043E\u043A\u0440\u0435\u043C\u043E.
+
+\u041F\u0410\u041C'\u042F\u0422\u042C: "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E X" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_memory_fact, \u0411\u0415\u0417 \u0456\u043D\u0448\u0438\u0445 \u0434\u0456\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0437\u0430\u0434\u0430\u0447\u0456-\u043F\u0440\u043E\u0442\u0438\u043B\u0435\u0436\u043D\u0456\u0441\u0442\u044C.
+
+${UI_TOOLS_RULES}`;
+  }
   function getHealthChatSystem(activeCard) {
     return `${getOWLPersonality()} \u0422\u0438 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454\u0448 \u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u043E\u044E \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0443 NeverMind.
 
@@ -10781,6 +10740,8 @@ ${UI_TOOLS_RULES}`;
         { type: "function", function: { name: "add_step", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id", "steps"], additionalProperties: false } } },
         { type: "function", function: { name: "move_note", description: "\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { query: { type: "string", description: "\u0427\u0430\u0441\u0442\u0438\u043D\u0430 \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, folder: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430" } }, required: ["query", "folder"], additionalProperties: false } } },
         { type: "function", function: { name: "update_transaction", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E. \u042E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043A\u0430\u0436\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438/\u0432\u0438\u043F\u0440\u0430\u0432\u0438\u0442\u0438 \u0441\u0443\u043C\u0443 \u0430\u0431\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E.", parameters: { type: "object", properties: { id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_transaction", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E (\u0443 \u043A\u043E\u0448\u0438\u043A \u043D\u0430 7 \u0434\u043D\u0456\u0432). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0438\u0434\u0430\u043B\u0438 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E', '\u043F\u0440\u0438\u0431\u0435\u0440\u0438 \u0446\u044E \u0432\u0438\u0442\u0440\u0430\u0442\u0443'.", parameters: { type: "object", properties: { id: { type: "integer", description: "ID \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
+        { type: "function", function: { name: "set_finance_budget", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u0430\u0431\u043E \u043B\u0456\u043C\u0456\u0442 \u043D\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u0441\u0442\u0430\u0432 \u0431\u044E\u0434\u0436\u0435\u0442 2000', '\u043B\u0456\u043C\u0456\u0442 \u043D\u0430 \u0407\u0436\u0443 400'.", parameters: { type: "object", properties: { total: { type: "number", description: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C" }, categories: { type: "object", description: "\u041C\u0430\u043F\u0430 \u043D\u0430\u0437\u0432\u0430\u2192\u043B\u0456\u043C\u0456\u0442 \u0434\u043B\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439", additionalProperties: { type: "number" } }, comment: { type: "string" } }, additionalProperties: false } } },
         { type: "function", function: { name: "set_reminder", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419, \u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456, \u043D\u0430\u043F\u043E\u043C\u043D\u0438. \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0429\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438" }, time: { type: "string", description: "HH:MM. \u0432\u0440\u0430\u043D\u0446\u0456=08:00, \u0432\u0434\u0435\u043D\u044C=12:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443=\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439+1" }, date: { type: "string", description: "YYYY-MM-DD, \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" } }, required: ["text", "time"], additionalProperties: false } } },
         { type: "function", function: { name: "restore_deleted", description: "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437 \u043A\u043E\u0448\u0438\u043A\u0430.", parameters: { type: "object", properties: { query: { type: "string", description: "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u0441\u043B\u043E\u0432\u0430, 'all' (\u0432\u0441\u0456) \u0430\u0431\u043E 'last' (\u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439)" }, type: { type: "string", enum: ["task", "note", "habit", "inbox", "folder", "finance"], description: "\u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443" } }, required: ["query"], additionalProperties: false } } },
         { type: "function", function: { name: "save_routine", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "default"] }, description: "\u0414\u043D\u0456. default=\u0431\u0443\u0434\u043D\u0456. \u041C\u0430\u0441\u0438\u0432: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time", "activity"] }, description: "\u0411\u043B\u043E\u043A\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043A\u0443" } }, required: ["day", "blocks"], additionalProperties: false } } },

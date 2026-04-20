@@ -3,20 +3,16 @@
 // Винесено з finance.js у рефакторингу 17.04.2026 (сесія gHCOh).
 // ============================================================
 
-import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
-import { addToTrash } from '../core/trash.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
-import { addFact } from '../ai/memory.js';
+import { escapeHtml } from '../core/utils.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { getFinanceChatSystem } from '../ai/prompts.js';
+import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
-import { getInbox, saveInbox, renderInbox } from './inbox.js';
-import { processUniversalAction } from './habits.js';
 import {
-  getFinance, saveFinance, renderFinance, formatMoney, getCurrency,
-  getFinBudget, saveFinBudget, getFinPeriodRange,
+  getFinance, formatMoney, getCurrency,
+  getFinBudget, getFinPeriodRange,
 } from './finance.js';
-import { getFinCats, createFinCategory } from './finance-cats.js';
+import { getFinCats } from './finance-cats.js';
 
 let _financeTypingEl = null;
 let financeBarHistory = [];
@@ -81,147 +77,46 @@ export async function sendFinanceBarMessage() {
   financeBarLoading = true;
   addFinanceChatMsg('typing', '');
 
+  // Фаза 3 "Один мозок V2" (20.04 Gg3Fy): Finance chat на INBOX_TOOLS + dispatcher.
   const from = getFinPeriodRange('month');
   const txs = getFinance().filter(t => t.ts >= from);
   const budget = getFinBudget();
   const cats = getFinCats();
-  const aiContext = getAIContext();
-
-  const FINANCE_BAR_PROMPT = `${getOWLPersonality()} Ти допомагаєш з фінансами. Відповіді — 1-3 речення, конкретно.
-Валюта: ${getCurrency()}. Поточний місяць.
-Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}${getCurrency()} ${t.comment||''}`).join('; ') || 'немає'}
-Загальний бюджет: ${budget.total ? budget.total+getCurrency() : 'не встановлено'}
-Категорії витрат: ${cats.expense.join(', ')}
-Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка)
-Категорії доходів: ${cats.income.join(', ')}
-Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
-
-Ти можеш виконувати дії через JSON (відповідай ТІЛЬКИ JSON якщо потрібна дія):
-{"action":"save_expense","amount":50,"category":"Їжа","comment":"продукти"}
-{"action":"save_income","amount":3000,"category":"Зарплата","comment":""}
-{"action":"delete_transaction","id":1234567890}
-{"action":"update_transaction","id":1234567890,"category":"Транспорт","comment":"заправка"}
-{"action":"set_budget","total":2000,"categories":{"Їжа":400}}
-{"action":"create_category","type":"expense","name":"Нова категорія"}
-
-Якщо користувач просить змінити категорію або опис існуючої операції — використовуй update_transaction з її id. НЕ створюй нову операцію і НЕ видаляй стару окремо.
-ВАЖЛИВО: НЕ вигадуй ліміти, бюджети або плани яких немає в даних вище. Якщо бюджет "не встановлено" — не згадуй перевищення. Тільки реальні цифри.
-Також вмієш: створити задачу {"action":"create_task","title":"назва","steps":[]}, звичку {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}, редагувати звичку {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}, нотатку {"action":"create_note","text":"текст","folder":null}, заплановану подію {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}, закрити задачу {"action":"complete_task","task_id":ID}, відмітити звичку {"action":"complete_habit","habit_name":"назва"}, редагувати задачу {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}, видалити задачу {"action":"delete_task","task_id":ID}, видалити звичку {"action":"delete_habit","habit_id":ID}, перевідкрити задачу {"action":"reopen_task","task_id":ID}, записати момент дня {"action":"add_moment","text":"текст"}. ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
-Також: змінити подію {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, видалити подію {"action":"delete_event","event_id":ID}, змінити нотатку {"action":"edit_note","note_id":ID,"text":"текст"}, розпорядок {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}.
-
-ПАМ'ЯТЬ (Один мозок — доступно з будь-якого чату):
-- Факт про юзера: {"action":"save_memory_fact","text":"короткий факт","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
-- Жорсткий тригер: "Запам'ятай що X" / "Запиши що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. НЕ вигадуй задачі-протилежність.
-
-${UI_TOOLS_RULES}${aiContext ? '\n\n' + aiContext : ''}`;
+  const currency = getCurrency();
+  const txSummary = txs.slice(0, 20).map(t => `[${t.type}] ${t.category} ${t.amount}${currency} ${t.comment || ''}`).join('; ');
+  const systemPrompt = getFinanceChatSystem({
+    currency,
+    budget,
+    txSummary,
+    expenseCats: (cats.expense || []).map(c => c.name || c).join(', '),
+    incomeCats: (cats.income || []).map(c => c.name || c).join(', '),
+  }) + (getAIContext() ? '\n\n' + getAIContext() : '');
 
   try {
-    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
-    // фінансові CRUD і універсальні actions — через текстовий JSON як раніше.
-    const msg = await callAIWithTools(FINANCE_BAR_PROMPT, financeBarHistory.slice(-10), UI_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS);
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
+      // Budget warning після save_finance (Finance-specific реакція — залишається у чаті).
       for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addFinanceChatMsg('agent', res.text);
+        if (tc.function.name === 'save_finance') {
+          try {
+            const a = JSON.parse(tc.function.arguments || '{}');
+            if (a.fin_type === 'expense') checkFinBudgetWarning('expense', a.category, a.amount);
+          } catch (e) {}
+          try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
         }
       }
+      // Verify Loop: показуємо msg.content якщо AI дав.
+      const reply = msg.content ? msg.content.trim() : '';
+      if (reply) addFinanceChatMsg('agent', reply);
       financeBarLoading = false;
       return;
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
-
-    // Обробка одного JSON блоку. Повертає true якщо оброблено, false якщо невідомий action.
-    const _processOne = (parsed) => {
-      // Один мозок (20.04 NRw8G): save_memory_fact доступний з чату Фінансів.
-      if (parsed.action === 'save_memory_fact' && parsed.text) {
-        try {
-          addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
-          addFinanceChatMsg('agent', 'Запам\'ятав ✓');
-        } catch (e) { console.warn('[finance save_memory_fact]', e); }
-        return true;
-      }
-      if (processUniversalAction(parsed, text, addFinanceChatMsg)) return true;
-      if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
-        const type = parsed.action === 'save_expense' ? 'expense' : 'income';
-        const amount = parseFloat(parsed.amount);
-        const category = parsed.category || 'Інше';
-        const comment = parsed.comment || '';
-        const ts = Date.now() + Math.floor(Math.random() * 1000); // унікальний id при множинних операціях
-        const txs2 = getFinance();
-        txs2.unshift({ id: ts, type, amount, category, comment, ts });
-        saveFinance(txs2);
-        // B-48: створюємо картку у стрічці Inbox
-        try {
-          const items = getInbox();
-          const inboxText = `${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}${comment ? ' — ' + comment : ''}`;
-          items.unshift({ id: ts, text: inboxText, category: 'finance', ts, processed: true });
-          saveInbox(items);
-          renderInbox();
-        } catch(e) {}
-        renderFinance();
-        try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
-        addFinanceChatMsg('agent', `✓ ${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}`);
-        checkFinBudgetWarning(type, category, amount);
-        return true;
-      }
-      if (parsed.action === 'delete_transaction') {
-        const item = getFinance().find(t => t.id === parsed.id);
-        if (item) addToTrash('finance', item);
-        saveFinance(getFinance().filter(t => t.id !== parsed.id));
-        renderFinance();
-        addFinanceChatMsg('agent', `🗑 Видалено: ${item ? item.category + ' ' + formatMoney(item.amount) : 'операцію'}`);
-        return true;
-      }
-      if (parsed.action === 'update_transaction') {
-        const txs2 = getFinance();
-        const idx = txs2.findIndex(t => t.id === parsed.id);
-        if (idx !== -1) {
-          if (parsed.category) txs2[idx].category = parsed.category;
-          if (parsed.comment !== undefined) txs2[idx].comment = parsed.comment;
-          if (parsed.amount) txs2[idx].amount = parseFloat(parsed.amount);
-          saveFinance(txs2);
-          renderFinance();
-          addFinanceChatMsg('agent', `✓ Оновлено: ${txs2[idx].category} ${formatMoney(txs2[idx].amount)}`);
-        } else {
-          addFinanceChatMsg('agent', 'Транзакцію не знайдено.');
-        }
-        return true;
-      }
-      if (parsed.action === 'set_budget') {
-        const bdg = getFinBudget();
-        if (parsed.total) bdg.total = parsed.total;
-        if (parsed.categories) Object.assign(bdg.categories, parsed.categories);
-        saveFinBudget(bdg);
-        renderFinance();
-        addFinanceChatMsg('agent', '✓ Бюджет оновлено');
-        return true;
-      }
-      if (parsed.action === 'create_category') {
-        const type = parsed.type === 'income' ? 'income' : 'expense';
-        const c = getFinCats();
-        const exists = (c[type] || []).some(x => x.name.toLowerCase() === (parsed.name || '').toLowerCase());
-        if (!exists) createFinCategory(type, { name: parsed.name });
-        renderFinance();
-        addFinanceChatMsg('agent', `✓ Категорію "${parsed.name}" ${exists ? 'вже існувала' : 'додано'}`);
-        return true;
-      }
-      return false;
-    };
-
-    // Витягуємо всі JSON-блоки з відповіді (може бути кілька — "видали А,Б,В, додай Г").
-    // Якщо блоків немає або жоден не вдалось обробити — показуємо reply як текст.
-    const blocks = extractJsonBlocks(reply);
-    let handled = false;
-    for (const parsed of blocks) {
-      if (_processOne(parsed)) handled = true;
-    }
-    if (!handled) safeAgentReply(reply, addFinanceChatMsg);
+    safeAgentReply(reply, addFinanceChatMsg);
   } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
   financeBarLoading = false;
 }

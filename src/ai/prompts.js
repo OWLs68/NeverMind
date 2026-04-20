@@ -230,6 +230,8 @@ export const INBOX_TOOLS = [
   { type: "function", function: { name: "add_step", description: "Додати кроки до існуючої задачі.", parameters: { type: "object", properties: { task_id: { type: "integer" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id","steps"], additionalProperties: false } } },
   { type: "function", function: { name: "move_note", description: "Перемістити нотатку в іншу папку.", parameters: { type: "object", properties: { query: { type: "string", description: "Частина тексту нотатки для пошуку" }, folder: { type: "string", description: "Нова папка" } }, required: ["query","folder"], additionalProperties: false } } },
   { type: "function", function: { name: "update_transaction", description: "Змінити існуючу фінансову операцію. Юзер ЯВНО каже змінити/виправити суму або категорію.", parameters: { type: "object", properties: { id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
+  { type: "function", function: { name: "delete_transaction", description: "Видалити фінансову операцію (у кошик на 7 днів). Юзер каже 'видали операцію', 'прибери цю витрату'.", parameters: { type: "object", properties: { id: { type: "integer", description: "ID транзакції з контексту" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
+  { type: "function", function: { name: "set_finance_budget", description: "Встановити загальний бюджет на місяць або ліміт на категорію. Юзер каже 'постав бюджет 2000', 'ліміт на Їжу 400'.", parameters: { type: "object", properties: { total: { type: "number", description: "Загальний бюджет на місяць" }, categories: { type: "object", description: "Мапа назва→ліміт для конкретних категорій", additionalProperties: { type: "number" } }, comment: { type: "string" } }, additionalProperties: false } } },
   { type: "function", function: { name: "set_reminder", description: "Встановити нагадування. Юзер каже НАГАДАЙ, нагадай мені, напомни. ЗАВЖДИ set_reminder, НІКОЛИ не save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "Що нагадати" }, time: { type: "string", description: "HH:MM. вранці=08:00, вдень=12:00, після обіду=14:00, ввечері=18:00, перед сном=22:00, через годину=поточний+1" }, date: { type: "string", description: "YYYY-MM-DD, за замовчуванням сьогодні" } }, required: ["text","time"], additionalProperties: false } } },
   { type: "function", function: { name: "restore_deleted", description: "Відновити видалений запис з кошика.", parameters: { type: "object", properties: { query: { type: "string", description: "Ключові слова, 'all' (всі) або 'last' (останній)" }, type: { type: "string", enum: ["task","note","habit","inbox","folder","finance"], description: "Тип запису" } }, required: ["query"], additionalProperties: false } } },
   { type: "function", function: { name: "save_routine", description: "Зберегти/змінити розпорядок дня.", parameters: { type: "object", properties: { day: { type: "array", items: { type: "string", enum: ["mon","tue","wed","thu","fri","sat","sun","default"] }, description: "Дні. default=будні. Масив: ['mon','tue',...]" }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time","activity"] }, description: "Блоки розпорядку" } }, required: ["day","blocks"], additionalProperties: false } } },
@@ -449,6 +451,42 @@ ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вищ
 Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовчуванням = сьогодні)
 
 ГОЛОВНЕ ПРАВИЛО РЕДАГУВАННЯ: Якщо юзер каже "перенеси", "зміни", "поміняй", "оновити" — це ЗАВЖДИ edit існуючого запису (edit_event, edit_task, edit_note). НІКОЛИ не створюй новий запис замість редагування. "Мама приїде 24го а не 20го" → edit_event (змінити дату), НЕ create_event. Шукай відповідний запис по назві в контексті.`;
+}
+
+// ===== 9. getFinanceChatSystem — чат-бар Фінансів =====
+// Фаза 3 "Один мозок V2" (20.04.2026 Gg3Fy): Finance chat мігровано з UI_TOOLS +
+// text-JSON (save_expense/save_income/delete_transaction/set_budget/create_category)
+// на повний INBOX_TOOLS + dispatchChatToolCalls. Нові tools: delete_transaction,
+// set_finance_budget. save_expense/save_income → save_finance (з fin_type).
+// create_category → create_finance_category.
+export function getFinanceChatSystem({ currency, budget, txSummary, expenseCats, incomeCats }) {
+  return `${getOWLPersonality()} Ти допомагаєш з фінансами. Відповіді — 1-3 речення, конкретно.
+Валюта: ${currency}. Поточний місяць.
+Транзакції (до 20 останніх): ${txSummary || 'немає'}
+Загальний бюджет: ${budget && budget.total ? budget.total + currency : 'не встановлено'}
+Категорії витрат: ${expenseCats}
+Категорії доходів: ${incomeCats}
+Приклади категорій: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка).
+Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
+
+ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools):
+- Витрата/дохід → save_finance (fin_type="expense" або "income")
+- Змінити операцію → update_transaction
+- Видалити операцію → delete_transaction
+- Бюджет (загальний або по категорії) → set_finance_budget
+- Категорії → create_finance_category / edit_finance_category / delete_finance_category / merge_finance_categories / add_finance_subcategory
+- Універсальні → save_task / save_note / save_moment / create_event / set_reminder / save_memory_fact тощо
+- Навігація → UI tools (switch_tab, open_finance_analytics, set_finance_period тощо)
+
+VERIFY LOOP (правило 4.21): ПІСЛЯ tool call ЗАВЖДИ пиши у content коротке підтвердження словами (1 речення). Приклад: save_finance → "Записав -120₴ на Їжу (кава)."
+
+ВАЖЛИВО: НЕ вигадуй ліміти, бюджети або плани яких немає в даних вище. Якщо бюджет "не встановлено" — не згадуй перевищення. Тільки реальні цифри.
+
+Якщо користувач просить змінити категорію або опис існуючої операції — update_transaction з id. НЕ створюй нову і НЕ видаляй стару окремо.
+
+ПАМ'ЯТЬ: "Запам'ятай що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. НЕ вигадуй задачі-протилежність.
+
+${UI_TOOLS_RULES}`;
 }
 
 // ===== 8. getHealthChatSystem — чат-бар Здоров'я =====

@@ -47,6 +47,15 @@ import {
   addFinSubcategory,
   findFinCatByName,
 } from '../tabs/finance-cats.js';
+import {
+  getFinance,
+  saveFinance,
+  getFinBudget,
+  saveFinBudget,
+  renderFinance,
+  formatMoney,
+} from '../tabs/finance.js';
+import { addToTrash } from '../core/trash.js';
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -305,6 +314,31 @@ function _handleMemoryOrFinCatTool(name, args, addMsg) {
       if (!cat) { addMsg('agent', `Не знайшов категорію "${args.category_name}".`); return true; }
       addFinSubcategory(cat.id, args.subcategory);
       addMsg('agent', `✓ Додав підкатегорію "${args.subcategory}" у "${cat.name}". ${args.comment || ''}`.trim());
+      return true;
+    }
+    case 'delete_transaction': {
+      const txs = getFinance();
+      const item = txs.find(t => t.id === args.id);
+      if (!item) { addMsg('agent', 'Не знайшов операцію для видалення.'); return true; }
+      try { addToTrash('finance', item); } catch(e) {}
+      saveFinance(txs.filter(t => t.id !== args.id));
+      if (currentTab === 'finance') renderFinance();
+      addMsg('agent', `🗑️ Видалив: ${item.category} ${formatMoney(item.amount)}.`);
+      return true;
+    }
+    case 'set_finance_budget': {
+      const bdg = getFinBudget();
+      if (args.total !== undefined) bdg.total = args.total;
+      if (args.categories) {
+        if (!bdg.categories) bdg.categories = {};
+        Object.assign(bdg.categories, args.categories);
+      }
+      saveFinBudget(bdg);
+      if (currentTab === 'finance') renderFinance();
+      const parts = [];
+      if (args.total !== undefined) parts.push(`загальний ${formatMoney(args.total)}`);
+      if (args.categories) parts.push(Object.entries(args.categories).map(([k, v]) => `${k} ${formatMoney(v)}`).join(', '));
+      addMsg('agent', `✓ Бюджет оновлено: ${parts.join('; ')}.`);
       return true;
     }
     default:
