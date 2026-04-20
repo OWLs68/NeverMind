@@ -9295,19 +9295,6 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
       if (!isOpen) showUnreadBadge("evening", "evening-send-btn");
     }
   }
-  function _parseContentChips(content) {
-    if (!content || typeof content !== "string") return { text: "", chips: null };
-    const blocks = extractJsonBlocks(content);
-    let chips = null;
-    for (const b of blocks) {
-      if (b && Array.isArray(b.chips)) {
-        chips = b.chips;
-        break;
-      }
-    }
-    const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, "").trim();
-    return { text, chips };
-  }
   async function sendEveningBarMessage() {
     if (eveningBarLoading) return;
     const input = document.getElementById("evening-bar-input");
@@ -9359,7 +9346,7 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
     }
     eveningBarLoading = false;
   }
-  var _eveningTypingEl, EVENING_TOPIC_STARTED_KEY, eveningBarHistory, eveningBarLoading;
+  var _eveningTypingEl, EVENING_TOPIC_STARTED_KEY, eveningBarHistory, eveningBarLoading, _parseContentChips;
   var init_evening_chat = __esm({
     "src/tabs/evening-chat.js"() {
       init_utils();
@@ -9373,6 +9360,7 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
       EVENING_TOPIC_STARTED_KEY = "nm_evening_topic_started";
       eveningBarHistory = [];
       eveningBarLoading = false;
+      _parseContentChips = parseContentChips;
       Object.assign(window, {
         openEveningTopic,
         closeEveningDay,
@@ -14005,19 +13993,6 @@ ${userText}
   function _clearInboxUnreadBadge() {
     clearUnreadBadge("inbox");
   }
-  function _parseContentChips2(content) {
-    if (!content || typeof content !== "string") return { text: "", chips: null };
-    const blocks = extractJsonBlocks(content);
-    let chips = null;
-    for (const b of blocks) {
-      if (b && Array.isArray(b.chips)) {
-        chips = b.chips;
-        break;
-      }
-    }
-    const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, "").trim();
-    return { text, chips };
-  }
   function getInbox() {
     return JSON.parse(localStorage.getItem("nm_inbox") || "[]");
   }
@@ -15042,7 +15017,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tb = document.getElementById("tab-bar");
     return tb ? tb.offsetHeight : 83;
   }
-  var _inboxTypingEl, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, INBOX_NAV_MAP, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
+  var _inboxTypingEl, _parseContentChips2, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, INBOX_NAV_MAP, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
   var init_inbox = __esm({
     "src/tabs/inbox.js"() {
       init_nav();
@@ -15066,6 +15041,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_health();
       init_unread_badge();
       _inboxTypingEl = null;
+      _parseContentChips2 = parseContentChips;
       CAT_DOT_SOLID = {
         task: "background:#2fd0f9",
         idea: "background:#c4b820",
@@ -15196,6 +15172,54 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     return blocks;
+  }
+  function parseContentChips(content) {
+    if (!content || typeof content !== "string") return { text: content || "", chips: null };
+    const ranges = [];
+    let depth = 0, start = -1, inStr = false, esc = false;
+    for (let i = 0; i < content.length; i++) {
+      const c = content[i];
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (c === "\\" && inStr) {
+        esc = true;
+        continue;
+      }
+      if (c === '"') {
+        inStr = !inStr;
+        continue;
+      }
+      if (inStr) continue;
+      if (c === "{") {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (c === "}") {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          ranges.push([start, i + 1]);
+          start = -1;
+        }
+      }
+    }
+    let chips = null, cutRange = null;
+    for (const [s, e] of ranges) {
+      try {
+        const obj = JSON.parse(content.slice(s, e));
+        if (obj && Array.isArray(obj.chips)) {
+          chips = obj.chips;
+          cutRange = [s, e];
+          break;
+        }
+      } catch {
+      }
+    }
+    if (cutRange) {
+      const text = (content.slice(0, cutRange[0]) + content.slice(cutRange[1])).replace(/\s+([,.!?])/g, "$1").replace(/\s{2,}/g, " ").trim();
+      return { text, chips };
+    }
+    return { text: content.trim(), chips: null };
   }
   function logRecentAction(action, title, tab) {
     try {

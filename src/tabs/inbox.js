@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, saveOffline, extractJsonBlocks } from '../core/utils.js';
+import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips } from '../core/utils.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
@@ -108,19 +108,10 @@ export function _clearInboxUnreadBadge() {
   clearUnreadBadge('inbox');
 }
 
-// Парсер content AI-відповіді: витягує optional JSON блок {chips:[...]} і
-// повертає { text, chips } — text БЕЗ JSON частини. Формат описаний
-// у INBOX_SYSTEM_PROMPT (секція Health Interview + загальне правило).
-function _parseContentChips(content) {
-  if (!content || typeof content !== 'string') return { text: '', chips: null };
-  const blocks = extractJsonBlocks(content);
-  let chips = null;
-  for (const b of blocks) {
-    if (b && Array.isArray(b.chips)) { chips = b.chips; break; }
-  }
-  const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, '').trim();
-  return { text, chips };
-}
+// B-87 fix (20.04 NRw8G): делегуємо у utils.parseContentChips (depth-tracking).
+// Старий регекс /\{[\s\S]*?"chips"[\s\S]*?\}/g різав на першому `}` після
+// "chips" (всередині чіп-об'єкта) → решта `{...}]}` лишалась як сміття у тексті.
+const _parseContentChips = parseContentChips;
 
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
 const CAT_DOT_BG = {

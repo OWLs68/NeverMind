@@ -91,6 +91,47 @@ export function extractJsonBlocks(text) {
   return blocks;
 }
 
+// B-87 fix (20.04.2026 NRw8G): парсер content AI-відповіді — витягує перший
+// JSON-блок {chips:[...]} і повертає { text, chips } з text БЕЗ JSON частини.
+// Використовує depth-tracking (балансує фігурні дужки з урахуванням рядків)
+// щоб точно вирізати цілий JSON-блок. Старий жадібно-лазливий регекс
+// /\{[\s\S]*?"chips"[\s\S]*?\}/g ріс на першому `}` після "chips" (всередині
+// першого чіп-об'єкта) і лишав решту `{...}]}` як сміття у тексті.
+export function parseContentChips(content) {
+  if (!content || typeof content !== 'string') return { text: content || '', chips: null };
+  const ranges = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < content.length; i++) {
+    const c = content[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) { ranges.push([start, i + 1]); start = -1; }
+    }
+  }
+  let chips = null, cutRange = null;
+  for (const [s, e] of ranges) {
+    try {
+      const obj = JSON.parse(content.slice(s, e));
+      if (obj && Array.isArray(obj.chips)) { chips = obj.chips; cutRange = [s, e]; break; }
+    } catch {}
+  }
+  if (cutRange) {
+    const text = (content.slice(0, cutRange[0]) + content.slice(cutRange[1]))
+      .replace(/\s+([,.!?])/g, '$1')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    return { text, chips };
+  }
+  return { text: content.trim(), chips: null };
+}
+
 // === Міні-лог останніх дій для крос-контексту OWL ===
 const NM_RECENT_ACTIONS_KEY = 'nm_recent_actions';
 const NM_RECENT_ACTIONS_MAX = 20;
