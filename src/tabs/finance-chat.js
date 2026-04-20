@@ -92,22 +92,29 @@ export async function sendFinanceBarMessage() {
 Транзакції (до 20 останніх): ${txs.slice(0,20).map(t=>`[${t.type}] ${t.category} ${t.amount}${getCurrency()} ${t.comment||''}`).join('; ') || 'немає'}
 Загальний бюджет: ${budget.total ? budget.total+getCurrency() : 'не встановлено'}
 Категорії витрат: ${cats.expense.join(', ')}
-Приклади: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка)
+Підказки: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка)
 Категорії доходів: ${cats.income.join(', ')}
 Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
 
-Ти можеш виконувати дії через JSON (відповідай ТІЛЬКИ JSON якщо потрібна дія):
-{"action":"save_expense","amount":50,"category":"Їжа","comment":"продукти"}
-{"action":"save_income","amount":3000,"category":"Зарплата","comment":""}
-{"action":"delete_transaction","id":1234567890}
-{"action":"update_transaction","id":1234567890,"category":"Транспорт","comment":"заправка"}
-{"action":"set_budget","total":2000,"categories":{"Їжа":400}}
-{"action":"create_category","type":"expense","name":"Нова категорія"}
+🔴 ЖОРСТКЕ ПРАВИЛО ВИТРАТ/ДОХОДІВ:
+Якщо повідомлення містить ЧИСЛО (суму грошей) + опис товару/категорії/джерела → ЗАВЖДИ викликай save_finance tool.
+НЕ switch_tab, НЕ текст-питання, НЕ "чи хочеш записати".
+Приклади:
+- "50 на каву" → save_finance(fin_type="expense", amount=50, category="Їжа", fin_comment="кава")
+- "300 продукти" → save_finance(fin_type="expense", amount=300, category="Їжа", fin_comment="продукти")
+- "+3000 зарплата" або "отримав 3000" → save_finance(fin_type="income", amount=3000, category="Зарплата", fin_comment="")
+- "120 бензин" → save_finance(fin_type="expense", amount=120, category="Транспорт", fin_comment="бензин")
 
-Якщо користувач просить змінити категорію або опис існуючої операції — використовуй update_transaction з її id. НЕ створюй нову операцію і НЕ видаляй стару окремо.
+Для редагування існуючої транзакції — update_transaction tool з її id.
+Для CRUD задач/звичок/нотаток/подій/моментів — відповідні tools (save_task, save_habit, save_note, create_event, save_moment, complete_task, edit_*, delete_*).
+ЗАДАЧА = дія ЗРОБИТИ → save_task. ПОДІЯ = факт що СТАНЕТЬСЯ → create_event. "Перенеси подію" = edit_event.
+
 ВАЖЛИВО: НЕ вигадуй ліміти, бюджети або плани яких немає в даних вище. Якщо бюджет "не встановлено" — не згадуй перевищення. Тільки реальні цифри.
-Також вмієш: створити задачу {"action":"create_task","title":"назва","steps":[]}, звичку {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}, редагувати звичку {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}, нотатку {"action":"create_note","text":"текст","folder":null}, заплановану подію {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}, закрити задачу {"action":"complete_task","task_id":ID}, відмітити звичку {"action":"complete_habit","habit_name":"назва"}, редагувати задачу {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}, видалити задачу {"action":"delete_task","task_id":ID}, видалити звичку {"action":"delete_habit","habit_id":ID}, перевідкрити задачу {"action":"reopen_task","task_id":ID}, записати момент дня {"action":"add_moment","text":"текст"}. ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
-Також: змінити подію {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, видалити подію {"action":"delete_event","event_id":ID}, змінити нотатку {"action":"edit_note","note_id":ID,"text":"текст"}, розпорядок {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}.
+
+Fallback JSON (НЕ tool — тільки текстом, для специфічного функціоналу Фінансів):
+- Видалити транзакцію: {"action":"delete_transaction","id":1234567890}
+- Встановити бюджет: {"action":"set_budget","total":2000,"categories":{"Їжа":400}}
+- Створити категорію: {"action":"create_category","type":"expense","name":"Нова категорія"}
 
 ${UI_TOOLS_RULES}${aiContext ? '\n\n' + aiContext : ''}`;
 
