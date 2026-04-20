@@ -6,7 +6,7 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
 import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -1417,46 +1417,22 @@ export async function sendTasksBarMessage() {
     + 'ЗАДАЧІ:\n' + (tasksSummary || 'Немає активних задач') + '\n\n'
     + (habitsSummary ? 'ЗВИЧКИ СЬОГОДНІ:\n' + habitsSummary + '\n\n' : '')
     + 'Ти можеш:\n'
-    + '1. Відповідати на питання про задачі та звички\n'
-    + '2. Виконав крок — JSON: {"action":"complete_step","task_id":ID,"step_text":"текст"}\n'
-    + '3. Виконав задачу — JSON: {"action":"complete_task","task_id":ID}\n'
-    + '4. Виконав звичку — JSON: {"action":"complete_habit","habit_name":"назва"}\n'
-    + '5. Створити звичку — JSON: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}\n'
-    + '5b. РЕДАГУВАТИ існуючу звичку (змінити назву, дні, деталі) — JSON: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}. Якщо юзер каже "бігати ввечері замість зранку" — НЕ створюй нову, а РЕДАГУЙ існуючу!\n'
-    + '6. Створити задачу — JSON: {"action":"create_task","title":"назва","steps":[]}\n'
-    + '7. Створити ПОДІЮ (факт що станеться: приїзд, зустріч, концерт, день народження, візит) — JSON: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}\n'
-    + '   ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити, зробити). ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, свято, рейс). "приїзд мами 20го" = create_event. "купити молоко" = create_task.\n'
-    + '9. Додати крок — JSON: {"action":"add_step","task_id":ID,"step":"текст"}\n'
-    + '10. Скасувати крок — JSON: {"action":"undo_step","task_id":ID,"step_text":"текст"}\n'
-    + '11. Створити нотатку — JSON: {"action":"create_note","text":"текст","folder":null}\n'
-    + '12. Зберегти витрату — JSON: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}\n'
-    + '13. Зберегти дохід — JSON: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}\n'
-    + '14. Редагувати задачу (назву, дедлайн, пріоритет) — JSON: {"action":"edit_task","task_id":ID,"title":"нова назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}\n'
-    + '15. Видалити задачу — JSON: {"action":"delete_task","task_id":ID}\n'
-    + '16. Видалити звичку — JSON: {"action":"delete_habit","habit_id":ID}\n'
-    + '17. Перевідкрити закриту задачу — JSON: {"action":"reopen_task","task_id":ID}\n'
-    + '18. Записати момент дня — JSON: {"action":"add_moment","text":"що сталося"}\n'
-    + 'КРИТИЧНЕ ПРАВИЛО: коли юзер просить ЗРОБИТИ дію (створити задачу/подію/звичку/нотатку, закрити, видалити, записати витрату) — відповідай ТІЛЬКИ чистим JSON. НЕ кажи "зараз створю", "зачекай", "готово" — ОДРАЗУ повертай JSON об\'єкт з action. Текст тільки якщо це відповідь на ПИТАННЯ або обговорення.\n'
-    + 'Якщо незрозуміло — запитай. ТІЛЬКИ чистий JSON без markdown. Інакше — текст українською 1-2 речення.\nНЕ вигадуй дані яких немає: ліміти, плани, звички чи задачі яких немає в списку вище.\n\n'
+    + '1. Для CRUD дій (створити/видалити/редагувати/закрити задачу-звичку-подію-нотатку-момент-витрату) — викликай відповідний tool.\n'
+    + '2. Специфічні fallback-JSON (НЕ як tool): {"action":"complete_step","task_id":ID,"step_text":"текст"} (закрити конкретний крок задачі), {"action":"undo_step","task_id":ID,"step_text":"текст"} (скасувати крок), {"action":"complete_habit","habit_name":"назва"} (позначити звичку за назвою коли ID невідомий).\n'
+    + 'ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити, зробити) → save_task. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, свято, рейс) → create_event. "приїзд мами 20го" = create_event. "купити молоко" = save_task.\n'
+    + 'Для редагування існуючої звички (зміна днів/назви) — edit_habit, НЕ save_habit нову.\n'
+    + 'Інакше — текст 1-3 речення українською. НЕ вигадуй даних яких немає.\n\n'
     + UI_TOOLS_RULES
     + (aiContext ? '\n\n' + aiContext : '');
 
   try {
-    // "Один мозок #1": callAIWithTools з UI_TOOLS — навігація через tool calling,
-    // CRUD через текстовий JSON як раніше.
+    // "Один мозок #2 A": INBOX_TOOLS — повний набір CRUD + UI.
     const history = [...taskBarHistory.slice(-8), { role: 'user', content: text }];
-    const msg = await callAIWithTools(systemPrompt, history, UI_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
 
-    // UI tools dispatch
+    // Tool dispatch — UI tool або CRUD через universal action
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addTaskBarMsg('agent', res.text);
-        }
-      }
+      dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
       setTaskBarLoading(false);
       return;
     }
@@ -1464,7 +1440,7 @@ export async function sendTasksBarMessage() {
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); setTaskBarLoading(false); return; }
 
-    // Обробка одного JSON блоку. Повертає true якщо дія оброблена.
+    // Fallback text-JSON — специфічні actions не в INBOX_TOOLS (complete_step, undo_step, complete_habit by name)
     const _processOne = (parsed) => {
       if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
       if (parsed.action === 'complete_step') {
