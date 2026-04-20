@@ -12,12 +12,15 @@
       "Bash(git pull*)",
       "Bash(git branch*)",
       "Bash(git checkout*)",
+      "Bash(git revert*)",
+      "Bash(git rev-parse*)",
       "Bash(date*)",
       "Bash(wc*)",
       "Bash(ls*)",
       "Bash(mkdir*)",
       "Bash(cat*)",
-      "Bash(echo*)"
+      "Bash(echo*)",
+      "Bash(chmod*)"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -44,6 +47,23 @@
           {
             "type": "command",
             "command": "file=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$file\" == *.js ]]; then node --check \"$file\" && echo \"✓ синтаксис OK: $file\" || echo \"✗ ПОМИЛКА синтаксису: $file\"; fi"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/cache-name-reminder.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ai-tools-sync.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/md-index-reminder.sh"
           }
         ]
       }
@@ -58,6 +78,10 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/context-warning.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/skill-triggers.sh"
           }
         ]
       }
