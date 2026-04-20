@@ -19,7 +19,7 @@ import { showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { dispatchChatToolCalls } from './habits.js';
+import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { getTasks } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, processUniversalAction } from './habits.js';
 import { getNotes } from './notes.js';
