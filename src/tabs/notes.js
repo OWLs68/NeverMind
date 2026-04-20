@@ -7,9 +7,9 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, formatTime } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
+import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { dispatchChatToolCalls } from './habits.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { processUniversalAction } from './habits.js';
 
@@ -1041,19 +1041,11 @@ export async function sendNotesBarMessage() {
 ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
   try {
-    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
-    // CRUD через існуючий текстовий JSON.
-    const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), UI_TOOLS);
+    // "Один мозок #2 A": INBOX_TOOLS — повний CRUD + UI.
+    const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS);
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addNotesChatMsg('agent', res.text);
-        }
-      }
+      dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
       notesBarLoading = false;
       return;
     }
