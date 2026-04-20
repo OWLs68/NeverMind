@@ -9,7 +9,7 @@ import { escapeHtml, formatTime } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { dispatchChatToolCalls } from './habits.js';
+import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { processUniversalAction } from './habits.js';
 

@@ -8,7 +8,7 @@ import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
@@ -911,92 +911,10 @@ function _levenshtein(a, b) {
 }
 
 // ============================================================
-// _toolCallToUniversalAction — мапа tool name → action об'єкт(и)
-// для processUniversalAction. Повертає МАСИВ actions (для bulk
-// complete_task/habit з task_ids/habit_ids array → розбиваємо на окремі).
-// Підтримує 20 CRUD tools з INBOX_TOOLS. Специфічні
-// (health_*, project_*, finance_category_*) — чати обробляють локально.
-// Додано 20.04.2026 EY55M "Один мозок #2 варіант A".
+// Перенесено 20.04.2026 Gg3Fy ("Один мозок V2" Шар 1):
+// - _toolCallToUniversalAction і dispatchChatToolCalls → src/ai/tool-dispatcher.js
+// - processUniversalAction залишається тут (384 рядки, тісні локальні залежності)
 // ============================================================
-export function _toolCallToUniversalAction(name, args) {
-  switch (name) {
-    case 'save_task':
-      return [{ action: 'create_task', title: args.title, desc: args.text, steps: args.steps || [], dueDate: args.due_date, priority: args.priority }];
-    case 'save_note':
-      return [{ action: 'create_note', text: args.text, folder: args.folder }];
-    case 'save_habit':
-      return [{ action: 'create_habit', name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
-    case 'save_moment':
-      return [{ action: 'add_moment', text: args.text, mood: args.mood }];
-    case 'create_event':
-      return [{ action: 'create_event', title: args.title, date: args.date, time: args.time || null, priority: args.priority || 'normal' }];
-    case 'save_finance':
-      return [{ action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date }];
-    case 'complete_task': {
-      const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
-      return ids.map(id => ({ action: 'complete_task', task_id: id }));
-    }
-    case 'complete_habit': {
-      const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
-      return ids.map(id => ({ action: 'complete_habit', habit_id: id }));
-    }
-    case 'edit_task':
-      return [{ action: 'edit_task', task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority }];
-    case 'edit_habit':
-      return [{ action: 'edit_habit', habit_id: args.habit_id, name: args.name, days: args.days, details: args.details }];
-    case 'edit_event':
-      return [{ action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority }];
-    case 'edit_note':
-      return [{ action: 'edit_note', note_id: args.note_id, text: args.text, folder: args.folder }];
-    case 'delete_task':
-      return [{ action: 'delete_task', task_id: args.task_id }];
-    case 'delete_habit':
-      return [{ action: 'delete_habit', habit_id: args.habit_id }];
-    case 'delete_event':
-      return [{ action: 'delete_event', event_id: args.event_id }];
-    case 'delete_folder':
-      return [{ action: 'delete_folder', folder: args.folder }];
-    case 'reopen_task':
-      return [{ action: 'reopen_task', task_id: args.task_id }];
-    case 'add_step': {
-      const steps = Array.isArray(args.steps) ? args.steps : [];
-      return steps.map(s => ({ action: 'add_step', task_id: args.task_id, step: s }));
-    }
-    case 'move_note':
-      return [{ action: 'move_note', query: args.query, folder: args.folder }];
-    case 'set_reminder':
-      return [{ action: 'set_reminder', time: args.time, text: args.text, date: args.date }];
-    case 'save_routine':
-      return [{ action: 'save_routine', day: args.day, blocks: args.blocks }];
-    default:
-      return [];
-  }
-}
-
-// Спільний dispatcher для 6 tab-чатів: обирає між UI tool → handleUITool,
-// CRUD tool → processUniversalAction. Повертає true якщо хоч один tool спрацював.
-export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
-  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return false;
-  let any = false;
-  for (const tc of toolCalls) {
-    let args = {};
-    try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-    // UI tools
-    if (UI_TOOL_NAMES.has(tc.function.name)) {
-      const res = handleUITool(tc.function.name, args);
-      if (res && res.text) addMsg('agent', res.text);
-      any = true;
-      continue;
-    }
-    // CRUD через universal action
-    const acts = _toolCallToUniversalAction(tc.function.name, args);
-    for (const a of acts) {
-      if (processUniversalAction(a, originalText, addMsg)) any = true;
-    }
-  }
-  return any;
-}
-
 export function processUniversalAction(parsed, originalText, addMsg) {
   const action = parsed.action;
 
