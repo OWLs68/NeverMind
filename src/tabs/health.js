@@ -10,6 +10,7 @@ import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
 import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { addFact } from '../ai/memory.js';
 import { processUniversalAction } from './habits.js';
 import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
@@ -1583,6 +1584,10 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Видалити подію: {"action":"delete_event","event_id":ID}
 🚫 ЗАБОРОНА UI-INST: на реченнях про події/прийоми/симптоми НІКОЛИ не викликай UI-інструменти (switch_tab, set_finance_period, open_finance_analytics). Це маркер що ти неправильно зрозумів намір.
 
+— ПАМ'ЯТЬ (Один мозок — доступно з будь-якого чату) —
+- Факт про юзера: {"action":"save_memory_fact","text":"короткий факт","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+  Жорсткий тригер: "Запам'ятай що X" / "Запиши що X" / "Знай що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. Не вигадуй задачі-протилежність.
+
 — УНІВЕРСАЛЬНІ (не тільки здоров'я) —
 - Задача (дія ЗРОБИТИ): {"action":"create_task","title":"назва"}
 - Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
@@ -1619,6 +1624,15 @@ ${UI_TOOLS_RULES}`;
     // Обробка одного JSON блоку. Повертає true якщо оброблено.
     const _processOne = (parsed) => {
       // B-88 fix (20.04 NRw8G): мертву дію `log_health` прибрано з промпту (legacy шкали).
+
+      // Один мозок (20.04 NRw8G): save_memory_fact доступний з чату Здоров'я.
+      if (parsed.action === 'save_memory_fact' && parsed.text) {
+        try {
+          addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+          addHealthChatMsg('agent', 'Запам\'ятав ✓');
+        } catch (e) { console.warn('[health save_memory_fact]', e); }
+        return true;
+      }
 
       // B-84 fix (20.04 NRw8G): алергії через чат Здоров'я.
       if (parsed.action === 'add_allergy' && parsed.name) {

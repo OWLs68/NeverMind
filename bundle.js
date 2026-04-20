@@ -3841,6 +3841,11 @@ ${aiContext ? "\n\n" + aiContext : ""}
 - \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: {"action":"edit_note","note_id":ID,"text":"\u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442"}
 - \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}
 \u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+
+\u041F\u0410\u041C'\u042F\u0422\u042C (\u041E\u0434\u0438\u043D \u043C\u043E\u0437\u043E\u043A \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u0437 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u0433\u043E \u0447\u0430\u0442\u0443):
+- \u0424\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430: {"action":"save_memory_fact","text":"\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+- \u0416\u043E\u0440\u0441\u0442\u043A\u0438\u0439 \u0442\u0440\u0438\u0433\u0435\u0440: "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E X" / "\u0417\u0430\u043F\u0438\u0448\u0438 \u0449\u043E X" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_memory_fact, \u0411\u0415\u0417 \u0456\u043D\u0448\u0438\u0445 \u0434\u0456\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0437\u0430\u0434\u0430\u0447\u0456-\u043F\u0440\u043E\u0442\u0438\u043B\u0435\u0436\u043D\u0456\u0441\u0442\u044C.
+
 \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.
 
 ${UI_TOOLS_RULES}`;
@@ -3868,6 +3873,15 @@ ${UI_TOOLS_RULES}`;
         return;
       }
       const _processOne = (parsed) => {
+        if (parsed.action === "save_memory_fact" && parsed.text) {
+          try {
+            addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+            addProjectsChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
+          } catch (e) {
+            console.warn("[projects save_memory_fact]", e);
+          }
+          return true;
+        }
         const pid = parsed.project_id;
         if (parsed.action === "complete_project_step" && pid) {
           const projs = getProjects();
@@ -3995,6 +4009,7 @@ ${UI_TOOLS_RULES}`;
       init_core();
       init_prompts();
       init_ui_tools();
+      init_memory();
       init_inbox();
       init_tasks();
       init_habits();
@@ -7501,6 +7516,10 @@ ${aiContext ? "\n\n" + aiContext : ""}
 - \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E: {"action":"delete_event","event_id":ID}
 \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0410 UI-INST: \u043D\u0430 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u0445 \u043F\u0440\u043E \u043F\u043E\u0434\u0456\u0457/\u043F\u0440\u0438\u0439\u043E\u043C\u0438/\u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 UI-\u0456\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u0438 (switch_tab, set_finance_period, open_finance_analytics). \u0426\u0435 \u043C\u0430\u0440\u043A\u0435\u0440 \u0449\u043E \u0442\u0438 \u043D\u0435\u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u043D\u0430\u043C\u0456\u0440.
 
+\u2014 \u041F\u0410\u041C'\u042F\u0422\u042C (\u041E\u0434\u0438\u043D \u043C\u043E\u0437\u043E\u043A \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u0437 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u0433\u043E \u0447\u0430\u0442\u0443) \u2014
+- \u0424\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430: {"action":"save_memory_fact","text":"\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+  \u0416\u043E\u0440\u0441\u0442\u043A\u0438\u0439 \u0442\u0440\u0438\u0433\u0435\u0440: "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E X" / "\u0417\u0430\u043F\u0438\u0448\u0438 \u0449\u043E X" / "\u0417\u043D\u0430\u0439 \u0449\u043E X" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_memory_fact, \u0411\u0415\u0417 \u0456\u043D\u0448\u0438\u0445 \u0434\u0456\u0439. \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0437\u0430\u0434\u0430\u0447\u0456-\u043F\u0440\u043E\u0442\u0438\u043B\u0435\u0436\u043D\u0456\u0441\u0442\u044C.
+
 \u2014 \u0423\u041D\u0406\u0412\u0415\u0420\u0421\u0410\u041B\u042C\u041D\u0406 (\u043D\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F) \u2014
 - \u0417\u0430\u0434\u0430\u0447\u0430 (\u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418): {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430"}
 - \u0417\u0432\u0438\u0447\u043A\u0430: {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}
@@ -7536,6 +7555,15 @@ ${UI_TOOLS_RULES}`;
         return;
       }
       const _processOne = (parsed) => {
+        if (parsed.action === "save_memory_fact" && parsed.text) {
+          try {
+            addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+            addHealthChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
+          } catch (e) {
+            console.warn("[health save_memory_fact]", e);
+          }
+          return true;
+        }
         if (parsed.action === "add_allergy" && parsed.name) {
           const added = addAllergy(parsed.name, parsed.notes || "");
           if (added) {
@@ -7651,6 +7679,7 @@ ${UI_TOOLS_RULES}`;
       init_core();
       init_prompts();
       init_ui_tools();
+      init_memory();
       init_habits();
       init_notes();
       init_calendar();
@@ -8288,6 +8317,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
 \u0422\u0430\u043A\u043E\u0436 \u0432\u043C\u0456\u0454\u0448: \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}, \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"create_habit","name":"\u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}, \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"edit_habit","habit_id":ID,"name":"\u043D\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430","days":[0,1,2,3,4,5,6]}, \u043D\u043E\u0442\u0430\u0442\u043A\u0443 {"action":"create_note","text":"\u0442\u0435\u043A\u0441\u0442","folder":null}, \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0443 \u043F\u043E\u0434\u0456\u044E {"action":"create_event","title":"\u043D\u0430\u0437\u0432\u0430","date":"YYYY-MM-DD","time":null,"priority":"normal"}, \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"complete_task","task_id":ID}, \u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"complete_habit","habit_name":"\u043D\u0430\u0437\u0432\u0430"}, \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"edit_task","task_id":ID,"title":"\u043D\u0430\u0437\u0432\u0430","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"delete_task","task_id":ID}, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443 {"action":"delete_habit","habit_id":ID}, \u043F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 {"action":"reopen_task","task_id":ID}, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F {"action":"add_moment","text":"\u0442\u0435\u043A\u0441\u0442"}. \u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F. "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
 \u0422\u0430\u043A\u043E\u0436: \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E {"action":"delete_event","event_id":ID}, \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 {"action":"edit_note","note_id":ID,"text":"\u0442\u0435\u043A\u0441\u0442"}, \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A {"action":"save_routine","day":"mon" \u0430\u0431\u043E \u043C\u0430\u0441\u0438\u0432,"blocks":[{"time":"07:00","activity":"\u041F\u0456\u0434\u0439\u043E\u043C"}]}.
 
+\u041F\u0410\u041C'\u042F\u0422\u042C (\u041E\u0434\u0438\u043D \u043C\u043E\u0437\u043E\u043A \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u0437 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u0433\u043E \u0447\u0430\u0442\u0443):
+- \u0424\u0430\u043A\u0442 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430: {"action":"save_memory_fact","text":"\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+- \u0416\u043E\u0440\u0441\u0442\u043A\u0438\u0439 \u0442\u0440\u0438\u0433\u0435\u0440: "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E X" / "\u0417\u0430\u043F\u0438\u0448\u0438 \u0449\u043E X" \u2192 \u0422\u0406\u041B\u042C\u041A\u0418 save_memory_fact, \u0411\u0415\u0417 \u0456\u043D\u0448\u0438\u0445 \u0434\u0456\u0439. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0437\u0430\u0434\u0430\u0447\u0456-\u043F\u0440\u043E\u0442\u0438\u043B\u0435\u0436\u043D\u0456\u0441\u0442\u044C.
+
 ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
     try {
       const msg = await callAIWithTools(FINANCE_BAR_PROMPT, financeBarHistory.slice(-10), UI_TOOLS);
@@ -8313,6 +8346,15 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
         return;
       }
       const _processOne = (parsed) => {
+        if (parsed.action === "save_memory_fact" && parsed.text) {
+          try {
+            addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+            addFinanceChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
+          } catch (e) {
+            console.warn("[finance save_memory_fact]", e);
+          }
+          return true;
+        }
         if (processUniversalAction(parsed, text, addFinanceChatMsg)) return true;
         if (parsed.action === "save_expense" || parsed.action === "save_income") {
           const type = parsed.action === "save_expense" ? "expense" : "income";
@@ -8403,6 +8445,7 @@ ${UI_TOOLS_RULES}${aiContext ? "\n\n" + aiContext : ""}`;
       init_core();
       init_prompts();
       init_ui_tools();
+      init_memory();
       init_proactive();
       init_inbox();
       init_habits();
