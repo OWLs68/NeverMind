@@ -5,14 +5,12 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { UI_TOOLS_RULES } from '../ai/prompts.js';
-import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
-import { addFact } from '../ai/memory.js';
+import { escapeHtml } from '../core/utils.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { getProjectsChatSystem } from '../ai/prompts.js';
+import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
-import { processUniversalAction } from './habits.js';
 import { getNotes, openNotesFolder } from './notes.js';
 import { getCurrency } from './finance.js';
 
@@ -482,204 +480,30 @@ export async function sendProjectsBarMessage() {
   projectsBarLoading = true;
   addProjectsChatMsg('typing', '');
 
+  // Фаза 4 "Один мозок V2" (20.04 Gg3Fy): Projects chat на INBOX_TOOLS + dispatcher.
   const projects = getProjects();
   const activeProject = activeProjectId ? projects.find(p => p.id === activeProjectId) : null;
-  const projCtx = getProjectsContext();
-  const aiContext = getAIContext();
-
+  const projectsContext = getProjectsContext();
   const activeSteps = activeProject ? (activeProject.steps || []).map(s =>
     `[ID:${s.id}] ${s.done ? '✓' : '○'} ${s.text}`).join('\n') : '';
 
-  const systemPrompt = `${getOWLPersonality()} Ти особистий наставник по проектах в NeverMind.
-${activeProject ? `Активний проект: "${activeProject.name}" (${activeProject.progress || 0}%). Підзаголовок: ${activeProject.subtitle || ''}.
-Кроки:\n${activeSteps || 'немає кроків'}` : projCtx}
-${aiContext ? '\n\n' + aiContext : ''}
-
-Ти можеш (відповідай JSON якщо потрібна дія):
-- Виконати крок: {"action":"complete_project_step","project_id":${activeProjectId || 'null'},"step_id":ID}
-- Додати крок: {"action":"add_project_step","project_id":${activeProjectId || 'null'},"step":"текст кроку"}
-- Оновити прогрес: {"action":"update_project_progress","project_id":${activeProjectId || 'null'},"progress":число 0-100}
-- Додати рішення: {"action":"add_project_decision","project_id":${activeProjectId || 'null'},"title":"рішення","reason":"чому"}
-- Додати метрику: {"action":"add_project_metric","project_id":${activeProjectId || 'null'},"label":"назва","value":"значення","color":"#hex"}
-- Додати ресурс: {"action":"add_project_resource","project_id":${activeProjectId || 'null'},"type":"Книга|Спільнота|Інструмент|Стаття","title":"назва","url":"посилання"}
-- Оновити темп: {"action":"update_project_tempo","project_id":${activeProjectId || 'null'},"tempoNow":"6 тиж","tempoMore":"4 тиж","tempoIdeal":"2 тиж"}
-- Записати ризики: {"action":"update_project_risks","project_id":${activeProjectId || 'null'},"risks":"текст"}
-- Нотатку: {"action":"create_note","text":"текст","folder":"${activeProject ? activeProject.name : 'Проекти'}"}
-- Створити папку нотаток: {"action":"create_folder","folder":"назва папки"}
-- Задачу: {"action":"create_task","title":"назва","steps":[]}
-- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
-- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
-- Закрити задачу: {"action":"complete_task","task_id":ID}
-- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
-- Редагувати задачу: {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- Видалити задачу: {"action":"delete_task","task_id":ID}
-- Видалити звичку: {"action":"delete_habit","habit_id":ID}
-- Перевідкрити задачу: {"action":"reopen_task","task_id":ID}
-- Записати момент дня: {"action":"add_moment","text":"що сталося"}
-- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
-- Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
-- Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
-- Видалити подію: {"action":"delete_event","event_id":ID}
-- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
-- Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
-ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
-
-ПАМ'ЯТЬ (Один мозок — доступно з будь-якого чату):
-- Факт про юзера: {"action":"save_memory_fact","text":"короткий факт","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
-- Жорсткий тригер: "Запам'ятай що X" / "Запиши що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. НЕ вигадуй задачі-протилежність.
-
-Інакше — відповідай текстом 1-3 речення. Якщо незрозуміло — перепитуй. НЕ вигадуй дані яких немає.
-
-${UI_TOOLS_RULES}`;
+  const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps })
+    + (getAIContext() ? '\n\n' + getAIContext() : '');
 
   try {
-    // "Один мозок #1": callAIWithTools(UI_TOOLS) — навігація через tool calling,
-    // проектні CRUD — через існуючий текстовий JSON.
-    const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), UI_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS);
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      for (const tc of msg.tool_calls) {
-        if (UI_TOOL_NAMES.has(tc.function.name)) {
-          let args = {};
-          try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
-          const res = handleUITool(tc.function.name, args);
-          if (res && res.text) addProjectsChatMsg('agent', res.text);
-        }
-      }
+      dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
+      const reply = msg.content ? msg.content.trim() : '';
+      if (reply) addProjectsChatMsg('agent', reply);
       projectsBarLoading = false;
       return;
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addProjectsChatMsg('agent', 'Щось пішло не так.'); projectsBarLoading = false; return; }
-
-    // Обробка одного JSON блоку. Повертає true якщо оброблено.
-    const _processOne = (parsed) => {
-      // Один мозок (20.04 NRw8G): save_memory_fact доступний з чату Проектів.
-      if (parsed.action === 'save_memory_fact' && parsed.text) {
-        try {
-          addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
-          addProjectsChatMsg('agent', 'Запам\'ятав ✓');
-        } catch (e) { console.warn('[projects save_memory_fact]', e); }
-        return true;
-      }
-      const pid = parsed.project_id;
-      if (parsed.action === 'complete_project_step' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          const step = (p.steps || []).find(s => s.id === parsed.step_id);
-          if (step) {
-            step.done = true;
-            step.doneAt = Date.now();
-            p.progress = Math.round(p.steps.filter(s => s.done).length / p.steps.length * 100);
-            p.lastActivity = Date.now();
-            saveProjects(projs);
-            renderProjects();
-            addProjectsChatMsg('agent', `✅ Крок "${step.text}" виконано! Прогрес: ${p.progress}%`);
-            return true;
-          }
-        }
-        return false;
-      }
-      if (parsed.action === 'add_project_step' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          if (!p.steps) p.steps = [];
-          p.steps.push({ id: Date.now(), text: parsed.step, done: false });
-          p.lastActivity = Date.now();
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Додав крок: "${parsed.step}"`);
-          return true;
-        }
-        return false;
-      }
-      if (parsed.action === 'update_project_progress' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          p.progress = Math.min(100, Math.max(0, parsed.progress));
-          p.lastActivity = Date.now();
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Прогрес оновлено: ${p.progress}%`);
-        }
-        return true;
-      }
-      if (parsed.action === 'add_project_decision' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          if (!p.decisions) p.decisions = [];
-          p.decisions.unshift({ title: parsed.title, reason: parsed.reason });
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Рішення записано: "${parsed.title}"`);
-        }
-        return true;
-      }
-      if (parsed.action === 'add_project_metric' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          if (!p.metrics) p.metrics = [];
-          p.metrics.push({ label: parsed.label, value: parsed.value, color: parsed.color || '#3d2e1e' });
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Метрику "${parsed.label}: ${parsed.value}" додано`);
-        }
-        return true;
-      }
-      if (parsed.action === 'add_project_resource' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          if (!p.resources) p.resources = [];
-          p.resources.push({ type: parsed.type, title: parsed.title, url: parsed.url || '' });
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Ресурс "${parsed.title}" додано`);
-        }
-        return true;
-      }
-      if (parsed.action === 'update_project_tempo' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          p.tempoNow = parsed.tempoNow || p.tempoNow;
-          p.tempoMore = parsed.tempoMore || p.tempoMore;
-          p.tempoIdeal = parsed.tempoIdeal || p.tempoIdeal;
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Темп оновлено`);
-        }
-        return true;
-      }
-      if (parsed.action === 'update_project_risks' && pid) {
-        const projs = getProjects();
-        const p = projs.find(pr => pr.id === pid);
-        if (p) {
-          p.risks = parsed.risks;
-          saveProjects(projs);
-          renderProjects();
-          addProjectsChatMsg('agent', `✓ Ризики записано`);
-        }
-        return true;
-      }
-      if (processUniversalAction(parsed, text, addProjectsChatMsg)) return true;
-      return false;
-    };
-
-    // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
-    const blocks = extractJsonBlocks(reply);
-    let handled = false;
-    for (const parsed of blocks) {
-      if (_processOne(parsed)) handled = true;
-    }
-    if (!handled) safeAgentReply(reply, addProjectsChatMsg);
+    safeAgentReply(reply, addProjectsChatMsg);
   } catch { addProjectsChatMsg('agent', 'Мережева помилка.'); }
   projectsBarLoading = false;
 }

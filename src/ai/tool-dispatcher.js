@@ -56,6 +56,7 @@ import {
   formatMoney,
 } from '../tabs/finance.js';
 import { addToTrash } from '../core/trash.js';
+import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -346,6 +347,82 @@ function _handleMemoryOrFinCatTool(name, args, addMsg) {
   }
 }
 
+// ===== Project-specific handlers =====
+// Кроки, рішення, метрики, ресурси, темп, ризики — деталі проекту.
+function _handleProjectTool(name, args, addMsg) {
+  if (!['complete_project_step', 'add_project_step', 'update_project_progress',
+        'add_project_decision', 'add_project_metric', 'add_project_resource',
+        'update_project_tempo', 'update_project_risks'].includes(name)) return false;
+
+  const projs = getProjects();
+  const p = projs.find(x => x.id === args.project_id);
+  if (!p) { addMsg('agent', 'Не знайшов проект.'); return true; }
+
+  switch (name) {
+    case 'complete_project_step': {
+      const step = (p.steps || []).find(s => s.id === args.step_id);
+      if (!step) { addMsg('agent', 'Не знайшов крок.'); return true; }
+      step.done = true;
+      step.doneAt = Date.now();
+      p.progress = Math.round((p.steps.filter(s => s.done).length / p.steps.length) * 100);
+      p.lastActivity = Date.now();
+      break;
+    }
+    case 'add_project_step': {
+      if (!args.step) { addMsg('agent', 'Потрібен текст кроку.'); return true; }
+      if (!p.steps) p.steps = [];
+      p.steps.push({ id: Date.now(), text: args.step, done: false });
+      p.lastActivity = Date.now();
+      break;
+    }
+    case 'update_project_progress': {
+      p.progress = Math.min(100, Math.max(0, args.progress || 0));
+      p.lastActivity = Date.now();
+      break;
+    }
+    case 'add_project_decision': {
+      if (!p.decisions) p.decisions = [];
+      p.decisions.unshift({ title: args.title, reason: args.reason || '' });
+      break;
+    }
+    case 'add_project_metric': {
+      if (!p.metrics) p.metrics = [];
+      p.metrics.push({ label: args.label, value: args.value, color: args.color || '#3d2e1e' });
+      break;
+    }
+    case 'add_project_resource': {
+      if (!p.resources) p.resources = [];
+      p.resources.push({ type: args.type, title: args.title, url: args.url || '' });
+      break;
+    }
+    case 'update_project_tempo': {
+      if (args.tempoNow !== undefined) p.tempoNow = args.tempoNow;
+      if (args.tempoMore !== undefined) p.tempoMore = args.tempoMore;
+      if (args.tempoIdeal !== undefined) p.tempoIdeal = args.tempoIdeal;
+      break;
+    }
+    case 'update_project_risks': {
+      p.risks = args.risks || '';
+      break;
+    }
+  }
+  saveProjects(projs);
+  if (currentTab === 'projects') renderProjects();
+
+  const labels = {
+    complete_project_step: `✅ Крок виконано. Прогрес: ${p.progress}%`,
+    add_project_step: `✓ Додав крок: "${args.step}"`,
+    update_project_progress: `✓ Прогрес оновлено: ${p.progress}%`,
+    add_project_decision: `✓ Рішення записано: "${args.title}"`,
+    add_project_metric: `✓ Метрика "${args.label}: ${args.value}" додана`,
+    add_project_resource: `✓ Ресурс "${args.title}" додано`,
+    update_project_tempo: '✓ Темп оновлено',
+    update_project_risks: '✓ Ризики записано',
+  };
+  addMsg('agent', labels[name] + (args.comment ? ` · ${args.comment}` : ''));
+  return true;
+}
+
 // ===== dispatchChatToolCalls — головний маршрутизатор =====
 export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return false;
@@ -369,7 +446,10 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
     // 3. Memory / Finance categories — прямі хендлери
     if (_handleMemoryOrFinCatTool(name, args, addMsg)) { any = true; continue; }
 
-    // 4. Решта CRUD через universal action
+    // 4. Project-specific CRUD (кроки, рішення, метрики, ресурси, темп, ризики)
+    if (_handleProjectTool(name, args, addMsg)) { any = true; continue; }
+
+    // 5. Решта CRUD через universal action
     const acts = _toolCallToUniversalAction(name, args);
     for (const a of acts) {
       if (processUniversalAction(a, originalText, addMsg)) any = true;

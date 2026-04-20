@@ -212,6 +212,15 @@ export const INBOX_TOOLS = [
   { type: "function", function: { name: "create_event", description: "Запланована подія з датою в МАЙБУТНЬОМУ: приїзд, зустріч, день народження, концерт, візит, прийом, рейс. ПОДІЯ = факт що СТАНЕТЬСЯ, не дія яку треба зробити.", parameters: { type: "object", properties: { title: { type: "string", description: "Назва 2-5 слів" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM якщо вказано" }, priority: { type: "string", enum: ["normal","important","critical"] }, comment: { type: "string", description: "Коротка ремарка" } }, required: ["title","date","comment"], additionalProperties: false } } },
   { type: "function", function: { name: "save_finance", description: "Записати витрату або дохід — є конкретна сума грошей.", parameters: { type: "object", properties: { fin_type: { type: "string", enum: ["expense","income"] }, amount: { type: "number", description: "Сума" }, category: { type: "string", description: "Витрати: Їжа, Транспорт, Підписки, Здоров'я, Житло, Покупки, Інше. Доходи: Зарплата, Надходження, Повернення, Інше" }, fin_comment: { type: "string", description: "Короткий опис БЕЗ суми, 1-3 слова" }, date: { type: "string", description: "YYYY-MM-DD тільки якщо юзер вказав дату або вчора/позавчора" } }, required: ["fin_type","amount","category","fin_comment"], additionalProperties: false } } },
   { type: "function", function: { name: "create_project", description: "Створити проект — масштабна довгострокова ціль на тижні/місяці: ремонт, запуск бізнесу, розробка додатку, організація весілля.", parameters: { type: "object", properties: { name: { type: "string", description: "Назва 2-5 слів" }, subtitle: { type: "string", description: "Підзаголовок" }, comment: { type: "string", description: "Ремарка" } }, required: ["name"], additionalProperties: false } } },
+  // --- ПРОЕКТИ — кроки і деталі (Фаза 4 Gg3Fy 20.04.2026 "Один мозок V2") ---
+  { type: "function", function: { name: "complete_project_step", description: "Відмітити крок проекту як виконаний. Юзер каже 'закрив крок X', 'зробив Y'.", parameters: { type: "object", properties: { project_id: { type: "integer" }, step_id: { type: "integer" }, comment: { type: "string" } }, required: ["project_id", "step_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "add_project_step", description: "Додати новий крок у проект.", parameters: { type: "object", properties: { project_id: { type: "integer" }, step: { type: "string", description: "Текст кроку" }, comment: { type: "string" } }, required: ["project_id", "step"], additionalProperties: false } } },
+  { type: "function", function: { name: "update_project_progress", description: "Встановити прогрес проекту вручну 0-100.", parameters: { type: "object", properties: { project_id: { type: "integer" }, progress: { type: "integer", description: "0-100" }, comment: { type: "string" } }, required: ["project_id", "progress"], additionalProperties: false } } },
+  { type: "function", function: { name: "add_project_decision", description: "Записати рішення у проект з обґрунтуванням.", parameters: { type: "object", properties: { project_id: { type: "integer" }, title: { type: "string" }, reason: { type: "string" }, comment: { type: "string" } }, required: ["project_id", "title"], additionalProperties: false } } },
+  { type: "function", function: { name: "add_project_metric", description: "Додати метрику до проекту (показник відстеження: 'Клієнти: 3', 'Дохід: 500₴').", parameters: { type: "object", properties: { project_id: { type: "integer" }, label: { type: "string" }, value: { type: "string" }, color: { type: "string", description: "HEX колір, опційно" }, comment: { type: "string" } }, required: ["project_id", "label", "value"], additionalProperties: false } } },
+  { type: "function", function: { name: "add_project_resource", description: "Додати ресурс до проекту (книга, спільнота, інструмент, стаття).", parameters: { type: "object", properties: { project_id: { type: "integer" }, type: { type: "string", enum: ["Книга", "Спільнота", "Інструмент", "Стаття"] }, title: { type: "string" }, url: { type: "string" }, comment: { type: "string" } }, required: ["project_id", "type", "title"], additionalProperties: false } } },
+  { type: "function", function: { name: "update_project_tempo", description: "Оновити темп проекту (поточний / прискорений / ідеальний).", parameters: { type: "object", properties: { project_id: { type: "integer" }, tempoNow: { type: "string" }, tempoMore: { type: "string" }, tempoIdeal: { type: "string" }, comment: { type: "string" } }, required: ["project_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "update_project_risks", description: "Записати ризики або занепокоєння проекту.", parameters: { type: "object", properties: { project_id: { type: "integer" }, risks: { type: "string" }, comment: { type: "string" } }, required: ["project_id", "risks"], additionalProperties: false } } },
   // --- ВИКОНАННЯ ---
   { type: "function", function: { name: "complete_habit", description: "Відмітити звичку(и) як виконані сьогодні. Юзер каже що зробив щось зі списку звичок.", parameters: { type: "object", properties: { habit_ids: { type: "array", items: { type: "integer" }, description: "ID звичок зі списку" }, comment: { type: "string", description: "Коротке підтвердження" } }, required: ["habit_ids","comment"], additionalProperties: false } } },
   { type: "function", function: { name: "complete_task", description: "Закрити задачу(і) як виконані. Юзер каже що зробив щось з активних задач.", parameters: { type: "object", properties: { task_ids: { type: "array", items: { type: "integer" }, description: "ID задач зі списку" }, comment: { type: "string", description: "Коротке підтвердження" } }, required: ["task_ids","comment"], additionalProperties: false } } },
@@ -451,6 +460,45 @@ ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вищ
 Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовчуванням = сьогодні)
 
 ГОЛОВНЕ ПРАВИЛО РЕДАГУВАННЯ: Якщо юзер каже "перенеси", "зміни", "поміняй", "оновити" — це ЗАВЖДИ edit існуючого запису (edit_event, edit_task, edit_note). НІКОЛИ не створюй новий запис замість редагування. "Мама приїде 24го а не 20го" → edit_event (змінити дату), НЕ create_event. Шукай відповідний запис по назві в контексті.`;
+}
+
+// ===== 10. getProjectsChatSystem — чат-бар Проектів =====
+// Фаза 4 "Один мозок V2" (20.04.2026 Gg3Fy): Projects chat мігровано з UI_TOOLS +
+// text-JSON на INBOX_TOOLS + dispatchChatToolCalls. Додано 8 project-specific tools:
+// complete_project_step, add_project_step, update_project_progress, add_project_decision,
+// add_project_metric, add_project_resource, update_project_tempo, update_project_risks.
+export function getProjectsChatSystem({ activeProject, projectsContext, activeSteps }) {
+  const contextBlock = activeProject
+    ? `Активний проект: "${activeProject.name}" (${activeProject.progress || 0}%). ID=${activeProject.id}. Підзаголовок: ${activeProject.subtitle || ''}.
+Кроки:
+${activeSteps || 'немає кроків'}`
+    : projectsContext;
+
+  return `${getOWLPersonality()} Ти особистий наставник по проектах у NeverMind.
+${contextBlock}
+
+ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools):
+- Кроки → complete_project_step / add_project_step
+- Прогрес → update_project_progress (0-100)
+- Рішення → add_project_decision (title + reason)
+- Метрики → add_project_metric (label + value)
+- Ресурси → add_project_resource (type: Книга/Спільнота/Інструмент/Стаття + title + url)
+- Темп → update_project_tempo (tempoNow/tempoMore/tempoIdeal)
+- Ризики → update_project_risks
+- Нові проекти → create_project
+- Універсальні → save_task / create_event / save_note / save_finance / save_moment / save_memory_fact / set_reminder тощо
+- Навігація → UI tools (switch_tab, open_memory тощо)
+
+VERIFY LOOP (правило 4.21): ПІСЛЯ tool call ЗАВЖДИ пиши у content коротке підтвердження словами (1 речення) — що саме зробив.
+
+ПРАВИЛА:
+- ЗАДАЧА (save_task) = дія ЗРОБИТИ. ПОДІЯ (create_event) = факт що СТАНЕТЬСЯ. "Перенеси подію" → edit_event.
+- Не вигадуй даних яких нема у контексті. Якщо незрозуміло — перепитуй.
+- "Запам'ятай що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій.
+
+Інакше — відповідай текстом 1-3 речення українською.
+
+${UI_TOOLS_RULES}`;
 }
 
 // ===== 9. getFinanceChatSystem — чат-бар Фінансів =====
