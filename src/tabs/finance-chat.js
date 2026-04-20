@@ -8,6 +8,7 @@ import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
 import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { addFact } from '../ai/memory.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox } from './inbox.js';
 import { processUniversalAction } from './habits.js';
@@ -108,6 +109,10 @@ export async function sendFinanceBarMessage() {
 Також вмієш: створити задачу {"action":"create_task","title":"назва","steps":[]}, звичку {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}, редагувати звичку {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}, нотатку {"action":"create_note","text":"текст","folder":null}, заплановану подію {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}, закрити задачу {"action":"complete_task","task_id":ID}, відмітити звичку {"action":"complete_habit","habit_name":"назва"}, редагувати задачу {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}, видалити задачу {"action":"delete_task","task_id":ID}, видалити звичку {"action":"delete_habit","habit_id":ID}, перевідкрити задачу {"action":"reopen_task","task_id":ID}, записати момент дня {"action":"add_moment","text":"текст"}. ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
 Також: змінити подію {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}, видалити подію {"action":"delete_event","event_id":ID}, змінити нотатку {"action":"edit_note","note_id":ID,"text":"текст"}, розпорядок {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}.
 
+ПАМ'ЯТЬ (Один мозок — доступно з будь-якого чату):
+- Факт про юзера: {"action":"save_memory_fact","text":"короткий факт","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+- Жорсткий тригер: "Запам'ятай що X" / "Запиши що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. НЕ вигадуй задачі-протилежність.
+
 ${UI_TOOLS_RULES}${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
@@ -133,6 +138,14 @@ ${UI_TOOLS_RULES}${aiContext ? '\n\n' + aiContext : ''}`;
 
     // Обробка одного JSON блоку. Повертає true якщо оброблено, false якщо невідомий action.
     const _processOne = (parsed) => {
+      // Один мозок (20.04 NRw8G): save_memory_fact доступний з чату Фінансів.
+      if (parsed.action === 'save_memory_fact' && parsed.text) {
+        try {
+          addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+          addFinanceChatMsg('agent', 'Запам\'ятав ✓');
+        } catch (e) { console.warn('[finance save_memory_fact]', e); }
+        return true;
+      }
       if (processUniversalAction(parsed, text, addFinanceChatMsg)) return true;
       if (parsed.action === 'save_expense' || parsed.action === 'save_income') {
         const type = parsed.action === 'save_expense' ? 'expense' : 'income';

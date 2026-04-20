@@ -16,7 +16,7 @@
 //             owl/chips, ui/unread-badge.
 // ============================================================
 
-import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
+import { escapeHtml, extractJsonBlocks, parseContentChips } from '../core/utils.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
@@ -156,20 +156,9 @@ export function addEveningBarMsg(role, text, _noSave = false, chips = null) {
   }
 }
 
-// Парсер content AI-відповіді: витягує optional JSON блок {chips:[...]} і
-// повертає { text, chips } — text БЕЗ JSON частини. Якщо JSON не знайдено —
-// chips=null. Формат content описаний у EVENING_CHAT_SYSTEM.
-function _parseContentChips(content) {
-  if (!content || typeof content !== 'string') return { text: '', chips: null };
-  const blocks = extractJsonBlocks(content);
-  let chips = null;
-  for (const b of blocks) {
-    if (b && Array.isArray(b.chips)) { chips = b.chips; break; }
-  }
-  // Прибираємо JSON блок з тексту (залишаємо тільки природню частину)
-  const text = content.replace(/\{[\s\S]*?"chips"[\s\S]*?\}/g, '').trim();
-  return { text, chips };
-}
+// B-87 fix (20.04 NRw8G): делегуємо у utils.parseContentChips (depth-tracking).
+// Старий регекс ріс на першому `}` всередині чіп-об'єкта → решта як сміття.
+const _parseContentChips = parseContentChips;
 
 export async function sendEveningBarMessage() {
   if (eveningBarLoading) return;

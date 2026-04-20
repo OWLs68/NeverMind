@@ -10,6 +10,7 @@ import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
 import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { addFact } from '../ai/memory.js';
 import { processUniversalAction } from './habits.js';
 import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
@@ -1541,43 +1542,60 @@ export async function sendHealthBarMessage() {
 
   const systemPrompt = `${getOWLPersonality()} Ти допомагаєш з вкладкою Здоров'я в NeverMind.
 
-🚫 ЖОРСТКИЙ БЛОК — OWL НЕ ЛІКАР (Фаза 4):
+🚫 ЖОРСТКИЙ БЛОК — OWL НЕ ЛІКАР:
 - ЗАБОРОНЕНО ставити діагнози ('схоже на...', 'це може бути...', 'мабуть у тебе...')
 - ЗАБОРОНЕНО радити препарати або дозування ('спробуй...', 'приймай...')
-- ЗАБОРОНЕНО інтерпретувати аналізи/симптоми
+- ЗАБОРОНЕНО інтерпретувати аналізи (що означає результат)
 - ЗАБОРОНЕНО давати альтернативи призначеному лікарем лікуванню
-- При медичному питанні ВІД ЮЗЕРА ('що зі мною?', 'чи це нормально?', 'що робити?') — шаблонна відповідь:
-  "Я не лікар. Це питання до твого лікаря — не займайся самолікуванням. Запиши питання щоб не забути на прийомі."
-- ДОЗВОЛЕНО тільки: нагадувати ПРО ПРИЗНАЧЕНЕ, помічати патерни у даних юзера, попереджати про суперечності з рекомендаціями/алергіями, фіксувати факти у history.
 
-${activeCard ? `Активна картка: "${activeCard.name}" — ${activeCard.subtitle || ''}. Статус: ${activeCard.status}. Прогрес: ${activeCard.progress}%.` : ''}
+🔀 РОЗРІЗНЕННЯ (B-85 fix 20.04 NRw8G — НЕ сплутуй два сценарії):
+
+А) МЕДИЧНЕ ПИТАННЯ (юзер просить поради/оцінки) → ШАБЛОН "не лікар":
+  Маркери: "що зі мною?", "чи це нормально?", "що мені робити?", "чи серйозно?", "чи треба до лікаря?"
+  Відповідь: "Я не лікар. Це питання до твого лікаря — не займайся самолікуванням. Запиши питання щоб не забути на прийомі."
+
+Б) ОПИС СИМПТОМУ/ФАКТУ (констатація, БЕЗ запитання поради) → ЗАПИСУЙ, НЕ шаблон:
+  Маркери: "болить X", "вже N днів Y", "почалось тоді-то", "прийняв ліки", "тиск 140/90", "кашляю", "не сплю".
+  Дія: якщо є активна картка — add_history у неї, текст = коротке переформулювання. Якщо немає активної картки — create_health_card з name="Здоров'я" (або те що описано) + initial_history_text.
+  ПІСЛЯ запису коротко підтверди 1 реченням без діагнозу: "Записав: горло, 3 дні → у картку 'Планове обстеження'." БЕЗ "схоже на фарингіт" і БЕЗ рекомендацій.
+
+✅ ДОЗВОЛЕНО: нагадувати ПРО ПРИЗНАЧЕНЕ лікарем, помічати патерни у даних юзера, попереджати про суперечності з рекомендаціями/алергіями, фіксувати симптоми/події у history картки, записувати алергії.
+
+${activeCard ? `🎯 АКТИВНА КАРТКА (пріоритет для add_history): "${activeCard.name}" — ${activeCard.subtitle || ''}. Статус: ${activeCard.status}. Прогрес: ${activeCard.progress}%. ID=${activeCard.id}.` : '⚠️ Немає активної картки — при описі симптому пропонуй створити через create_health_card.'}
 ${aiContext ? '\n\n' + aiContext : ''}
 
-Ти можеш (відповідай JSON якщо потрібна дія):
-- Зберегти запис про самопочуття: {"action":"log_health","energy":7,"sleep":8,"pain":2}
-- Додати препарат до картки: {"action":"add_medication","card_id":${activeHealthCardId || 'null'},"name":"назва","dose":"дозування","time":"час"}
-- Записати нотатку: {"action":"create_note","text":"текст","folder":"${activeCard ? activeCard.name : 'Здоровʼя'}"}
-- Оновити прогрес картки: {"action":"update_health_progress","card_id":${activeHealthCardId || 'null'},"progress":число 0-100,"nextStep":"наступний крок"}
-Також вмієш (для будь-яких записів, не тільки здоров'я):
-- Задача: {"action":"create_task","title":"назва","steps":[]}
-- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
-- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]}
-- Закрити задачу: {"action":"complete_task","task_id":ID}
-- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
-- Редагувати задачу: {"action":"edit_task","task_id":ID,"title":"назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
-- Видалити задачу: {"action":"delete_task","task_id":ID}
-- Видалити звичку: {"action":"delete_habit","habit_id":ID}
-- Перевідкрити задачу: {"action":"reopen_task","task_id":ID}
-- Записати момент дня: {"action":"add_moment","text":"що сталося"}
-- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
-- Дохід: {"action":"save_finance","fin_type":"income","amount":число,"category":"категорія","comment":"текст"}
-- Подія з датою: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
-- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+Ти можеш (відповідай JSON якщо потрібна дія). Одразу декілька JSON-блоків допускаються якщо треба кілька дій:
+
+— ЗДОРОВ'Я —
+- Запис у історію картки (симптоми, факти, прийом ліків): {"action":"add_health_history_entry","card_id":${activeHealthCardId || 'null'},"entry_type":"symptom|note|appointment|test_result","text":"коротке формулювання"}
+- Створити нову картку (при симптомі без активної): {"action":"create_health_card","name":"Назва","subtitle":"короткий опис","initial_history_text":"перший запис"}
+- Оновити існуючу картку: {"action":"edit_health_card","card_id":ID,"name":"...","subtitle":"...","next_appointment_date":"YYYY-MM-DD","next_appointment_time":"HH:MM"}
+- Додати препарат до картки: {"action":"add_medication","card_id":${activeHealthCardId || 'null'},"med_name":"назва","dosage":"доза","schedule":"час"}
+- Алергія: {"action":"add_allergy","name":"назва","notes":"опис"}
+- Видалити алергію: {"action":"delete_allergy","allergy_id":ID}
+- Оновити прогрес картки: {"action":"update_health_progress","card_id":${activeHealthCardId || 'null'},"progress":0-100,"nextStep":"наступний крок"}
+- Записати нотатку (нейтральна — не симптом): {"action":"create_note","text":"текст","folder":"${activeCard ? activeCard.name : 'Здоровʼя'}"}
+
+— ПОДІЇ (B-86 fix 20.04 — CREATE vs EDIT) —
+- Нова подія (створити): {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":"HH:MM","priority":"normal"}
+  ЖОРСТКЕ ПРАВИЛО: "новий прийом", "завтра до лікаря", "записав до [лікар/спеціаліст] на [час]" → ЗАВЖДИ create_event. Навіть якщо у контексті вже є інший прийом — це НОВА подія, не помилка у існуючій.
+- Змінити дату/час існуючої: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD","time":"HH:MM"}
+  ЖОРСТКЕ ПРАВИЛО: edit_event ТІЛЬКИ коли юзер явно каже "перенеси", "зміни час", "відклади". Сумніваєшся → create_event.
 - Видалити подію: {"action":"delete_event","event_id":ID}
-- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
-- Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
-- Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовч.=сьогодні). "НАГАДАЙ" = ЗАВЖДИ set_reminder. Маркери: вранці=08:00, вдень=12:00, після обіду=14:00, ввечері=18:00, перед сном=22:00
-ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
+🚫 ЗАБОРОНА UI-INST: на реченнях про події/прийоми/симптоми НІКОЛИ не викликай UI-інструменти (switch_tab, set_finance_period, open_finance_analytics). Це маркер що ти неправильно зрозумів намір.
+
+— ПАМ'ЯТЬ (Один мозок — доступно з будь-якого чату) —
+- Факт про юзера: {"action":"save_memory_fact","text":"короткий факт","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+  Жорсткий тригер: "Запам'ятай що X" / "Запиши що X" / "Знай що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. Не вигадуй задачі-протилежність.
+
+— УНІВЕРСАЛЬНІ (не тільки здоров'я) —
+- Задача (дія ЗРОБИТИ): {"action":"create_task","title":"назва"}
+- Звичка: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Момент дня: {"action":"add_moment","text":"що сталося"}
+- Витрата: {"action":"save_finance","fin_type":"expense","amount":число,"category":"категорія","comment":"текст"}
+- Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"}. "НАГАДАЙ" = ЗАВЖДИ set_reminder. Маркери: вранці=08:00, вдень=12:00, після обіду=14:00, ввечері=18:00, перед сном=22:00
+- Редагувати/видалити звичку/задачу/подію — відповідні edit_*/delete_* дії з ID.
+
 Інакше — відповідай текстом 1-3 речення українською. НЕ вигадуй медичних рекомендацій.
 
 ${UI_TOOLS_RULES}`;
@@ -1605,6 +1623,82 @@ ${UI_TOOLS_RULES}`;
 
     // Обробка одного JSON блоку. Повертає true якщо оброблено.
     const _processOne = (parsed) => {
+      // B-88 fix (20.04 NRw8G): мертву дію `log_health` прибрано з промпту (legacy шкали).
+
+      // Один мозок (20.04 NRw8G): save_memory_fact доступний з чату Здоров'я.
+      if (parsed.action === 'save_memory_fact' && parsed.text) {
+        try {
+          addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+          addHealthChatMsg('agent', 'Запам\'ятав ✓');
+        } catch (e) { console.warn('[health save_memory_fact]', e); }
+        return true;
+      }
+
+      // B-84 fix (20.04 NRw8G): алергії через чат Здоров'я.
+      if (parsed.action === 'add_allergy' && parsed.name) {
+        const added = addAllergy(parsed.name, parsed.notes || '');
+        if (added) {
+          renderHealth();
+          addHealthChatMsg('agent', `🚨 Додав алергію: ${parsed.name}. ${parsed.comment || ''}`.trim());
+        } else {
+          addHealthChatMsg('agent', `Алергія "${parsed.name}" вже є у списку.`);
+        }
+        return true;
+      }
+      if (parsed.action === 'delete_allergy' && parsed.allergy_id) {
+        const ok = deleteAllergy(parsed.allergy_id);
+        renderHealth();
+        addHealthChatMsg('agent', ok ? '🗑️ Алергію видалено.' : 'Не знайшов алергію для видалення.');
+        return true;
+      }
+
+      // B-85 fix (20.04 NRw8G): опис симптому → запис у history активної картки.
+      if (parsed.action === 'add_health_history_entry' && parsed.card_id && parsed.text) {
+        const entry = addHealthHistoryEntry(parsed.card_id, parsed.entry_type || 'note', parsed.text);
+        if (entry) {
+          renderHealth();
+          const cards = getHealthCards();
+          const card = cards.find(c => c.id === parsed.card_id);
+          addHealthChatMsg('agent', `📝 Записав у картку "${card ? card.name : '—'}": ${parsed.text}`);
+        } else {
+          addHealthChatMsg('agent', 'Не знайшов картку для запису.');
+        }
+        return true;
+      }
+      if (parsed.action === 'create_health_card' && parsed.name) {
+        const created = createHealthCardProgrammatic({
+          name: parsed.name,
+          subtitle: parsed.subtitle,
+          initialHistoryEntry: parsed.initial_history_text,
+        });
+        if (created) {
+          renderHealth();
+          addHealthChatMsg('agent', `🏥 Створив картку "${created.name}".`);
+        } else {
+          addHealthChatMsg('agent', 'Не вдалось створити картку — потрібна назва.');
+        }
+        return true;
+      }
+      if (parsed.action === 'edit_health_card' && parsed.card_id) {
+        const updates = {};
+        if (parsed.name !== undefined) updates.name = parsed.name;
+        if (parsed.subtitle !== undefined) updates.subtitle = parsed.subtitle;
+        if (parsed.status !== undefined) updates.status = parsed.status;
+        if (parsed.next_appointment_date !== undefined) {
+          updates.nextAppointment = parsed.next_appointment_date
+            ? { date: parsed.next_appointment_date, time: parsed.next_appointment_time || '' }
+            : null;
+        }
+        const updated = editHealthCardProgrammatic(parsed.card_id, updates);
+        if (updated) {
+          renderHealth();
+          addHealthChatMsg('agent', `✓ Оновив картку "${updated.name}".`);
+        } else {
+          addHealthChatMsg('agent', 'Не знайшов картку.');
+        }
+        return true;
+      }
+
       if (parsed.action === 'update_health_progress' && parsed.card_id) {
         const cards = getHealthCards();
         const idx = cards.findIndex(c => c.id === parsed.card_id);
@@ -1618,15 +1712,21 @@ ${UI_TOOLS_RULES}`;
         return true;
       }
       if (parsed.action === 'add_medication' && parsed.card_id) {
+        // Новий формат (з Inbox) + старий (name/dose/time) для backward-compat
+        const medName = parsed.med_name || parsed.name;
+        const dosage = parsed.dosage || parsed.dose || '';
+        const schedule = parsed.schedule || parsed.time || '';
+        if (!medName) { addHealthChatMsg('agent', 'Потрібна назва препарату.'); return true; }
         const cards = getHealthCards();
         const idx = cards.findIndex(c => c.id === parsed.card_id);
         if (idx !== -1) {
           if (!cards[idx].medications) cards[idx].medications = [];
-          cards[idx].medications.push({ name: parsed.name, dose: parsed.dose || '', time: parsed.time || '', taken: false });
-          if (parsed.name && !cards[idx].treatments.includes(parsed.name)) cards[idx].treatments.push(parsed.name);
+          cards[idx].medications.push({ name: medName, dose: dosage, time: schedule, taken: false });
+          if (!cards[idx].treatments) cards[idx].treatments = [];
+          if (medName && !cards[idx].treatments.includes(medName)) cards[idx].treatments.push(medName);
           saveHealthCards(cards);
           renderHealth();
-          addHealthChatMsg('agent', `✓ Додав ${parsed.name} до картки`);
+          addHealthChatMsg('agent', `✓ Додав ${medName} до картки`);
         }
         return true;
       }

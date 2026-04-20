@@ -9,6 +9,7 @@ import { escapeHtml, extractJsonBlocks } from '../core/utils.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
 import { UI_TOOLS_RULES } from '../ai/prompts.js';
 import { UI_TOOLS, UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
+import { addFact } from '../ai/memory.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
 import { processUniversalAction } from './habits.js';
@@ -523,6 +524,11 @@ ${aiContext ? '\n\n' + aiContext : ''}
 - Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст"}
 - Розпорядок: {"action":"save_routine","day":"mon" або масив,"blocks":[{"time":"07:00","activity":"Підйом"}]}
 ЗАДАЧА = дія ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію" = edit_event.
+
+ПАМ'ЯТЬ (Один мозок — доступно з будь-якого чату):
+- Факт про юзера: {"action":"save_memory_fact","text":"короткий факт","category":"preferences|health|work|relationships|context|goals","ttl_days":30}
+- Жорсткий тригер: "Запам'ятай що X" / "Запиши що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. НЕ вигадуй задачі-протилежність.
+
 Інакше — відповідай текстом 1-3 речення. Якщо незрозуміло — перепитуй. НЕ вигадуй дані яких немає.
 
 ${UI_TOOLS_RULES}`;
@@ -550,6 +556,14 @@ ${UI_TOOLS_RULES}`;
 
     // Обробка одного JSON блоку. Повертає true якщо оброблено.
     const _processOne = (parsed) => {
+      // Один мозок (20.04 NRw8G): save_memory_fact доступний з чату Проектів.
+      if (parsed.action === 'save_memory_fact' && parsed.text) {
+        try {
+          addFact({ text: parsed.text, category: parsed.category, ttlDays: parsed.ttl_days });
+          addProjectsChatMsg('agent', 'Запам\'ятав ✓');
+        } catch (e) { console.warn('[projects save_memory_fact]', e); }
+        return true;
+      }
       const pid = parsed.project_id;
       if (parsed.action === 'complete_project_step' && pid) {
         const projs = getProjects();
