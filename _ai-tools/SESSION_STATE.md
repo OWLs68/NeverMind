@@ -49,6 +49,8 @@
 - **Фази 2-7** — me/habits/notes/finance-chat/health/projects: UI_TOOLS → INBOX_TOOLS. Промпти скоротились на ~30 рядків кожен (прибрано JSON-приклади, tool schemas покривають). Локальні fallback залишено для специфічних actions: `complete_step`/`undo_step` (Задачі), `delete_transaction`/`set_budget`/`create_category` (Фінанси), `update_health_progress`/`add_medication` (Здоров'я), `complete_project_step`/`add_project_step` (Проекти), `search_notes`/`open_folder`/`open_note` (Нотатки). Finance чат — кастомний цикл бо `update_transaction` не в processUniversalAction.
 - **CACHE_NAME bump:** `nm-20260419-2027` → `nm-20260420-0430`.
 
+**Hook context-warning recalibration (коміт `a3721d5`):** старі пороги 80%/90% від 1M застаріли — Opus 4.7 у розширеному режимі [1m] має реальний ліміт ~1.6M. Нові пороги у `.claude/hooks/context-warning.sh`: WARN 75% (1.2M) жовте з трикутниками 🟡⚠️, CRITICAL 85% (1.36M) червоне 🔴⚠️. Помітніший візуал (рамка з емодзі-рядків, bordered block, action hint з ⚡). Hook спрацьовує у `UserPromptSubmit` — попередження з'являється у КОЖНОМУ наступному повідомленні після першого переходу порога.
+
 **Регресії #2A виправлені (коміт `5078a21`, CACHE_NAME `nm-20260420-0441`):**
 - **Фінанси** — "50 на каву" → AI обирав `switch_tab("finance")` замість save_finance. Корінь: промпт мав застарілі JSON приклади `save_expense`/`save_income` яких НЕМА як tools — AI плутався. Замінив на жорстке правило з конкретними прикладами: "50 на каву" → save_finance(fin_type=expense, amount=50, category=Їжа, fin_comment=кава).
 - **Задачі** — "Пити воду щодня" → AI галюцинував "у тебе вже є звичка Пити воду". Корінь: правило "edit_habit замість save_habit нову" AI трактував занадто широко. Переписав: ПЕРЕВІР список "ЗВИЧКИ СЬОГОДНІ" — якщо назви немає → save_habit. Якщо ТОЧНО є з ID → edit_habit.
@@ -75,7 +77,7 @@
 
 ### Метрики
 
-- **Коміти:** 17 (`abbeafd → 5078a21`) + 2 build (`7d235a2`, `6555e9e`)
+- **Коміти:** 17 (`abbeafd → 5078a21`) + 2 build (`7d235a2`, `6555e9e`) + 1 docs (`bf16308`) + 1 hook (`a3721d5`)
 - **Гілка:** `claude/start-session-EY55M`
 - **Версія:** v309 (старт) → v312+ після мержу (з усіма фіксами)
 - **CACHE_NAME:** `nm-20260419-1951` → `nm-20260420-0441` (3 bump'и)
