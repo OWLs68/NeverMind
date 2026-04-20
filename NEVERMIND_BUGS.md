@@ -11,8 +11,8 @@
 
 | # | Файл | Опис | Деталі |
 |---|------|------|--------|
-| B-94 | `src/tabs/health.js` архітектура | "Алергія на пил" → випадковий UI-tool (`set_owl_mode` / `set_finance_period`) замість `add_allergy` | **Два промпт-підходи провалились.** Підхід №1 (коміт `379f13e`): жорсткий блок на початку промпту → на iPhone v337 все одно "Характер OWL: Партнер" × 3. Підхід №2 (коміт `6fa67e2`): history detox + прибраний дубль `UI_TOOLS_RULES` → на iPhone v338 гірше, "Фінанси: місяць" і ще десяток повторень `set_owl_mode`. **Корінь архітектурний:** UI-tools у чаті Здоров'я передаються як справжні функції OpenAI, а CRUD (`add_allergy`/`create_event`) — як JSON у тексті. Модель GPT-4o-mini завжди обирає реальну функцію над текст-JSON. Жоден промпт це не перепише. **Рішення:** Шар 1 "Один мозок V2" — мігрувати CRUD Health chat на повні INBOX_TOOLS через OpenAI tool calling. Тоді `add_allergy` і `set_owl_mode` для моделі однорівневі. |
-| B-95 | `src/tabs/health.js` архітектура | "Завтра прийом у лікаря на 2" → випадковий UI-tool (`switch_tab` / `set_owl_mode`) замість `create_event` | Те саме що B-94 за коренем. Закриється разом з B-94 при міграції CRUD Health на OpenAI tools у Шарі 1 "Один мозок V2". |
+| B-94 | `src/tabs/health.js` архітектура | "Алергія на пил" → випадковий UI-tool (`set_owl_mode` / `set_finance_period`) замість `add_allergy` | 🟡 **Gg3Fy 20.04 — архітектурна міграція виконана, очікує iPhone v340+ підтвердження.** Health chat переписано на `INBOX_TOOLS` + `dispatchChatToolCalls` (коміт `5563b15`). `add_allergy` тепер реальна OpenAI-функція на одному рівні з `set_owl_mode` — модель не має bias "справжня функція над текст-JSON". Якщо iPhone v340 підтверджує — закрити як ✅ Gg3Fy. Якщо ні — проблема десь глибше, треба дебаг з логами OpenAI-запитів. |
+| B-95 | `src/tabs/health.js` архітектура | "Завтра прийом у лікаря на 2" → випадковий UI-tool (`switch_tab` / `set_owl_mode`) замість `create_event` | 🟡 Те саме що B-94. Міграція Gg3Fy має закрити. Чекає iPhone v340+ тест. |
 
 ---
 

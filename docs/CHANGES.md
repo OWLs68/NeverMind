@@ -6,6 +6,49 @@
 
 ---
 
+## 2026-04-20 — ✅ Шар 1 "Один мозок V2" ЗАВЕРШЕНО: 8 чатів на єдиному dispatcher (Gg3Fy)
+
+**Контекст:** Після сесії EWxjG (2 провали промпт-підходу для B-94/B-95) було встановлено що корінь архітектурний — модель GPT-4o-mini завжди обирає реальну OpenAI-функцію над JSON-у-тексті. Треба мігрувати CRUD у проблемних чатах (Health/Finance/Projects) на повні `INBOX_TOOLS` і забезпечити паритет можливостей у всіх 8 чатах. Роман явно попросив "все має будуватись на принципі Один мозок".
+
+**Зроблено (6 комітів на гілці `claude/start-session-Gg3Fy`, автономна робота вночі):**
+
+**1. ROADMAP.md Шар 3 переписано (коміт `a80fa08`).** Скасовано неправильне формулювання "спільна історія `nm_owl_conversation` + міграція 8 ключів → 1". Повернуто до оригінальної концепції з `_archive/FEATURES_ROADMAP.md` п.1.3: **"чати лишаються окремими для юзера, але мозок бачить ВСІ чати при генерації відповідей"**. Майбутній Шар 3 = розширення `getAIContext()` хвостами чатів (3-5 msg × 8 вкладок), без торкання сховища. Також переписано ризики (прибрано "міграція даних").
+
+**2. Фаза 1 — dispatcher foundation (коміт `ebfab56`).** Створено `src/ai/tool-dispatcher.js` — єдиний модуль-мозок для tool_calls у всіх 8 чатах. Маршрутизація: UI tools → `handleUITool`, health CRUD → прямі хендлери (9 tools), memory/finance-cat → прямі хендлери (6 tools), project-specific → `_handleProjectTool` (додано у Фазі 4), інші CRUD → `processUniversalAction` (лишається у `tabs/habits.js` бо 384 рядки локальних залежностей). Перенесено `dispatchChatToolCalls` і `_toolCallToUniversalAction` з `tabs/habits.js`. Оновлено імпорти у habits.js, me.js, notes.js.
+
+**3. Фаза 2 — Health chat migration (коміт `5563b15`). B-94/B-95 архітектурно зачеплені.** Промпт винесено у `getHealthChatSystem(activeCard)` у `ai/prompts.js` (стиль `getEveningChatSystem`). У `sendHealthBarMessage` замінено `UI_TOOLS` → `INBOX_TOOLS`, прибрано `_processOne` (~100 рядків) + `extractJsonBlocks` + history detox patch. `add_allergy`/`create_event`/`create_health_card` — тепер справжні OpenAI-функції на одному рівні з `set_owl_mode`/`switch_tab`. Функція стиснута 250 → 40 рядків. **Очікується iPhone v340+ підтвердження що B-94/B-95 закриті.**
+
+**4. Фаза 3 — Finance chat migration (коміт `fe5b9e2`).** Додано 2 нові tools у INBOX_TOOLS: `delete_transaction`, `set_finance_budget`. Хендлери у dispatcher. Промпт винесено у `getFinanceChatSystem({currency, budget, txSummary, expenseCats, incomeCats})`. Старі псевдо-actions (`save_expense`/`save_income`/`create_category`) замінені на стандартні (`save_finance` з `fin_type`, `create_finance_category`). `checkFinBudgetWarning` лишається локальним — викликається post-dispatch для `save_finance(expense)`. Функція стиснута 155 → 50 рядків.
+
+**5. Фаза 4 — Projects chat migration (коміт `8307d26`). Шар 1 повністю закритий.** Додано 8 project-specific tools у INBOX_TOOLS: `complete_project_step`, `add_project_step`, `update_project_progress`, `add_project_decision`, `add_project_metric`, `add_project_resource`, `update_project_tempo`, `update_project_risks`. Хендлер `_handleProjectTool` у dispatcher — централізована логіка з автоматичним прогрес-розрахунком. Промпт → `getProjectsChatSystem({activeProject, projectsContext, activeSteps})`. Функція стиснута 215 → 30 рядків.
+
+**6. CACHE_NAME bump + документація (цей коміт).** `nm-20260420-2040` → `nm-20260420-2159`. Оновлено `SESSION_STATE.md` (повний журнал сесії), `NEVERMIND_BUGS.md` (B-94/B-95 → 🟡 очікують iPhone підтвердження), цей `CHANGES.md`.
+
+**Архітектурний підсумок:**
+- **До сесії:** 3 паралельні dispatcher-и (Inbox inline, `dispatchEveningTool`, `processUniversalAction`) + 3 чати на `UI_TOOLS` + text-JSON (Health/Finance/Projects) → ~950 рядків дубльованої dispatch-логіки.
+- **Після сесії:** єдиний `tool-dispatcher.js` (~370 рядків) + централізовані промпти у `prompts.js`. 8 чатів отримали паритет можливостей.
+- **Net delta:** ~610 рядків видалено з 3 мігрованих чатів, ~370 додано у новому dispatcher-модулі + 400 у prompts.js. Bundle size ≈ без змін, але 8 чатів тепер на одному двигуні.
+
+**Критично перевірити на iPhone v340+:**
+У чаті Здоровʼя 6 фраз:
+1. "Алергія на пил" → `add_allergy` (B-94 fix)
+2. "Завтра прийом у лікаря о 10" → `create_event` (B-95 fix)
+3. "Болить горло 3 дні" → `add_health_history_entry` або `create_health_card`
+4. "Перейди до фінансів" → `switch_tab` (UI tool має все ще працювати)
+5. "Переключись на Ментора" → `set_owl_mode`
+6. "Запам'ятай що не їм глютен" → `save_memory_fact`
+
+Якщо всі 6 спрацюють → закрити B-94/B-95 у `NEVERMIND_BUGS.md` як ✅ Gg3Fy. Якщо ні → корінь глибше ніж bias моделі, треба сесія дебагу з логами OpenAI-запитів.
+
+**Файли:** створено `src/ai/tool-dispatcher.js`. Змінено `src/ai/prompts.js` (+3 нові функції промптів + 10 нових tools), `src/tabs/habits.js` (−90 рядків), `src/tabs/health.js` (−200 рядків), `src/tabs/finance-chat.js` (−105 рядків), `src/tabs/projects.js` (−185 рядків), `src/tabs/me.js` + `src/tabs/notes.js` (тільки імпорти), `sw.js` (CACHE_NAME), `ROADMAP.md`, `NEVERMIND_BUGS.md`, `_ai-tools/SESSION_STATE.md`, `bundle.js`.
+
+**Відкрите у новий чат:**
+- 🧪 iPhone-тест Gg3Fy на v340+ (найперше) → підтвердження B-94/B-95.
+- 🎯 Шар 2 — єдине табло `nm_owl_board_unified` з призмою вкладки (наступна сесія).
+- 🎯 Шар 3 — розширення `getAIContext()` хвостами чатів (після Шару 2).
+
+---
+
 ## 2026-04-20 — 🟡 B-93 закритий, B-94/B-95 два провали → архітектурний фікс у новій сесії (EWxjG)
 
 **Контекст:** Сесія починалась з плану закрити 3 баги з iPhone-тесту v325 (B-93, B-94, B-95). B-93 закритий з першого разу (CSS). B-94/B-95 отримали два промпт-підходи — обидва провалились на iPhone. Встановлено що корінь архітектурний — потрібен Шар 1 "Один мозок V2" (CRUD як справжні OpenAI tools у чаті Здоров'я).
