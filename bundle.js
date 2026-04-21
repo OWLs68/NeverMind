@@ -10818,7 +10818,44 @@ ${activeCard ? `\u{1F3AF} \u0410\u041A\u0422\u0418\u0412\u041D\u0410 \u041A\u041
 
 ${UI_TOOLS_RULES}`;
   }
-  var UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS;
+  function getBrainPulseSystemPrompt(signals) {
+    const signalLines = signals.map((s, i) => {
+      const ctx = JSON.stringify(s.context);
+      return `${i + 1}. [${s.tab} \xB7 ${s.type} \xB7 ${s.urgency}] ${ctx}`;
+    }).join("\n");
+    return `\u0422\u0438 \u2014 \u043C\u043E\u0437\u043E\u043A \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u0430\u0433\u0435\u043D\u0442\u0430 OWL. \u0416\u0438\u0432\u0435\u0448 \u0443 \u0444\u043E\u043D\u0456 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind \u0456 \u0440\u0430\u0437 \u043D\u0430 \u043A\u0456\u043B\u044C\u043A\u0430 \u0445\u0432\u0438\u043B\u0438\u043D \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0441\u0442\u0430\u043D \u0443\u0441\u0456\u0445 \u0432\u043A\u043B\u0430\u0434\u043E\u043A.
+
+\u0417\u0430\u0440\u0430\u0437 \u0431\u0430\u0447\u0443 \u043E\u0441\u044C \u0442\u0430\u043A\u0456 \u0436\u0438\u0432\u0456 \u0441\u0438\u0433\u043D\u0430\u043B\u0438:
+${signalLines}
+
+\u0422\u0412\u041E\u0404 \u0417\u0410\u0412\u0414\u0410\u041D\u041D\u042F:
+\u0412\u0438\u0440\u0456\u0448\u0438\u0442\u0438 \u2014 \u0447\u0438 \u0432\u0430\u0440\u0442\u043E \u0437\u0430\u0440\u0430\u0437 \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u044E\u0437\u0435\u0440\u0443 \u041F\u0420\u041E\u0410\u041A\u0422\u0418\u0412\u041D\u041E (\u0432\u0456\u043D \u0437 \u0442\u043E\u0431\u043E\u044E \u041D\u0415 \u0440\u043E\u0437\u043C\u043E\u0432\u043B\u044F\u0432, \u0442\u0438 \u043F\u0438\u0448\u0435\u0448 \u043F\u0435\u0440\u0448\u0438\u0439).
+
+\u041F\u041E\u0420\u0406\u0413 \u0412\u0418\u0421\u041E\u041A\u0418\u0419. \u041A\u0440\u0430\u0449\u0435 \u043C\u043E\u0432\u0447\u0430\u0442\u0438 \u043D\u0456\u0436 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0441\u043B\u0430\u0431\u043A\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0422\u0435\u0431\u0435 \u043C\u043E\u0436\u0443\u0442\u044C \u0437\u0430\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u0442\u0438 \u044F\u043A\u0449\u043E \u0441\u043F\u0430\u043C.
+
+\u041F\u0420\u0410\u0412\u0418\u041B\u0410:
+- \u042F\u043A\u0449\u043E \u0436\u043E\u0434\u0435\u043D \u0441\u0438\u0433\u043D\u0430\u043B \u043D\u0435 \u0432\u0430\u0440\u0442\u0438\u0439 \u0443\u0432\u0430\u0433\u0438 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u043F\u0440\u043E\u0441\u0442\u043E "skip" (\u0431\u0435\u0437 \u0432\u0438\u043A\u043B\u0438\u043A\u0443 tool).
+- \u042F\u043A\u0449\u043E \u0432\u0430\u0440\u0442\u0438\u0439 \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 post_chat_message \u0420\u0406\u0412\u041D\u041E \u041E\u0414\u0418\u041D \u0440\u0430\u0437 \u0434\u043B\u044F \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u043E\u0433\u043E \u0441\u0438\u0433\u043D\u0430\u043B\u0443.
+- \u041E\u0431\u0438\u0440\u0430\u0439 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0437\u0430 \u0442\u0435\u043C\u043E\u044E \u0441\u0438\u0433\u043D\u0430\u043B\u0443: \u0441\u0442\u0440\u0456\u043A \u0437\u0432\u0438\u0447\u043A\u0438 \u2192 me, \u0431\u044E\u0434\u0436\u0435\u0442 \u2192 finance, \u043B\u0456\u043A\u0430\u0440 \u2192 health, \u043F\u0440\u043E\u0435\u043A\u0442 \u2192 projects, \u0437\u0430\u0434\u0430\u0447\u0430/\u043F\u043E\u0434\u0456\u044F \u2192 tasks.
+- \u0422\u0435\u043A\u0441\u0442: 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u0442\u043E\u043D \u0414\u0436\u0430\u0440\u0432\u0456\u0441\u0430 (\u043F\u0440\u044F\u043C\u043E, \u0431\u0435\u0437 "\u041F\u0440\u0438\u0432\u0456\u0442!", \u0431\u0435\u0437 \u0444\u0430\u043C\u0456\u043B\u044C\u044F\u0440\u043D\u043E\u0441\u0442\u0456). \u041C\u043E\u0436\u043D\u0430 \u043E\u0434\u043D\u0435 \u0434\u043E\u0440\u0435\u0447\u043D\u0435 emoji \u044F\u043A\u0449\u043E \u043F\u0430\u0441\u0443\u0454.
+- priority: 'critical' \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u043E\u0433\u043E (event-upcoming \u0447\u0435\u0440\u0435\u0437 <3 \u0433\u043E\u0434, budget-overflow, \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0430 \u0434\u043E\u0437\u0430). \u0414\u043B\u044F stuck-task / budget-warn 80-99% / project-stuck \u2014 'normal'.
+- \u041D\u0435 \u0434\u0443\u0431\u043B\u044E\u0439 \u2014 \u044F\u043A\u0449\u043E \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0438\u0433\u043D\u0430\u043B\u0456\u0432 \u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0438\u043F\u0443, \u043E\u0431\u0438\u0440\u0430\u0439 \u043D\u0430\u0439\u0433\u043E\u0441\u0442\u0440\u0456\u0448\u0438\u0439.
+- \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0435\u0442\u0430\u043B\u0435\u0439 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0432 context. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0441\u0430\u043C\u0435 \u0442\u0456 \u0456\u043C\u0435\u043D\u0430/\u0447\u0438\u0441\u043B\u0430 \u0449\u043E \u0434\u0430\u043D\u043E.
+
+\u041F\u0420\u0418\u041A\u041B\u0410\u0414\u0418 \u0425\u041E\u0420\u041E\u0428\u041E\u0413\u041E:
+- stuck-task "\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 \u041E\u043B\u0435\u043D\u0456" 5 \u0434\u043D\u0456\u0432 \u2192 "\u0417\u0430\u0434\u0430\u0447\u0430 \xAB\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 \u041E\u043B\u0435\u043D\u0456\xBB \u0432\u0438\u0441\u0438\u0442\u044C 5 \u0434\u043D\u0456\u0432. \u0412\u0456\u0434\u043A\u043B\u0430\u0434\u0430\u0454\u043C\u043E \u0434\u0430\u043B\u0456 \u0447\u0438 \u0440\u043E\u0431\u0438\u043C\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456? \u23F0"
+- budget-warn 85% \u2192 "85% \u0431\u044E\u0434\u0436\u0435\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E. \u0417\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C 3 300 UAH \u043D\u0430 9 \u0434\u043D\u0456\u0432."
+- appointment-soon \u0447\u0435\u0440\u0435\u0437 4 \u0433\u043E\u0434 \u2192 "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u0442\u0435\u0440\u0430\u043F\u0435\u0432\u0442\u0430 \u043E 14:00 \u2014 \u0447\u0435\u0440\u0435\u0437 4 \u0433\u043E\u0434\u0438\u043D\u0438."
+- streak-risk habit "\u041C\u0435\u0434\u0438\u0442\u0430\u0446\u0456\u044F" streak=7 \u2192 "\u041C\u0435\u0434\u0438\u0442\u0430\u0446\u0456\u044F 7 \u0434\u043D\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u2014 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0432."
+
+\u041F\u0420\u0418\u041A\u041B\u0410\u0414\u0418 \u041F\u041E\u0413\u0410\u041D\u041E\u0413\u041E:
+- "\u041F\u0440\u0438\u0432\u0456\u0442! \u042F\u043A \u0441\u043F\u0440\u0430\u0432\u0438? \u{1F44B}" \u2190 \u043D\u0456\u044F\u043A\u0438\u0445 greetings \u0431\u0435\u0437 \u043F\u0440\u0438\u0432\u043E\u0434\u0443
+- "\u041D\u0435 \u0437\u0430\u0431\u0443\u0434\u044C \u043F\u0440\u043E..." \u2190 \u043C\u043E\u0440\u0430\u043B\u0456\u0437\u043C
+- "\u041C\u043E\u0436\u0435, \u0445\u043E\u0447\u0435\u0448..." \u2190 \u043D\u0435\u0440\u0456\u0448\u0443\u0447\u0456\u0441\u0442\u044C
+
+\u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432\u0430\u0454\u0448\u0441\u044F \u2014 skip.`;
+  }
+  var UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, BRAIN_TOOLS;
   var init_prompts = __esm({
     "src/ai/prompts.js"() {
       init_chips();
@@ -11010,6 +11047,39 @@ ${UI_TOOLS_RULES}`;
         { type: "function", function: { name: "add_finance_subcategory", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0434\u043E\u0434\u0430\u0439 \u0443 \u0407\u0436\u0443 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0421\u043D\u0456\u0434\u0430\u043D\u043E\u043A', '\u0432 \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442 \u2014 \u041C\u0435\u0442\u0440\u043E'.", parameters: { type: "object", properties: { category_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0457 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, subcategory: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" }, comment: { type: "string" } }, required: ["category_name", "subcategory", "comment"], additionalProperties: false } } },
         // --- UI TOOLS (4.17, 18.04.2026 VJF2M) — навігація/фільтри/налаштування ---
         ...UI_TOOLS
+      ];
+      BRAIN_TOOLS = [
+        {
+          type: "function",
+          function: {
+            name: "post_chat_message",
+            description: "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0443 \u0447\u0430\u0442 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0432\u043A\u043B\u0430\u0434\u043A\u0438. \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 \u041C\u0410\u041A\u0421\u0418\u041C\u0423\u041C \u043E\u0434\u0438\u043D \u0440\u0430\u0437 \u0437\u0430 \u043F\u0443\u043B\u044C\u0441 \u2014 \u043A\u0440\u0430\u0449\u0435 \u043C\u043E\u0432\u0447\u0430\u0442\u0438 \u043D\u0456\u0436 \u0441\u043F\u0430\u043C\u0438\u0442\u0438 \u0441\u043B\u0430\u0431\u043A\u0438\u043C \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u043C.",
+            parameters: {
+              type: "object",
+              properties: {
+                tab: {
+                  type: "string",
+                  enum: ["tasks", "notes", "me", "finance", "health", "projects"],
+                  description: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430-\u043E\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0447. \u041E\u0431\u0438\u0440\u0430\u0439 \u0437\u0430 \u0442\u0435\u043C\u043E\u044E \u0441\u0438\u0433\u043D\u0430\u043B\u0443 (\u0441\u0442\u0440\u0456\u043A \u0437\u0432\u0438\u0447\u043A\u0438 \u2192 me, \u0431\u044E\u0434\u0436\u0435\u0442 \u2192 finance, \u043F\u0440\u0438\u0439\u043E\u043C \u043B\u0456\u043A\u0430\u0440\u044F \u2192 health)."
+                },
+                text: {
+                  type: "string",
+                  description: '1-2 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443 \u0442\u043E\u043D\u0456 \u0414\u0436\u0430\u0440\u0432\u0456\u0441\u0430. \u0411\u0435\u0437 "\u041F\u0440\u0438\u0432\u0456\u0442!", \u0431\u0435\u0437 emoji-\u0431\u043E\u043C\u0431\u0430\u0440\u0434\u0443\u0432\u0430\u043D\u043D\u044F. \u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u0434\u043D\u0435 \u0434\u043E\u0440\u0435\u0447\u043D\u0435 emoji.'
+                },
+                priority: {
+                  type: "string",
+                  enum: ["normal", "critical"],
+                  description: "critical \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u043B\u044F \u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u043E\u0433\u043E: \u043F\u043E\u0434\u0456\u044F \u0447\u0435\u0440\u0435\u0437 <3 \u0433\u043E\u0434, \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0430 \u0434\u043E\u0437\u0430 \u043B\u0456\u043A\u0456\u0432, \u0431\u044E\u0434\u0436\u0435\u0442 >100%. \u0412\u0441\u0435 \u0456\u043D\u0448\u0435 \u2014 normal."
+                },
+                reason: {
+                  type: "string",
+                  description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0442\u0435\u0445\u043D\u0456\u0447\u043D\u0438\u0439 \u043C\u0430\u0440\u043A\u0435\u0440 \u2014 \u044F\u043A\u0438\u0439 \u0441\u0430\u043C\u0435 \u0441\u0438\u0433\u043D\u0430\u043B \u0441\u043F\u0440\u043E\u0432\u043E\u043A\u0443\u0432\u0430\u0432. \u0414\u043B\u044F \u043B\u043E\u0433\u0456\u0432."
+                }
+              },
+              required: ["tab", "text", "priority"]
+            }
+          }
+        }
       ];
     }
   });
@@ -15753,31 +15823,18 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (typeof document !== "undefined" && document.hidden) return;
     _checkInFlight = true;
     try {
-      const triggers = [
-        _checkEveningPrompt,
-        _checkStuckTasks,
-        _checkPassedEvents
-      ];
-      for (const trig of triggers) {
-        const hit = trig();
-        if (!hit) continue;
-        const tab = TRIGGER_TO_TAB[hit.type];
-        const judge = shouldOwlSpeak(hit.type, { channel: "chat-followup", targetTab: tab });
-        if (!judge.speak) {
-          continue;
-        }
-        await _sendFollowupToChat(tab, hit.type, hit.item);
-        return;
-      }
+      const hit = _checkEveningPrompt();
+      if (!hit) return;
+      const judge = shouldOwlSpeak(hit.type, { channel: "chat-followup", targetTab: "evening" });
+      if (!judge.speak) return;
+      const text = await _generateEveningPrompt();
+      if (!text) return;
+      addMsgForTab("evening", "agent", text);
+      setOwlCd("followup_global");
+      setOwlCd("evening_prompt_daily");
     } finally {
       _checkInFlight = false;
     }
-  }
-  function _checkStuckTasks() {
-    const cutoff = Date.now() - STUCK_TASK_DAYS * 24 * 60 * 60 * 1e3;
-    const tasks = getTasks().filter((t) => t.status === "active").filter((t) => t.createdAt && t.createdAt < cutoff).filter((t) => owlCdExpired(`followup_stuck_${t.id}`, STUCK_TASK_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    if (tasks.length === 0) return null;
-    return { type: "stuck-task", item: tasks[0] };
   }
   function _checkEveningPrompt() {
     const h = (/* @__PURE__ */ new Date()).getHours();
@@ -15785,29 +15842,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (!owlCdExpired("evening_prompt_daily", EVENING_PROMPT_CD)) return null;
     const hasContent = (getMomentsContext() || "").length > 0 || (getEveningContext() || "").length > 0;
     if (!hasContent) return null;
-    return { type: "evening-prompt", item: null };
-  }
-  function _checkPassedEvents() {
-    const now = Date.now();
-    const events = getEvents().filter((ev) => ev.time).filter((ev) => {
-      const [h, m] = ev.time.split(":").map(Number);
-      if (isNaN(h) || isNaN(m)) return false;
-      const [y, mo, d] = ev.date.split("-").map(Number);
-      if (isNaN(y) || isNaN(mo) || isNaN(d)) return false;
-      const evDate = new Date(y, mo - 1, d, h, m);
-      return now - evDate.getTime() > 30 * 60 * 1e3 && now - evDate.getTime() < 24 * 60 * 60 * 1e3;
-    }).filter((ev) => owlCdExpired(`followup_event_${ev.id}`, EVENT_PASSED_CD)).sort((a, b) => (b.id || 0) - (a.id || 0));
-    if (events.length === 0) return null;
-    return { type: "event-passed", item: events[0] };
-  }
-  async function _sendFollowupToChat(tab, type, item) {
-    const text = type === "evening-prompt" ? await _generateEveningPrompt() : await _generateFollowupText(type, item);
-    if (!text) return;
-    addMsgForTab(tab, "agent", text);
-    setOwlCd("followup_global");
-    if (type === "stuck-task") setOwlCd(`followup_stuck_${item.id}`);
-    if (type === "event-passed") setOwlCd(`followup_event_${item.id}`);
-    if (type === "evening-prompt") setOwlCd("evening_prompt_daily");
+    return { type: "evening-prompt" };
   }
   async function _generateEveningPrompt() {
     try {
@@ -15820,28 +15855,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       return null;
     }
   }
-  async function _generateFollowupText(type, item) {
-    const prompts = {
-      "stuck-task": {
-        system: `\u0422\u0438 \u2014 OWL, \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u041F\u0438\u0448\u0435\u0448 \u044E\u0437\u0435\u0440\u0443 \u0443 \u0447\u0430\u0442 \u0431\u043E \u0431\u0430\u0447\u0438\u0448 \u0449\u043E \u0439\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0432\u0438\u0441\u0438\u0442\u044C \u0443\u0436\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 3 \u0434\u043D\u0456\u0432. \u0417\u0430\u0434\u0430\u0447\u0430: "${item.title}". \u041D\u0430\u043F\u0438\u0448\u0438 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043B\u044E\u0434\u044F\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u043C'\u044F\u043A\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u0449\u043E \u0437 \u043D\u0435\u044E, \u0431\u0435\u0437 \u0442\u0438\u0441\u043A\u0443 \u0456 \u043C\u043E\u0440\u0430\u043B\u0456. \u041C\u043E\u0436\u0435\u0448 \u0434\u043E\u0434\u0430\u0442\u0438 \u043E\u0434\u043D\u0435 \u0434\u043E\u0440\u0435\u0447\u043D\u0435 emoji (\u23F0 \u0430\u0431\u043E \u043F\u043E\u0434\u0456\u0431\u043D\u0435) \u044F\u043A\u0449\u043E \u043F\u0430\u0441\u0443\u0454. \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0435\u0442\u0430\u043B\u0435\u0439 \u044F\u043A\u0438\u0445 \u043D\u0435 \u0437\u043D\u0430\u0454\u0448.`,
-        user: "\u041D\u0430\u043F\u0438\u0448\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F"
-      },
-      "event-passed": {
-        system: `\u0422\u0438 \u2014 OWL, \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u041F\u0438\u0448\u0435\u0448 \u044E\u0437\u0435\u0440\u0443 \u0443 \u0447\u0430\u0442 \u0431\u043E \u0431\u0430\u0447\u0438\u0448 \u0449\u043E \u0443 \u043D\u044C\u043E\u0433\u043E \u0431\u0443\u043B\u0430 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F "${item.title}" \u0456 \u0432\u043E\u043D\u0430 \u0449\u043E\u0439\u043D\u043E \u043F\u0440\u043E\u0439\u0448\u043B\u0430. \u041D\u0430\u043F\u0438\u0448\u0438 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043B\u044E\u0434\u044F\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0449\u0438\u0440\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u044F\u043A \u0432\u043E\u043D\u043E \u043F\u0440\u043E\u0439\u0448\u043B\u043E. \u041C\u043E\u0436\u0435\u0448 \u0434\u043E\u0434\u0430\u0442\u0438 \u043E\u0434\u043D\u0435 \u0434\u043E\u0440\u0435\u0447\u043D\u0435 emoji (\u{1F4AC} \u0430\u0431\u043E \u043F\u043E\u0434\u0456\u0431\u043D\u0435). \u0411\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0444\u0440\u0430\u0437.`,
-        user: "\u041D\u0430\u043F\u0438\u0448\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F"
-      }
-    };
-    const p = prompts[type];
-    if (!p) return null;
-    try {
-      const reply = await callAI(p.system, p.user);
-      if (!reply || typeof reply !== "string") return null;
-      return reply.trim().slice(0, 240);
-    } catch (e) {
-      console.warn("[followups] generation failed:", e);
-      return null;
-    }
-  }
   function startFollowupsCycle() {
     setTimeout(checkFollowups, 30 * 1e3);
     setInterval(checkFollowups, FOLLOWUP_CHECK_INTERVAL);
@@ -15850,30 +15863,360 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       _debounceTimer = setTimeout(checkFollowups, FOLLOWUP_DEBOUNCE);
     });
   }
-  var FOLLOWUP_CHECK_INTERVAL, FOLLOWUP_DEBOUNCE, STUCK_TASK_DAYS, STUCK_TASK_CD, EVENT_PASSED_CD, EVENING_PROMPT_CD, TRIGGER_TO_TAB, _debounceTimer, _checkInFlight;
+  var FOLLOWUP_CHECK_INTERVAL, FOLLOWUP_DEBOUNCE, EVENING_PROMPT_CD, _debounceTimer, _checkInFlight;
   var init_followups = __esm({
     "src/owl/followups.js"() {
       init_core();
-      init_tasks();
-      init_calendar();
       init_evening();
       init_prompts();
       init_inbox_board();
       FOLLOWUP_CHECK_INTERVAL = 5 * 60 * 1e3;
       FOLLOWUP_DEBOUNCE = 5 * 1e3;
-      STUCK_TASK_DAYS = 3;
-      STUCK_TASK_CD = 24 * 60 * 60 * 1e3;
-      EVENT_PASSED_CD = 365 * 24 * 60 * 60 * 1e3;
       EVENING_PROMPT_CD = 24 * 60 * 60 * 1e3;
-      TRIGGER_TO_TAB = {
-        "stuck-task": "tasks",
-        "event-passed": "tasks",
-        // календар зараз живе всередині Продуктивності
-        "evening-prompt": "evening"
-        // Фаза 3 Вечора 2.0 — сова пише першою о 18:00
-      };
       _debounceTimer = null;
       _checkInFlight = false;
+    }
+  });
+
+  // src/owl/brain-signals.js
+  function collectBrainSignals() {
+    const signals = [];
+    try {
+      signals.push(..._collectStuckTasks());
+    } catch (e) {
+      console.warn("[brain-signals] stuck-tasks failed:", e);
+    }
+    try {
+      signals.push(..._collectPassedEvents());
+    } catch (e) {
+      console.warn("[brain-signals] passed-events failed:", e);
+    }
+    try {
+      signals.push(..._collectUpcomingEvents());
+    } catch (e) {
+      console.warn("[brain-signals] upcoming-events failed:", e);
+    }
+    try {
+      signals.push(..._collectBudgetWarn());
+    } catch (e) {
+      console.warn("[brain-signals] budget-warn failed:", e);
+    }
+    try {
+      signals.push(..._collectAppointmentSoon());
+    } catch (e) {
+      console.warn("[brain-signals] appointment-soon failed:", e);
+    }
+    try {
+      signals.push(..._collectStreakRisk());
+    } catch (e) {
+      console.warn("[brain-signals] streak-risk failed:", e);
+    }
+    try {
+      signals.push(..._collectProjectStuck());
+    } catch (e) {
+      console.warn("[brain-signals] project-stuck failed:", e);
+    }
+    try {
+      signals.push(..._collectWeeklyReview());
+    } catch (e) {
+      console.warn("[brain-signals] weekly-review failed:", e);
+    }
+    return signals;
+  }
+  function _collectStuckTasks() {
+    const cutoff = Date.now() - STUCK_TASK_DAYS * 24 * 60 * 60 * 1e3;
+    const tasks = getTasks().filter((t2) => t2.status === "active").filter((t2) => t2.createdAt && t2.createdAt < cutoff).filter((t2) => owlCdExpired(`brain_stuck_${t2.id}`, PER_SIGNAL_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (tasks.length === 0) return [];
+    const t = tasks[0];
+    const daysOld = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
+    return [{
+      tab: "tasks",
+      type: "stuck-task",
+      urgency: "normal",
+      context: { title: t.title, daysOld },
+      cdKey: `brain_stuck_${t.id}`,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectPassedEvents() {
+    const now = Date.now();
+    const minAgo = EVENT_PASSED_MIN_MIN * 60 * 1e3;
+    const maxAgo = EVENT_PASSED_MAX_HR * 60 * 60 * 1e3;
+    const events = getEvents().filter((ev2) => ev2.time && ev2.date).filter((ev2) => {
+      const [h, m] = ev2.time.split(":").map(Number);
+      const [y, mo, d] = ev2.date.split("-").map(Number);
+      if ([h, m, y, mo, d].some(isNaN)) return false;
+      const ts = new Date(y, mo - 1, d, h, m).getTime();
+      const diff = now - ts;
+      return diff > minAgo && diff < maxAgo;
+    }).filter((ev2) => owlCdExpired(`brain_passed_${ev2.id}`, PER_SIGNAL_CD));
+    if (events.length === 0) return [];
+    const ev = events.sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+    return [{
+      tab: "tasks",
+      // календар живе всередині Продуктивності
+      type: "event-passed",
+      urgency: "normal",
+      context: { title: ev.title },
+      cdKey: `brain_passed_${ev.id}`,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectUpcomingEvents() {
+    const now = Date.now();
+    const minAhead = EVENT_UPCOMING_MIN_HR * 60 * 60 * 1e3;
+    const maxAhead = EVENT_UPCOMING_MAX_HR * 60 * 60 * 1e3;
+    const events = getEvents().filter((ev2) => ev2.time && ev2.date).filter((ev2) => {
+      const [h, m] = ev2.time.split(":").map(Number);
+      const [y, mo, d] = ev2.date.split("-").map(Number);
+      if ([h, m, y, mo, d].some(isNaN)) return false;
+      const ts = new Date(y, mo - 1, d, h, m).getTime();
+      const ahead = ts - now;
+      return ahead >= minAhead && ahead <= maxAhead;
+    }).filter((ev2) => owlCdExpired(`brain_upcoming_${ev2.id}`, PER_SIGNAL_CD));
+    if (events.length === 0) return [];
+    const ev = events.sort((a, b) => {
+      const tsA = (/* @__PURE__ */ new Date(a.date + "T" + a.time)).getTime();
+      const tsB = (/* @__PURE__ */ new Date(b.date + "T" + b.time)).getTime();
+      return tsA - tsB;
+    })[0];
+    return [{
+      tab: "tasks",
+      type: "event-upcoming",
+      urgency: "critical",
+      context: { title: ev.title, time: ev.time, date: ev.date },
+      cdKey: `brain_upcoming_${ev.id}`,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectBudgetWarn() {
+    const budget = getFinBudget();
+    if (!budget || !budget.total || budget.total <= 0) return [];
+    const now = /* @__PURE__ */ new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const txs = getFinance();
+    const spent = txs.filter((t) => t.type === "expense" && t.ts >= monthStart).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const pct = Math.round(spent / budget.total * 100);
+    if (pct < BUDGET_WARN_THRESHOLD) return [];
+    const urgency = pct >= 100 ? "critical" : "normal";
+    const type = pct >= 100 ? "budget-overflow" : "budget-warn";
+    const cdKey = `brain_${type}`;
+    if (!owlCdExpired(cdKey, PER_SIGNAL_CD)) return [];
+    return [{
+      tab: "finance",
+      type,
+      urgency,
+      context: { percentage: pct, spent: Math.round(spent), budget: budget.total },
+      cdKey,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectAppointmentSoon() {
+    const now = Date.now();
+    const maxAhead = APPOINTMENT_SOON_HOURS * 60 * 60 * 1e3;
+    const cards = getHealthCards();
+    const candidates = [];
+    for (const c of cards) {
+      const appt = c.nextAppointment;
+      if (!appt || !appt.date) continue;
+      const t = appt.time || "09:00";
+      const [h, m] = t.split(":").map(Number);
+      const [y, mo, d] = appt.date.split("-").map(Number);
+      if ([h, m, y, mo, d].some(isNaN)) continue;
+      const ts = new Date(y, mo - 1, d, h, m).getTime();
+      const ahead = ts - now;
+      if (ahead <= 0 || ahead > maxAhead) continue;
+      const cdKey = `brain_appt_${c.id}_${appt.date}`;
+      if (!owlCdExpired(cdKey, PER_SIGNAL_CD)) continue;
+      candidates.push({ card: c, appt, ahead, cdKey });
+    }
+    if (candidates.length === 0) return [];
+    candidates.sort((a, b) => a.ahead - b.ahead);
+    const best = candidates[0];
+    const hoursAhead = Math.round(best.ahead / (60 * 60 * 1e3));
+    return [{
+      tab: "health",
+      type: "appointment-soon",
+      urgency: hoursAhead <= 3 ? "critical" : "normal",
+      context: {
+        cardName: best.card.name,
+        doctor: best.card.doctor || "",
+        date: best.appt.date,
+        time: best.appt.time,
+        hoursAhead
+      },
+      cdKey: best.cdKey,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectStreakRisk() {
+    const hour = (/* @__PURE__ */ new Date()).getHours();
+    if (hour < STREAK_RISK_HOUR) return [];
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const log = getHabitLog();
+    const todayLog = log[today] || {};
+    const habits = getHabits().filter((h) => h.type === "gain");
+    const candidates = [];
+    for (const h of habits) {
+      const streak = getHabitStreak(h.id);
+      if (streak < 3) continue;
+      const dow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+      const days = h.days || [0, 1, 2, 3, 4];
+      if (!days.includes(dow)) continue;
+      const done = (todayLog[h.id] || 0) >= (h.targetCount || 1);
+      if (done) continue;
+      const cdKey = `brain_streak_${h.id}`;
+      if (!owlCdExpired(cdKey, PER_SIGNAL_CD)) continue;
+      candidates.push({ habit: h, streak, cdKey });
+    }
+    if (candidates.length === 0) return [];
+    candidates.sort((a, b) => b.streak - a.streak);
+    const best = candidates[0];
+    return [{
+      tab: "me",
+      // звички зараз у вкладці "Я" / без окремого чат-бару → пишемо в Я
+      type: "streak-risk",
+      urgency: "normal",
+      context: { habitName: best.habit.name, streak: best.streak },
+      cdKey: best.cdKey,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectProjectStuck() {
+    const cutoff = Date.now() - PROJECT_STUCK_DAYS * 24 * 60 * 60 * 1e3;
+    const projects = getProjects().filter((p2) => (p2.progress || 0) < 100).filter((p2) => p2.lastActivity && p2.lastActivity < cutoff).filter((p2) => owlCdExpired(`brain_project_${p2.id}`, PER_SIGNAL_CD)).sort((a, b) => (a.lastActivity || 0) - (b.lastActivity || 0));
+    if (projects.length === 0) return [];
+    const p = projects[0];
+    const daysStuck = Math.floor((Date.now() - p.lastActivity) / (24 * 60 * 60 * 1e3));
+    return [{
+      tab: "projects",
+      type: "project-stuck",
+      urgency: "normal",
+      context: { name: p.name, daysStuck, progress: p.progress || 0 },
+      cdKey: `brain_project_${p.id}`,
+      cdMs: PER_SIGNAL_CD
+    }];
+  }
+  function _collectWeeklyReview() {
+    const now = /* @__PURE__ */ new Date();
+    if (now.getDay() !== 0) return [];
+    const h = now.getHours();
+    if (h < 18 || h >= 22) return [];
+    const cdKey = "brain_weekly_review";
+    if (!owlCdExpired(cdKey, 6 * 24 * 60 * 60 * 1e3)) return [];
+    return [{
+      tab: "me",
+      type: "weekly-review",
+      urgency: "normal",
+      context: { dayOfWeek: "sunday" },
+      cdKey,
+      cdMs: 6 * 24 * 60 * 60 * 1e3
+      // 6 днів (щоб не спрацювало наступної неділі)
+    }];
+  }
+  var STUCK_TASK_DAYS, BUDGET_WARN_THRESHOLD, APPOINTMENT_SOON_HOURS, EVENT_PASSED_MIN_MIN, EVENT_PASSED_MAX_HR, EVENT_UPCOMING_MIN_HR, EVENT_UPCOMING_MAX_HR, STREAK_RISK_HOUR, PROJECT_STUCK_DAYS, PER_SIGNAL_CD;
+  var init_brain_signals = __esm({
+    "src/owl/brain-signals.js"() {
+      init_tasks();
+      init_calendar();
+      init_finance();
+      init_habits();
+      init_health();
+      init_projects();
+      init_inbox_board();
+      STUCK_TASK_DAYS = 3;
+      BUDGET_WARN_THRESHOLD = 80;
+      APPOINTMENT_SOON_HOURS = 48;
+      EVENT_PASSED_MIN_MIN = 30;
+      EVENT_PASSED_MAX_HR = 24;
+      EVENT_UPCOMING_MIN_HR = 1;
+      EVENT_UPCOMING_MAX_HR = 3;
+      STREAK_RISK_HOUR = 18;
+      PROJECT_STUCK_DAYS = 5;
+      PER_SIGNAL_CD = 24 * 60 * 60 * 1e3;
+    }
+  });
+
+  // src/owl/brain-pulse.js
+  async function brainPulse() {
+    if (_pulseInFlight) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    _pulseInFlight = true;
+    try {
+      const judge = shouldOwlSpeak("brain-pulse", { channel: "chat-followup" });
+      if (!judge.speak) {
+        if (judge.reason !== "followup-global-cd") {
+          console.log("[brain-pulse] skip:", judge.reason);
+        }
+        return;
+      }
+      const signals = collectBrainSignals();
+      if (signals.length === 0) return;
+      const allowedSignals = signals.filter((s) => owlCdExpired(`brain_tab_${s.tab}`, BRAIN_TAB_CD));
+      if (allowedSignals.length === 0) {
+        console.log("[brain-pulse] all tabs on cooldown");
+        return;
+      }
+      const systemPrompt = getBrainPulseSystemPrompt(allowedSignals);
+      const history = [{
+        role: "user",
+        content: '\u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0441\u0438\u0433\u043D\u0430\u043B\u0438 \u0432\u0438\u0449\u0435 \u0456 \u0432\u0438\u043A\u043B\u0438\u0447 post_chat_message \u043E\u0434\u0438\u043D \u0440\u0430\u0437, \u0430\u0431\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 "skip".'
+      }];
+      const result = await callAIWithTools(systemPrompt, history, BRAIN_TOOLS);
+      if (!result || !result.tool_calls || result.tool_calls.length === 0) {
+        console.log("[brain-pulse] model said skip");
+        return;
+      }
+      const call = result.tool_calls[0];
+      if (call.function?.name !== "post_chat_message") {
+        console.warn("[brain-pulse] unexpected tool:", call.function?.name);
+        return;
+      }
+      let args;
+      try {
+        args = JSON.parse(call.function.arguments || "{}");
+      } catch (e) {
+        console.warn("[brain-pulse] bad tool args:", e);
+        return;
+      }
+      const { tab, text, priority, reason } = args;
+      if (!tab || !text) return;
+      addMsgForTab(tab, "agent", text);
+      setOwlCd("followup_global");
+      setOwlCd(`brain_tab_${tab}`);
+      const relevantSignals = allowedSignals.filter((s) => s.tab === tab);
+      for (const s of relevantSignals) {
+        if (s.cdKey) setOwlCd(s.cdKey);
+      }
+      console.log(`[brain-pulse] posted to ${tab} (${priority}, reason: ${reason || "?"})`);
+    } catch (e) {
+      console.warn("[brain-pulse] error:", e);
+    } finally {
+      _pulseInFlight = false;
+    }
+  }
+  function startBrainPulseCycle() {
+    setTimeout(brainPulse, 45 * 1e3);
+    setInterval(brainPulse, BRAIN_PULSE_INTERVAL);
+    if (typeof window !== "undefined") {
+      window.addEventListener("nm-data-changed", () => {
+        clearTimeout(_debounceTimer2);
+        _debounceTimer2 = setTimeout(brainPulse, BRAIN_PULSE_DEBOUNCE);
+      });
+    }
+  }
+  var BRAIN_PULSE_INTERVAL, BRAIN_PULSE_DEBOUNCE, BRAIN_TAB_CD, _pulseInFlight, _debounceTimer2;
+  var init_brain_pulse = __esm({
+    "src/owl/brain-pulse.js"() {
+      init_core();
+      init_prompts();
+      init_inbox_board();
+      init_brain_signals();
+      BRAIN_PULSE_INTERVAL = 10 * 60 * 1e3;
+      BRAIN_PULSE_DEBOUNCE = 60 * 1e3;
+      BRAIN_TAB_CD = 24 * 60 * 60 * 1e3;
+      _pulseInFlight = false;
+      _debounceTimer2 = null;
     }
   });
 
@@ -16452,6 +16795,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       } catch (e) {
       }
     }, 3e3);
+    setTimeout(() => {
+      try {
+        startBrainPulseCycle();
+      } catch (e) {
+      }
+    }, 4e3);
   }
   function showApp() {
     const splash = document.getElementById("splash");
@@ -16481,6 +16830,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_board();
       init_inbox_board();
       init_followups();
+      init_brain_pulse();
       init_keyboard();
       init_inbox();
       init_tasks();
@@ -17907,6 +18257,7 @@ ${legacy}`;
   init_board();
   init_proactive();
   init_followups();
+  init_brain_pulse();
   init_inbox();
   init_tasks();
   init_habits();

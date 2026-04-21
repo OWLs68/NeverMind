@@ -4,6 +4,7 @@ import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
 import { renderOwlBoard, setupChatBarSwipe, startOwlBoardCycle, clearStaleBoards } from '../owl/inbox-board.js';
 import { startFollowupsCycle } from '../owl/followups.js';
+import { startBrainPulseCycle } from '../owl/brain-pulse.js';
 import { setupKeyboardAvoiding } from '../ui/keyboard.js';
 import { renderInbox } from '../tabs/inbox.js';
 import { renderTasks, setupModalSwipeClose } from '../tabs/tasks.js';
@@ -392,6 +393,9 @@ function init() {
   setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 2000);
   // Live chat replies (Фаза 2 OWL-мозку) — follow-up повідомлення у контекстний чат
   setTimeout(() => { try { startFollowupsCycle(); } catch(e) {} }, 3000);
+  // Brain Pulse (ZJmdF Фаза B — Один мозок на все): проактивні повідомлення
+  // у чат будь-якої вкладки на основі живих сигналів. Мозок сам обирає куди/що.
+  setTimeout(() => { try { startBrainPulseCycle(); } catch(e) {} }, 4000);
 }
 
 function showApp() {
