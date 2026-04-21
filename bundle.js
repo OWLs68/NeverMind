@@ -16371,7 +16371,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const splash = document.getElementById("splash");
     if (splash) {
       splash.classList.add("hide");
-      setTimeout(() => splash.classList.add("gone"), 400);
+      setTimeout(() => splash.classList.add("gone"), 200);
     }
     try {
       checkOnboarding();
@@ -16384,8 +16384,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     } catch (e) {
       console.error("init error:", e);
     }
-    const delay = document.readyState === "complete" ? 300 : 500;
-    setTimeout(showApp, delay);
+    showApp();
   }
   var currentTabForAnim, NM_KEYS;
   var init_boot = __esm({
@@ -16472,9 +16471,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const splash = document.getElementById("splash");
         if (splash && !splash.classList.contains("gone")) {
           splash.classList.add("hide");
-          setTimeout(() => splash.classList.add("gone"), 600);
+          setTimeout(() => splash.classList.add("gone"), 200);
         }
-      }, 3e3);
+      }, 1e3);
     }
   });
 

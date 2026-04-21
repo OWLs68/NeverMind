@@ -49,11 +49,10 @@ body {
   justify-content: flex-start;
   padding-top: max(114px, calc(env(safe-area-inset-top) + 90px));
   background: linear-gradient(175deg, #f5c49a 0%, #f0c090 35%, #e8d5b0 70%, #e5d5b5 100%);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 #splash.hide {
   opacity: 0;
-  transform: scale(1.04);
   pointer-events: none;
 }
 #splash.gone {
