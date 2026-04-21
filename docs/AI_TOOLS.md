@@ -131,6 +131,7 @@
 | `switch_tab` | ✅ | "покажи календар", "відкрий фінанси" |
 | `open_memory` | ✅ | "що ти про мене знаєш" |
 | `open_settings` | ✅ | "відкрий налаштування" |
+| `open_calendar` | ✅ (rJYkw 21.04) | "які події заплановані" (highlight_events:true) / "відкрий календар" (false) |
 | `open_record` | 🚧 блок | Треба API пошуку + highlight |
 | `open_trash` | 🚧 блок | Нема UI модалки кошика |
 
