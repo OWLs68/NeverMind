@@ -72,6 +72,7 @@
 
 | ID | Дата | Закрито / Зроблено | Коміти | Гілка | Деталі |
 |---|---|---|---|---|---|
+| **rJYkw** | 21.04 | ✅ Шар 2 "Один мозок V2" ЗАВЕРШЕНО (4 фази: unified storage + tab-switched/AbortController/крос-чат + призма+пробій+fade + boosting+брифінг) + UX швидкого старту (splash 800→200мс) + бірюзовий колір подій + AI-дія open_calendar з чіпом "Відкрити календар". 3 ітерації Gemini. 10 комітів. CACHE_NAME nm-20260421-0445→1949 | 10 | `claude/start-session-rJYkw` | [CHANGES §21.04-rJYkw](../docs/CHANGES.md) |
 | **Gg3Fy** | 20-21.04 | ✅ Шар 1 "Один мозок V2" ЗАВЕРШЕНО: створено `ai/tool-dispatcher.js`, мігровано Health/Finance/Projects на INBOX_TOOLS, додано 10 нових tools. iPhone v340 тест: 5/6 фраз ✅. **B-94/B-95 закриті.** B-96 (концепція картки Здоровʼя) — 3 ітерації фіксу: тематичний матчинг → загальна картка + автодубль → селективний дубль. 9 комітів. CACHE_NAME nm-20260420-2040→20260421-0445. ROADMAP Шар 3 переписано. | 9 | `claude/start-session-Gg3Fy` | [CHANGES §20-21.04-Gg3Fy](../docs/CHANGES.md) |
 | EWxjG | 20.04 | ✅ B-93 (CSS fade чат-вікна, `9f80341`). ❌ B-94/B-95: два промпт-підходи провалились на iPhone (коміти `379f13e`, `6fa67e2`) — треба архітектурний Шар 1. CACHE_NAME nm-20260420-1948→2040 | 3 | `claude/start-session-EWxjG` (merged) | [CHANGES §20.04-EWxjG](../docs/CHANGES.md) |
 | 2Veg1 | 20.04 | Нова apple-touch-icon: сова-логотип (лайн-арт на беж-папері) через base64 у index.html рядок 18. 2 ітерації (перша обрізала ноги через iOS-заокруглення, друга з запасом ~80px — fix). CACHE_NAME bump nm-20260420-1120→1948 | 2 | `claude/start-session-2Veg1` (merged) | [CHANGES §20.04-2Veg1](../docs/CHANGES.md) |
@@ -87,7 +88,58 @@
 
 ---
 
-## 🔧 Поточна сесія Gg3Fy — Шар 1 "Один мозок V2" (20.04.2026, автономна робота вночі)
+## 🔧 Поточна сесія rJYkw — Шар 2 "Один мозок V2" + UX швидкого старту (21.04.2026)
+
+### Мета і результат
+Перетворити 8 окремих сов у єдиний мозок з призмою вкладки (Шар 2 дорожньої карти) + прибрати тертя при відкритті застосунку + AI-дія для миттєвого відкриття календаря з подіями. **Підсумок:** ✅ Обидва блоки повністю закриті — Шар 2 (4 фази) + UX (4 фази) + 2 iPhone-фікси. 10 комітів, всі запушені.
+
+### Зроблено (10 комітів)
+
+**Шар 2 "Один мозок V2":**
+1. **`444d0cd` — Ф1 Unified storage.** Створено `src/owl/unified-storage.js` — єдиний ключ `nm_owl_board_unified` (масив до 50 повідомлень, кожне з `forTab`). Lazy міграція зі старих 8 ключів. Обгортки `getOwlBoardMessages`/`saveOwlBoardMessages`/`getTabBoardMsgs`/`saveTabBoardMsg` для backward compat.
+2. **`1a8d9ac` — Ф2 Tab-switched + крос-чат.** Event `nm-tab-switched` у `switchTab()` + dwell timer 3 сек + `tab-switched` тригер (+1) у Judge Layer + stale>10m (+1) нова градація + один глобальний `_boardAbortController` (скасовує попередній fetch при новому тригері) + `getRecentChatsAcrossTabs()` у `ai/core.js` (2 останні репліки з будь-якого чату за 30 хв) + жорстке розмежування `boardHistory` (proactive) vs `recentChat` (reactive) у системному промпті + блок `[ЗМІНА ФОКУСУ]` для transitionFrom.
+3. **`2701573` — Ф3 Призма + fade.** `_pickMessageForTab()` у `board.js` — показуємо `msgs[0]` якщо `forTab===tab` АБО `priority==='critical'` (Jarvis-пуш), інакше — останнє для вкладки. CSS transition opacity 0.2s на `.owl-speech-text`. Функція `_applyTabText` робить fade-out→текст→fade-in 200+200мс. Сірий підпис "N хв тому" (клас `owl-time-stale`) для повідомлень старше 10 хв.
+4. **`f2eb4f2` — Ф4 Tab-specific boosting + брифінг.** У `_judgeBoard(trigger, targetTab)` додано бонуси: health-evening streak-risk +2, finance-monthend (≥25 числа) budget-warn +2, me-monday week-start +2, projects-work stuck-tasks +2, evening-dusk no-evening-summary +2. Ранковий брифінг через `options.isBriefing:true` у `generateBoardMessage` — промпт просить `priority:critical` щоб повідомлення було видно скрізь.
+
+**UX швидкого старту + AI-дія Календар:**
+5. **`9c515f8` — Фаза A splash 800мс→200мс.** У `boot.js` прибрано `setTimeout(showApp, 300-500мс)` — викликається одразу. Fade скорочено з 400мс до 200мс. Fallback 3с→1с. У style.css прибрано `transform:scale` (економія на composite).
+6. **`07af786` — Фаза B бірюзовий колір подій.** Sed замінив фіолет `#6366f1`/`rgba(99,102,241,*)` → бірюзовий `#14b8a6`/`rgba(20,184,166,*)` у `calendar.js` (всі 7 місць: фон, border, крапка, текст, timeline). У `index.html` — time picker у модалці події + кнопка "Зберегти" (градієнт `#2dd4bf`→`#14b8a6`).
+7. **`88c35eb` — Фаза C AI-дія open_calendar.** Додано tool `open_calendar(highlight_events:boolean)` у `UI_TOOLS`. Handler викликає `openCalendarModal()` + через 400мс `highlightEventDays()` (після анімації scale). Функція експортована у window. CSS `@keyframes cal-day-event-pulse-anim` — бірюзовий box-shadow pulse 1.5s infinite. Автозупинка через 8 сек. Правило в `UI_TOOLS_RULES`: питання про події → tool + текстова відповідь.
+8. **`e1b3ce0` — Фаза D доки.** CACHE_NAME bump, оновлено `docs/AI_TOOLS.md` (нова таблиця A), оновлено `_ai-tools/SESSION_STATE.md`.
+9. **`e1880ea` — фікс: модель дала тільки текст.** iPhone v350: "Які в мене події?" → сова відповіла текстом але не викликала `open_calendar`. Причина: формулювання "ОКРІМ виклику tool" gpt-4o-mini читав як "замість". Переписано жорстко: "ЖОРСТКЕ ПРАВИЛО ДВОХ ДІЙ", "ОБОВ'ЯЗКОВО І TOOL І ТЕКСТ ОДНОЧАСНО", з конкретним прикладом tool_call + content.
+10. **`b17cd4b` — чіп "Відкрити календар" (мінімальне тертя).** Роман: "не треба писати 'покажи'". Додано обробку особливого `action:"nav", target:"calendar"` у `handleChipClick` (chips.js) — напряму викликає `handleUITool('open_calendar', {highlight_events:true})`. Правило у промпті: при відповіді про події додати chip "Відкрити календар" — тап одразу відкриває модалку з пульсацією.
+
+### Консультація з Gemini (3 ітерації)
+- Ітерація 1: поверхнева (не знала про `getAIContext`, `getRecentActions`). Після першого промпту.
+- Ітерація 2: вже враховує контекст. Прийняли: AbortController один глобальний, правило "НІКОЛИ не кажи я бачу ти перейшов", Context Thrashing пастка (розмежування пам'ятей).
+- Ітерація 3: самооцінка 7/10. Прийняли: priority-critical override (моя ідея), tab-specific boosting (моя ідея), сірий підпис "N хв тому" замість згортання. Gemini оцінив "priority-critical + tab-specific boosting разом" як найбільший Jarvis-feel за мінімум роботи.
+
+### Обговорено (без виконання)
+- Шар 3 "мозок бачить всі чати" — частково зроблено через `getRecentChatsAcrossTabs()` (2 репліки). Розширення до 3-5 з тегами — у майбутній сесії.
+- Відмовились від adaptive UI silence (opacity 0.5) — виглядатиме як баг.
+- Відмовились від адаптивного dwell time (0-10 сек) — over-engineering.
+- Chips action:"switch_tab" уже було реалізовано як `target:"calendar"` спеціальний випадок — проблема тільки в тому що AI рідко використовує це (треба агресивніший промпт).
+
+### Ключові рішення
+- Вирішили: msgs[0] показувати ТІЛЬКИ якщо forTab збігається, критичні пробивають фільтр. Оригінальне "одне повідомлення всюди" — занадто радикально (Gemini вказав на проблему з UX).
+- Вирішили: tab-switched НЕ окремий тригер а модифікатор Judge Layer (+1) який комбінується з stale/data-changed.
+- Вирішили: бірюзовий `#14b8a6` (teal-500) як замінник фіолетового `#6366f1` для подій — Роман не любить фіолет.
+- Вирішили: замість "юзер пише друге повідомлення покажи" → чіп під відповіддю про події з миттєвим відкриттям.
+
+### Інциденти
+- Без інцидентів. 10 комітів з checkpoint-ами після кожної фази, без reset/force push.
+
+### Метрики
+- **Коміти:** 10 (`444d0cd` → ... → `b17cd4b`)
+- **Версії:** v345 → v351+
+- **CACHE_NAME:** `nm-20260421-0445` → `nm-20260421-1949`
+- **Build:** чистий (0 попереджень)
+- **Гілка:** `claude/start-session-rJYkw`
+- **Статус багів:** B-96 все ще очікує повторного iPhone-тесту (ще не перевіряли з Gg3Fy)
+
+---
+
+## 🔧 Попередня сесія Gg3Fy — Шар 1 "Один мозок V2" (20.04.2026, автономна робота вночі)
 
 ### Мета і результат
 Мігрувати всі 8 чатів на єдиний dispatcher + `INBOX_TOOLS`, щоб закрити B-94/B-95 архітектурно. **Підсумок:** ✅ Шар 1 повністю закритий у 4 фази з checkpoint-комітами. B-94/B-95 очікують iPhone-тест v340+ для остаточного закриття.
