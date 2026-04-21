@@ -234,6 +234,20 @@ export function renderChips(containerEl, chips, tab, options = {}) {
 // handleChipClick — головна логіка обробки кліку на чіп
 // ============================================================
 export function handleChipClick(tab, text, action, target) {
+  // Спеціальний target:'calendar' → відкриваємо модалку календаря + пульсація
+  // (rJYkw 21.04.2026). Календар не є вкладкою — це модалка, тому окремо.
+  if (action === 'nav' && target === 'calendar') {
+    if (typeof window.handleUITool === 'function') {
+      window.handleUITool('open_calendar', { highlight_events: true });
+    } else if (typeof window.openCalendarModal === 'function') {
+      window.openCalendarModal();
+      if (typeof window.highlightEventDays === 'function') {
+        setTimeout(() => window.highlightEventDays(), 400);
+      }
+    }
+    return;
+  }
+
   // 1. Навігаційний чіп — B-40 fix: ігнорувати якщо юзер вже на цільовій вкладці
   if (action === 'nav' && VALID_NAV_TARGETS.includes(target)) {
     if (target === currentTab) return; // вже на цій вкладці — не переходити
