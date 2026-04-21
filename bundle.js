@@ -6099,7 +6099,7 @@ ${pulseParts.join("\n")}
       const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
       return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
     }).join("\n");
-    const crossChatRecent = getRecentChatsAcrossTabs(tab, 2, 30 * 60 * 1e3).map((m) => {
+    const crossChatRecent = getRecentChatsAcrossTabs(tab, 5, 60 * 60 * 1e3).map((m) => {
       const mins = Math.floor((Date.now() - m.ts) / 6e4);
       const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
       const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
@@ -12765,7 +12765,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return [];
     }
   }
-  function getRecentChatsAcrossTabs(excludeTab, limit = 2, windowMs = 30 * 60 * 1e3) {
+  function getRecentChatsAcrossTabs(excludeTab, limit = 5, windowMs = 60 * 60 * 1e3) {
     const now = Date.now();
     const all = [];
     _ALL_CHAT_TABS.filter((t) => t !== excludeTab).forEach((t) => {
@@ -12775,7 +12775,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         msgs = JSON.parse(localStorage.getItem(key) || "[]");
       } catch {
       }
-      msgs.slice(-3).forEach((m) => {
+      msgs.slice(-5).forEach((m) => {
         if (m && m.ts && now - m.ts < windowMs && m.text) {
           all.push({ role: m.role, text: m.text, ts: m.ts, tab: t, tabLabel: _TAB_LABELS_CHAT[t] || t });
         }
