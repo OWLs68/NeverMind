@@ -812,7 +812,10 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     } catch(e) {}
 
     // Збереження: inbox і вкладки мають різні сховища
-    const newMsg = { text: parsed.text, topic: parsed.topic || '', priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
+    // Шар 3 (ZJmdF): якщо це ранковий брифінг — примусово ставимо topic для
+    // подальшого downgrade priority при кліку на чіп.
+    const topicFinal = isBriefing ? 'morning-briefing' : (parsed.topic || '');
+    const newMsg = { text: parsed.text, topic: topicFinal, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
     // Ставимо cooldown на тему щоб не повторювати 3 години
     if (parsed.topic) setOwlCd('topic_' + parsed.topic);
     if (isInbox) {
