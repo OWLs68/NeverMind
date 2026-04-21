@@ -398,17 +398,19 @@ function showApp() {
   const splash = document.getElementById('splash');
   if (splash) {
     splash.classList.add('hide');
-    setTimeout(() => splash.classList.add('gone'), 400);
+    setTimeout(() => splash.classList.add('gone'), 200);
   }
   try { checkOnboarding(); } catch(e) {}
 }
 
 // === SPLASH → APP ===
+// Мінімальне тертя (rJYkw 21.04.2026): прибрана затримка 300-500мс перед showApp.
+// Застосунок показується одразу після init(). Splash fade 200мс + знищення DOM.
+// Загалом юзер чекає ~200мс замість 700-900мс раніше.
 function bootApp() {
   try { init(); } catch(e) { console.error('init error:', e); }
-  // Show app after brief splash — use both timer and readyState check
-  const delay = document.readyState === 'complete' ? 300 : 500;
-  setTimeout(showApp, delay);
+  // Показуємо одразу — без delay
+  showApp();
 }
 
 if (document.readyState === 'loading') {
@@ -418,12 +420,14 @@ if (document.readyState === 'loading') {
   bootApp();
 }
 
-// Fallback: force hide splash after 3s no matter what
+// Fallback: якщо bootApp не встиг з якоїсь причини — ховаємо splash через 1с.
+// (раніше було 3с, але тепер showApp викликається одразу — fallback лишається
+// тільки як безпека на випадок краху init()).
 setTimeout(() => {
   const splash = document.getElementById('splash');
   if (splash && !splash.classList.contains('gone')) {
     splash.classList.add('hide');
-    setTimeout(() => splash.classList.add('gone'), 600);
+    setTimeout(() => splash.classList.add('gone'), 200);
   }
-}, 3000);
+}, 1000);
 

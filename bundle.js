@@ -833,6 +833,22 @@ ${logLines}
             return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
           }
           return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
+        case "open_calendar": {
+          if (typeof window.openCalendarModal !== "function") {
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          window.openCalendarModal();
+          if (args.highlight_events && typeof window.highlightEventDays === "function") {
+            setTimeout(() => {
+              try {
+                window.highlightEventDays();
+              } catch (e) {
+              }
+            }, 400);
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u2014 \u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438 \u043F\u0443\u043B\u044C\u0441\u0443\u044E\u0442\u044C." };
+          }
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+        }
         case "open_settings":
           openSettings();
           return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
@@ -914,6 +930,25 @@ ${logLines}
             name: "open_memory",
             description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
             parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_calendar",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u043F\u0440\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0456 \u043F\u043E\u0434\u0456\u0457, \u0440\u043E\u0437\u043A\u043B\u0430\u0434, '\u0449\u043E \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456', '\u044F\u043A\u0456 \u0432 \u043C\u0435\u043D\u0435 \u043F\u043E\u0434\u0456\u0457', '\u044F\u043A\u0438\u0439 \u0437\u0430\u0432\u0442\u0440\u0430 \u0434\u0435\u043D\u044C', '\u0449\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u0443\u0432\u0430\u0432', '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440'. \u042F\u043A\u0449\u043E highlight_events:true \u2014 \u043A\u043B\u0456\u0442\u0438\u043D\u043A\u0438-\u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438 \u0431\u0443\u0434\u0443\u0442\u044C \u043F\u0443\u043B\u044C\u0441\u0443\u0432\u0430\u0442\u0438 \u0431\u0456\u0440\u044E\u0437\u043E\u0432\u0438\u043C (\u044F\u0441\u043A\u0440\u0430\u0432\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u043F\u043E\u0434\u0456\u0457). \u042F\u043A\u0449\u043E false \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u043D\u044C. \u041E\u041A\u0420\u0406\u041C \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u0446\u044C\u043E\u0433\u043E tool \u2014 \u0417\u0410\u0412\u0416\u0414\u0418 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0443 \u0447\u0430\u0442\u0456: \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u0434\u0456\u0439, \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u0437 \u0434\u0430\u0442\u043E\u044E/\u0447\u0430\u0441\u043E\u043C.",
+            strict: true,
+            parameters: {
+              type: "object",
+              properties: {
+                highlight_events: {
+                  type: "boolean",
+                  description: "true \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u041F\u0420\u041E \u043F\u043E\u0434\u0456\u0457 (\u043F\u0456\u0434\u0441\u0432\u0456\u0442\u0438\u0442\u0438 \u043F\u0443\u043B\u044C\u0441\u0430\u0446\u0456\u0454\u044E \u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438). false \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u043E\u043F\u0440\u043E\u0441\u0438\u0432 \u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0418 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 (\u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0435\u043D\u044C)."
+                }
+              },
+              required: ["highlight_events"],
+              additionalProperties: false
+            }
           }
         },
         {
@@ -1276,7 +1311,7 @@ ${lines.join("\n")}`;
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}` : "";
       const opacity = isPast ? "opacity:0.4;" : "";
-      const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#6366f1" : "rgba(30,16,64,0.45)";
+      const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#14b8a6" : "rgba(30,16,64,0.45)";
       const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
       html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       <div style="font-size:15px;flex-shrink:0">${icon}</div>
@@ -1417,17 +1452,26 @@ ${lines.join("\n")}`;
         color = "#ea580c";
         border = "rgba(234,88,12,0.25)";
       } else if (hasEvent) {
-        bg = "rgba(99,102,241,0.12)";
-        color = "#6366f1";
-        border = "rgba(99,102,241,0.25)";
+        bg = "rgba(20,184,166,0.15)";
+        color = "#14b8a6";
+        border = "rgba(20,184,166,0.30)";
       } else if (hasItems) {
         bg = "rgba(30,16,64,0.1)";
         color = "#1e1040";
       }
-      if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#6366f1" : "currentColor"};margin-top:1px"></div>`;
-      cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+      if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#14b8a6" : "currentColor"};margin-top:1px"></div>`;
+      const cls = hasEvent ? ' class="cal-day-event"' : "";
+      cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
     grid.innerHTML = cells;
+  }
+  function highlightEventDays() {
+    const cells = document.querySelectorAll("#calendar-grid .cal-day-event");
+    if (cells.length === 0) return;
+    cells.forEach((c) => c.classList.add("cal-day-event-pulse"));
+    setTimeout(() => {
+      cells.forEach((c) => c.classList.remove("cal-day-event-pulse"));
+    }, 8e3);
   }
   function calendarDayTap(day) {
     _selectedDay = day;
@@ -1456,9 +1500,9 @@ ${lines.join("\n")}`;
         alldayEl.style.display = "block";
         alldayEl.innerHTML = allDayEvents.map((ev) => {
           const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
-          return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(99,102,241,0.08)">
+          return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(20,184,166,0.10)">
           <div style="font-size:15px;flex-shrink:0">\u{1F4C5}</div>
-          <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${escapeHtml(ev.title)}</div>
+          <div style="flex:1;font-size:14px;font-weight:600;color:#14b8a6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C</div>
         </div>`;
         }).join("");
@@ -1495,7 +1539,7 @@ ${lines.join("\n")}`;
           const isEvent = item.type === "event";
           const isTask = item.type === "task";
           const isDone = item.done;
-          const color = isDone ? "rgba(30,16,64,0.3)" : isEvent ? "#6366f1" : isCurrent ? "#ea580c" : "#1e1040";
+          const color = isDone ? "rgba(30,16,64,0.3)" : isEvent ? "#14b8a6" : isCurrent ? "#ea580c" : "#1e1040";
           const icon = isEvent ? "\u{1F4C5}" : isTask ? isDone ? "\u2705" : "\u2611\uFE0F" : "";
           const prio = item.priority === "critical" ? "\u{1F534} " : item.priority === "important" ? "\u{1F7E0} " : "";
           const strike = isDone ? "text-decoration:line-through;" : "";
@@ -1505,7 +1549,7 @@ ${lines.join("\n")}`;
           else tapAttr = `style="`;
           html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
           <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "rgba(30,16,64,0.5)"};text-align:right">${item.time}</div>
-          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#6366f1" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
+          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#14b8a6" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
           <div style="flex:1;font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${color};${strike}">${icon ? icon + " " : ""}${prio}${escapeHtml(item.text)}${isCurrent ? " \u2190" : ""}${isTask && item.dueDate ? " \u{1F4C5}" : ""}</div>
         </div>`;
         });
@@ -1777,7 +1821,7 @@ ${lines.join("\n")}`;
   function _renderEventPriority() {
     const wrap = document.getElementById("event-edit-priority");
     if (!wrap) return;
-    const colors = { normal: "#6366f1", important: "#ea580c", critical: "#ef4444" };
+    const colors = { normal: "#14b8a6", important: "#ea580c", critical: "#ef4444" };
     wrap.querySelectorAll("[data-p]").forEach((el) => {
       const p = el.dataset.p;
       const active = p === _editEventPriority;
@@ -1864,7 +1908,8 @@ ${lines.join("\n")}`;
         deleteEventFromModal,
         setEventPriority,
         closeDayScheduleModal,
-        openRoutineFromCalendar
+        openRoutineFromCalendar,
+        highlightEventDays
       });
     }
   });
@@ -10774,6 +10819,10 @@ ${UI_TOOLS_RULES}`;
 - "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F" \u2192 open_settings
 - "\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C/\u043C\u0456\u0441\u044F\u0446\u044C/3 \u043C\u0456\u0441\u044F\u0446\u0456" (\u0424\u0456\u043D\u0430\u043D\u0441\u0438) \u2192 set_finance_period
 - "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443" / "\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442" \u2192 open_finance_analytics
+- \u041A\u0410\u041B\u0415\u041D\u0414\u0410\u0420 (rJYkw 21.04.2026):
+  \u2022 \u041F\u0438\u0442\u0430\u043D\u043D\u044F \u041F\u0420\u041E \u041F\u041E\u0414\u0406\u0407 \u2014 "\u044F\u043A\u0456 \u0432 \u043C\u0435\u043D\u0435 \u043F\u043E\u0434\u0456\u0457", "\u0449\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E", "\u044F\u043A\u0438\u0439 \u0437\u0430\u0432\u0442\u0440\u0430 \u0434\u0435\u043D\u044C", "\u0449\u043E \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456", "\u043A\u043E\u043B\u0438 \u043F\u0440\u0438\u0439\u043E\u043C", "\u0454 \u043F\u043E\u0434\u0456\u0457 \u043D\u0430 \u0442\u0438\u0436\u043D\u0456" \u2192 open_calendar(highlight_events:true). \u041E\u041A\u0420\u0406\u041C \u0432\u0438\u043A\u043B\u0438\u043A\u0443 tool \u2014 \u0417\u0410\u0412\u0416\u0414\u0418 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C: \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u0434\u0456\u0439, \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u0437 \u0434\u0430\u0442\u043E\u044E/\u0447\u0430\u0441\u043E\u043C (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: "\u0423 \u0442\u0435\u0431\u0435 2 \u043F\u043E\u0434\u0456\u0457 \u2014 \u043F\u0440\u0438\u0439\u043E\u043C \u0437\u0430\u0432\u0442\u0440\u0430 \u043E 10:00 \u0456 \u043F\u0440\u0438\u0457\u0437\u0434 \u043C\u0430\u043C\u0438 23 \u043A\u0432\u0456\u0442\u043D\u044F").
+  \u2022 \u041F\u0440\u043E\u0441\u0442\u043E \u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0418 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u2014 "\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440", "\u043F\u043E\u043A\u0430\u0436\u0438 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440" \u2192 open_calendar(highlight_events:false) \u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u043D\u043D\u044F.
+  \u2022 \u042F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u0439 \u043D\u0435\u043C\u0430\u0454 \u2014 tool \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0437 highlight_events:false + \u0441\u043A\u0430\u0436\u0438 "\u041F\u043E\u0434\u0456\u0439 \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E" (\u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043F\u043E\u0434\u0456\u0457).
 - "\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u0422\u0440\u0435\u043D\u0435\u0440\u0430/\u041F\u0430\u0440\u0442\u043D\u0435\u0440\u0430/\u041C\u0435\u043D\u0442\u043E\u0440\u0430" / "\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C" \u2192 set_owl_mode
 - "\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443" / "\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443" \u2192 export_health_card
 - \u041F\u0420\u0418\u041D\u0426\u0418\u041F \u041C\u0406\u041D\u0406\u041C\u0410\u041B\u042C\u041D\u041E\u0413\u041E \u0422\u0415\u0420\u0422\u042F: \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0434\u0456\u044E \u0441\u043B\u043E\u0432\u0430\u043C\u0438 ("\u0434\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0443 \u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431") \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 save_task \u043D\u0430\u043F\u0440\u044F\u043C\u0443. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 UI tools \u0434\u043B\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0442\u044F \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0445 \u0444\u043E\u0440\u043C \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F. UI tools \u2014 \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457/\u0444\u0456\u043B\u044C\u0442\u0440\u0456\u0432/\u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C.
@@ -16371,7 +16420,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const splash = document.getElementById("splash");
     if (splash) {
       splash.classList.add("hide");
-      setTimeout(() => splash.classList.add("gone"), 400);
+      setTimeout(() => splash.classList.add("gone"), 200);
     }
     try {
       checkOnboarding();
@@ -16384,8 +16433,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     } catch (e) {
       console.error("init error:", e);
     }
-    const delay = document.readyState === "complete" ? 300 : 500;
-    setTimeout(showApp, delay);
+    showApp();
   }
   var currentTabForAnim, NM_KEYS;
   var init_boot = __esm({
@@ -16472,9 +16520,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const splash = document.getElementById("splash");
         if (splash && !splash.classList.contains("gone")) {
           splash.classList.add("hide");
-          setTimeout(() => splash.classList.add("gone"), 600);
+          setTimeout(() => splash.classList.add("gone"), 200);
         }
-      }, 3e3);
+      }, 1e3);
     }
   });
 
