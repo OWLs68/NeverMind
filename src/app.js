@@ -24,6 +24,7 @@ import './owl/chips.js';
 import './owl/board.js';
 import './owl/proactive.js';
 import './owl/followups.js';
+import './owl/brain-pulse.js';
 
 // Tabs (вкладки) — порядок як в оригінальних <script> тегах
 import './tabs/inbox.js';
