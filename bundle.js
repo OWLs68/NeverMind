@@ -3952,7 +3952,7 @@ ${lines.join("\n")}`;
     if (channel === "chat-followup") {
       return _judgeFollowup(trigger, opts.targetTab);
     }
-    return _judgeBoard(trigger);
+    return _judgeBoard(trigger, opts.targetTab);
   }
   function _judgeFollowup(trigger, targetTab) {
     if (activeChatBar && activeChatBar === targetTab) {
@@ -3974,7 +3974,7 @@ ${lines.join("\n")}`;
     const speak = score >= SPEAK_THRESHOLD;
     return { speak, score, reason: reasons.join(", ") };
   }
-  function _judgeBoard(trigger) {
+  function _judgeBoard(trigger, targetTab) {
     try {
       const silenceUntil = parseInt(localStorage.getItem("nm_owl_silence_until") || "0");
       if (silenceUntil > Date.now()) {
@@ -4113,6 +4113,38 @@ ${lines.join("\n")}`;
     if (now.getDay() === 5 && phase === "evening" && owlCdExpired("week_end", 6 * 60 * 60 * 1e3)) {
       score += 2;
       reasons.push("week-end");
+    }
+    if (targetTab) {
+      if (targetTab === "health" && (phase === "evening" || phase === "night")) {
+        if (reasons.includes("streak-risk")) {
+          score += 2;
+          reasons.push("health-evening-boost");
+        }
+      }
+      if (targetTab === "finance" && now.getDate() >= 25) {
+        if (reasons.includes("budget-warn")) {
+          score += 2;
+          reasons.push("finance-monthend-boost");
+        }
+      }
+      if (targetTab === "me" && now.getDay() === 1 && phase === "morning") {
+        if (reasons.includes("week-start")) {
+          score += 2;
+          reasons.push("me-monday-boost");
+        }
+      }
+      if (targetTab === "projects" && phase === "work") {
+        if (reasons.includes("stuck-tasks")) {
+          score += 2;
+          reasons.push("projects-work-boost");
+        }
+      }
+      if (targetTab === "evening" && (phase === "evening" || phase === "night")) {
+        if (reasons.includes("no-evening-summary")) {
+          score += 2;
+          reasons.push("evening-dusk-boost");
+        }
+      }
     }
     if (sinceLastVisible > 60 * 60 * 1e3) {
       score += 3;
@@ -5997,6 +6029,7 @@ ${pulseParts.join("\n")}
     const abortSignal = _boardAbortController.signal;
     const isInbox = tab === "inbox";
     const transitionFrom = options.transitionFrom || null;
+    const isBriefing = !!options.isBriefing;
     const context = getBoardContext(tab);
     const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const existing = allMsgs[0] || null;
@@ -6063,6 +6096,9 @@ ${crossActions}` : ""}
 ${transitionFrom ? `
 [\u0417\u041C\u0406\u041D\u0410 \u0424\u041E\u041A\u0423\u0421\u0423]: \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u043F\u0435\u0440\u0435\u0439\u0448\u043E\u0432 \u0437 "${tabLabels[transitionFrom] || transitionFrom}" \u043D\u0430 "${tabLabels[tab] || tab}".
 [\u041F\u0420\u0410\u0412\u0418\u041B\u041E]: \u042F\u043A\u0449\u043E \u0442\u0435\u043C\u0430 \u0437 "${tabLabels[transitionFrom] || transitionFrom}" \u043B\u043E\u0433\u0456\u0447\u043D\u043E \u043F\u043E\u0432\u02BC\u044F\u0437\u0430\u043D\u0430 \u0437 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u044E \u0432\u043A\u043B\u0430\u0434\u043A\u043E\u044E \u2014 \u043F\u043B\u0430\u0432\u043D\u043E \u0437\u0432\u02BC\u044F\u0436\u0438 \u043E\u0434\u043D\u0456\u0454\u044E \u0444\u0440\u0430\u0437\u043E\u044E. \u042F\u043A\u0449\u043E \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u043D\u0435\u043C\u0430\u0454 \u2014 \u041F\u0420\u041E\u0406\u0413\u041D\u041E\u0420\u0423\u0419 \u0444\u0430\u043A\u0442 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0443 \u0456 \u0440\u0435\u0430\u0433\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u043D\u0430 \u0441\u0442\u0430\u043D \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0457 \u0432\u043A\u043B\u0430\u0434\u043A\u0438. \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u044F \u0431\u0430\u0447\u0443 \u0442\u0438 \u043F\u0435\u0440\u0435\u0439\u0448\u043E\u0432" \u0430\u0431\u043E "\u0434\u043E\u0431\u0440\u0435 \u0449\u043E \u0437\u0430\u0439\u0448\u043E\u0432 \u0441\u044E\u0434\u0438".` : ""}
+${isBriefing ? `
+[\u0420\u0410\u041D\u041A\u041E\u0412\u0418\u0419 \u0411\u0420\u0418\u0424\u0406\u041D\u0413]: \u0426\u0435 \u043F\u0435\u0440\u0448\u0438\u0439 \u0440\u0430\u0437 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u0432\u0456\u0434\u043A\u0440\u0438\u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456.
+[\u041F\u0420\u0410\u0412\u0418\u041B\u041E]: \u0414\u0430\u0439 \u041E\u0414\u041D\u0415 \u0433\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F-\u043E\u0433\u043B\u044F\u0434 \u0434\u043D\u044F (\u041D\u0415 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0432\u043A\u043B\u0430\u0434\u043A\u0438). \u041F\u043E\u0441\u0442\u0430\u0432 priority:"critical" \u2014 \u0432\u043E\u043D\u043E \u0431\u0443\u0434\u0435 \u0432\u0438\u0434\u043D\u0435 \u043D\u0430 \u0432\u0441\u0456\u0445 \u0432\u043A\u043B\u0430\u0434\u043A\u0430\u0445. \u0412\u043A\u043B\u044E\u0447\u0438 chips \u0434\u043E 2-3 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0438\u0445 \u0432\u043A\u043B\u0430\u0434\u043E\u043A \u0434\u0435 \u0449\u043E\u0441\u044C \u0447\u0435\u043A\u0430\u0454. \u041D\u0435 \u0432\u0456\u0442\u0430\u0439\u0441\u044F \u0431\u0435\u0437 \u0434\u0456\u043B\u0430, \u043E\u0434\u0440\u0430\u0437\u0443 \u0434\u043E \u0441\u0443\u0442\u0456.` : ""}
 
 \u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430; \u0444\u0430\u043A\u0442\u0438 \u043C\u0430\u044E\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u0456 \u043C\u0456\u0442\u043A\u0438 \u2014 \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442, \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D):
 ${formatFactsForBoard(15) || localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
@@ -6458,7 +6494,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           if (isFirstOpenToday) {
             localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO);
             const judge = shouldOwlSpeak("first-open-today");
-            if (judge.speak) generateBoardMessage(currentTab || "inbox");
+            if (judge.speak) generateBoardMessage(currentTab || "inbox", { isBriefing: true });
             return;
           }
           const lastActive = parseInt(localStorage.getItem(NM_LAST_ACTIVE_KEY) || "0");

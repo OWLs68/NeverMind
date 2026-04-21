@@ -624,6 +624,7 @@ export async function generateBoardMessage(tab, options = {}) {
 
   const isInbox = tab === 'inbox';
   const transitionFrom = options.transitionFrom || null;
+  const isBriefing = !!options.isBriefing;
 
   // Контекст: inbox має свій збирач, решта — спільний
   const context = getBoardContext(tab);
@@ -709,6 +710,9 @@ ${crossActions}` : ''}
 ${transitionFrom ? `
 [ЗМІНА ФОКУСУ]: Юзер щойно перейшов з "${tabLabels[transitionFrom] || transitionFrom}" на "${tabLabels[tab] || tab}".
 [ПРАВИЛО]: Якщо тема з "${tabLabels[transitionFrom] || transitionFrom}" логічно повʼязана з поточною вкладкою — плавно звʼяжи однією фразою. Якщо звʼязку немає — ПРОІГНОРУЙ факт переходу і реагуй тільки на стан поточної вкладки. НІКОЛИ не кажи "я бачу ти перейшов" або "добре що зайшов сюди".` : ''}
+${isBriefing ? `
+[РАНКОВИЙ БРИФІНГ]: Це перший раз коли юзер відкрив застосунок сьогодні.
+[ПРАВИЛО]: Дай ОДНЕ глобальне повідомлення-огляд дня (НЕ конкретної вкладки). Постав priority:"critical" — воно буде видне на всіх вкладках. Включи chips до 2-3 найважливіших вкладок де щось чекає. Не вітайся без діла, одразу до суті.` : ''}
 
 ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина; факти мають часові мітки — якщо по здоров'ю/обставинах бачиш старий факт, НЕ цитуй як поточний стан):
 ${formatFactsForBoard(15) || localStorage.getItem('nm_memory') || '(ще не знаю)'}
@@ -1167,7 +1171,10 @@ document.addEventListener('visibilitychange', () => {
     if (isFirstOpenToday) {
       localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO);
       const judge = shouldOwlSpeak('first-open-today');
-      if (judge.speak) generateBoardMessage(currentTab || 'inbox');
+      // Шар 2 Фаза 4: ранковий брифінг позначаємо як глобальний —
+      // мозок поставить priority:'critical' і завдяки пробою на рендері
+      // це повідомлення буде видно на ВСІХ вкладках як iOS push.
+      if (judge.speak) generateBoardMessage(currentTab || 'inbox', { isBriefing: true });
       return; // не дублюємо welcome-back
     }
     // Welcome Back — повернувся після довгої паузи в межах одного дня

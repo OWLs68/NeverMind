@@ -423,7 +423,7 @@ export function shouldOwlSpeak(trigger, opts = {}) {
   if (channel === 'chat-followup') {
     return _judgeFollowup(trigger, opts.targetTab);
   }
-  return _judgeBoard(trigger);
+  return _judgeBoard(trigger, opts.targetTab);
 }
 
 // ============================================================
@@ -454,8 +454,9 @@ function _judgeFollowup(trigger, targetTab) {
 // Канал 'board' — проактивні повідомлення на табло
 // Існуюча логіка 08.04 (Judge Layer) — без змін, тільки винесена у приватну функцію.
 // ============================================================
-function _judgeBoard(trigger) {
-  // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time' | 'chat-closed'
+function _judgeBoard(trigger, targetTab) {
+  // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time' | 'chat-closed' | 'tab-switched'
+  // targetTab: поточна вкладка (для tab-specific boosting тригерів, Шар 2 Фаза 4)
 
   // 4.40 Auto-silence (ROADMAP Блок 1) — якщо юзер проігнорував 3 повідомлення
   // поспіль (детекція у chips.js trackChipsIgnored), OWL мовчить 4 години.
@@ -650,6 +651,31 @@ function _judgeBoard(trigger) {
   if (now.getDay() === 5 && phase === 'evening' && owlCdExpired('week_end', 6 * 60 * 60 * 1000)) {
     score += 2;
     reasons.push('week-end');
+  }
+
+  // === TAB-SPECIFIC BOOSTING (Шар 2 Фаза 4, rJYkw 21.04.2026) ===
+  // Тригери отримують додатковий скор залежно від активної вкладки:
+  //  • На Здоровʼї ввечері — звички під загрозою критичніші.
+  //  • На Фінансах наприкінці місяця — бюджет-попередження важливіші.
+  //  • На Я в понеділок вранці — огляд тижня у пріоритеті.
+  //  • На Проектах під час робочого дня — застряглі задачі критичніші.
+  //  • На Вечорі після заходу сонця — відсутність підсумку критичніша.
+  if (targetTab) {
+    if (targetTab === 'health' && (phase === 'evening' || phase === 'night')) {
+      if (reasons.includes('streak-risk')) { score += 2; reasons.push('health-evening-boost'); }
+    }
+    if (targetTab === 'finance' && now.getDate() >= 25) {
+      if (reasons.includes('budget-warn')) { score += 2; reasons.push('finance-monthend-boost'); }
+    }
+    if (targetTab === 'me' && now.getDay() === 1 && phase === 'morning') {
+      if (reasons.includes('week-start')) { score += 2; reasons.push('me-monday-boost'); }
+    }
+    if (targetTab === 'projects' && phase === 'work') {
+      if (reasons.includes('stuck-tasks')) { score += 2; reasons.push('projects-work-boost'); }
+    }
+    if (targetTab === 'evening' && (phase === 'evening' || phase === 'night')) {
+      if (reasons.includes('no-evening-summary')) { score += 2; reasons.push('evening-dusk-boost'); }
+    }
   }
 
   // Як довго юзер бачить ТЕ САМЕ повідомлення — градуйований бонус.
