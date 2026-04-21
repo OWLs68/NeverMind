@@ -1,4 +1,4 @@
-import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError } from '../ai/core.js';
+import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs } from '../ai/core.js';
 import { formatFactsForBoard } from '../ai/memory.js';
 import { getRecentActions } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
@@ -568,6 +568,12 @@ function checkTabBoardTrigger(tab) {
 
 let _boardGenerating = {};
 
+// Шар 2 "Один мозок V2" Фаза 2 (rJYkw 21.04.2026):
+// Один глобальний AbortController — бо "мозок один". Якщо під час генерації
+// (наприклад для вкладки Нотатки) прилетів новіший тригер (юзер свайпнув
+// на Фінанси) — попередній запит скасовується, результат уже нерелевантний.
+let _boardAbortController = null;
+
 // Червона крапка на сові якщо API табло падає
 function _updateApiDot() {
   const dot = document.getElementById('owl-api-dot');
@@ -598,7 +604,7 @@ function _getBannedTopics(msgs) {
 // generateBoardMessage — ЄДИНА функція генерації повідомлення табло
 // Працює для БУДЬ-якої вкладки включно з inbox
 // ============================================================
-export async function generateBoardMessage(tab) {
+export async function generateBoardMessage(tab, options = {}) {
   if (_boardGenerating[tab]) return;
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
@@ -608,7 +614,16 @@ export async function generateBoardMessage(tab) {
   }
   _boardGenerating[tab] = true;
 
+  // Шар 2 "Один мозок V2" Фаза 2: скасовуємо попередню генерацію (AbortController)
+  // бо мозок один і результат старого запиту вже нерелевантний.
+  if (_boardAbortController) {
+    try { _boardAbortController.abort(); } catch(e) {}
+  }
+  _boardAbortController = new AbortController();
+  const abortSignal = _boardAbortController.signal;
+
   const isInbox = tab === 'inbox';
+  const transitionFrom = options.transitionFrom || null;
 
   // Контекст: inbox має свій збирач, решта — спільний
   const context = getBoardContext(tab);
@@ -645,6 +660,18 @@ export async function generateBoardMessage(tab) {
       return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
     }).join('\n');
 
+  // Шар 2 Фаза 2: КРОС-ЧАТОВА пам'ять. Беремо 2 найсвіжіші репліки з БУДЬ-якого
+  // чату крім поточного за 30 хв — щоб мозок не "забував" про тему з іншої вкладки
+  // (напр. у Inbox обговорювали "болить спина", юзер перейшов на Здоровʼя де чат
+  // ще порожній — без цього блоку сова не знала б).
+  const crossChatRecent = getRecentChatsAcrossTabs(tab, 2, 30 * 60 * 1000)
+    .map(m => {
+      const mins = Math.floor((Date.now() - m.ts) / 60000);
+      const when = mins < 1 ? 'щойно' : mins + ' хв тому';
+      const who = m.role === 'agent' ? 'агент' : 'юзер';
+      return `[Чат ${m.tabLabel} · ${when}] ${who}: ${m.text}`;
+    }).join('\n');
+
   const tabLabels = { inbox: 'Inbox', tasks: 'Продуктивність', notes: 'Нотатки', me: 'Я', evening: 'Вечір', finance: 'Фінанси', health: 'Здоров\'я', projects: 'Проекти' };
   const phase = getDayPhase();
   const sc = getSchedule();
@@ -664,14 +691,24 @@ ${sc ? 'РОЗКЛАД ЮЗЕРА: прокидається ' + (sc.wakeUpStr ||
 
 Ти пишеш КОРОТКЕ проактивне повідомлення для табло${isInbox ? ' в Inbox' : ' у вкладці "' + (tabLabels[tab] || tab) + '"'}. Це НЕ відповідь на запит — це твоя ініціатива.
 
-ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ (пам'ятай що вже казав, будуй діалог, не повторюйся):
+⚠️ ДВА ТИПИ ПАМʼЯТІ — НЕ ПЛУТАЙ:
+• "ПРОАКТИВНА ПАМʼЯТЬ" (boardHistory нижче) — це ТВОЇ ПУБЛІЧНІ СЛОВА на табло, які ти вже говорив. Не повторюй їх, розвивай тему.
+• "РЕАКТИВНА ДОВІДКА" (recentChat + crossChatRecent нижче) — це РОЗМОВА з юзером у чаті. Це НЕ твої слова на табло, це контекст. НЕ цитуй чат як свої публічні повідомлення. Ти пишеш НОВЕ публічне повідомлення.
+
+ПРОАКТИВНА ПАМʼЯТЬ — ТВОЇ ПОПЕРЕДНІ ПОВІДОМЛЕННЯ НА ТАБЛО (не повторюйся, будуй діалог):
 ${boardHistory || '(ще нічого не казав)'}
 
-ОСТАННІ ПОВІДОМЛЕННЯ З ЧАТУ (враховуй що вже обговорювали, не повторюй і не суперечь):
+РЕАКТИВНА ДОВІДКА — РОЗМОВА У ПОТОЧНОМУ ЧАТІ (враховуй щоб не суперечити, але НЕ цитуй як свої слова):
 ${recentChat || '(чат порожній)'}
+${crossChatRecent ? `
+РЕАКТИВНА ДОВІДКА — РЕПЛІКИ В ІНШИХ ЧАТАХ (контекст який юзер обговорював деінде):
+${crossChatRecent}` : ''}
 ${crossActions ? `
-НЕЩОДАВНІ ДІЇ НА ІНШИХ ВКЛАДКАХ (враховуй загальний контекст — що відбувається в житті юзера):
+НЕЩОДАВНІ ДІЇ НА ІНШИХ ВКЛАДКАХ (загальний контекст життя юзера):
 ${crossActions}` : ''}
+${transitionFrom ? `
+[ЗМІНА ФОКУСУ]: Юзер щойно перейшов з "${tabLabels[transitionFrom] || transitionFrom}" на "${tabLabels[tab] || tab}".
+[ПРАВИЛО]: Якщо тема з "${tabLabels[transitionFrom] || transitionFrom}" логічно повʼязана з поточною вкладкою — плавно звʼяжи однією фразою. Якщо звʼязку немає — ПРОІГНОРУЙ факт переходу і реагуй тільки на стан поточної вкладки. НІКОЛИ не кажи "я бачу ти перейшов" або "добре що зайшов сюди".` : ''}
 
 ЩО ТИ ЗНАЄШ ПРО КОРИСТУВАЧА (використовуй для персоналізації — чіпи і поради мають враховувати хто ця людина; факти мають часові мітки — якщо по здоров'ю/обставинах бачиш старий факт, НЕ цитуй як поточний стан):
 ${formatFactsForBoard(15) || localStorage.getItem('nm_memory') || '(ще не знаю)'}
@@ -705,6 +742,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      signal: abortSignal,
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
@@ -788,6 +826,12 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     if (isInbox) renderOwlBoard();
     else renderTabBoard(tab);
   } catch(e) {
+    // Шар 2 Фаза 2: AbortError — це нормально (прилетів новіший тригер).
+    // ТИХО дропаємо, НЕ показуємо fallback — нова генерація вже в процесі.
+    if (e && e.name === 'AbortError') {
+      _boardGenerating[tab] = false;
+      return;
+    }
     // Мережеві помилки (offline, timeout) — тихо, не засмічувати логи
     if (!_isNetworkError(e)) {
       console.warn('[OWL board] generation error:', e?.message || e);
@@ -1083,6 +1127,27 @@ window.addEventListener('nm-chat-closed', () => {
     const judge = shouldOwlSpeak('chat-closed');
     if (judge.speak) generateBoardMessage(currentTab || 'inbox');
   }, 3000); // 3 сек затримка після закриття чату
+});
+
+// === Tab Switched — Шар 2 "Один мозок V2" Фаза 2 (rJYkw 21.04.2026) ===
+// Юзер перейшов на іншу вкладку. Ми вже негайно відрендерили попереднє повідомлення
+// (у switchTab через tryBoardUpdate), щоб не було мигання. Тепер даємо dwell 3 сек
+// (щоб не спрацьовувати при швидких свайпах повз) і питаємо Judge Layer.
+// Якщо скор достатній — генеруємо нове з transitionFrom у промпті.
+let _tabSwitchTimer = null;
+window.addEventListener('nm-tab-switched', (e) => {
+  const { from, to } = e.detail || {};
+  if (!to) return;
+  // Скасовуємо попередній dwell-таймер (юзер гортає далі)
+  if (_tabSwitchTimer) { clearTimeout(_tabSwitchTimer); _tabSwitchTimer = null; }
+  _tabSwitchTimer = setTimeout(() => {
+    _tabSwitchTimer = null;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const judge = shouldOwlSpeak('tab-switched', { targetTab: to });
+    if (judge.speak) {
+      generateBoardMessage(to, { transitionFrom: from });
+    }
+  }, 3000);
 });
 
 // === Welcome Back + Smart Boot-up (3.6) — тригери при поверненні в додаток ===

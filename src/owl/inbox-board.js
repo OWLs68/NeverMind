@@ -519,6 +519,15 @@ function _judgeBoard(trigger) {
     reasons.push('chat-closed');
   }
 
+  // Шар 2 "Один мозок V2" Фаза 2 (rJYkw 21.04.2026):
+  // Перехід між вкладками — невеликий бонус (+1). НЕ гарантовано тригерить
+  // генерацію сам по собі — тільки у поєднанні з іншими скорами (stale, data-changed).
+  // Тобто юзер гортає вкладки → судить набирається тихо, спрацьовує коли є що сказати.
+  if (trigger === 'tab-switched') {
+    score += 1;
+    reasons.push('tab-switched');
+  }
+
   // Нагадування що настали — КРИТИЧНЕ
   let hasCritical = false;
   try {
@@ -643,14 +652,19 @@ function _judgeBoard(trigger) {
     reasons.push('week-end');
   }
 
-  // Як довго юзер бачить ТЕ САМЕ повідомлення — градуйований бонус
-  // Використовує вік ВИДИМОГО повідомлення, не час останньої спроби генерації
+  // Як довго юзер бачить ТЕ САМЕ повідомлення — градуйований бонус.
+  // Використовує вік ВИДИМОГО повідомлення, не час останньої спроби генерації.
+  // Шар 2 Фаза 2: додано stale>10m (+1) — плавніша градація щоб tab-switched
+  // природно спрацьовував на злегка застарілому табло без спаму.
   if (sinceLastVisible > 60 * 60 * 1000) {
     score += 3;
     reasons.push('stale>60m');
   } else if (sinceLastVisible > 30 * 60 * 1000) {
     score += 2;
     reasons.push('stale>30m');
+  } else if (sinceLastVisible > 10 * 60 * 1000) {
+    score += 1;
+    reasons.push('stale>10m');
   }
 
   const speak = score >= SPEAK_THRESHOLD;

@@ -478,6 +478,29 @@ export function loadChatMsgs(tab) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
 
+// === КРОС-ЧАТОВА ПАМ'ЯТЬ (Шар 2 "Один мозок V2" Фаза 2 — rJYkw 21.04.2026) ===
+// Повертає останні N повідомлень з БУДЬ-якого чату (крім excludeTab) за вікно часу.
+// Дає мозку побачити що юзер обговорював на ІНШИХ вкладках — щоб не забувати
+// контекст "ти на Здоровʼї, а в Inbox 5 хв тому було 'болить спина'".
+const _ALL_CHAT_TABS = ['inbox','tasks','notes','me','evening','finance','health','projects'];
+const _TAB_LABELS_CHAT = { inbox:'Inbox', tasks:'Продуктивність', notes:'Нотатки', me:'Я', evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти' };
+export function getRecentChatsAcrossTabs(excludeTab, limit = 2, windowMs = 30 * 60 * 1000) {
+  const now = Date.now();
+  const all = [];
+  _ALL_CHAT_TABS.filter(t => t !== excludeTab).forEach(t => {
+    const key = 'nm_chat_' + t;
+    let msgs = [];
+    try { msgs = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
+    msgs.slice(-3).forEach(m => {
+      if (m && m.ts && (now - m.ts) < windowMs && m.text) {
+        all.push({ role: m.role, text: m.text, ts: m.ts, tab: t, tabLabel: _TAB_LABELS_CHAT[t] || t });
+      }
+    });
+  });
+  all.sort((a, b) => b.ts - a.ts);
+  return all.slice(0, limit);
+}
+
 // === addMsgForTab — універсальний диспатчер для проактивних повідомлень агента ===
 // Використовується followups.js щоб писати в контекстний чат ("один мозок на все")
 // Не відкриває чат-бар, не спамить DOM при закритому барі — надійно зберігає в localStorage
