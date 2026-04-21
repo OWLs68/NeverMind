@@ -1,26 +1,23 @@
 import { openChatBar } from '../ai/core.js';
 import { renderChips } from './chips.js';
-import { getOwlBoardMessages } from './inbox-board.js';
+import { getCurrentMessage, getTabMessages, saveTabMessage } from './unified-storage.js';
 
 // === OWL TAB BOARDS (#37) ===
 export const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
 
-function getOwlTabBoardKey(tab) { return 'nm_owl_tab_' + tab; }
+// Шар 2 "Один мозок V2" (21.04 rJYkw): tab-specific TS-ключі лишаються для
+// Judge Layer таймерів (різний темп оновлень per tab) — це не шкодить єдиному
+// сховищу повідомлень.
 export function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
 
+// Обгортка над unified storage — повертає повідомлення які генерувались для
+// конкретної вкладки (для історії, Judge Layer тощо). Для рендеру на табло
+// використовуй getCurrentMessage() — воно ЄДИНЕ на всі вкладки.
 export function getTabBoardMsgs(tab) {
-  try {
-    const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || 'null');
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    return [raw]; // backward compat: старий формат → масив
-  } catch { return []; }
+  return getTabMessages(tab);
 }
 export function saveTabBoardMsg(tab, newMsg) {
-  const msgs = getTabBoardMsgs(tab);
-  msgs.unshift(newMsg);          // новий → перший
-  if (msgs.length > 30) msgs.length = 30; // максимум 30
-  try { localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs)); } catch {}
+  saveTabMessage(tab, newMsg);
 }
 
 // === OWL TAB BOARD — новий стиль (як Інбокс) ===
@@ -104,20 +101,23 @@ export function scrollOwlTabChips(tab, dir) {
   setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
 }
 
+// Рендер табло. Шар 2 "Один мозок V2": повідомлення ЄДИНЕ на всіх вкладках —
+// береться з unified storage через getCurrentMessage(). При переключенні між
+// вкладками юзер бачить ТЕ САМЕ повідомлення (нема мигання "дві різні сови").
+// Нове повідомлення зʼявляється лише коли мозок згенерував його (API або fallback).
 export function renderTabBoard(tab) {
   const isInbox = tab === 'inbox';
-  const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
   const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
   if (!board) return;
   board.style.display = 'block';
 
-  // Якщо кеш порожній — дефолтне повідомлення одразу (синхронно, без API)
-  if (!msgs.length) {
+  // Єдине повідомлення на всі вкладки
+  let msg = getCurrentMessage();
+  if (!msg) {
+    // Перший запуск — дефолт для поточної вкладки, зберігаємо в unified
     const defaults = { inbox:'Привіт! Напиши що завгодно — я допоможу.', tasks:'Що будемо робити сьогодні?', finance:'Тапни категорію щоб записати витрату.', notes:'Запиши думку або ідею 📝', health:'Як самопочуття?', evening:'Як пройшов день?', me:'Подивимось на тиждень.', projects:'Працюємо над проектами.' };
-    const defMsg = { text: defaults[tab] || 'Привіт!', priority:'normal', chips:[], ts: Date.now(), id: Date.now() };
-    msgs.push(defMsg);
-    if (isInbox) { try { const all = [defMsg]; localStorage.setItem('nm_owl_board', JSON.stringify(all)); } catch {} }
-    else { saveTabBoardMsg(tab, defMsg); }
+    const defMsg = { text: defaults[tab] || 'Привіт!', priority:'normal', chips:[], ts: Date.now() };
+    msg = saveTabMessage(tab, defMsg);
   }
 
   // Ініціалізація структури — один раз (inbox вже має HTML в index.html)
@@ -128,12 +128,14 @@ export function renderTabBoard(tab) {
     _owlTabApplyState(tab);
   }
 
-  const msg = msgs[0];
   const tEl = document.getElementById('owl-tab-text-' + tab);
   const cEl = document.getElementById('owl-tab-ctext-' + tab);
   const tmEl = document.getElementById('owl-tab-time-' + tab);
-  if (tEl) tEl.textContent = msg.text;
-  if (cEl) cEl.textContent = msg.text;
+
+  // Fade-транзиція при зміні тексту (Фаза 3 робить красиво — зараз миттєво).
+  // Placeholder: підготуємо структуру яку Фаза 3 замінить на opacity-fade.
+  _applyTabText(tEl, msg.text);
+  _applyTabText(cEl, msg.text);
   if (tmEl) tmEl.textContent = '';
 
   const chipsEl = document.getElementById('owl-tab-chips-' + tab);
@@ -144,6 +146,12 @@ export function renderTabBoard(tab) {
     chipsEl.addEventListener('scroll', chipsEl._arrowHandler, { passive: true });
     setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
   }
+}
+
+// Фаза 3 розширить цю функцію fade-транзицією. Зараз — миттєво.
+function _applyTabText(el, text) {
+  if (!el) return;
+  el.textContent = text;
 }
 
 // === WINDOW GLOBALS (HTML handlers only) ===

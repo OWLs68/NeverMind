@@ -380,8 +380,14 @@ function init() {
   // у чат о 18:00 через тригер evening-prompt (src/owl/followups.js). Щогодинний
   // автопідсумок у картці став дублем і зайвим шумом.
   try { cleanupTrash(); } catch(e) {}
-  // Показуємо кешований OWL Board одразу (без затримки)
-  try { const _msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]'); if (_msgs.length > 0) renderOwlBoard(); } catch(e) {}
+  // Показуємо кешований OWL Board одразу (без затримки).
+  // Шар 2 "Один мозок V2" (rJYkw 21.04): unified storage + міграція старих ключів
+  // виконуються автоматично при першому читанні.
+  try {
+    const _unified = JSON.parse(localStorage.getItem('nm_owl_board_unified') || '[]');
+    const _legacy = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
+    if (_unified.length > 0 || _legacy.length > 0) renderOwlBoard();
+  } catch(e) {}
   // Цикл генерації нових повідомлень — з невеликою затримкою
   setTimeout(() => { try { startOwlBoardCycle(); } catch(e) {} }, 2000);
   // Live chat replies (Фаза 2 OWL-мозку) — follow-up повідомлення у контекстний чат

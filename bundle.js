@@ -112,7 +112,7 @@
     }
     try {
       const attemptTs = parseInt(localStorage.getItem("nm_owl_board_ts") || "0");
-      const msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+      const msgs = JSON.parse(localStorage.getItem("nm_owl_board_unified") || "[]");
       const msgTs = msgs[0]?.ts || msgs[0]?.id || 0;
       const sinceAttempt = Date.now() - attemptTs;
       const sinceMsg = Date.now() - msgTs;
@@ -3380,6 +3380,239 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/owl/unified-storage.js
+  function _migrateOnce() {
+    if (localStorage.getItem(MIGRATION_FLAG)) return;
+    try {
+      const unified = [];
+      try {
+        const inboxMsgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+        inboxMsgs.forEach((m) => {
+          if (m && m.text) unified.push({ ...m, forTab: "inbox" });
+        });
+      } catch (e) {
+      }
+      ALL_TABS.filter((t) => t !== "inbox").forEach((tab) => {
+        try {
+          const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "null");
+          if (!raw) return;
+          const arr = Array.isArray(raw) ? raw : [raw];
+          arr.forEach((m) => {
+            if (m && m.text) unified.push({ ...m, forTab: tab });
+          });
+        } catch (e) {
+        }
+      });
+      unified.sort((a, b) => (b.ts || b.id || 0) - (a.ts || a.id || 0));
+      const trimmed = unified.slice(0, MAX_HISTORY);
+      localStorage.setItem(UNIFIED_KEY, JSON.stringify(trimmed));
+      localStorage.setItem(MIGRATION_FLAG, "1");
+      console.log("[unified-storage] migrated", trimmed.length, "messages");
+    } catch (e) {
+      console.warn("[unified-storage] migration failed:", e?.message);
+      try {
+        localStorage.setItem(MIGRATION_FLAG, "1");
+      } catch (e2) {
+      }
+    }
+  }
+  function getUnifiedBoard() {
+    _migrateOnce();
+    try {
+      return JSON.parse(localStorage.getItem(UNIFIED_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function getCurrentMessage() {
+    return getUnifiedBoard()[0] || null;
+  }
+  function getTabMessages(tab) {
+    return getUnifiedBoard().filter((m) => m.forTab === tab);
+  }
+  function saveTabMessage(tab, msg) {
+    _migrateOnce();
+    const all = getUnifiedBoard();
+    const now = Date.now();
+    const record = {
+      id: msg.id || now,
+      ts: msg.ts || now,
+      text: msg.text || "",
+      topic: msg.topic || "",
+      priority: msg.priority || "normal",
+      chips: Array.isArray(msg.chips) ? msg.chips : [],
+      forTab: tab
+    };
+    if (msg.transitionFrom) record.transitionFrom = msg.transitionFrom;
+    all.unshift(record);
+    const trimmed = all.slice(0, MAX_HISTORY);
+    try {
+      localStorage.setItem(UNIFIED_KEY, JSON.stringify(trimmed));
+      localStorage.setItem(UNIFIED_TS_KEY, String(now));
+    } catch (e) {
+    }
+    return record;
+  }
+  function replaceUnified(arr) {
+    _migrateOnce();
+    const trimmed = Array.isArray(arr) ? arr.slice(0, MAX_HISTORY) : [];
+    try {
+      localStorage.setItem(UNIFIED_KEY, JSON.stringify(trimmed));
+    } catch (e) {
+    }
+  }
+  var UNIFIED_KEY, UNIFIED_TS_KEY, MIGRATION_FLAG, MAX_HISTORY, ALL_TABS;
+  var init_unified_storage = __esm({
+    "src/owl/unified-storage.js"() {
+      UNIFIED_KEY = "nm_owl_board_unified";
+      UNIFIED_TS_KEY = "nm_owl_board_unified_ts";
+      MIGRATION_FLAG = "nm_owl_board_migrated_v2";
+      MAX_HISTORY = 50;
+      ALL_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
+    }
+  });
+
+  // src/owl/board.js
+  function getOwlTabTsKey(tab) {
+    return "nm_owl_tab_ts_" + tab;
+  }
+  function getTabBoardMsgs(tab) {
+    return getTabMessages(tab);
+  }
+  function saveTabBoardMsg(tab, newMsg) {
+    saveTabMessage(tab, newMsg);
+  }
+  function _owlTabHTML(tab) {
+    const t = tab;
+    return `
+    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+      <div class="owl-collapsed-avatar">\u{1F989}</div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
+    </div>
+    <div id="owl-tab-speech-${t}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+      <div class="owl-speech-avatar">\u{1F989}</div>
+      <div class="owl-tab-card">
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
+          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
+      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
+    </div>`;
+  }
+  function _owlTabApplyState(tab) {
+    const st = _owlTabStates[tab] || "speech";
+    const collapsed = document.getElementById("owl-tab-collapsed-" + tab);
+    const speech = document.getElementById("owl-tab-speech-" + tab);
+    const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
+    if (!speech) return;
+    if (collapsed) collapsed.style.display = st === "collapsed" ? "flex" : "none";
+    speech.style.display = st === "collapsed" ? "none" : "block";
+    if (chipsWrap) chipsWrap.style.display = "flex";
+  }
+  function toggleOwlTabChat(tab) {
+    _owlTabStates[tab] = "speech";
+    _owlTabApplyState(tab);
+  }
+  function owlTabSwipeStart(e, tab) {
+    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
+  }
+  function owlTabSwipeMove(e, tab) {
+    if (!_owlTabSwipes[tab]) return;
+    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
+  }
+  function owlTabSwipeEnd(e, tab) {
+    const sw = _owlTabSwipes[tab];
+    if (!sw) return;
+    _owlTabSwipes[tab] = null;
+    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
+    if (dy < -40) {
+      if (st === "speech") {
+        _owlTabStates[tab] = "collapsed";
+        _owlTabApplyState(tab);
+      }
+    } else if (dy > 40) {
+      if (st === "collapsed") {
+        _owlTabStates[tab] = "speech";
+        _owlTabApplyState(tab);
+      } else if (st === "speech") openChatBar(tab === "inbox" ? "inbox" : tab);
+    }
+  }
+  function _updateOwlTabChipsArrows(tab) {
+    const el = document.getElementById("owl-tab-chips-" + tab);
+    const left = document.getElementById("owl-tab-chips-left-" + tab);
+    const right = document.getElementById("owl-tab-chips-right-" + tab);
+    if (!el || !left || !right) return;
+    left.classList.toggle("visible", el.scrollLeft > 4);
+    right.classList.toggle("visible", el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+  function scrollOwlTabChips(tab, dir) {
+    const el = document.getElementById("owl-tab-chips-" + tab);
+    if (!el) return;
+    el.scrollBy({ left: dir * 130, behavior: "smooth" });
+    setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
+  }
+  function renderTabBoard(tab) {
+    const isInbox = tab === "inbox";
+    const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
+    if (!board) return;
+    board.style.display = "block";
+    let msg = getCurrentMessage();
+    if (!msg) {
+      const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
+      const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now() };
+      msg = saveTabMessage(tab, defMsg);
+    }
+    if (!board._owlReady) {
+      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
+      board._owlReady = true;
+      _owlTabStates[tab] = _owlTabStates[tab] || "speech";
+      _owlTabApplyState(tab);
+    }
+    const tEl = document.getElementById("owl-tab-text-" + tab);
+    const cEl = document.getElementById("owl-tab-ctext-" + tab);
+    const tmEl = document.getElementById("owl-tab-time-" + tab);
+    _applyTabText(tEl, msg.text);
+    _applyTabText(cEl, msg.text);
+    if (tmEl) tmEl.textContent = "";
+    const chipsEl = document.getElementById("owl-tab-chips-" + tab);
+    if (chipsEl) {
+      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
+      chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
+      chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
+      chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
+      setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
+    }
+  }
+  function _applyTabText(el, text) {
+    if (!el) return;
+    el.textContent = text;
+  }
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
+  var init_board = __esm({
+    "src/owl/board.js"() {
+      init_core();
+      init_chips();
+      init_unified_storage();
+      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
+      _owlTabStates = {};
+      _owlTabSwipes = {};
+      Object.assign(window, {
+        toggleOwlTabChat,
+        owlTabSwipeStart,
+        owlTabSwipeMove,
+        owlTabSwipeEnd,
+        scrollOwlTabChips,
+        openChatBar
+      });
+    }
+  });
+
   // src/owl/inbox-board.js
   function _getTabChatAHeight(tab) {
     const bar = document.getElementById(tab + "-ai-bar");
@@ -3604,14 +3837,15 @@ ${lines.join("\n")}`;
     }, { passive: true });
   }
   function getOwlBoardMessages() {
-    try {
-      return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
-    } catch {
-      return [];
-    }
+    return getTabMessages("inbox");
   }
   function saveOwlBoardMessages(arr) {
-    localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
+    if (!Array.isArray(arr) || arr.length === 0) return;
+    const latest = arr[0];
+    if (!latest || !latest.text) return;
+    const existing = getTabMessages("inbox")[0];
+    if (existing && existing.ts === latest.ts && existing.text === latest.text) return;
+    saveTabMessage("inbox", latest);
   }
   function clearStaleBoards() {
     try {
@@ -3622,21 +3856,14 @@ ${lines.join("\n")}`;
         if (!ts) return false;
         return new Date(ts).toDateString() !== today;
       };
-      const inboxMsgs = JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || "[]");
-      if (inboxMsgs.length > 0 && isStale(inboxMsgs[0])) {
-        localStorage.setItem(OWL_BOARD_KEY, "[]");
+      const all = getUnifiedBoard();
+      if (all.length > 0 && isStale(all[0])) {
+        replaceUnified(all.slice(1));
         localStorage.setItem(OWL_BOARD_TS_KEY, "0");
-      }
-      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
-        const key = "nm_owl_tab_" + tab;
-        const raw = JSON.parse(localStorage.getItem(key) || "null");
-        if (!raw) return;
-        const msgs = Array.isArray(raw) ? raw : [raw];
-        if (msgs.length > 0 && isStale(msgs[0])) {
-          localStorage.setItem(key, "[]");
+        ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
           localStorage.setItem("nm_owl_tab_ts_" + tab, "0");
-        }
-      });
+        });
+      }
     } catch (e) {
     }
   }
@@ -4205,13 +4432,14 @@ ${lines.join("\n")}`;
     }
     return true;
   }
-  var _tabChatState, OWL_BOARD_KEY, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var _tabChatState, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
   var init_inbox_board = __esm({
     "src/owl/inbox-board.js"() {
       init_nav();
       init_utils();
       init_core();
       init_board();
+      init_unified_storage();
       init_chips();
       init_inbox();
       init_tasks();
@@ -4219,7 +4447,6 @@ ${lines.join("\n")}`;
       init_notes();
       init_finance();
       _tabChatState = {};
-      OWL_BOARD_KEY = "nm_owl_board";
       OWL_BOARD_TS_KEY = "nm_owl_board_ts";
       OWL_BOARD_INTERVAL = 10 * 60 * 1e3;
       _owlBoardMessages = [];
@@ -4234,169 +4461,6 @@ ${lines.join("\n")}`;
       _owlChatSending = false;
       _owlState = "speech";
       window.sendOwlReply = sendOwlReply;
-    }
-  });
-
-  // src/owl/board.js
-  function getOwlTabBoardKey(tab) {
-    return "nm_owl_tab_" + tab;
-  }
-  function getOwlTabTsKey(tab) {
-    return "nm_owl_tab_ts_" + tab;
-  }
-  function getTabBoardMsgs(tab) {
-    try {
-      const raw = JSON.parse(localStorage.getItem(getOwlTabBoardKey(tab)) || "null");
-      if (!raw) return [];
-      if (Array.isArray(raw)) return raw;
-      return [raw];
-    } catch {
-      return [];
-    }
-  }
-  function saveTabBoardMsg(tab, newMsg) {
-    const msgs = getTabBoardMsgs(tab);
-    msgs.unshift(newMsg);
-    if (msgs.length > 30) msgs.length = 30;
-    try {
-      localStorage.setItem(getOwlTabBoardKey(tab), JSON.stringify(msgs));
-    } catch {
-    }
-  }
-  function _owlTabHTML(tab) {
-    const t = tab;
-    return `
-    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
-      <div class="owl-collapsed-avatar">\u{1F989}</div>
-      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
-    </div>
-    <div id="owl-tab-speech-${t}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
-      <div class="owl-speech-avatar">\u{1F989}</div>
-      <div class="owl-tab-card">
-        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
-          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
-          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
-        </div>
-      </div>
-    </div>
-    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
-      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
-    </div>`;
-  }
-  function _owlTabApplyState(tab) {
-    const st = _owlTabStates[tab] || "speech";
-    const collapsed = document.getElementById("owl-tab-collapsed-" + tab);
-    const speech = document.getElementById("owl-tab-speech-" + tab);
-    const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
-    if (!speech) return;
-    if (collapsed) collapsed.style.display = st === "collapsed" ? "flex" : "none";
-    speech.style.display = st === "collapsed" ? "none" : "block";
-    if (chipsWrap) chipsWrap.style.display = "flex";
-  }
-  function toggleOwlTabChat(tab) {
-    _owlTabStates[tab] = "speech";
-    _owlTabApplyState(tab);
-  }
-  function owlTabSwipeStart(e, tab) {
-    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
-  }
-  function owlTabSwipeMove(e, tab) {
-    if (!_owlTabSwipes[tab]) return;
-    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-  }
-  function owlTabSwipeEnd(e, tab) {
-    const sw = _owlTabSwipes[tab];
-    if (!sw) return;
-    _owlTabSwipes[tab] = null;
-    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
-    if (dy < -40) {
-      if (st === "speech") {
-        _owlTabStates[tab] = "collapsed";
-        _owlTabApplyState(tab);
-      }
-    } else if (dy > 40) {
-      if (st === "collapsed") {
-        _owlTabStates[tab] = "speech";
-        _owlTabApplyState(tab);
-      } else if (st === "speech") openChatBar(tab === "inbox" ? "inbox" : tab);
-    }
-  }
-  function _updateOwlTabChipsArrows(tab) {
-    const el = document.getElementById("owl-tab-chips-" + tab);
-    const left = document.getElementById("owl-tab-chips-left-" + tab);
-    const right = document.getElementById("owl-tab-chips-right-" + tab);
-    if (!el || !left || !right) return;
-    left.classList.toggle("visible", el.scrollLeft > 4);
-    right.classList.toggle("visible", el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }
-  function scrollOwlTabChips(tab, dir) {
-    const el = document.getElementById("owl-tab-chips-" + tab);
-    if (!el) return;
-    el.scrollBy({ left: dir * 130, behavior: "smooth" });
-    setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
-  }
-  function renderTabBoard(tab) {
-    const isInbox = tab === "inbox";
-    const msgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
-    const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
-    if (!board) return;
-    board.style.display = "block";
-    if (!msgs.length) {
-      const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
-      const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now(), id: Date.now() };
-      msgs.push(defMsg);
-      if (isInbox) {
-        try {
-          const all = [defMsg];
-          localStorage.setItem("nm_owl_board", JSON.stringify(all));
-        } catch {
-        }
-      } else {
-        saveTabBoardMsg(tab, defMsg);
-      }
-    }
-    if (!board._owlReady) {
-      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
-      board._owlReady = true;
-      _owlTabStates[tab] = _owlTabStates[tab] || "speech";
-      _owlTabApplyState(tab);
-    }
-    const msg = msgs[0];
-    const tEl = document.getElementById("owl-tab-text-" + tab);
-    const cEl = document.getElementById("owl-tab-ctext-" + tab);
-    const tmEl = document.getElementById("owl-tab-time-" + tab);
-    if (tEl) tEl.textContent = msg.text;
-    if (cEl) cEl.textContent = msg.text;
-    if (tmEl) tmEl.textContent = "";
-    const chipsEl = document.getElementById("owl-tab-chips-" + tab);
-    if (chipsEl) {
-      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
-      chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
-      chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
-      chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
-      setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
-    }
-  }
-  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
-  var init_board = __esm({
-    "src/owl/board.js"() {
-      init_core();
-      init_chips();
-      init_inbox_board();
-      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
-      _owlTabStates = {};
-      _owlTabSwipes = {};
-      Object.assign(window, {
-        toggleOwlTabChat,
-        owlTabSwipeStart,
-        owlTabSwipeMove,
-        owlTabSwipeEnd,
-        scrollOwlTabChips,
-        openChatBar
-      });
     }
   });
 
@@ -12231,14 +12295,8 @@ ${inboxList}`);
     }
     try {
       const tab = typeof currentTab !== "undefined" ? currentTab : "inbox";
-      let msgs = [];
-      if (tab === "inbox") {
-        msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
-      } else {
-        const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "[]");
-        if (Array.isArray(raw)) msgs = raw;
-        else if (raw && raw.text) msgs = [raw];
-      }
+      const unified = JSON.parse(localStorage.getItem("nm_owl_board_unified") || "[]");
+      const msgs = Array.isArray(unified) ? unified : [];
       const recent = msgs.slice(0, 3).filter((m) => m && m.text);
       if (recent.length > 0) {
         const formatted = recent.map((m) => {
@@ -14472,7 +14530,7 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
     let aiText = text;
     if (fromChip) {
       try {
-        const boardMsgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+        const boardMsgs = JSON.parse(localStorage.getItem("nm_owl_board_unified") || "[]");
         if (boardMsgs[0]?.text) {
           aiText = `[\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F OWL \u043D\u0430 \u0442\u0430\u0431\u043B\u043E: "${boardMsgs[0].text}"] ${text}`;
         }
@@ -16153,8 +16211,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     } catch (e) {
     }
     try {
-      const _msgs = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
-      if (_msgs.length > 0) renderOwlBoard();
+      const _unified = JSON.parse(localStorage.getItem("nm_owl_board_unified") || "[]");
+      const _legacy = JSON.parse(localStorage.getItem("nm_owl_board") || "[]");
+      if (_unified.length > 0 || _legacy.length > 0) renderOwlBoard();
     } catch (e) {
     }
     setTimeout(() => {

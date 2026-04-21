@@ -425,7 +425,8 @@ export async function sendToAI(fromChip = false) {
   let aiText = text;
   if (fromChip) {
     try {
-      const boardMsgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
+      // Шар 2 "Один мозок V2" (rJYkw 21.04): читаємо з unified — табло ЄДИНЕ на всі вкладки
+      const boardMsgs = JSON.parse(localStorage.getItem('nm_owl_board_unified') || '[]');
       if (boardMsgs[0]?.text) {
         aiText = `[Відповідь на повідомлення OWL на табло: "${boardMsgs[0].text}"] ${text}`;
       }

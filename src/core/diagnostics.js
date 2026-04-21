@@ -120,7 +120,8 @@ export function runHealthCheck() {
   // 8. Застаріле повідомлення табло (ознака залиплого _boardGenerating)
   try {
     const attemptTs = parseInt(localStorage.getItem('nm_owl_board_ts') || '0');
-    const msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
+    // Шар 2 "Один мозок V2" (rJYkw 21.04): читаємо з unified storage
+    const msgs = JSON.parse(localStorage.getItem('nm_owl_board_unified') || '[]');
     const msgTs = msgs[0]?.ts || msgs[0]?.id || 0;
     const sinceAttempt = Date.now() - attemptTs;
     const sinceMsg = Date.now() - msgTs;

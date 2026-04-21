@@ -7,6 +7,7 @@ import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
+import { getTabMessages, saveTabMessage, replaceUnified, getUnifiedBoard, getCurrentMessage } from './unified-storage.js';
 import { renderChips } from './chips.js';
 import { addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
@@ -278,26 +279,38 @@ export function setupChatBarSwipe() {
 
 
 // === OWL BOARD ===
-const OWL_BOARD_KEY = 'nm_owl_board';       // масив до 3 повідомлень
 const OWL_BOARD_SEEN_KEY = 'nm_owl_board_seen'; // які ID вже показано
-const OWL_BOARD_TS_KEY = 'nm_owl_board_ts'; // timestamp останньої генерації
+const OWL_BOARD_TS_KEY = 'nm_owl_board_ts'; // timestamp останньої генерації (inbox-specific)
 const OWL_BOARD_INTERVAL = 10 * 60 * 1000; // 10 хв — fallback, основні тригери через події
 
 let _owlBoardMessages = [];
 // _owlBoardGenerating видалено — guard тепер у generateBoardMessage (proactive.js)
 let _owlBoardTimer = null;
 
+// Обгортка над unified storage — повертає повідомлення згенеровані для Inbox.
+// Для рендеру на табло використовуй getCurrentMessage() — воно ЄДИНЕ на всі вкладки
+// (Шар 2 "Один мозок V2", 21.04 rJYkw).
 export function getOwlBoardMessages() {
-  try { return JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]'); } catch { return []; }
+  return getTabMessages('inbox');
 }
+// Backward compat: старі виклики передавали обрізаний масив як "нове сховище".
+// Тепер записуємо тільки найсвіжіше (перше) у unified — історія вкладки сама
+// накопичується через getTabMessages. Якщо потрібна повна заміна — окрема функція.
 export function saveOwlBoardMessages(arr) {
-  localStorage.setItem(OWL_BOARD_KEY, JSON.stringify(arr.slice(-30)));
+  if (!Array.isArray(arr) || arr.length === 0) return;
+  // Найновіше повідомлення — arr[0] (масив відсортований новіші → старіші)
+  const latest = arr[0];
+  if (!latest || !latest.text) return;
+  // Перевірка — чи це вже у сховищі (не плодити дубль при fallback-ретраях)
+  const existing = getTabMessages('inbox')[0];
+  if (existing && existing.ts === latest.ts && existing.text === latest.text) return;
+  saveTabMessage('inbox', latest);
 }
 
 // Інвалідація застарілих повідомлень табло з іншого дня.
 // Причина: AI пише природно ("завтра", "вчора") — ці слова стають неправдою коли день змінився,
 // а кеш табло живе у localStorage без прив'язки до дати. Запускається на старті застосунку.
-// Торкаємось тільки першого (найсвіжішого) повідомлення — вся історія лишається.
+// Шар 2 (rJYkw 21.04): сховище єдине — перевіряємо тільки msgs[0] (те що видно юзеру).
 export function clearStaleBoards() {
   try {
     const today = new Date().toDateString();
@@ -308,24 +321,16 @@ export function clearStaleBoards() {
       return new Date(ts).toDateString() !== today;
     };
 
-    // Inbox board
-    const inboxMsgs = JSON.parse(localStorage.getItem(OWL_BOARD_KEY) || '[]');
-    if (inboxMsgs.length > 0 && isStale(inboxMsgs[0])) {
-      localStorage.setItem(OWL_BOARD_KEY, '[]');
+    const all = getUnifiedBoard();
+    if (all.length > 0 && isStale(all[0])) {
+      // Видаляємо тільки найсвіжіше зі старого дня — історія лишається
+      replaceUnified(all.slice(1));
       localStorage.setItem(OWL_BOARD_TS_KEY, '0');
-    }
-
-    // Tab boards (tasks, notes, me, evening, finance, health, projects)
-    ['tasks','notes','me','evening','finance','health','projects'].forEach(tab => {
-      const key = 'nm_owl_tab_' + tab;
-      const raw = JSON.parse(localStorage.getItem(key) || 'null');
-      if (!raw) return;
-      const msgs = Array.isArray(raw) ? raw : [raw];
-      if (msgs.length > 0 && isStale(msgs[0])) {
-        localStorage.setItem(key, '[]');
+      // Тab TS keys теж скидаємо щоб Judge Layer знав що новий день
+      ['tasks','notes','me','evening','finance','health','projects'].forEach(tab => {
         localStorage.setItem('nm_owl_tab_ts_' + tab, '0');
-      }
-    });
+      });
+    }
   } catch(e) {}
 }
 

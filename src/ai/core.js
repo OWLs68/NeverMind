@@ -212,16 +212,12 @@ export function getAIContext() {
   // === Останні повідомлення OWL на табло (Фаза 1.2 — синхронізація табло ↔ чат) ===
   // Чат бачить історію табло щоб відповіді були послідовними —
   // якщо OWL задав кілька питань підряд, AI розуміє на яке саме юзер відповідає.
+  // Шар 2 "Один мозок V2" (rJYkw 21.04): читаємо з unified storage — бачимо
+  // історію всіх вкладок, не тільки поточної.
   try {
     const tab = typeof currentTab !== 'undefined' ? currentTab : 'inbox';
-    let msgs = [];
-    if (tab === 'inbox') {
-      msgs = JSON.parse(localStorage.getItem('nm_owl_board') || '[]');
-    } else {
-      const raw = JSON.parse(localStorage.getItem('nm_owl_tab_' + tab) || '[]');
-      if (Array.isArray(raw)) msgs = raw;
-      else if (raw && raw.text) msgs = [raw]; // legacy single-object format
-    }
+    const unified = JSON.parse(localStorage.getItem('nm_owl_board_unified') || '[]');
+    const msgs = Array.isArray(unified) ? unified : [];
     const recent = msgs.slice(0, 3).filter(m => m && m.text);
     if (recent.length > 0) {
       const formatted = recent.map(m => {
