@@ -57,6 +57,7 @@ import {
 } from '../tabs/finance.js';
 import { addToTrash } from '../core/trash.js';
 import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
+import { addNoteFromInbox } from '../tabs/notes.js';
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -235,15 +236,33 @@ function _handleHealthTool(name, args, addMsg) {
       return true;
     }
     case 'add_health_history_entry': {
-      if (!args.card_id || !args.text) { addMsg('agent', 'Потрібна картка і текст запису.'); return true; }
-      const entry = addHealthHistoryEntry(args.card_id, args.entry_type || 'manual', args.text);
+      if (!args.text) { addMsg('agent', 'Потрібен текст запису.'); return true; }
+      // Якщо нема картки або картку не знайдено — fallback на загальну "Здоровʼя" (створити якщо немає).
+      // Виправлено 21.04 Gg3Fy за запитом Романа: "Картка має бути здоровʼя. Нащо 10 нових папок".
+      let targetCardId = args.card_id;
+      let cards = getHealthCards();
+      if (!targetCardId || !cards.find(c => c.id === targetCardId)) {
+        const general = cards.find(c => c.name === 'Здоровʼя' || c.name === 'Здоровя' || c.name === "Здоров'я");
+        if (general) {
+          targetCardId = general.id;
+        } else {
+          const created = createHealthCardProgrammatic({
+            name: 'Здоровʼя',
+            subtitle: 'Загальний журнал',
+          });
+          if (created) targetCardId = created.id;
+        }
+      }
+      const entry = addHealthHistoryEntry(targetCardId, args.entry_type || 'manual', args.text);
       if (entry) {
+        // Дубль у Нотатки (папка "Здоровʼя") — запит Романа: щоб запис був і в картці, і в нотатках.
+        try { addNoteFromInbox(args.text, 'note', 'Здоровʼя', 'agent'); } catch (e) {}
         if (currentTab === 'health') renderHealth();
-        const cards = getHealthCards();
-        const card = cards.find(c => c.id === args.card_id);
-        addMsg('agent', `📝 Записав у картку "${card ? card.name : '—'}": ${args.text}`);
+        cards = getHealthCards();
+        const card = cards.find(c => c.id === targetCardId);
+        addMsg('agent', `📝 Записав у картку "${card ? card.name : 'Здоровʼя'}" + нотатку: ${args.text}`);
       } else {
-        addMsg('agent', 'Не знайшов картку для запису.');
+        addMsg('agent', 'Не вдалось зберегти запис.');
       }
       return true;
     }
