@@ -101,6 +101,29 @@ export function saveTabMessage(tab, msg) {
   return record;
 }
 
+// Шар 3 (ZJmdF 21.04.2026): знижує priority ранкового брифінгу з 'critical'
+// на 'normal' після того як юзер клацнув по чіпу з брифінгу.
+// Ідентифікація: topic === 'morning-briefing'.
+// Мета: після свідомого переходу брифінг перестає пробивати фільтр priority:critical
+// на ВСІХ вкладках — лишається тільки на тій куди юзер зайшов.
+// Повертає true якщо щось змінено (щоб викликати re-render).
+export function downgradeBriefingPriority() {
+  _migrateOnce();
+  const all = getUnifiedBoard();
+  let changed = false;
+  const updated = all.map(m => {
+    if (m && m.topic === 'morning-briefing' && m.priority === 'critical') {
+      changed = true;
+      return { ...m, priority: 'normal' };
+    }
+    return m;
+  });
+  if (changed) {
+    try { localStorage.setItem(UNIFIED_KEY, JSON.stringify(updated)); } catch(e) {}
+  }
+  return changed;
+}
+
 // Замінити весь масив (використовується рідко — наприклад при clearStaleBoards).
 export function replaceUnified(arr) {
   _migrateOnce();

@@ -7,7 +7,7 @@
 //   - Інші файли (картинки, fonts) → cache-first як раніше.
 //   - SKIP_WAITING повідомлення від клієнта → self.skipWaiting() → controllerchange → reload.
 
-const CACHE_NAME = 'nm-20260421-2121';
+const CACHE_NAME = 'nm-20260421-2130';
 
 // Список файлів які кешуємо при встановленні
 const STATIC_ASSETS = [

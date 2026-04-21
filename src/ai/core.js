@@ -486,14 +486,15 @@ export function loadChatMsgs(tab) {
 // контекст "ти на Здоровʼї, а в Inbox 5 хв тому було 'болить спина'".
 const _ALL_CHAT_TABS = ['inbox','tasks','notes','me','evening','finance','health','projects'];
 const _TAB_LABELS_CHAT = { inbox:'Inbox', tasks:'Продуктивність', notes:'Нотатки', me:'Я', evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти' };
-export function getRecentChatsAcrossTabs(excludeTab, limit = 2, windowMs = 30 * 60 * 1000) {
+export function getRecentChatsAcrossTabs(excludeTab, limit = 5, windowMs = 60 * 60 * 1000) {
   const now = Date.now();
   const all = [];
   _ALL_CHAT_TABS.filter(t => t !== excludeTab).forEach(t => {
     const key = 'nm_chat_' + t;
     let msgs = [];
     try { msgs = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
-    msgs.slice(-3).forEach(m => {
+    // Шар 3 (ZJmdF 21.04.2026): беремо останні 5 з кожного чату (було 3)
+    msgs.slice(-5).forEach(m => {
       if (m && m.ts && (now - m.ts) < windowMs && m.text) {
         all.push({ role: m.role, text: m.text, ts: m.ts, tab: t, tabLabel: _TAB_LABELS_CHAT[t] || t });
       }

@@ -8,6 +8,8 @@ import { openChatBar, saveChatMsg } from '../ai/core.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { sendToAI } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
+import { downgradeBriefingPriority } from './unified-storage.js';
+import { renderTabBoard } from './board.js';
 import { sendNotesBarMessage } from '../tabs/notes.js';
 import { sendFinanceBarMessage } from '../tabs/finance.js';
 import { sendEveningBarMessage } from '../tabs/evening-chat.js';
@@ -251,7 +253,15 @@ export function handleChipClick(tab, text, action, target) {
   // 1. Навігаційний чіп — B-40 fix: ігнорувати якщо юзер вже на цільовій вкладці
   if (action === 'nav' && VALID_NAV_TARGETS.includes(target)) {
     if (target === currentTab) return; // вже на цій вкладці — не переходити
+    // Шар 3 (ZJmdF 21.04.2026): клік по чіпу навігації → брифінг стає "спожитим"
+    // (priority critical → normal). Без цього брифінг переслідує юзера на
+    // всіх вкладках бо пробиває фільтр priority:critical у _pickMessageForTab.
+    const downgraded = downgradeBriefingPriority();
     switchTab(target);
+    // Re-render табло цільової вкладки з новим priority
+    if (downgraded) {
+      try { renderTabBoard(target); } catch(e) {}
+    }
     return;
   }
 

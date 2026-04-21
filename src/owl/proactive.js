@@ -665,7 +665,8 @@ export async function generateBoardMessage(tab, options = {}) {
   // чату крім поточного за 30 хв — щоб мозок не "забував" про тему з іншої вкладки
   // (напр. у Inbox обговорювали "болить спина", юзер перейшов на Здоровʼя де чат
   // ще порожній — без цього блоку сова не знала б).
-  const crossChatRecent = getRecentChatsAcrossTabs(tab, 2, 30 * 60 * 1000)
+  // Шар 3 (ZJmdF 21.04.2026): розширено 2→5 реплік, 30→60 хв вікно
+  const crossChatRecent = getRecentChatsAcrossTabs(tab, 5, 60 * 60 * 1000)
     .map(m => {
       const mins = Math.floor((Date.now() - m.ts) / 60000);
       const when = mins < 1 ? 'щойно' : mins + ' хв тому';
@@ -811,7 +812,10 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     } catch(e) {}
 
     // Збереження: inbox і вкладки мають різні сховища
-    const newMsg = { text: parsed.text, topic: parsed.topic || '', priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
+    // Шар 3 (ZJmdF): якщо це ранковий брифінг — примусово ставимо topic для
+    // подальшого downgrade priority при кліку на чіп.
+    const topicFinal = isBriefing ? 'morning-briefing' : (parsed.topic || '');
+    const newMsg = { text: parsed.text, topic: topicFinal, priority: parsed.priority || 'normal', chips: parsed.chips || [], ts: Date.now() };
     // Ставимо cooldown на тему щоб не повторювати 3 години
     if (parsed.topic) setOwlCd('topic_' + parsed.topic);
     if (isInbox) {
