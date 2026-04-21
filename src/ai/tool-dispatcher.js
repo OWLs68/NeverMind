@@ -57,7 +57,6 @@ import {
 } from '../tabs/finance.js';
 import { addToTrash } from '../core/trash.js';
 import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
-import { addNoteFromInbox } from '../tabs/notes.js';
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -237,8 +236,8 @@ function _handleHealthTool(name, args, addMsg) {
     }
     case 'add_health_history_entry': {
       if (!args.text) { addMsg('agent', 'Потрібен текст запису.'); return true; }
-      // Якщо нема картки або картку не знайдено — fallback на загальну "Здоровʼя" (створити якщо немає).
-      // Виправлено 21.04 Gg3Fy за запитом Романа: "Картка має бути здоровʼя. Нащо 10 нових папок".
+      // Fallback на загальну "Здоровʼя" якщо card_id відсутній або невалідний.
+      // Виправлено 21.04 Gg3Fy: Роман не хоче "10 нових папок" — все разове у одну картку.
       let targetCardId = args.card_id;
       let cards = getHealthCards();
       if (!targetCardId || !cards.find(c => c.id === targetCardId)) {
@@ -255,12 +254,13 @@ function _handleHealthTool(name, args, addMsg) {
       }
       const entry = addHealthHistoryEntry(targetCardId, args.entry_type || 'manual', args.text);
       if (entry) {
-        // Дубль у Нотатки (папка "Здоровʼя") — запит Романа: щоб запис був і в картці, і в нотатках.
-        try { addNoteFromInbox(args.text, 'note', 'Здоровʼя', 'agent'); } catch (e) {}
+        // Дубль у Нотатки — НЕ автоматично. Сова вирішує сама через окремий save_note
+        // коли запис значущий (тривалий симптом, діагноз, важлива зміна). Разові дрібниці
+        // → тільки картка, щоб не перетворювати Нотатки на архів кожного чиха.
         if (currentTab === 'health') renderHealth();
         cards = getHealthCards();
         const card = cards.find(c => c.id === targetCardId);
-        addMsg('agent', `📝 Записав у картку "${card ? card.name : 'Здоровʼя'}" + нотатку: ${args.text}`);
+        addMsg('agent', `📝 Записав у картку "${card ? card.name : 'Здоровʼя'}": ${args.text}`);
       } else {
         addMsg('agent', 'Не вдалось зберегти запис.');
       }
