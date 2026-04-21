@@ -1276,7 +1276,7 @@ ${lines.join("\n")}`;
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}` : "";
       const opacity = isPast ? "opacity:0.4;" : "";
-      const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#6366f1" : "rgba(30,16,64,0.45)";
+      const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#14b8a6" : "rgba(30,16,64,0.45)";
       const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
       html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       <div style="font-size:15px;flex-shrink:0">${icon}</div>
@@ -1417,14 +1417,14 @@ ${lines.join("\n")}`;
         color = "#ea580c";
         border = "rgba(234,88,12,0.25)";
       } else if (hasEvent) {
-        bg = "rgba(99,102,241,0.12)";
-        color = "#6366f1";
-        border = "rgba(99,102,241,0.25)";
+        bg = "rgba(20,184,166,0.15)";
+        color = "#14b8a6";
+        border = "rgba(20,184,166,0.30)";
       } else if (hasItems) {
         bg = "rgba(30,16,64,0.1)";
         color = "#1e1040";
       }
-      if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#6366f1" : "currentColor"};margin-top:1px"></div>`;
+      if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#14b8a6" : "currentColor"};margin-top:1px"></div>`;
       cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
     grid.innerHTML = cells;
@@ -1456,9 +1456,9 @@ ${lines.join("\n")}`;
         alldayEl.style.display = "block";
         alldayEl.innerHTML = allDayEvents.map((ev) => {
           const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
-          return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(99,102,241,0.08)">
+          return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(20,184,166,0.10)">
           <div style="font-size:15px;flex-shrink:0">\u{1F4C5}</div>
-          <div style="flex:1;font-size:14px;font-weight:600;color:#6366f1">${prio}${escapeHtml(ev.title)}</div>
+          <div style="flex:1;font-size:14px;font-weight:600;color:#14b8a6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C</div>
         </div>`;
         }).join("");
@@ -1495,7 +1495,7 @@ ${lines.join("\n")}`;
           const isEvent = item.type === "event";
           const isTask = item.type === "task";
           const isDone = item.done;
-          const color = isDone ? "rgba(30,16,64,0.3)" : isEvent ? "#6366f1" : isCurrent ? "#ea580c" : "#1e1040";
+          const color = isDone ? "rgba(30,16,64,0.3)" : isEvent ? "#14b8a6" : isCurrent ? "#ea580c" : "#1e1040";
           const icon = isEvent ? "\u{1F4C5}" : isTask ? isDone ? "\u2705" : "\u2611\uFE0F" : "";
           const prio = item.priority === "critical" ? "\u{1F534} " : item.priority === "important" ? "\u{1F7E0} " : "";
           const strike = isDone ? "text-decoration:line-through;" : "";
@@ -1505,7 +1505,7 @@ ${lines.join("\n")}`;
           else tapAttr = `style="`;
           html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
           <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "rgba(30,16,64,0.5)"};text-align:right">${item.time}</div>
-          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#6366f1" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
+          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#14b8a6" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
           <div style="flex:1;font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${color};${strike}">${icon ? icon + " " : ""}${prio}${escapeHtml(item.text)}${isCurrent ? " \u2190" : ""}${isTask && item.dueDate ? " \u{1F4C5}" : ""}</div>
         </div>`;
         });
@@ -1777,7 +1777,7 @@ ${lines.join("\n")}`;
   function _renderEventPriority() {
     const wrap = document.getElementById("event-edit-priority");
     if (!wrap) return;
-    const colors = { normal: "#6366f1", important: "#ea580c", critical: "#ef4444" };
+    const colors = { normal: "#14b8a6", important: "#ea580c", critical: "#ef4444" };
     wrap.querySelectorAll("[data-p]").forEach((el) => {
       const p = el.dataset.p;
       const active = p === _editEventPriority;
