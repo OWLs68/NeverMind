@@ -3424,9 +3424,6 @@ ${lines.join("\n")}`;
       return [];
     }
   }
-  function getCurrentMessage() {
-    return getUnifiedBoard()[0] || null;
-  }
   function getTabMessages(tab) {
     return getUnifiedBoard().filter((m) => m.forTab === tab);
   }
@@ -3557,12 +3554,20 @@ ${lines.join("\n")}`;
     el.scrollBy({ left: dir * 130, behavior: "smooth" });
     setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
   }
+  function _pickMessageForTab(tab) {
+    const all = getUnifiedBoard();
+    if (all.length === 0) return null;
+    if (all[0].priority === "critical") return all[0];
+    const tabMsg = all.find((m) => m.forTab === tab);
+    if (tabMsg) return tabMsg;
+    return all[0];
+  }
   function renderTabBoard(tab) {
     const isInbox = tab === "inbox";
     const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
     if (!board) return;
     board.style.display = "block";
-    let msg = getCurrentMessage();
+    let msg = _pickMessageForTab(tab);
     if (!msg) {
       const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
       const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now() };
@@ -3579,7 +3584,17 @@ ${lines.join("\n")}`;
     const tmEl = document.getElementById("owl-tab-time-" + tab);
     _applyTabText(tEl, msg.text);
     _applyTabText(cEl, msg.text);
-    if (tmEl) tmEl.textContent = "";
+    if (tmEl) {
+      const ageMs = Date.now() - (msg.ts || msg.id || 0);
+      const ageMin = Math.floor(ageMs / 6e4);
+      if (ageMin > 10) {
+        tmEl.textContent = "\u2022 " + (ageMin < 60 ? ageMin + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(ageMin / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
+        tmEl.classList.add("owl-time-stale");
+      } else {
+        tmEl.textContent = "";
+        tmEl.classList.remove("owl-time-stale");
+      }
+    }
     const chipsEl = document.getElementById("owl-tab-chips-" + tab);
     if (chipsEl) {
       renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
@@ -3591,7 +3606,18 @@ ${lines.join("\n")}`;
   }
   function _applyTabText(el, text) {
     if (!el) return;
-    el.textContent = text;
+    const current = el.textContent || "";
+    if (current === text) return;
+    if (current === "") {
+      el.textContent = text;
+      el.style.opacity = "1";
+      return;
+    }
+    el.style.opacity = "0";
+    setTimeout(() => {
+      el.textContent = text;
+      el.style.opacity = "1";
+    }, 200);
   }
   var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
   var init_board = __esm({
