@@ -3988,6 +3988,10 @@ ${lines.join("\n")}`;
       score += 4;
       reasons.push("chat-closed");
     }
+    if (trigger === "tab-switched") {
+      score += 1;
+      reasons.push("tab-switched");
+    }
     let hasCritical = false;
     try {
       const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
@@ -4090,6 +4094,9 @@ ${lines.join("\n")}`;
     } else if (sinceLastVisible > 30 * 60 * 1e3) {
       score += 2;
       reasons.push("stale>30m");
+    } else if (sinceLastVisible > 10 * 60 * 1e3) {
+      score += 1;
+      reasons.push("stale>10m");
     }
     const speak = score >= SPEAK_THRESHOLD;
     return { speak, score, reason: reasons.join(", ") };
@@ -5946,7 +5953,7 @@ ${pulseParts.join("\n")}
     }
     return topics.join(", ");
   }
-  async function generateBoardMessage(tab) {
+  async function generateBoardMessage(tab, options = {}) {
     if (_boardGenerating[tab]) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
@@ -5954,7 +5961,16 @@ ${pulseParts.join("\n")}
       return;
     }
     _boardGenerating[tab] = true;
+    if (_boardAbortController) {
+      try {
+        _boardAbortController.abort();
+      } catch (e) {
+      }
+    }
+    _boardAbortController = new AbortController();
+    const abortSignal = _boardAbortController.signal;
     const isInbox = tab === "inbox";
+    const transitionFrom = options.transitionFrom || null;
     const context = getBoardContext(tab);
     const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
     const existing = allMsgs[0] || null;
@@ -5979,6 +5995,12 @@ ${pulseParts.join("\n")}
       const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
       return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
     }).join("\n");
+    const crossChatRecent = getRecentChatsAcrossTabs(tab, 2, 30 * 60 * 1e3).map((m) => {
+      const mins = Math.floor((Date.now() - m.ts) / 6e4);
+      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+      const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
+      return `[\u0427\u0430\u0442 ${m.tabLabel} \xB7 ${when}] ${who}: ${m.text}`;
+    }).join("\n");
     const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
     const phase = getDayPhase();
     const sc = getSchedule();
@@ -5997,14 +6019,24 @@ ${sc ? "\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u042E\u0417\u0415\u0420\u041
 
 \u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041A\u041E\u0420\u041E\u0422\u041A\u0415 \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0442\u0430\u0431\u043B\u043E${isInbox ? " \u0432 Inbox" : ' \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 "' + (tabLabels[tab] || tab) + '"'}. \u0426\u0435 \u041D\u0415 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u0437\u0430\u043F\u0438\u0442 \u2014 \u0446\u0435 \u0442\u0432\u043E\u044F \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u0430.
 
-\u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F (\u043F\u0430\u043C'\u044F\u0442\u0430\u0439 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F):
+\u26A0\uFE0F \u0414\u0412\u0410 \u0422\u0418\u041F\u0418 \u041F\u0410\u041C\u02BC\u042F\u0422\u0406 \u2014 \u041D\u0415 \u041F\u041B\u0423\u0422\u0410\u0419:
+\u2022 "\u041F\u0420\u041E\u0410\u041A\u0422\u0418\u0412\u041D\u0410 \u041F\u0410\u041C\u02BC\u042F\u0422\u042C" (boardHistory \u043D\u0438\u0436\u0447\u0435) \u2014 \u0446\u0435 \u0422\u0412\u041E\u0407 \u041F\u0423\u0411\u041B\u0406\u0427\u041D\u0406 \u0421\u041B\u041E\u0412\u0410 \u043D\u0430 \u0442\u0430\u0431\u043B\u043E, \u044F\u043A\u0456 \u0442\u0438 \u0432\u0436\u0435 \u0433\u043E\u0432\u043E\u0440\u0438\u0432. \u041D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0457\u0445, \u0440\u043E\u0437\u0432\u0438\u0432\u0430\u0439 \u0442\u0435\u043C\u0443.
+\u2022 "\u0420\u0415\u0410\u041A\u0422\u0418\u0412\u041D\u0410 \u0414\u041E\u0412\u0406\u0414\u041A\u0410" (recentChat + crossChatRecent \u043D\u0438\u0436\u0447\u0435) \u2014 \u0446\u0435 \u0420\u041E\u0417\u041C\u041E\u0412\u0410 \u0437 \u044E\u0437\u0435\u0440\u043E\u043C \u0443 \u0447\u0430\u0442\u0456. \u0426\u0435 \u041D\u0415 \u0442\u0432\u043E\u0457 \u0441\u043B\u043E\u0432\u0430 \u043D\u0430 \u0442\u0430\u0431\u043B\u043E, \u0446\u0435 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442. \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u0447\u0430\u0442 \u044F\u043A \u0441\u0432\u043E\u0457 \u043F\u0443\u0431\u043B\u0456\u0447\u043D\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0422\u0438 \u043F\u0438\u0448\u0435\u0448 \u041D\u041E\u0412\u0415 \u043F\u0443\u0431\u043B\u0456\u0447\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F.
+
+\u041F\u0420\u041E\u0410\u041A\u0422\u0418\u0412\u041D\u0410 \u041F\u0410\u041C\u02BC\u042F\u0422\u042C \u2014 \u0422\u0412\u041E\u0407 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F \u041D\u0410 \u0422\u0410\u0411\u041B\u041E (\u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439\u0441\u044F, \u0431\u0443\u0434\u0443\u0439 \u0434\u0456\u0430\u043B\u043E\u0433):
 ${boardHistory || "(\u0449\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043A\u0430\u0437\u0430\u0432)"}
 
-\u041E\u0421\u0422\u0410\u041D\u041D\u0406 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u042F \u0417 \u0427\u0410\u0422\u0423 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E \u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0432\u0430\u043B\u0438, \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0456 \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u044C):
+\u0420\u0415\u0410\u041A\u0422\u0418\u0412\u041D\u0410 \u0414\u041E\u0412\u0406\u0414\u041A\u0410 \u2014 \u0420\u041E\u0417\u041C\u041E\u0412\u0410 \u0423 \u041F\u041E\u0422\u041E\u0427\u041D\u041E\u041C\u0423 \u0427\u0410\u0422\u0406 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0449\u043E\u0431 \u043D\u0435 \u0441\u0443\u043F\u0435\u0440\u0435\u0447\u0438\u0442\u0438, \u0430\u043B\u0435 \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u0441\u0432\u043E\u0457 \u0441\u043B\u043E\u0432\u0430):
 ${recentChat || "(\u0447\u0430\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439)"}
+${crossChatRecent ? `
+\u0420\u0415\u0410\u041A\u0422\u0418\u0412\u041D\u0410 \u0414\u041E\u0412\u0406\u0414\u041A\u0410 \u2014 \u0420\u0415\u041F\u041B\u0406\u041A\u0418 \u0412 \u0406\u041D\u0428\u0418\u0425 \u0427\u0410\u0422\u0410\u0425 (\u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u044F\u043A\u0438\u0439 \u044E\u0437\u0435\u0440 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0432\u0430\u0432 \u0434\u0435\u0456\u043D\u0434\u0435):
+${crossChatRecent}` : ""}
 ${crossActions ? `
-\u041D\u0415\u0429\u041E\u0414\u0410\u0412\u041D\u0406 \u0414\u0406\u0407 \u041D\u0410 \u0406\u041D\u0428\u0418\u0425 \u0412\u041A\u041B\u0410\u0414\u041A\u0410\u0425 (\u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0439 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2014 \u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0436\u0438\u0442\u0442\u0456 \u044E\u0437\u0435\u0440\u0430):
+\u041D\u0415\u0429\u041E\u0414\u0410\u0412\u041D\u0406 \u0414\u0406\u0407 \u041D\u0410 \u0406\u041D\u0428\u0418\u0425 \u0412\u041A\u041B\u0410\u0414\u041A\u0410\u0425 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0436\u0438\u0442\u0442\u044F \u044E\u0437\u0435\u0440\u0430):
 ${crossActions}` : ""}
+${transitionFrom ? `
+[\u0417\u041C\u0406\u041D\u0410 \u0424\u041E\u041A\u0423\u0421\u0423]: \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u043F\u0435\u0440\u0435\u0439\u0448\u043E\u0432 \u0437 "${tabLabels[transitionFrom] || transitionFrom}" \u043D\u0430 "${tabLabels[tab] || tab}".
+[\u041F\u0420\u0410\u0412\u0418\u041B\u041E]: \u042F\u043A\u0449\u043E \u0442\u0435\u043C\u0430 \u0437 "${tabLabels[transitionFrom] || transitionFrom}" \u043B\u043E\u0433\u0456\u0447\u043D\u043E \u043F\u043E\u0432\u02BC\u044F\u0437\u0430\u043D\u0430 \u0437 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u044E \u0432\u043A\u043B\u0430\u0434\u043A\u043E\u044E \u2014 \u043F\u043B\u0430\u0432\u043D\u043E \u0437\u0432\u02BC\u044F\u0436\u0438 \u043E\u0434\u043D\u0456\u0454\u044E \u0444\u0440\u0430\u0437\u043E\u044E. \u042F\u043A\u0449\u043E \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u043D\u0435\u043C\u0430\u0454 \u2014 \u041F\u0420\u041E\u0406\u0413\u041D\u041E\u0420\u0423\u0419 \u0444\u0430\u043A\u0442 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0443 \u0456 \u0440\u0435\u0430\u0433\u0443\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u043D\u0430 \u0441\u0442\u0430\u043D \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0457 \u0432\u043A\u043B\u0430\u0434\u043A\u0438. \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u044F \u0431\u0430\u0447\u0443 \u0442\u0438 \u043F\u0435\u0440\u0435\u0439\u0448\u043E\u0432" \u0430\u0431\u043E "\u0434\u043E\u0431\u0440\u0435 \u0449\u043E \u0437\u0430\u0439\u0448\u043E\u0432 \u0441\u044E\u0434\u0438".` : ""}
 
 \u0429\u041E \u0422\u0418 \u0417\u041D\u0410\u0404\u0428 \u041F\u0420\u041E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u0447\u0456\u043F\u0438 \u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u043C\u0430\u044E\u0442\u044C \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0445\u0442\u043E \u0446\u044F \u043B\u044E\u0434\u0438\u043D\u0430; \u0444\u0430\u043A\u0442\u0438 \u043C\u0430\u044E\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u0456 \u043C\u0456\u0442\u043A\u0438 \u2014 \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442, \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D):
 ${formatFactsForBoard(15) || localStorage.getItem("nm_memory") || "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)"}
@@ -6037,6 +6069,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        signal: abortSignal,
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
@@ -6111,6 +6144,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (isInbox) renderOwlBoard();
       else renderTabBoard(tab);
     } catch (e) {
+      if (e && e.name === "AbortError") {
+        _boardGenerating[tab] = false;
+        return;
+      }
       if (!_isNetworkError(e)) {
         console.warn("[OWL board] generation error:", e?.message || e);
       }
@@ -6284,7 +6321,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     return true;
   }
-  var _boardGenerating, TOPIC_CD_MS, NM_FIRST_VISIT_KEY, TAB_HINTS, _boardUpdateTimer, BOARD_UPDATE_DELAY, INSTANT_REACTIONS, NM_LAST_ACTIVE_KEY, NM_LAST_ACTIVE_DAY_KEY, WELCOME_BACK_THRESHOLD;
+  var _boardGenerating, _boardAbortController, TOPIC_CD_MS, NM_FIRST_VISIT_KEY, TAB_HINTS, _boardUpdateTimer, BOARD_UPDATE_DELAY, INSTANT_REACTIONS, _tabSwitchTimer, NM_LAST_ACTIVE_KEY, NM_LAST_ACTIVE_DAY_KEY, WELCOME_BACK_THRESHOLD;
   var init_proactive = __esm({
     "src/owl/proactive.js"() {
       init_core();
@@ -6300,6 +6337,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_finance();
       init_evening();
       _boardGenerating = {};
+      _boardAbortController = null;
       setTimeout(_updateApiDot, 3e3);
       TOPIC_CD_MS = 3 * 60 * 60 * 1e3;
       NM_FIRST_VISIT_KEY = "nm_tab_first_visit";
@@ -6361,6 +6399,23 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         setTimeout(() => {
           const judge = shouldOwlSpeak("chat-closed");
           if (judge.speak) generateBoardMessage(currentTab || "inbox");
+        }, 3e3);
+      });
+      _tabSwitchTimer = null;
+      window.addEventListener("nm-tab-switched", (e) => {
+        const { from, to } = e.detail || {};
+        if (!to) return;
+        if (_tabSwitchTimer) {
+          clearTimeout(_tabSwitchTimer);
+          _tabSwitchTimer = null;
+        }
+        _tabSwitchTimer = setTimeout(() => {
+          _tabSwitchTimer = null;
+          if (typeof document !== "undefined" && document.hidden) return;
+          const judge = shouldOwlSpeak("tab-switched", { targetTab: to });
+          if (judge.speak) {
+            generateBoardMessage(to, { transitionFrom: from });
+          }
         }, 3e3);
       });
       NM_LAST_ACTIVE_KEY = "nm_last_active";
@@ -12516,6 +12571,25 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return [];
     }
   }
+  function getRecentChatsAcrossTabs(excludeTab, limit = 2, windowMs = 30 * 60 * 1e3) {
+    const now = Date.now();
+    const all = [];
+    _ALL_CHAT_TABS.filter((t) => t !== excludeTab).forEach((t) => {
+      const key = "nm_chat_" + t;
+      let msgs = [];
+      try {
+        msgs = JSON.parse(localStorage.getItem(key) || "[]");
+      } catch {
+      }
+      msgs.slice(-3).forEach((m) => {
+        if (m && m.ts && now - m.ts < windowMs && m.text) {
+          all.push({ role: m.role, text: m.text, ts: m.ts, tab: t, tabLabel: _TAB_LABELS_CHAT[t] || t });
+        }
+      });
+    });
+    all.sort((a, b) => b.ts - a.ts);
+    return all.slice(0, limit);
+  }
   function addMsgForTab(tab, role, text) {
     if (tab === "inbox") {
       addInboxChatMsg(role, text);
@@ -12669,7 +12743,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       activeChatBar = null;
     }
   }
-  var activeChatBar, lastChatClosedTs, CHAT_STORE_MAX, CHAT_STORE_KEYS;
+  var activeChatBar, lastChatClosedTs, CHAT_STORE_MAX, CHAT_STORE_KEYS, _ALL_CHAT_TABS, _TAB_LABELS_CHAT;
   var init_core = __esm({
     "src/ai/core.js"() {
       init_nav();
@@ -12703,6 +12777,8 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         evening: "nm_chat_evening",
         finance: "nm_chat_finance"
       };
+      _ALL_CHAT_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
+      _TAB_LABELS_CHAT = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
       Object.assign(window, { openChatBar, closeChatBar });
     }
   });
@@ -16348,6 +16424,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       console.warn("[switchTab] unknown tab:", tab);
       return;
     }
+    const prevTab = currentTab;
     animateTabSwitch(tab);
     currentTab = tab;
     try {
@@ -16417,7 +16494,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         tryBoardUpdate(tab);
       } catch (e) {
       }
-    }, 700);
+    }, 100);
+    window.dispatchEvent(new CustomEvent("nm-tab-switched", { detail: { from: prevTab, to: tab } }));
     if (["me", "evening", "health", "projects", "inbox"].includes(tab)) {
       setTimeout(() => {
         try {

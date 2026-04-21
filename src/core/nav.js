@@ -101,6 +101,7 @@ export function switchTab(tab) {
     console.warn('[switchTab] unknown tab:', tab);
     return;
   }
+  const prevTab = currentTab;
   animateTabSwitch(tab);
   currentTab = tab;
 
@@ -143,8 +144,13 @@ export function switchTab(tab) {
   // Підказка першого відвідування
   setTimeout(() => showFirstVisitTip(tab), 600);
 
-  // OWL табло для вкладки
-  setTimeout(() => { try { tryBoardUpdate(tab); } catch(e) {} }, 700);
+  // Шар 2 "Один мозок V2" Фаза 2 (rJYkw 21.04.2026):
+  // Негайно рендеримо поточне повідомлення з unified storage (без мигання).
+  // Потім dispatch події nm-tab-switched — listener у proactive.js робить
+  // dwell 3 сек і питає Judge Layer чи генерувати нове (з transitionFrom).
+  setTimeout(() => { try { tryBoardUpdate(tab); } catch(e) {} }, 100);
+  window.dispatchEvent(new CustomEvent('nm-tab-switched', { detail: { from: prevTab, to: tab } }));
+
   // Оновлюємо висоту overlay після зміни вмісту табло
   if (['me','evening','health','projects','inbox'].includes(tab)) {
     setTimeout(() => { try { applyBoardOverlays(); } catch(e) {} }, 750);
