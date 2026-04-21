@@ -1294,6 +1294,19 @@ body {
   display: none;
   color: rgba(255,255,255,0.25);
 }
+/* Шар 2 Фаза 3 (rJYkw 21.04.2026) — сіра мітка "N хв тому" коли повідомлення
+   на табло протухло (>10 хв), щоб юзер розумів що сова ще не оновилася */
+.owl-speech-time.owl-time-stale {
+  display: inline-block;
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  margin-left: 6px;
+  font-weight: 400;
+}
+/* Плавний fade при зміні тексту табло (200мс opacity) — не мигає при переходах */
+.owl-speech-text, .owl-collapsed-text {
+  transition: opacity 0.2s ease;
+}
 /* Чіпи під баблом — один рядок */
 .owl-chips-wrapper {
   position: relative;

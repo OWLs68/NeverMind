@@ -1,6 +1,6 @@
 import { openChatBar } from '../ai/core.js';
 import { renderChips } from './chips.js';
-import { getCurrentMessage, getTabMessages, saveTabMessage } from './unified-storage.js';
+import { getCurrentMessage, getTabMessages, getUnifiedBoard, saveTabMessage } from './unified-storage.js';
 
 // === OWL TAB BOARDS (#37) ===
 export const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
@@ -101,18 +101,33 @@ export function scrollOwlTabChips(tab, dir) {
   setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
 }
 
-// Рендер табло. Шар 2 "Один мозок V2": повідомлення ЄДИНЕ на всіх вкладках —
-// береться з unified storage через getCurrentMessage(). При переключенні між
-// вкладками юзер бачить ТЕ САМЕ повідомлення (нема мигання "дві різні сови").
-// Нове повідомлення зʼявляється лише коли мозок згенерував його (API або fallback).
+// Шар 2 "Один мозок V2" Фаза 3 (rJYkw 21.04.2026): ПРИЗМА ВКЛАДКИ + ПРОБІЙ КРИТИЧНИХ.
+// Правило: показуємо найсвіжіше повідомлення де (forTab === tab) АБО (priority === 'critical').
+// Критичні (нагадування, дедлайни <1год) пробивають фільтр і видно СКРІЗЬ, як push-сповіщення.
+// Рядові — тільки на своїй вкладці, щоб на Фінансах не мигало про задачі.
+// Якщо для вкладки немає нічого — fallback на глобальне найсвіжіше.
+function _pickMessageForTab(tab) {
+  const all = getUnifiedBoard();
+  if (all.length === 0) return null;
+  // 1. Найсвіжіше критичне пробиває фільтр — Jarvis-пуш
+  if (all[0].priority === 'critical') return all[0];
+  // 2. Найсвіжіше повідомлення для цієї вкладки
+  const tabMsg = all.find(m => m.forTab === tab);
+  if (tabMsg) return tabMsg;
+  // 3. Немає для вкладки — покажемо глобальне (краще щось ніж дефолт)
+  return all[0];
+}
+
+// Рендер табло з призмою вкладки. При переключенні юзер бачить або своє повідомлення
+// (якщо є), або критичне з будь-якої вкладки (якщо щось терміново). Перехід плавний
+// через fade 200мс (CSS transition на opacity).
 export function renderTabBoard(tab) {
   const isInbox = tab === 'inbox';
   const board = document.getElementById(isInbox ? 'owl-board' : 'owl-tab-board-' + tab);
   if (!board) return;
   board.style.display = 'block';
 
-  // Єдине повідомлення на всі вкладки
-  let msg = getCurrentMessage();
+  let msg = _pickMessageForTab(tab);
   if (!msg) {
     // Перший запуск — дефолт для поточної вкладки, зберігаємо в unified
     const defaults = { inbox:'Привіт! Напиши що завгодно — я допоможу.', tasks:'Що будемо робити сьогодні?', finance:'Тапни категорію щоб записати витрату.', notes:'Запиши думку або ідею 📝', health:'Як самопочуття?', evening:'Як пройшов день?', me:'Подивимось на тиждень.', projects:'Працюємо над проектами.' };
@@ -132,11 +147,23 @@ export function renderTabBoard(tab) {
   const cEl = document.getElementById('owl-tab-ctext-' + tab);
   const tmEl = document.getElementById('owl-tab-time-' + tab);
 
-  // Fade-транзиція при зміні тексту (Фаза 3 робить красиво — зараз миттєво).
-  // Placeholder: підготуємо структуру яку Фаза 3 замінить на opacity-fade.
+  // Плавна fade-транзиція при зміні тексту (CSS transition opacity 0.2s)
   _applyTabText(tEl, msg.text);
   _applyTabText(cEl, msg.text);
-  if (tmEl) tmEl.textContent = '';
+
+  // Сірий підпис "N хв тому" якщо повідомлення протухло (>10 хв).
+  // Gemini ідея — замість згортання показуємо що думка стара, без мигання UI.
+  if (tmEl) {
+    const ageMs = Date.now() - (msg.ts || msg.id || 0);
+    const ageMin = Math.floor(ageMs / 60000);
+    if (ageMin > 10) {
+      tmEl.textContent = '• ' + (ageMin < 60 ? ageMin + ' хв тому' : Math.floor(ageMin / 60) + ' год тому');
+      tmEl.classList.add('owl-time-stale');
+    } else {
+      tmEl.textContent = '';
+      tmEl.classList.remove('owl-time-stale');
+    }
+  }
 
   const chipsEl = document.getElementById('owl-tab-chips-' + tab);
   if (chipsEl) {
@@ -148,10 +175,23 @@ export function renderTabBoard(tab) {
   }
 }
 
-// Фаза 3 розширить цю функцію fade-транзицією. Зараз — миттєво.
+// Плавна зміна тексту через opacity (CSS transition на .owl-speech-text).
+// Перший рендер (порожній textContent) — без fade. Зміни — fade-out 200мс → текст → fade-in 200мс.
+// Якщо новий текст = старий, нічого не робимо (уникаємо зайвого мигання).
 function _applyTabText(el, text) {
   if (!el) return;
-  el.textContent = text;
+  const current = el.textContent || '';
+  if (current === text) return;
+  if (current === '') {
+    el.textContent = text;
+    el.style.opacity = '1';
+    return;
+  }
+  el.style.opacity = '0';
+  setTimeout(() => {
+    el.textContent = text;
+    el.style.opacity = '1';
+  }, 200);
 }
 
 // === WINDOW GLOBALS (HTML handlers only) ===
