@@ -451,12 +451,14 @@ export async function callAIWithTools(systemPrompt, history, tools) {
 // === CHAT STORAGE — зберігає чати по вкладках ===
 const CHAT_STORE_MAX = 30; // максимум повідомлень на вкладку
 const CHAT_STORE_KEYS = {
-  inbox:   'nm_chat_inbox',
-  tasks:   'nm_chat_tasks',
-  notes:   'nm_chat_notes',
-  me:      'nm_chat_me',
-  evening: 'nm_chat_evening',
-  finance: 'nm_chat_finance',
+  inbox:    'nm_chat_inbox',
+  tasks:    'nm_chat_tasks',
+  notes:    'nm_chat_notes',
+  me:       'nm_chat_me',
+  evening:  'nm_chat_evening',
+  finance:  'nm_chat_finance',
+  health:   'nm_chat_health',
+  projects: 'nm_chat_projects',
 };
 
 export function saveChatMsg(tab, role, text) {

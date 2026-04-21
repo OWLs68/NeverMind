@@ -12913,7 +12913,9 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         notes: "nm_chat_notes",
         me: "nm_chat_me",
         evening: "nm_chat_evening",
-        finance: "nm_chat_finance"
+        finance: "nm_chat_finance",
+        health: "nm_chat_health",
+        projects: "nm_chat_projects"
       };
       _ALL_CHAT_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
       _TAB_LABELS_CHAT = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
