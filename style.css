@@ -1306,6 +1306,18 @@ body {
 .owl-speech-text, .owl-collapsed-text {
   transition: opacity 0.2s ease;
 }
+
+/* === Пульсація днів з подіями (rJYkw 21.04.2026) ===
+   Активується коли юзер питає агента "які події заплановані" — сова
+   відкриває календар і пульсує клітинки-дні з подіями бірюзовим glow.
+   Триває 8 сек, потім сама припиняється. */
+@keyframes cal-day-event-pulse-anim {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(20,184,166,0.55); }
+  50%      { box-shadow: 0 0 0 6px rgba(20,184,166,0); }
+}
+.cal-day-event-pulse {
+  animation: cal-day-event-pulse-anim 1.5s ease-in-out infinite;
+}
 /* Чіпи під баблом — один рядок */
 .owl-chips-wrapper {
   position: relative;

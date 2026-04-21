@@ -234,9 +234,24 @@ function renderCalendar() {
 
     if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#14b8a6' : 'currentColor'};margin-top:1px"></div>`;
 
-    cells += `<div onclick="calendarDayTap(${d})" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+    const cls = hasEvent ? ' class="cal-day-event"' : '';
+    cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
   }
   grid.innerHTML = cells;
+}
+
+// === HIGHLIGHT EVENT DAYS (rJYkw 21.04.2026) ===
+// Додає пульсацію на клітинки з подіями коли юзер питає "які події заплановані".
+// Знімається через 8 сек або при тапі на день (через renderCalendar після selectedDay).
+// Клас .cal-day-event-pulse — CSS keyframes у style.css.
+export function highlightEventDays() {
+  const cells = document.querySelectorAll('#calendar-grid .cal-day-event');
+  if (cells.length === 0) return;
+  cells.forEach(c => c.classList.add('cal-day-event-pulse'));
+  // Самознаття через 8 сек — не відволікати юзера надовго
+  setTimeout(() => {
+    cells.forEach(c => c.classList.remove('cal-day-event-pulse'));
+  }, 8000);
 }
 
 // === DAY TAP → модалка розкладу дня ===
@@ -722,4 +737,5 @@ Object.assign(window, {
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
   openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority,
   closeDayScheduleModal, openRoutineFromCalendar,
+  highlightEventDays,
 });

@@ -49,6 +49,25 @@ export const UI_TOOLS = [
   {
     type: "function",
     function: {
+      name: "open_calendar",
+      description: "Відкрити модалку Календаря. Використовуй коли юзер питає про заплановані події, розклад, 'що на цьому тижні', 'які в мене події', 'який завтра день', 'що запланував', 'відкрий календар'. Якщо highlight_events:true — клітинки-дні з подіями будуть пульсувати бірюзовим (яскрава відповідь на питання про події). Якщо false — просто відкрити календар без підсвічувань. ОКРІМ виклику цього tool — ЗАВЖДИ дай коротку текстову відповідь у чаті: скільки подій, найближча з датою/часом.",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {
+          highlight_events: {
+            type: "boolean",
+            description: "true — коли юзер питає ПРО події (підсвітити пульсацією дні з подіями). false — коли юзер просто попросив ВІДКРИТИ календар (без підсвічень)."
+          }
+        },
+        required: ["highlight_events"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "open_settings",
       description: "Відкрити модалку Налаштувань. Юзер каже 'відкрий налаштування', 'покажи налаштування'.",
       parameters: { type: "object", properties: {}, additionalProperties: false }
@@ -135,6 +154,19 @@ export function handleUITool(name, args) {
           return { text: 'Відкрив Пам\'ять.' };
         }
         return { text: 'Пам\'ять недоступна.' };
+
+      case 'open_calendar': {
+        if (typeof window.openCalendarModal !== 'function') {
+          return { text: 'Календар недоступний.' };
+        }
+        window.openCalendarModal();
+        if (args.highlight_events && typeof window.highlightEventDays === 'function') {
+          // Даємо модалці час розкритися (анімація scale 0→1 займає ~350мс)
+          setTimeout(() => { try { window.highlightEventDays(); } catch(e) {} }, 400);
+          return { text: 'Відкрив Календар — дні з подіями пульсують.' };
+        }
+        return { text: 'Відкрив Календар.' };
+      }
 
       case 'open_settings':
         openSettings();
