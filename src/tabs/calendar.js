@@ -229,7 +229,7 @@ function renderCalendar() {
     else if (isSelected) { bg = 'rgba(234,88,12,0.18)'; color = '#ea580c'; border = '#ea580c'; }
     else if (hasCritical) { bg = 'rgba(239,68,68,0.15)'; color = '#ef4444'; border = 'rgba(239,68,68,0.3)'; }
     else if (hasImportant) { bg = 'rgba(234,88,12,0.12)'; color = '#ea580c'; border = 'rgba(234,88,12,0.25)'; }
-    else if (hasEvent) { bg = 'rgba(20,184,166,0.15)'; color = '#14b8a6'; border = 'rgba(20,184,166,0.30)'; }
+    else if (hasEvent) { bg = 'rgba(20,184,166,0.15)'; color = '#1e1040'; border = 'rgba(20,184,166,0.45)'; }
     else if (hasItems) { bg = 'rgba(30,16,64,0.1)'; color = '#1e1040'; }
 
     if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#14b8a6' : 'currentColor'};margin-top:1px"></div>`;

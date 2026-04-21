@@ -1731,8 +1731,8 @@ ${lines.join("\n")}`;
         border = "rgba(234,88,12,0.25)";
       } else if (hasEvent) {
         bg = "rgba(20,184,166,0.15)";
-        color = "#14b8a6";
-        border = "rgba(20,184,166,0.30)";
+        color = "#1e1040";
+        border = "rgba(20,184,166,0.45)";
       } else if (hasItems) {
         bg = "rgba(30,16,64,0.1)";
         color = "#1e1040";
