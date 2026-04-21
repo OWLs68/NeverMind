@@ -1495,7 +1495,7 @@ export function getHealthContext() {
 }
 
 // === HEALTH AI BAR ===
-function addHealthChatMsg(role, text, _noSave = false) {
+export function addHealthChatMsg(role, text, _noSave = false) {
   const el = document.getElementById('health-chat-messages');
   if (!el) return;
   if (_healthTypingEl) { _healthTypingEl.remove(); _healthTypingEl = null; }

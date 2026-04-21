@@ -15,13 +15,13 @@ import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { getEveningMood, getMomentsContext, getEveningContext } from '../tabs/evening.js';
 import { addEveningBarMsg } from '../tabs/evening-chat.js';
 import { addMeChatMsg } from '../tabs/me.js';
-import { getHealthContext } from '../tabs/health.js';
-import { getProjectsContext } from '../tabs/projects.js';
+import { getHealthContext, addHealthChatMsg } from '../tabs/health.js';
+import { getProjectsContext, addProjectsChatMsg } from '../tabs/projects.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
 import { getBoardContext } from '../owl/proactive.js';
 import { formatFactsForContext, getFacts } from './memory.js';
 import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPrompt } from './prompts.js';
-import { clearUnreadBadge } from '../ui/unread-badge.js';
+import { clearUnreadBadge, showUnreadBadge } from '../ui/unread-badge.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
 // які імпортують ці константи з './ai/core.js' продовжували працювати без змін.
@@ -505,6 +505,17 @@ export function getRecentChatsAcrossTabs(excludeTab, limit = 2, windowMs = 30 * 
 // Використовується followups.js щоб писати в контекстний чат ("один мозок на все")
 // Не відкриває чат-бар, не спамить DOM при закритому барі — надійно зберігає в localStorage
 // і синхронізує DOM якщо чат уже був відновлений (юзер відкривав бар у цій сесії)
+// Кнопки "Надіслати" для червоної крапки непрочитаних.
+// Inbox і Evening вже мають власні виклики у своїх add-функціях (backward-compat).
+const SEND_BTN_MAP = {
+  tasks:    'tasks-send-btn',
+  notes:    'notes-send-btn',
+  me:       'me-send-btn',
+  finance:  'finance-send-btn',
+  health:   'health-send-btn',
+  projects: 'projects-send-btn',
+};
+
 export function addMsgForTab(tab, role, text) {
   // Inbox — спеціальний: addInboxChatMsg сам зберігає + показує бейдж
   if (tab === 'inbox') {
@@ -515,41 +526,57 @@ export function addMsgForTab(tab, role, text) {
   saveChatMsg(tab, role, text);
   // Якщо DOM контейнер уже був відновлений (юзер відкривав бар) — додаємо у DOM зараз
   const containerMap = {
-    tasks:   'tasks-chat-messages',
-    notes:   'notes-chat-messages',
-    me:      'me-chat-messages',
-    evening: 'evening-bar-messages',
-    finance: 'finance-chat-messages',
+    tasks:    'tasks-chat-messages',
+    notes:    'notes-chat-messages',
+    me:       'me-chat-messages',
+    evening:  'evening-bar-messages',
+    finance:  'finance-chat-messages',
+    health:   'health-chat-messages',
+    projects: 'projects-chat-messages',
   };
   const renderMap = {
-    tasks:   addTaskBarMsg,
-    notes:   addNotesChatMsg,
-    me:      addMeChatMsg,
-    evening: addEveningBarMsg,
-    finance: addFinanceChatMsg,
+    tasks:    addTaskBarMsg,
+    notes:    addNotesChatMsg,
+    me:       addMeChatMsg,
+    evening:  addEveningBarMsg,
+    finance:  addFinanceChatMsg,
+    health:   addHealthChatMsg,
+    projects: addProjectsChatMsg,
   };
   const el = document.getElementById(containerMap[tab]);
   if (el && el.dataset.restored && renderMap[tab]) {
     // _noSave=true — не відкриває чат-бар і не зберігає повторно
     renderMap[tab](role, text, true);
   }
+  // Універсальний бейдж непрочитаних для всіх вкладок з чат-баром.
+  // Evening має локальний виклик у addEveningBarMsg — не дублюємо щоб не було +2.
+  if (role === 'agent' && tab !== 'evening' && SEND_BTN_MAP[tab]) {
+    const bar = document.getElementById(tab + '-ai-bar');
+    const chatWin = bar ? bar.querySelector('.ai-bar-chat-window') : null;
+    const isOpen = chatWin && chatWin.classList.contains('open');
+    if (!isOpen) showUnreadBadge(tab, SEND_BTN_MAP[tab]);
+  }
 }
 
 export function restoreChatUI(tab) {
   const containerMap = {
-    inbox:   'inbox-chat-messages',
-    tasks:   'tasks-chat-messages',
-    notes:   'notes-chat-messages',
-    me:      'me-chat-messages',
-    evening: 'evening-bar-messages',
-    finance: 'finance-chat-messages',
+    inbox:    'inbox-chat-messages',
+    tasks:    'tasks-chat-messages',
+    notes:    'notes-chat-messages',
+    me:       'me-chat-messages',
+    evening:  'evening-bar-messages',
+    finance:  'finance-chat-messages',
+    health:   'health-chat-messages',
+    projects: 'projects-chat-messages',
   };
   const addMsgMap = {
-    tasks:   (r,t) => addTaskBarMsg(r,t,true),
-    notes:   (r,t) => addNotesChatMsg(r,t,true),
-    me:      (r,t) => addMeChatMsg(r,t,true),
-    evening: (r,t) => addEveningBarMsg(r,t,true),
-    finance: (r,t) => addFinanceChatMsg(r,t,true),
+    tasks:    (r,t) => addTaskBarMsg(r,t,true),
+    notes:    (r,t) => addNotesChatMsg(r,t,true),
+    me:       (r,t) => addMeChatMsg(r,t,true),
+    evening:  (r,t) => addEveningBarMsg(r,t,true),
+    finance:  (r,t) => addFinanceChatMsg(r,t,true),
+    health:   (r,t) => addHealthChatMsg(r,t,true),
+    projects: (r,t) => addProjectsChatMsg(r,t,true),
   };
   const containerId = containerMap[tab];
   if (!containerId) return;

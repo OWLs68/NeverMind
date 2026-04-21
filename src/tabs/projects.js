@@ -442,7 +442,7 @@ export function getProjectsContext() {
 }
 
 // === PROJECTS AI BAR ===
-function addProjectsChatMsg(role, text, _noSave = false) {
+export function addProjectsChatMsg(role, text, _noSave = false) {
   const el = document.getElementById('projects-chat-messages');
   if (!el) return;
   if (_projectsTypingEl) { _projectsTypingEl.remove(); _projectsTypingEl = null; }

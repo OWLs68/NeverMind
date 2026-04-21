@@ -12725,18 +12725,28 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       notes: "notes-chat-messages",
       me: "me-chat-messages",
       evening: "evening-bar-messages",
-      finance: "finance-chat-messages"
+      finance: "finance-chat-messages",
+      health: "health-chat-messages",
+      projects: "projects-chat-messages"
     };
     const renderMap = {
       tasks: addTaskBarMsg,
       notes: addNotesChatMsg,
       me: addMeChatMsg,
       evening: addEveningBarMsg,
-      finance: addFinanceChatMsg
+      finance: addFinanceChatMsg,
+      health: addHealthChatMsg,
+      projects: addProjectsChatMsg
     };
     const el = document.getElementById(containerMap[tab]);
     if (el && el.dataset.restored && renderMap[tab]) {
       renderMap[tab](role, text, true);
+    }
+    if (role === "agent" && tab !== "evening" && SEND_BTN_MAP[tab]) {
+      const bar = document.getElementById(tab + "-ai-bar");
+      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
+      const isOpen = chatWin && chatWin.classList.contains("open");
+      if (!isOpen) showUnreadBadge(tab, SEND_BTN_MAP[tab]);
     }
   }
   function restoreChatUI(tab) {
@@ -12746,14 +12756,18 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       notes: "notes-chat-messages",
       me: "me-chat-messages",
       evening: "evening-bar-messages",
-      finance: "finance-chat-messages"
+      finance: "finance-chat-messages",
+      health: "health-chat-messages",
+      projects: "projects-chat-messages"
     };
     const addMsgMap = {
       tasks: (r, t) => addTaskBarMsg(r, t, true),
       notes: (r, t) => addNotesChatMsg(r, t, true),
       me: (r, t) => addMeChatMsg(r, t, true),
       evening: (r, t) => addEveningBarMsg(r, t, true),
-      finance: (r, t) => addFinanceChatMsg(r, t, true)
+      finance: (r, t) => addFinanceChatMsg(r, t, true),
+      health: (r, t) => addHealthChatMsg(r, t, true),
+      projects: (r, t) => addProjectsChatMsg(r, t, true)
     };
     const containerId = containerMap[tab];
     if (!containerId) return;
@@ -12867,7 +12881,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       activeChatBar = null;
     }
   }
-  var activeChatBar, lastChatClosedTs, CHAT_STORE_MAX, CHAT_STORE_KEYS, _ALL_CHAT_TABS, _TAB_LABELS_CHAT;
+  var activeChatBar, lastChatClosedTs, CHAT_STORE_MAX, CHAT_STORE_KEYS, _ALL_CHAT_TABS, _TAB_LABELS_CHAT, SEND_BTN_MAP;
   var init_core = __esm({
     "src/ai/core.js"() {
       init_nav();
@@ -12903,6 +12917,14 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       };
       _ALL_CHAT_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
       _TAB_LABELS_CHAT = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
+      SEND_BTN_MAP = {
+        tasks: "tasks-send-btn",
+        notes: "notes-send-btn",
+        me: "me-send-btn",
+        finance: "finance-send-btn",
+        health: "health-send-btn",
+        projects: "projects-send-btn"
+      };
       Object.assign(window, { openChatBar, closeChatBar });
     }
   });
