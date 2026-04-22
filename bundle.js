@@ -1577,7 +1577,15 @@ ${lines.join("\n")}`;
       listEl.style.display = "none";
       return;
     }
-    items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || "").localeCompare(b.time || ""));
+    const bucket = (d) => d === todayStr ? 0 : d > todayStr ? 1 : 2;
+    items.sort((a, b) => {
+      const ba = bucket(a.date), bb = bucket(b.date);
+      if (ba !== bb) return ba - bb;
+      const cmp = ba === 2 ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+      if (cmp !== 0) return cmp;
+      const ta = a.time || "", tb = b.time || "";
+      return ba === 2 ? tb.localeCompare(ta) : ta.localeCompare(tb);
+    });
     const prioIcons = { critical: "\u{1F534} ", important: "\u{1F7E0} ", normal: "" };
     let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041F\u043E\u0434\u0456\u0457 \xB7 ${MONTHS_UA[_calMonth]}</div>`;
     items.forEach((item) => {
@@ -6638,7 +6646,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     return `${allTxs.length}_${Math.round(exp)}_${Math.round(inc)}_${top}`;
   }
   function finDailyInsight(allTxs, period, offset) {
-    if (allTxs.length === 0) return "";
+    if (allTxs.length < 2) return "";
     const cacheKey = `nm_fin_insight_${period}_${offset}`;
     const cached = localStorage.getItem(cacheKey);
     let text = "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026";
