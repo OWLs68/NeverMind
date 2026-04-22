@@ -77,7 +77,17 @@ function renderMonthEventsList() {
     return;
   }
 
-  items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+  // Варіант A (узгоджено ZJmdF 22.04): сьогодні → майбутні (за зростанням) → минулі (за спаданням)
+  const bucket = (d) => d === todayStr ? 0 : d > todayStr ? 1 : 2;
+  items.sort((a, b) => {
+    const ba = bucket(a.date), bb = bucket(b.date);
+    if (ba !== bb) return ba - bb;
+    // у минулому — свіже зверху (спадання), інакше — зростання
+    const cmp = ba === 2 ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+    if (cmp !== 0) return cmp;
+    const ta = a.time || '', tb = b.time || '';
+    return ba === 2 ? tb.localeCompare(ta) : ta.localeCompare(tb);
+  });
 
   const prioIcons = { critical: '🔴 ', important: '🟠 ', normal: '' };
 
