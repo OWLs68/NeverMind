@@ -7,7 +7,7 @@ import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS } from '../ai/core.js';
-import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
@@ -1340,6 +1340,7 @@ export async function sendTasksBarMessage() {
     + 'ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити, зробити) → save_task. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, свято, рейс) → create_event. "приїзд мами 20го" = create_event. "купити молоко" = save_task.\n'
     + 'Для редагування існуючої звички (зміна днів/назви) — edit_habit, НЕ save_habit нову.\n'
     + 'Інакше — текст 1-3 речення українською. НЕ вигадуй даних яких немає.\n\n'
+    + REMINDER_RULES + '\n\n'
     + UI_TOOLS_RULES
     + (aiContext ? '\n\n' + aiContext : '');
 

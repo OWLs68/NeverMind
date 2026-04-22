@@ -18,7 +18,7 @@
 import { showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
-import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { getTasks } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, processUniversalAction } from './habits.js';
@@ -79,8 +79,9 @@ export async function sendMeChatMessage() {
   const stats = getMeStatsContext();
   const systemPrompt = `${getOWLPersonality()} Аналізуєш дані користувача і даєш чесний, корисний зворотній звʼязок. Відповіді — 2-4 речення, конкретно і по ділу. Відповідай українською. НЕ вигадуй факти яких немає в даних.
 ЗАДАЧА = дія ЗРОБИТИ (save_task). ПОДІЯ = факт що СТАНЕТЬСЯ (create_event). "Перенеси подію" = edit_event.
-НАГАДУВАННЯ (юзер каже "нагадай", "нагадай зранку", "напомни через годину") = ЗАВЖДИ set_reminder. НЕ create_event, НЕ save_task. "Зранку" = 08:00, НЕ 05:00.
-Викликай set_reminder РІВНО ОДИН раз за запит. Якщо юзер підтверджує ("Ок", "Добре") — НЕ створюй ще одне нагадування, просто підтверджуй текстом.
+
+${REMINDER_RULES}
+
 Для CRUD дій — викликай відповідний tool. Для аналізу/відповіді — пиши текст.
 
 ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;

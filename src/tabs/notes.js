@@ -8,7 +8,7 @@ import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, formatTime } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
-import { UI_TOOLS_RULES } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { processUniversalAction } from './habits.js';
@@ -1031,9 +1031,11 @@ export async function sendNotesBarMessage() {
 - Видалити подію: {"action":"delete_event","event_id":ID}
 - Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст","folder":"папка"}
 - Розпорядок: {"action":"save_routine","day":"mon" або ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"Підйом"}]}
-- Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовч.=сьогодні). "НАГАДАЙ" = ЗАВЖДИ set_reminder. Маркери: вранці=08:00, вдень=12:00, після обіду=14:00, ввечері=18:00, перед сном=22:00
+- Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовч.=сьогодні). Деталі нижче у ПРАВИЛО НАГАДУВАНЬ.
 ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію на 24" = edit_event.
 - Просто відповісти: текст (1-3 речення)
+
+${REMINDER_RULES}
 ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
 Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
 НЕ вигадуй дані яких немає в контексті.
