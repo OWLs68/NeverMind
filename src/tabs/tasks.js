@@ -4,9 +4,10 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
+import { renderChips } from '../owl/chips.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { updateProdTabCounters, processUniversalAction } from './habits.js';
 import { closeNoteView } from './notes.js';
@@ -352,13 +353,20 @@ function closeTaskChat() {
   taskChatHistory = [];
 }
 
-function addTaskChatMsg(role, text, id = '') {
+function addTaskChatMsg(role, text, id = '', chips = null) {
   const el = document.getElementById('task-chat-messages');
   const isAgent = role === 'agent';
+  if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div ${id ? `id="${id}"` : ''} style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#ea580c'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'tasks');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskChatHistory.push({ role: 'user', content: text });
 }
@@ -420,7 +428,9 @@ async function sendTaskChatMessage() {
       })
     });
     const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content;
+    const rawReply = data.choices?.[0]?.message?.content;
+    // Виділяємо блок {chips:[...]} окремо щоб він не плутався з action-JSON
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply || '');
     if (reply) {
       // Check if reply is JSON with steps
       try {
@@ -437,10 +447,10 @@ async function sendTaskChatMessage() {
           }
         } else if (parsed.action) {
           if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
-            addTaskChatMsg('agent', reply);
+            addTaskChatMsg('agent', reply, '', extractedChips);
           }
         } else {
-          addTaskChatMsg('agent', reply);
+          addTaskChatMsg('agent', reply, '', extractedChips);
         }
       } catch {
         // Якщо reply містить кілька JSON дій підряд або JSON з оточуючим текстом —
@@ -463,7 +473,7 @@ async function sendTaskChatMessage() {
             handled = true;
           }
         }
-        if (!handled) addTaskChatMsg('agent', reply);
+        if (!handled) addTaskChatMsg('agent', reply, '', extractedChips);
       }
     }
     else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');

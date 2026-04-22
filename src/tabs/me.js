@@ -16,8 +16,9 @@
 // ============================================================
 
 import { showToast, switchTab } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
 import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { getTasks } from './tasks.js';
@@ -94,13 +95,18 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
   if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
     if (loadEl) loadEl.remove();
     dispatchChatToolCalls(msg.tool_calls, (r, t) => addMeChatMsg(r, t), text);
-    if (msg.content) meChatHistory.push({ role: 'assistant', content: msg.content });
+    if (msg.content) {
+      const { text: rt, chips } = parseContentChips(msg.content);
+      if (rt) addMeChatMsg('agent', rt, false, '', chips);
+      meChatHistory.push({ role: 'assistant', content: msg.content });
+    }
     if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
     return;
   }
 
   // Fallback на існуючий текст-JSON флоу (CRUD через processUniversalAction)
-  const reply = msg && msg.content ? msg.content : '';
+  const rawReply = msg && msg.content ? msg.content : '';
+  const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
 
   // Розбиваємо AI-відповідь на окремі JSON блоки (кілька дій одразу).
   let handled = false;
@@ -114,7 +120,10 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
     if (handled && loadEl) loadEl.textContent = '✅';
   }
 
-  if (!handled && loadEl) loadEl.textContent = reply || 'Не вдалося отримати відповідь.';
+  if (!handled) {
+    if (loadEl) loadEl.remove();
+    addMeChatMsg('agent', reply || 'Не вдалося отримати відповідь.', false, '', extractedChips);
+  }
   if (reply) meChatHistory.push({ role: 'assistant', content: reply });
   if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
 }
@@ -463,15 +472,22 @@ function showMeChatMessages() {
   openChatBar('me');
 }
 
-export function addMeChatMsg(role, text, _noSave = false, id = '') {
+export function addMeChatMsg(role, text, _noSave = false, id = '', chips = null) {
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   if (!_noSave) { try { openChatBar('me'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div ${id ? `id="${id}"` : ''} class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'me');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (!_noSave) saveChatMsg('me', role, text);
 }

@@ -5,10 +5,11 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, parseContentChips } from '../core/utils.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { renderChips } from '../owl/chips.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
 import { getNotes, openNotesFolder } from './notes.js';
@@ -442,7 +443,7 @@ export function getProjectsContext() {
 }
 
 // === PROJECTS AI BAR ===
-export function addProjectsChatMsg(role, text, _noSave = false) {
+export function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
   const el = document.getElementById('projects-chat-messages');
   if (!el) return;
   if (_projectsTypingEl) { _projectsTypingEl.remove(); _projectsTypingEl = null; }
@@ -455,12 +456,19 @@ export function addProjectsChatMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   try { openChatBar('projects'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'projects');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') projectsBarHistory.push({ role: 'user', content: text });
   else projectsBarHistory.push({ role: 'assistant', content: text });
@@ -495,15 +503,22 @@ export async function sendProjectsBarMessage() {
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
-      const reply = msg.content ? msg.content.trim() : '';
-      if (reply) addProjectsChatMsg('agent', reply);
+      if (msg.content) {
+        const { text: replyText, chips } = parseContentChips(msg.content);
+        if (replyText) addProjectsChatMsg('agent', replyText, false, chips);
+      }
       projectsBarLoading = false;
       return;
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addProjectsChatMsg('agent', 'Щось пішло не так.'); projectsBarLoading = false; return; }
-    safeAgentReply(reply, addProjectsChatMsg);
+    const { text: replyText, chips } = parseContentChips(reply);
+    if (replyText) {
+      const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
+      if (looksLikeJson) { try { JSON.parse(replyText); addProjectsChatMsg('agent', 'Зроблено ✓'); } catch { addProjectsChatMsg('agent', replyText, false, chips); } }
+      else addProjectsChatMsg('agent', replyText, false, chips);
+    }
   } catch { addProjectsChatMsg('agent', 'Мережева помилка.'); }
   projectsBarLoading = false;
 }

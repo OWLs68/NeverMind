@@ -5006,7 +5006,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     });
     return parts.join("\n");
   }
-  function addProjectsChatMsg(role, text, _noSave = false) {
+  function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
     const el = document.getElementById("projects-chat-messages");
     if (!el) return;
     if (_projectsTypingEl) {
@@ -5022,6 +5022,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       el.scrollTop = el.scrollHeight;
       return;
     }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     try {
       openChatBar("projects");
     } catch (e) {
@@ -5031,6 +5032,12 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "projects");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
     else projectsBarHistory.push({ role: "assistant", content: text });
@@ -5061,8 +5068,10 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS);
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
-        const reply2 = msg.content ? msg.content.trim() : "";
-        if (reply2) addProjectsChatMsg("agent", reply2);
+        if (msg.content) {
+          const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
+          if (replyText2) addProjectsChatMsg("agent", replyText2, false, chips2);
+        }
         projectsBarLoading = false;
         return;
       }
@@ -5072,7 +5081,18 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         projectsBarLoading = false;
         return;
       }
-      safeAgentReply(reply, addProjectsChatMsg);
+      const { text: replyText, chips } = parseContentChips(reply);
+      if (replyText) {
+        const looksLikeJson = replyText.startsWith("{") && replyText.endsWith("}") || replyText.startsWith("[") && replyText.endsWith("]");
+        if (looksLikeJson) {
+          try {
+            JSON.parse(replyText);
+            addProjectsChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+          } catch {
+            addProjectsChatMsg("agent", replyText, false, chips);
+          }
+        } else addProjectsChatMsg("agent", replyText, false, chips);
+      }
     } catch {
       addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
@@ -5086,6 +5106,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       init_core();
       init_prompts();
       init_tool_dispatcher();
+      init_chips();
       init_inbox();
       init_tasks();
       init_notes();
@@ -8730,13 +8751,20 @@ ${folderList.join(", ")}
     const greeting = await callAI(systemPrompt, `\u041D\u043E\u0442\u0430\u0442\u043A\u0430: ${note.text}`, {});
     if (greeting) addNoteChatMsg("agent", greeting);
   }
-  function addNoteChatMsg(role, text) {
+  function addNoteChatMsg(role, text, chips = null) {
     const el = document.getElementById("note-chat-messages");
     const isAgent = role === "agent";
+    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#4f46e5"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "notes");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") noteChatHistory.push({ role: "user", content: text });
   }
@@ -8793,7 +8821,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         })
       });
       const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content;
+      const rawReply = data.choices?.[0]?.message?.content;
+      const { text: reply, chips: extractedChips } = parseContentChips(rawReply || "");
       if (reply) {
         noteChatHistory.push({ role: "user", content: text });
         noteChatHistory.push({ role: "assistant", content: reply });
@@ -8815,11 +8844,11 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
               addNoteChatMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043D\u0430\u0439\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443.");
             }
           } else {
-            addNoteChatMsg("agent", reply);
+            addNoteChatMsg("agent", reply, extractedChips);
             showSaveAsNoteBtn(reply);
           }
         } catch {
-          addNoteChatMsg("agent", reply);
+          addNoteChatMsg("agent", reply, extractedChips);
           showSaveAsNoteBtn(reply);
         }
       } else {
@@ -8955,7 +8984,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     renderNotes();
     showToast("\u2713 \u041F\u0430\u043F\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
   }
-  function addNotesChatMsg(role, text, _noSave = false) {
+  function addNotesChatMsg(role, text, _noSave = false, chips = null) {
     const el = document.getElementById("notes-chat-messages");
     if (!el) return;
     if (_notesTypingEl) {
@@ -8971,6 +9000,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       el.scrollTop = el.scrollHeight;
       return;
     }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     if (!_noSave) {
       try {
         openChatBar("notes");
@@ -8982,6 +9012,12 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "notes");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") notesBarHistory.push({ role: "user", content: text });
     else notesBarHistory.push({ role: "assistant", content: text });
@@ -9042,15 +9078,20 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS);
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
+        if (msg.content) {
+          const { text: rt, chips } = parseContentChips(msg.content);
+          if (rt) addNotesChatMsg("agent", rt, false, chips);
+        }
         notesBarLoading = false;
         return;
       }
-      const reply = msg && msg.content ? msg.content.trim() : "";
-      if (!reply) {
+      const rawReply = msg && msg.content ? msg.content.trim() : "";
+      if (!rawReply) {
         addNotesChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
         notesBarLoading = false;
         return;
       }
+      const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
       try {
         const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
         if (parsed.action === "search_notes") {
@@ -9109,10 +9150,26 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return;
         }
         if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
-          safeAgentReply(reply, addNotesChatMsg);
+          const looksLikeJson = reply.startsWith("{") && reply.endsWith("}") || reply.startsWith("[") && reply.endsWith("]");
+          if (looksLikeJson) {
+            try {
+              JSON.parse(reply);
+              addNotesChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+            } catch {
+              addNotesChatMsg("agent", reply, false, extractedChips);
+            }
+          } else addNotesChatMsg("agent", reply, false, extractedChips);
         }
       } catch {
-        safeAgentReply(reply, addNotesChatMsg);
+        const looksLikeJson = reply.startsWith("{") && reply.endsWith("}") || reply.startsWith("[") && reply.endsWith("]");
+        if (looksLikeJson) {
+          try {
+            JSON.parse(reply);
+            addNotesChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+          } catch {
+            addNotesChatMsg("agent", reply, false, extractedChips);
+          }
+        } else addNotesChatMsg("agent", reply, false, extractedChips);
       }
     } catch {
       addNotesChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
@@ -9126,6 +9183,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_utils();
       init_trash();
       init_core();
+      init_chips();
       init_prompts();
       init_tool_dispatcher();
       init_swipe_delete();
@@ -9843,11 +9901,16 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       if (loadEl) loadEl.remove();
       dispatchChatToolCalls(msg.tool_calls, (r, t) => addMeChatMsg(r, t), text);
-      if (msg.content) meChatHistory.push({ role: "assistant", content: msg.content });
+      if (msg.content) {
+        const { text: rt, chips } = parseContentChips(msg.content);
+        if (rt) addMeChatMsg("agent", rt, false, "", chips);
+        meChatHistory.push({ role: "assistant", content: msg.content });
+      }
       if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
       return;
     }
-    const reply = msg && msg.content ? msg.content : "";
+    const rawReply = msg && msg.content ? msg.content : "";
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
     let handled = false;
     if (reply) {
       const blocks = extractJsonBlocks(reply);
@@ -9858,7 +9921,10 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       }
       if (handled && loadEl) loadEl.textContent = "\u2705";
     }
-    if (!handled && loadEl) loadEl.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.";
+    if (!handled) {
+      if (loadEl) loadEl.remove();
+      addMeChatMsg("agent", reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.", false, "", extractedChips);
+    }
     if (reply) meChatHistory.push({ role: "assistant", content: reply });
     if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
   }
@@ -10182,9 +10248,10 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
   function showMeChatMessages() {
     openChatBar("me");
   }
-  function addMeChatMsg(role, text, _noSave = false, id = "") {
+  function addMeChatMsg(role, text, _noSave = false, id = "", chips = null) {
     const el = document.getElementById("me-chat-messages");
     if (!el) return;
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     if (!_noSave) {
       try {
         openChatBar("me");
@@ -10196,6 +10263,12 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "me");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
   }
@@ -10205,6 +10278,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       init_nav();
       init_utils();
       init_core();
+      init_chips();
       init_prompts();
       init_tool_dispatcher();
       init_tasks();
@@ -13364,13 +13438,20 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     taskChatId = null;
     taskChatHistory = [];
   }
-  function addTaskChatMsg(role, text, id = "") {
+  function addTaskChatMsg(role, text, id = "", chips = null) {
     const el = document.getElementById("task-chat-messages");
     const isAgent = role === "agent";
+    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div ${id ? `id="${id}"` : ""} style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#ea580c"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "tasks");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") taskChatHistory.push({ role: "user", content: text });
   }
@@ -13430,7 +13511,8 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         })
       });
       const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content;
+      const rawReply = data.choices?.[0]?.message?.content;
+      const { text: reply, chips: extractedChips } = parseContentChips(rawReply || "");
       if (reply) {
         try {
           const parsed = JSON.parse(reply.trim());
@@ -13446,10 +13528,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
             }
           } else if (parsed.action) {
             if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
-              addTaskChatMsg("agent", reply);
+              addTaskChatMsg("agent", reply, "", extractedChips);
             }
           } else {
-            addTaskChatMsg("agent", reply);
+            addTaskChatMsg("agent", reply, "", extractedChips);
           }
         } catch {
           const blocks = extractJsonBlocks(reply);
@@ -13470,7 +13552,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               handled = true;
             }
           }
-          if (!handled) addTaskChatMsg("agent", reply);
+          if (!handled) addTaskChatMsg("agent", reply, "", extractedChips);
         }
       } else addTaskChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
     } catch {
@@ -13556,6 +13638,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_utils();
       init_trash();
       init_core();
+      init_chips();
       init_swipe_delete();
       init_habits();
       init_notes();

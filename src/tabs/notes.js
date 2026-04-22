@@ -5,9 +5,10 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, formatTime } from '../core/utils.js';
+import { escapeHtml, formatTime, parseContentChips } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -682,13 +683,20 @@ async function initNoteChatGreeting(note) {
   if (greeting) addNoteChatMsg('agent', greeting);
 }
 
-function addNoteChatMsg(role, text) {
+function addNoteChatMsg(role, text, chips = null) {
   const el = document.getElementById('note-chat-messages');
   const isAgent = role === 'agent';
+  if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#4f46e5'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'notes');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') noteChatHistory.push({ role: 'user', content: text });
 }
@@ -748,7 +756,8 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
       })
     });
     const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content;
+    const rawReply = data.choices?.[0]?.message?.content;
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply || '');
     if (reply) {
       noteChatHistory.push({ role: 'user', content: text });
       noteChatHistory.push({ role: 'assistant', content: reply });
@@ -773,11 +782,11 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
             addNoteChatMsg('agent', 'Не вдалося знайти нотатку.');
           }
         } else {
-          addNoteChatMsg('agent', reply);
+          addNoteChatMsg('agent', reply, extractedChips);
           showSaveAsNoteBtn(reply);
         }
       } catch {
-        addNoteChatMsg('agent', reply);
+        addNoteChatMsg('agent', reply, extractedChips);
         showSaveAsNoteBtn(reply);
       }
     } else {
@@ -968,7 +977,7 @@ let _notesTypingEl = null;
 let notesBarHistory = [];
 let notesBarLoading = false;
 
-export function addNotesChatMsg(role, text, _noSave = false) {
+export function addNotesChatMsg(role, text, _noSave = false, chips = null) {
   const el = document.getElementById('notes-chat-messages');
   if (!el) return;
   if (_notesTypingEl) { _notesTypingEl.remove(); _notesTypingEl = null; }
@@ -981,12 +990,19 @@ export function addNotesChatMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   if (!_noSave) { try { openChatBar('notes'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'notes');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
   else notesBarHistory.push({ role: 'assistant', content: text });
@@ -1048,12 +1064,18 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
+      if (msg.content) {
+        const { text: rt, chips } = parseContentChips(msg.content);
+        if (rt) addNotesChatMsg('agent', rt, false, chips);
+      }
       notesBarLoading = false;
       return;
     }
 
-    const reply = msg && msg.content ? msg.content.trim() : '';
-    if (!reply) { addNotesChatMsg('agent', 'Щось пішло не так.'); notesBarLoading = false; return; }
+    const rawReply = msg && msg.content ? msg.content.trim() : '';
+    if (!rawReply) { addNotesChatMsg('agent', 'Щось пішло не так.'); notesBarLoading = false; return; }
+    // Виділяємо {chips:[...]} окремо щоб не ламати розбір action-JSON
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
 
     try {
       const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
@@ -1121,10 +1143,14 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
       }
 
       if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
-        safeAgentReply(reply, addNotesChatMsg);
+        const looksLikeJson = (reply.startsWith('{') && reply.endsWith('}')) || (reply.startsWith('[') && reply.endsWith(']'));
+        if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', 'Зроблено ✓'); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
+        else addNotesChatMsg('agent', reply, false, extractedChips);
       }
     } catch {
-      safeAgentReply(reply, addNotesChatMsg);
+      const looksLikeJson = (reply.startsWith('{') && reply.endsWith('}')) || (reply.startsWith('[') && reply.endsWith(']'));
+      if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', 'Зроблено ✓'); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
+      else addNotesChatMsg('agent', reply, false, extractedChips);
     }
   } catch { addNotesChatMsg('agent', 'Мережева помилка.'); }
   notesBarLoading = false;
