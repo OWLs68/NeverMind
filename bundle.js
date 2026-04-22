@@ -6646,7 +6646,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     return `${allTxs.length}_${Math.round(exp)}_${Math.round(inc)}_${top}`;
   }
   function finDailyInsight(allTxs, period, offset) {
-    if (allTxs.length === 0) return "";
+    if (allTxs.length < 2) return "";
     const cacheKey = `nm_fin_insight_${period}_${offset}`;
     const cached = localStorage.getItem(cacheKey);
     let text = "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026";

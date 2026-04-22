@@ -22,7 +22,9 @@ function _finInsightHash(allTxs) {
 
 // Рендер картки. period+offset — для cache-key (різні періоди мають різний інсайт).
 export function finDailyInsight(allTxs, period, offset) {
-  if (allTxs.length === 0) return '';
+  // Синхронізовано з refreshFinInsight: AI не запускається при <2 транзакціях,
+  // тому картка застрягала у "OWL аналізує…" назавжди при 1 транзакції.
+  if (allTxs.length < 2) return '';
   const cacheKey = `nm_fin_insight_${period}_${offset}`;
   const cached = localStorage.getItem(cacheKey);
   let text = 'OWL аналізує фінанси…';
