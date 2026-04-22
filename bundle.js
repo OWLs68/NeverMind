@@ -3466,7 +3466,7 @@ ${lines.join("\n")}`;
     }
     return parts.join("\n");
   }
-  function addHealthChatMsg(role, text, _noSave = false) {
+  function addHealthChatMsg(role, text, _noSave = false, chips = null) {
     const el = document.getElementById("health-chat-messages");
     if (!el) return;
     if (_healthTypingEl) {
@@ -3482,6 +3482,7 @@ ${lines.join("\n")}`;
       el.scrollTop = el.scrollHeight;
       return;
     }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     try {
       openChatBar("health");
     } catch (e) {
@@ -3491,6 +3492,12 @@ ${lines.join("\n")}`;
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "health");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") healthBarHistory.push({ role: "user", content: text });
     else healthBarHistory.push({ role: "assistant", content: text });
@@ -3520,8 +3527,10 @@ ${lines.join("\n")}`;
       const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS);
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);
-        const reply2 = msg.content ? msg.content.trim() : "";
-        if (reply2) addHealthChatMsg("agent", reply2);
+        if (msg.content) {
+          const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
+          if (replyText2) addHealthChatMsg("agent", replyText2, false, chips2);
+        }
         healthBarLoading = false;
         return;
       }
@@ -3531,7 +3540,18 @@ ${lines.join("\n")}`;
         healthBarLoading = false;
         return;
       }
-      safeAgentReply(reply, addHealthChatMsg);
+      const { text: replyText, chips } = parseContentChips(reply);
+      if (replyText) {
+        const looksLikeJson = replyText.startsWith("{") && replyText.endsWith("}") || replyText.startsWith("[") && replyText.endsWith("]");
+        if (looksLikeJson) {
+          try {
+            JSON.parse(replyText);
+            addHealthChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+          } catch {
+            addHealthChatMsg("agent", replyText, false, chips);
+          }
+        } else addHealthChatMsg("agent", replyText, false, chips);
+      }
     } catch {
       addHealthChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
@@ -3546,6 +3566,7 @@ ${lines.join("\n")}`;
       init_core();
       init_tool_dispatcher();
       init_prompts();
+      init_chips();
       init_notes();
       init_calendar();
       activeHealthCardId = null;
@@ -6693,7 +6714,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   });
 
   // src/tabs/finance-chat.js
-  function addFinanceChatMsg(role, text, _noSave = false) {
+  function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
     const el = document.getElementById("finance-chat-messages");
     if (!el) return;
     if (_financeTypingEl) {
@@ -6709,6 +6730,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       el.scrollTop = el.scrollHeight;
       return;
     }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     if (!_noSave) {
       try {
         openChatBar("finance");
@@ -6720,6 +6742,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "finance");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
     else financeBarHistory.push({ role: "assistant", content: text });
@@ -6791,8 +6819,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
             }
           }
         }
-        const reply2 = msg.content ? msg.content.trim() : "";
-        if (reply2) addFinanceChatMsg("agent", reply2);
+        if (msg.content) {
+          const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
+          if (replyText2) addFinanceChatMsg("agent", replyText2, false, chips2);
+        }
         financeBarLoading = false;
         return;
       }
@@ -6802,7 +6832,18 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         financeBarLoading = false;
         return;
       }
-      safeAgentReply(reply, addFinanceChatMsg);
+      const { text: replyText, chips } = parseContentChips(reply);
+      if (replyText) {
+        const looksLikeJson = replyText.startsWith("{") && replyText.endsWith("}") || replyText.startsWith("[") && replyText.endsWith("]");
+        if (looksLikeJson) {
+          try {
+            JSON.parse(replyText);
+            addFinanceChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+          } catch {
+            addFinanceChatMsg("agent", replyText, false, chips);
+          }
+        } else addFinanceChatMsg("agent", replyText, false, chips);
+      }
     } catch {
       addFinanceChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
@@ -6816,6 +6857,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_prompts();
       init_tool_dispatcher();
       init_proactive();
+      init_chips();
       init_finance();
       init_finance_cats();
       _financeTypingEl = null;

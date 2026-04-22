@@ -5,11 +5,12 @@
 // ============================================================
 
 import { switchTab, showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, parseContentChips } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { getHealthChatSystem } from '../ai/prompts.js';
+import { renderChips } from '../owl/chips.js';
 import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
 
@@ -1495,7 +1496,7 @@ export function getHealthContext() {
 }
 
 // === HEALTH AI BAR ===
-export function addHealthChatMsg(role, text, _noSave = false) {
+export function addHealthChatMsg(role, text, _noSave = false, chips = null) {
   const el = document.getElementById('health-chat-messages');
   if (!el) return;
   if (_healthTypingEl) { _healthTypingEl.remove(); _healthTypingEl = null; }
@@ -1508,12 +1509,19 @@ export function addHealthChatMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   try { openChatBar('health'); } catch(e) {}
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'health');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') healthBarHistory.push({ role: 'user', content: text });
   else healthBarHistory.push({ role: 'assistant', content: text });
@@ -1546,16 +1554,22 @@ export async function sendHealthBarMessage() {
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);
-      // Verify Loop: показуємо msg.content як підтвердження словами якщо AI його дав.
-      const reply = msg.content ? msg.content.trim() : '';
-      if (reply) addHealthChatMsg('agent', reply);
+      if (msg.content) {
+        const { text: replyText, chips } = parseContentChips(msg.content);
+        if (replyText) addHealthChatMsg('agent', replyText, false, chips);
+      }
       healthBarLoading = false;
       return;
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addHealthChatMsg('agent', 'Щось пішло не так.'); healthBarLoading = false; return; }
-    safeAgentReply(reply, addHealthChatMsg);
+    const { text: replyText, chips } = parseContentChips(reply);
+    if (replyText) {
+      const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
+      if (looksLikeJson) { try { JSON.parse(replyText); addHealthChatMsg('agent', 'Зроблено ✓'); } catch { addHealthChatMsg('agent', replyText, false, chips); } }
+      else addHealthChatMsg('agent', replyText, false, chips);
+    }
   } catch { addHealthChatMsg('agent', 'Мережева помилка.'); }
   healthBarLoading = false;
 }

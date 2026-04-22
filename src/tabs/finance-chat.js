@@ -3,11 +3,12 @@
 // Винесено з finance.js у рефакторингу 17.04.2026 (сесія gHCOh).
 // ============================================================
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, parseContentChips } from '../core/utils.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { getFinanceChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
+import { renderChips } from '../owl/chips.js';
 import {
   getFinance, formatMoney, getCurrency,
   getFinBudget, getFinPeriodRange,
@@ -18,7 +19,7 @@ let _financeTypingEl = null;
 let financeBarHistory = [];
 let financeBarLoading = false;
 
-export function addFinanceChatMsg(role, text, _noSave = false) {
+export function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
   const el = document.getElementById('finance-chat-messages');
   if (!el) return;
   if (_financeTypingEl) { _financeTypingEl.remove(); _financeTypingEl = null; }
@@ -31,12 +32,20 @@ export function addFinanceChatMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
+  // Чіпи релевантні тільки останньому повідомленню сови — чистимо попередні
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   if (!_noSave) { try { openChatBar('finance'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'finance');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') financeBarHistory.push({ role: 'user', content: text });
   else financeBarHistory.push({ role: 'assistant', content: text });
@@ -108,15 +117,22 @@ export async function sendFinanceBarMessage() {
         }
       }
       // Verify Loop: показуємо msg.content якщо AI дав.
-      const reply = msg.content ? msg.content.trim() : '';
-      if (reply) addFinanceChatMsg('agent', reply);
+      if (msg.content) {
+        const { text: replyText, chips } = parseContentChips(msg.content);
+        if (replyText) addFinanceChatMsg('agent', replyText, false, chips);
+      }
       financeBarLoading = false;
       return;
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
-    safeAgentReply(reply, addFinanceChatMsg);
+    const { text: replyText, chips } = parseContentChips(reply);
+    if (replyText) {
+      const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
+      if (looksLikeJson) { try { JSON.parse(replyText); addFinanceChatMsg('agent', 'Зроблено ✓'); } catch { addFinanceChatMsg('agent', replyText, false, chips); } }
+      else addFinanceChatMsg('agent', replyText, false, chips);
+    }
   } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
   financeBarLoading = false;
 }
