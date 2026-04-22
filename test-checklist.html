@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<meta name="theme-color" content="#f5e9d4">
+<title>NeverMind — Чеклист тестування</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: linear-gradient(180deg, #f5e9d4 0%, #efd9b4 100%);
+    color: #1e1040;
+    font-size: 15px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  h1 {
+    margin: 4px 0 6px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .intro {
+    margin: 0 0 14px;
+    font-size: 13.5px;
+    color: rgba(30, 16, 64, 0.72);
+  }
+  .copy-wrap { position: sticky; top: 8px; z-index: 10; margin-bottom: 16px; }
+  .copy-btn {
+    width: 100%;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.35);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .copy-btn:active { transform: scale(0.98); box-shadow: 0 3px 10px rgba(234, 88, 12, 0.3); }
+  .copy-btn.ok { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 6px 18px rgba(22, 163, 74, 0.35); }
+  section {
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.82);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #c2410c;
+    letter-spacing: -0.2px;
+  }
+  h3 {
+    margin: 10px 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e1040;
+  }
+  ul { margin: 0; padding: 0 0 0 4px; list-style: none; }
+  li {
+    padding: 6px 0 6px 26px;
+    position: relative;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #c2790a;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.6);
+  }
+  li.checked::before { background: #c2790a; }
+  li.checked::after {
+    content: "✓";
+    position: absolute;
+    left: 2px;
+    top: 4px;
+    color: white;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  li.checked { opacity: 0.55; text-decoration: line-through; }
+  li b { color: #c2410c; font-weight: 700; }
+  .note { font-size: 12.5px; color: rgba(30, 16, 64, 0.62); margin-top: 4px; font-style: italic; }
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(30, 16, 64, 0.5);
+    margin: 20px 0 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🧪 NeverMind — Чеклист тестування</h1>
+<p class="intro">Тестуй з iPhone як PWA (застосунок з головного екрана). Після кожного блоку записуй знайдене у вигляді скріна + 1 речення «що не так». Тап на пункт = закреслити зроблене.</p>
+
+<div class="copy-wrap">
+  <button class="copy-btn" id="copy-btn" onclick="copyAll()">📋 Копіювати весь чеклист</button>
+</div>
+
+<section>
+  <h2>🧠 Один мозок — Brain Pulse (сова пише першою)</h2>
+  <h3>Сценарій 1 — Фінанси</h3>
+  <ul>
+    <li>Відкрити Фінанси → встановити бюджет місяця <b>1000 грн</b></li>
+    <li>Додати витрату <b>900 грн</b> у будь-яку категорію</li>
+    <li>Перейти на іншу вкладку (напр. Задачі), почекати <b>10-15 хв</b></li>
+    <li>Очікується: на значку Фінансів внизу (літачок) зʼявиться <b>червона крапка</b></li>
+    <li>Відкрити чат Фінансів → сова має сама написати про перевищення (наприклад «перевищено бюджет» або «залишилось 100 грн»)</li>
+  </ul>
+  <h3>Сценарій 2 — Задачі</h3>
+  <ul>
+    <li>Створити задачу з датою <b>позавчора</b> (напр. «Подзвонити Олегу», дата 2 дні тому)</li>
+    <li>Закрити Задачі, не відкривати 10-15 хв</li>
+    <li>Очікується: червона крапка на значку Задач + сова пише у чат Задач про застарілу</li>
+  </ul>
+  <h3>Сценарій 3 — Здоровʼя (critical)</h3>
+  <ul>
+    <li>У Календарі створити подію «Прийом у лікаря» <b>через 4 години</b></li>
+    <li>Перейти на іншу вкладку</li>
+    <li>Очікується: на значку Здоровʼя червона крапка, сова пише критично — «прийом через N годин»</li>
+  </ul>
+  <p class="note">Якщо жодних сигналів немає — сова має мовчати (це фіча, не баг).</p>
+</section>
+
+<section>
+  <h2>🔴 Червоні крапки — у всіх 8 вкладках</h2>
+  <ul>
+    <li>Відкрити будь-який чат, попросити сову <b>«запиши 50 грн на каву у фінанси»</b></li>
+    <li>Перейти на Задачі — на значку Фінансів має бути крапка</li>
+    <li>Відкрити Фінанси → крапка зникає</li>
+    <li>Повторити з іншими вкладками: Нотатки, Я, Здоровʼя, Проекти, Задачі, Звички, Календар</li>
+  </ul>
+  <p class="note">Раніше крапки працювали тільки в Inbox і Вечорі.</p>
+</section>
+
+<section>
+  <h2>🧩 Крос-чат памʼять (мозок знає все)</h2>
+  <ul>
+    <li>У чаті Здоровʼя написати <b>«болить спина»</b></li>
+    <li>Почекати <b>30-45 хв</b> (не більше години)</li>
+    <li>Відкрити чат Фінансів, написати <b>«купив ліки за 200 грн»</b></li>
+    <li>Очікується: сова записує витрату + згадує попередню тему («це через біль у спині?»)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>⏰ Нагадування у 8 чатах — REMINDER_RULES</h2>
+  <ul>
+    <li>У <b>кожному</b> з 8 чатів (Inbox, Задачі, Нотатки, Я, Фінанси, Здоровʼя, Проекти, Вечір) сказати: <b>«Нагадай зранку про спортзал»</b></li>
+    <li>Очікується: нагадування на <b>08:00</b> (не на 05:00)</li>
+    <li>Коли сова питає «створити?» — відповісти <b>«Ок»</b></li>
+    <li>Очікується: <b>без дубля</b> нагадування (перевірити у Календарі)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>📰 Ранковий брифінг — клікабельний</h2>
+  <ul>
+    <li>Зранку (або дочекатись наступного ранку) — зʼявиться брифінг сови зверху екрану</li>
+    <li>Перевірити: брифінг видно на <b>всіх вкладках</b> (Inbox, Задачі, Фінанси...)</li>
+    <li>У брифінгу є чіпи типу «Задачі», «Фінанси» тощо</li>
+    <li>Натиснути чіп «Задачі» — переходить на Задачі</li>
+    <li>Очікується: брифінг <b>зникає з інших вкладок</b> (більше не спливає скрізь)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>📅 Календар — сортування «Події · місяць»</h2>
+  <ul>
+    <li>Переконатись що є події сьогодні, у майбутньому і в минулому цього місяця</li>
+    <li>Відкрити Календар → прокрутити донизу до блоку «Події · квітень»</li>
+    <li>Очікується порядок: <b>Сьогодні → майбутні (за зростанням) → минулі (за спаданням)</b></li>
+    <li>Приклад: Сьогодні 22.04 зверху, потім 24, 25, 28... потім 20, 15, 9 донизу</li>
+    <li>Минулі — напівпрозорі (opacity 0.4)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>📅 Календар — кольори і читабельність</h2>
+  <ul>
+    <li>Перевірити дні з подіями у сітці календаря — <b>цифра темно-фіолетова на блідому бірюзовому</b> (читається)</li>
+    <li>Сьогоднішній день — помаранчевий з білою цифрою (не має зливатися)</li>
+    <li>Без зливання цифри з фоном — жодного «невидимого» числа</li>
+  </ul>
+</section>
+
+<section>
+  <h2>📌 Чіп «Відкрити календар»</h2>
+  <ul>
+    <li>У чаті Inbox написати <b>«які в мене події?»</b> або «що заплановано»</li>
+    <li>Очікується: сова відповідає текстом + під повідомленням зʼявляється <b>кнопка-чіп «Відкрити календар»</b></li>
+    <li>Тап на чіп → модалка Календаря відкривається одразу, дні з подіями <b>пульсують бірюзовим</b> 8 секунд</li>
+  </ul>
+</section>
+
+<section>
+  <h2>💬 Чіпи у 6 нових чатах (свіже)</h2>
+  <ul>
+    <li>У чаті <b>Задач</b> спитати «які події сьогодні» — під відповіддю має бути чіп, а не сирий JSON {"chips":[...]}</li>
+    <li>Те саме у <b>Нотатках</b>, <b>Я</b>, <b>Фінансах</b>, <b>Здоровʼї</b>, <b>Проектах</b></li>
+    <li>Натискання чіпа має працювати (виконати дію або відкрити вкладку)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>💰 Фінанси — Інсайт дня</h2>
+  <ul>
+    <li>Порожній період (немає транзакцій) → картка з лампочкою <b>не показується</b></li>
+    <li>Рівно <b>1 транзакція</b> → картка не показується (раніше застрягала на «OWL аналізує…»)</li>
+    <li>2+ транзакції → через 10-30 сек зʼявляється картка з конкретною порадою і числом (наприклад «На каву 5€/день = 60€/місяць»)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>💰 Фінанси — свайп-видалення транзакції</h2>
+  <ul>
+    <li>Відкрити список транзакцій</li>
+    <li>Свайп вліво на будь-якій транзакції → зʼявляється червоний кошик справа</li>
+    <li>Тап на кошик → транзакція зникає + унизу зʼявляється повідомлення «Відмінити»</li>
+    <li>Свайп вправо на відкритій транзакції → закривається без видалення</li>
+  </ul>
+</section>
+
+<section>
+  <h2>🧠 Памʼять — без галюцинацій</h2>
+  <ul>
+    <li>Inbox: <b>«Запамʼятай що я не їм глютен»</b></li>
+    <li>Очікується: сова запамʼятовує факт. <b>НЕ</b> створює задачу «купити безглютенову піцу»</li>
+    <li>Inbox: <b>«Увімкни темну тему»</b></li>
+    <li>Очікується: чесна відповідь «Поки немає, зʼявиться пізніше» (не вдавати що увімкнула)</li>
+  </ul>
+</section>
+
+<section>
+  <h2>✅ Якщо щось не працює</h2>
+  <ul>
+    <li>Зробити скріншот екрана</li>
+    <li>Написати в 1 реченні: <b>що натиснув</b> → <b>що очікував</b> → <b>що сталося</b></li>
+    <li>Надіслати Роману у ТГ</li>
+    <li>Версію застосунку видно зверху Налаштувань (напр. «Версія 362 · 22.04 06:30»)</li>
+  </ul>
+</section>
+
+<footer>NeverMind · Чеклист тестування · сесія L67Xf 22.04.2026</footer>
+
+<script>
+  // Тап = закреслити пункт
+  document.querySelectorAll('li').forEach(li => {
+    li.addEventListener('click', () => li.classList.toggle('checked'));
+  });
+
+  // Збираємо чистий текст для передачі другу
+  function buildPlainText() {
+    const lines = ['🧪 NeverMind — Чеклист тестування', ''];
+    document.querySelectorAll('section').forEach(sec => {
+      const h2 = sec.querySelector('h2');
+      if (h2) lines.push('', h2.textContent);
+      sec.querySelectorAll('h3, ul').forEach(el => {
+        if (el.tagName === 'H3') lines.push('', el.textContent);
+        else el.querySelectorAll('li').forEach(li => lines.push('☐ ' + li.textContent.trim()));
+      });
+    });
+    return lines.join('\n');
+  }
+
+  async function copyAll() {
+    const btn = document.getElementById('copy-btn');
+    const text = buildPlainText();
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = '✓ Скопійовано — вставляй у ТГ';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = '📋 Копіювати весь чеклист'; btn.classList.remove('ok'); }, 2500);
+    } catch (e) {
+      // Fallback для старих iOS/браузерів без Clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); btn.textContent = '✓ Скопійовано'; btn.classList.add('ok'); }
+      catch { btn.textContent = '✗ Скопіюй вручну'; }
+      document.body.removeChild(ta);
+      setTimeout(() => { btn.textContent = '📋 Копіювати весь чеклист'; btn.classList.remove('ok'); }, 2500);
+    }
+  }
+</script>
+</body>
+</html>
