@@ -308,6 +308,7 @@ OWL = єдиний Jarvis. Табло, чати, чіпи — різні "вік
 | `CONCEPTS_ACTIVE.md` | Реалізовані концепції вкладок (Finance, Evening, Me, Projects, Gamification) |
 | `ROADMAP.md` | **Дорожня карта** — Active / Next / Ideas / Rejected / After Supabase |
 | `ROADMAP_DONE.md` | **Виконане** — завершені Active, Блок 1, 6 фаз Здоров'я, хронологія ✅ Done (винесено 20.04) |
+| `docs/AGENT_INTELLIGENCE_SCALE.md` | **Шкала розумності агента (0-100% де 100 = Jarvis).** Оновлювати після кожної Active-фази, чесно без прикрашання (L67Xf 22.04) |
 | `docs/EVENING_2.0_PLAN.md` | Детальний план Вечора 2.0 (MVP виконано 19.04) |
 | `docs/FINANCE_V2_PLAN.md` | Фази імплементації Фінансів v2 (винесено з ROADMAP 20.04) |
 | **Технічна довідка** | |
