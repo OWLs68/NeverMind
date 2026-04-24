@@ -8,6 +8,28 @@
 
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
+### Сесія Gg3Fy (20-21.04.2026)
+- **B-94** `src/tabs/health.js` + `src/ai/prompts.js` — "Алергія на пил" → UI-tool замість `add_allergy`. Архітектурна міграція Health chat з text-JSON → `INBOX_TOOLS`. Коміт `5563b15`.
+- **B-95** `src/tabs/health.js` — "Завтра прийом у лікаря на 2" → UI-tool замість `create_event`. Те саме що B-94.
+- **B-96** `src/ai/prompts.js` getHealthChatSystem — опис симптому писав у активну картку з іншою темою. Додано правило тематичного матчингу з 4 прикладами.
+
+### Сесія EWxjG (20.04.2026)
+- **B-93** `style.css` — чіпи у Inbox chat обрізані знизу через mask-image. Прибрано нижню точку fade + padding-bottom 20→28px.
+
+### Сесія NRw8G (20.04.2026)
+- **B-84..B-92** — 9 багів з iPhone v322 тесту: алергія/симптом/прийом у Health (B-84/85/86), parseContentChips регекс (B-87), мертва log_health (B-88), свайп чат-handle тонкий (B-89), темна тема галюцинація (B-90), "не їм X" → задача "купити X-free" (B-91), Memory модалка без свайпа (B-92). Коміти `058cd9d`, `8aebb3a`, `3b08d2c`, `ffba291`, `474a1f7`, `256330f`. Додатково `9200411` — save_memory_fact у Health/Finance/Projects.
+
+### Сесія JvzDi (19.04.2026)
+- **B-81** `src/ai/prompts.js` — "Відкрий задачі" → save_task замість switch_tab. Жорстке правило UI TOOLS. Коміт `240a0b5`.
+- **B-82** `src/ai/ui-tools.js` — плацебо `set_theme` без реального ефекту. Прибрано визначення і handler.
+- **B-83** `src/tabs/inbox.js` — чіпи у Health-інтерв'ю як текст замість кнопок. Портовано `_parseContentChips` з evening-chat. Коміт `0bf3d37`.
+
+### Сесія 6GoDe (19.04.2026)
+- **B-65** `src/core/boot.js` — "SW load failed" у логах 7+ разів на добу через `reg.update()` без `.catch()`. Додано тихі `.catch(() => {})`. Коміт `e634b12`.
+
+---
+
+
 | # | Коли | Опис |
 |---|------|------|
 | B-58 | 17.04.2026 (KTQZA) | **Автогенерація підкатегорій обмежена до 3.** Раніше дефолти у `FIN_DEFAULT_SUBCATS` містили по 5 на категорію — всі автоматично створювались. Фікс у 3 місцях `finance-cats.js`: `_makeCatObj` `.slice(0, 3)`, `normalize` у міграції доставляє до 3, `createFinCategory` бере до 3. Опис AI-tool оновлено. |
