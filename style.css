@@ -26,6 +26,10 @@ body {
   --card-radius: 18px;
   --card-blur: blur(16px);
   --card-shadow: 0 4px 20px rgba(100,70,200,0.06);
+  /* Standardized card spacing (24.04.2026 R5Ejr — єдиний стандарт висоти карток) */
+  --card-gap: 5px;           /* відступ між картками у списку */
+  --card-pad-y: 10px;        /* внутрішній відступ зверху/знизу */
+  --card-pad-x: 14px;        /* внутрішній відступ збоку */
 
   /* Typography */
   --font-display: 'Unbounded', sans-serif;
@@ -808,7 +812,7 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: 14px;
-  margin: 5px 0;
+  margin: var(--card-gap) 0;
 }
 .task-item-wrap, .note-item-wrap {
   position: relative;
@@ -846,7 +850,7 @@ body {
 .inbox-item[data-cat="event"]   { background: linear-gradient(135deg, #c9dffe, #b0ccfe); }
 .inbox-item[data-cat="finance"] { background: linear-gradient(135deg, #fcddc4, #fbc89a); }
 .inbox-item-inner {
-  padding: 8px 12px;
+  padding: var(--card-pad-y) var(--card-pad-x);
   display: flex;
   gap: 10px;
   align-items: center;

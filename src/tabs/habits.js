@@ -529,21 +529,22 @@ function switchProdTab(tab) {
   const habitsCount = document.getElementById('prod-tab-habits-count');
   const habitsTitle = tabHabits ? tabHabits.querySelector('div > div:first-child') : null;
 
+  // R5Ejr 24.04: активна — біла без тіні з яскравою обводкою; неактивні — напівпрозорі з м'якою тінню (як категорії Фінансів)
   if (tabTasks) {
-    tabTasks.style.background = !isHabits ? 'white' : 'rgba(255,255,255,0.4)';
-    tabTasks.style.borderColor = !isHabits ? 'rgba(234,88,12,0.2)' : 'transparent';
-    tabTasks.style.boxShadow = !isHabits ? '0 2px 10px rgba(234,88,12,0.1)' : 'none';
+    tabTasks.style.background = !isHabits ? 'white' : 'rgba(255,255,255,0.6)';
+    tabTasks.style.borderColor = !isHabits ? 'rgba(234,88,12,0.6)' : 'rgba(234,88,12,0.1)';
+    tabTasks.style.boxShadow = !isHabits ? 'none' : '0 2px 12px rgba(30,16,64,0.06)';
   }
-  if (tasksCount) tasksCount.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.3)';
-  if (tasksTitle) tasksTitle.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.3)';
+  if (tasksCount) tasksCount.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.35)';
+  if (tasksTitle) tasksTitle.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.35)';
 
   if (tabHabits) {
-    tabHabits.style.background = isHabits ? 'white' : 'rgba(255,255,255,0.4)';
-    tabHabits.style.borderColor = isHabits ? 'rgba(22,163,74,0.2)' : 'transparent';
-    tabHabits.style.boxShadow = isHabits ? '0 2px 10px rgba(22,163,74,0.1)' : 'none';
+    tabHabits.style.background = isHabits ? 'white' : 'rgba(255,255,255,0.6)';
+    tabHabits.style.borderColor = isHabits ? 'rgba(22,163,74,0.6)' : 'rgba(22,163,74,0.1)';
+    tabHabits.style.boxShadow = isHabits ? 'none' : '0 2px 12px rgba(30,16,64,0.06)';
   }
-  if (habitsCount) habitsCount.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.3)';
-  if (habitsTitle) habitsTitle.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.3)';
+  if (habitsCount) habitsCount.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.35)';
+  if (habitsTitle) habitsTitle.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.35)';
 
   document.getElementById('prod-page-tasks').style.display = isHabits ? 'none' : 'block';
   document.getElementById('prod-page-habits').style.display = isHabits ? 'block' : 'none';
