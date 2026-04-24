@@ -8491,7 +8491,7 @@ ${recent}`;
       if (pinB !== pinA) return pinB - pinA;
       return b[1].length - a[1].length;
     });
-    content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:10px">' + folders.map(([folder, items]) => {
+    content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:var(--card-gap)">' + folders.map(([folder, items]) => {
       const meta = getFolderMeta(folder);
       const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
       const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(folder);
@@ -8502,7 +8502,7 @@ ${recent}`;
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
       return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
         <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
-          style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
           ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
           <div style="flex:1;min-width:0">
@@ -8525,9 +8525,9 @@ ${recent}`;
       const fc = getFolderColor(n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
       const preview = n.text.length > 80 ? n.text.substring(0, 80) + "\u2026" : n.text;
       return `
-      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:8px">
+      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
         <div id="note-item-${n.id}" class="inbox-item"
-          style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
+          style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
@@ -11732,19 +11732,19 @@ ${UI_TOOLS_RULES}`;
     const habitsCount = document.getElementById("prod-tab-habits-count");
     const habitsTitle = tabHabits ? tabHabits.querySelector("div > div:first-child") : null;
     if (tabTasks) {
-      tabTasks.style.background = !isHabits ? "white" : "rgba(255,255,255,0.4)";
-      tabTasks.style.borderColor = !isHabits ? "rgba(234,88,12,0.2)" : "transparent";
-      tabTasks.style.boxShadow = !isHabits ? "0 2px 10px rgba(234,88,12,0.1)" : "none";
+      tabTasks.style.background = !isHabits ? "white" : "rgba(255,255,255,0.6)";
+      tabTasks.style.borderColor = !isHabits ? "rgba(234,88,12,0.6)" : "rgba(234,88,12,0.1)";
+      tabTasks.style.boxShadow = !isHabits ? "none" : "0 2px 12px rgba(30,16,64,0.06)";
     }
-    if (tasksCount) tasksCount.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
-    if (tasksTitle) tasksTitle.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
+    if (tasksCount) tasksCount.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.35)";
+    if (tasksTitle) tasksTitle.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.35)";
     if (tabHabits) {
-      tabHabits.style.background = isHabits ? "white" : "rgba(255,255,255,0.4)";
-      tabHabits.style.borderColor = isHabits ? "rgba(22,163,74,0.2)" : "transparent";
-      tabHabits.style.boxShadow = isHabits ? "0 2px 10px rgba(22,163,74,0.1)" : "none";
+      tabHabits.style.background = isHabits ? "white" : "rgba(255,255,255,0.6)";
+      tabHabits.style.borderColor = isHabits ? "rgba(22,163,74,0.6)" : "rgba(22,163,74,0.1)";
+      tabHabits.style.boxShadow = isHabits ? "none" : "0 2px 12px rgba(30,16,64,0.06)";
     }
-    if (habitsCount) habitsCount.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
-    if (habitsTitle) habitsTitle.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
+    if (habitsCount) habitsCount.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.35)";
+    if (habitsTitle) habitsTitle.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.35)";
     document.getElementById("prod-page-tasks").style.display = isHabits ? "none" : "block";
     document.getElementById("prod-page-habits").style.display = isHabits ? "block" : "none";
     const addBtn = document.getElementById("prod-add-btn");
@@ -11886,7 +11886,7 @@ ${UI_TOOLS_RULES}`;
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
+      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
     }).join("");
     if (quitHabits.length > 0) {
       html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456</div>';
@@ -11929,7 +11929,7 @@ ${UI_TOOLS_RULES}`;
     const cardBg = relapses30 === 0 && streak > 0 ? "background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)" : relapses30 >= 6 ? "background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)" : "background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)";
     const streakColor = streak > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
     const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ";box-shadow:0 0 8px 3px " + lamp.glow + ';margin-top:3px"></div>';
-    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">\u0432\u0456\u043B\u044C\u043D\u0438\u0445 ' + _dayWord(freedomDays) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">\u{1F525} \u0441\u0435\u0440\u0456\u044F ' + streak + " " + _dayWord(streak) + (longest > streak ? " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 " + longest : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">\u0440\u0435\u043A\u043E\u0440\u0434 ' + longest + " " + _dayWord(longest) + "</div>" : "") + '</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C") + '</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button></div></div></div>';
+    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">\u0432\u0456\u043B\u044C\u043D\u0438\u0445 ' + _dayWord(freedomDays) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">\u{1F525} \u0441\u0435\u0440\u0456\u044F ' + streak + " " + _dayWord(streak) + (longest > streak ? " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 " + longest : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">\u0440\u0435\u043A\u043E\u0440\u0434 ' + longest + " " + _dayWord(longest) + "</div>" : "") + '</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C") + '</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button></div></div></div>';
   }
   function confirmQuitRelapse(habitId) {
     const s = getQuitStatus(habitId);
@@ -13384,17 +13384,45 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const tasks = getTasks();
     const t = tasks.find((x) => x.id === id);
     if (!t) return;
-    t.status = t.status === "done" ? "active" : "done";
+    const isCompleting = t.status !== "done";
     const now = Date.now();
-    if (t.status === "done") {
-      t.completedAt = now;
-      t.updatedAt = now;
-    } else {
-      delete t.completedAt;
-      t.updatedAt = now;
+    if (isCompleting) {
+      const wrap = document.getElementById("task-wrap-" + id);
+      const card = document.getElementById("task-item-" + id);
+      if (card) {
+        const check = card.querySelector("[data-task-check] > div");
+        const title = card.querySelector('[style*="font-weight:700"]');
+        if (check) {
+          check.style.background = "#16a34a";
+          check.style.borderColor = "#16a34a";
+          check.textContent = "\u2713";
+        }
+        if (title) {
+          title.style.textDecoration = "line-through";
+          title.style.opacity = "0.5";
+        }
+      }
+      if (wrap) {
+        wrap.style.maxHeight = wrap.offsetHeight + "px";
+        setTimeout(() => {
+          wrap.classList.add("task-completing");
+        }, 250);
+      }
+      setTimeout(() => {
+        t.status = "done";
+        t.completedAt = now;
+        t.updatedAt = now;
+        saveTasks(tasks);
+        logRecentAction("complete_task", t.title, "tasks");
+        renderTasks();
+      }, 620);
+      return;
     }
+    t.status = "active";
+    delete t.completedAt;
+    t.updatedAt = now;
     saveTasks(tasks);
-    logRecentAction(t.status === "done" ? "complete_task" : "reopen_task", t.title, "tasks");
+    logRecentAction("reopen_task", t.title, "tasks");
     renderTasks();
   }
   function renderTasks() {
@@ -13416,11 +13444,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       const doneCount = steps.filter((s) => s.done).length;
       const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t.status === "done" ? 100 : 0;
       const isDone = t.status === "done";
-      return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
+      return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
       <div id="task-item-${t.id}" onclick="taskCardClick(${t.id}, event)"
-        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? "10px" : "0"}">
-        <div data-task-check="1" ontouchend="event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
+        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? "8px" : "0"}">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus(${t.id})" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+          <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
+        </div>
         <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ""}
