@@ -38,8 +38,9 @@ export async function brainPulse() {
     const judge = shouldOwlSpeak('brain-pulse', { channel: 'chat-followup' });
     if (!judge.speak) {
       // 'followup-global-cd' — нормально, чекаємо годину
+      // B-99 (v2vYo 24.04): fallback 'unknown' щоб у логах не було пустого 'skip:'
       if (judge.reason !== 'followup-global-cd') {
-        console.log('[brain-pulse] skip:', judge.reason);
+        console.log('[brain-pulse] skip:', judge.reason || 'unknown');
       }
       return;
     }

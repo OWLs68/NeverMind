@@ -6133,59 +6133,72 @@ ${pulseParts.join("\n")}
       return;
     }
     _boardGenerating[tab] = true;
-    if (_boardAbortController) {
-      try {
-        _boardAbortController.abort();
-      } catch (e) {
+    const watchdog = setTimeout(() => {
+      if (_boardGenerating[tab]) {
+        console.warn("[OWL board] watchdog fired \u2014 forcing flag reset for", tab);
+        if (_boardAbortController) {
+          try {
+            _boardAbortController.abort();
+          } catch (e) {
+          }
+        }
+        _boardGenerating[tab] = false;
       }
-    }
-    _boardAbortController = new AbortController();
-    const abortSignal = _boardAbortController.signal;
-    const isInbox = tab === "inbox";
-    const transitionFrom = options.transitionFrom || null;
-    const isBriefing = !!options.isBriefing;
-    const context = getBoardContext(tab);
-    const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
-    const existing = allMsgs[0] || null;
-    const recentText = existing ? existing.text : "";
-    const recentTexts = allMsgs.slice(0, 5).map((m) => m.text).join(" | ");
-    const boardHistory = allMsgs.slice(0, 20).map((m) => {
-      const ago = Date.now() - (m.ts || m.id || 0);
-      const hours = Math.floor(ago / 36e5);
-      const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
-      return `[${when}] ${m.text}`;
-    }).join("\n");
-    const chatMsgs = loadChatMsgs(tab);
-    const recentChat = chatMsgs.slice(-30).map((m) => {
-      const ago = Date.now() - (m.ts || 0);
-      const mins = Math.floor(ago / 6e4);
-      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
-      const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
-      return `[${when}] ${who}: ${m.text}`;
-    }).join("\n");
-    const crossActions = getRecentActions().filter((a) => a.tab !== tab && Date.now() - a.ts < 30 * 60 * 1e3).slice(-5).map((a) => {
-      const mins = Math.floor((Date.now() - a.ts) / 6e4);
-      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-      return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
-    }).join("\n");
-    const crossChatRecent = getRecentChatsAcrossTabs(tab, 5, 60 * 60 * 1e3).map((m) => {
-      const mins = Math.floor((Date.now() - m.ts) / 6e4);
-      const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-      const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
-      return `[\u0427\u0430\u0442 ${m.tabLabel} \xB7 ${when}] ${who}: ${m.text}`;
-    }).join("\n");
-    const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
-    const phase = getDayPhase();
-    const sc = getSchedule();
-    const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-    const phaseInstr = {
-      dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A \u2014 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F \u0440\u0430\u043D\u0456\u0448\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E. \u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439 \u043C'\u044F\u043A\u043E, \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043F\u043E\u0447\u0430\u0442\u0438 \u0434\u0435\u043D\u044C.",
-      morning: "\u0420\u0430\u043D\u043E\u043A \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u043D\u0430\u0434\u0438\u0445\u043D\u0443\u0442\u0438 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0441\u0444\u043E\u043A\u0443\u0441\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u043C\u0443.",
-      work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432 \u043A\u0443\u0440\u0441\u0456 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443, \u043C'\u044F\u043A\u043E \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0435.",
-      evening: "\u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u043F\u0456\u0434\u0431\u0438\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F, \u043D\u0435 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438 \u0441\u0442\u0440\u0456\u043A\u0438.",
-      night: "\u041D\u0456\u0447 \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u0440\u043E \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435. \u0414\u0443\u0436\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E."
-    };
-    const systemPrompt = getOWLPersonality2() + `
+    }, 60 * 1e3);
+    try {
+      if (_boardAbortController) {
+        try {
+          _boardAbortController.abort();
+        } catch (e) {
+        }
+      }
+      _boardAbortController = new AbortController();
+      const abortSignal = _boardAbortController.signal;
+      const isInbox = tab === "inbox";
+      const transitionFrom = options.transitionFrom || null;
+      const isBriefing = !!options.isBriefing;
+      const context = getBoardContext(tab);
+      const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
+      const existing = allMsgs[0] || null;
+      const recentText = existing ? existing.text : "";
+      const recentTexts = allMsgs.slice(0, 5).map((m) => m.text).join(" | ");
+      const boardHistory = allMsgs.slice(0, 20).map((m) => {
+        const ago = Date.now() - (m.ts || m.id || 0);
+        const hours = Math.floor(ago / 36e5);
+        const when = hours < 1 ? "\u0449\u043E\u0439\u043D\u043E" : hours < 24 ? hours + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443" : Math.floor(hours / 24) + " \u0434\u043D \u0442\u043E\u043C\u0443";
+        return `[${when}] ${m.text}`;
+      }).join("\n");
+      const chatMsgs = loadChatMsgs(tab);
+      const recentChat = chatMsgs.slice(-30).map((m) => {
+        const ago = Date.now() - (m.ts || 0);
+        const mins = Math.floor(ago / 6e4);
+        const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins < 60 ? mins + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(mins / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+        const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
+        return `[${when}] ${who}: ${m.text}`;
+      }).join("\n");
+      const crossActions = getRecentActions().filter((a) => a.tab !== tab && Date.now() - a.ts < 30 * 60 * 1e3).slice(-5).map((a) => {
+        const mins = Math.floor((Date.now() - a.ts) / 6e4);
+        const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+        return `[${when}] ${a.action}: "${a.title}" (${a.tab})`;
+      }).join("\n");
+      const crossChatRecent = getRecentChatsAcrossTabs(tab, 5, 60 * 60 * 1e3).map((m) => {
+        const mins = Math.floor((Date.now() - m.ts) / 6e4);
+        const when = mins < 1 ? "\u0449\u043E\u0439\u043D\u043E" : mins + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+        const who = m.role === "agent" ? "\u0430\u0433\u0435\u043D\u0442" : "\u044E\u0437\u0435\u0440";
+        return `[\u0427\u0430\u0442 ${m.tabLabel} \xB7 ${when}] ${who}: ${m.text}`;
+      }).join("\n");
+      const tabLabels = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
+      const phase = getDayPhase();
+      const sc = getSchedule();
+      const timeStr = (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+      const phaseInstr = {
+        dawn: "\u0420\u0430\u043D\u043D\u0456\u0439 \u0440\u0430\u043D\u043E\u043A \u2014 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F \u0440\u0430\u043D\u0456\u0448\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E. \u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439 \u043C'\u044F\u043A\u043E, \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043F\u043E\u0447\u0430\u0442\u0438 \u0434\u0435\u043D\u044C.",
+        morning: "\u0420\u0430\u043D\u043E\u043A \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u043D\u0430\u0434\u0438\u0445\u043D\u0443\u0442\u0438 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0441\u0444\u043E\u043A\u0443\u0441\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u043C\u0443.",
+        work: "\u0420\u043E\u0431\u043E\u0447\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432 \u043A\u0443\u0440\u0441\u0456 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443, \u043C'\u044F\u043A\u043E \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0440\u043E \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0435.",
+        evening: "\u0412\u0435\u0447\u0456\u0440 \u2014 \u0442\u0432\u043E\u044F \u0440\u043E\u043B\u044C: \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u043F\u0456\u0434\u0431\u0438\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F, \u043D\u0435 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438 \u0441\u0442\u0440\u0456\u043A\u0438.",
+        night: "\u041D\u0456\u0447 \u2014 \u0433\u043E\u0432\u043E\u0440\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u0440\u043E \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0435. \u0414\u0443\u0436\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u043E."
+      };
+      const systemPrompt = getOWLPersonality2() + `
 
 \u0417\u0430\u0440\u0430\u0437: ${timeStr}. ${phaseInstr[phase] || ""}
 ${sc ? "\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u042E\u0417\u0415\u0420\u0410: \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F " + (sc.wakeUpStr || "?") + ", \u043F\u043E\u0447\u0438\u043D\u0430\u0454 \u0434\u0435\u043D\u044C " + (sc.workStartStr || "?") + ", \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454 \u0440\u043E\u0431\u043E\u0442\u0443 " + (sc.workEndStr || "?") + ", \u043B\u044F\u0433\u0430\u0454 " + (sc.bedTimeStr || "?") + ".\n\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0437\u0432\u0456\u0440\u044F\u0439 \u0437 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043E\u043C. \u0417\u0430\u0440\u0430\u0437 \u0414\u041E workStart = \u044E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0432\u0441\u044F, \u043C'\u044F\u043A\u0435 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F. \u041C\u0456\u0436 workStart \u0456 workEnd = \u041D\u0410 \u0420\u041E\u0411\u041E\u0422\u0406, \u043D\u0435 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0431\u0456\u0433/\u0437\u0430\u043B/\u0441\u043F\u043E\u0440\u0442. \u041F\u0456\u0441\u043B\u044F workEnd = \u043C\u043E\u0436\u043D\u0430 \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438 \u043F\u0440\u043E \u0437\u0432\u0438\u0447\u043A\u0438/\u0441\u043F\u043E\u0440\u0442.\n\u041D\u0415 \u041F\u0418\u0422\u0410\u0419 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014 \u0432\u0456\u043D \u0432\u0436\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0439. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u2014 \u0441\u0430\u043C \u0441\u043A\u0430\u0436\u0435." : ""}
@@ -6241,96 +6254,99 @@ SMART BOOT-UP (\u044F\u043A \u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u0
 ${CHIP_PROMPT_RULES}
 ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        signal: abortSignal,
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
-          ],
-          max_tokens: 150,
-          temperature: 0.8,
-          response_format: { type: "json_object" }
-        })
-      });
-      if (!res.ok) {
-        const errDetail = `HTTP ${res.status} ${res.statusText}`;
-        console.warn("[OWL board] API error:", errDetail);
-        localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
-        _updateApiDot();
-        _tryLocalFallback(tab);
-        _boardGenerating[tab] = false;
-        return;
-      }
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        const errDetail = "empty reply: " + JSON.stringify(data?.error || {}).slice(0, 150);
-        console.warn("[OWL board]", errDetail);
-        localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
-        _updateApiDot();
-        _tryLocalFallback(tab);
-        _boardGenerating[tab] = false;
-        return;
-      }
-      localStorage.removeItem("nm_owl_api_error");
-      _updateApiDot();
-      const parsed = _parseJsonTolerant(reply);
-      if (!parsed || !parsed.text) {
-        _boardGenerating[tab] = false;
-        return;
-      }
       try {
-        const MIN_VISIBLE_MS = 10 * 60 * 1e3;
-        const IGNORE_THRESHOLD = 7;
-        const SILENCE_MS = 2 * 60 * 60 * 1e3;
-        const lastBoardTs = parseInt(localStorage.getItem("nm_owl_last_board_ts") || "0");
-        const lastClickTs = parseInt(localStorage.getItem("nm_owl_last_chip_click_ts") || "0");
-        const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
-        if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
-          const ignored = parseInt(localStorage.getItem("nm_owl_ignored_msgs") || "0") + 1;
-          if (ignored >= IGNORE_THRESHOLD) {
-            localStorage.setItem("nm_owl_silence_until", String(Date.now() + SILENCE_MS));
-            localStorage.setItem("nm_owl_ignored_msgs", "0");
-            console.log("[OWL 4.40] Auto-silence 2 \u0433\u043E\u0434 \u2014", IGNORE_THRESHOLD, "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
-          } else {
-            localStorage.setItem("nm_owl_ignored_msgs", String(ignored));
-          }
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+          signal: abortSignal,
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
+            ],
+            max_tokens: 150,
+            temperature: 0.8,
+            response_format: { type: "json_object" }
+          })
+        });
+        if (!res.ok) {
+          const errDetail = `HTTP ${res.status} ${res.statusText}`;
+          console.warn("[OWL board] API error:", errDetail);
+          localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
+          _updateApiDot();
+          _tryLocalFallback(tab);
+          _boardGenerating[tab] = false;
+          return;
         }
-        localStorage.setItem("nm_owl_last_board_ts", String(Date.now()));
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content?.trim();
+        if (!reply) {
+          const errDetail = "empty reply: " + JSON.stringify(data?.error || {}).slice(0, 150);
+          console.warn("[OWL board]", errDetail);
+          localStorage.setItem("nm_owl_api_error", errDetail + " @ " + (/* @__PURE__ */ new Date()).toLocaleTimeString("uk-UA"));
+          _updateApiDot();
+          _tryLocalFallback(tab);
+          _boardGenerating[tab] = false;
+          return;
+        }
+        localStorage.removeItem("nm_owl_api_error");
+        _updateApiDot();
+        const parsed = _parseJsonTolerant(reply);
+        if (!parsed || !parsed.text) {
+          _boardGenerating[tab] = false;
+          return;
+        }
+        try {
+          const MIN_VISIBLE_MS = 10 * 60 * 1e3;
+          const IGNORE_THRESHOLD = 7;
+          const SILENCE_MS = 2 * 60 * 60 * 1e3;
+          const lastBoardTs = parseInt(localStorage.getItem("nm_owl_last_board_ts") || "0");
+          const lastClickTs = parseInt(localStorage.getItem("nm_owl_last_chip_click_ts") || "0");
+          const ageMs = lastBoardTs > 0 ? Date.now() - lastBoardTs : 0;
+          if (lastBoardTs > 0 && ageMs >= MIN_VISIBLE_MS && lastClickTs < lastBoardTs) {
+            const ignored = parseInt(localStorage.getItem("nm_owl_ignored_msgs") || "0") + 1;
+            if (ignored >= IGNORE_THRESHOLD) {
+              localStorage.setItem("nm_owl_silence_until", String(Date.now() + SILENCE_MS));
+              localStorage.setItem("nm_owl_ignored_msgs", "0");
+              console.log("[OWL 4.40] Auto-silence 2 \u0433\u043E\u0434 \u2014", IGNORE_THRESHOLD, "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u043F\u043E\u0441\u043F\u0456\u043B\u044C \u043F\u0440\u043E\u0456\u0433\u043D\u043E\u0440\u043E\u0432\u0430\u043D\u043E");
+            } else {
+              localStorage.setItem("nm_owl_ignored_msgs", String(ignored));
+            }
+          }
+          localStorage.setItem("nm_owl_last_board_ts", String(Date.now()));
+        } catch (e) {
+        }
+        const topicFinal = isBriefing ? "morning-briefing" : parsed.topic || "";
+        const newMsg = { text: parsed.text, topic: topicFinal, priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
+        if (parsed.topic) setOwlCd("topic_" + parsed.topic);
+        if (isInbox) {
+          newMsg.id = Date.now();
+          const msgs = getOwlBoardMessages();
+          msgs.unshift(newMsg);
+          saveOwlBoardMessages(msgs.slice(0, 3));
+          localStorage.setItem("nm_owl_board_ts", Date.now().toString());
+          setOwlCd("phase_pulse");
+        } else {
+          saveTabBoardMsg(tab, newMsg);
+          localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
+        }
+        if (isInbox) renderOwlBoard();
+        else renderTabBoard(tab);
       } catch (e) {
+        if (e && e.name === "AbortError") {
+          _boardGenerating[tab] = false;
+          return;
+        }
+        if (!_isNetworkError(e)) {
+          console.warn("[OWL board] generation error:", e?.message || e);
+        }
+        _tryLocalFallback(tab);
       }
-      const topicFinal = isBriefing ? "morning-briefing" : parsed.topic || "";
-      const newMsg = { text: parsed.text, topic: topicFinal, priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
-      if (parsed.topic) setOwlCd("topic_" + parsed.topic);
-      if (isInbox) {
-        newMsg.id = Date.now();
-        const msgs = getOwlBoardMessages();
-        msgs.unshift(newMsg);
-        saveOwlBoardMessages(msgs.slice(0, 3));
-        localStorage.setItem("nm_owl_board_ts", Date.now().toString());
-        setOwlCd("phase_pulse");
-      } else {
-        saveTabBoardMsg(tab, newMsg);
-        localStorage.setItem(getOwlTabTsKey(tab), Date.now().toString());
-      }
-      if (isInbox) renderOwlBoard();
-      else renderTabBoard(tab);
-    } catch (e) {
-      if (e && e.name === "AbortError") {
-        _boardGenerating[tab] = false;
-        return;
-      }
-      if (!_isNetworkError(e)) {
-        console.warn("[OWL board] generation error:", e?.message || e);
-      }
-      _tryLocalFallback(tab);
+    } finally {
+      clearTimeout(watchdog);
+      _boardGenerating[tab] = false;
     }
-    _boardGenerating[tab] = false;
   }
   function _tryLocalFallback(tab) {
     if (tab !== "inbox") {
@@ -16327,7 +16343,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const judge = shouldOwlSpeak("brain-pulse", { channel: "chat-followup" });
       if (!judge.speak) {
         if (judge.reason !== "followup-global-cd") {
-          console.log("[brain-pulse] skip:", judge.reason);
+          console.log("[brain-pulse] skip:", judge.reason || "unknown");
         }
         return;
       }

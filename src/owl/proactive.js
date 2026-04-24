@@ -614,6 +614,22 @@ export async function generateBoardMessage(tab, options = {}) {
   }
   _boardGenerating[tab] = true;
 
+  // B-98 (v2vYo 24.04): watchdog на випадок коли fetch повисне без помилки
+  // або проміс впаде у незворотний стан. Якщо прапорець не скинувся за 60 сек —
+  // примусово скидаємо + аборт (щоб наступна генерація не блокувалась).
+  // Корінь бага: раніше не було try/finally на все тіло функції; виключення
+  // між prompt-збором і fetch (lines 624-745) лишало прапорець `true` назавжди.
+  const watchdog = setTimeout(() => {
+    if (_boardGenerating[tab]) {
+      console.warn('[OWL board] watchdog fired — forcing flag reset for', tab);
+      if (_boardAbortController) {
+        try { _boardAbortController.abort(); } catch(e) {}
+      }
+      _boardGenerating[tab] = false;
+    }
+  }, 60 * 1000);
+
+  try {
   // Шар 2 "Один мозок V2" Фаза 2: скасовуємо попередню генерацію (AbortController)
   // бо мозок один і результат старого запиту вже нерелевантний.
   if (_boardAbortController) {
@@ -847,7 +863,14 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
     // Якщо API впав а повідомлення застаріло — показати локальне fallback
     _tryLocalFallback(tab);
   }
-  _boardGenerating[tab] = false;
+  } finally {
+    // B-98 (v2vYo 24.04): finally гарантує скидання прапорця у ВСІХ сценаріях
+    // (включно з виключенням у prompt-збірці, AbortError, unhandled exception).
+    // Раніше ad-hoc резети не покривали exception між _boardGenerating=true і
+    // внутрішнім try {} — прапорець залипав назавжди, табло замовкало.
+    clearTimeout(watchdog);
+    _boardGenerating[tab] = false;
+  }
 }
 
 // Розумне fallback-повідомлення з РЕАЛЬНИХ даних коли API не працює
