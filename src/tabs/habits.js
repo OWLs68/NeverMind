@@ -529,21 +529,22 @@ function switchProdTab(tab) {
   const habitsCount = document.getElementById('prod-tab-habits-count');
   const habitsTitle = tabHabits ? tabHabits.querySelector('div > div:first-child') : null;
 
+  // R5Ejr 24.04: активна — біла без тіні з яскравою обводкою; неактивні — напівпрозорі з м'якою тінню (як категорії Фінансів)
   if (tabTasks) {
-    tabTasks.style.background = !isHabits ? 'white' : 'rgba(255,255,255,0.4)';
-    tabTasks.style.borderColor = !isHabits ? 'rgba(234,88,12,0.2)' : 'transparent';
-    tabTasks.style.boxShadow = !isHabits ? '0 2px 10px rgba(234,88,12,0.1)' : 'none';
+    tabTasks.style.background = !isHabits ? 'white' : 'rgba(255,255,255,0.6)';
+    tabTasks.style.borderColor = !isHabits ? 'rgba(234,88,12,0.6)' : 'rgba(234,88,12,0.1)';
+    tabTasks.style.boxShadow = !isHabits ? 'none' : '0 2px 12px rgba(30,16,64,0.06)';
   }
-  if (tasksCount) tasksCount.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.3)';
-  if (tasksTitle) tasksTitle.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.3)';
+  if (tasksCount) tasksCount.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.35)';
+  if (tasksTitle) tasksTitle.style.color = !isHabits ? '#ea580c' : 'rgba(30,16,64,0.35)';
 
   if (tabHabits) {
-    tabHabits.style.background = isHabits ? 'white' : 'rgba(255,255,255,0.4)';
-    tabHabits.style.borderColor = isHabits ? 'rgba(22,163,74,0.2)' : 'transparent';
-    tabHabits.style.boxShadow = isHabits ? '0 2px 10px rgba(22,163,74,0.1)' : 'none';
+    tabHabits.style.background = isHabits ? 'white' : 'rgba(255,255,255,0.6)';
+    tabHabits.style.borderColor = isHabits ? 'rgba(22,163,74,0.6)' : 'rgba(22,163,74,0.1)';
+    tabHabits.style.boxShadow = isHabits ? 'none' : '0 2px 12px rgba(30,16,64,0.06)';
   }
-  if (habitsCount) habitsCount.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.3)';
-  if (habitsTitle) habitsTitle.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.3)';
+  if (habitsCount) habitsCount.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.35)';
+  if (habitsTitle) habitsTitle.style.color = isHabits ? '#16a34a' : 'rgba(30,16,64,0.35)';
 
   document.getElementById('prod-page-tasks').style.display = isHabits ? 'none' : 'block';
   document.getElementById('prod-page-habits').style.display = isHabits ? 'block' : 'none';
@@ -710,8 +711,8 @@ export function renderProdHabits() {
 
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
-    return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
-      + '<div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px 14px;box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent">'
+    return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden">'
+      + '<div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
         + '<div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
           + `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
@@ -789,8 +790,8 @@ function _renderQuitHabitCard(h) {
   // Лампа — кругла індикаторна точка з підсвіткою
   const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ';box-shadow:0 0 8px 3px ' + lamp.glow + ';margin-top:3px"></div>';
 
-  return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:10px;overflow:hidden">'
-    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:12px 14px;position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent">'
+  return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden">'
+    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent">'
 
     // Рядок 1: лампа + назва + тренд
     + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">'

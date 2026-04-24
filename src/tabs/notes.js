@@ -338,7 +338,7 @@ export function renderNotes(searchQuery = '') {
     return b[1].length - a[1].length;
   });
 
-  content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:10px">' +
+  content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:var(--card-gap)">' +
     folders.map(([folder, items]) => {
       const meta = getFolderMeta(folder);
       // Колір — з мета або дефолт
@@ -353,7 +353,7 @@ export function renderNotes(searchQuery = '') {
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
       return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
         <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
-          style="cursor:pointer;border-radius:18px;padding:16px;background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
           ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
           <div style="flex:1;min-width:0">
@@ -377,9 +377,9 @@ function renderNotesList(notes) {
     const fc = getFolderColor(n.folder || 'Загальне');
     const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
     return `
-      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:8px">
+      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
         <div id="note-item-${n.id}" class="inbox-item"
-          style="cursor:default;padding:12px 13px;width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
+          style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">

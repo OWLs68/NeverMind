@@ -26,6 +26,10 @@ body {
   --card-radius: 18px;
   --card-blur: blur(16px);
   --card-shadow: 0 4px 20px rgba(100,70,200,0.06);
+  /* Standardized card spacing (24.04.2026 R5Ejr — єдиний стандарт висоти карток) */
+  --card-gap: 5px;           /* відступ між картками у списку */
+  --card-pad-y: 10px;        /* внутрішній відступ зверху/знизу */
+  --card-pad-x: 14px;        /* внутрішній відступ збоку */
 
   /* Typography */
   --font-display: 'Unbounded', sans-serif;
@@ -808,10 +812,20 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: 14px;
-  margin: 5px 0;
+  margin: var(--card-gap) 0;
 }
 .task-item-wrap, .note-item-wrap {
   position: relative;
+  overflow: hidden;
+}
+/* R5Ejr 24.04: анімація закриття задачі — галочка одразу, через 250мс плавне сповзання */
+.task-item-wrap.task-completing {
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, max-height 0.35s ease, margin 0.35s ease;
+  transform: translateY(14px) scale(0.96);
+  opacity: 0;
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   overflow: hidden;
 }
 .inbox-item-delete-bg {
@@ -846,7 +860,7 @@ body {
 .inbox-item[data-cat="event"]   { background: linear-gradient(135deg, #c9dffe, #b0ccfe); }
 .inbox-item[data-cat="finance"] { background: linear-gradient(135deg, #fcddc4, #fbc89a); }
 .inbox-item-inner {
-  padding: 8px 12px;
+  padding: var(--card-pad-y) var(--card-pad-x);
   display: flex;
   gap: 10px;
   align-items: center;
@@ -1440,7 +1454,7 @@ body {
 .owl-confirm-banner { background: rgba(34,197,94,0.12); color: rgba(34,197,94,0.9); font-size: 12px; font-weight: 600; text-align: center; padding: 8px; animation: fadeUp 0.2s ease; }
 
 /* === JS-EXTRACTED: Shared components === */
-.card-glass { background: rgba(255,255,255,0.72); border: 1.5px solid rgba(255,255,255,0.75); border-radius: 16px; padding: 13px 14px; margin-bottom: 10px; }
+.card-glass { background: rgba(255,255,255,0.72); border: 1.5px solid rgba(255,255,255,0.75); border-radius: 16px; padding: var(--card-pad-y) var(--card-pad-x); margin-bottom: var(--card-gap); }
 .section-label { font-size: 10px; font-weight: 800; color: rgba(30,16,64,0.35); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
 .msg-bubble { max-width: 85%; padding: 8px 12px; font-size: 15px; line-height: 1.5; font-weight: 500; }
 .msg-bubble--agent { background: rgba(255,255,255,0.12); color: white; border-radius: 4px 12px 12px 12px; }
