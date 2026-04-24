@@ -6,6 +6,38 @@
 
 ---
 
+## 🔧 Сесія ZJmdF — Один мозок V2 ЗАМКНУТО + універсальні крапки + REMINDER_RULES (21-22.04.2026)
+
+### Мета і результат
+Завершити концепцію "Один мозок": (1) сова має можливість писати першою у всі 8 вкладок з візуальним сигналом; (2) мозок сам вирішує куди/що писати на основі живих сигналів з усіх вкладок; (3) мозок пам'ятає розмови з інших чатів; (4) правила (час, захист від дубля) однакові скрізь. **Підсумок:** ✅ все закрито за 11 комітів з чекпоінтами. Без інцидентів.
+
+### Зроблено (11 комітів)
+
+**Фаза A — Універсальна червона крапка:**
+1. **`7dc837e`** — `showUnreadBadge` підключено у 6 нових чатах. `addHealthChatMsg`/`addProjectsChatMsg` експортовано. IDs кнопок у index.html для tasks/notes/me/finance/health/projects. `addMsgForTab` викликає бейдж для всіх закритих чатів. `restoreChatUI` знає про health/projects.
+
+**Фаза B — Brain Pulse (один мозок, 9 сигналів):**
+2. **`149ce00`** — B.1: `src/owl/brain-signals.js` (264 рядки). `collectBrainSignals()` збирає 9 типів: stuck-task, event-passed, event-upcoming, budget-warn/overflow, appointment-soon, streak-risk, project-stuck, weekly-review.
+3. **`7e10b62`** — B.2: `src/owl/brain-pulse.js` engine. `BRAIN_TOOLS.post_chat_message` у prompts.js. `getBrainPulseSystemPrompt(signals)` з правилами "краще мовчати ніж спам". CHAT_STORE_KEYS додано health+projects.
+4. **`7165fda`** — B.3: інтеграція. `startBrainPulseCycle()` через 4 сек у boot.js. `followups.js` рефактор 218→80 рядків (тільки evening-prompt залишився, інші сигнали йдуть через Brain Pulse). Спільний `followup_global` cooldown — дублі неможливі.
+
+**Шар 3 — Мозок бачить всі чати:**
+5. **`e479278`** — Блок 1: `getRecentChatsAcrossTabs` 2→5 реплік, 30→60хв вікно.
+6. **`973bb60`** — Блок 2: клік на чіп брифінгу знижує priority critical→normal.
+
+**Фікси і полірування:**
+7. **`8109dd4`** — календар: цифри днів з подіями стали темно-фіолетовими.
+8. **`3f9ea78`** — фікс "зранку=08:00" + захист від дубля "Ок".
+9. **`f863f46`** — REMINDER_RULES спільна константа у 8 чатах.
+10-11. **`d7c03b4`+`1dede1f`** — ROADMAP оновлено (сортування календаря Варіант A узгоджено).
+
+### Метрики
+- **Коміти:** 11 (`7dc837e` → `1dede1f`)
+- **CACHE_NAME:** `nm-20260421-1949` → `nm-20260422-0414`
+- **Нові файли:** `src/owl/brain-signals.js` (264 рядки), `src/owl/brain-pulse.js` (117 рядків)
+
+---
+
 ## 🔧 Сесія rJYkw — Шар 2 "Один мозок V2" + UX швидкого старту (21.04.2026)
 
 ### Мета і результат

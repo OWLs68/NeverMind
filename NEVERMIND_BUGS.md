@@ -37,6 +37,12 @@
 
 _Зберігаються закриті у 2 останніх активних сесіях. Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
+### Сесія R5Ejr (24.04.2026)
+
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-104 | `src/tabs/tasks.js` + `src/tabs/habits.js` + `src/owl/proactive.js` | Stale OWL board на вкладці Задач — сова повторювала «закрий 3 задачі: X, Y, Z» попри те що юзер щойно їх закрив тапом ✓. Фікс B-98 (watchdog прапорця) НЕ допомагав — генерація проходила успішно, але з поганим контекстом. | **2 причини:** (1) у 4 з 8 місць де `status='done'` ставилось БЕЗ `completedAt` (tasks.js:171 toggleTaskStep, tasks.js:192 toggleTaskStatus, habits.js:1373 AI complete_step, habits.js:1383 AI complete_task) — `getAIContext` блок «Нещодавно ЗАКРИТІ задачі» фільтрує по `t.completedAt` і їх пропускав. (2) У `getTabBoardContext('tasks')` не було блоку «Нещодавно закриті» (тільки у `_getInboxBoardContext`). Фікс: усі 4 місця тепер ставлять `completedAt+updatedAt` при 'done', видаляють `completedAt` при reopen. Додано блок «Нещодавно ЗАКРИТІ задачі (НЕ повторюй з boardHistory)» у tab-контекст. Коміт `3e3892a`. |
+
 ### Сесія v2vYo (24.04.2026)
 
 | # | Файл | Опис | Як виправлено |
@@ -45,53 +51,7 @@ _Зберігаються закриті у 2 останніх активних 
 | B-98 | `src/owl/proactive.js` (`generateBoardMessage`) | OWL табло не оновлювалось 8+ годин попри 5+ тригерів `[OWL board] stale message detected, forcing generation`. Прапорець `_boardGenerating[tab]` залипав `true` бо не було `try/finally` на все тіло функції — виключення у prompt-збірці (lines 624-745) або hung fetch без помилки лишали прапорець назавжди | Обгорнуто все тіло функції у `try { ... } finally { clearTimeout(watchdog); _boardGenerating[tab] = false; }` + додано watchdog `setTimeout(60s)` який примусово скидає прапорець і робить `abort()` якщо прапорець висить >60 сек. Коміт `5b25374`. |
 | B-99 | `src/owl/brain-pulse.js:42` | У логах `[brain-pulse] skip:` іноді з пустою причиною після двокрапки — заважало діагностиці | Додано fallback `judge.reason \|\| 'unknown'` у `console.log`. Коміт `5b25374`. |
 
-### Сесія Gg3Fy (20-21.04.2026)
-
-| # | Файл | Опис | Як виправлено |
-|---|------|------|----------------|
-| B-94 | `src/tabs/health.js` + `src/ai/prompts.js` + `src/ai/tool-dispatcher.js` | "Алергія на пил" → випадковий UI-tool замість `add_allergy` | Архітектурна міграція (Шар 1 "Один мозок V2"). Health chat з `UI_TOOLS` + text-JSON → `INBOX_TOOLS` + `dispatchChatToolCalls` (коміт `5563b15`). `add_allergy` тепер справжня OpenAI-функція на одному рівні з `set_owl_mode` — модель більше не має bias "справжня функція над текст-JSON". iPhone v340+ тест 21.04 06:21: "Алергія на пил" → `add_allergy` ✅. |
-| B-95 | `src/tabs/health.js` + `src/ai/prompts.js` + `src/ai/tool-dispatcher.js` | "Завтра прийом у лікаря на 2" → випадковий UI-tool замість `create_event` | Те саме архітектурне рішення що B-94. iPhone v340+ тест 21.04 06:22: "Завтра прийом у лікаря на 10" → `create_event` на 22.04 10:00 ✅. |
-| B-96 | `src/ai/prompts.js` getHealthChatSystem | Опис симптому записується у активну картку навіть якщо тема не збігається (ex: активна "Шляпа" + "Болить горло" → запис у "Шляпа" замість нової картки "Горло") | iPhone v340+ тест 21.04: виклик tool правильний (`add_health_history_entry`), але вибір картки помилковий — промпт казав "якщо є активна → запиши у неї" без перевірки теми. Додано правило тематичного матчингу з 4 прикладами: активна + повʼязана тема → add_history; активна + різна тема → create_health_card; немає активної → create_health_card. Потребує iPhone повторного тесту. |
-
-### Сесія EWxjG (20.04.2026)
-
-| # | Файл | Опис | Як виправлено |
-|---|------|------|----------------|
-| B-93 | `style.css` (`.ai-bar-messages` mask-image) | Чіпи-кнопки у Inbox chat обрізані знизу — видно тільки верх | Корінь: нижній fade у `mask-image` на контейнері повідомлень робив останні 16px прозорими. Чіпи останнім елементом попадали у цю зону. Фікс: прибрано нижню точку fade (мазка тільки згори), плюс `padding-bottom` 20→28px. Глобально для всіх 8 чатів. |
-
-_B-94/B-95 у сесії EWxjG отримали 2 промпт-підходи (коміти `379f13e`, `6fa67e2`), обидва провалились на iPhone. Повернуті у 🔴 Критичні — закриватимемо архітектурно через Шар 1 "Один мозок V2" у новій сесії._
-
-### Сесія NRw8G (20.04.2026)
-
-| # | Файл | Опис | Як виправлено |
-|---|------|------|----------------|
-| B-84 | `src/tabs/health.js` | Алергія не зберігається з чату Здоров'я — промпт фізично не мав дій | Додав `add_allergy` / `delete_allergy` у промпт Здоров'я + handlers у `_processOne` (викликають існуючі `addAllergy`/`deleteAllergy`). Коміт `058cd9d`. |
-| B-85 | `src/tabs/health.js` | Опис симптому → шаблон "Я не лікар" замість запису | Переписав ЖОРСТКИЙ БЛОК: **медичне питання** ("що зі мною?", "що робити?") → шаблон; **опис симптому/факту** ("болить горло 3 дні") → `add_health_history_entry` у активну картку або `create_health_card` якщо нема активної. Додав handlers. Коміт `058cd9d`. |
-| B-86 | `src/tabs/health.js` | "Новий прийом у лікаря" → edit існуючої події або UI-тул замість create_event | Додав жорсткі правила у промпт: "новий прийом / завтра до лікаря" → ЗАВЖДИ create_event; edit_event ТІЛЬКИ на "перенеси/зміни час". Заборона UI-інструментів (switch_tab/set_finance_period) на реченнях про події. Коміт `058cd9d`. |
-| B-87 | `src/core/utils.js` + `src/tabs/inbox.js` + `src/tabs/evening-chat.js` | Регекс `_parseContentChips` обрізав JSON-блок чіпів на першому `}` | Виніс helper `parseContentChips` у `utils.js` з depth-tracking балансуванням фігурних дужок (як `extractJsonBlocks`). Обидва файли тепер делегують. Коміт `8aebb3a`. |
-| B-88 | `src/tabs/health.js` | Мертва дія `log_health` у промпті Здоров'я | Прибрав рядок з промпту (пакет з B-84/85/86). Коміт `058cd9d`. |
-| B-89 | `style.css` | Свайп закриття чату у Здоров'ї криво — handle надто тонкий | Збільшив вертикальну зону `.ai-bar-chat-handle` з `padding:12px 0 10px` (~22px) до `padding:20px 0 16px` (~40px). Візуально смужка не змінилась (через `::after`). Глобально для всіх 8 чатів. Коміт `3b08d2c`. |
-| B-90 | `src/ai/prompts.js` | "Темна тема" — AI галюцинує інструкцію "зроби це у налаштуваннях" | Додав блок "НЕДОСТУПНІ ФУНКЦІЇ" у `UI_TOOLS_RULES`: "темна тема / dark mode / нічний режим" → чесна відповідь "Поки немає, з'явиться пізніше." Пропагується у всі 8 чатів через спільні правила. Коміт `ffba291`. |
-| B-91 | `src/ai/prompts.js` | "Запам'ятай що я не їм глютен" → сова створює задачу "купити безглютенову піцу" | Корінь — старий приклад у промпті ("алергія на горіхи → save_task купити піцу + save_memory_fact") вчив AI галюцинувати задачі-протилежність. Переписав секцію ПАМ'ЯТЬ: жорсткий тригер "Запам'ятай/Запиши що/Знай що" → ТІЛЬКИ save_memory_fact. Явна заборона галюцинацій: "не їм X" ≠ "купити X-free". Коміт `474a1f7`. |
-| B-92 | `src/core/nav.js` | Модалка Пам'ять не закривається свайпом, тільки хрестиком | `openMemoryModal` тепер викликає `setupModalSwipeClose` на внутрішній панелі — як Tasks/Habits/Settings/Calendar модалки. Коміт `256330f`. |
-
-**Додатково (Один мозок parity 20.04):** `save_memory_fact` тепер доступний у чатах Здоров'я / Фінансів / Проектів (раніше був тільки в Inbox/Notes/Tasks/Я/Evening через INBOX_TOOLS). Коміт `9200411`.
-
-### Сесія JvzDi (19.04.2026)
-
-| # | Файл | Опис | Як виправлено |
-|---|------|------|----------------|
-| B-81 | `src/ai/prompts.js` | "Відкрий задачі" у Inbox чаті інтерпретувалось як save_task з title="задачі" замість switch_tab | М'яке правило промпту "відкрий X → switch_tab" не заважало AI обрати save_task. Переписав UI TOOLS секцію як ЖОРСТКЕ правило з прикладами: повідомлення що починається з "відкрий/покажи/перейди до + назва вкладки" → ЗАВЖДИ switch_tab, НЕ save_task. Коміт `240a0b5`. |
-| B-82 | `src/ai/ui-tools.js`, `src/ai/prompts.js` | Плацебо tool `set_theme` — сова "Темна тема." але у застосунку немає глобальної темної теми | Tool викликав `applyTheme()` яка лише фарбує таб-бар за поточною вкладкою. Прибрав визначення з UI_TOOLS, case з handleUITool, рядок з промпту, невикористаний імпорт. Повернемо коли буде реальна темна тема. Коміт `240a0b5`. |
-| B-83 | `src/tabs/inbox.js`, `src/ai/prompts.js` | Чіпи у Health-інтерв'ю показувались як текст у дужках замість клікабельних кнопок | Health-інтерв'ю промпт з 6GoDe обіцяв чіпи, але Inbox chat не мав парсера JSON блоку `{chips:[...]}` — тільки evening-chat мав. Портував `_parseContentChips` з evening-chat.js, розширив `addInboxChatMsg` параметром `chips`, додав 3 точки показу msg.content з парсингом+рендером. Коміт `0bf3d37`. |
-
-### Сесія 6GoDe (19.04.2026)
-
-| # | Файл | Опис | Як виправлено |
-|---|------|------|----------------|
-| B-65 | `src/core/boot.js` | "SW load failed" у логах 7+ разів на добу | Корінь — `reg.update()` у `setupSW()` викликався 3 рази без `.catch()` (register, visibilitychange, pageshow). Коли iPhone офлайн/повільний — update() rejects з "Script load failed" → `window.unhandledrejection` → логер. Додав тихі `.catch(() => {})` на всі 3 виклики. Коміт `e634b12`. |
-
-_У сесіях до 6GoDe (dIooU, QV1n2, NFtzw, rSTLV, w3ISi, uDZmz, VJF2M, Vydqm, FMykK, KTQZA, cnTkD, W6MDn, acZEu, 3229b, 6v2eR, jMR6m та старіші) — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Закриті у сесіях Gg3Fy / EWxjG / NRw8G / JvzDi / 6GoDe та старіші — у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
