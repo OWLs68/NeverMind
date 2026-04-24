@@ -5622,6 +5622,10 @@ ${lines.join("\n\n")}`;
       const stuck = active.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
       if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t) => '"' + t.title + '"').join(", ")}`);
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t) => t.status === "done").length}`);
+      const recentlyDone = tasks.filter((t) => t.status === "done" && (t.completedAt || t.updatedAt) && now - (t.completedAt || t.updatedAt) < 24 * 60 * 60 * 1e3).slice(0, 5);
+      if (recentlyDone.length > 0) {
+        parts.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0436\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u041D\u0415 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445, \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0437\u0456 \u0441\u0432\u043E\u0433\u043E boardHistory): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
+      }
       const allHabits = getHabits();
       const quitHabits = allHabits.filter((h) => h.type === "quit");
       if (quitHabits.length > 0) {
@@ -12439,7 +12443,11 @@ ${UI_TOOLS_RULES}`;
             const step = t.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
             if (step) {
               step.done = true;
-              if (t.steps.every((s) => s.done)) t.status = "done";
+              if (t.steps.every((s) => s.done)) {
+                t.status = "done";
+                t.completedAt = Date.now();
+                t.updatedAt = Date.now();
+              }
               saveTasks(allTasks);
               renderTasks();
               addTaskBarMsg("agent", `\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 "${step.text}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E`);
@@ -12454,6 +12462,8 @@ ${UI_TOOLS_RULES}`;
           const t = allTasks.find((x) => x.id === parsed.task_id);
           if (t) {
             t.status = "done";
+            t.completedAt = Date.now();
+            t.updatedAt = Date.now();
             t.steps.forEach((s) => s.done = true);
             saveTasks(allTasks);
             renderTasks();
@@ -13356,8 +13366,17 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const s = (t.steps || []).find((x) => x.id === stepId);
     if (s) s.done = !s.done;
     const allDone = t.steps.length > 0 && t.steps.every((x) => x.done);
-    if (allDone) t.status = "done";
-    else if (t.status === "done") t.status = "active";
+    const wasDone = t.status === "done";
+    const now = Date.now();
+    if (allDone && !wasDone) {
+      t.status = "done";
+      t.completedAt = now;
+      t.updatedAt = now;
+    } else if (!allDone && wasDone) {
+      t.status = "active";
+      delete t.completedAt;
+      t.updatedAt = now;
+    }
     saveTasks(tasks);
     renderTasks();
   }
@@ -13366,6 +13385,14 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const t = tasks.find((x) => x.id === id);
     if (!t) return;
     t.status = t.status === "done" ? "active" : "done";
+    const now = Date.now();
+    if (t.status === "done") {
+      t.completedAt = now;
+      t.updatedAt = now;
+    } else {
+      delete t.completedAt;
+      t.updatedAt = now;
+    }
     saveTasks(tasks);
     logRecentAction(t.status === "done" ? "complete_task" : "reopen_task", t.title, "tasks");
     renderTasks();
