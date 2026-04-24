@@ -707,7 +707,7 @@ body {
 
 /* === PAGE-SPECIFIC HEADER BACKGROUNDS === */
 #page-inbox .page-header { background: linear-gradient(to bottom, #ffedd5 30%, transparent); padding-bottom: 0; }
-#page-tasks .page-header { background: linear-gradient(to bottom, #fdb87a 30%, transparent); }
+#page-tasks .page-header { background: transparent; }
 #page-notes .page-header { background: linear-gradient(to bottom, #ffffff 30%, transparent); }
 #page-me .page-header { background: linear-gradient(to bottom, #e8d5c4 30%, transparent); }
 #page-evening .page-header { background: linear-gradient(to bottom, #1e3350 30%, transparent); }

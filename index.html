@@ -303,8 +303,8 @@
     <!-- PAGE: TASKS -->
     <div class="page" id="page-tasks">
       <!-- Sticky header: заголовок + табло + перемикач вкладок -->
-      <!-- R5Ejr 24.04: напівпрозоре "матове скло" — картки при скролі просвічуються -->
-      <div style="position:sticky;top:0;z-index:10;background:rgba(253,184,122,0.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)">
+      <!-- R5Ejr 24.04: фон прибрано — картки при скролі проходять за sticky повністю видимо -->
+      <div style="position:sticky;top:0;z-index:10">
         <div class="page-header" style="position:relative;top:auto">
           <span class="page-title">Продуктивність</span>
           <div class="header-actions">
@@ -320,7 +320,7 @@
         <div id="owl-tab-board-tasks" style="display:none;padding:0 14px"></div>
 
         <!-- Inner tabs: Задачі / Звички -->
-        <div style="padding:8px 0 6px;background:linear-gradient(to bottom,#fdb87a 80%,transparent)">
+        <div style="padding:8px 0 6px">
           <div style="display:flex;margin:0 14px;gap:8px">
             <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
               style="flex:0.8;border-radius:16px;padding:10px 12px;cursor:pointer;background:white;border:2px solid rgba(234,88,12,0.6);box-shadow:none;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
