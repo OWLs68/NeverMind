@@ -168,8 +168,10 @@ function toggleTaskStep(taskId, stepId) {
 
   // Перевіряємо чи всі кроки виконані
   const allDone = t.steps.length > 0 && t.steps.every(x => x.done);
-  if (allDone) t.status = 'done';
-  else if (t.status === 'done') t.status = 'active';
+  const wasDone = t.status === 'done';
+  const now = Date.now();
+  if (allDone && !wasDone) { t.status = 'done'; t.completedAt = now; t.updatedAt = now; }
+  else if (!allDone && wasDone) { t.status = 'active'; delete t.completedAt; t.updatedAt = now; }
 
   saveTasks(tasks);
   renderTasks();
@@ -190,6 +192,9 @@ function toggleTaskStatus(id) {
   const t = tasks.find(x => x.id === id);
   if (!t) return;
   t.status = t.status === 'done' ? 'active' : 'done';
+  const now = Date.now();
+  if (t.status === 'done') { t.completedAt = now; t.updatedAt = now; }
+  else { delete t.completedAt; t.updatedAt = now; }
   saveTasks(tasks);
   logRecentAction(t.status === 'done' ? 'complete_task' : 'reopen_task', t.title, 'tasks');
   renderTasks();
