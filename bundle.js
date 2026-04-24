@@ -13436,7 +13436,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     }
     empty.style.display = "none";
     const active = tasks.filter((t) => t.status !== "done");
-    const done = tasks.filter((t) => t.status === "done");
+    const done = tasks.filter((t) => t.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
     const sorted = [...active, ...done];
     updateProdTabCounters();
     list.innerHTML = sorted.map((t) => {
