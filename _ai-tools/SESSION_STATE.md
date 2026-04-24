@@ -23,6 +23,21 @@
 
 5. **📣 Проба GLOBAL_TOOLS_RULE на iPhone.** Якщо у чаті Задач спрацює — **пропагувати** у 7 інших tab chats (Notes/Me/Finance/Health/Projects/Evening/Inbox) як зробили з REMINDER_RULES у ZJmdF. Імпорт з `prompts.js`, додати у системний промпт.
 
+6. **🐛 4 нові відкриті баги з iPhone-тестування:**
+   - **B-100** 🟡 Сова не реагує на «не доставай / відчепись» — пропонує «що ще можу» замість замовкнути. Треба підсилити правило емпатії у `getOWLPersonality`. Потребує верифікації чи відтворюється на v374+.
+   - **B-101** 🟢 Туманне «Щось пішло не так» на мережеві помилки. UX: юзер не знає що робити. Фікс: розрізняти abort/network/server і додати «Повторити» чіп.
+   - **B-102** 🟡 Табло ігнорує настрій у чаті. Архітектурно — V3 Фаза 2 (USER_STATE у Brain Pulse).
+   - **B-103** 🔴 Дублі подій у календарі («Концерт 30 квітня» × 2). 5 call-sites без dedup helper. Фікс: `addEventDedup(ev)` у `calendar.js` → делегують з inbox/habits/tasks/notes/health.
+
+7. **🔐 БЕЗПЕКА — нова секція у ROADMAP (After Supabase).** 23 обовʼязкові пункти перед першим реальним юзером:
+   - A. Приватність даних (RLS, шифрування медицини, GDPR-експорт, cascade-видалення) — 6
+   - B. Захист клієнта (CSP, санітизація DOM, Service Worker safety, localStorage validation) — 4
+   - C. Процеси (npm audit, HTTPS, 2FA на GitHub+Supabase, branch protection) — 4
+   - + попередні 9 пунктів про API-ключ / rate limit / budget cap / kill switch
+   Треба створити `docs/SECURITY_CHECKLIST.md` і пройти ВСІ 23 пункти ДО першого Edge Function у production.
+
+8. **🎯 `/finish` тепер робить `/obsidian` автоматично (Фаза 9).** `/obsidian` скіл видалений. Одна команда = і репо оновлений, і блок для RoamBrain готовий. Записано у `.claude/commands/finish.md`.
+
 6. **💰 Економіка узгоджена:** підписка $10-12/міс. Поточна вартість $4/міс. Після V3 ~$2/міс → маржа ~80%. Оптимізації ПІСЛЯ даних з Usage Meter (Фаза 0 V3).
 
 7. **📊 Шкала розумності ~20%.** Стеля ROADMAP 45-48%.
@@ -67,7 +82,7 @@
 
 | ID | Дата | Закрито / Зроблено | Коміти | Гілка | Деталі |
 |---|---|---|---|---|---|
-| **v2vYo** | 24.04 | ✅ 3 баги закриті: **B-98** (🔴 залиплий OWL табло — `try/finally` + watchdog 60с у `generateBoardMessage`), **B-97** (🔴 Context Segmentation Failure — `GLOBAL_TOOLS_RULE` у `prompts.js` підключений у чат Задач), **B-99** (🟡 `brain-pulse skip:` порожня причина — fallback `'unknown'`). 2 коміти checkpoint-стилем. CACHE_NAME `nm-20260422-0639` → `nm-20260424-0715`. Чекає iPhone-верифікації | 2 | `claude/start-session-v2vYo` | — |
+| **v2vYo** | 24.04 | ✅ 3 баги закриті: **B-98** (🔴 залиплий OWL табло — `try/finally` + watchdog 60с), **B-97** (🔴 Context Segmentation — `GLOBAL_TOOLS_RULE` у чаті Задач), **B-99** (🟡 skip-лог з причиною). ➕ Знайдено 4 нові баги (B-100 емпатія, B-101 туманна помилка, B-102 настрій табло, B-103 дублі подій — 5 call-sites без dedup). ➕ Додана секція безпеки у ROADMAP (23 пункти: API-ключ, RLS, XSS, GDPR) за ідею статті про Jessie Davis ($18k рахунок через плейн-текст ключ у Cloud Run). ➕ Обʼєднано `/obsidian` у `/finish` Фаза 9. CACHE_NAME `nm-20260422-0639` → `nm-20260424-0715`. Чекає iPhone-верифікації фіксів | 10 | `claude/start-session-v2vYo` | — |
 | **8bSsE** | 24.04 | 💬 Сесія обговорень (без коду). Проаналізовано діагностику з iPhone Романа (v370) і друга (v368). Зафіксовано B-98 (залиплий прапорець OWL табло 8+ год) і B-99 (brain-pulse skip без причини). Розʼяснено архітектурне обмеження: Brain Pulse у фоні iPhone неможливий без Supabase+Edge. Побудована розширена шпаргалка для великого тесту (8 блоків на 1-2 дні). Роман попросив правило «кнопка копіювати у довгих списках» — чекає підтвердження | 0 | `claude/start-session-8bSsE` | [CHANGES §24.04-8bSsE](../docs/CHANGES.md) |
 | **L67Xf** | 22.04 | ✅ Чіпи у 6 чатах (Задачі/Нотатки/Я/Фінанси/Здоровʼя/Проекти — `parseContentChips` + `renderChips`) + сортування календаря Варіант A + фікс Інсайту дня (не застрягав на 1 тx) + стратегічні документи: Test Sprint у Active, OWL Reasoning V3 (3 ітерації Gemini: 6/10→4/10→9/10), шкала розумності агента 0-100% (стан ~20%, стеля ROADMAP ~45%), економіка V3 (підписка $10-12, поточна $4/міс, оптимізована $2/міс), баг B-97 «Прийом у лікаря відміни» зафіксовано. CACHE_NAME nm-20260422-0414→0639 | 10+ | `claude/start-session-L67Xf` | [CHANGES §22.04-L67Xf](../docs/CHANGES.md) |
 | ZJmdF | 21-22.04 | ✅ Один мозок V2 ЗАМКНУТО: універсальна крапка у 8 вкладках + Brain Pulse engine (9 сигналів, tool `post_chat_message`) + Шар 3 крос-чат памʼять (2→5 реплік, 30→60хв) + клікабельний брифінг (critical→normal при кліку) + REMINDER_RULES у 8 чатах (зранку=08:00, захист від дубля) + фікс читабельності цифр у календарі. 11 комітів | 11 | `claude/start-session-ZJmdF` (merged) | [CHANGES §22.04-ZJmdF](../docs/CHANGES.md) |
