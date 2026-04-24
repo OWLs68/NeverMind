@@ -818,6 +818,16 @@ body {
   position: relative;
   overflow: hidden;
 }
+/* R5Ejr 24.04: анімація закриття задачі — галочка одразу, через 250мс плавне сповзання */
+.task-item-wrap.task-completing {
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, max-height 0.35s ease, margin 0.35s ease;
+  transform: translateY(14px) scale(0.96);
+  opacity: 0;
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  overflow: hidden;
+}
 .inbox-item-delete-bg {
   position: absolute;
   right: 0; top: 0; bottom: 0;

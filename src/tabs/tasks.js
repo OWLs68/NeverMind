@@ -191,12 +191,41 @@ function toggleTaskStatus(id) {
   const tasks = getTasks();
   const t = tasks.find(x => x.id === id);
   if (!t) return;
-  t.status = t.status === 'done' ? 'active' : 'done';
+  const isCompleting = t.status !== 'done';
   const now = Date.now();
-  if (t.status === 'done') { t.completedAt = now; t.updatedAt = now; }
-  else { delete t.completedAt; t.updatedAt = now; }
+
+  if (isCompleting) {
+    // R5Ejr 24.04: 3-фазна анімація — миттєва галочка → 250мс пауза → сповзання → renderTasks
+    const wrap = document.getElementById('task-wrap-' + id);
+    const card = document.getElementById('task-item-' + id);
+    if (card) {
+      const check = card.querySelector('[data-task-check] > div');
+      const title = card.querySelector('[style*="font-weight:700"]');
+      if (check) { check.style.background = '#16a34a'; check.style.borderColor = '#16a34a'; check.textContent = '✓'; }
+      if (title) { title.style.textDecoration = 'line-through'; title.style.opacity = '0.5'; }
+    }
+    if (wrap) {
+      // Фіксуємо висоту щоб max-height transition знав з чого падати до 0
+      wrap.style.maxHeight = wrap.offsetHeight + 'px';
+      setTimeout(() => { wrap.classList.add('task-completing'); }, 250);
+    }
+    setTimeout(() => {
+      t.status = 'done';
+      t.completedAt = now;
+      t.updatedAt = now;
+      saveTasks(tasks);
+      logRecentAction('complete_task', t.title, 'tasks');
+      renderTasks();
+    }, 620);
+    return;
+  }
+
+  // Reopen — без анімації
+  t.status = 'active';
+  delete t.completedAt;
+  t.updatedAt = now;
   saveTasks(tasks);
-  logRecentAction(t.status === 'done' ? 'complete_task' : 'reopen_task', t.title, 'tasks');
+  logRecentAction('reopen_task', t.title, 'tasks');
   renderTasks();
 }
 
@@ -223,11 +252,13 @@ export function renderTasks() {
     const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
     const isDone = t.status === 'done';
 
-    return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px 10px;border-radius:16px">
+    return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
       <div id="task-item-${t.id}" onclick="taskCardClick(${t.id}, event)"
-        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 14px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${steps.length ? '10px' : '0'}">
-        <div data-task-check="1" ontouchend="event.preventDefault();toggleTaskStatus(${t.id})" style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? '8px' : '0'}">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus(${t.id})" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+          <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
+        </div>
         <div style="flex:1">
           <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
           ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
