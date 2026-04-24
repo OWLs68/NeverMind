@@ -37,6 +37,12 @@ export function getTabBoardContext(tab) {
     const stuck = active.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
     if (stuck.length > 0) parts.push(`[ВАЖЛИВО] Задачі без прогресу 3+ дні: ${stuck.map(t => '"' + t.title + '"').join(', ')}`);
     parts.push(`Активних задач: ${active.length}, закрито: ${tasks.filter(t => t.status === 'done').length}`);
+
+    // Нещодавно закриті (24 год) — щоб AI не повторював їх як відкриті з boardHistory
+    const recentlyDone = tasks.filter(t => t.status === 'done' && (t.completedAt || t.updatedAt) && (now - (t.completedAt || t.updatedAt)) < 24 * 60 * 60 * 1000).slice(0, 5);
+    if (recentlyDone.length > 0) {
+      parts.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (вже виконані, НЕ нагадуй про них, НЕ повторюй зі свого boardHistory): ${recentlyDone.map(t => '"' + t.title + '"').join(', ')}.`);
+    }
     // Quit звички
     const allHabits = getHabits();
     const quitHabits = allHabits.filter(h => h.type === 'quit');

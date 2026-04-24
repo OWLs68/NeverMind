@@ -1370,7 +1370,11 @@ export async function sendTasksBarMessage() {
           const step = t.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
           if (step) {
             step.done = true;
-            if (t.steps.every(s => s.done)) t.status = 'done';
+            if (t.steps.every(s => s.done)) {
+              t.status = 'done';
+              t.completedAt = Date.now();
+              t.updatedAt = Date.now();
+            }
             saveTasks(allTasks); renderTasks();
             addTaskBarMsg('agent', `✅ Відмітив "${step.text}" як виконано`);
           } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
@@ -1380,7 +1384,7 @@ export async function sendTasksBarMessage() {
       if (parsed.action === 'complete_task') {
         const allTasks = getTasks();
         const t = allTasks.find(x => x.id === parsed.task_id);
-        if (t) { t.status = 'done'; t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
+        if (t) { t.status = 'done'; t.completedAt = Date.now(); t.updatedAt = Date.now(); t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
         return true;
       }
       if (parsed.action === 'add_step') {
