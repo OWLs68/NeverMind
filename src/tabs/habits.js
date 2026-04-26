@@ -6,7 +6,7 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -1355,7 +1355,7 @@ export async function sendTasksBarMessage() {
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
-    if (!reply) { addTaskBarMsg('agent', 'Щось пішло не так.'); setTaskBarLoading(false); return; }
+    if (!reply) { handleChatError(addTaskBarMsg); setTaskBarLoading(false); return; }
 
     // Fallback text-JSON — специфічні actions не в INBOX_TOOLS (complete_step, undo_step, complete_habit by name)
     const _processOne = (parsed) => {

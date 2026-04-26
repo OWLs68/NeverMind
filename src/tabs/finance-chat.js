@@ -4,7 +4,7 @@
 // ============================================================
 
 import { escapeHtml, parseContentChips } from '../core/utils.js';
-import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getFinanceChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
@@ -126,7 +126,7 @@ export async function sendFinanceBarMessage() {
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
-    if (!reply) { addFinanceChatMsg('agent', 'Щось пішло не так.'); financeBarLoading = false; return; }
+    if (!reply) { handleChatError(addFinanceChatMsg); financeBarLoading = false; return; }
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));

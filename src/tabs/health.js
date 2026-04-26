@@ -7,7 +7,7 @@
 import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, parseContentChips } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
-import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { getHealthChatSystem } from '../ai/prompts.js';
 import { renderChips } from '../owl/chips.js';
@@ -1563,7 +1563,7 @@ export async function sendHealthBarMessage() {
     }
 
     const reply = msg && msg.content ? msg.content.trim() : '';
-    if (!reply) { addHealthChatMsg('agent', 'Щось пішло не так.'); healthBarLoading = false; return; }
+    if (!reply) { handleChatError(addHealthChatMsg); healthBarLoading = false; return; }
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
