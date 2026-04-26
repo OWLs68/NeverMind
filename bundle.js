@@ -1518,6 +1518,23 @@ ${lines.join("\n")}`;
     localStorage.setItem("nm_events", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "events" }));
   }
+  function addEventDedup(ev) {
+    const events = getEvents();
+    const now = Date.now();
+    const newTitle = (ev.title || "").toLowerCase().trim();
+    const newTime = ev.time || null;
+    const existing = events.find((e) => {
+      if (e.date !== ev.date) return false;
+      if ((e.time || null) !== newTime) return false;
+      if ((e.title || "").toLowerCase().trim() !== newTitle) return false;
+      const age = now - (e.createdAt || 0);
+      return age < 6e4;
+    });
+    if (existing) return { added: false, existing };
+    events.unshift(ev);
+    saveEvents(events);
+    return { added: true, event: ev };
+  }
   function _zoomIn(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -9461,9 +9478,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "create_event": {
-          const events = getEvents();
-          events.unshift({ id: Date.now(), title: args.title || "\u041F\u043E\u0434\u0456\u044F", date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
-          saveEvents(events);
+          const res = addEventDedup({ id: Date.now(), title: args.title || "\u041F\u043E\u0434\u0456\u044F", date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
+          if (!res.added) return { ok: true, duplicate: true };
           logRecentAction("create_event", args.title || "", "evening");
           return { ok: true };
         }
@@ -9482,10 +9498,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "set_reminder": {
-          const events = getEvents();
           const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          events.unshift({ id: Date.now(), title: "\u23F0 " + (args.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
-          saveEvents(events);
+          const res = addEventDedup({ id: Date.now(), title: "\u23F0 " + (args.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
+          if (!res.added) return { ok: true, duplicate: true };
           return { ok: true };
         }
         case "save_memory_fact": {
@@ -12005,9 +12020,11 @@ ${UI_TOOLS_RULES}`;
       const eventDetected = _detectEventFromTask(title);
       if (eventDetected) {
         const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
-        const events = getEvents();
-        events.unshift(ev);
-        saveEvents(events);
+        const res = addEventDedup(ev);
+        if (!res.added) {
+          addMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+          return true;
+        }
         const dateObj = new Date(eventDetected.date);
         const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
         const items2 = getInbox();
@@ -12177,9 +12194,11 @@ ${UI_TOOLS_RULES}`;
       const title = (parsed.title || "").trim();
       if (!title || !parsed.date) return false;
       const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, priority: parsed.priority || "normal", createdAt: Date.now() };
-      const events = getEvents();
-      events.unshift(ev);
-      saveEvents(events);
+      const res = addEventDedup(ev);
+      if (!res.added) {
+        addMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+        return true;
+      }
       const dateObj = new Date(parsed.date);
       const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
       const items = getInbox();
@@ -12360,8 +12379,7 @@ ${UI_TOOLS_RULES}`;
       const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
       reminders.push({ id: reminderId, time, text, date, done: false });
       localStorage.setItem("nm_reminders", JSON.stringify(reminders));
-      const events = getEvents();
-      events.unshift({
+      addEventDedup({
         id: reminderId + 1,
         title: text,
         date,
@@ -12371,7 +12389,6 @@ ${UI_TOOLS_RULES}`;
         source: "reminder",
         reminderId
       });
-      saveEvents(events);
       const items = getInbox();
       items.unshift({
         id: reminderId + 2,
@@ -15215,9 +15232,11 @@ ${aiContext}`;
             setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
           } else if (action.action === "create_event") {
             const ev = { id: Date.now(), title: action.title || "\u041F\u043E\u0434\u0456\u044F", date: action.date, time: action.time || null, priority: action.priority || "normal", createdAt: Date.now() };
-            const events = getEvents();
-            events.unshift(ev);
-            saveEvents(events);
+            const res = addEventDedup(ev);
+            if (!res.added) {
+              addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+              continue;
+            }
             const items = getInbox();
             items.unshift({ id: Date.now() + 1, text: ev.title, category: "event", ts: Date.now(), processed: true });
             saveInbox(items);
@@ -15669,9 +15688,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const eventDetected = _detectEventFromTask(taskTitle);
       if (eventDetected) {
         const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
-        const events = getEvents();
-        events.unshift(ev);
-        saveEvents(events);
+        const res = addEventDedup(ev);
+        if (!res.added) {
+          addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+          return;
+        }
         const dateObj = new Date(eventDetected.date);
         const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
         addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
@@ -15743,12 +15764,14 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const eventDetected = _detectEventDate(savedText);
       if (eventDetected) {
         const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal", createdAt: Date.now() };
-        const events = getEvents();
-        events.unshift(ev);
-        saveEvents(events);
-        const dateObj = new Date(eventDetected.date);
-        const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
-        addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
+        const res = addEventDedup(ev);
+        if (!res.added) {
+          addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+        } else {
+          const dateObj = new Date(eventDetected.date);
+          const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+          addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
+        }
       } else {
         const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral");
         const moments = getMoments();
