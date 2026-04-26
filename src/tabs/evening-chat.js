@@ -17,7 +17,7 @@
 // ============================================================
 
 import { escapeHtml, extractJsonBlocks, parseContentChips } from '../core/utils.js';
-import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
 import { getEveningChatSystem } from '../ai/prompts.js';
@@ -70,7 +70,7 @@ async function openEveningTopic(topic) {
 
   try {
     const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
-    if (!msg) { addEveningBarMsg('agent', 'Щось пішло не так.'); return; }
+    if (!msg) { handleChatError(addEveningBarMsg); return; }
     // Стартове повідомлення не має виконувати tool calls, але якщо AI все ж
     // дав — виконуємо (bонус); основне — content + чіпи
     if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
@@ -179,7 +179,7 @@ export async function sendEveningBarMessage() {
 
   try {
     const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
-    if (!msg) { addEveningBarMsg('agent', 'Щось пішло не так.'); eveningBarLoading = false; return; }
+    if (!msg) { handleChatError(addEveningBarMsg); eveningBarLoading = false; return; }
 
     // Виконуємо tool calls через локальний dispatcher (без Inbox side effects)
     // UI tools ("Один мозок #1") — навігація/фільтри доступні з Вечора.

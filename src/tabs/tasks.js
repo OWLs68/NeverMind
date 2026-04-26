@@ -6,7 +6,7 @@
 import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg } from '../ai/core.js';
+import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { updateProdTabCounters, processUniversalAction } from './habits.js';
@@ -514,7 +514,7 @@ async function sendTaskChatMessage() {
         if (!handled) addTaskChatMsg('agent', reply, '', extractedChips);
       }
     }
-    else addTaskChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+    else handleChatError(addTaskChatMsg);
   } catch {
     addTaskChatMsg('agent', 'Мережева помилка.');
   }

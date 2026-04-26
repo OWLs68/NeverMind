@@ -335,6 +335,18 @@ export function _isNetworkError(e) {
   return /Load failed|Failed to fetch|NetworkError|aborted|The operation was aborted/i.test(msg);
 }
 
+// B-101 fix (UVKL1 26.04): єдиний обробник «нема відповіді» у 9 чат-барах.
+// callAIWithTools/callAIWithHistory ловлять усі винятки і повертають null —
+// тому викликаючий код бачить `if (!reply)` для всіх причин (мережа/ключ/5xx).
+// Замість туманного «Щось пішло не так» розрізняємо офлайн → конкретна порада.
+export function handleChatError(addMsg) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    addMsg('agent', '📡 Мережа не відповіла. Перевір інтернет і повтори повідомлення.');
+  } else {
+    addMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+  }
+}
+
 async function _fetchAI(messages, signal, tools, temperature = 0.7) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }

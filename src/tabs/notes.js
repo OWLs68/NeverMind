@@ -7,7 +7,7 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, formatTime, parseContentChips } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -790,7 +790,7 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
         showSaveAsNoteBtn(reply);
       }
     } else {
-      addNoteChatMsg('agent', 'Щось пішло не так. Спробуй ще раз.');
+      handleChatError(addNoteChatMsg);
     }
   } catch {
     addNoteChatMsg('agent', 'Мережева помилка.');
@@ -1073,7 +1073,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
     }
 
     const rawReply = msg && msg.content ? msg.content.trim() : '';
-    if (!rawReply) { addNotesChatMsg('agent', 'Щось пішло не так.'); notesBarLoading = false; return; }
+    if (!rawReply) { handleChatError(addNotesChatMsg); notesBarLoading = false; return; }
     // Виділяємо {chips:[...]} окремо щоб не ламати розбір action-JSON
     const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
 
