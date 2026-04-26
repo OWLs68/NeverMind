@@ -16,7 +16,7 @@ import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder,
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { getMoments, saveMoments } from './evening.js';
 import { renderMeHabitsStats } from './me.js';
-import { getEvents, saveEvents, getRoutine, saveRoutine } from './calendar.js';
+import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 
 // === HABITS ===
 let editingHabitId = null;
@@ -932,9 +932,8 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const eventDetected = _detectEventFromTask(title);
     if (eventDetected) {
       const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
-      const events = getEvents();
-      events.unshift(ev);
-      saveEvents(events);
+      const res = addEventDedup(ev);
+      if (!res.added) { addMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return true; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
       const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
@@ -1092,9 +1091,8 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const title = (parsed.title || '').trim();
     if (!title || !parsed.date) return false;
     const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, priority: parsed.priority || 'normal', createdAt: Date.now() };
-    const events = getEvents();
-    events.unshift(ev);
-    saveEvents(events);
+    const res = addEventDedup(ev);
+    if (!res.added) { addMsg('agent', `Така подія "${title}" вже є в календарі.`); return true; }
     const dateObj = new Date(parsed.date);
     const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
@@ -1271,8 +1269,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     reminders.push({ id: reminderId, time, text, date, done: false });
     localStorage.setItem('nm_reminders', JSON.stringify(reminders));
     // 2. nm_events — щоб було видно у календарі і модалці "Розпорядок дня"
-    const events = getEvents();
-    events.unshift({
+    addEventDedup({
       id: reminderId + 1,
       title: text,
       date,
@@ -1282,7 +1279,6 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       source: 'reminder',
       reminderId
     });
-    saveEvents(events);
     // 3. nm_inbox — картка у стрічку з категорією "Нагадування" (⏰)
     const items = getInbox();
     items.unshift({

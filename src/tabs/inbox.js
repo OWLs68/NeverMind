@@ -13,7 +13,7 @@ import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
-import { getEvents, saveEvents } from './calendar.js';
+import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
 import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
@@ -578,9 +578,8 @@ ${aiContext}`;
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
         } else if (action.action === 'create_event') {
           const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, priority: action.priority || 'normal', createdAt: Date.now() };
-          const events = getEvents();
-          events.unshift(ev);
-          saveEvents(events);
+          const res = addEventDedup(ev);
+          if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
@@ -1059,9 +1058,8 @@ async function processSaveAction(parsed, originalText) {
     const eventDetected = _detectEventFromTask(taskTitle);
     if (eventDetected) {
       const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
-      const events = getEvents();
-      events.unshift(ev);
-      saveEvents(events);
+      const res = addEventDedup(ev);
+      if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
       addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
@@ -1141,12 +1139,14 @@ async function processSaveAction(parsed, originalText) {
     if (eventDetected) {
       // Календарна подія — зберігаємо в nm_events
       const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: 'normal', createdAt: Date.now() };
-      const events = getEvents();
-      events.unshift(ev);
-      saveEvents(events);
-      const dateObj = new Date(eventDetected.date);
-      const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
-      addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+      const res = addEventDedup(ev);
+      if (!res.added) {
+        addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`);
+      } else {
+        const dateObj = new Date(eventDetected.date);
+        const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+        addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+      }
     } else {
       // Момент дня — як раніше
       const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :

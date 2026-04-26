@@ -10,6 +10,32 @@ import { addToTrash, showUndoToast } from '../core/trash.js';
 export function getEvents() { return JSON.parse(localStorage.getItem('nm_events') || '[]'); }
 export function saveEvents(arr) { localStorage.setItem('nm_events', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'events' })); }
 
+// === DEDUP HELPER (B-103, qG4fj 25.04) ===
+// Перевіряє чи вже є подія з тією ж датою+часом+назвою за останні 60 сек.
+// Захищає від дублів коли AI повертає 2 create_event tool_calls у одній відповіді
+// або юзер двічі тапнув до отримання відповіді.
+// Повертає { added: true, event } якщо додано, { added: false, existing } якщо дубль.
+export function addEventDedup(ev) {
+  const events = getEvents();
+  const now = Date.now();
+  const newTitle = (ev.title || '').toLowerCase().trim();
+  const newTime = ev.time || null;
+
+  const existing = events.find(e => {
+    if (e.date !== ev.date) return false;
+    if ((e.time || null) !== newTime) return false;
+    if ((e.title || '').toLowerCase().trim() !== newTitle) return false;
+    const age = now - (e.createdAt || 0);
+    return age < 60_000;
+  });
+
+  if (existing) return { added: false, existing };
+
+  events.unshift(ev);
+  saveEvents(events);
+  return { added: true, event: ev };
+}
+
 const MONTHS_UA = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
 const MONTHS_OF = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
 

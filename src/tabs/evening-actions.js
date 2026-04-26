@@ -24,7 +24,7 @@
 import { getTasks, saveTasks, renderTasks } from './tasks.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits } from './habits.js';
 import { getNotes, saveNotes, addNoteFromInbox, renderNotes } from './notes.js';
-import { getEvents, saveEvents } from './calendar.js';
+import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getFinance, saveFinance, renderFinance } from './finance.js';
 import { saveMoments, getMoments } from './evening.js';
 import { addFact } from '../ai/memory.js';
@@ -134,9 +134,8 @@ export function dispatchEveningTool(name, args) {
         return { ok: true };
       }
       case 'create_event': {
-        const events = getEvents();
-        events.unshift({ id: Date.now(), title: args.title || 'Подія', date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() });
-        saveEvents(events);
+        const res = addEventDedup({ id: Date.now(), title: args.title || 'Подія', date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() });
+        if (!res.added) return { ok: true, duplicate: true };
         logRecentAction('create_event', args.title || '', 'evening');
         return { ok: true };
       }
@@ -157,10 +156,9 @@ export function dispatchEveningTool(name, args) {
       case 'set_reminder': {
         // MVP: reminder як подія у календарі. Повна реалізація Динамічного
         // розпорядку + push-нотифікацій — окрема фіча у ROADMAP.
-        const events = getEvents();
         const dateISO = args.date || new Date().toISOString().slice(0, 10);
-        events.unshift({ id: Date.now(), title: '⏰ ' + (args.text || 'Нагадування'), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() });
-        saveEvents(events);
+        const res = addEventDedup({ id: Date.now(), title: '⏰ ' + (args.text || 'Нагадування'), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() });
+        if (!res.added) return { ok: true, duplicate: true };
         return { ok: true };
       }
       case 'save_memory_fact': {
