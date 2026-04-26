@@ -3561,7 +3561,7 @@ ${lines.join("\n")}`;
       }
       const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
-        addHealthChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addHealthChatMsg);
         healthBarLoading = false;
         return;
       }
@@ -5102,7 +5102,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       }
       const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
-        addProjectsChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addProjectsChatMsg);
         projectsBarLoading = false;
         return;
       }
@@ -6894,7 +6894,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
       const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
-        addFinanceChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addFinanceChatMsg);
         financeBarLoading = false;
         return;
       }
@@ -8897,7 +8897,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
           showSaveAsNoteBtn(reply);
         }
       } else {
-        addNoteChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+        handleChatError(addNoteChatMsg);
       }
     } catch {
       addNoteChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
@@ -9132,7 +9132,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       }
       const rawReply = msg && msg.content ? msg.content.trim() : "";
       if (!rawReply) {
-        addNotesChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addNotesChatMsg);
         notesBarLoading = false;
         return;
       }
@@ -9732,7 +9732,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     try {
       const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
       if (!msg) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addEveningBarMsg);
         return;
       }
       if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
@@ -9832,7 +9832,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     try {
       const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
       if (!msg) {
-        addEveningBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addEveningBarMsg);
         eveningBarLoading = false;
         return;
       }
@@ -12447,7 +12447,7 @@ ${UI_TOOLS_RULES}`;
       }
       const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
-        addTaskBarMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A.");
+        handleChatError(addTaskBarMsg);
         setTaskBarLoading(false);
         return;
       }
@@ -12859,6 +12859,13 @@ ${routineParts.join("\n")}${nextHint}
     if (e.name === "AbortError") return true;
     const msg = e.message || String(e);
     return /Load failed|Failed to fetch|NetworkError|aborted|The operation was aborted/i.test(msg);
+  }
+  function handleChatError(addMsg) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      addMsg("agent", "\u{1F4E1} \u041C\u0435\u0440\u0435\u0436\u0430 \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u043B\u0430. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442 \u0456 \u043F\u043E\u0432\u0442\u043E\u0440\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F.");
+    } else {
+      addMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+    }
   }
   async function _fetchAI(messages, signal, tools, temperature = 0.7) {
     const key = localStorage.getItem("nm_gemini_key");
@@ -13659,7 +13666,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
           }
           if (!handled) addTaskChatMsg("agent", reply, "", extractedChips);
         }
-      } else addTaskChatMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+      } else handleChatError(addTaskChatMsg);
     } catch {
       addTaskChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
     }
