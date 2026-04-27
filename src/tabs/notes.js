@@ -396,6 +396,18 @@ function renderNotesList(notes) {
 
 // === NOTES SWIPE TO DELETE (нотатки + папки) ===
 // Підключається після кожного renderNotes — обробляє і .note-item-wrap, і .folder-item-wrap.
+//
+// B-80 fix Aps79 27.04: перед save+render — анімація схлопу wrapEl (max-height→0).
+// Інакше DOM перерисовується миттєво поки swipe-transform ще активний → перша папка на
+// 50-250мс перекривається чіпами OWL-баблу зверху. Дзеркало task-completing.
+function _animateSwipeRemoval(wrap, doRemove) {
+  if (!wrap) { doRemove(); return; }
+  // Фіксуємо поточну висоту inline — інакше CSS transition від `auto` не спрацює.
+  wrap.style.maxHeight = wrap.offsetHeight + 'px';
+  // 30мс щоб браузер встиг застосувати inline-стиль перед класом
+  setTimeout(() => wrap.classList.add('swipe-deleting'), 30);
+  setTimeout(doRemove, 310);
+}
 function _attachNotesSwipeDelete() {
   // Нотатки
   document.querySelectorAll('.note-item-wrap').forEach(wrap => {
@@ -407,20 +419,22 @@ function _attachNotesSwipeDelete() {
       const noteSwipeIdx = allNotes.findIndex(x => String(x.id) === id);
       const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
       const item = allNotes.find(x => String(x.id) === id);
-      if (item) addToTrash('note', item);
-      saveNotes(allNotes.filter(x => String(x.id) !== id));
-      renderNotes();
-      if (item) showUndoToast('Нотатку видалено', () => {
-        const notes = getNotes();
-        let idx;
-        if (swipePredecessorId === null) idx = 0;
-        else {
-          const predIdx = notes.findIndex(x => x.id === swipePredecessorId);
-          idx = predIdx !== -1 ? predIdx + 1 : notes.length;
-        }
-        notes.splice(idx, 0, item);
-        saveNotes(notes);
+      _animateSwipeRemoval(wrap, () => {
+        if (item) addToTrash('note', item);
+        saveNotes(allNotes.filter(x => String(x.id) !== id));
         renderNotes();
+        if (item) showUndoToast('Нотатку видалено', () => {
+          const notes = getNotes();
+          let idx;
+          if (swipePredecessorId === null) idx = 0;
+          else {
+            const predIdx = notes.findIndex(x => x.id === swipePredecessorId);
+            idx = predIdx !== -1 ? predIdx + 1 : notes.length;
+          }
+          notes.splice(idx, 0, item);
+          saveNotes(notes);
+          renderNotes();
+        });
       });
     });
   });
@@ -433,15 +447,16 @@ function _attachNotesSwipeDelete() {
       const notes = getNotes();
       const folderNotes = notes.filter(n => (n.folder || 'Загальне') === folder);
       const remaining = notes.filter(n => (n.folder || 'Загальне') !== folder);
-      if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
-      saveNotes(remaining);
-      renderNotes();
-      if (folderNotes.length > 0) showUndoToast('Папку "' + folder + '" видалено (' + folderNotes.length + ')', () => {
-        const n = getNotes();
-        folderNotes.forEach(note => n.push(note));
-        saveNotes(n);
+      _animateSwipeRemoval(wrap, () => {
+        if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
+        saveNotes(remaining);
         renderNotes();
-      });
+        if (folderNotes.length > 0) showUndoToast('Папку "' + folder + '" видалено (' + folderNotes.length + ')', () => {
+          const n = getNotes();
+          folderNotes.forEach(note => n.push(note));
+          saveNotes(n);
+          renderNotes();
+        });
     });
   });
 }

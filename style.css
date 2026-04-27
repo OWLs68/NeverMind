@@ -814,7 +814,7 @@ body {
   border-radius: 14px;
   margin: var(--card-gap) 0;
 }
-.task-item-wrap, .note-item-wrap {
+.task-item-wrap, .note-item-wrap, .folder-item-wrap {
   position: relative;
   overflow: hidden;
 }
@@ -822,6 +822,18 @@ body {
 .task-item-wrap.task-completing {
   transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, max-height 0.35s ease, margin 0.35s ease;
   transform: translateY(14px) scale(0.96);
+  opacity: 0;
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  overflow: hidden;
+}
+/* B-80 fix Aps79 27.04: схлоп нотатки/папки після свайп-видалення.
+   Перед класом фіксуємо max-height у inline-style — інакше transition від auto не працює.
+   Висота сповзає до 0 → потім renderNotes — нема race зі стрибком чіпів зверху. */
+.note-item-wrap.swipe-deleting,
+.folder-item-wrap.swipe-deleting {
+  transition: opacity 0.25s ease, max-height 0.28s ease, margin 0.28s ease;
   opacity: 0;
   max-height: 0 !important;
   margin-top: 0 !important;
