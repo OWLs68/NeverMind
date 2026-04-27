@@ -344,6 +344,7 @@ OWL = єдиний Jarvis. Табло, чати, чіпи — різні "вік
 | `docs/AGENT_INTELLIGENCE_SCALE.md` | **Шкала розумності агента (0-100% де 100 = Jarvis).** Оновлювати після кожної Active-фази, чесно без прикрашання (L67Xf 22.04) |
 | `docs/EVENING_2.0_PLAN.md` | Детальний план Вечора 2.0 (MVP виконано 19.04) |
 | `docs/FINANCE_V2_PLAN.md` | Фази імплементації Фінансів v2 (винесено з ROADMAP 20.04) |
+| `docs/OWL_SILENCE_PRUNING_PLAN.md` | **Архітектурний план OWL Silence + Pruning Engine** (UVKL1 26.04 після 2 раундів Gemini). 3 фази (Silence Engine ~1.5 год → Pruning Engine ~3 год → Розділення Контексту ~30 хв) для системного вирішення stale board + структурного важеля «дай спокій». Закриває B-100 і B-102. **Активний пріоритет після UVKL1.** |
 | **Технічна довідка** | |
 | `docs/FILE_STRUCTURE.md` | Повна таблиця файлів проекту (винесено з CLAUDE.md 20.04) |
 | `docs/TECHNICAL_REFERENCE.md` | Система деплою, AI-логіка, Дані localStorage, Структури даних |
