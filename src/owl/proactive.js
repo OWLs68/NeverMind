@@ -40,12 +40,10 @@ export function getTabBoardContext(tab) {
     if (active.length > 0) {
       parts.push(`Усі активні задачі: ${active.slice(0, 10).map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}.`);
     }
-
-    // Нещодавно закриті (24 год) — щоб AI не повторював їх як відкриті з boardHistory
-    const recentlyDone = tasks.filter(t => t.status === 'done' && (t.completedAt || t.updatedAt) && (now - (t.completedAt || t.updatedAt)) < 24 * 60 * 60 * 1000).slice(0, 5);
-    if (recentlyDone.length > 0) {
-      parts.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (вже виконані, НЕ нагадуй про них, НЕ повторюй зі свого boardHistory): ${recentlyDone.map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}.`);
-    }
+    // Блок "Нещодавно ЗАКРИТІ" видалено у Фазі 3 (UVKL1 27.04). Pruning Engine
+    // (Фаза 2) уже структурно забезпечує що сова не бачить старих повідомлень
+    // про закриті задачі — промптові правила "НЕ нагадуй" небезпечні (модель
+    // інерційно цитує сама себе). У чатах блок лишається через getAIContext.
     // Quit звички
     const allHabits = getHabits();
     const quitHabits = allHabits.filter(h => h.type === 'quit');
@@ -200,11 +198,11 @@ function _getInboxBoardContext() {
   const tasks = getTasks();
   const activeTasks = tasks.filter(t => t.status === 'active');
 
-  // Нещодавно закриті — щоб AI не згадував їх як відкриті
-  const recentlyDone = tasks.filter(t => t.status === 'done' && t.completedAt && (Date.now() - t.completedAt) < 24 * 60 * 60 * 1000);
-  if (recentlyDone.length > 0) {
-    normal.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (НЕ згадуй як відкриті!): ${recentlyDone.map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}.`);
-  }
+  // Блок "Нещодавно ЗАКРИТІ задачі" видалено у Фазі 3 (UVKL1 27.04).
+  // Pruning Engine (Фаза 2) уже забезпечує що сова не бачить старих повідомлень
+  // про закриті задачі. Чат-контекст getAIContext має блок recentlyClosedTasks
+  // окремо — там промптовий "не нагадуй" не потрібен бо чат відповідає на
+  // запит юзера (а не ініціативно нагадує).
 
   // === РАНКОВИЙ БРИФ ===
   if (phase === 'morning' && owlCdExpired('morning_brief_ctx', 3 * 60 * 60 * 1000)) {
