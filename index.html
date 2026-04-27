@@ -1463,6 +1463,18 @@
       </div>
     </div>
 
+    <!-- Споживання OpenAI (V3 Фаза 0 — Usage Meter) -->
+    <div class="s-group-label" style="padding:4px 14px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.09em">📊 Споживання OpenAI</div>
+    <div class="s-group">
+      <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:10px;padding:14px">
+        <div id="usage-meter-display"></div>
+        <div style="display:flex;gap:8px">
+          <button onclick="exportUsageWithToast()" style="flex:1;background:rgba(194,121,10,0.08);border:1.5px solid rgba(194,121,10,0.20);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#c2790a;cursor:pointer;font-family:inherit">📋 Експортувати JSON</button>
+          <button onclick="clearUsageWithConfirm()" style="background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.18);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:#ef4444;cursor:pointer;font-family:inherit">🗑️</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <div style="text-align:center;padding:20px 0 8px">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:900;color:rgba(30,16,64,0.2)">NeverMind</div>

@@ -153,9 +153,88 @@ export function clearUsageLog() {
   }
 }
 
+// === RENDER ===
+// renderUsageMeter — заповнює блок #usage-meter-display у Налаштуваннях.
+// Викликається при відкритті Налаштувань (з nav.js openSettings) і при `nm-usage-updated`.
+// Якщо блок не знайдено (Налаштування закриті) — тихо return.
+
+function _formatUSD(n) {
+  if (!n) return '$0.00';
+  if (n < 0.01) return '<$0.01';
+  return '$' + n.toFixed(n < 1 ? 3 : 2);
+}
+
+function _renderModuleBreakdown(byModule, total) {
+  const entries = Object.entries(byModule).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0 || total === 0) return '';
+  return entries.slice(0, 6).map(([mod, cost]) => {
+    const pct = Math.round((cost / total) * 100);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(30,16,64,0.7);padding:2px 0">
+      <span>${escapeHtmlSafe(mod)}</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(cost)} <span style="color:rgba(30,16,64,0.4);font-size:11px">(${pct}%)</span></span>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtmlSafe(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+export function renderUsageMeter() {
+  const el = typeof document !== 'undefined' && document.getElementById('usage-meter-display');
+  if (!el) return;
+  const stats = getUsageStats();
+  const projLine = stats.projection !== null
+    ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>Прогноз кінця місяця</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>`
+    : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">Прогноз з'явиться після 3 днів даних</div>`;
+  const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
+      <span>Сьогодні</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} викл)</span></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600;margin-top:6px">
+      <span>Цей місяць</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} викл)</span></span>
+    </div>
+    ${projLine}
+    ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ''}
+    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">Зберігається ${RETENTION_DAYS} днів. Дані локальні.</div>
+  `;
+}
+
+// Підписка на оновлення лога — якщо Налаштування відкриті, перерендерюємо.
+if (typeof window !== 'undefined') {
+  window.addEventListener('nm-usage-updated', () => {
+    try { renderUsageMeter(); } catch {}
+  });
+}
+
+// Експорт із toast для зворотного зв'язку.
+async function exportWithToast() {
+  const r = await exportUsageJSON();
+  if (r.ok && typeof window !== 'undefined' && window.showToast) {
+    window.showToast(`📋 Скопійовано ${r.calls} записів у буфер`, 2500);
+  } else if (typeof window !== 'undefined' && window.showToast) {
+    window.showToast('❌ Не вдалось скопіювати: ' + (r.error || 'невідомо'), 3000);
+  }
+}
+
+async function clearWithConfirm() {
+  if (typeof confirm !== 'undefined' && !confirm('Очистити лог витрат? Дію не можна скасувати.')) return;
+  clearUsageLog();
+  renderUsageMeter();
+  if (typeof window !== 'undefined' && window.showToast) {
+    window.showToast('🗑️ Лог витрат очищено', 2000);
+  }
+}
+
 // Window-exports для виклику з HTML onclick (кнопки у Налаштуваннях).
 if (typeof window !== 'undefined') {
   window.exportUsageJSON = exportUsageJSON;
   window.clearUsageLog = clearUsageLog;
   window.getUsageStats = getUsageStats;
+  window.renderUsageMeter = renderUsageMeter;
+  window.exportUsageWithToast = exportWithToast;
+  window.clearUsageWithConfirm = clearWithConfirm;
 }
