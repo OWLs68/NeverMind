@@ -118,6 +118,23 @@ export const UI_TOOLS = [
       description: "Відкрити модалку 'Медична картка' — готовий текст з алергіями/станами/ліками для копіювання лікарю. Юзер каже 'експортуй медкартку', 'зроби медичну картку'.",
       parameters: { type: "object", properties: {}, additionalProperties: false }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "request_quiet",
+      description: "Вмикає режим тиші коли юзер просить не турбувати, дати спокій, відчепитися, не зайобувати, помовчати, не доставати. Сова мовчить вказану кількість годин у табло, brain pulse, проактивних повідомленнях. Чат лишається доступним для прямих питань юзера. Тривалість: 'на годинку'=1, 'до вечора'=різниця до 22:00, 'на пів дня'=6, 'до завтра'=різниця до завтрашнього 08:00, без уточнення=4.",
+      parameters: {
+        type: "object",
+        properties: {
+          duration_hours: {
+            type: "number",
+            description: "Тривалість тиші у годинах (1-24). За замовчуванням 4."
+          }
+        },
+        required: ["duration_hours"]
+      }
+    }
   }
 ];
 
@@ -200,6 +217,15 @@ export function handleUITool(name, args) {
           return { text: 'Відкрив Медичну картку.' };
         }
         return { text: 'Вкладка Здоров\'я ще не готова.' };
+
+      case 'request_quiet': {
+        const hours = Math.max(1, Math.min(24, Number(args.duration_hours) || 4));
+        const expiresAt = Date.now() + hours * 3600000;
+        localStorage.setItem('nm_owl_silence_until', String(expiresAt));
+        try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'silence' })); } catch {}
+        const endTime = new Date(expiresAt).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+        return { text: `🤫 Зрозуміла. Мовчу до ${endTime}. У чаті можеш питати — відповім.` };
+      }
 
       default:
         return { text: `Невідомий UI tool: ${name}` };

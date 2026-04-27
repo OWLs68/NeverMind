@@ -418,6 +418,16 @@ export function shouldOwlSpeak(trigger, opts = {}) {
   const phase = getDayPhase();
   if (phase === 'silent') return { speak: false, score: -100, reason: 'silent-phase' };
 
+  // Тиша (Фаза 1 OWL Silence Engine UVKL1) — блокує всі 4 канали сови.
+  // Ключ nm_owl_silence_until заповнюється або auto-silence (proactive.js: 7 ігнорів → 4 год),
+  // або explicit-silence через AI tool request_quiet (юзер: «дай спокій до вечора»).
+  try {
+    const silenceUntil = parseInt(localStorage.getItem('nm_owl_silence_until') || '0');
+    if (silenceUntil > Date.now()) {
+      return { speak: false, score: -100, reason: 'silence' };
+    }
+  } catch (e) {}
+
   // === РОУТИНГ ЗА КАНАЛОМ ===
   const channel = opts.channel || 'board';
   if (channel === 'chat-followup') {
@@ -458,16 +468,8 @@ function _judgeBoard(trigger, targetTab) {
   // trigger: 'timer' | 'data-changed' | 'welcome-back' | 'new-day' | 'first-time' | 'chat-closed' | 'tab-switched'
   // targetTab: поточна вкладка (для tab-specific boosting тригерів, Шар 2 Фаза 4)
 
-  // 4.40 Auto-silence (ROADMAP Блок 1) — якщо юзер проігнорував 3 повідомлення
-  // поспіль (детекція у chips.js trackChipsIgnored), OWL мовчить 4 години.
-  // reminder-due пробиває бо йде через _checkReminders → generateBoardMessage напряму,
-  // обходячи Judge Layer.
-  try {
-    const silenceUntil = parseInt(localStorage.getItem('nm_owl_silence_until') || '0');
-    if (silenceUntil > Date.now()) {
-      return { speak: false, score: -100, reason: 'auto-silence-4h' };
-    }
-  } catch(e) {}
+  // Чек тиші винесено вище у shouldOwlSpeak() — щоб блокувати обидва канали
+  // (board + chat-followup) одним рядком (Фаза 1 OWL Silence Engine UVKL1).
 
   let score = 0;
   let reasons = [];
