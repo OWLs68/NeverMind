@@ -1056,6 +1056,58 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  // B-106 fix (Aps79 27.04): complete_task/complete_habit/add_step тепер у processUniversalAction.
+  // Раніше були тільки у fallback text-JSON шляху sendTasksBarMessage — коли AI кликав через
+  // tool_calls, dispatchChatToolCalls йшов сюди і не знаходив обробник → жодного addMsg → точки
+  // друку висіли назавжди.
+  if (action === 'complete_task') {
+    const tasks = getTasks();
+    const t = tasks.find(x => String(x.id) === String(parsed.task_id) && x.status !== 'done');
+    if (!t) { addMsg('agent', 'Не знайшов активну задачу з таким ID.'); return true; }
+    t.status = 'done';
+    t.completedAt = Date.now();
+    t.updatedAt = Date.now();
+    if (Array.isArray(t.steps)) t.steps.forEach(s => s.done = true);
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', `✅ Задачу "${t.title}" виконано!`);
+    return true;
+  }
+
+  if (action === 'complete_habit') {
+    const habits = getHabits();
+    let h = habits.find(x => String(x.id) === String(parsed.habit_id));
+    if (!h && parsed.habit_name) {
+      const q = parsed.habit_name.toLowerCase();
+      h = habits.find(x => x.name.toLowerCase().includes(q.slice(0, 6)));
+    }
+    if (!h) { addMsg('agent', 'Не знайшов звичку.'); return true; }
+    const todayStr = new Date().toDateString();
+    const log = getHabitLog();
+    if (!log[todayStr]) log[todayStr] = {};
+    log[todayStr][h.id] = true;
+    saveHabitLog(log);
+    renderProdHabits();
+    renderHabits();
+    addMsg('agent', `✅ Відмітив звичку "${h.name}" як виконану сьогодні`);
+    return true;
+  }
+
+  if (action === 'add_step') {
+    const tasks = getTasks();
+    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!t) { addMsg('agent', 'Не знайшов задачу для додавання кроку.'); return true; }
+    const stepText = (parsed.step || '').trim();
+    if (!stepText) { addMsg('agent', 'Не вказано текст кроку.'); return true; }
+    if (!Array.isArray(t.steps)) t.steps = [];
+    t.steps.push({ id: Date.now(), text: stepText, done: false });
+    t.updatedAt = Date.now();
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', `✅ Додав крок "${stepText}"`);
+    return true;
+  }
+
   if (action === 'add_moment') {
     const text = (parsed.text || '').trim();
     if (!text) return false;
@@ -1336,6 +1388,7 @@ export async function sendTasksBarMessage() {
     + '1. Для CRUD дій (створити/видалити/редагувати/закрити задачу-звичку-подію-нотатку-момент-витрату) — викликай відповідний tool.\n'
     + '2. Специфічні fallback-JSON (НЕ як tool): {"action":"complete_step","task_id":ID,"step_text":"текст"} (закрити конкретний крок задачі), {"action":"undo_step","task_id":ID,"step_text":"текст"} (скасувати крок), {"action":"complete_habit","habit_name":"назва"} (позначити звичку за назвою коли ID невідомий).\n'
     + 'ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ (купити, подзвонити, зробити) → save_task. ПОДІЯ = факт що СТАНЕТЬСЯ (приїзд, зустріч, свято, рейс) → create_event. "приїзд мами 20го" = create_event. "купити молоко" = save_task.\n'
+    + 'МИНУЛИЙ ЧАС (B-105 fix Aps79): "поміняв", "подав", "зробив", "написав", "сходив", "купив" — це факт що ВЖЕ стався. ОБРОБКА: (а) якщо у списку АКТИВНИХ задач є явно відповідна задача з тією ж дією — complete_task на ту задачу; (б) якщо явної відповідності немає — ТЕКСТ-ВІДПОВІДЬ "✓ Записав. Якщо це закриває задачу — скажи яку." або save_moment, але НІКОЛИ delete_task. Не вигадуй фузі-зв\'язок ("поміняв номер" ≠ "Зареєструватися на Upwirk"). НІКОЛИ не видаляй задачу без явного слова "видали/забудь/прибери" від юзера.\n'
     + 'Для редагування існуючої звички (зміна днів/назви) — edit_habit, НЕ save_habit нову.\n'
     + 'Інакше — текст 1-3 речення українською. НЕ вигадуй даних яких немає.\n\n'
     + GLOBAL_TOOLS_RULE + '\n\n'
@@ -1350,7 +1403,14 @@ export async function sendTasksBarMessage() {
 
     // Tool dispatch — UI tool або CRUD через universal action
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
+      const handled = dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
+      // B-106 safety net: якщо жоден з tool-обробників не запалив addMsg —
+      // точки друку залишились би назавжди. Покажемо текст-fallback або помилку.
+      if (!handled) {
+        const fallback = msg.content && msg.content.trim();
+        if (fallback) addTaskBarMsg('agent', fallback);
+        else addTaskBarMsg('agent', 'Не зрозуміла дію. Переформулюй коротше — напр. "закрий [назву задачі]".');
+      }
       setTaskBarLoading(false);
       return;
     }
