@@ -10525,7 +10525,12 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     if (!containerEl) return;
     const oldChips = containerEl.querySelectorAll(".owl-chip:not(.owl-chip-speak)");
     if (oldChips.length > 0) trackChipsIgnored(oldChips.length);
-    const normChips = filterStaleChips(normalizeChips(chips));
+    const filteredByTab = normalizeChips(chips).filter((c) => {
+      if (c.action !== "nav") return true;
+      if (!c.target) return true;
+      return c.target !== currentTab;
+    });
+    const normChips = filterStaleChips(filteredByTab);
     if (normChips.length === 0 && !options.showSpeak) {
       containerEl.innerHTML = "";
       return;
