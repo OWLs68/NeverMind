@@ -318,7 +318,25 @@ function runMigrations() {
     localStorage.removeItem('nm_health_log');
     localStorage.setItem('nm_health_log_cleared_v6', '1');
   }
-  // v7: нові міграції додавати тут
+  // v7 (27.04.2026 UVKL1 Pruning Engine Фаза 2): одноразовий wipe історії табла.
+  // Старі повідомлення сови не мають поля entityRefs — вони не фільтруються
+  // isMessageRelevant і будуть «застряглі» в історії боксі назавжди.
+  // Wipe чистить unified storage щоб сова почала з нуля з правильною моделлю.
+  // Видимий ефект: табло порожнє ~30 сек поки сова не згенерує перше нове
+  // повідомлення (з entityRefs) — далі нормальний потік.
+  if (!localStorage.getItem('nm_pruning_wipe_v1_done')) {
+    ['nm_owl_board_unified','nm_owl_board_unified_ts',
+     'nm_owl_board','nm_owl_board_ts',
+     // Тригерні TS-ключі вкладок — щоб Judge Layer не вирішив що
+     // «тільки що генерували, мовчимо ще 30 хв»
+     'nm_owl_tab_ts_inbox','nm_owl_tab_ts_tasks','nm_owl_tab_ts_notes',
+     'nm_owl_tab_ts_me','nm_owl_tab_ts_evening','nm_owl_tab_ts_finance',
+     'nm_owl_tab_ts_health','nm_owl_tab_ts_projects'
+    ].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('nm_pruning_wipe_v1_done', '1');
+    console.log('[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)');
+  }
+  // v8: нові міграції додавати тут
 }
 
 // === INIT ===
