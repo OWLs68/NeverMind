@@ -89,6 +89,9 @@ export function saveTabMessage(tab, msg) {
     topic: msg.topic || '',
     priority: msg.priority || 'normal',
     chips: Array.isArray(msg.chips) ? msg.chips : [],
+    // Pruning Engine (Фаза 2 UVKL1) — посилання на активні сутності.
+    // Порожній масив = загальне повідомлення (не фільтрується).
+    entityRefs: Array.isArray(msg.entityRefs) ? msg.entityRefs : [],
     forTab: tab,
   };
   if (msg.transitionFrom) record.transitionFrom = msg.transitionFrom;

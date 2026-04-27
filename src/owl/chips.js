@@ -55,7 +55,7 @@ export const CHIP_PROMPT_RULES = `- G11 (ЗАВЖДИ): chips НІКОЛИ не 
 - Якщо нічого конкретного — все одно дай 1-2 загальні чіпи на кшталт ["Пізніше", "Розкажи більше"] (НЕ порожній масив, див. правило G11 вище).
 - ТОН чіпів має відповідати твоєму характеру (описаний вище). Coach — прямий і конкретний. Partner — м'який і підтримуючий. Mentor — запитує і направляє.`;
 
-export const CHIP_JSON_FORMAT = `{"text":"повідомлення","topic":"коротка_тема_латиницею","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}]}`;
+export const CHIP_JSON_FORMAT = `{"text":"повідомлення","topic":"коротка_тема_латиницею","priority":"critical|important|normal","chips":[{"label":"текст","action":"nav","target":"tasks"},{"label":"текст","action":"chat"}],"entityRefs":["task_888","habit_42"]}`;
 
 // ============================================================
 // normalizeChips — приведення до єдиного формату
