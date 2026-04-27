@@ -862,6 +862,9 @@ ${logLines}
       topic: msg.topic || "",
       priority: msg.priority || "normal",
       chips: Array.isArray(msg.chips) ? msg.chips : [],
+      // Pruning Engine (Фаза 2 UVKL1) — посилання на активні сутності.
+      // Порожній масив = загальне повідомлення (не фільтрується).
+      entityRefs: Array.isArray(msg.entityRefs) ? msg.entityRefs : [],
       forTab: tab
     };
     if (msg.transitionFrom) record.transitionFrom = msg.transitionFrom;
@@ -909,632 +912,6 @@ ${logLines}
       MIGRATION_FLAG = "nm_owl_board_migrated_v2";
       MAX_HISTORY = 50;
       ALL_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
-    }
-  });
-
-  // src/owl/board.js
-  function getOwlTabTsKey(tab) {
-    return "nm_owl_tab_ts_" + tab;
-  }
-  function getTabBoardMsgs(tab) {
-    return getTabMessages(tab);
-  }
-  function saveTabBoardMsg(tab, newMsg) {
-    saveTabMessage(tab, newMsg);
-  }
-  function _owlTabHTML(tab) {
-    const t = tab;
-    return `
-    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
-      <div class="owl-collapsed-avatar">\u{1F989}</div>
-      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
-    </div>
-    <div id="owl-tab-speech-${t}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
-      <div class="owl-speech-avatar">\u{1F989}</div>
-      <div class="owl-tab-card">
-        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
-          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
-          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
-        </div>
-      </div>
-    </div>
-    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
-      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
-    </div>`;
-  }
-  function _owlTabApplyState(tab) {
-    const st = _owlTabStates[tab] || "speech";
-    const collapsed = document.getElementById("owl-tab-collapsed-" + tab);
-    const speech = document.getElementById("owl-tab-speech-" + tab);
-    const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
-    if (!speech) return;
-    if (collapsed) collapsed.style.display = st === "collapsed" ? "flex" : "none";
-    speech.style.display = st === "collapsed" ? "none" : "block";
-    if (chipsWrap) chipsWrap.style.display = "flex";
-  }
-  function toggleOwlTabChat(tab) {
-    _owlTabStates[tab] = "speech";
-    _owlTabApplyState(tab);
-  }
-  function owlTabSwipeStart(e, tab) {
-    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
-  }
-  function owlTabSwipeMove(e, tab) {
-    if (!_owlTabSwipes[tab]) return;
-    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-  }
-  function owlTabSwipeEnd(e, tab) {
-    const sw = _owlTabSwipes[tab];
-    if (!sw) return;
-    _owlTabSwipes[tab] = null;
-    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
-    if (dy < -40) {
-      if (st === "speech") {
-        _owlTabStates[tab] = "collapsed";
-        _owlTabApplyState(tab);
-      }
-    } else if (dy > 40) {
-      if (st === "collapsed") {
-        _owlTabStates[tab] = "speech";
-        _owlTabApplyState(tab);
-      } else if (st === "speech") openChatBar(tab === "inbox" ? "inbox" : tab);
-    }
-  }
-  function _updateOwlTabChipsArrows(tab) {
-    const el = document.getElementById("owl-tab-chips-" + tab);
-    const left = document.getElementById("owl-tab-chips-left-" + tab);
-    const right = document.getElementById("owl-tab-chips-right-" + tab);
-    if (!el || !left || !right) return;
-    left.classList.toggle("visible", el.scrollLeft > 4);
-    right.classList.toggle("visible", el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }
-  function scrollOwlTabChips(tab, dir) {
-    const el = document.getElementById("owl-tab-chips-" + tab);
-    if (!el) return;
-    el.scrollBy({ left: dir * 130, behavior: "smooth" });
-    setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
-  }
-  function _pickMessageForTab(tab) {
-    const all = getUnifiedBoard();
-    if (all.length === 0) return null;
-    if (all[0].priority === "critical") return all[0];
-    const tabMsg = all.find((m) => m.forTab === tab);
-    if (tabMsg) return tabMsg;
-    return all[0];
-  }
-  function renderTabBoard(tab) {
-    const isInbox = tab === "inbox";
-    const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
-    if (!board) return;
-    board.style.display = "block";
-    let msg = _pickMessageForTab(tab);
-    if (!msg) {
-      const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
-      const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now() };
-      msg = saveTabMessage(tab, defMsg);
-    }
-    if (!board._owlReady) {
-      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
-      board._owlReady = true;
-      _owlTabStates[tab] = _owlTabStates[tab] || "speech";
-      _owlTabApplyState(tab);
-    }
-    const tEl = document.getElementById("owl-tab-text-" + tab);
-    const cEl = document.getElementById("owl-tab-ctext-" + tab);
-    const tmEl = document.getElementById("owl-tab-time-" + tab);
-    _applyTabText(tEl, msg.text);
-    _applyTabText(cEl, msg.text);
-    if (tmEl) {
-      const ageMs = Date.now() - (msg.ts || msg.id || 0);
-      const ageMin = Math.floor(ageMs / 6e4);
-      if (ageMin > 10) {
-        tmEl.textContent = "\u2022 " + (ageMin < 60 ? ageMin + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(ageMin / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
-        tmEl.classList.add("owl-time-stale");
-      } else {
-        tmEl.textContent = "";
-        tmEl.classList.remove("owl-time-stale");
-      }
-    }
-    const chipsEl = document.getElementById("owl-tab-chips-" + tab);
-    if (chipsEl) {
-      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
-      chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
-      chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
-      chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
-      setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
-    }
-  }
-  function _applyTabText(el, text) {
-    if (!el) return;
-    const current = el.textContent || "";
-    if (current === text) return;
-    if (current === "") {
-      el.textContent = text;
-      el.style.opacity = "1";
-      return;
-    }
-    el.style.opacity = "0";
-    setTimeout(() => {
-      el.textContent = text;
-      el.style.opacity = "1";
-    }, 200);
-  }
-  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
-  var init_board = __esm({
-    "src/owl/board.js"() {
-      init_core();
-      init_chips();
-      init_unified_storage();
-      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
-      _owlTabStates = {};
-      _owlTabSwipes = {};
-      Object.assign(window, {
-        toggleOwlTabChat,
-        owlTabSwipeStart,
-        owlTabSwipeMove,
-        owlTabSwipeEnd,
-        scrollOwlTabChips,
-        openChatBar
-      });
-    }
-  });
-
-  // src/ai/ui-tools.js
-  function handleUITool(name, args) {
-    try {
-      switch (name) {
-        case "switch_tab": {
-          const t = args.target;
-          if (t === "calendar") {
-            if (typeof window.openCalendarModal === "function") {
-              window.openCalendarModal();
-              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
-            }
-            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
-          }
-          if (t === "habits") {
-            switchTab("tasks");
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
-          }
-          if (!document.getElementById(`page-${t}`)) {
-            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
-          }
-          switchTab(t);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
-        }
-        case "open_memory":
-          if (typeof window.openMemoryModal === "function") {
-            window.openMemoryModal();
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
-          }
-          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
-        case "open_calendar": {
-          if (typeof window.openCalendarModal !== "function") {
-            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
-          }
-          window.openCalendarModal();
-          if (args.highlight_events && typeof window.highlightEventDays === "function") {
-            setTimeout(() => {
-              try {
-                window.highlightEventDays();
-              } catch (e) {
-              }
-            }, 400);
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u2014 \u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438 \u043F\u0443\u043B\u044C\u0441\u0443\u044E\u0442\u044C." };
-          }
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
-        }
-        case "open_settings":
-          openSettings();
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
-        case "set_finance_period": {
-          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
-          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
-          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
-        }
-        case "open_finance_analytics":
-          switchTab("finance");
-          if (typeof window.openFinAnalytics === "function") {
-            setTimeout(() => window.openFinAnalytics(), 120);
-          }
-          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
-        case "set_owl_mode": {
-          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-          settings.owl_mode = args.mode;
-          localStorage.setItem("nm_settings", JSON.stringify(settings));
-          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
-          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
-        }
-        case "export_health_card":
-          if (typeof window.openHealthExport === "function") {
-            switchTab("health");
-            setTimeout(() => window.openHealthExport(), 120);
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
-          }
-          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
-        case "request_quiet": {
-          const hours = Math.max(1, Math.min(24, Number(args.duration_hours) || 4));
-          const expiresAt = Date.now() + hours * 36e5;
-          localStorage.setItem("nm_owl_silence_until", String(expiresAt));
-          try {
-            window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "silence" }));
-          } catch {
-          }
-          const endTime = new Date(expiresAt).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-          return { text: `\u{1F92B} \u0417\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u0430. \u041C\u043E\u0432\u0447\u0443 \u0434\u043E ${endTime}. \u0423 \u0447\u0430\u0442\u0456 \u043C\u043E\u0436\u0435\u0448 \u043F\u0438\u0442\u0430\u0442\u0438 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u043C.` };
-        }
-        default:
-          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
-      }
-    } catch (e) {
-      console.error("[ui-tools]", name, e);
-      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
-    }
-  }
-  function _tabLabel(key) {
-    return {
-      inbox: "Inbox",
-      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
-      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
-      me: "\u042F",
-      evening: "\u0412\u0435\u0447\u0456\u0440",
-      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
-      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
-      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
-    }[key] || key;
-  }
-  var UI_TOOLS, UI_TOOL_NAMES;
-  var init_ui_tools = __esm({
-    "src/ai/ui-tools.js"() {
-      init_nav();
-      UI_TOOLS = [
-        {
-          type: "function",
-          function: {
-            name: "switch_tab",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
-            strict: true,
-            parameters: {
-              type: "object",
-              properties: {
-                target: {
-                  type: "string",
-                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
-                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
-                }
-              },
-              required: ["target"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_memory",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_calendar",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u043F\u0440\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0456 \u043F\u043E\u0434\u0456\u0457, \u0440\u043E\u0437\u043A\u043B\u0430\u0434, '\u0449\u043E \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456', '\u044F\u043A\u0456 \u0432 \u043C\u0435\u043D\u0435 \u043F\u043E\u0434\u0456\u0457', '\u044F\u043A\u0438\u0439 \u0437\u0430\u0432\u0442\u0440\u0430 \u0434\u0435\u043D\u044C', '\u0449\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u0443\u0432\u0430\u0432', '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440'. \u042F\u043A\u0449\u043E highlight_events:true \u2014 \u043A\u043B\u0456\u0442\u0438\u043D\u043A\u0438-\u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438 \u0431\u0443\u0434\u0443\u0442\u044C \u043F\u0443\u043B\u044C\u0441\u0443\u0432\u0430\u0442\u0438 \u0431\u0456\u0440\u044E\u0437\u043E\u0432\u0438\u043C (\u044F\u0441\u043A\u0440\u0430\u0432\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u043F\u043E\u0434\u0456\u0457). \u042F\u043A\u0449\u043E false \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u043D\u044C. \u041E\u041A\u0420\u0406\u041C \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u0446\u044C\u043E\u0433\u043E tool \u2014 \u0417\u0410\u0412\u0416\u0414\u0418 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0443 \u0447\u0430\u0442\u0456: \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u0434\u0456\u0439, \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u0437 \u0434\u0430\u0442\u043E\u044E/\u0447\u0430\u0441\u043E\u043C.",
-            strict: true,
-            parameters: {
-              type: "object",
-              properties: {
-                highlight_events: {
-                  type: "boolean",
-                  description: "true \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u041F\u0420\u041E \u043F\u043E\u0434\u0456\u0457 (\u043F\u0456\u0434\u0441\u0432\u0456\u0442\u0438\u0442\u0438 \u043F\u0443\u043B\u044C\u0441\u0430\u0446\u0456\u0454\u044E \u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438). false \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u043E\u043F\u0440\u043E\u0441\u0438\u0432 \u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0418 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 (\u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0435\u043D\u044C)."
-                }
-              },
-              required: ["highlight_events"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_settings",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_finance_period",
-            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
-            parameters: {
-              type: "object",
-              properties: {
-                period: { type: "string", enum: ["week", "month", "3months"] }
-              },
-              required: ["period"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_finance_analytics",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "set_owl_mode",
-            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
-            parameters: {
-              type: "object",
-              properties: {
-                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
-              },
-              required: ["mode"],
-              additionalProperties: false
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "export_health_card",
-            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
-            parameters: { type: "object", properties: {}, additionalProperties: false }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "request_quiet",
-            description: "\u0412\u043C\u0438\u043A\u0430\u0454 \u0440\u0435\u0436\u0438\u043C \u0442\u0438\u0448\u0456 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u0432\u0430\u0442\u0438, \u0434\u0430\u0442\u0438 \u0441\u043F\u043E\u043A\u0456\u0439, \u0432\u0456\u0434\u0447\u0435\u043F\u0438\u0442\u0438\u0441\u044F, \u043D\u0435 \u0437\u0430\u0439\u043E\u0431\u0443\u0432\u0430\u0442\u0438, \u043F\u043E\u043C\u043E\u0432\u0447\u0430\u0442\u0438, \u043D\u0435 \u0434\u043E\u0441\u0442\u0430\u0432\u0430\u0442\u0438. \u0421\u043E\u0432\u0430 \u043C\u043E\u0432\u0447\u0438\u0442\u044C \u0432\u043A\u0430\u0437\u0430\u043D\u0443 \u043A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0433\u043E\u0434\u0438\u043D \u0443 \u0442\u0430\u0431\u043B\u043E, brain pulse, \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u0445. \u0427\u0430\u0442 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u043C \u0434\u043B\u044F \u043F\u0440\u044F\u043C\u0438\u0445 \u043F\u0438\u0442\u0430\u043D\u044C \u044E\u0437\u0435\u0440\u0430. \u0422\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C: '\u043D\u0430 \u0433\u043E\u0434\u0438\u043D\u043A\u0443'=1, '\u0434\u043E \u0432\u0435\u0447\u043E\u0440\u0430'=\u0440\u0456\u0437\u043D\u0438\u0446\u044F \u0434\u043E 22:00, '\u043D\u0430 \u043F\u0456\u0432 \u0434\u043D\u044F'=6, '\u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430'=\u0440\u0456\u0437\u043D\u0438\u0446\u044F \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u044C\u043E\u0433\u043E 08:00, \u0431\u0435\u0437 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F=4.",
-            parameters: {
-              type: "object",
-              properties: {
-                duration_hours: {
-                  type: "number",
-                  description: "\u0422\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C \u0442\u0438\u0448\u0456 \u0443 \u0433\u043E\u0434\u0438\u043D\u0430\u0445 (1-24). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 4."
-                }
-              },
-              required: ["duration_hours"]
-            }
-          }
-        }
-      ];
-      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
-      try {
-        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
-      } catch {
-      }
-    }
-  });
-
-  // src/ai/memory.js
-  function getFacts() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(NM_FACTS_KEY) || "[]");
-      if (!Array.isArray(raw)) return [];
-      const now = Date.now();
-      return raw.filter((f) => {
-        if (!f || !f.ts) return false;
-        if (!f.ttl) return true;
-        return now - f.ts < f.ttl * 24 * 60 * 60 * 1e3;
-      });
-    } catch {
-      return [];
-    }
-  }
-  function getFactsRaw() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(NM_FACTS_KEY) || "[]");
-      return Array.isArray(raw) ? raw : [];
-    } catch {
-      return [];
-    }
-  }
-  function _saveFacts(facts) {
-    let trimmed = facts;
-    if (trimmed.length > MAX_FACTS) {
-      trimmed = [...trimmed].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, MAX_FACTS);
-    }
-    localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
-  }
-  function _rejectReason(text) {
-    const t = (text || "").trim();
-    if (!t) return "empty";
-    if (t.length < 6) return "too_short";
-    if (t.length > 200) return "too_long";
-    for (const rx of REJECT_PATTERNS) {
-      if (rx.test(t)) return `pattern:${rx.source}`;
-    }
-    const words = t.split(/\s+/).filter(Boolean);
-    if (words.length < 2) return "too_few_words";
-    return null;
-  }
-  function addFact({ text, category, ttlDays, source = "auto" }) {
-    if (!text || typeof text !== "string") return null;
-    text = text.trim();
-    if (text.length < 3 || text.length > 200) return null;
-    const reject = _rejectReason(text);
-    if (reject) {
-      console.log("[memory] rejected fact:", reject, "\u2014", text);
-      return null;
-    }
-    if (!category || !FACT_CATEGORIES[category]) category = "context";
-    const facts = getFactsRaw();
-    const textLower = text.toLowerCase();
-    const existingIdx = facts.findIndex((f) => {
-      if (!f || f.category !== category) return false;
-      const fLower = (f.text || "").toLowerCase().trim();
-      if (fLower === textLower) return true;
-      return _textSimilarity(fLower, textLower) > 0.75;
-    });
-    if (existingIdx !== -1) {
-      facts[existingIdx].lastSeen = Date.now();
-      if (ttlDays && !facts[existingIdx].ttl) facts[existingIdx].ttl = ttlDays;
-      _saveFacts(facts);
-      return facts[existingIdx];
-    }
-    const newFact = {
-      id: `fct_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      text,
-      category,
-      ts: Date.now(),
-      lastSeen: Date.now(),
-      source,
-      ttl: typeof ttlDays === "number" && ttlDays > 0 ? ttlDays : null
-    };
-    facts.push(newFact);
-    _saveFacts(facts);
-    return newFact;
-  }
-  function deleteFact(id) {
-    const facts = getFactsRaw();
-    _saveFacts(facts.filter((f) => f.id !== id));
-  }
-  function updateFactText(id, newText) {
-    const facts = getFactsRaw();
-    const idx = facts.findIndex((f) => f.id === id);
-    if (idx === -1) return false;
-    const t = (newText || "").trim();
-    if (t.length < 3 || t.length > 200) return false;
-    facts[idx].text = t;
-    facts[idx].lastSeen = Date.now();
-    _saveFacts(facts);
-    return true;
-  }
-  function cleanupExpiredFacts() {
-    const all = getFactsRaw();
-    const now = Date.now();
-    const alive = all.filter((f) => {
-      if (!f || !f.ts) return false;
-      if (!f.ttl) return true;
-      return now - f.ts < f.ttl * 24 * 60 * 60 * 1e3;
-    });
-    if (alive.length !== all.length) {
-      _saveFacts(alive);
-    }
-    return all.length - alive.length;
-  }
-  function formatFactsForContext(maxFacts = 30) {
-    const facts = getFacts();
-    if (facts.length === 0) return "";
-    const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
-    const grouped = {};
-    sorted.forEach((f) => {
-      if (!grouped[f.category]) grouped[f.category] = [];
-      grouped[f.category].push(f);
-    });
-    const lines = [];
-    for (const cat of CATEGORY_ORDER) {
-      if (!grouped[cat]) continue;
-      const catLabel = FACT_CATEGORIES[cat]?.label || cat;
-      grouped[cat].forEach((f) => {
-        const ago = _relativeTime(f.ts);
-        lines.push(`- [${catLabel}] ${f.text} (${ago})`);
-      });
-    }
-    if (lines.length === 0) return "";
-    return `\u0424\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u0437\u0430\u0444\u0456\u043A\u0441\u043E\u0432\u0430\u043D\u043E \u0432 \u0440\u0456\u0437\u043D\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0456 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u043E\u0433\u043E \u043F\u0440\u043E\u0444\u0456\u043B\u044E; \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442 \u2014 \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D). \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0446\u0435 \u0444\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410, \u043D\u0435 \u043F\u0440\u043E \u0442\u0435\u0431\u0435. \u041A\u043E\u043B\u0438 \u043F\u0435\u0440\u0435\u043A\u0430\u0437\u0443\u0454\u0448 \u2014 \u043A\u0430\u0436\u0438 "\u0442\u0438", "\u0443 \u0442\u0435\u0431\u0435", "\u0442\u0432\u0456\u0439". \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u044F", "\u043C\u0456\u0439", "\u0443 \u043C\u0435\u043D\u0435" \u0432\u0456\u0434 \u0456\u043C\u0435\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430:
-${lines.join("\n")}`;
-  }
-  function formatFactsForBoard(maxFacts = 15) {
-    const facts = getFacts();
-    if (facts.length === 0) return "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)";
-    const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
-    return sorted.map((f) => `- ${f.text}`).join("\n");
-  }
-  function _relativeTime(ts) {
-    if (!ts) return "\u2014";
-    const diff = Date.now() - ts;
-    const day = 24 * 60 * 60 * 1e3;
-    const days = Math.floor(diff / day);
-    if (days === 0) return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    if (days === 1) return "\u0432\u0447\u043E\u0440\u0430";
-    if (days < 7) return `${days} \u0434\u043D. \u0442\u043E\u043C\u0443`;
-    if (days < 30) return `${Math.floor(days / 7)} \u0442\u0438\u0436. \u0442\u043E\u043C\u0443`;
-    if (days < 365) return `${Math.floor(days / 30)} \u043C\u0456\u0441. \u0442\u043E\u043C\u0443`;
-    return `${Math.floor(days / 365)} \u0440. \u0442\u043E\u043C\u0443`;
-  }
-  function _textSimilarity(a, b) {
-    if (!a || !b) return 0;
-    if (a === b) return 1;
-    const grams = (s) => {
-      const set = /* @__PURE__ */ new Set();
-      for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
-      return set;
-    };
-    const ga = grams(a);
-    const gb = grams(b);
-    if (!ga.size || !gb.size) return 0;
-    let common = 0;
-    ga.forEach((g) => {
-      if (gb.has(g)) common++;
-    });
-    return common / Math.max(ga.size, gb.size);
-  }
-  function isMigrationDone() {
-    return localStorage.getItem(NM_FACTS_MIGRATED_KEY) === "1";
-  }
-  function markMigrationDone() {
-    localStorage.setItem(NM_FACTS_MIGRATED_KEY, "1");
-  }
-  function getLegacyMemoryText() {
-    return localStorage.getItem("nm_memory") || "";
-  }
-  var NM_FACTS_KEY, NM_FACTS_MIGRATED_KEY, MAX_FACTS, FACT_CATEGORIES, CATEGORY_ORDER, REJECT_PATTERNS;
-  var init_memory = __esm({
-    "src/ai/memory.js"() {
-      NM_FACTS_KEY = "nm_facts";
-      NM_FACTS_MIGRATED_KEY = "nm_facts_migrated";
-      MAX_FACTS = 100;
-      FACT_CATEGORIES = {
-        preferences: { label: "\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F", emoji: "\u{1F4AD}", color: "#c2790a" },
-        health: { label: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", emoji: "\u2764\uFE0F", color: "#dc2626" },
-        work: { label: "\u0420\u043E\u0431\u043E\u0442\u0430", emoji: "\u{1F4BC}", color: "#2563eb" },
-        relationships: { label: "\u0421\u0442\u043E\u0441\u0443\u043D\u043A\u0438", emoji: "\u{1F465}", color: "#7c3aed" },
-        context: { label: "\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442", emoji: "\u{1F4CD}", color: "#16a34a" },
-        goals: { label: "\u0426\u0456\u043B\u0456", emoji: "\u{1F3AF}", color: "#ea580c" }
-      };
-      CATEGORY_ORDER = ["health", "relationships", "work", "goals", "preferences", "context"];
-      REJECT_PATTERNS = [
-        // Дії переказані як стійкі факти (юзер зробив щось раз → AI вигадав "займається")
-        /^займа(є|ю)шся\s/i,
-        // "Займаєшся пранням одягу"
-        /^вимика(є|ю)ш\s/i,
-        // "Вимикаєш світло в кімнаті"
-        /^вмика(є|ю)ш\s/i,
-        /^склада(є|ю)ш\s(списк|план)/i,
-        // "Складаєш списки справ" — тавтологія
-        /^пере(пи)?ш\s.*одя?г/i,
-        // "Переш одяг"
-        /^пра(ну|є|ю)ш\s/i,
-        // Вигадані позитивні риси / суб'єктивні прикметники
-        /^відкрит(ий|а)\s/i,
-        // "Відкритий до нових ідей"
-        /^креативн(ий|а)/i,
-        /^цілеспрямован(ий|а)/i,
-        /^старанн(ий|а)/i,
-        /^наполегл?ив(ий|а)/i,
-        /^мудр(ий|а)/i,
-        /^добр(ий|а)\s/i,
-        /^розумн(ий|а)/i,
-        /проявля(є|ю)ш\s/i,
-        // "Проявляєш креативність"
-        /прагне(ш)?\s(підтримув|зроб|досягт)/i
-        // "Прагнеш підтримувати організованість"
-      ];
     }
   });
 
@@ -2242,6 +1619,462 @@ ${lines.join("\n")}`;
         openRoutineFromCalendar,
         highlightEventDays
       });
+    }
+  });
+
+  // src/ai/ui-tools.js
+  function handleUITool(name, args) {
+    try {
+      switch (name) {
+        case "switch_tab": {
+          const t = args.target;
+          if (t === "calendar") {
+            if (typeof window.openCalendarModal === "function") {
+              window.openCalendarModal();
+              return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+            }
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          if (t === "habits") {
+            switchTab("tasks");
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
+          }
+          if (!document.getElementById(`page-${t}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          }
+          switchTab(t);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+        }
+        case "open_memory":
+          if (typeof window.openMemoryModal === "function") {
+            window.openMemoryModal();
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041F\u0430\u043C'\u044F\u0442\u044C." };
+          }
+          return { text: "\u041F\u0430\u043C'\u044F\u0442\u044C \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430." };
+        case "open_calendar": {
+          if (typeof window.openCalendarModal !== "function") {
+            return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
+          }
+          window.openCalendarModal();
+          if (args.highlight_events && typeof window.highlightEventDays === "function") {
+            setTimeout(() => {
+              try {
+                window.highlightEventDays();
+              } catch (e) {
+              }
+            }, 400);
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u2014 \u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438 \u043F\u0443\u043B\u044C\u0441\u0443\u044E\u0442\u044C." };
+          }
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
+        }
+        case "open_settings":
+          openSettings();
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F." };
+        case "set_finance_period": {
+          if (typeof window.setFinPeriod === "function") window.setFinPeriod(args.period);
+          const label = { week: "\u0442\u0438\u0436\u0434\u0435\u043D\u044C", month: "\u043C\u0456\u0441\u044F\u0446\u044C", "3months": "3 \u043C\u0456\u0441\u044F\u0446\u0456" }[args.period] || args.period;
+          return { text: `\u0424\u0456\u043D\u0430\u043D\u0441\u0438: ${label}.` };
+        }
+        case "open_finance_analytics":
+          switchTab("finance");
+          if (typeof window.openFinAnalytics === "function") {
+            setTimeout(() => window.openFinAnalytics(), 120);
+          }
+          return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
+        case "set_owl_mode": {
+          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+          settings.owl_mode = args.mode;
+          localStorage.setItem("nm_settings", JSON.stringify(settings));
+          const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
+          return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
+        }
+        case "export_health_card":
+          if (typeof window.openHealthExport === "function") {
+            switchTab("health");
+            setTimeout(() => window.openHealthExport(), 120);
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443." };
+          }
+          return { text: "\u0412\u043A\u043B\u0430\u0434\u043A\u0430 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0449\u0435 \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0430." };
+        case "request_quiet": {
+          const hours = Math.max(1, Math.min(24, Number(args.duration_hours) || 4));
+          const expiresAt = Date.now() + hours * 36e5;
+          localStorage.setItem("nm_owl_silence_until", String(expiresAt));
+          try {
+            window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "silence" }));
+          } catch {
+          }
+          const endTime = new Date(expiresAt).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+          return { text: `\u{1F92B} \u0417\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u0430. \u041C\u043E\u0432\u0447\u0443 \u0434\u043E ${endTime}. \u0423 \u0447\u0430\u0442\u0456 \u043C\u043E\u0436\u0435\u0448 \u043F\u0438\u0442\u0430\u0442\u0438 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u043C.` };
+        }
+        default:
+          return { text: `\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 UI tool: ${name}` };
+      }
+    } catch (e) {
+      console.error("[ui-tools]", name, e);
+      return { text: `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438: ${name}` };
+    }
+  }
+  function _tabLabel(key) {
+    return {
+      inbox: "Inbox",
+      tasks: "\u0417\u0430\u0434\u0430\u0447\u0456",
+      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
+      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
+      habits: "\u0417\u0432\u0438\u0447\u043A\u0438",
+      me: "\u042F",
+      evening: "\u0412\u0435\u0447\u0456\u0440",
+      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+      calendar: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440"
+    }[key] || key;
+  }
+  var UI_TOOLS, UI_TOOL_NAMES;
+  var init_ui_tools = __esm({
+    "src/ai/ui-tools.js"() {
+      init_nav();
+      UI_TOOLS = [
+        {
+          type: "function",
+          function: {
+            name: "switch_tab",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430\u0434\u0430\u0447\u0456', '\u043F\u0435\u0440\u0435\u0439\u0434\u0438 \u0434\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0456\u0432'. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u041B\u0418\u0428\u0415 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u0437 enum target \u2014 \u0456\u043D\u0448\u0456 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456.",
+            strict: true,
+            parameters: {
+              type: "object",
+              properties: {
+                target: {
+                  type: "string",
+                  enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
+                  description: "\u041D\u0430\u0437\u0432\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"
+                }
+              },
+              required: ["target"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_memory",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041F\u0430\u043C'\u044F\u0442\u044C \u0430\u0433\u0435\u043D\u0442\u0430' \u2014 \u0449\u043E \u0430\u0433\u0435\u043D\u0442 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u044E\u0437\u0435\u0440\u0430. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435 \u0437\u043D\u0430\u0454\u0448', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0430\u043C'\u044F\u0442\u044C'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_calendar",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u043F\u0440\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0456 \u043F\u043E\u0434\u0456\u0457, \u0440\u043E\u0437\u043A\u043B\u0430\u0434, '\u0449\u043E \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456', '\u044F\u043A\u0456 \u0432 \u043C\u0435\u043D\u0435 \u043F\u043E\u0434\u0456\u0457', '\u044F\u043A\u0438\u0439 \u0437\u0430\u0432\u0442\u0440\u0430 \u0434\u0435\u043D\u044C', '\u0449\u043E \u0437\u0430\u043F\u043B\u0430\u043D\u0443\u0432\u0430\u0432', '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440'. \u042F\u043A\u0449\u043E highlight_events:true \u2014 \u043A\u043B\u0456\u0442\u0438\u043D\u043A\u0438-\u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438 \u0431\u0443\u0434\u0443\u0442\u044C \u043F\u0443\u043B\u044C\u0441\u0443\u0432\u0430\u0442\u0438 \u0431\u0456\u0440\u044E\u0437\u043E\u0432\u0438\u043C (\u044F\u0441\u043A\u0440\u0430\u0432\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u043F\u043E\u0434\u0456\u0457). \u042F\u043A\u0449\u043E false \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u043D\u044C. \u041E\u041A\u0420\u0406\u041C \u0432\u0438\u043A\u043B\u0438\u043A\u0443 \u0446\u044C\u043E\u0433\u043E tool \u2014 \u0417\u0410\u0412\u0416\u0414\u0418 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0443 \u0447\u0430\u0442\u0456: \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u0434\u0456\u0439, \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u0437 \u0434\u0430\u0442\u043E\u044E/\u0447\u0430\u0441\u043E\u043C.",
+            strict: true,
+            parameters: {
+              type: "object",
+              properties: {
+                highlight_events: {
+                  type: "boolean",
+                  description: "true \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u041F\u0420\u041E \u043F\u043E\u0434\u0456\u0457 (\u043F\u0456\u0434\u0441\u0432\u0456\u0442\u0438\u0442\u0438 \u043F\u0443\u043B\u044C\u0441\u0430\u0446\u0456\u0454\u044E \u0434\u043D\u0456 \u0437 \u043F\u043E\u0434\u0456\u044F\u043C\u0438). false \u2014 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u043E\u043F\u0440\u043E\u0441\u0438\u0432 \u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0418 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 (\u0431\u0435\u0437 \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0435\u043D\u044C)."
+                }
+              },
+              required: ["highlight_events"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_settings",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F', '\u043F\u043E\u043A\u0430\u0436\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_finance_period",
+            description: "\u041F\u0435\u0440\u0435\u043C\u043A\u043D\u0443\u0442\u0438 \u043F\u0435\u0440\u0456\u043E\u0434 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0430\u0445. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u043E\u043A\u0430\u0436\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C', '\u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C', '\u0437\u0430 3 \u043C\u0456\u0441\u044F\u0446\u0456'.",
+            parameters: {
+              type: "object",
+              properties: {
+                period: { type: "string", enum: ["week", "month", "3months"] }
+              },
+              required: ["period"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_finance_analytics",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0435\u043A\u0440\u0430\u043D \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 (\u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u043C\u0435\u0442\u0440\u0438\u043A\u0438, 50/30/20). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443', '\u043F\u043E\u043A\u0430\u0436\u0438 \u0433\u0440\u0430\u0444\u0456\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_owl_mode",
+            description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439, \u043F\u0456\u0434\u0448\u0442\u043E\u0432\u0445\u0443\u0454), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454), \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u041C\u0435\u043D\u0442\u043E\u0440\u0430', '\u0431\u0443\u0434\u044C \u0442\u0440\u0435\u043D\u0435\u0440\u043E\u043C'.",
+            parameters: {
+              type: "object",
+              properties: {
+                mode: { type: "string", enum: ["coach", "partner", "mentor"] }
+              },
+              required: ["mode"],
+              additionalProperties: false
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "export_health_card",
+            description: "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043C\u043E\u0434\u0430\u043B\u043A\u0443 '\u041C\u0435\u0434\u0438\u0447\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430' \u2014 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0430\u043B\u0435\u0440\u0433\u0456\u044F\u043C\u0438/\u0441\u0442\u0430\u043D\u0430\u043C\u0438/\u043B\u0456\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043B\u0456\u043A\u0430\u0440\u044E. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443', '\u0437\u0440\u043E\u0431\u0438 \u043C\u0435\u0434\u0438\u0447\u043D\u0443 \u043A\u0430\u0440\u0442\u043A\u0443'.",
+            parameters: { type: "object", properties: {}, additionalProperties: false }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "request_quiet",
+            description: "\u0412\u043C\u0438\u043A\u0430\u0454 \u0440\u0435\u0436\u0438\u043C \u0442\u0438\u0448\u0456 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u0432\u0430\u0442\u0438, \u0434\u0430\u0442\u0438 \u0441\u043F\u043E\u043A\u0456\u0439, \u0432\u0456\u0434\u0447\u0435\u043F\u0438\u0442\u0438\u0441\u044F, \u043D\u0435 \u0437\u0430\u0439\u043E\u0431\u0443\u0432\u0430\u0442\u0438, \u043F\u043E\u043C\u043E\u0432\u0447\u0430\u0442\u0438, \u043D\u0435 \u0434\u043E\u0441\u0442\u0430\u0432\u0430\u0442\u0438. \u0421\u043E\u0432\u0430 \u043C\u043E\u0432\u0447\u0438\u0442\u044C \u0432\u043A\u0430\u0437\u0430\u043D\u0443 \u043A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0433\u043E\u0434\u0438\u043D \u0443 \u0442\u0430\u0431\u043B\u043E, brain pulse, \u043F\u0440\u043E\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u0445. \u0427\u0430\u0442 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u043C \u0434\u043B\u044F \u043F\u0440\u044F\u043C\u0438\u0445 \u043F\u0438\u0442\u0430\u043D\u044C \u044E\u0437\u0435\u0440\u0430. \u0422\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C: '\u043D\u0430 \u0433\u043E\u0434\u0438\u043D\u043A\u0443'=1, '\u0434\u043E \u0432\u0435\u0447\u043E\u0440\u0430'=\u0440\u0456\u0437\u043D\u0438\u0446\u044F \u0434\u043E 22:00, '\u043D\u0430 \u043F\u0456\u0432 \u0434\u043D\u044F'=6, '\u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430'=\u0440\u0456\u0437\u043D\u0438\u0446\u044F \u0434\u043E \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u044C\u043E\u0433\u043E 08:00, \u0431\u0435\u0437 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F=4.",
+            parameters: {
+              type: "object",
+              properties: {
+                duration_hours: {
+                  type: "number",
+                  description: "\u0422\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C \u0442\u0438\u0448\u0456 \u0443 \u0433\u043E\u0434\u0438\u043D\u0430\u0445 (1-24). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 4."
+                }
+              },
+              required: ["duration_hours"]
+            }
+          }
+        }
+      ];
+      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
+      try {
+        Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
+      } catch {
+      }
+    }
+  });
+
+  // src/ai/memory.js
+  function getFacts() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(NM_FACTS_KEY) || "[]");
+      if (!Array.isArray(raw)) return [];
+      const now = Date.now();
+      return raw.filter((f) => {
+        if (!f || !f.ts) return false;
+        if (!f.ttl) return true;
+        return now - f.ts < f.ttl * 24 * 60 * 60 * 1e3;
+      });
+    } catch {
+      return [];
+    }
+  }
+  function getFactsRaw() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(NM_FACTS_KEY) || "[]");
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  }
+  function _saveFacts(facts) {
+    let trimmed = facts;
+    if (trimmed.length > MAX_FACTS) {
+      trimmed = [...trimmed].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, MAX_FACTS);
+    }
+    localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
+  }
+  function _rejectReason(text) {
+    const t = (text || "").trim();
+    if (!t) return "empty";
+    if (t.length < 6) return "too_short";
+    if (t.length > 200) return "too_long";
+    for (const rx of REJECT_PATTERNS) {
+      if (rx.test(t)) return `pattern:${rx.source}`;
+    }
+    const words = t.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return "too_few_words";
+    return null;
+  }
+  function addFact({ text, category, ttlDays, source = "auto" }) {
+    if (!text || typeof text !== "string") return null;
+    text = text.trim();
+    if (text.length < 3 || text.length > 200) return null;
+    const reject = _rejectReason(text);
+    if (reject) {
+      console.log("[memory] rejected fact:", reject, "\u2014", text);
+      return null;
+    }
+    if (!category || !FACT_CATEGORIES[category]) category = "context";
+    const facts = getFactsRaw();
+    const textLower = text.toLowerCase();
+    const existingIdx = facts.findIndex((f) => {
+      if (!f || f.category !== category) return false;
+      const fLower = (f.text || "").toLowerCase().trim();
+      if (fLower === textLower) return true;
+      return _textSimilarity(fLower, textLower) > 0.75;
+    });
+    if (existingIdx !== -1) {
+      facts[existingIdx].lastSeen = Date.now();
+      if (ttlDays && !facts[existingIdx].ttl) facts[existingIdx].ttl = ttlDays;
+      _saveFacts(facts);
+      return facts[existingIdx];
+    }
+    const newFact = {
+      id: `fct_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      text,
+      category,
+      ts: Date.now(),
+      lastSeen: Date.now(),
+      source,
+      ttl: typeof ttlDays === "number" && ttlDays > 0 ? ttlDays : null
+    };
+    facts.push(newFact);
+    _saveFacts(facts);
+    return newFact;
+  }
+  function deleteFact(id) {
+    const facts = getFactsRaw();
+    _saveFacts(facts.filter((f) => f.id !== id));
+  }
+  function updateFactText(id, newText) {
+    const facts = getFactsRaw();
+    const idx = facts.findIndex((f) => f.id === id);
+    if (idx === -1) return false;
+    const t = (newText || "").trim();
+    if (t.length < 3 || t.length > 200) return false;
+    facts[idx].text = t;
+    facts[idx].lastSeen = Date.now();
+    _saveFacts(facts);
+    return true;
+  }
+  function cleanupExpiredFacts() {
+    const all = getFactsRaw();
+    const now = Date.now();
+    const alive = all.filter((f) => {
+      if (!f || !f.ts) return false;
+      if (!f.ttl) return true;
+      return now - f.ts < f.ttl * 24 * 60 * 60 * 1e3;
+    });
+    if (alive.length !== all.length) {
+      _saveFacts(alive);
+    }
+    return all.length - alive.length;
+  }
+  function formatFactsForContext(maxFacts = 30) {
+    const facts = getFacts();
+    if (facts.length === 0) return "";
+    const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
+    const grouped = {};
+    sorted.forEach((f) => {
+      if (!grouped[f.category]) grouped[f.category] = [];
+      grouped[f.category].push(f);
+    });
+    const lines = [];
+    for (const cat of CATEGORY_ORDER) {
+      if (!grouped[cat]) continue;
+      const catLabel = FACT_CATEGORIES[cat]?.label || cat;
+      grouped[cat].forEach((f) => {
+        const ago = _relativeTime(f.ts);
+        lines.push(`- [${catLabel}] ${f.text} (${ago})`);
+      });
+    }
+    if (lines.length === 0) return "";
+    return `\u0424\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u0437\u0430\u0444\u0456\u043A\u0441\u043E\u0432\u0430\u043D\u043E \u0432 \u0440\u0456\u0437\u043D\u0438\u0439 \u0447\u0430\u0441 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0456 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u043E\u0433\u043E \u043F\u0440\u043E\u0444\u0456\u043B\u044E; \u044F\u043A\u0449\u043E \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E/\u043E\u0431\u0441\u0442\u0430\u0432\u0438\u043D\u0430\u0445 \u0431\u0430\u0447\u0438\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0444\u0430\u043A\u0442 \u2014 \u041D\u0415 \u0446\u0438\u0442\u0443\u0439 \u044F\u043A \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u043D). \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0446\u0435 \u0444\u0430\u043A\u0442\u0438 \u043F\u0440\u043E \u041A\u041E\u0420\u0418\u0421\u0422\u0423\u0412\u0410\u0427\u0410, \u043D\u0435 \u043F\u0440\u043E \u0442\u0435\u0431\u0435. \u041A\u043E\u043B\u0438 \u043F\u0435\u0440\u0435\u043A\u0430\u0437\u0443\u0454\u0448 \u2014 \u043A\u0430\u0436\u0438 "\u0442\u0438", "\u0443 \u0442\u0435\u0431\u0435", "\u0442\u0432\u0456\u0439". \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u044F", "\u043C\u0456\u0439", "\u0443 \u043C\u0435\u043D\u0435" \u0432\u0456\u0434 \u0456\u043C\u0435\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430:
+${lines.join("\n")}`;
+  }
+  function formatFactsForBoard(maxFacts = 15) {
+    const facts = getFacts();
+    if (facts.length === 0) return "(\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u044E)";
+    const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
+    return sorted.map((f) => `- ${f.text}`).join("\n");
+  }
+  function _relativeTime(ts) {
+    if (!ts) return "\u2014";
+    const diff = Date.now() - ts;
+    const day = 24 * 60 * 60 * 1e3;
+    const days = Math.floor(diff / day);
+    if (days === 0) return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (days === 1) return "\u0432\u0447\u043E\u0440\u0430";
+    if (days < 7) return `${days} \u0434\u043D. \u0442\u043E\u043C\u0443`;
+    if (days < 30) return `${Math.floor(days / 7)} \u0442\u0438\u0436. \u0442\u043E\u043C\u0443`;
+    if (days < 365) return `${Math.floor(days / 30)} \u043C\u0456\u0441. \u0442\u043E\u043C\u0443`;
+    return `${Math.floor(days / 365)} \u0440. \u0442\u043E\u043C\u0443`;
+  }
+  function _textSimilarity(a, b) {
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const grams = (s) => {
+      const set = /* @__PURE__ */ new Set();
+      for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+      return set;
+    };
+    const ga = grams(a);
+    const gb = grams(b);
+    if (!ga.size || !gb.size) return 0;
+    let common = 0;
+    ga.forEach((g) => {
+      if (gb.has(g)) common++;
+    });
+    return common / Math.max(ga.size, gb.size);
+  }
+  function isMigrationDone() {
+    return localStorage.getItem(NM_FACTS_MIGRATED_KEY) === "1";
+  }
+  function markMigrationDone() {
+    localStorage.setItem(NM_FACTS_MIGRATED_KEY, "1");
+  }
+  function getLegacyMemoryText() {
+    return localStorage.getItem("nm_memory") || "";
+  }
+  var NM_FACTS_KEY, NM_FACTS_MIGRATED_KEY, MAX_FACTS, FACT_CATEGORIES, CATEGORY_ORDER, REJECT_PATTERNS;
+  var init_memory = __esm({
+    "src/ai/memory.js"() {
+      NM_FACTS_KEY = "nm_facts";
+      NM_FACTS_MIGRATED_KEY = "nm_facts_migrated";
+      MAX_FACTS = 100;
+      FACT_CATEGORIES = {
+        preferences: { label: "\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F", emoji: "\u{1F4AD}", color: "#c2790a" },
+        health: { label: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", emoji: "\u2764\uFE0F", color: "#dc2626" },
+        work: { label: "\u0420\u043E\u0431\u043E\u0442\u0430", emoji: "\u{1F4BC}", color: "#2563eb" },
+        relationships: { label: "\u0421\u0442\u043E\u0441\u0443\u043D\u043A\u0438", emoji: "\u{1F465}", color: "#7c3aed" },
+        context: { label: "\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442", emoji: "\u{1F4CD}", color: "#16a34a" },
+        goals: { label: "\u0426\u0456\u043B\u0456", emoji: "\u{1F3AF}", color: "#ea580c" }
+      };
+      CATEGORY_ORDER = ["health", "relationships", "work", "goals", "preferences", "context"];
+      REJECT_PATTERNS = [
+        // Дії переказані як стійкі факти (юзер зробив щось раз → AI вигадав "займається")
+        /^займа(є|ю)шся\s/i,
+        // "Займаєшся пранням одягу"
+        /^вимика(є|ю)ш\s/i,
+        // "Вимикаєш світло в кімнаті"
+        /^вмика(є|ю)ш\s/i,
+        /^склада(є|ю)ш\s(списк|план)/i,
+        // "Складаєш списки справ" — тавтологія
+        /^пере(пи)?ш\s.*одя?г/i,
+        // "Переш одяг"
+        /^пра(ну|є|ю)ш\s/i,
+        // Вигадані позитивні риси / суб'єктивні прикметники
+        /^відкрит(ий|а)\s/i,
+        // "Відкритий до нових ідей"
+        /^креативн(ий|а)/i,
+        /^цілеспрямован(ий|а)/i,
+        /^старанн(ий|а)/i,
+        /^наполегл?ив(ий|а)/i,
+        /^мудр(ий|а)/i,
+        /^добр(ий|а)\s/i,
+        /^розумн(ий|а)/i,
+        /проявля(є|ю)ш\s/i,
+        // "Проявляєш креативність"
+        /прагне(ш)?\s(підтримув|зроб|досягт)/i
+        // "Прагнеш підтримувати організованість"
+      ];
     }
   });
 
@@ -3228,13 +3061,13 @@ ${lines.join("\n")}`;
   }
   function _archivePastAppointments() {
     const cards = getHealthCards();
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     let cardsChanged = false;
     let eventsChanged = false;
     const events = getEvents();
     cards.forEach((card) => {
       const appt = card.nextAppointment;
-      if (!appt || !appt.date || appt.date >= todayISO) return;
+      if (!appt || !appt.date || appt.date >= todayISO2) return;
       if (appt.eventId) {
         const ev = events.find((e) => e.id === appt.eventId);
         if (ev && !ev.archived) {
@@ -4001,7 +3834,7 @@ ${lines.join("\n")}`;
     }, { passive: true });
   }
   function getOwlBoardMessages() {
-    return getTabMessages("inbox");
+    return getTabMessages("inbox").filter(isMessageRelevant);
   }
   function saveOwlBoardMessages(arr) {
     if (!Array.isArray(arr) || arr.length === 0) return;
@@ -4159,9 +3992,9 @@ ${lines.join("\n")}`;
     let hasCritical = false;
     try {
       const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      const todayISO2 = now.toISOString().slice(0, 10);
+      const todayISO3 = now.toISOString().slice(0, 10);
       const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= nowTime);
+      const due = reminders.filter((r) => !r.done && r.date === todayISO3 && r.time <= nowTime);
       if (due.length > 0) {
         score += 5;
         reasons.push("reminder-due");
@@ -4182,8 +4015,8 @@ ${lines.join("\n")}`;
         }
       }
     }
-    const todayISO = now.toISOString().slice(0, 10);
-    if (tasks.some((t) => t.dueDate === todayISO)) {
+    const todayISO2 = now.toISOString().slice(0, 10);
+    if (tasks.some((t) => t.dueDate === todayISO2)) {
       score += 2;
       reasons.push("due-today");
     }
@@ -4522,9 +4355,9 @@ ${lines.join("\n")}`;
     try {
       const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
       const now = /* @__PURE__ */ new Date();
-      const todayISO = now.toISOString().slice(0, 10);
+      const todayISO2 = now.toISOString().slice(0, 10);
       const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= nowTime);
       if (due.length > 0) {
         due.forEach((r) => {
           r.done = true;
@@ -4643,6 +4476,7 @@ ${lines.join("\n")}`;
       init_core();
       init_board();
       init_unified_storage();
+      init_board_utils();
       init_chips();
       init_inbox();
       init_tasks();
@@ -5208,7 +5042,7 @@ ${lines}`;
   function getEveningContext() {
     const lines = [];
     const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const nowMs = Date.now();
     const mood = getEveningMood();
     if (mood) {
@@ -5216,7 +5050,7 @@ ${lines}`;
       lines.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u044E\u0437\u0435\u0440 \u0441\u0430\u043C \u043E\u0431\u0440\u0430\u0432 \u0443 \u0412\u0435\u0447\u043E\u0440\u0456): ${moodMap[mood] || mood}`);
     }
     try {
-      const dueToday = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO);
+      const dueToday = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO2);
       if (dueToday.length > 0) {
         const list = dueToday.slice(0, 6).map((t) => `- [ID:${t.id}] "${t.title}"`).join("\n");
         lines.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u043E\u043C \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0430\u043B\u0435 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0456:
@@ -5253,7 +5087,7 @@ ${stepsToday.slice(0, 8).join("\n")}`);
       if (quitHabits.length > 0) {
         const qLines = quitHabits.map((h) => {
           const s = getQuitStatus(h.id);
-          const marked = s.lastHeld === todayISO ? "\u0442\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713" : "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u041D\u0415 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E";
+          const marked = s.lastHeld === todayISO2 ? "\u0442\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713" : "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u041D\u0415 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E";
           return `- "${h.name}": \u0441\u0442\u0440\u0456\u043A ${s.streak || 0} \u0434\u043D, ${marked}`;
         }).join("\n");
         lines.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u043A\u0438\u043D\u0443\u0442\u0438":
@@ -5263,7 +5097,7 @@ ${qLines}`);
     }
     try {
       const pastEvents = getEvents().filter((ev) => {
-        if (ev.date !== todayISO) return false;
+        if (ev.date !== todayISO2) return false;
         if (!ev.time) return true;
         const [h, m] = ev.time.split(":").map(Number);
         return (/* @__PURE__ */ new Date()).setHours(h, m, 0, 0) < nowMs;
@@ -5330,8 +5164,8 @@ ${lines.join("\n\n")}`;
   function renderEveningUndoneTasks() {
     const container = document.getElementById("evening-undone");
     if (!container) return;
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const undone = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO);
+    const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const undone = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO2);
     const wrapBlock = document.getElementById("evening-undone-block");
     if (undone.length === 0) {
       if (wrapBlock) wrapBlock.style.display = "none";
@@ -5370,7 +5204,7 @@ ${lines.join("\n\n")}`;
   function renderEveningQuitHabits() {
     const container = document.getElementById("evening-quit");
     if (!container) return;
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const quits = getHabits().filter((h) => h.type === "quit");
     const wrapBlock = document.getElementById("evening-quit-block");
     if (quits.length === 0) {
@@ -5380,7 +5214,7 @@ ${lines.join("\n\n")}`;
     if (wrapBlock) wrapBlock.style.display = "block";
     container.innerHTML = quits.map((h) => {
       const s = getQuitStatus(h.id);
-      const heldToday = s.lastHeld === todayISO;
+      const heldToday = s.lastHeld === todayISO2;
       const streak = s.streak || 0;
       const streakText = streak > 0 ? `\u0441\u0442\u0440\u0456\u043A ${streak} \u0434\u043D` : "\u043D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u0440\u0442";
       if (heldToday) {
@@ -5584,8 +5418,8 @@ ${lines.join("\n\n")}`;
     if (!badge) return;
     try {
       const s = JSON.parse(localStorage.getItem("nm_evening_closed") || "null");
-      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      badge.style.display = s && s.date === todayISO ? "inline-block" : "none";
+      const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      badge.style.display = s && s.date === todayISO2 ? "inline-block" : "none";
     } catch (e) {
       badge.style.display = "none";
     }
@@ -5665,11 +5499,14 @@ ${lines.join("\n\n")}`;
       const active = tasks.filter((t) => t.status === "active");
       const now = Date.now();
       const stuck = active.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
-      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t) => '"' + t.title + '"').join(", ")}`);
+      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}`);
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t) => t.status === "done").length}`);
+      if (active.length > 0) {
+        parts.push(`\u0423\u0441\u0456 \u0430\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: ${active.slice(0, 10).map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}.`);
+      }
       const recentlyDone = tasks.filter((t) => t.status === "done" && (t.completedAt || t.updatedAt) && now - (t.completedAt || t.updatedAt) < 24 * 60 * 60 * 1e3).slice(0, 5);
       if (recentlyDone.length > 0) {
-        parts.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0436\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u041D\u0415 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445, \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0437\u0456 \u0441\u0432\u043E\u0433\u043E boardHistory): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
+        parts.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0436\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u041D\u0415 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445, \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0437\u0456 \u0441\u0432\u043E\u0433\u043E boardHistory): ${recentlyDone.map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}.`);
       }
       const allHabits = getHabits();
       const quitHabits = allHabits.filter((h) => h.type === "quit");
@@ -5678,11 +5515,11 @@ ${lines.join("\n\n")}`;
         const quitInfo = quitHabits.map((h) => {
           const s = getQuitStatus(h.id);
           const heldToday = s.lastHeld === todayStr;
-          return `"${h.name}": \u0441\u0442\u0440\u0456\u043A ${s.streak || 0} \u0434\u043D${heldToday ? " \u2713" : " (\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)"}`;
+          return `"${h.name}" [habit_${h.id}]: \u0441\u0442\u0440\u0456\u043A ${s.streak || 0} \u0434\u043D${heldToday ? " \u2713" : " (\u043D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456)"}`;
         });
         parts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456 "\u041A\u0438\u043D\u0443\u0442\u0438": ${quitInfo.join("; ")}`);
         const notHeld = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayStr);
-        if (notHeld.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${notHeld.map((h) => '"' + h.name + '"').join(", ")}`);
+        if (notHeld.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${notHeld.map((h) => '"' + h.name + '" [habit_' + h.id + "]").join(", ")}`);
       }
     }
     if (tab === "notes") {
@@ -5693,6 +5530,10 @@ ${lines.join("\n\n")}`;
         byFolder[f] = (byFolder[f] || 0) + 1;
       });
       parts.push(`\u041D\u043E\u0442\u0430\u0442\u043A\u0438: ${notes.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432. \u041F\u0430\u043F\u043A\u0438: ${Object.entries(byFolder).map(([f, c]) => f + "(" + c + ")").join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
+      const recent = notes.slice(0, 5);
+      if (recent.length > 0) {
+        parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438: ${recent.map((n) => '"' + (n.title || (n.text || "").slice(0, 30)) + '" [note_' + n.id + "]").join(", ")}.`);
+      }
     }
     if (tab === "me") {
       const habits = getHabits();
@@ -5705,13 +5546,17 @@ ${lines.join("\n\n")}`;
       const todayH = buildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const doneToday = todayH.filter((h) => !!log[today]?.[h.id]).length;
       if (buildHabits.length > 0) {
-        const streaks = buildHabits.map((h) => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
-        parts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneToday}/${todayH.length}. \u0421\u0442\u0440\u0456\u043A\u0438: ${streaks.filter((s) => s.streak >= 2).map((s) => s.name + "\u{1F525}" + s.streak).join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
+        const streaks = buildHabits.map((h) => ({ id: h.id, name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
+        parts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneToday}/${todayH.length}. \u0421\u0442\u0440\u0456\u043A\u0438: ${streaks.filter((s) => s.streak >= 2).map((s) => s.name + " [habit_" + s.id + "]\u{1F525}" + s.streak).join(", ") || "\u043D\u0435\u043C\u0430\u0454"}`);
+        const pendingToday = todayH.filter((h) => !log[today]?.[h.id]);
+        if (pendingToday.length > 0) {
+          parts.push(`\u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${pendingToday.map((h) => '"' + h.name + '" [habit_' + h.id + "]").join(", ")}.`);
+        }
       }
       if (quitHabits.length > 0) {
         const quitInfo = quitHabits.map((h) => {
           const s = getQuitStatus(h.id);
-          return `"${h.name}": ${s.streak || 0} \u0434\u043D \u0431\u0435\u0437 \u0437\u0440\u0438\u0432\u0456\u0432`;
+          return `"${h.name}" [habit_${h.id}]: ${s.streak || 0} \u0434\u043D \u0431\u0435\u0437 \u0437\u0440\u0438\u0432\u0456\u0432`;
         });
         parts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
       }
@@ -5751,7 +5596,7 @@ ${lines.join("\n\n")}`;
         const active = projects.filter((p) => p.status === "active");
         const paused = projects.filter((p) => p.status === "paused");
         parts.push(`\u041F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${active.length}, \u043D\u0430 \u043F\u0430\u0443\u0437\u0456: ${paused.length}, \u0432\u0441\u044C\u043E\u0433\u043E: ${projects.length}.`);
-        if (active.length > 0) parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456: ${active.slice(0, 3).map((p) => '"' + p.name + '"').join(", ")}`);
+        if (active.length > 0) parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456: ${active.slice(0, 5).map((p) => '"' + p.name + '" [project_' + p.id + "]").join(", ")}`);
       } catch (e) {
       }
     }
@@ -5774,15 +5619,15 @@ ${lines.join("\n\n")}`;
     const normal = [];
     try {
       const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-      const todayISO = now.toISOString().slice(0, 10);
+      const todayISO2 = now.toISOString().slice(0, 10);
       const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      const due = reminders.filter((r) => !r.done && r.date === todayISO && r.time <= nowTime);
+      const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= nowTime);
       if (due.length > 0) {
         due.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
         const updated = reminders.map((r) => due.find((d) => d.id === r.id) ? { ...r, done: true } : r);
         localStorage.setItem("nm_reminders", JSON.stringify(updated));
       }
-      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
+      const upcoming = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
       if (upcoming.length > 0) {
         const next = upcoming[0];
         const [nh, nm] = next.time.split(":").map(Number);
@@ -5803,19 +5648,19 @@ ${lines.join("\n\n")}`;
     const activeTasks = tasks.filter((t) => t.status === "active");
     const recentlyDone = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3);
     if (recentlyDone.length > 0) {
-      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '"').join(", ")}.`);
+      normal.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u041D\u0415 \u0437\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0456!): ${recentlyDone.map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}.`);
     }
     if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const briefParts = [];
-      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '"').join(", ")}`);
-      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name).join(", ")}`);
+      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}`);
+      if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name + " [habit_" + h.id + "]").join(", ")}`);
       const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
       if (quitHabitsAll.length > 0) {
         const quitInfo = quitHabitsAll.map((h) => {
           const s = getQuitStatus(h.id);
-          return `"${h.name}": ${s.streak || 0} \u0434\u043D`;
+          return `"${h.name}" [habit_${h.id}]: ${s.streak || 0} \u0434\u043D`;
         });
         briefParts.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}`);
       }
@@ -5854,31 +5699,31 @@ ${pulseParts.join("\n")}
       return diff > 0 && diff <= 65;
     });
     urgent.forEach((t) => {
-      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}".`);
+      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}" [task_${t.id}].`);
     });
     const todayISOLocal = now.toISOString().slice(0, 10);
     const overdue = activeTasks.filter((t) => t.dueDate && t.dueDate < todayISOLocal);
     if (overdue.length > 0) {
       overdue.slice(0, 3).forEach((t) => {
         const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t.dueDate)) / (24 * 60 * 60 * 1e3));
-        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
+        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" [task_${t.id}] \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
       });
     }
     const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
     stuckDays3.forEach((t) => {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" [task_${t.id}] \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
     });
     const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
     forgotten.forEach((t) => {
       const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
-      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
+      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" [task_${t.id}] \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
     });
     const reshuffled = activeTasks.filter((t) => (t.rescheduleCount || 0) >= 3);
     reshuffled.forEach((t) => {
-      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
+      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" [task_${t.id}] \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
     });
     if (activeTasks.length > 0) {
-      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => t.title).join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
+      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
     } else {
       normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
     }
@@ -5906,13 +5751,13 @@ ${pulseParts.join("\n")}
       if (atRisk.length > 0) {
         const details = atRisk.map((h) => {
           const streak = Object.values(log).filter((d) => d[h.id]).length;
-          return `"${h.name}" (\u0432\u0436\u0435 ${streak} \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434, \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E)`;
+          return `"${h.name}" [habit_${h.id}] (\u0432\u0436\u0435 ${streak} \u0434\u043D\u0456\u0432 \u043F\u0456\u0434\u0440\u044F\u0434, \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E)`;
         });
         critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0417\u0432\u0438\u0447\u043A\u0438 \u0437 \u0441\u0435\u0440\u0456\u0454\u044E \u043F\u0456\u0434 \u0437\u0430\u0433\u0440\u043E\u0437\u043E\u044E \u2014 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u0456\u043D\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u0430 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0440\u043E\u0431\u0438\u0432: ${details.join(", ")}.`);
       }
     }
     if ((phase === "work" || phase === "evening") && pendingHabits.length > 0) {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name).join(", ")}.`);
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0437\u0432\u0438\u0447\u043E\u043A: ${pendingHabits.map((h) => h.name + " [habit_" + h.id + "]").join(", ")}.`);
     }
     if (todayHabits.length > 0) {
       normal.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${doneHabits.length}/${todayHabits.length}.`);
@@ -5921,17 +5766,17 @@ ${pulseParts.join("\n")}
       const todayIso = now.toISOString().slice(0, 10);
       const notHeldToday = quitHabits.filter((h) => getQuitStatus(h.id).lastHeld !== todayIso);
       if ((phase === "evening" || phase === "night") && notHeldToday.length > 0) {
-        important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '"').join(", ")}.`);
+        important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 (\u043A\u0438\u043D\u0443\u0442\u0438): ${notHeldToday.map((h) => '"' + h.name + '" [habit_' + h.id + "]").join(", ")}.`);
       }
       quitHabits.forEach((h) => {
         const s = getQuitStatus(h.id);
         const streak = s.streak || 0;
         const milestones = [7, 14, 21, 30, 60, 90];
         if (milestones.includes(streak) && owlCdExpired("quit_milestone_" + h.id + "_" + streak, 24 * 60 * 60 * 1e3)) {
-          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] ${streak} \u0434\u043D\u0456\u0432 \u0431\u0435\u0437 "${h.name}"! \u{1F389}`);
+          important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] ${streak} \u0434\u043D\u0456\u0432 \u0431\u0435\u0437 "${h.name}" [habit_${h.id}]! \u{1F389}`);
         }
       });
-      const quitInfo = quitHabits.map((h) => `"${h.name}": ${getQuitStatus(h.id).streak || 0} \u0434\u043D`);
+      const quitInfo = quitHabits.map((h) => `"${h.name}" [habit_${h.id}]: ${getQuitStatus(h.id).streak || 0} \u0434\u043D`);
       normal.push(`\u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456: ${quitInfo.join(", ")}.`);
     }
     try {
@@ -5958,7 +5803,7 @@ ${pulseParts.join("\n")}
           if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
             const avg = bycat[lastTx.category].reduce((a, b) => a + b, 0) / bycat[lastTx.category].length;
             if (lastTx.amount > avg * 2.5 && owlCdExpired("unusual_tx_" + lastTx.id, 8 * 60 * 60 * 1e3)) {
-              important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435\u0437\u0432\u0438\u0447\u043D\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430: ${formatMoney(lastTx.amount)} \u043D\u0430 "${lastTx.category}" \u2014 \u0432\u0438\u0449\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0432\u0434\u0432\u0456\u0447\u0456.`);
+              important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u041D\u0435\u0437\u0432\u0438\u0447\u043D\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430: ${formatMoney(lastTx.amount)} \u043D\u0430 "${lastTx.category}" [transaction_${lastTx.id}] \u2014 \u0432\u0438\u0449\u0435 \u0437\u0432\u0438\u0447\u043D\u043E\u0433\u043E \u0432\u0434\u0432\u0456\u0447\u0456.`);
             }
           }
         }
@@ -6298,6 +6143,7 @@ SMART BOOT-UP (\u044F\u043A \u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u0
 - \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0444\u0430\u043A\u0442\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u0438\u0436\u0447\u0435. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043B\u0456\u043C\u0456\u0442\u0438, \u0441\u0443\u043C\u0438, \u043F\u043B\u0430\u043D\u0438 \u0430\u0431\u043E \u0437\u0432\u0438\u0447\u043A\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
 - \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043A\u0430\u0437\u0430\u0432. ${_getBannedTopics(allMsgs) ? "\u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u0406 \u0422\u0415\u041C\u0418 (\u0432\u0436\u0435 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u0456, \u0432 cooldown \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u043E\u0431\u0435\u0440\u0438 \u0406\u041D\u0428\u0423 \u0442\u0435\u043C\u0443): " + _getBannedTopics(allMsgs) + "." : "\u0414\u0438\u0432\u0438\u0441\u044C \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0456 \u043E\u0431\u0438\u0440\u0430\u0439 \u0456\u043D\u0448\u0443 \u0442\u0435\u043C\u0443."}
 - \u041F\u043E\u043B\u0435 "topic" \u0443 JSON \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438 \u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: "daily_habits", "stuck_task", "budget_warning", "morning_greeting", "habit_streak", "project_progress"). \u0426\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0434\u043B\u044F \u0430\u043D\u0442\u0438\u043F\u043E\u0432\u0442\u043E\u0440\u0443.
+- \u041F\u043E\u043B\u0435 "entityRefs" \u0443 JSON \u2014 \u043C\u0430\u0441\u0438\u0432 ID \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u043F\u0440\u043E \u044F\u043A\u0456 \u0442\u0438 \u043F\u0438\u0448\u0435\u0448 \u0443 text. \u0424\u043E\u0440\u043C\u0430\u0442: "<\u0442\u0438\u043F>_<id>" \u0411\u0415\u0417 \u043B\u0430\u043F\u043E\u043A \u0456 \u043F\u0440\u043E\u0431\u0456\u043B\u0456\u0432. \u0414\u043E\u0437\u0432\u043E\u043B\u0435\u043D\u0456 \u0442\u0438\u043F\u0438: task, habit, event, note, project, transaction. ID \u0431\u0435\u0440\u0443\u0442\u044C\u0441\u044F \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0438\u0449\u0435 \u2014 \u0442\u0430\u043C \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u043F\u043E\u043C\u0456\u0447\u0435\u043D\u0456 \u044F\u043A "\u041D\u0430\u0437\u0432\u0430" [task_888]. \u042F\u043A\u0449\u043E \u0442\u0432\u043E\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043F\u043E\u0441\u0438\u043B\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0446\u0456 [task_888]/[habit_42] \u2014 \u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u0434\u043E\u0434\u0430\u0439 \u0457\u0445 \u0443 entityRefs (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "task_888", "habit_42"). \u042F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0435 (\u0431\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447/\u0437\u0432\u0438\u0447\u043E\u043A \u2014 \u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u0413\u0430\u0440\u043D\u043E\u0433\u043E \u0440\u0430\u043D\u043A\u0443", "\u042F\u043A \u0441\u043F\u0440\u0430\u0432\u0438 \u0437 \u0442\u0438\u0436\u043D\u0435\u043C?") \u2014 entityRefs \u043C\u0430\u0454 \u0431\u0443\u0442\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u043C\u0430\u0441\u0438\u0432\u043E\u043C []. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 ID \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.
 - \u0415\u041C\u041F\u0410\u0422\u0406\u042F: \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u043D\u0430 \u0441\u043B\u043E\u0432\u0430-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 ("\u0432\u0442\u043E\u043C\u0438\u0432\u0441\u044F", "\u043D\u0435 \u043C\u043E\u0436\u0443", "\u0437\u0430\u0431\u0438\u0432" \u0442\u043E\u0449\u043E) \u0432\u0436\u0435 \u043E\u043F\u0438\u0441\u0430\u043D\u0435 \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0456 (\u0434\u0438\u0432. universal \u043F\u0440\u0430\u0432\u0438\u043B\u0430). \u0417\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E.
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: ${CHIP_JSON_FORMAT}
 ${CHIP_PROMPT_RULES}
@@ -6367,7 +6213,8 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         } catch (e) {
         }
         const topicFinal = isBriefing ? "morning-briefing" : parsed.topic || "";
-        const newMsg = { text: parsed.text, topic: topicFinal, priority: parsed.priority || "normal", chips: parsed.chips || [], ts: Date.now() };
+        const entityRefs = Array.isArray(parsed.entityRefs) ? parsed.entityRefs.filter((r) => typeof r === "string" && r.length > 0).slice(0, 10) : [];
+        const newMsg = { text: parsed.text, topic: topicFinal, priority: parsed.priority || "normal", chips: parsed.chips || [], entityRefs, ts: Date.now() };
         if (parsed.topic) setOwlCd("topic_" + parsed.topic);
         if (isInbox) {
           newMsg.id = Date.now();
@@ -6668,11 +6515,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           localStorage.setItem(NM_LAST_ACTIVE_KEY, Date.now().toString());
           localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
         } else if (document.visibilityState === "visible") {
-          const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+          const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
           const lastActiveDay = localStorage.getItem(NM_LAST_ACTIVE_DAY_KEY) || "";
-          const isFirstOpenToday = lastActiveDay && lastActiveDay !== todayISO;
+          const isFirstOpenToday = lastActiveDay && lastActiveDay !== todayISO2;
           if (isFirstOpenToday) {
-            localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO);
+            localStorage.setItem(NM_LAST_ACTIVE_DAY_KEY, todayISO2);
             const judge = shouldOwlSpeak("first-open-today");
             if (judge.speak) generateBoardMessage(currentTab || "inbox", { isBriefing: true });
             return;
@@ -9387,6 +9234,257 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
+  // src/owl/board-utils.js
+  function isEntityRelevant(ref) {
+    if (typeof ref !== "string") return false;
+    const idx = ref.indexOf("_");
+    if (idx < 0) return false;
+    const type = ref.slice(0, idx);
+    const idRaw = ref.slice(idx + 1);
+    if (!idRaw) return false;
+    const idNum = Number(idRaw);
+    const matchId = (x) => x === idRaw || x === idNum || idNum && Number(x) === idNum;
+    try {
+      if (type === "task") {
+        const t = getTasks().find((x) => matchId(x.id));
+        if (!t) return false;
+        if (t.status !== "active") return false;
+        if (t.dueDate && t.dueDate < todayISO()) return false;
+        return true;
+      }
+      if (type === "habit") {
+        const h = getHabits().find((x) => matchId(x.id));
+        if (!h) return false;
+        if (h.type === "quit") {
+          return true;
+        }
+        const todayKey = (/* @__PURE__ */ new Date()).toDateString();
+        const log = getHabitLog();
+        const doneToday = !!log[todayKey]?.[h.id];
+        return !doneToday;
+      }
+      if (type === "event") {
+        const e = getEvents().find((x) => matchId(x.id));
+        if (!e) return false;
+        try {
+          const dt = e.time ? (/* @__PURE__ */ new Date(`${e.date}T${e.time}`)).getTime() : (/* @__PURE__ */ new Date(`${e.date}T23:59`)).getTime();
+          return dt >= Date.now();
+        } catch (err) {
+          return true;
+        }
+      }
+      if (type === "note") {
+        return getNotes().some((x) => matchId(x.id));
+      }
+      if (type === "project") {
+        const projects = JSON.parse(localStorage.getItem("nm_projects") || "[]");
+        const p = projects.find((x) => matchId(x.id));
+        if (!p) return false;
+        if (p.status && p.status !== "active") return false;
+        const progress = Number(p.progress || 0);
+        if (progress >= 100) return false;
+        return true;
+      }
+      if (type === "transaction") {
+        const txs = JSON.parse(localStorage.getItem("nm_finance") || "[]");
+        return txs.some((x) => matchId(x.id));
+      }
+    } catch (e) {
+      return true;
+    }
+    return true;
+  }
+  function isMessageRelevant(msg) {
+    if (!msg) return false;
+    if (!Array.isArray(msg.entityRefs) || msg.entityRefs.length === 0) return true;
+    return msg.entityRefs.some(isEntityRelevant);
+  }
+  var todayISO;
+  var init_board_utils = __esm({
+    "src/owl/board-utils.js"() {
+      init_tasks();
+      init_habits();
+      init_calendar();
+      init_notes();
+      todayISO = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      try {
+        Object.assign(window, { isEntityRelevant, isMessageRelevant });
+      } catch {
+      }
+    }
+  });
+
+  // src/owl/board.js
+  function getOwlTabTsKey(tab) {
+    return "nm_owl_tab_ts_" + tab;
+  }
+  function getTabBoardMsgs(tab) {
+    return getTabMessages(tab).filter(isMessageRelevant);
+  }
+  function saveTabBoardMsg(tab, newMsg) {
+    saveTabMessage(tab, newMsg);
+  }
+  function _owlTabHTML(tab) {
+    const t = tab;
+    return `
+    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+      <div class="owl-collapsed-avatar">\u{1F989}</div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
+    </div>
+    <div id="owl-tab-speech-${t}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+      <div class="owl-speech-avatar">\u{1F989}</div>
+      <div class="owl-tab-card">
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
+          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
+      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
+    </div>`;
+  }
+  function _owlTabApplyState(tab) {
+    const st = _owlTabStates[tab] || "speech";
+    const collapsed = document.getElementById("owl-tab-collapsed-" + tab);
+    const speech = document.getElementById("owl-tab-speech-" + tab);
+    const chipsWrap = document.getElementById("owl-tab-chips-wrap-" + tab);
+    if (!speech) return;
+    if (collapsed) collapsed.style.display = st === "collapsed" ? "flex" : "none";
+    speech.style.display = st === "collapsed" ? "none" : "block";
+    if (chipsWrap) chipsWrap.style.display = "flex";
+  }
+  function toggleOwlTabChat(tab) {
+    _owlTabStates[tab] = "speech";
+    _owlTabApplyState(tab);
+  }
+  function owlTabSwipeStart(e, tab) {
+    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
+  }
+  function owlTabSwipeMove(e, tab) {
+    if (!_owlTabSwipes[tab]) return;
+    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
+  }
+  function owlTabSwipeEnd(e, tab) {
+    const sw = _owlTabSwipes[tab];
+    if (!sw) return;
+    _owlTabSwipes[tab] = null;
+    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
+    if (dy < -40) {
+      if (st === "speech") {
+        _owlTabStates[tab] = "collapsed";
+        _owlTabApplyState(tab);
+      }
+    } else if (dy > 40) {
+      if (st === "collapsed") {
+        _owlTabStates[tab] = "speech";
+        _owlTabApplyState(tab);
+      } else if (st === "speech") openChatBar(tab === "inbox" ? "inbox" : tab);
+    }
+  }
+  function _updateOwlTabChipsArrows(tab) {
+    const el = document.getElementById("owl-tab-chips-" + tab);
+    const left = document.getElementById("owl-tab-chips-left-" + tab);
+    const right = document.getElementById("owl-tab-chips-right-" + tab);
+    if (!el || !left || !right) return;
+    left.classList.toggle("visible", el.scrollLeft > 4);
+    right.classList.toggle("visible", el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+  function scrollOwlTabChips(tab, dir) {
+    const el = document.getElementById("owl-tab-chips-" + tab);
+    if (!el) return;
+    el.scrollBy({ left: dir * 130, behavior: "smooth" });
+    setTimeout(() => _updateOwlTabChipsArrows(tab), 250);
+  }
+  function _pickMessageForTab(tab) {
+    const all = getUnifiedBoard().filter(isMessageRelevant);
+    if (all.length === 0) return null;
+    if (all[0].priority === "critical") return all[0];
+    const tabMsg = all.find((m) => m.forTab === tab);
+    if (tabMsg) return tabMsg;
+    return all[0];
+  }
+  function renderTabBoard(tab) {
+    const isInbox = tab === "inbox";
+    const board = document.getElementById(isInbox ? "owl-board" : "owl-tab-board-" + tab);
+    if (!board) return;
+    board.style.display = "block";
+    let msg = _pickMessageForTab(tab);
+    if (!msg) {
+      const defaults = { inbox: "\u041F\u0440\u0438\u0432\u0456\u0442! \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443.", tasks: "\u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?", finance: "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443.", notes: "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u{1F4DD}", health: "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F?", evening: "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u0434\u0435\u043D\u044C?", me: "\u041F\u043E\u0434\u0438\u0432\u0438\u043C\u043E\u0441\u044C \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", projects: "\u041F\u0440\u0430\u0446\u044E\u0454\u043C\u043E \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u043C\u0438." };
+      const defMsg = { text: defaults[tab] || "\u041F\u0440\u0438\u0432\u0456\u0442!", priority: "normal", chips: [], ts: Date.now() };
+      msg = saveTabMessage(tab, defMsg);
+    }
+    if (!board._owlReady) {
+      if (!isInbox) board.innerHTML = _owlTabHTML(tab);
+      board._owlReady = true;
+      _owlTabStates[tab] = _owlTabStates[tab] || "speech";
+      _owlTabApplyState(tab);
+    }
+    const tEl = document.getElementById("owl-tab-text-" + tab);
+    const cEl = document.getElementById("owl-tab-ctext-" + tab);
+    const tmEl = document.getElementById("owl-tab-time-" + tab);
+    _applyTabText(tEl, msg.text);
+    _applyTabText(cEl, msg.text);
+    if (tmEl) {
+      const ageMs = Date.now() - (msg.ts || msg.id || 0);
+      const ageMin = Math.floor(ageMs / 6e4);
+      if (ageMin > 10) {
+        tmEl.textContent = "\u2022 " + (ageMin < 60 ? ageMin + " \u0445\u0432 \u0442\u043E\u043C\u0443" : Math.floor(ageMin / 60) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
+        tmEl.classList.add("owl-time-stale");
+      } else {
+        tmEl.textContent = "";
+        tmEl.classList.remove("owl-time-stale");
+      }
+    }
+    const chipsEl = document.getElementById("owl-tab-chips-" + tab);
+    if (chipsEl) {
+      renderChips(chipsEl, msg.chips || [], tab, { showSpeak: true });
+      chipsEl.removeEventListener("scroll", chipsEl._arrowHandler);
+      chipsEl._arrowHandler = () => _updateOwlTabChipsArrows(tab);
+      chipsEl.addEventListener("scroll", chipsEl._arrowHandler, { passive: true });
+      setTimeout(() => _updateOwlTabChipsArrows(tab), 50);
+    }
+  }
+  function _applyTabText(el, text) {
+    if (!el) return;
+    const current = el.textContent || "";
+    if (current === text) return;
+    if (current === "") {
+      el.textContent = text;
+      el.style.opacity = "1";
+      return;
+    }
+    el.style.opacity = "0";
+    setTimeout(() => {
+      el.textContent = text;
+      el.style.opacity = "1";
+    }, 200);
+  }
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
+  var init_board = __esm({
+    "src/owl/board.js"() {
+      init_core();
+      init_chips();
+      init_unified_storage();
+      init_board_utils();
+      OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
+      _owlTabStates = {};
+      _owlTabSwipes = {};
+      Object.assign(window, {
+        toggleOwlTabChat,
+        owlTabSwipeStart,
+        owlTabSwipeMove,
+        owlTabSwipeEnd,
+        scrollOwlTabChips,
+        openChatBar
+      });
+    }
+  });
+
   // src/ui/unread-badge.js
   function showUnreadBadge(tab, sendBtnId) {
     const current = _unreadCounts.get(tab) || 0;
@@ -9732,13 +9830,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     await generateEveningRitualSummary(addEveningBarMsg);
   }
   async function openEveningTopic(topic) {
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     let started = {};
     try {
       started = JSON.parse(localStorage.getItem(EVENING_TOPIC_STARTED_KEY) || "{}");
     } catch (e) {
     }
-    if (started.date !== todayISO) started = { date: todayISO };
+    if (started.date !== todayISO2) started = { date: todayISO2 };
     try {
       openChatBar("evening");
     } catch (e) {
@@ -10392,7 +10490,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       }
       const habits = getHabits();
       const today = (/* @__PURE__ */ new Date()).toDateString();
-      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       const log = getHabitLog();
       for (const h of habits) {
         const hWords = h.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
@@ -10401,7 +10499,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         if (matches.length >= 1 && matches.length >= stems.length * 0.5) {
           if (h.type === "quit") {
             const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
-            if (quitLog[h.id]?.lastHeld === todayISO) return false;
+            if (quitLog[h.id]?.lastHeld === todayISO2) return false;
           } else {
             if (log[today]?.[h.id]) return false;
           }
@@ -10547,7 +10645,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     }
     const habits = getHabits();
     const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const log = getHabitLog();
     for (const habit of habits) {
       const habitWords = habit.name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
@@ -10557,8 +10655,8 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         if (habit.type === "quit") {
           const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
           if (!quitLog[habit.id]) quitLog[habit.id] = { streak: 0, relapses: [] };
-          quitLog[habit.id].lastHeld = todayISO;
-          if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO;
+          quitLog[habit.id].lastHeld = todayISO2;
+          if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO2;
           localStorage.setItem("nm_quit_log", JSON.stringify(quitLog));
           renderHabits();
           renderProdHabits();
@@ -10659,7 +10757,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
   \u2022 \u0412\u0435\u0447\u0456\u0440: {"text":"\u0414\u0435\u043D\u044C \u043C\u0430\u0439\u0436\u0435 \u0437\u0430\u043A\u0456\u043D\u0447\u0438\u0432\u0441\u044F \u2014 \u044F\u043A \u043F\u0440\u043E\u0439\u0448\u043E\u0432?","chips":[{"label":"\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F","action":"nav","target":"evening"},{"label":"\u0414\u043E\u0434\u0430\u0439 \u043C\u043E\u043C\u0435\u043D\u0442","action":"nav","target":"evening"}]}
 - \u042F\u043A\u0449\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0434\u0430\u0439 1-2 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0447\u0456\u043F\u0438 \u043D\u0430 \u043A\u0448\u0442\u0430\u043B\u0442 ["\u041F\u0456\u0437\u043D\u0456\u0448\u0435", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435"] (\u041D\u0415 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432, \u0434\u0438\u0432. \u043F\u0440\u0430\u0432\u0438\u043B\u043E G11 \u0432\u0438\u0449\u0435).
 - \u0422\u041E\u041D \u0447\u0456\u043F\u0456\u0432 \u043C\u0430\u0454 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u0442\u0432\u043E\u0454\u043C\u0443 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0443 (\u043E\u043F\u0438\u0441\u0430\u043D\u0438\u0439 \u0432\u0438\u0449\u0435). Coach \u2014 \u043F\u0440\u044F\u043C\u0438\u0439 \u0456 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439. Partner \u2014 \u043C'\u044F\u043A\u0438\u0439 \u0456 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439. Mentor \u2014 \u0437\u0430\u043F\u0438\u0442\u0443\u0454 \u0456 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u044F\u0454.`;
-      CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","topic":"\u043A\u043E\u0440\u043E\u0442\u043A\u0430_\u0442\u0435\u043C\u0430_\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}]}`;
+      CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","topic":"\u043A\u043E\u0440\u043E\u0442\u043A\u0430_\u0442\u0435\u043C\u0430_\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"entityRefs":["task_888","habit_42"]}`;
       NM_CHIP_STATS_KEY = "nm_chip_stats";
       CHIP_STATS_MAX_CLICKED = 50;
       window.owlChipToChat = handleChipClick;
@@ -12701,26 +12799,26 @@ ${taskList}`);
 ${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
     }
     try {
-      const todayISO = now.toISOString().slice(0, 10);
+      const todayISO2 = now.toISOString().slice(0, 10);
       const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
       const upcoming = [];
       getEvents().forEach((ev) => {
-        if (ev.date >= todayISO && ev.date <= in7) {
-          const diff = Math.round((/* @__PURE__ */ new Date(ev.date + "T00:00:00") - /* @__PURE__ */ new Date(todayISO + "T00:00:00")) / 864e5);
+        if (ev.date >= todayISO2 && ev.date <= in7) {
+          const diff = Math.round((/* @__PURE__ */ new Date(ev.date + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
           upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${when}${ev.time ? " \u043E " + ev.time : ""}`);
         }
       });
       const allEvents = getEvents();
-      const futureEvents = allEvents.filter((ev) => ev.date >= todayISO && !upcoming.some((u) => u.includes(ev.id)));
+      const futureEvents = allEvents.filter((ev) => ev.date >= todayISO2 && !upcoming.some((u) => u.includes(ev.id)));
       if (futureEvents.length > 0) {
         futureEvents.slice(0, 10).forEach((ev) => {
           upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${ev.date}${ev.time ? " \u043E " + ev.time : ""}`);
         });
       }
       getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
-        if (t.dueDate >= todayISO && t.dueDate <= in7) {
-          const diff = Math.round((/* @__PURE__ */ new Date(t.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO + "T00:00:00")) / 864e5);
+        if (t.dueDate >= todayISO2 && t.dueDate <= in7) {
+          const diff = Math.round((/* @__PURE__ */ new Date(t.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
           if (!upcoming.some((u) => u.includes(t.title))) {
             upcoming.push(`- \u23F0 "${t.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D ${when}`);
@@ -16994,6 +17092,26 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       localStorage.removeItem("nm_health_log");
       localStorage.setItem("nm_health_log_cleared_v6", "1");
     }
+    if (!localStorage.getItem("nm_pruning_wipe_v1_done")) {
+      [
+        "nm_owl_board_unified",
+        "nm_owl_board_unified_ts",
+        "nm_owl_board",
+        "nm_owl_board_ts",
+        // Тригерні TS-ключі вкладок — щоб Judge Layer не вирішив що
+        // «тільки що генерували, мовчимо ще 30 хв»
+        "nm_owl_tab_ts_inbox",
+        "nm_owl_tab_ts_tasks",
+        "nm_owl_tab_ts_notes",
+        "nm_owl_tab_ts_me",
+        "nm_owl_tab_ts_evening",
+        "nm_owl_tab_ts_finance",
+        "nm_owl_tab_ts_health",
+        "nm_owl_tab_ts_projects"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_pruning_wipe_v1_done", "1");
+      console.log("[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)");
+    }
   }
   function init() {
     try {
@@ -18578,6 +18696,7 @@ ${legacy}`;
   init_inbox_board();
   init_chips();
   init_board();
+  init_board_utils();
   init_proactive();
   init_followups();
   init_brain_pulse();
