@@ -155,9 +155,6 @@ function saveTask() {
   closeTaskModal();
   renderTasks();
   showToast(editingTaskId ? '✓ Задачу оновлено' : '✓ Задачу додано');
-
-  // Тихий AI коментар для нової задачі
-  if (!editingTaskId) askAIAboutTask(title, desc, tempSteps);
 }
 
 function toggleTaskStep(taskId, stepId) {
@@ -310,21 +307,6 @@ export function renderTasks() {
 function taskCardClick(id, event) {
   if (event.target.closest('[data-task-check],[data-step-check]')) return;
   openEditTask(id);
-}
-
-async function askAIAboutTask(title, desc, steps) {
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) return;
-  const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} Користувач щойно додав задачу. Дай коротку (1-2 речення) реакцію у своєму стилі. Фокус на тому ЯК досягти мети. Якщо задача нечітка — запропонуй перший конкретний крок. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
-  const steps_text = steps.length ? `\nКроки: ${steps.map(s => s.text).join(', ')}` : '';
-  const reply = await callAI(systemPrompt, `Задача: ${title}${desc ? '\nОпис: ' + desc : ''}${steps_text}`, {});
-  if (!reply) return;
-  const commentEl = document.getElementById('tasks-ai-comment');
-  if (commentEl) {
-    commentEl.textContent = reply;
-    commentEl.style.display = 'block';
-  }
 }
 
 // Відкриваємо задачі при переключенні вкладки — через хук в renderTasks
