@@ -401,14 +401,14 @@ function _attachNotesSwipeDelete() {
   document.querySelectorAll('.note-item-wrap').forEach(wrap => {
     const card = wrap.querySelector('[id^="note-item-"]');
     if (!card) return;
-    const id = parseInt(wrap.dataset.id);
+    const id = wrap.dataset.id;
     attachSwipeDelete(wrap, card, () => {
       const allNotes = getNotes();
-      const noteSwipeIdx = allNotes.findIndex(x => x.id === id);
+      const noteSwipeIdx = allNotes.findIndex(x => String(x.id) === id);
       const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
-      const item = allNotes.find(x => x.id === id);
+      const item = allNotes.find(x => String(x.id) === id);
       if (item) addToTrash('note', item);
-      saveNotes(allNotes.filter(x => x.id !== id));
+      saveNotes(allNotes.filter(x => String(x.id) !== id));
       renderNotes();
       if (item) showUndoToast('Нотатку видалено', () => {
         const notes = getNotes();

@@ -5,6 +5,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
+import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE } from '../ai/prompts.js';
@@ -849,13 +850,13 @@ function confirmQuitRelapse(habitId) {
 function _attachHabitsSwipeDelete() {
   const bind = (wrap, card) => {
     if (!card) return;
-    const id = parseInt(wrap.dataset.id);
+    const id = wrap.dataset.id;
     attachSwipeDelete(wrap, card, () => {
       const allHabits = getHabits();
-      const habitOrigIdx = allHabits.findIndex(h => h.id === id);
-      const item = allHabits.find(h => h.id === id);
+      const habitOrigIdx = allHabits.findIndex(h => String(h.id) === id);
+      const item = allHabits.find(h => String(h.id) === id);
       if (item) addToTrash('habit', item);
-      saveHabits(allHabits.filter(h => h.id !== id));
+      saveHabits(allHabits.filter(h => String(h.id) !== id));
       renderHabits();
       renderProdHabits();
       if (item) showUndoToast('Звичку видалено', () => {
@@ -941,7 +942,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       return true;
     }
     const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-    const newTask = { id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
+    const newTask = { id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
     if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
     if (parsed.priority && ['important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
     const tasks = getTasks();
@@ -981,7 +982,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'edit_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => x.id === parsed.task_id);
+    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
     if (!t) {
       const nameQ = (parsed.title || '').toLowerCase();
       const found = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
@@ -1013,7 +1014,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'delete_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => x.id === parsed.task_id);
+    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
     const nameQ = (parsed.title || parsed.query || '').toLowerCase();
     const target = t || tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
     if (!target) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
@@ -1043,7 +1044,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'reopen_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => x.id === parsed.task_id && x.status === 'done');
+    const t = tasks.find(x => String(x.id) === String(parsed.task_id) && x.status === 'done');
     const nameQ = (parsed.title || parsed.query || '').toLowerCase();
     const target = t || tasks.find(x => x.status === 'done' && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
     if (!target) { addMsg('agent', 'Не знайшов закриту задачу з такою назвою.'); return true; }
@@ -1362,7 +1363,7 @@ export async function sendTasksBarMessage() {
       if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
       if (parsed.action === 'complete_step') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => x.id === parsed.task_id);
+        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
         if (t) {
           const step = t.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
           if (step) {
@@ -1380,13 +1381,13 @@ export async function sendTasksBarMessage() {
       }
       if (parsed.action === 'complete_task') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => x.id === parsed.task_id);
+        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
         if (t) { t.status = 'done'; t.completedAt = Date.now(); t.updatedAt = Date.now(); t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
         return true;
       }
       if (parsed.action === 'add_step') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => x.id === parsed.task_id);
+        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
         if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
         return true;
       }
@@ -1423,7 +1424,7 @@ export async function sendTasksBarMessage() {
         const title = (parsed.title || '').trim();
         if (title) {
           const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-          tasks.unshift({ id: Date.now() + Math.floor(Math.random() * 1000), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+          tasks.unshift({ id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
           saveTasks(tasks); renderTasks();
           addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
         }
@@ -1431,7 +1432,7 @@ export async function sendTasksBarMessage() {
       }
       if (parsed.action === 'undo_step') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => x.id === parsed.task_id);
+        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
         if (t) {
           const step = t.steps.find(s => s.text.toLowerCase().includes((parsed.step_text || '').toLowerCase().substring(0,10)));
           if (step) {

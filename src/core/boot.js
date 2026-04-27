@@ -1,4 +1,5 @@
 import { applyTheme, autoRefreshMemory, closeSettings, currentTab, setupDrumTabbar, updateKeyStatus } from './nav.js';
+import { generateUUID } from './uuid.js';
 import { cleanupTrash } from './trash.js';
 import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
@@ -336,7 +337,43 @@ function runMigrations() {
     localStorage.setItem('nm_pruning_wipe_v1_done', '1');
     console.log('[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)');
   }
-  // v8: нові міграції додавати тут
+  // v8 (27.04.2026 xGe1H Pre-Migration Hardening Підсесія 1B): Task.id Date.now() → UUID.
+  // Пілот UUID-міграції перед Supabase. Supabase primary key очікує UUID, не number.
+  // Бекап nm_tasks у nm_tasks_backup_v7 — на випадок rollback. Перевіряє typeof
+  // щоб не повторно мігрувати рядкові ID. Не чіпає steps[].id (окрема міграція v9+).
+  if (!localStorage.getItem('nm_tasks_uuid_migrated_v8')) {
+    try {
+      const tasksRaw = localStorage.getItem('nm_tasks');
+      if (tasksRaw) {
+        // Бекап тільки nm_tasks (не весь localStorage — щоб не вилетіти у quota)
+        localStorage.setItem('nm_tasks_backup_v7', tasksRaw);
+        const tasks = JSON.parse(tasksRaw);
+        if (Array.isArray(tasks)) {
+          let migrated = 0;
+          tasks.forEach(t => {
+            if (typeof t.id === 'number') {
+              t.legacy_id = t.id;
+              t.id = generateUUID();
+              migrated++;
+            }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_tasks', JSON.stringify(tasks));
+            console.log(`[boot] v8 migration: ${migrated} tasks migrated to UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_tasks_uuid_migrated_v8', '1');
+    } catch (e) {
+      console.error('[boot] v8 migration failed:', e);
+      // Rollback з бекапу якщо щось зламалось
+      const backup = localStorage.getItem('nm_tasks_backup_v7');
+      if (backup) {
+        try { localStorage.setItem('nm_tasks', backup); } catch(_) {}
+      }
+    }
+  }
+  // v9: нові міграції додавати тут
 }
 
 // === INIT ===

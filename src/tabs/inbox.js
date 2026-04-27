@@ -6,6 +6,7 @@
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
@@ -306,12 +307,12 @@ export function renderInbox() {
     const card = wrap.querySelector('.inbox-item');
     if (!card) return;
     attachSwipeDelete(wrap, card, () => {
-      const id = parseInt(wrap.dataset.id);
+      const id = wrap.dataset.id;
       const allItems = getInbox();
-      const originalIdx = allItems.findIndex(i => i.id === id);
-      const item = allItems.find(i => i.id === id);
+      const originalIdx = allItems.findIndex(i => String(i.id) === id);
+      const item = allItems.find(i => String(i.id) === id);
       if (item) addToTrash('inbox', item);
-      saveInbox(allItems.filter(i => i.id !== id));
+      saveInbox(allItems.filter(i => String(i.id) !== id));
       renderInbox();
       if (item) showUndoToast('Видалено з Inbox', () => {
         const items = getInbox();
@@ -1065,12 +1066,12 @@ async function processSaveAction(parsed, originalText) {
       addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
       return;
     }
-    const taskId = Date.now();
+    const taskId = generateUUID();
     const tasks = getTasks();
     const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
       ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
       : [];
-    const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: taskId };
+    const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: Date.now() };
     if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
     if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
     tasks.unshift(newTask);

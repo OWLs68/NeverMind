@@ -5,6 +5,7 @@
 
 import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
@@ -147,7 +148,7 @@ function saveTask() {
       tasks[idx] = { ...tasks[idx], title, desc, steps: tempSteps, updatedAt: Date.now() };
     }
   } else {
-    tasks.unshift({ id: Date.now(), title, desc, steps: tempSteps, status: 'active', createdAt: Date.now() });
+    tasks.unshift({ id: generateUUID(), title, desc, steps: tempSteps, status: 'active', createdAt: Date.now() });
   }
 
   saveTasks(tasks);
@@ -285,13 +286,13 @@ export function renderTasks() {
   document.querySelectorAll('#tasks-list .task-item-wrap').forEach(wrap => {
     const card = wrap.querySelector('[id^="task-item-"]');
     if (!card) return;
-    const id = parseInt(card.id.replace('task-item-', ''));
+    const id = card.id.replace('task-item-', '');
     attachSwipeDelete(wrap, card, () => {
       const tasks = getTasks();
-      const taskOrigIdx = tasks.findIndex(x => x.id === id);
-      const item = tasks.find(x => x.id === id);
+      const taskOrigIdx = tasks.findIndex(x => String(x.id) === id);
+      const item = tasks.find(x => String(x.id) === id);
       if (item) addToTrash('task', item);
-      saveTasks(tasks.filter(x => x.id !== id));
+      saveTasks(tasks.filter(x => String(x.id) !== id));
       renderTasks();
       if (item) showUndoToast('Задачу видалено', () => {
         const t = getTasks();
