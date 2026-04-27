@@ -921,8 +921,8 @@ function selectOwlMode(mode) {
   ['coach','partner','mentor'].forEach(m => {
     const card = document.getElementById('owl-card-' + m);
     if (!card) return;
-    card.style.border = m === mode ? '2px solid #7c3aed' : '2px solid rgba(124,58,237,0.15)';
-    card.style.background = m === mode ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.8)';
+    card.style.border = m === mode ? '2px solid #c2790a' : '2px solid rgba(194,121,10,0.15)';
+    card.style.background = m === mode ? 'rgba(194,121,10,0.08)' : 'rgba(255,255,255,0.8)';
   });
 }
 
