@@ -804,6 +804,23 @@ ${logLines}
     }
   });
 
+  // src/core/uuid.js
+  function generateUUID() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    const buf = new Uint8Array(16);
+    crypto.getRandomValues(buf);
+    buf[6] = buf[6] & 15 | 64;
+    buf[8] = buf[8] & 63 | 128;
+    const hex = [...buf].map((b) => b.toString(16).padStart(2, "0"));
+    return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+  }
+  var init_uuid = __esm({
+    "src/core/uuid.js"() {
+    }
+  });
+
   // src/owl/unified-storage.js
   function _migrateOnce() {
     if (localStorage.getItem(MIGRATION_FLAG)) return;
@@ -4317,7 +4334,7 @@ ${lines.join("\n")}`;
       if (!title) return;
       const steps = Array.isArray(action.steps) ? action.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
       const tasks = getTasks();
-      tasks.unshift({ id: Date.now(), title, desc: action.desc || "", steps, status: "active", createdAt: Date.now() });
+      tasks.unshift({ id: generateUUID(), title, desc: action.desc || "", steps, status: "active", createdAt: Date.now() });
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
       showOwlConfirm("\u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u2713");
@@ -4474,6 +4491,7 @@ ${lines.join("\n")}`;
     "src/owl/inbox-board.js"() {
       init_nav();
       init_utils();
+      init_uuid();
       init_core();
       init_board();
       init_unified_storage();
@@ -8416,14 +8434,14 @@ ${recent}`;
     document.querySelectorAll(".note-item-wrap").forEach((wrap) => {
       const card = wrap.querySelector('[id^="note-item-"]');
       if (!card) return;
-      const id = parseInt(wrap.dataset.id);
+      const id = wrap.dataset.id;
       attachSwipeDelete(wrap, card, () => {
         const allNotes = getNotes();
-        const noteSwipeIdx = allNotes.findIndex((x) => x.id === id);
+        const noteSwipeIdx = allNotes.findIndex((x) => String(x.id) === id);
         const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
-        const item = allNotes.find((x) => x.id === id);
+        const item = allNotes.find((x) => String(x.id) === id);
         if (item) addToTrash("note", item);
-        saveNotes(allNotes.filter((x) => x.id !== id));
+        saveNotes(allNotes.filter((x) => String(x.id) !== id));
         renderNotes();
         if (item) showUndoToast("\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
           const notes = getNotes();
@@ -11331,20 +11349,20 @@ ${UI_TOOLS_RULES}`;
         { type: "function", function: { name: "update_project_risks", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438 \u0430\u0431\u043E \u0437\u0430\u043D\u0435\u043F\u043E\u043A\u043E\u0454\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { project_id: { type: "integer" }, risks: { type: "string" }, comment: { type: "string" } }, required: ["project_id", "risks"], additionalProperties: false } } },
         // --- ВИКОНАННЯ ---
         { type: "function", function: { name: "complete_habit", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443(\u0438) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0437\u0432\u0438\u0447\u043E\u043A.", parameters: { type: "object", properties: { habit_ids: { type: "array", items: { type: "integer" }, description: "ID \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["habit_ids", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.", parameters: { type: "object", properties: { task_ids: { type: "array", items: { type: "integer" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["task_ids", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.", parameters: { type: "object", properties: { task_ids: { type: "array", items: { type: "string" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 (\u0440\u044F\u0434\u043A\u043E\u0432\u0456 \u2014 UUID \u0430\u0431\u043E \u0447\u0438\u0441\u043B\u043E\u0432\u0456 ID \u044F\u043A \u0440\u044F\u0434\u043E\u043A)" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["task_ids", "comment"], additionalProperties: false } } },
         // --- РЕДАГУВАННЯ ---
-        { type: "function", function: { name: "edit_task", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438/\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "integer", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456" }, title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_task", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438/\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A \u2014 UUID \u0430\u0431\u043E \u0447\u0438\u0441\u043B\u043E\u0432\u0438\u0439 ID \u044F\u043A \u0440\u044F\u0434\u043E\u043A)" }, title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
         { type: "function", function: { name: "edit_habit", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0432\u0438\u0447\u043A\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u043D\u0456, \u0434\u0435\u0442\u0430\u043B\u0456. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0443 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443!", parameters: { type: "object", properties: { habit_id: { type: "integer", description: "ID \u0437\u0432\u0438\u0447\u043A\u0438" }, name: { type: "string" }, days: { type: "array", items: { type: "integer" } }, details: { type: "string" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
         { type: "function", function: { name: "edit_event", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043F\u043E\u0434\u0456\u044E: \u0434\u0430\u0442\u0443, \u0447\u0430\u0441, \u043D\u0430\u0437\u0432\u0443. \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438 \u043F\u043E\u0434\u0456\u044E.", parameters: { type: "object", properties: { event_id: { type: "integer", description: "ID \u043F\u043E\u0434\u0456\u0457" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
         { type: "function", function: { name: "edit_note", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: \u0442\u0435\u043A\u0441\u0442 \u0430\u0431\u043E \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { note_id: { type: "integer", description: "ID \u043D\u043E\u0442\u0430\u0442\u043A\u0438" }, text: { type: "string" }, folder: { type: "string" }, comment: { type: "string" } }, required: ["note_id"], additionalProperties: false } } },
         // --- ВИДАЛЕННЯ ---
-        { type: "function", function: { name: "delete_task", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_task", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A)" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
         { type: "function", function: { name: "delete_habit", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443.", parameters: { type: "object", properties: { habit_id: { type: "integer" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
         { type: "function", function: { name: "delete_event", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0434\u0456\u044E \u0437 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F.", parameters: { type: "object", properties: { event_id: { type: "integer" }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
         { type: "function", function: { name: "delete_folder", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u0430\u043F\u043A\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A \u0437 \u0443\u0441\u0456\u043C\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430\u043C\u0438.", parameters: { type: "object", properties: { folder: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0430\u043F\u043A\u0438" } }, required: ["folder"], additionalProperties: false } } },
         // --- ІНШЕ ---
-        { type: "function", function: { name: "reopen_task", description: "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "add_step", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456.", parameters: { type: "object", properties: { task_id: { type: "integer" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id", "steps"], additionalProperties: false } } },
+        { type: "function", function: { name: "reopen_task", description: "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456.", parameters: { type: "object", properties: { task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A)" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "add_step", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456.", parameters: { type: "object", properties: { task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A)" }, steps: { type: "array", items: { type: "string" } } }, required: ["task_id", "steps"], additionalProperties: false } } },
         { type: "function", function: { name: "move_note", description: "\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { query: { type: "string", description: "\u0427\u0430\u0441\u0442\u0438\u043D\u0430 \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, folder: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430" } }, required: ["query", "folder"], additionalProperties: false } } },
         { type: "function", function: { name: "update_transaction", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E. \u042E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043A\u0430\u0436\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438/\u0432\u0438\u043F\u0440\u0430\u0432\u0438\u0442\u0438 \u0441\u0443\u043C\u0443 \u0430\u0431\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E.", parameters: { type: "object", properties: { id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
         { type: "function", function: { name: "delete_transaction", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E (\u0443 \u043A\u043E\u0448\u0438\u043A \u043D\u0430 7 \u0434\u043D\u0456\u0432). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0438\u0434\u0430\u043B\u0438 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E', '\u043F\u0440\u0438\u0431\u0435\u0440\u0438 \u0446\u044E \u0432\u0438\u0442\u0440\u0430\u0442\u0443'.", parameters: { type: "object", properties: { id: { type: "integer", description: "ID \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, comment: { type: "string" } }, required: ["id"], additionalProperties: false } } },
@@ -12072,13 +12090,13 @@ ${UI_TOOLS_RULES}`;
   function _attachHabitsSwipeDelete() {
     const bind = (wrap, card) => {
       if (!card) return;
-      const id = parseInt(wrap.dataset.id);
+      const id = wrap.dataset.id;
       attachSwipeDelete(wrap, card, () => {
         const allHabits = getHabits();
-        const habitOrigIdx = allHabits.findIndex((h) => h.id === id);
-        const item = allHabits.find((h) => h.id === id);
+        const habitOrigIdx = allHabits.findIndex((h) => String(h.id) === id);
+        const item = allHabits.find((h) => String(h.id) === id);
         if (item) addToTrash("habit", item);
-        saveHabits(allHabits.filter((h) => h.id !== id));
+        saveHabits(allHabits.filter((h) => String(h.id) !== id));
         renderHabits();
         renderProdHabits();
         if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
@@ -12149,7 +12167,7 @@ ${UI_TOOLS_RULES}`;
         return true;
       }
       const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-      const newTask = { id: Date.now(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() };
+      const newTask = { id: generateUUID(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() };
       if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
       if (parsed.priority && ["important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
       const tasks = getTasks();
@@ -12193,7 +12211,7 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "edit_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => x.id === parsed.task_id);
+      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
       if (!t) {
         const nameQ = (parsed.title || "").toLowerCase();
         const found = tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
@@ -12227,7 +12245,7 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "delete_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => x.id === parsed.task_id);
+      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
       const target = t || tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
@@ -12262,7 +12280,7 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "reopen_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => x.id === parsed.task_id && x.status === "done");
+      const t = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
       const target = t || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
@@ -12570,7 +12588,7 @@ ${UI_TOOLS_RULES}`;
         if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
         if (parsed.action === "complete_step") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => x.id === parsed.task_id);
+          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
           if (t) {
             const step = t.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
             if (step) {
@@ -12591,7 +12609,7 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "complete_task") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => x.id === parsed.task_id);
+          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
           if (t) {
             t.status = "done";
             t.completedAt = Date.now();
@@ -12605,7 +12623,7 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "add_step") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => x.id === parsed.task_id);
+          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
           if (t) {
             t.steps.push({ id: Date.now(), text: parsed.step, done: false });
             saveTasks(allTasks);
@@ -12648,7 +12666,7 @@ ${UI_TOOLS_RULES}`;
           const title = (parsed.title || "").trim();
           if (title) {
             const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-            tasks2.unshift({ id: Date.now() + Math.floor(Math.random() * 1e3), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() });
+            tasks2.unshift({ id: generateUUID(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() });
             saveTasks(tasks2);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "' + title + '" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!');
@@ -12657,7 +12675,7 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "undo_step") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => x.id === parsed.task_id);
+          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
           if (t) {
             const step = t.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
             if (step) {
@@ -12690,6 +12708,7 @@ ${UI_TOOLS_RULES}`;
     "src/tabs/habits.js"() {
       init_nav();
       init_utils();
+      init_uuid();
       init_trash();
       init_core();
       init_prompts();
@@ -13498,7 +13517,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         tasks[idx] = { ...tasks[idx], title, desc, steps: tempSteps, updatedAt: Date.now() };
       }
     } else {
-      tasks.unshift({ id: Date.now(), title, desc, steps: tempSteps, status: "active", createdAt: Date.now() });
+      tasks.unshift({ id: generateUUID(), title, desc, steps: tempSteps, status: "active", createdAt: Date.now() });
     }
     saveTasks(tasks);
     closeTaskModal();
@@ -13621,13 +13640,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     document.querySelectorAll("#tasks-list .task-item-wrap").forEach((wrap) => {
       const card = wrap.querySelector('[id^="task-item-"]');
       if (!card) return;
-      const id = parseInt(card.id.replace("task-item-", ""));
+      const id = card.id.replace("task-item-", "");
       attachSwipeDelete(wrap, card, () => {
         const tasks2 = getTasks();
-        const taskOrigIdx = tasks2.findIndex((x) => x.id === id);
-        const item = tasks2.find((x) => x.id === id);
+        const taskOrigIdx = tasks2.findIndex((x) => String(x.id) === id);
+        const item = tasks2.find((x) => String(x.id) === id);
         if (item) addToTrash("task", item);
-        saveTasks(tasks2.filter((x) => x.id !== id));
+        saveTasks(tasks2.filter((x) => String(x.id) !== id));
         renderTasks();
         if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
           const t = getTasks();
@@ -13871,6 +13890,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     "src/tabs/tasks.js"() {
       init_nav();
       init_utils();
+      init_uuid();
       init_trash();
       init_core();
       init_chips();
@@ -15089,12 +15109,12 @@ ${userText}
       const card = wrap.querySelector(".inbox-item");
       if (!card) return;
       attachSwipeDelete(wrap, card, () => {
-        const id = parseInt(wrap.dataset.id);
+        const id = wrap.dataset.id;
         const allItems = getInbox();
-        const originalIdx = allItems.findIndex((i) => i.id === id);
-        const item = allItems.find((i) => i.id === id);
+        const originalIdx = allItems.findIndex((i) => String(i.id) === id);
+        const item = allItems.find((i) => String(i.id) === id);
         if (item) addToTrash("inbox", item);
-        saveInbox(allItems.filter((i) => i.id !== id));
+        saveInbox(allItems.filter((i) => String(i.id) !== id));
         renderInbox();
         if (item) showUndoToast("\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0437 Inbox", () => {
           const items2 = getInbox();
@@ -15828,10 +15848,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
         return;
       }
-      const taskId = Date.now();
+      const taskId = generateUUID();
       const tasks = getTasks();
       const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0 ? parsed.task_steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-      const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: taskId };
+      const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: Date.now() };
       if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
       if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
       tasks.unshift(newTask);
@@ -16006,6 +16026,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     "src/tabs/inbox.js"() {
       init_nav();
       init_utils();
+      init_uuid();
       init_trash();
       init_core();
       init_ui_tools();
@@ -17105,6 +17126,39 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       localStorage.setItem("nm_pruning_wipe_v1_done", "1");
       console.log("[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)");
     }
+    if (!localStorage.getItem("nm_tasks_uuid_migrated_v8")) {
+      try {
+        const tasksRaw = localStorage.getItem("nm_tasks");
+        if (tasksRaw) {
+          localStorage.setItem("nm_tasks_backup_v7", tasksRaw);
+          const tasks2 = JSON.parse(tasksRaw);
+          if (Array.isArray(tasks2)) {
+            let migrated = 0;
+            tasks2.forEach((t) => {
+              if (typeof t.id === "number") {
+                t.legacy_id = t.id;
+                t.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
+              console.log(`[boot] v8 migration: ${migrated} tasks migrated to UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_tasks_uuid_migrated_v8", "1");
+      } catch (e) {
+        console.error("[boot] v8 migration failed:", e);
+        const backup = localStorage.getItem("nm_tasks_backup_v7");
+        if (backup) {
+          try {
+            localStorage.setItem("nm_tasks", backup);
+          } catch (_) {
+          }
+        }
+      }
+    }
   }
   function init() {
     try {
@@ -17259,6 +17313,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   var init_boot = __esm({
     "src/core/boot.js"() {
       init_nav();
+      init_uuid();
       init_trash();
       init_core();
       init_board();
