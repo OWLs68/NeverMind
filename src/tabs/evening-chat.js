@@ -69,7 +69,7 @@ async function openEveningTopic(topic) {
   const systemPrompt = getEveningChatSystem() + '\n\n' + getAIContext() + '\n\n=== СЦЕНАРІЙ ===\n' + tp + '\n\nУ ЦЬОМУ ПЕРШОМУ ПОВІДОМЛЕННІ: без tool calls (юзер ще не просив створювати). Тільки content: стартове питання + чіпи.';
 
   try {
-    const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS, 'evening-bar');
     if (!msg) { handleChatError(addEveningBarMsg); return; }
     // Стартове повідомлення не має виконувати tool calls, але якщо AI все ж
     // дав — виконуємо (bонус); основне — content + чіпи
@@ -178,7 +178,7 @@ export async function sendEveningBarMessage() {
   const history = eveningBarHistory.slice(-10);
 
   try {
-    const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS, 'evening-bar');
     if (!msg) { handleChatError(addEveningBarMsg); eveningBarLoading = false; return; }
 
     // Виконуємо tool calls через локальний dispatcher (без Inbox side effects)

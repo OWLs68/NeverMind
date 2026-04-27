@@ -10,6 +10,7 @@ import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } fr
 import { getNotes } from '../tabs/notes.js';
 import { getFinance, getFinanceContext, getFinBudget, getFinPeriodRange, formatMoney } from '../tabs/finance.js';
 import { getEveningMood } from '../tabs/evening.js';
+import { logUsage } from '../core/usage-meter.js';
 
 // Толерантний JSON парсер — якщо звичайний JSON.parse впав, витягує {...} або [...] блок з тексту.
 // Страховка на випадок якщо AI все ж поверне звичайний текст з JSON всередині попри response_format.
@@ -806,6 +807,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
       return;
     }
     const data = await res.json();
+    if (data?.usage) logUsage('owl-board', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) {
       const errDetail = 'empty reply: ' + JSON.stringify(data?.error || {}).slice(0, 150);

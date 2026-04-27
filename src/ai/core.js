@@ -22,6 +22,7 @@ import { getBoardContext } from '../owl/proactive.js';
 import { formatFactsForContext, getFacts } from './memory.js';
 import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPrompt } from './prompts.js';
 import { clearUnreadBadge, showUnreadBadge } from '../ui/unread-badge.js';
+import { logUsage } from '../core/usage-meter.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
 // які імпортують ці константи з './ai/core.js' продовжували працювати без змін.
@@ -361,7 +362,7 @@ export function handleChatError(addMsg) {
   }
 }
 
-async function _fetchAI(messages, signal, tools, temperature = 0.7) {
+async function _fetchAI(messages, signal, tools, temperature = 0.7, module = 'unknown') {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
@@ -379,6 +380,7 @@ async function _fetchAI(messages, signal, tools, temperature = 0.7) {
     return null;
   }
   const data = await res.json();
+  if (data?.usage) logUsage(module, data.usage, data.model || 'gpt-4o-mini');
   const msg = data.choices?.[0]?.message;
   if (!msg) return null;
   // Якщо tools передані — повертаємо повний message object
@@ -387,7 +389,7 @@ async function _fetchAI(messages, signal, tools, temperature = 0.7) {
   return msg.content || null;
 }
 
-export async function callAI(systemPrompt, userMessage, contextData = {}) {
+export async function callAI(systemPrompt, userMessage, contextData = {}, module = 'callAI') {
   const context = Object.keys(contextData).length > 0
     ? `\n\nКонтекст:\n${JSON.stringify(contextData, null, 2)}`
     : '';
@@ -396,7 +398,7 @@ export async function callAI(systemPrompt, userMessage, contextData = {}) {
     { role: 'user', content: userMessage + context }
   ];
   try {
-    const text = await _fetchAI(messages, undefined);
+    const text = await _fetchAI(messages, undefined, undefined, 0.7, module);
     if (text === null) return null;
     if (!text) { showToast('❌ Порожня відповідь від Агента', 3000); return null; }
     return text;
@@ -434,19 +436,19 @@ export async function callOwlChat(userText) {
   ];
 
   try {
-    const reply = await _fetchAI(messages, undefined);
+    const reply = await _fetchAI(messages, undefined, undefined, 0.7, 'owl-mini-chat');
     return reply;
   } catch(e) {
     return null;
   }
 }
 
-export async function callAIWithHistory(systemPrompt, history) {
+export async function callAIWithHistory(systemPrompt, history, module = 'callAIWithHistory') {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000); // 25 сек таймаут
   try {
     const messages = [{ role: 'system', content: systemPrompt }, ...history];
-    const reply = await _fetchAI(messages, controller.signal);
+    const reply = await _fetchAI(messages, controller.signal, undefined, 0.7, module);
     clearTimeout(timeout);
     return reply;
   } catch(e) {
@@ -459,12 +461,13 @@ export async function callAIWithHistory(systemPrompt, history) {
 // === callAIWithTools — tool calling для Inbox ===
 // Повертає message object { content?, tool_calls? } або null
 // Temperature 0.2 — класифікація має бути стабільною, не творчою
-export async function callAIWithTools(systemPrompt, history, tools) {
+// `module` — ідентифікатор для лічильника витрат (inbox/tasks-bar/notes-bar тощо).
+export async function callAIWithTools(systemPrompt, history, tools, module = 'callAIWithTools') {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const messages = [{ role: 'system', content: systemPrompt }, ...history];
-    const msg = await _fetchAI(messages, controller.signal, tools, 0.2);
+    const msg = await _fetchAI(messages, controller.signal, tools, 0.2, module);
     clearTimeout(timeout);
     return msg;
   } catch(e) {

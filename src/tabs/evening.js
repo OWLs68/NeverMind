@@ -8,6 +8,7 @@
 
 import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
+import { logUsage } from '../core/usage-meter.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
 import { getNotes } from './notes.js';
@@ -347,6 +348,7 @@ export async function generateMomentSummary(momentId, text) {
       })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('evening-summary', data.usage, data.model);
     const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, '');
     if (!summary) return;
     // Зберігаємо summary в обʼєкт моменту

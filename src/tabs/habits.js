@@ -5,6 +5,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
+import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -124,6 +125,7 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
       }]
     })
   }).then(r => r.json()).then(d => {
+    if (d?.usage) logUsage('habits-ai', d.usage, d.model);
     const reply = d.choices?.[0]?.message?.content;
     if (reply) addInboxChatMsg('agent', reply);
   }).catch(() => {
@@ -1406,7 +1408,7 @@ export async function sendTasksBarMessage() {
   try {
     // "Один мозок #2 A": INBOX_TOOLS — повний набір CRUD + UI.
     const history = [...taskBarHistory.slice(-8), { role: 'user', content: text }];
-    const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS, 'tasks-bar');
 
     // Tool dispatch — UI tool або CRUD через universal action
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {

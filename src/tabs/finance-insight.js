@@ -6,6 +6,7 @@
 
 import { escapeHtml } from '../core/utils.js';
 import { getOWLPersonality } from '../ai/core.js';
+import { logUsage } from '../core/usage-meter.js';
 import { getCurrency, formatMoney, getFinBudget } from './finance.js';
 
 // B-46: кеш 1 год + інвалідація по хешу даних
@@ -100,6 +101,7 @@ ${totalInc > 0 ? `Доходи: ${formatMoney(totalInc)} (заощаджено $
       body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 120, temperature: 0.3 })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('finance-insight', data.usage, data.model);
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) return;
     localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now(), hash: currentHash }));

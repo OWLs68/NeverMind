@@ -5,6 +5,7 @@
 
 import { currentTab, showToast, switchTab, updateKeyStatus } from '../core/nav.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { logUsage } from '../core/usage-meter.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getProjects, saveProjects } from './projects.js';
 
@@ -669,6 +670,7 @@ async function finishSurvey() {
       body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.7 })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (reply) {
       try {
@@ -812,6 +814,7 @@ async function generateProjectFirstSteps(projectName) {
       })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) return;
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
@@ -856,6 +859,7 @@ export async function saveGuideTopicAnswer(userText) {
       })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const updated = data.choices?.[0]?.message?.content?.trim();
     if (updated) {
       localStorage.setItem('nm_memory', updated);

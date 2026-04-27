@@ -88,7 +88,7 @@ ${REMINDER_RULES}
 ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''}`;
 
   // "Один мозок #2 A": INBOX_TOOLS (31) + UI tools — повний набір для CRUD і навігації.
-  const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS);
+  const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS, 'me-chat');
   const loadEl = document.getElementById(loadId);
 
   // Tool dispatch — через спільний dispatcher (UI tool OR CRUD через universal action)

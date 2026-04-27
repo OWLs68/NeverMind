@@ -454,7 +454,7 @@ export async function sendToAI(fromChip = false) {
 - Якщо даних нема — скажи прямо "поки що нема"
 
 ${aiContext}`;
-    const reply = await callAIWithHistory(qPrompt, historySlice);
+    const reply = await callAIWithHistory(qPrompt, historySlice, 'inbox-quick-q');
     const elapsedQ = Date.now() - _aiStart;
     if (elapsedQ < 800) await new Promise(r => setTimeout(r, 800 - elapsedQ));
     addInboxChatMsg('agent', reply || 'Не зрозумів, переформулюй?');
@@ -466,7 +466,7 @@ ${aiContext}`;
   }
 
   // === TOOL CALLING — основний виклик ===
-  const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS);
+  const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS, 'inbox');
 
   // Мінімальна затримка — typing indicator тримається хоча б 0.8 сек
   const elapsed = Date.now() - _aiStart;
@@ -910,7 +910,7 @@ async function sendClarifyText() {
   const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   const combinedMsg = `Оригінальний запис: "${origText}". Уточнення від користувача: "${text}"`;
   // Tool calling для уточнення
-  const msg = await callAIWithTools(fullPrompt, [{ role: 'user', content: combinedMsg }], INBOX_TOOLS);
+  const msg = await callAIWithTools(fullPrompt, [{ role: 'user', content: combinedMsg }], INBOX_TOOLS, 'inbox-clarify');
   if (msg) {
     try {
       if (msg.tool_calls && msg.tool_calls.length > 0) {

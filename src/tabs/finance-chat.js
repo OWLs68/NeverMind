@@ -102,7 +102,7 @@ export async function sendFinanceBarMessage() {
   }) + (getAIContext() ? '\n\n' + getAIContext() : '');
 
   try {
-    const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS, 'finance-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
