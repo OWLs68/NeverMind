@@ -1,6 +1,7 @@
 import { openChatBar } from '../ai/core.js';
 import { renderChips } from './chips.js';
 import { getCurrentMessage, getTabMessages, getUnifiedBoard, saveTabMessage } from './unified-storage.js';
+import { isMessageRelevant } from './board-utils.js';
 
 // === OWL TAB BOARDS (#37) ===
 export const OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1000; // 30 хвилин між оновленнями
@@ -13,8 +14,12 @@ export function getOwlTabTsKey(tab) { return 'nm_owl_tab_ts_' + tab; }
 // Обгортка над unified storage — повертає повідомлення які генерувались для
 // конкретної вкладки (для історії, Judge Layer тощо). Для рендеру на табло
 // використовуй getCurrentMessage() — воно ЄДИНЕ на всі вкладки.
+//
+// Pruning Engine (Фаза 2 UVKL1): фільтр isMessageRelevant викидає повідомлення
+// з посиланнями на вже-неактивні сутності (закриті задачі, виконані звички тощо).
+// Завдяки цьому при nm-data-changed re-render UI старі бабли зникають миттєво.
 export function getTabBoardMsgs(tab) {
-  return getTabMessages(tab);
+  return getTabMessages(tab).filter(isMessageRelevant);
 }
 export function saveTabBoardMsg(tab, newMsg) {
   saveTabMessage(tab, newMsg);
@@ -107,7 +112,10 @@ export function scrollOwlTabChips(tab, dir) {
 // Рядові — тільки на своїй вкладці, щоб на Фінансах не мигало про задачі.
 // Якщо для вкладки немає нічого — fallback на глобальне найсвіжіше.
 function _pickMessageForTab(tab) {
-  const all = getUnifiedBoard();
+  // Pruning Engine (Фаза 2 UVKL1): викидаємо повідомлення з посиланнями на
+  // неактивні сутності перед вибором. Якщо найсвіжіше критичне посилається
+  // на вже-закриту задачу — воно зникає, наступне за пріоритетом виходить наперед.
+  const all = getUnifiedBoard().filter(isMessageRelevant);
   if (all.length === 0) return null;
   // 1. Найсвіжіше критичне пробиває фільтр — Jarvis-пуш
   if (all[0].priority === 'critical') return all[0];

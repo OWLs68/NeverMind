@@ -5,7 +5,6 @@ import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase, getSchedule, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, owlCdExpired, renderOwlBoard, shouldOwlSpeak, tryOwlBoardUpdate } from './inbox-board.js';
 import { CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, getChipStatsForPrompt } from './chips.js';
-import { isMessageRelevant } from './board-utils.js';
 import { getTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, getQuitStatus } from '../tabs/habits.js';
 import { getNotes } from '../tabs/notes.js';
@@ -665,12 +664,11 @@ export async function generateBoardMessage(tab, options = {}) {
   const context = getBoardContext(tab);
 
   // Історія повідомлень: inbox і вкладки мають різні сховища
-  // Pruning Engine (Фаза 2 UVKL1): фільтр повідомлень з посиланнями на
-  // вже-неактивні сутності (закриті задачі, виконані звички, видалені нотатки).
-  // Без фільтру модель цитує своє ж старе "Не забудь молоко" з boardHistory
-  // навіть коли молоко вже закрито — інерція маленької моделі.
-  const allMsgsRaw = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
-  const allMsgs = allMsgsRaw.filter(isMessageRelevant);
+  // Pruning Engine (Фаза 2 UVKL1): обидва геттери (getOwlBoardMessages,
+  // getTabBoardMsgs) уже фільтрують через isMessageRelevant. Тут отримуємо
+  // лише "живі" повідомлення — модель не побачить старе "Не забудь молоко"
+  // якщо молоко закрите.
+  const allMsgs = isInbox ? getOwlBoardMessages() : getTabBoardMsgs(tab);
   const existing = allMsgs[0] || null;
   const recentText = existing ? existing.text : '';
   const recentTexts = allMsgs.slice(0, 5).map(m => m.text).join(' | ');
