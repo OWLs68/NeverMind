@@ -8,6 +8,34 @@
 
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
+### Сесія C8uQD (27.04.2026) — OWL Silence + Pruning Engine 3 фази
+
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-100 | `src/ai/ui-tools.js` (новий tool) + `src/owl/inbox-board.js` (`shouldOwlSpeak`) + `src/ai/prompts.js` (UI_TOOLS_RULES) + `src/ai/core.js` (getAIContext silence flag) | Сова не реагує на пряме «відступи» — iPhone 22-23.04 скрін: юзер написав «Не доставай з задачами» → сова відповіла «Давай зосередимось на вечері. Що ще можу запропонувати?». | **Закрито структурно через Silence Engine (Фази 1+3):** Замість додавання нових промптових тригер-слів («не доставай / відчепись» — модель інерційно ігнорує) — введено AI-tool `request_quiet(duration_hours)` який пише `nm_owl_silence_until` у localStorage. Чек тиші у `shouldOwlSpeak()` блокує всі 4 канали сови. Фаза 3 додала `[ВАЖЛИВО — РЕЖИМ ТИШІ]` у `getAIContext()`. Виявлено v2vYo 24.04, фікс C8uQD 27.04. Коміти `044bc7f`, `d89ef79`, `baf91bc`. |
+| B-102 | `src/owl/inbox-board.js` (`shouldOwlSpeak`) + `src/ai/ui-tools.js` (`request_quiet` handler) | Табло не реагує на настрій у чаті — юзер у чаті пише «не доставай», сова продовжує показувати проактивні пропозиції. | **Закрито через Silence Engine Фаза 1.** Не треба новий тип сигналу — просто mute усієї системи через `nm_owl_silence_until`. Виявлено v2vYo 24.04, фікс C8uQD 27.04. Коміт `044bc7f`. |
+
+### Сесія UVKL1 (26.04.2026)
+
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-103 | `src/tabs/calendar.js` (helper) + 8 call-sites: `inbox.js` (4 місця), `habits.js` (3 місця), `evening-actions.js` (2 місця) | Дублікати подій у Календарі. AI повертав 2 `create_event` tool_calls в одній відповіді → дві однакові події. | Створено `addEventDedup(ev)` у `calendar.js` — перевіряє чи вже є подія з тією ж датою+часом+назвою за останні 60 сек. При дублі чат-бар повідомляє «Така подія вже є в календарі». Виявлено v2vYo 24.04, фікс UVKL1 26.04. |
+| B-101 | `src/ai/core.js` (helper) + 9 call-sites: `evening-chat.js` (2), `finance-chat.js`, `habits.js`, `health.js`, `notes.js` (2), `projects.js`, `tasks.js` | Туманне «Щось пішло не так» на будь-яку помилку запиту — юзер не знав, повторювати чи це баг. | Створено `handleChatError(addMsg)` у `core.js`. Якщо `navigator.onLine === false` → «📡 Мережа не відповіла…». Інакше → «Щось пішло не так. Спробуй ще раз.» Виявлено v2vYo 24.04, фікс UVKL1 26.04. |
+
+### Сесія R5Ejr (24.04.2026)
+
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-104 | `src/tabs/tasks.js` + `src/tabs/habits.js` + `src/owl/proactive.js` | Stale OWL board на вкладці Задач — сова повторювала «закрий 3 задачі: X, Y, Z» попри те що юзер щойно їх закрив тапом ✓. | **2 причини:** (1) у 4 з 8 місць `status='done'` ставилось БЕЗ `completedAt`. (2) У `getTabBoardContext('tasks')` не було блоку «Нещодавно закриті». Усі 4 місця тепер ставлять `completedAt+updatedAt` при 'done'. Коміт `3e3892a`. |
+
+### Сесія v2vYo (24.04.2026)
+
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-97 | `src/ai/prompts.js` (+ `src/tabs/habits.js`) | Чат Задач відмовляв «це подія, а не задача» на «Прийом у лікаря відміни» попри наявність `delete_event` у `INBOX_TOOLS` | Доданий `GLOBAL_TOOLS_RULE` — спільний блок «інструменти глобальні у всіх 8 чатах». Глибший архітектурний фікс — через V3 Фазу 1 (`_reasoning_log`). Коміт `9e065a1`. |
+| B-98 | `src/owl/proactive.js` (`generateBoardMessage`) | OWL табло не оновлювалось 8+ годин попри 5+ тригерів. Прапорець `_boardGenerating[tab]` залипав `true`. | Обгорнуто все тіло функції у `try { ... } finally { _boardGenerating[tab] = false; }` + watchdog `setTimeout(60s)`. Коміт `5b25374`. |
+| B-99 | `src/owl/brain-pulse.js:42` | У логах `[brain-pulse] skip:` іноді з пустою причиною. | Fallback `judge.reason \|\| 'unknown'`. Коміт `5b25374`. |
+
 ### Сесія Gg3Fy (20-21.04.2026)
 - **B-94** `src/tabs/health.js` + `src/ai/prompts.js` — "Алергія на пил" → UI-tool замість `add_allergy`. Архітектурна міграція Health chat з text-JSON → `INBOX_TOOLS`. Коміт `5563b15`.
 - **B-95** `src/tabs/health.js` — "Завтра прийом у лікаря на 2" → UI-tool замість `create_event`. Те саме що B-94.
