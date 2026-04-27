@@ -6,6 +6,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, formatTime, parseContentChips } from '../core/utils.js';
+import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
@@ -772,6 +773,7 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
       })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('notes-ai', data.usage, data.model);
     const rawReply = data.choices?.[0]?.message?.content;
     const { text: reply, chips: extractedChips } = parseContentChips(rawReply || '');
     if (reply) {
@@ -1076,7 +1078,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
   try {
     // "Один мозок #2 A": INBOX_TOOLS — повний CRUD + UI.
-    const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS, 'notes-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);

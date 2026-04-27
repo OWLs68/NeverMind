@@ -719,6 +719,7 @@ export function openSettings() {
   const overlay = document.getElementById('settings-overlay');
   overlay.classList.add('open');
   try { updateErrorLogBtn(); } catch(e) {}
+  try { window.renderUsageMeter && window.renderUsageMeter(); } catch(e) {}
 
   const key = localStorage.getItem('nm_gemini_key') || '';
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');

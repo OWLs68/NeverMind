@@ -5,6 +5,7 @@
 
 import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError } from '../ai/core.js';
@@ -449,6 +450,7 @@ async function sendTaskChatMessage() {
       })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('tasks-ai', data.usage, data.model);
     const rawReply = data.choices?.[0]?.message?.content;
     // Виділяємо блок {chips:[...]} окремо щоб він не плутався з action-JSON
     const { text: reply, chips: extractedChips } = parseContentChips(rawReply || '');
@@ -556,6 +558,7 @@ export async function autoGenerateTaskSteps(taskId, title) {
     });
     clearTimeout(timeout);
     const data = await res.json();
+    if (data?.usage) logUsage('tasks-ai', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) return;
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());

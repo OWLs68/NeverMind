@@ -1550,7 +1550,7 @@ export async function sendHealthBarMessage() {
   const systemPrompt = getHealthChatSystem(activeCard) + (aiContext ? '\n\n' + aiContext : '');
 
   try {
-    const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS, 'health-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);

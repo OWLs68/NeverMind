@@ -6,6 +6,7 @@
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, parseContentChips } from '../core/utils.js';
+import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -404,6 +405,7 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
       })
     });
     const data = await res.json();
+    if (data?.usage) logUsage('projects-ai', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (reply) {
       setTimeout(() => {
@@ -499,7 +501,7 @@ export async function sendProjectsBarMessage() {
     + (getAIContext() ? '\n\n' + getAIContext() : '');
 
   try {
-    const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS, 'projects-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);

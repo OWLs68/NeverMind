@@ -61,7 +61,7 @@ export async function brainPulse() {
       content: 'Проаналізуй сигнали вище і виклич post_chat_message один раз, або відповідай "skip".'
     }];
 
-    const result = await callAIWithTools(systemPrompt, history, BRAIN_TOOLS);
+    const result = await callAIWithTools(systemPrompt, history, BRAIN_TOOLS, 'brain-pulse');
 
     if (!result || !result.tool_calls || result.tool_calls.length === 0) {
       console.log('[brain-pulse] model said skip');
