@@ -25,7 +25,7 @@ body {
   --card-border: rgba(255,255,255,0.82);
   --card-radius: 18px;
   --card-blur: blur(16px);
-  --card-shadow: 0 4px 20px rgba(100,70,200,0.06);
+  --card-shadow: 0 2px 12px rgba(30,16,64,0.06);
   /* Standardized card spacing (24.04.2026 R5Ejr — єдиний стандарт висоти карток) */
   --card-gap: 5px;           /* відступ між картками у списку */
   --card-pad-y: 10px;        /* внутрішній відступ зверху/знизу */
