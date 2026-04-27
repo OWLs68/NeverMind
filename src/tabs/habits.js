@@ -5,6 +5,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
+import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE } from '../ai/prompts.js';
@@ -941,7 +942,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       return true;
     }
     const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-    const newTask = { id: Date.now(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
+    const newTask = { id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
     if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
     if (parsed.priority && ['important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
     const tasks = getTasks();
@@ -1423,7 +1424,7 @@ export async function sendTasksBarMessage() {
         const title = (parsed.title || '').trim();
         if (title) {
           const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
-          tasks.unshift({ id: Date.now() + Math.floor(Math.random() * 1000), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+          tasks.unshift({ id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
           saveTasks(tasks); renderTasks();
           addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
         }

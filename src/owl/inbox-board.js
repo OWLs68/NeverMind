@@ -5,6 +5,7 @@
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
+import { generateUUID } from '../core/uuid.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
 import { getTabMessages, saveTabMessage, replaceUnified, getUnifiedBoard, getCurrentMessage } from './unified-storage.js';
@@ -947,7 +948,7 @@ function executeOwlAction(action, originalText) {
     if (!title) return;
     const steps = Array.isArray(action.steps) ? action.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
     const tasks = getTasks();
-    tasks.unshift({ id: Date.now(), title, desc: action.desc || '', steps, status: 'active', createdAt: Date.now() });
+    tasks.unshift({ id: generateUUID(), title, desc: action.desc || '', steps, status: 'active', createdAt: Date.now() });
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
     showOwlConfirm('Задачу створено ✓');
