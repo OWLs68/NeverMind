@@ -73,8 +73,13 @@
 
 | Питання | Файл / секція |
 |---|---|
-| Кольори, палітра, стилі модалок | `docs/DESIGN_SYSTEM.md` |
-| Помилки модалок (padding інцидент) | `docs/DESIGN_SYSTEM.md` → "Помилки які були зроблені" |
+| Кольори, палітра, стилі модалок | `docs/DESIGN_SYSTEM.md` (перепис Aps79 27.04 — 9 секцій з якорями) |
+| Шпаргалка дизайну (1 екран) | `docs/DESIGN_SYSTEM.md` → секція 1 "⚡ Шпаргалка" |
+| Готові шаблони коду (модалка/картка/чіп/Safe Areas/Haptics) | `docs/DESIGN_SYSTEM.md` → секція 3 "📦 Шаблони для копі-пасту" |
+| Чекліст перед UI-пушем | `docs/DESIGN_SYSTEM.md` → секція 6 |
+| Техборг UI (фіолет 4×, конфлікти радіусів/blur/тіней) | `docs/DESIGN_SYSTEM.md` → секція 7 |
+| Інциденти UI (padding 01.04, UUID-onclick xGe1H, мовчанка диспетчера Aps79) | `docs/DESIGN_SYSTEM.md` → секція 8 "🚫 Анти-патерни" |
+| Словник термінів (outer/backdrop/glass/safe-area/skeleton) | `docs/DESIGN_SYSTEM.md` → секція 9 |
 | Свайп-видалення (attachSwipeDelete) | `src/ui/swipe-delete.js` + `docs/DO_NOT_TOUCH.md` |
 | Голосовий ввід у чатах | `src/ui/voice-input.js` |
 | Іконки фінансів (SVG-набір 41 іконки) | `src/tabs/finance-cats.js` |
