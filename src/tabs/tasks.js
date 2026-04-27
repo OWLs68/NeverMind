@@ -285,13 +285,13 @@ export function renderTasks() {
   document.querySelectorAll('#tasks-list .task-item-wrap').forEach(wrap => {
     const card = wrap.querySelector('[id^="task-item-"]');
     if (!card) return;
-    const id = parseInt(card.id.replace('task-item-', ''));
+    const id = card.id.replace('task-item-', '');
     attachSwipeDelete(wrap, card, () => {
       const tasks = getTasks();
-      const taskOrigIdx = tasks.findIndex(x => x.id === id);
-      const item = tasks.find(x => x.id === id);
+      const taskOrigIdx = tasks.findIndex(x => String(x.id) === id);
+      const item = tasks.find(x => String(x.id) === id);
       if (item) addToTrash('task', item);
-      saveTasks(tasks.filter(x => x.id !== id));
+      saveTasks(tasks.filter(x => String(x.id) !== id));
       renderTasks();
       if (item) showUndoToast('Задачу видалено', () => {
         const t = getTasks();

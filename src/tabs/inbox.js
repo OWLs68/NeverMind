@@ -306,12 +306,12 @@ export function renderInbox() {
     const card = wrap.querySelector('.inbox-item');
     if (!card) return;
     attachSwipeDelete(wrap, card, () => {
-      const id = parseInt(wrap.dataset.id);
+      const id = wrap.dataset.id;
       const allItems = getInbox();
-      const originalIdx = allItems.findIndex(i => i.id === id);
-      const item = allItems.find(i => i.id === id);
+      const originalIdx = allItems.findIndex(i => String(i.id) === id);
+      const item = allItems.find(i => String(i.id) === id);
       if (item) addToTrash('inbox', item);
-      saveInbox(allItems.filter(i => i.id !== id));
+      saveInbox(allItems.filter(i => String(i.id) !== id));
       renderInbox();
       if (item) showUndoToast('Видалено з Inbox', () => {
         const items = getInbox();
