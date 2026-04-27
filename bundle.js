@@ -12047,7 +12047,7 @@ ${UI_TOOLS_RULES}`;
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 10px rgba(100,70,200,0.06);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
+      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
     }).join("");
     if (quitHabits.length > 0) {
       html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456</div>';
@@ -14574,8 +14574,8 @@ ${userText}
     ["coach", "partner", "mentor"].forEach((m) => {
       const card = document.getElementById("owl-card-" + m);
       if (!card) return;
-      card.style.border = m === mode ? "2px solid #7c3aed" : "2px solid rgba(124,58,237,0.15)";
-      card.style.background = m === mode ? "rgba(124,58,237,0.08)" : "rgba(255,255,255,0.8)";
+      card.style.border = m === mode ? "2px solid #c2790a" : "2px solid rgba(194,121,10,0.15)";
+      card.style.background = m === mode ? "rgba(194,121,10,0.08)" : "rgba(255,255,255,0.8)";
     });
   }
   function obFinish() {
@@ -15752,7 +15752,7 @@ ${list}
     const optEl = document.getElementById("clarify-options");
     optEl.innerHTML = (parsed.options || []).map((opt, i) => {
       const isPrimary = i === 0;
-      return `<button onclick="selectClarifyOption(${i})" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? "rgba(124,58,237,0.05)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isPrimary ? "rgba(124,58,237,0.2)" : "rgba(30,16,64,0.08)"};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? "#7c3aed" : "#1e1040"};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || "")}</button>`;
+      return `<button onclick="selectClarifyOption(${i})" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? "rgba(194,121,10,0.05)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isPrimary ? "rgba(194,121,10,0.2)" : "rgba(30,16,64,0.08)"};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? "#c2790a" : "#1e1040"};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || "")}</button>`;
     }).join("");
     document.getElementById("clarify-modal").style.display = "flex";
   }
