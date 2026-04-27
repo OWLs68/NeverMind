@@ -22,6 +22,7 @@ import './ai/core.js';
 import './owl/inbox-board.js';
 import './owl/chips.js';
 import './owl/board.js';
+import './owl/board-utils.js';
 import './owl/proactive.js';
 import './owl/followups.js';
 import './owl/brain-pulse.js';

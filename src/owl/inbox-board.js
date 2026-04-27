@@ -8,6 +8,7 @@ import { escapeHtml } from '../core/utils.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
 import { getTabMessages, saveTabMessage, replaceUnified, getUnifiedBoard, getCurrentMessage } from './unified-storage.js';
+import { isMessageRelevant } from './board-utils.js';
 import { renderChips } from './chips.js';
 import { addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
@@ -290,8 +291,12 @@ let _owlBoardTimer = null;
 // Обгортка над unified storage — повертає повідомлення згенеровані для Inbox.
 // Для рендеру на табло використовуй getCurrentMessage() — воно ЄДИНЕ на всі вкладки
 // (Шар 2 "Один мозок V2", 21.04 rJYkw).
+//
+// Pruning Engine (Фаза 2 UVKL1): фільтр isMessageRelevant викидає повідомлення
+// з посиланнями на вже-неактивні сутності (закриті задачі, виконані звички тощо).
+// Усі 5 викликачів цієї функції автоматично отримують лише живі повідомлення.
 export function getOwlBoardMessages() {
-  return getTabMessages('inbox');
+  return getTabMessages('inbox').filter(isMessageRelevant);
 }
 // Backward compat: старі виклики передавали обрізаний масив як "нове сховище".
 // Тепер записуємо тільки найсвіжіше (перше) у unified — історія вкладки сама
