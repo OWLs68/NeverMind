@@ -173,7 +173,17 @@ export function renderChips(containerEl, chips, tab, options = {}) {
   const oldChips = containerEl.querySelectorAll('.owl-chip:not(.owl-chip-speak)');
   if (oldChips.length > 0) trackChipsIgnored(oldChips.length);
 
-  const normChips = filterStaleChips(normalizeChips(chips));
+  // Фільтр nav→currentTab (UVKL1 27.04 C8uQD): nav-чіп який веде на ту вкладку
+  // де юзер уже знаходиться — марний (клік нічого не зробить, юзер бачить лише
+  // зникнення чіпа без видимого ефекту). Не показуємо такі чіпи взагалі.
+  // Динамічно: при переключенні вкладки renderTabBoard викликається через
+  // tryBoardUpdate (nav.js:151), і фільтр перераховується на новому currentTab.
+  const filteredByTab = normalizeChips(chips).filter(c => {
+    if (c.action !== 'nav') return true;
+    if (!c.target) return true;
+    return c.target !== currentTab;
+  });
+  const normChips = filterStaleChips(filteredByTab);
   if (normChips.length === 0 && !options.showSpeak) {
     containerEl.innerHTML = '';
     return;
