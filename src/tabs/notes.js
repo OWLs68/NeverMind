@@ -457,6 +457,7 @@ function _attachNotesSwipeDelete() {
           saveNotes(n);
           renderNotes();
         });
+      });
     });
   });
 }

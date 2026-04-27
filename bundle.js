@@ -8430,6 +8430,15 @@ ${recent}`;
     `;
     }).join("");
   }
+  function _animateSwipeRemoval(wrap, doRemove) {
+    if (!wrap) {
+      doRemove();
+      return;
+    }
+    wrap.style.maxHeight = wrap.offsetHeight + "px";
+    setTimeout(() => wrap.classList.add("swipe-deleting"), 30);
+    setTimeout(doRemove, 310);
+  }
   function _attachNotesSwipeDelete() {
     document.querySelectorAll(".note-item-wrap").forEach((wrap) => {
       const card = wrap.querySelector('[id^="note-item-"]');
@@ -8440,20 +8449,22 @@ ${recent}`;
         const noteSwipeIdx = allNotes.findIndex((x) => String(x.id) === id);
         const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
         const item = allNotes.find((x) => String(x.id) === id);
-        if (item) addToTrash("note", item);
-        saveNotes(allNotes.filter((x) => String(x.id) !== id));
-        renderNotes();
-        if (item) showUndoToast("\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-          const notes = getNotes();
-          let idx;
-          if (swipePredecessorId === null) idx = 0;
-          else {
-            const predIdx = notes.findIndex((x) => x.id === swipePredecessorId);
-            idx = predIdx !== -1 ? predIdx + 1 : notes.length;
-          }
-          notes.splice(idx, 0, item);
-          saveNotes(notes);
+        _animateSwipeRemoval(wrap, () => {
+          if (item) addToTrash("note", item);
+          saveNotes(allNotes.filter((x) => String(x.id) !== id));
           renderNotes();
+          if (item) showUndoToast("\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+            const notes = getNotes();
+            let idx;
+            if (swipePredecessorId === null) idx = 0;
+            else {
+              const predIdx = notes.findIndex((x) => x.id === swipePredecessorId);
+              idx = predIdx !== -1 ? predIdx + 1 : notes.length;
+            }
+            notes.splice(idx, 0, item);
+            saveNotes(notes);
+            renderNotes();
+          });
         });
       });
     });
@@ -8465,14 +8476,16 @@ ${recent}`;
         const notes = getNotes();
         const folderNotes = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === folder);
         const remaining = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") !== folder);
-        if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
-        saveNotes(remaining);
-        renderNotes();
-        if (folderNotes.length > 0) showUndoToast('\u041F\u0430\u043F\u043A\u0443 "' + folder + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (' + folderNotes.length + ")", () => {
-          const n = getNotes();
-          folderNotes.forEach((note) => n.push(note));
-          saveNotes(n);
+        _animateSwipeRemoval(wrap, () => {
+          if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
+          saveNotes(remaining);
           renderNotes();
+          if (folderNotes.length > 0) showUndoToast('\u041F\u0430\u043F\u043A\u0443 "' + folder + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (' + folderNotes.length + ")", () => {
+            const n = getNotes();
+            folderNotes.forEach((note) => n.push(note));
+            saveNotes(n);
+            renderNotes();
+          });
         });
       });
     });
