@@ -123,11 +123,11 @@
 
 | Параметр | Значення |
 |---|---|
-| **Версія** | v400 (після nudNp+qG4fj мержу) |
+| **Версія** | v408 (приблизно, після C8uQD мержу) |
 | **URL** | owls68.github.io/NeverMind |
-| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (56 tools INBOX_TOOLS + post_chat_message) |
-| **Гілка** | `claude/start-session-UVKL1` (B-103 + B-101 + новий план OWL_SILENCE_PRUNING_PLAN.md) |
-| **CACHE_NAME** | `nm-20260426-1824` (B-101 фікс) |
+| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (57 tools — додано `request_quiet`) |
+| **Гілка** | `claude/start-session-C8uQD` (Silence/Pruning 3 фази + perf + чіпи) |
+| **CACHE_NAME** | `nm-20260427-1451` (фікс UX чіпів) |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
@@ -151,6 +151,7 @@
 
 | ID | Дата | Закрито / Зроблено | Коміти | Гілка | Деталі |
 |---|---|---|---|---|---|
+| **C8uQD** | 27.04 | ✅ **OWL Silence + Pruning Engine ВСІ 3 ФАЗИ + perf тюнінг + UX чіпів.** Фаза 1: tool `request_quiet` + чек у `shouldOwlSpeak` блокує 4 канали. Фаза 2 (7 кроків): `entityRefs` + новий `board-utils.js` + фільтр історії та UI + одноразовий wipe. Фаза 3: silence flag у `getAIContext` + видалено `recentlyDone` з табло-контексту. Perf: 5-хв soft cache + видалено дубль 3-сек тригер ≈ ½ API запитів. Чіпи: nav-чіп з target===currentTab більше не показується. Закрито B-100 і B-102 структурно. CACHE `nm-20260426-1824` → `nm-20260427-1451`. 16 комітів. | 16 | `claude/start-session-C8uQD` | — |
 | **qG4fj** | 25.04 (ніч) | 🌙 **Автономна нічна підготовка Підсесій 1+2+3 паралельно (тільки документи).** 3 нових документи: `docs/DATA_SCHEMA.md` (508 рядків — 8 типів даних, 60+ ключів, конфлікти, цільова Supabase-схема, готовий каркас Migration Engine), `_ai-tools/DESIGN_SYSTEM_INVENTORY.md` (591 рядок — 30+ HEX, 100+ rgba, 11 пріоритетизованих конфліктів з 3 джерел паралельно, **знайдено фіолет 4× у проекті**), `_ai-tools/BUGS_VERIFICATION.md` (186 рядків — верифікація 4 багів проти коду, **B-103=6 місць не 5, B-101=9 чат-барів не 1, B-102=8 сигналів не 9**). Код НЕ чіпали, CACHE_NAME без змін. 4 коміти. | 4 | `claude/start-session-qG4fj` | — |
 | **nudNp** | 24.04 | 💬 **3 раунди консультації Gemini** про стандартизації перед Supabase. Прийняті рішення: Voice API → Whisper+GPT+TTS (не Realtime, $50-100/міс нереальні при $12 підписці); Headless refactor відкладено під час Supabase; A11y відкладено; `t()` тільки для нових рядків; Migration Engine з бекапом у boot.js — пріоритет №1 наступної сесії. **Інфраструктура:** правило CLAUDE.md про довгі списки спрощено (код-блок у чаті замість HTML-файла); скіл `/gemini` переписаний (код-блок + 9 секцій контексту); видалено test-checklist.html. **Готовий план 3 підсесій:** DATA_SCHEMA+Migration → DESIGN_SYSTEM (9 секцій + Safe Areas + Haptics + Empty States + Skeletons) → Events unify + `t()` функція. | 6 | `claude/start-session-nudNp` | — |
 | **jEWcj** | 24.04 | 💬 Обговорення підходу до перепису `docs/DESIGN_SYSTEM.md`. Роман підтвердив філософію (робочий інструмент, не галерея) + структуру з 9 секцій. Код застосунку НЕ чіпали. Почато редагування `.claude/commands/gemini.md` — часткова WIP-зміна (тільки секція концепції, Кроки 3-4 не докручено). Роман перервав перед виконанням, переходить в інший чат. 1 WIP-коміт `e47ea1e` | 1 | `claude/document-design-system-jEWcj` | — |
@@ -175,7 +176,80 @@
 
 ---
 
-## 🔧 Поточна сесія qG4fj — Автономна нічна підготовка 3 підсесій (25.04.2026, ~01:00-04:00)
+## 🔧 Поточна сесія C8uQD — OWL Silence + Pruning Engine 3 фази + perf тюнінг + чіпи (27.04.2026)
+
+### Зроблено
+
+**Фаза 1 — Silence Engine** (`044bc7f`, `d89ef79`):
+- Новий AI-tool `request_quiet(duration_hours)` у `src/ai/ui-tools.js` + handler який пише `nm_owl_silence_until` у localStorage + диспатчить `nm-data-changed`
+- Чек тиші **одним рядком** на початку `shouldOwlSpeak()` у `src/owl/inbox-board.js` — блокує всі 4 канали сови (Inbox-табло, табла вкладок, Brain Pulse, chat-followup)
+- Дубль `auto-silence-4h` чек з `_judgeBoard` видалено — консолідація в одне правило
+- 11 тригер-фраз у `UI_TOOLS_RULES` (`src/ai/prompts.js`): «дай спокій / не доставай / відчепись / не зайобуй / помовчи / вистачить / досить / не нагадуй мені / залиш мене / відчепися» + мапа тривалості
+
+**Фаза 2 — Pruning Engine** (7 чекпоінт-комітів `3e42600` → `d17b769`):
+- Step A — додано `[task_xxx]/[habit_xxx]/[note_xxx]/[project_xxx]/[transaction_xxx]` маркери поряд з назвами сутностей у `_getInboxBoardContext` (15 місць) + `getTabBoardContext` для tasks/me/notes/projects (10 місць). Без ID модель не могла заповнити `entityRefs` коректно.
+- Step B — новий файл `src/owl/board-utils.js` (106 рядків) з функцією `isEntityRelevant(ref)` + `isMessageRelevant(msg)`. Per-type правила: task→active+dueDate, habit→build не виконано сьогодні / quit завжди, event→не пройшла, note→існує, project→active+progress<100, transaction→існує. Robust ID matching (numeric + UUID).
+- Step C — поле `entityRefs` у JSON-схемі `CHIP_JSON_FORMAT` (chips.js) + інструкція в промпт `generateBoardMessage` про заповнення з `[task_X]` маркерів + збереження поля `entityRefs` (capped 10) у `saveTabMessage` (unified-storage.js)
+- Step D — фільтр `boardHistory` через `isMessageRelevant` (одна точка перед `_getBannedTopics`/`recentTexts`/`boardHistory.slice(20)`)
+- Step E — фільтр на UI: `getTabBoardMsgs` (board.js), `getOwlBoardMessages` (inbox-board.js на джерелі — 5 викликачів автоматично відфільтровані), `_pickMessageForTab` (фільтр перед priority/tab selection)
+- Step F — одноразовий wipe `nm_owl_board_unified` + `nm_owl_tab_ts_*` за прапорцем `nm_pruning_wipe_v1_done` (boot.js v7 міграція)
+- Step G — bump CACHE_NAME → `nm-20260427-1349`
+
+**Perf тюнінг балансу актуальність↔економія** (`51143a3`):
+- М'який кеш 5 хв у `tryTabBoardUpdate` (proactive.js) і `tryOwlBoardUpdate` (inbox-board.js) — якщо повідомлення для вкладки молодше 5 хв, не питаємо API. Pruning гарантує що «свіже» = живе.
+- Видалено дубль 3-сек dwell тригер у `nm-tab-switched` listener (proactive.js:1198) — він робив другий API запит з `transitionFrom`. Тепер — тільки один шлях через `tryBoardUpdate(tab)` з 100мс затримкою у nav.js. ~Вдвічі менше API запитів за активний день.
+
+**Фаза 3 — Розділення контексту** (`baf91bc`, `68a2674`):
+- 3.1 — прапорець `[ВАЖЛИВО — РЕЖИМ ТИШІ]` у `getAIContext()` (core.js): під час тиші у промпт всіх 8 чатів додається жорстке правило «відповідай на питання ('що я зробив?') але не пропонуй нових задач, не питай 'що далі', чіпи нейтральні»
+- 3.2 — видалено блок `[ФАКТ] Нещодавно ЗАКРИТІ задачі (НЕ нагадуй)` з `getTabBoardContext('tasks')` і `_getInboxBoardContext`. Промптові правила «НЕ нагадуй» небезпечні бо GPT-4o-mini ігнорує негативні правила. Pruning Engine забезпечує це структурно. У `getAIContext` (для чатів) блок ЗАЛИШЕНО — там «що я закрив?» — легітимний запит юзера.
+- CACHE_NAME bump → `nm-20260427-1429`
+
+**Закрито баги** (`bc8c188`):
+- B-100 (сова не реагує на «не доставай») — закрито структурно через Silence Engine. Промптова детекція маркерів більше не потрібна.
+- B-102 (табло не реагує на настрій у чаті) — закрито структурно. USER_STATE сигнал у Brain Pulse (V3 Фаза 2) не потрібен — `shouldOwlSpeak('brain-pulse')` блокує до збору сигналів.
+- `NEVERMIND_BUGS.md` — у Середніх 0 відкритих, у Дрібних 1 (B-80 косметичний)
+
+**Фікс UX чіпів** (`9ce78f4`):
+- Фільтр nav-чіпів з `target===currentTab` у `renderChips` (chips.js). Якщо чіп веде на ту саму вкладку де юзер — не показуємо. Динамічно через `currentTab` import → перехід на іншу вкладку → re-render → новий currentTab → інші чіпи.
+- Сценарій: на Здоров'ї табло про задачі з 3 чіпами (2 nav + «Поговорити»), переходиш на Задачі — лишається тільки «Поговорити».
+- CACHE_NAME bump → `nm-20260427-1451`
+
+### Обговорено (без виконання)
+
+- **Філософія Pruning vs пам'ять агента** — Роман запитав «чи нормально що сова "забуває" про закриті задачі?». Розʼяснено три шари пам'яті: (1) board-історія сови — фільтрується, (2) чат-історія — не чіпається, (3) `nm_facts` + Календар — довгострокова, не чіпається. Pruning торкається лише (1).
+- **Швидкість табла при переході вкладок** — Роман помітив 3-5 сек затримку. Розʼяснено: це частково через wipe (lastTs=0 для всіх вкладок), стабілізується через ~30 хв активного використання. Реалізовано: 5-хв soft cache + видалення дубль-тригера = вдвічі менше API.
+- **Економіка API-запитів** — Роман запитав «чи кожен перехід коштує грошей?». Розʼяснено: ~3 копійки/запит, ~30 грн/міс активне використання, після оптимізації ~15 грн/міс.
+- **Фікс № чіпа на своїй вкладці** — три варіанти проаналізовано: (1) не ховати чіп, (2) скролити до сутності+підсвітити, (3) відкрити модалку. Роман уточнив: «не показуй взагалі — це логічніше». Реалізовано (1*) — не показуємо.
+
+### Ключові рішення
+
+- **Не ламати back-compat зі старими повідомленнями** — wipe одноразовий за прапорцем + новий формат entityRefs опціональний (порожній масив = загальне повідомлення)
+- **`getOwlBoardMessages` фільтрувати на джерелі** — 5 викликачів автоматично отримують лише живі повідомлення замість дубляжа filter в кожному місці
+- **`_pickMessageForTab` фільтрує ПЕРЕД priority/tab selection** — щоб «critical» про закриту задачу не пробивав
+- **Прибрати `transitionFrom` шлях** свідомо — крос-чат пам'ять (з ZJmdF) дає сові достатньо контексту, дублюючий тригер витрачав токени
+- **Блок «Нещодавно ЗАКРИТІ» залишити в getAIContext (чати)** — юзер легітимно питає «що я зробив?» у чаті, там фактологічна довідка потрібна
+- **Не починати кодити Фазу 2 без повного дослідження** — після зауваження Романа «робити повноцінне дослідження» спавнено Explore-агент який знайшов critical gap (відсутність ID у контексті), тому Step A додано до плану
+
+### Інциденти
+
+- Без інцидентів. Без `git reset` / `git push --force` / revert. CI деплої проходили чисто. 16 комітів від `044bc7f` до `9ce78f4` усі merged через auto-merge.
+- Один епізод — Роман зауважив «робиш швидке дослідження замість повноцінного». Зупинився, спавнив Explore-агент для повного дослідження перед Фазою 2. Виявлено critical gap (нема ID у контексті) — додано Step A до плану.
+
+### Метрики
+
+- **Коміти:** 16 (`044bc7f` → `9ce78f4`)
+- **CACHE_NAME:** `nm-20260426-1824` → `nm-20260427-1451` (4 bump)
+- **Гілка:** `claude/start-session-C8uQD`
+- **Версії:** v403 → v408 (приблизно)
+- **Build:** чистий локально (node --check), CI auto-merge без помилок
+- **Створено файлів:** 1 (`src/owl/board-utils.js` 106 рядків)
+- **Змінено файлів:** 8 + sw.js (`src/ai/ui-tools.js`, `src/ai/core.js`, `src/ai/prompts.js`, `src/owl/inbox-board.js`, `src/owl/proactive.js`, `src/owl/board.js`, `src/owl/chips.js`, `src/owl/unified-storage.js`, `src/core/boot.js`, `src/app.js`, `sw.js`)
+- **Закриті баги:** 2 (B-100, B-102)
+- **Документи оновлені:** `NEVERMIND_BUGS.md`, `_ai-tools/SESSION_STATE.md`
+
+---
+
+## 🔧 Попередня сесія qG4fj — Автономна нічна підготовка 3 підсесій (25.04.2026, ~01:00-04:00)
 
 ### Контекст і мета
 
