@@ -4402,6 +4402,7 @@ ${lines.join("\n")}`;
     const phase = getDayPhase();
     if (phase === "silent") return;
     const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+    if (visibleTs && Date.now() - visibleTs < 5 * 60 * 1e3) return;
     if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1e3) {
       console.log("[OWL board] stale message detected, forcing generation");
       Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
@@ -6376,6 +6377,10 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const hour = (/* @__PURE__ */ new Date()).getHours();
     if (hour < 5) return;
     if (tab === "evening" && hour < 12) return;
+    const tabMsgs = getTabBoardMsgs(tab);
+    const latestMsg = tabMsgs[0];
+    const latestAge = latestMsg ? Date.now() - (latestMsg.ts || latestMsg.id || 0) : Infinity;
+    if (latestAge < 5 * 60 * 1e3) return;
     const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || "0");
     const elapsed = Date.now() - lastTs;
     const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
@@ -6410,7 +6415,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
     return true;
   }
-  var _boardGenerating, _boardAbortController, TOPIC_CD_MS, NM_FIRST_VISIT_KEY, TAB_HINTS, _boardUpdateTimer, BOARD_UPDATE_DELAY, INSTANT_REACTIONS, _tabSwitchTimer, NM_LAST_ACTIVE_KEY, NM_LAST_ACTIVE_DAY_KEY, WELCOME_BACK_THRESHOLD;
+  var _boardGenerating, _boardAbortController, TOPIC_CD_MS, NM_FIRST_VISIT_KEY, TAB_HINTS, _boardUpdateTimer, BOARD_UPDATE_DELAY, INSTANT_REACTIONS, NM_LAST_ACTIVE_KEY, NM_LAST_ACTIVE_DAY_KEY, WELCOME_BACK_THRESHOLD;
   var init_proactive = __esm({
     "src/owl/proactive.js"() {
       init_core();
@@ -6488,23 +6493,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         setTimeout(() => {
           const judge = shouldOwlSpeak("chat-closed");
           if (judge.speak) generateBoardMessage(currentTab || "inbox");
-        }, 3e3);
-      });
-      _tabSwitchTimer = null;
-      window.addEventListener("nm-tab-switched", (e) => {
-        const { from, to } = e.detail || {};
-        if (!to) return;
-        if (_tabSwitchTimer) {
-          clearTimeout(_tabSwitchTimer);
-          _tabSwitchTimer = null;
-        }
-        _tabSwitchTimer = setTimeout(() => {
-          _tabSwitchTimer = null;
-          if (typeof document !== "undefined" && document.hidden) return;
-          const judge = shouldOwlSpeak("tab-switched", { targetTab: to });
-          if (judge.speak) {
-            generateBoardMessage(to, { transitionFrom: from });
-          }
         }, 3e3);
       });
       NM_LAST_ACTIVE_KEY = "nm_last_active";
