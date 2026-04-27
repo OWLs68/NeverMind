@@ -821,6 +821,196 @@ ${logLines}
     }
   });
 
+  // src/core/usage-meter.js
+  function _calcCost(model, prompt_tokens, completion_tokens) {
+    const p = PRICING[model] || PRICING["gpt-4o-mini"];
+    const inputCost = prompt_tokens / 1e6 * p.input;
+    const outputCost = completion_tokens / 1e6 * p.output;
+    return Number((inputCost + outputCost).toFixed(6));
+  }
+  function _readLog() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+  function _writeLog(arr) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+    } catch (e) {
+      console.warn("usage-meter: localStorage quota, trimming half", e);
+      const half = arr.slice(Math.floor(arr.length / 2));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(half));
+      } catch {
+      }
+    }
+  }
+  function _rotate(arr) {
+    const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1e3;
+    let firstFreshIdx = 0;
+    while (firstFreshIdx < arr.length && arr[firstFreshIdx].ts < cutoff) firstFreshIdx++;
+    return firstFreshIdx > 0 ? arr.slice(firstFreshIdx) : arr;
+  }
+  function logUsage(module, usageObj, model = "gpt-4o-mini") {
+    if (!usageObj || typeof usageObj.prompt_tokens !== "number") return;
+    const entry = {
+      ts: Date.now(),
+      module: module || "unknown",
+      model,
+      prompt_tokens: usageObj.prompt_tokens,
+      completion_tokens: usageObj.completion_tokens || 0,
+      cost_usd: _calcCost(model, usageObj.prompt_tokens, usageObj.completion_tokens || 0)
+    };
+    const log = _rotate(_readLog());
+    log.push(entry);
+    _writeLog(log);
+    try {
+      window.dispatchEvent(new CustomEvent("nm-usage-updated", { detail: entry }));
+    } catch {
+    }
+  }
+  function getUsageStats() {
+    const log = _readLog();
+    const now = /* @__PURE__ */ new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const aggregate = (entries) => {
+      const byModule = {};
+      let cost = 0, calls = 0;
+      for (const e of entries) {
+        cost += e.cost_usd || 0;
+        calls += 1;
+        byModule[e.module] = (byModule[e.module] || 0) + (e.cost_usd || 0);
+      }
+      return { cost: Number(cost.toFixed(4)), calls, byModule };
+    };
+    const today = aggregate(log.filter((e) => e.ts >= startOfToday));
+    const thisMonth = aggregate(log.filter((e) => e.ts >= startOfMonth));
+    const dayOfMonth = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    let projection = null;
+    if (dayOfMonth >= 3 && thisMonth.cost > 0) {
+      projection = Number((thisMonth.cost / dayOfMonth * daysInMonth).toFixed(2));
+    }
+    return {
+      today,
+      thisMonth,
+      projection,
+      totalCalls: log.length,
+      daysInLog: log.length > 0 ? Math.ceil((Date.now() - log[0].ts) / (24 * 60 * 60 * 1e3)) : 0
+    };
+  }
+  async function exportUsageJSON() {
+    const log = _readLog();
+    const json = JSON.stringify({
+      exported_at: (/* @__PURE__ */ new Date()).toISOString(),
+      retention_days: RETENTION_DAYS,
+      pricing: PRICING,
+      entries: log
+    }, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      return { ok: true, bytes: json.length, calls: log.length };
+    } catch (e) {
+      console.error("exportUsageJSON failed:", e);
+      return { ok: false, error: e.message };
+    }
+  }
+  function clearUsageLog() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent("nm-usage-updated", { detail: null }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function _formatUSD(n) {
+    if (!n) return "$0.00";
+    if (n < 0.01) return "<$0.01";
+    return "$" + n.toFixed(n < 1 ? 3 : 2);
+  }
+  function _renderModuleBreakdown(byModule, total) {
+    const entries = Object.entries(byModule).sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0 || total === 0) return "";
+    return entries.slice(0, 6).map(([mod, cost]) => {
+      const pct = Math.round(cost / total * 100);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(30,16,64,0.7);padding:2px 0">
+      <span>${escapeHtmlSafe(mod)}</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(cost)} <span style="color:rgba(30,16,64,0.4);font-size:11px">(${pct}%)</span></span>
+    </div>`;
+    }).join("");
+  }
+  function escapeHtmlSafe(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+  function renderUsageMeter() {
+    const el = typeof document !== "undefined" && document.getElementById("usage-meter-display");
+    if (!el) return;
+    const stats = getUsageStats();
+    const projLine = stats.projection !== null ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>` : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F 3 \u0434\u043D\u0456\u0432 \u0434\u0430\u043D\u0438\u0445</div>`;
+    const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
+    el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
+      <span>\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} \u0432\u0438\u043A\u043B)</span></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600;margin-top:6px">
+      <span>\u0426\u0435\u0439 \u043C\u0456\u0441\u044F\u0446\u044C</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} \u0432\u0438\u043A\u043B)</span></span>
+    </div>
+    ${projLine}
+    ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ""}
+    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F ${RETENTION_DAYS} \u0434\u043D\u0456\u0432. \u0414\u0430\u043D\u0456 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0456.</div>
+  `;
+  }
+  async function exportWithToast() {
+    const r = await exportUsageJSON();
+    if (r.ok && typeof window !== "undefined" && window.showToast) {
+      window.showToast(`\u{1F4CB} \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E ${r.calls} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u0431\u0443\u0444\u0435\u0440`, 2500);
+    } else if (typeof window !== "undefined" && window.showToast) {
+      window.showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438: " + (r.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"), 3e3);
+    }
+  }
+  async function clearWithConfirm() {
+    if (typeof confirm !== "undefined" && !confirm("\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u043B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442? \u0414\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0441\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438.")) return;
+    clearUsageLog();
+    renderUsageMeter();
+    if (typeof window !== "undefined" && window.showToast) {
+      window.showToast("\u{1F5D1}\uFE0F \u041B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u043E", 2e3);
+    }
+  }
+  var STORAGE_KEY, RETENTION_DAYS, PRICING;
+  var init_usage_meter = __esm({
+    "src/core/usage-meter.js"() {
+      STORAGE_KEY = "nm_usage_log";
+      RETENTION_DAYS = 31;
+      PRICING = {
+        "gpt-4o-mini": { input: 0.15, output: 0.6 },
+        "gpt-4o": { input: 2.5, output: 10 }
+      };
+      if (typeof window !== "undefined") {
+        window.addEventListener("nm-usage-updated", () => {
+          try {
+            renderUsageMeter();
+          } catch {
+          }
+        });
+      }
+      if (typeof window !== "undefined") {
+        window.exportUsageJSON = exportUsageJSON;
+        window.clearUsageLog = clearUsageLog;
+        window.getUsageStats = getUsageStats;
+        window.renderUsageMeter = renderUsageMeter;
+        window.exportUsageWithToast = exportWithToast;
+        window.clearUsageWithConfirm = clearWithConfirm;
+      }
+    }
+  });
+
   // src/owl/unified-storage.js
   function _migrateOnce() {
     if (localStorage.getItem(MIGRATION_FLAG)) return;
@@ -3427,7 +3617,7 @@ ${lines.join("\n")}`;
     const aiContext = getAIContext();
     const systemPrompt = getHealthChatSystem(activeCard) + (aiContext ? "\n\n" + aiContext : "");
     try {
-      const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS, "health-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);
         if (msg.content) {
@@ -4879,6 +5069,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("projects-ai", data.usage, data.model);
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (reply) {
         setTimeout(() => {
@@ -4971,7 +5162,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const activeSteps = activeProject ? (activeProject.steps || []).map((s) => `[ID:${s.id}] ${s.done ? "\u2713" : "\u25CB"} ${s.text}`).join("\n") : "";
     const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps }) + (getAIContext() ? "\n\n" + getAIContext() : "");
     try {
-      const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS, "projects-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
         if (msg.content) {
@@ -5009,6 +5200,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     "src/tabs/projects.js"() {
       init_nav();
       init_utils();
+      init_usage_meter();
       init_core();
       init_prompts();
       init_tool_dispatcher();
@@ -5340,6 +5532,7 @@ ${lines.join("\n\n")}`;
         })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("evening-summary", data.usage, data.model);
       const summary = data.choices?.[0]?.message?.content?.trim().replace(/["""]/g, "");
       if (!summary) return;
       const moments = getMoments();
@@ -5448,6 +5641,7 @@ ${lines.join("\n\n")}`;
     "src/tabs/evening.js"() {
       init_nav();
       init_utils();
+      init_usage_meter();
       init_tasks();
       init_habits();
       init_notes();
@@ -6186,6 +6380,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           return;
         }
         const data = await res.json();
+        if (data?.usage) logUsage("owl-board", data.usage, data.model);
         const reply = data.choices?.[0]?.message?.content?.trim();
         if (!reply) {
           const errDetail = "empty reply: " + JSON.stringify(data?.error || {}).slice(0, 150);
@@ -6440,6 +6635,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       init_notes();
       init_finance();
       init_evening();
+      init_usage_meter();
       _boardGenerating = {};
       _boardAbortController = null;
       setTimeout(_updateApiDot, 3e3);
@@ -6634,6 +6830,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 120, temperature: 0.3 })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("finance-insight", data.usage, data.model);
       const text = data.choices?.[0]?.message?.content?.trim();
       if (!text) return;
       localStorage.setItem(cacheKey, JSON.stringify({ text, ts: Date.now(), hash: currentHash }));
@@ -6647,6 +6844,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     "src/tabs/finance-insight.js"() {
       init_utils();
       init_core();
+      init_usage_meter();
       init_finance();
       FIN_INSIGHT_TTL = 60 * 60 * 1e3;
     }
@@ -6741,7 +6939,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       incomeCats: (cats.income || []).map((c) => c.name || c).join(", ")
     }) + (getAIContext() ? "\n\n" + getAIContext() : "");
     try {
-      const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS, "finance-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
         for (const tc of msg.tool_calls) {
@@ -8752,6 +8950,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("notes-ai", data.usage, data.model);
       const rawReply = data.choices?.[0]?.message?.content;
       const { text: reply, chips: extractedChips } = parseContentChips(rawReply || "");
       if (reply) {
@@ -9006,7 +9205,7 @@ ${REMINDER_RULES}
 
 ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     try {
-      const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS, "notes-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
         if (msg.content) {
@@ -9112,6 +9311,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     "src/tabs/notes.js"() {
       init_nav();
       init_utils();
+      init_usage_meter();
       init_trash();
       init_core();
       init_chips();
@@ -9867,7 +10067,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (!tp) return;
     const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext() + "\n\n=== \u0421\u0426\u0415\u041D\u0410\u0420\u0406\u0419 ===\n" + tp + "\n\n\u0423 \u0426\u042C\u041E\u041C\u0423 \u041F\u0415\u0420\u0428\u041E\u041C\u0423 \u041F\u041E\u0412\u0406\u0414\u041E\u041C\u041B\u0415\u041D\u041D\u0406: \u0431\u0435\u0437 tool calls (\u044E\u0437\u0435\u0440 \u0449\u0435 \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u0432 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438). \u0422\u0456\u043B\u044C\u043A\u0438 content: \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F + \u0447\u0456\u043F\u0438.";
     try {
-      const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, [], INBOX_TOOLS, "evening-bar");
       if (!msg) {
         handleChatError(addEveningBarMsg);
         return;
@@ -9967,7 +10167,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const systemPrompt = getEveningChatSystem() + "\n\n" + getAIContext();
     const history = eveningBarHistory.slice(-10);
     try {
-      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS, "evening-bar");
       if (!msg) {
         handleChatError(addEveningBarMsg);
         eveningBarLoading = false;
@@ -10076,7 +10276,7 @@ ${REMINDER_RULES}
 \u0414\u043B\u044F CRUD \u0434\u0456\u0439 \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool. \u0414\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443/\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u043F\u0438\u0448\u0438 \u0442\u0435\u043A\u0441\u0442.
 
 ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
-    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS);
+    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS, "me-chat");
     const loadEl = document.getElementById(loadId);
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       if (loadEl) loadEl.remove();
@@ -11545,6 +11745,7 @@ ${UI_TOOLS_RULES}`;
         }]
       })
     }).then((r) => r.json()).then((d) => {
+      if (d?.usage) logUsage("habits-ai", d.usage, d.model);
       const reply = d.choices?.[0]?.message?.content;
       if (reply) addInboxChatMsg("agent", reply);
     }).catch(() => {
@@ -12657,7 +12858,7 @@ ${UI_TOOLS_RULES}`;
 ` + GLOBAL_TOOLS_RULE + "\n\n" + REMINDER_RULES + "\n\n" + UI_TOOLS_RULES + (aiContext ? "\n\n" + aiContext : "");
     try {
       const history = [...taskBarHistory.slice(-8), { role: "user", content: text }];
-      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS);
+      const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS, "tasks-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
         const handled2 = dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
         if (!handled2) {
@@ -12798,6 +12999,7 @@ ${UI_TOOLS_RULES}`;
     "src/tabs/habits.js"() {
       init_nav();
       init_utils();
+      init_usage_meter();
       init_uuid();
       init_trash();
       init_core();
@@ -13099,7 +13301,7 @@ ${routineParts.join("\n")}${nextHint}
       addMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
     }
   }
-  async function _fetchAI(messages, signal, tools, temperature = 0.7) {
+  async function _fetchAI(messages, signal, tools, temperature = 0.7, module = "unknown") {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
       showToast("\u2699\uFE0F \u0412\u0432\u0435\u0434\u0456\u0442\u044C OpenAI API \u043A\u043B\u044E\u0447 \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445", 3e3);
@@ -13123,12 +13325,13 @@ ${routineParts.join("\n")}${nextHint}
       return null;
     }
     const data = await res.json();
+    if (data?.usage) logUsage(module, data.usage, data.model || "gpt-4o-mini");
     const msg = data.choices?.[0]?.message;
     if (!msg) return null;
     if (tools) return msg;
     return msg.content || null;
   }
-  async function callAI(systemPrompt, userMessage, contextData = {}) {
+  async function callAI(systemPrompt, userMessage, contextData = {}, module = "callAI") {
     const context = Object.keys(contextData).length > 0 ? `
 
 \u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442:
@@ -13138,7 +13341,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       { role: "user", content: userMessage + context }
     ];
     try {
-      const text = await _fetchAI(messages, void 0);
+      const text = await _fetchAI(messages, void 0, void 0, 0.7, module);
       if (text === null) return null;
       if (!text) {
         showToast("\u274C \u041F\u043E\u0440\u043E\u0436\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0432\u0456\u0434 \u0410\u0433\u0435\u043D\u0442\u0430", 3e3);
@@ -13170,18 +13373,18 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       { role: "user", content: userText }
     ];
     try {
-      const reply = await _fetchAI(messages, void 0);
+      const reply = await _fetchAI(messages, void 0, void 0, 0.7, "owl-mini-chat");
       return reply;
     } catch (e) {
       return null;
     }
   }
-  async function callAIWithHistory(systemPrompt, history) {
+  async function callAIWithHistory(systemPrompt, history, module = "callAIWithHistory") {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25e3);
     try {
       const messages = [{ role: "system", content: systemPrompt }, ...history];
-      const reply = await _fetchAI(messages, controller.signal);
+      const reply = await _fetchAI(messages, controller.signal, void 0, 0.7, module);
       clearTimeout(timeout);
       return reply;
     } catch (e) {
@@ -13190,12 +13393,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return null;
     }
   }
-  async function callAIWithTools(systemPrompt, history, tools) {
+  async function callAIWithTools(systemPrompt, history, tools, module = "callAIWithTools") {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25e3);
     try {
       const messages = [{ role: "system", content: systemPrompt }, ...history];
-      const msg = await _fetchAI(messages, controller.signal, tools, 0.2);
+      const msg = await _fetchAI(messages, controller.signal, tools, 0.2, module);
       clearTimeout(timeout);
       return msg;
     } catch (e) {
@@ -13434,6 +13637,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_memory();
       init_prompts();
       init_unread_badge();
+      init_usage_meter();
       init_prompts();
       activeChatBar = null;
       lastChatClosedTs = 0;
@@ -13839,6 +14043,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("tasks-ai", data.usage, data.model);
       const rawReply = data.choices?.[0]?.message?.content;
       const { text: reply, chips: extractedChips } = parseContentChips(rawReply || "");
       if (reply) {
@@ -13908,6 +14113,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       });
       clearTimeout(timeout);
       const data = await res.json();
+      if (data?.usage) logUsage("tasks-ai", data.usage, data.model);
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) return;
       const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
@@ -13964,6 +14170,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     "src/tabs/tasks.js"() {
       init_nav();
       init_utils();
+      init_usage_meter();
       init_uuid();
       init_trash();
       init_core();
@@ -14376,6 +14583,7 @@ ${answersText}
         body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 500, temperature: 0.7 })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("onboarding", data.usage, data.model);
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (reply) {
         try {
@@ -14463,6 +14671,7 @@ ${aiContext}` }
         })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("onboarding", data.usage, data.model);
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) return;
       const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
@@ -14513,6 +14722,7 @@ ${userText}
         })
       });
       const data = await res.json();
+      if (data?.usage) logUsage("onboarding", data.usage, data.model);
       const updated = data.choices?.[0]?.message?.content?.trim();
       if (updated) {
         localStorage.setItem("nm_memory", updated);
@@ -14594,6 +14804,7 @@ ${userText}
     "src/tabs/onboarding.js"() {
       init_nav();
       init_core();
+      init_usage_meter();
       init_inbox();
       init_projects();
       UPDATE_VERSION = "v065";
@@ -15347,7 +15558,7 @@ ${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
 - \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043D\u0435\u043C\u0430 \u2014 \u0441\u043A\u0430\u0436\u0438 \u043F\u0440\u044F\u043C\u043E "\u043F\u043E\u043A\u0438 \u0449\u043E \u043D\u0435\u043C\u0430"
 
 ${aiContext}`;
-      const reply = await callAIWithHistory(qPrompt, historySlice);
+      const reply = await callAIWithHistory(qPrompt, historySlice, "inbox-quick-q");
       const elapsedQ = Date.now() - _aiStart;
       if (elapsedQ < 800) await new Promise((r) => setTimeout(r, 800 - elapsedQ));
       addInboxChatMsg("agent", reply || "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432, \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0439?");
@@ -15357,7 +15568,7 @@ ${aiContext}`;
       btn.innerHTML = SEND_SVG;
       return;
     }
-    const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS);
+    const msg = await callAIWithTools(fullPrompt, historySlice, INBOX_TOOLS, "inbox");
     const elapsed = Date.now() - _aiStart;
     if (elapsed < 800) await new Promise((r) => setTimeout(r, 800 - elapsed));
     if (!msg) {
@@ -15783,7 +15994,7 @@ ${list}
 
 ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const combinedMsg = `\u041E\u0440\u0438\u0433\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441: "${origText}". \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0432\u0456\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430: "${text}"`;
-    const msg = await callAIWithTools(fullPrompt, [{ role: "user", content: combinedMsg }], INBOX_TOOLS);
+    const msg = await callAIWithTools(fullPrompt, [{ role: "user", content: combinedMsg }], INBOX_TOOLS, "inbox-clarify");
     if (msg) {
       try {
         if (msg.tool_calls && msg.tool_calls.length > 0) {
@@ -16671,7 +16882,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         role: "user",
         content: '\u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0441\u0438\u0433\u043D\u0430\u043B\u0438 \u0432\u0438\u0449\u0435 \u0456 \u0432\u0438\u043A\u043B\u0438\u0447 post_chat_message \u043E\u0434\u0438\u043D \u0440\u0430\u0437, \u0430\u0431\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 "skip".'
       }];
-      const result = await callAIWithTools(systemPrompt, history, BRAIN_TOOLS);
+      const result = await callAIWithTools(systemPrompt, history, BRAIN_TOOLS, "brain-pulse");
       if (!result || !result.tool_calls || result.tool_calls.length === 0) {
         console.log("[brain-pulse] model said skip");
         return;
@@ -18044,6 +18255,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       updateErrorLogBtn();
     } catch (e) {
     }
+    try {
+      window.renderUsageMeter && window.renderUsageMeter();
+    } catch (e) {
+    }
     const key = localStorage.getItem("nm_gemini_key") || "";
     const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
     const memory = localStorage.getItem("nm_memory") || "";
@@ -18666,6 +18881,7 @@ ${legacy}`;
   init_trash();
   init_logger();
   init_diagnostics();
+  init_usage_meter();
   init_keyboard();
   init_swipe_delete();
 
