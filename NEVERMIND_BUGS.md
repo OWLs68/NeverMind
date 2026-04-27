@@ -9,32 +9,35 @@
 
 ## 🔴 Критичні (зламана функціональність)
 
-| # | Файл | Опис | Деталі |
-|---|------|------|--------|
-| B-105 | `src/ai/prompts.js` (INBOX_TOOLS) + `src/tabs/habits.js` (processUniversalAction) | Сова видаляє задачу замість закрити при фразі «Поміняв номер...» / «Зареєструвався...» | iPhone v412 19:10. Юзер мав задачу «Зареєструватися на Upwirk», сказав сові «Поміняв номер на склад» (мав на увазі іншу задачу), сова відповіла «🗑 Задачу 'Зареєструватися на Upwirk' видалено». Можливо повернення B-97 (Context Segmentation Failure) або новий баг через UUID-схему AI tools (integer→string у xGe1H). Виявлено xGe1H 27.04.2026. **НЕ дебажено** (контекст чату переповнений). |
-| B-106 | `src/owl/inbox-board.js` (`shouldOwlSpeak`) або chat-handler | Сова замовкла на 3 повідомленнях у чаті Продуктивності | iPhone v412 19:10. Юзер: «Поміняв номер на склад» ×2 + «Подав декларацію» — без жодної відповіді, точки `...` справа знизу. Можливо Silence Engine (B-100 фікс) помилково спрацював на якесь слово АБО модель застрягла. Виявлено xGe1H 27.04.2026. **НЕ дебажено**. |
+_Немає відкритих критичних багів станом на 27.04.2026 (Aps79)._
 
 ---
 
 ## 🟡 Середні (є обхідний шлях або рідко трапляється)
 
-| # | Файл | Опис | Деталі |
-|---|------|------|--------|
-| B-107 | `src/tabs/tasks.js:314` (`askAIAboutTask`) + `index.html` (блок `tasks-ai-comment`) | Велика синя картка з AI-порадами з'являється зверху списку задач при створенні нової | iPhone v412 19:07. Стара фіча — функція `askAIAboutTask` викликається з `saveTask` після створення задачі, заповнює блок `tasks-ai-comment` AI-коментарем. Раніше AI давав короткі ремарки → виглядало нормально. Зараз модель розписалась на 4 речення → блок занимає півекрана, виглядає як зайва картка/галюцинація. Роман: «це не повинно бути». **Фікс:** прибрати виклик `askAIAboutTask` з `saveTask` + видалити блок `tasks-ai-comment` з HTML. Виявлено xGe1H 27.04.2026. |
+_Немає відкритих середніх багів._
 
 ---
 
 ## 🟢 Дрібні (косметика, не ламає функціонал)
 
-| # | Файл | Опис | Деталі |
-|---|------|------|--------|
-| B-80 | `src/tabs/notes.js` | Layout glitch при видаленні папки через свайп | Чіпи під OWL-баблом на частку секунди перекриваються першою папкою, потім само-виправляється (~250мс). Гіпотеза: layout race між анімацією закриття свайпу (transition 0.25s) і `renderNotes()`. Косметика, не ламає функціонал. Виявлено 18.04.2026 Vydqm. |
+_Немає відкритих дрібних багів._
 
 ---
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях. Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (Aps79 + xGe1H). Старіші → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+
+### Сесія Aps79 (27.04.2026) — 5 багів закрито
+
+| # | Файл | Опис | Як виправлено |
+|---|------|------|----------------|
+| B-105 | `src/ai/prompts.js` + `src/tabs/habits.js` | Сова видалила «Зареєструватися на Upwirk» замість закрити при «Поміняв номер на склад» | Промпт чату Продуктивності не мав правила про минулий час → модель фузі-матчила «поміняв номер» на «Upwirk реєстрація» через спільний номер → `delete_task`. **FIX:** правило про минулий час у `sendTasksBarMessage` («поміняв/подав/зробив» → `complete_task` на ЯВНУ задачу або текст-питання, НІКОЛИ delete без слова «видали/забудь»). Посилений опис tool `delete_task` у INBOX_TOOLS — поширюється на всі 8 чатів. Коміт `f394b40`. |
+| B-106 | `src/tabs/habits.js` (processUniversalAction + sendTasksBarMessage) | Сова замовкла на 3 повідомленнях у чаті Продуктивності, точки `...` назавжди | AI кликав `complete_task`/`complete_habit` через tool_calls. Диспетчер йшов через `_toolCallToUniversalAction` → `processUniversalAction` де ОБРОБНИКА НЕ БУЛО (тільки у fallback text-JSON шляху). Жодного `addMsg` → typing dots не зникали. **FIX 1:** додано `complete_task`/`complete_habit`/`add_step` у `processUniversalAction`. **FIX 2 (safety net):** якщо `dispatchChatToolCalls` повернув false — показати fallback `msg.content` або «Не зрозуміла дію». Гарантує що typing dots завжди зникнуть. Коміт `f394b40`. |
+| B-107 | `src/tabs/tasks.js` + `index.html` | Велика синя картка з AI-порадами зверху списку при створенні задачі | Стара фіча `askAIAboutTask` викликалась з `saveTask`, заповнювала блок `tasks-ai-comment` AI-коментарем на 4+ речення. **FIX:** видалено виклик `askAIAboutTask` з `saveTask` + саму функцію + HTML-блок з `index.html`. Імпорти AI-функцій лишено (використовуються в інших місцях). Коміт `f71b0b8`. |
+| B-108 | `src/tabs/tasks.js` (5 onclick) + `src/tabs/evening.js` (2 onclick) + handlers | НОВИЙ після xGe1H — тап ✓ рукою на задачі НЕ ПРАЦЮВАВ після UUID-міграції | HTML `onclick="toggleTaskStatus(${t.id})"` з UUID-string давав `onclick="toggleTaskStatus(abc-def-123)"` → JS парсить як арифметику ідентифікаторів `abc - def - 123` → ReferenceError. Тап не доходив до handler. Юзер мусив закривати задачі через AI у чаті. **FIX:** обгортка `'${t.id}'` у одинарні лапки у 5 місцях (taskCardClick, toggleTaskStatus, toggleTaskStep, rescheduleTaskTomorrow/Week) + `String()` typesafety у `toggleTaskStatus/Step/openEditTask/_rescheduleTask` + AI complete_task тепер викликає експортовану `toggleTaskStatus` → 3-фазна анімація закриття як ручний тап. Коміт `2eb9347`. |
+| B-80 | `src/tabs/notes.js` + `style.css` | Свайп-видалення папки/нотатки — стрибок чіпів зверху на 50-250мс | При тапі кошика `onDelete` викликав `saveNotes+renderNotes` миттєво → DOM перерисовувався поки swipe-transform на старому wrapEl ще активний → перша папка/нотатка залазила під чіпи OWL-баблу зверху. **FIX:** дзеркало `task-completing` патерну. Новий CSS клас `.swipe-deleting` (opacity:0 + max-height:0 + margin:0 з transition 0.25-0.28s) + хелпер `_animateSwipeRemoval(wrap, doRemove)` у `notes.js` — фіксує поточну висоту inline, додає клас через 30мс, через 310мс виконує save+render+undoToast. Працює і для нотаток і для папок. Коміти `ee2afad`, `f636d49` (syntax fix). |
 
 ### Сесія C8uQD (27.04.2026) — OWL Silence + Pruning Engine 3 фази
 
