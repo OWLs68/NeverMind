@@ -1087,8 +1087,12 @@ export function tryOwlBoardUpdate() {
   const phase = getDayPhase();
   if (phase === 'silent') return;
 
-  // SAFETY NET: якщо повідомлення на табло > 60 хв — примусова генерація
+  // М'який кеш (UVKL1 27.04 баланс актуальність↔економія): якщо найсвіжіше
+  // повідомлення Inbox молодше 5 хв — не питаємо нового. Pruning (Фаза 2)
+  // забирає неактуальне миттєво без API, тож «свіже» гарантовано релевантне.
   const visibleTs = msgs[0]?.ts || msgs[0]?.id || 0;
+  if (visibleTs && Date.now() - visibleTs < 5 * 60 * 1000) return;
+  // SAFETY NET: якщо повідомлення на табло > 60 хв — примусова генерація
   if (visibleTs && Date.now() - visibleTs > 60 * 60 * 1000) {
     console.log('[OWL board] stale message detected, forcing generation');
     import('./proactive.js').then(m => m.generateBoardMessage('inbox'));

@@ -1078,6 +1078,13 @@ export function tryTabBoardUpdate(tab) {
   if (hour < 5) return; // тихі години — генерація пропускається
   // Вечірнє табло — "підсумок дня" не має сенсу зранку; генеруємо лише після 12:00
   if (tab === 'evening' && hour < 12) return;
+  // М'який кеш (UVKL1 27.04 баланс актуальність↔економія): якщо для цієї вкладки
+  // вже є повідомлення молодше 5 хв — не питаємо нового. Pruning Engine (Фаза 2)
+  // миттєво забирає неактуальне з табла без API, тож кеш гарантовано «живий».
+  const tabMsgs = getTabBoardMsgs(tab);
+  const latestMsg = tabMsgs[0];
+  const latestAge = latestMsg ? (Date.now() - (latestMsg.ts || latestMsg.id || 0)) : Infinity;
+  if (latestAge < 5 * 60 * 1000) return;
   const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
   const elapsed = Date.now() - lastTs;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
@@ -1189,26 +1196,13 @@ window.addEventListener('nm-chat-closed', () => {
   }, 3000); // 3 сек затримка після закриття чату
 });
 
-// === Tab Switched — Шар 2 "Один мозок V2" Фаза 2 (rJYkw 21.04.2026) ===
-// Юзер перейшов на іншу вкладку. Ми вже негайно відрендерили попереднє повідомлення
-// (у switchTab через tryBoardUpdate), щоб не було мигання. Тепер даємо dwell 3 сек
-// (щоб не спрацьовувати при швидких свайпах повз) і питаємо Judge Layer.
-// Якщо скор достатній — генеруємо нове з transitionFrom у промпті.
-let _tabSwitchTimer = null;
-window.addEventListener('nm-tab-switched', (e) => {
-  const { from, to } = e.detail || {};
-  if (!to) return;
-  // Скасовуємо попередній dwell-таймер (юзер гортає далі)
-  if (_tabSwitchTimer) { clearTimeout(_tabSwitchTimer); _tabSwitchTimer = null; }
-  _tabSwitchTimer = setTimeout(() => {
-    _tabSwitchTimer = null;
-    if (typeof document !== 'undefined' && document.hidden) return;
-    const judge = shouldOwlSpeak('tab-switched', { targetTab: to });
-    if (judge.speak) {
-      generateBoardMessage(to, { transitionFrom: from });
-    }
-  }, 3000);
-});
+// === Tab Switched (UVKL1 27.04 баланс актуальність↔економія) ===
+// Раніше тут був другий тригер генерації через 3 сек dwell з transitionFrom.
+// Прибрано: tryBoardUpdate (через 100мс у nav.switchTab) уже сам вирішує чи
+// потрібен API через м'який кеш 5 хв + 30 хв guard. Дублювання тут призводило
+// до подвійних запитів і марних витрат токенів. transitionFrom втратили —
+// плавний перехід темою лишається через крос-чат пам'ять у звичайних промптах.
+// Лишаємо порожній listener для майбутнього розширення / діагностики.
 
 // === Welcome Back + Smart Boot-up (3.6) — тригери при поверненні в додаток ===
 const NM_LAST_ACTIVE_KEY = 'nm_last_active';
