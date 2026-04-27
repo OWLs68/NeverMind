@@ -12,7 +12,7 @@ import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE } from '../ai/prompts
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
-import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose } from './tasks.js';
+import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose, toggleTaskStatus } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { getMoments, saveMoments } from './evening.js';
@@ -1062,15 +1062,22 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   // друку висіли назавжди.
   if (action === 'complete_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => String(x.id) === String(parsed.task_id) && x.status !== 'done');
-    if (!t) { addMsg('agent', 'Не знайшов активну задачу з таким ID.'); return true; }
-    t.status = 'done';
-    t.completedAt = Date.now();
-    t.updatedAt = Date.now();
-    if (Array.isArray(t.steps)) t.steps.forEach(s => s.done = true);
-    saveTasks(tasks);
-    if (currentTab === 'tasks') renderTasks();
+    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!t) { addMsg('agent', 'Не знайшов задачу з таким ID.'); return true; }
+    if (t.status === 'done') { addMsg('agent', `Задача "${t.title}" вже закрита.`); return true; }
     addMsg('agent', `✅ Задачу "${t.title}" виконано!`);
+    // Викликаємо ту саму 3-фазну анімацію що й при ручному тапі ✓:
+    // галочка → 250мс пауза → сповзання картки → save+render через 620мс.
+    if (currentTab === 'tasks') {
+      toggleTaskStatus(t.id);
+    } else {
+      // Не на вкладці Задач — анімувати нема де, просто зберігаємо статус.
+      t.status = 'done';
+      t.completedAt = Date.now();
+      t.updatedAt = Date.now();
+      if (Array.isArray(t.steps)) t.steps.forEach(s => s.done = true);
+      saveTasks(tasks);
+    }
     return true;
   }
 

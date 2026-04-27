@@ -198,15 +198,15 @@ function renderEveningUndoneTasks() {
   container.innerHTML = top.map(t => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
       <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t.title)}</div>
-      <button onclick="rescheduleTaskTomorrow(${t.id})" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На завтра</button>
-      <button onclick="rescheduleTaskWeek(${t.id})" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На тиждень</button>
+      <button onclick="rescheduleTaskTomorrow('${t.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На завтра</button>
+      <button onclick="rescheduleTaskWeek('${t.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На тиждень</button>
     </div>
   `).join('') + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">і ще ${more}</div>` : '');
 }
 
 function _rescheduleTask(taskId, daysAhead) {
   const tasks = getTasks();
-  const idx = tasks.findIndex(t => t.id === taskId);
+  const idx = tasks.findIndex(t => String(t.id) === String(taskId));
   if (idx === -1) return;
   const d = new Date();
   d.setDate(d.getDate() + daysAhead);

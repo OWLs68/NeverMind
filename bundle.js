@@ -5196,14 +5196,14 @@ ${lines.join("\n\n")}`;
     container.innerHTML = top.map((t) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
       <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t.title)}</div>
-      <button onclick="rescheduleTaskTomorrow(${t.id})" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430</button>
-      <button onclick="rescheduleTaskWeek(${t.id})" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</button>
+      <button onclick="rescheduleTaskTomorrow('${t.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430</button>
+      <button onclick="rescheduleTaskWeek('${t.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</button>
     </div>
   `).join("") + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">\u0456 \u0449\u0435 ${more}</div>` : "");
   }
   function _rescheduleTask(taskId, daysAhead) {
     const tasks = getTasks();
-    const idx = tasks.findIndex((t) => t.id === taskId);
+    const idx = tasks.findIndex((t) => String(t.id) === String(taskId));
     if (idx === -1) return;
     const d = /* @__PURE__ */ new Date();
     d.setDate(d.getDate() + daysAhead);
@@ -12296,18 +12296,25 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "complete_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status !== "done");
+      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
       if (!t) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID.");
+        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID.");
         return true;
       }
-      t.status = "done";
-      t.completedAt = Date.now();
-      t.updatedAt = Date.now();
-      if (Array.isArray(t.steps)) t.steps.forEach((s) => s.done = true);
-      saveTasks(tasks);
-      if (currentTab === "tasks") renderTasks();
+      if (t.status === "done") {
+        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
+        return true;
+      }
       addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+      if (currentTab === "tasks") {
+        toggleTaskStatus(t.id);
+      } else {
+        t.status = "done";
+        t.completedAt = Date.now();
+        t.updatedAt = Date.now();
+        if (Array.isArray(t.steps)) t.steps.forEach((s) => s.done = true);
+        saveTasks(tasks);
+      }
       return true;
     }
     if (action === "complete_habit") {
@@ -13470,7 +13477,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function openEditTask(id) {
     const tasks = getTasks();
-    const t = tasks.find((x) => x.id === id);
+    const t = tasks.find((x) => String(x.id) === String(id));
     if (!t) return;
     editingTaskId = id;
     tempSteps = [...t.steps || []];
@@ -13596,9 +13603,9 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function toggleTaskStep(taskId, stepId) {
     const tasks = getTasks();
-    const t = tasks.find((x) => x.id === taskId);
+    const t = tasks.find((x) => String(x.id) === String(taskId));
     if (!t) return;
-    const s = (t.steps || []).find((x) => x.id === stepId);
+    const s = (t.steps || []).find((x) => String(x.id) === String(stepId));
     if (s) s.done = !s.done;
     const allDone = t.steps.length > 0 && t.steps.every((x) => x.done);
     const wasDone = t.status === "done";
@@ -13617,7 +13624,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function toggleTaskStatus(id) {
     const tasks = getTasks();
-    const t = tasks.find((x) => x.id === id);
+    const t = tasks.find((x) => String(x.id) === String(id));
     if (!t) return;
     const isCompleting = t.status !== "done";
     const now = Date.now();
@@ -13680,10 +13687,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t.status === "done" ? 100 : 0;
       const isDone = t.status === "done";
       return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${t.id}" onclick="taskCardClick(${t.id}, event)"
+      <div id="task-item-${t.id}" onclick="taskCardClick('${t.id}', event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? "8px" : "0"}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus(${t.id})" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
         </div>
         <div style="flex:1">
@@ -13697,7 +13704,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map((s) => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep(${t.id},${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
             </div>

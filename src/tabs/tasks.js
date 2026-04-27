@@ -38,7 +38,7 @@ export function openAddTask() {
 
 function openEditTask(id) {
   const tasks = getTasks();
-  const t = tasks.find(x => x.id === id);
+  const t = tasks.find(x => String(x.id) === String(id));
   if (!t) return;
   editingTaskId = id;
   tempSteps = [...(t.steps || [])];
@@ -159,9 +159,9 @@ function saveTask() {
 
 function toggleTaskStep(taskId, stepId) {
   const tasks = getTasks();
-  const t = tasks.find(x => x.id === taskId);
+  const t = tasks.find(x => String(x.id) === String(taskId));
   if (!t) return;
-  const s = (t.steps || []).find(x => x.id === stepId);
+  const s = (t.steps || []).find(x => String(x.id) === String(stepId));
   if (s) s.done = !s.done;
 
   // Перевіряємо чи всі кроки виконані
@@ -185,9 +185,9 @@ function deleteTask(id) {
   if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
 }
 
-function toggleTaskStatus(id) {
+export function toggleTaskStatus(id) {
   const tasks = getTasks();
-  const t = tasks.find(x => x.id === id);
+  const t = tasks.find(x => String(x.id) === String(id));
   if (!t) return;
   const isCompleting = t.status !== 'done';
   const now = Date.now();
@@ -253,10 +253,10 @@ export function renderTasks() {
     const isDone = t.status === 'done';
 
     return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${t.id}" onclick="taskCardClick(${t.id}, event)"
+      <div id="task-item-${t.id}" onclick="taskCardClick('${t.id}', event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? '8px' : '0'}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus(${t.id})" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         </div>
         <div style="flex:1">
@@ -270,7 +270,7 @@ export function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep(${t.id},${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
