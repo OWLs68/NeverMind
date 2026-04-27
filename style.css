@@ -633,11 +633,11 @@ body {
   border-radius: 14px;
   font-family: var(--font-body); font-size: 16px;
   color: var(--text-primary); outline: none;
-  box-shadow: 0 2px 12px rgba(100,70,200,0.05);
+  box-shadow: 0 2px 12px rgba(30,16,64,0.05);
   transition: border-color 0.2s, box-shadow 0.2s;
   -webkit-appearance: none; box-sizing: border-box;
 }
-.settings-input:focus { border-color: rgba(167,139,250,0.6); box-shadow: 0 2px 16px rgba(100,70,200,0.12); }
+.settings-input:focus { border-color: rgba(194,121,10,0.6); box-shadow: 0 2px 16px rgba(194,121,10,0.12); }
 .settings-input[type="password"] { letter-spacing: 2px; }
 .settings-input[type="password"]::placeholder { letter-spacing: 0; }
 .btn-primary {
