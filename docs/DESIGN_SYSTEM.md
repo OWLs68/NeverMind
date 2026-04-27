@@ -1,193 +1,219 @@
-# NeverMind — Дизайн-система
+# NeverMind — Design System (робочий інструмент)
 
-> Живий документ. Оновлюється кожного разу коли затверджується новий вигляд або поведінка компонента.
-> Формат кожного компонента: **Опис → Поведінка → CSS-специфікація → HTML-шаблон**
-> Корисно: можна взяти шаблон і перенести в інший проект — все задокументовано.
+> **Цей документ — робочий інструмент Claude.** Не галерея картинок, а інструкція для UI-задач: «треба змінити X → читай секцію Y → використовуй токен Z».
+>
+> **Кому корисно:** Claude перед UI-кодом (через скіл `/ux-ui`). Роман — для довідки, але цільова аудиторія = майбутній Claude.
+>
+> **Принцип:** одна правда у токенах. Якщо HEX/розмір/радіус не у токенах — це **техборг** (секція 7).
+>
+> **Оновлення:** кожна нова UI-фіча → додається у відповідну секцію. Старі інциденти → секція 8 (анти-патерни).
 
 ---
 
-## ⚠️ Помилки які були зроблені — читати перед будь-якою зміною модалки
+## 📑 Зміст
 
-### Проблема: padding на дочірніх елементах не звужував вміст
+1. [⚡ Шпаргалка (1 екран)](#-шпаргалка)
+2. [🎨 Токени дизайну](#-токени-дизайну)
+3. [📦 Шаблони для копі-пасту](#-шаблони-для-копі-пасту)
+   - [Glass-модалка (задача, звичка)](#glass-модалка)
+   - [Opaque-модалка (момент, проект, нотатка)](#opaque-модалка)
+   - [Картка у списку](#картка-у-списку)
+   - [Кнопка primary / secondary](#кнопки)
+   - [Чіп OWL](#чіп)
+   - [Поле вводу](#поле-вводу)
+   - [Safe Areas (iPhone notch + home indicator)](#safe-areas)
+   - [Haptics (вібрація на дії)](#haptics)
+   - [Empty States (порожній список)](#empty-states)
+   - [Loading Skeletons (заглушки даних)](#skeletons)
+4. [🧩 Компоненти (детальні специфікації)](#-компоненти-детальні-специфікації)
+5. [🗺 Вкладки (стандарт картки + акцент)](#-вкладки-стандарт-картки--акцент)
+6. [✅ Чекліст перед UI-пушем](#-чекліст-перед-ui-пушем)
+7. [⚠️ Техборг (file:line — що виправити)](#%EF%B8%8F-техборг-fileline--що-виправити)
+8. [🚫 Анти-патерни (як НЕ робити)](#-анти-патерни-як-не-робити)
+9. [📖 Словник (outer/backdrop/glass українською)](#-словник)
 
-**Що сталось (01.04.2026):** Роман просив додати горизонтальні відступи всередині модалок задачі і звички. Було зроблено 5+ спроб — жодна не давала видимого результату. Роман чекав і нервував.
+---
 
-**Що пробували і чому не спрацювало:**
+<a id="-шпаргалка"></a>
 
-| Спроба | Що зроблено | Чому не спрацювало |
-|--------|-------------|-------------------|
-| 1 | `padding:28px 20px` на `overflow-y:auto` inner wrapper | `overflow-y:auto` з padding — горизонтальний padding ігнорується або не дає ефекту в деяких браузерах/контекстах |
-| 2 | `padding:28px 28px` на тому самому wrapper | Та сама причина — зміна числа не вирішує проблему архітектури |
-| 3 | Додали окремий `<div>` з `padding:28px 20px` всередині scroll-контейнера | Здавалось правильним, але div мав `box-sizing:border-box` і `width:100%` — зовні не було видно різниці через прозорий фон модалки |
-| 4 | Звинувачення iOS Safari | Неправильна діагностика. Проблема відтворювалась в Chrome і на десктопі — значить не браузерний баг |
+## ⚡ Шпаргалка
 
-**Що реально вирішило проблему:**
+**Кольори в одному погляді:**
+| Роль | Значення | Коли |
+|---|---|---|
+| Темний текст | `#1e1040` | заголовки, body |
+| Бурштин | `#c2790a` | onboarding, нейтральний акцент |
+| Помаранч | `#ea580c` | задачі, основні CTA |
+| Зелений | `#16a34a` | успіх, звички, чекмарк |
+| Червоний | `#ef4444` | помилка, видалення |
+| Скляний фон | `rgba(255,255,255,0.30)` + blur 32 | модалки задача/звичка |
+| AI-bar / чат | `rgba(15,10,22,0.72)` + blur 16 | темна нижня панель |
+| 🚫 Фіолет | будь-який | **ЗАБОРОНЕНИЙ** — Роман не любить |
+
+**Якщо робиш X — йди сюди:**
+| Що | Куди |
+|---|---|
+| Нова модалка (форма редагування) | [Glass-модалка](#glass-модалка) або [Opaque-модалка](#opaque-модалка) |
+| Картка у списку | [Картка у списку](#картка-у-списку) |
+| Кнопка | [Кнопки](#кнопки) |
+| Чіп OWL (швидка дія) | [Чіп OWL](#чіп) |
+| Поле вводу/textarea | [Поле вводу](#поле-вводу) |
+| Список який буває порожній | [Empty States](#empty-states) |
+| Дія потребує тактильного фідбеку | [Haptics](#haptics) |
+| Дані вантажаться з мережі (Supabase) | [Loading Skeletons](#skeletons) |
+| Модалка торкається краю iPhone | [Safe Areas](#safe-areas) |
+| Не знаєш яка вкладка яким акцентом | [🗺 Вкладки](#-вкладки-стандарт-картки--акцент) |
+| Перед `git push` UI-зміни | [✅ Чекліст](#-чекліст-перед-ui-пушем) |
+
+**3 жорсткі правила (порушення = баг):**
+1. **Padding модалки** — `padding: 0 20px` ставиться на **outer panel** (з `overflow:hidden`), НЕ на scroll-контейнері. Інцидент 01.04 → секція 8.
+2. **Фіолет заборонений** — Claude інерційно пропонує, але Роман не любить. Заміна: `#c2790a` (бурштин), `#1e1040` (темний), `rgba(255,255,255,0.X)` (glass).
+3. **Перед UI-кодом** — посилайся на існуючий схожий компонент, не вигадуй з нуля. Приклад: «модалка операції як у `src/tabs/finance.js → _renderTransactionModalBody`».
+
+---
+
+<a id="-токени-дизайну"></a>
+
+## 🎨 Токени дизайну
+
+**Принцип:** усі повторювані значення — токени у `:root` або `--var-*` через CSS-змінні. Інлайн-стилі дозволені для одноразових випадків, але **повторення = техборг**.
+
+**Іменування:** англомовні (`--accent-amber`, `--card-radius`). Бо Claude мислить англійською — переклад ламає логіку (висновок Gemini-консультації nudNp 24.04).
+
+### Кольори (поточні + цільові)
+
 ```css
-/* НА OUTER PANEL (той що має overflow:hidden і border-radius): */
-padding: 0 20px;
+:root {
+  /* === ОСНОВНІ === */
+  --color-bg: linear-gradient(160deg, #f5f0e8, #ffffff, #fff8f0);
+  --color-text-primary:   rgba(30, 16, 64, 0.88);
+  --color-text-secondary: rgba(30, 16, 64, 0.55);
+  --color-text-muted:     rgba(30, 16, 64, 0.40);
 
-/* scroll container — тільки вертикальний padding: */
-padding: 28px 0 calc(env(safe-area-inset-bottom) + 28px);
+  /* === АКЦЕНТИ (семантичні) === */
+  --accent-amber:  #c2790a;   /* нейтральне, навчальне (onboarding) */
+  --accent-orange: #ea580c;   /* задачі, головні CTA */
+  --accent-green:  #16a34a;   /* успіх, звички, чекмарк */
+  --accent-red:    #ef4444;   /* помилка, видалення */
+
+  /* === ГРАДІЄНТИ ДЛЯ КНОПОК «ЗБЕРЕГТИ» === */
+  --grad-task:    linear-gradient(135deg, #f97316, #ea580c);  /* помаранч (задача) */
+  --grad-habit:   linear-gradient(135deg, #4ade80, #16a34a);  /* зелений (звичка) */
+  --grad-project: linear-gradient(135deg, #5c4a2a, #3d2e1e);  /* коричневий (проект) */
+
+  /* === GLASS / BLUR === */
+  --glass-modal-bg:  rgba(255, 255, 255, 0.30);
+  --glass-opaque-bg: rgba(255, 255, 255, 0.88);
+  --blur-card:  blur(16px);
+  --blur-modal: blur(24px);   /* компроміс між 16 (CSS) і 32 (JS finance) */
+  --blur-bar:   blur(16px);   /* AI-bar, чат */
+
+  /* === AI BAR / ЧАТ === */
+  --bar-bg: rgba(15, 10, 22, 0.72);
+
+  /* === КАРТКИ === */
+  --card-bg:     rgba(255, 255, 255, 0.50);
+  --card-border: rgba(255, 255, 255, 0.82);
+  --card-shadow: 0 2px 12px rgba(30, 16, 64, 0.06);  /* без фіолету! */
+  --card-radius: 18px;
+  --card-pad-x:  14px;
+  --card-pad-y:  10px;
+  --card-gap:    5px;
+
+  /* === МОДАЛКИ === */
+  --modal-radius:       18px;  /* стандартні (задача/звичка) */
+  --modal-radius-large: 24px;  /* великі (Finance, Cat picker) */
+  --modal-border: 1.5px solid rgba(255, 255, 255, 0.5);
+
+  /* === КНОПКИ === */
+  --btn-radius: 12px;
+  --btn-pad-sm: 8px 12px;     /* малі (фільтри, чіпи) */
+  --btn-pad-md: 10px 14px;    /* середні (дії в картці) */
+  --btn-pad-lg: 13px 14px;    /* великі (Зберегти/Скасувати у модалці) */
+
+  /* === ШРИФТИ === */
+  --font-body:    'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Unbounded', sans-serif;
+
+  /* === РОЗМІРИ ТЕКСТУ === */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   16px;
+  --text-xl:   18px;
+
+  /* === LINE-HEIGHT === */
+  --line-tight:   1.4;
+  --line-normal:  1.6;
+  --line-relaxed: 1.8;   /* нотатки, неспішна читаність */
+
+  /* === АНІМАЦІЇ === */
+  --motion-fast:   200ms;
+  --motion-normal: 300ms;
+  --motion-slow:   500ms;
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:   cubic-bezier(0.4, 0, 0.2, 1);
+}
 ```
-
-**Що реально спрацювало:** padding на outer panel (той що має `overflow:hidden`), а не на scroll-контейнері всередині.
-
----
-
-## Кольорова палітра
-
-| Роль | CSS-значення | Де |
-|------|-------------|-----|
-| Фон сторінки | `linear-gradient(160deg,#f5f0e8,#ffffff,#fff8f0)` | body background |
-| Основний текст | `#1e1040` | заголовки, input text |
-| Другорядний текст | `rgba(30,16,64,0.45)` | підписи, placeholder-like |
-| Акцент amber | `#c2790a` | onboarding, посилання |
-| Акцент orange | `#ea580c` | задачі, кнопка "Зберегти" |
-| Акцент green | `#16a34a` | звички, виконані кроки |
-| AI bar / чат | `rgba(15,10,22,0.72)` | input bar, chat window, tab board |
 
 ### ❌ Заборонені кольори
 
-**Фіолетовий — НЕ використовувати.** Роман не любить цей колір. Альтернативи коли здається що треба "третій акцентний":
-- Бурштиновий `#c2790a` (amber) — для навчальних/нейтральних елементів
-- Темно-сірий `#1e1040` — для текстів і акцентів на світлому фоні
-- Білий / напівпрозорий білий `rgba(255,255,255,0.X)` — для glass-ефектів
+**Фіолетовий — НЕ використовувати.**
 
-> ⚠️ **Claude має тенденцію пропонувати фіолетовий за замовчуванням** (це залишок з тренувальних даних). Якщо Claude в мокапі або коді пропонує фіолетовий — одразу нагадати йому це правило і запропонувати заміну з палітри вище.
+| Чому | Деталі |
+|---|---|
+| Роман не любить | особиста преференція власника продукту |
+| Claude інерційно пропонує | залишок з тренувальних даних — `purple-500`, `indigo-600` за замовчуванням |
+| Знайдено 4× у проекті | див. секція 7 [Техборг](#%EF%B8%8F-техборг-fileline--що-виправити) |
+
+**Замість фіолету:**
+- `#c2790a` (бурштин) — для нейтрального/навчального
+- `#1e1040` (основний темний) — для тексту і темних акцентів
+- `rgba(255,255,255,0.X)` — для glass-ефектів
+
+### Стан токенів (поточно vs цільово)
+
+✅ **Вже є у `style.css`:** `--card-bg`, `--card-border`, `--card-shadow` (з фіолетом!), `--card-radius`, `--card-pad-x/y`, `--card-gap`, `--text-primary`, `--text-secondary`, `--active-accent`, `--inbox-bg`, `--font-body`, `--font-display`.
+
+❌ **Ще не існує (треба додати у `style.css` коли черга):** `--accent-amber/orange/green/red`, `--blur-card/modal/bar`, `--modal-radius/-large`, `--btn-radius/pad-sm/md/lg`, `--text-xs/sm/base/md/lg/xl`, `--line-tight/normal/relaxed`, `--motion-fast/normal/slow`.
+
+⚠️ **Конфлікти між поточним і цільовим** — див. секція 7 [Техборг](#%EF%B8%8F-техборг-fileline--що-виправити).
 
 ---
 
-## Модальне вікно (Bottom Sheet Modal)
+<a id="-шаблони-для-копі-пасту"></a>
 
-### Опис
-Панель що виїжджає знизу екрану. Використовується для: редагування задачі, звички, проекту, моменту, та будь-якого іншого об'єкту.
+## 📦 Шаблони для копі-пасту
 
-**Два типи** залежно від прозорості фону:
-| Тип | Де | background панелі |
-|-----|----|-------------------|
-| **Скляний** (glass) | задача, звичка | `rgba(255,255,255,0.30)` + `blur(32px)` |
-| **Непрозорий** | проект, момент, нотатка | `rgba(255,255,255,0.88)` + `blur(24px)` |
+> **TODO у Коміті 1**: 10 готових блоків коду які копіюємо при створенні нового UI.
 
-### Поведінка
-- Закривається тапом по backdrop або свайпом вниз
-- `max-height: 80-85vh` + scroll — якщо вміст не влізає
-- `env(safe-area-inset-bottom)` в нижньому padding — для iPhone з home indicator
+<a id="glass-модалка"></a>
+### Glass-модалка
 
-### CSS-специфікація (актуальна, скляний тип — задача/звичка)
+**Де використовується:** редагування задачі, звички. Прозоро-біла панель з blur через яку видно фон.
 
-**Зовнішній контейнер (overlay):**
-```css
-position: fixed; inset: 0; z-index: 200;
-display: flex; align-items: flex-end; justify-content: center;
-padding: 0 16px 16px;   /* відступ від країв екрана */
-```
+**Аналог у коді:** `src/tabs/tasks.js → openTaskModal()`, `src/tabs/habits.js → openHabitModal()`.
 
-**Backdrop:**
-```css
-position: absolute; inset: 0;
-background: rgba(0,0,0,0.35);
-backdrop-filter: blur(4px);
-```
-
-**Панель (outer panel):**
-```css
-position: relative;
-width: 100%; max-width: 480px;
-background: rgba(255,255,255,0.30);
-backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
-border-radius: 24px;
-border: 1.5px solid rgba(255,255,255,0.5);
-overflow: hidden;          /* ВАЖЛИВО: clip контенту */
-padding: 0 20px;           /* горизонтальний відступ — ТІЛЬКИ тут, не на дочірніх */
-max-height: 85vh;
-z-index: 1;
-```
-
-> ⚠️ **Правило:** горизонтальний padding (`0 20px`) ставити на `overflow:hidden` outer panel.
-> Padding на `overflow-y:auto` дочірніх елементах не дає ефекту в деяких браузерах.
-
-**Scroll-контейнер (всередині панелі):**
-```css
-overflow-y: auto;
-max-height: 85vh;   /* дублює max-height батька для коректного scroll */
-padding: 28px 0 calc(env(safe-area-inset-bottom) + 28px);
-box-sizing: border-box;
-/* горизонтальний padding — НЕ ставити тут, він вже є на outer panel */
-```
-
-**Handle (риска зверху):**
-```css
-width: 36px; height: 4px;
-background: rgba(0,0,0,0.12);
-border-radius: 2px;
-margin: 0 auto 18px;
-```
-
-**Поля вводу (input / textarea):**
-```css
-width: 100%; box-sizing: border-box;
-background: rgba(255,255,255,0.7);
-border: 1.5px solid rgba(30,16,64,0.12);
-border-radius: 12px;
-padding: 12px 14px;
-font-size: 16-17px; color: #1e1040; outline: none;
-```
-
-**Рядки списків (кроки задачі тощо):**
-```css
-display: flex; align-items: center; gap: 8px;
-background: rgba(255,255,255,0.7);        /* такий самий як поля вводу */
-border: 1.5px solid rgba(30,16,64,0.12);
-border-radius: 10px;
-padding: 8px 10px;
-```
-
-**Кнопки внизу:**
-```css
-/* обгортка */
-display: flex; gap: 8-10px;
-
-/* Скасувати (flex:1) */
-background: rgba(30,16,64,0.06); border: none;
-border-radius: 12px; padding: 13-14px;
-font-size: 16px; font-weight: 700; color: rgba(30,16,64,0.5);
-
-/* Зберегти (flex:2) */
-background: linear-gradient(135deg, [акцент-light], [акцент-dark]);
-border: none; border-radius: 12px; padding: 13-14px;
-font-size: 16px; font-weight: 700; color: white;
-```
-
-**Акцентні градієнти по типу модалки:**
-| Модалка | Зберегти |
-|---------|----------|
-| Задача | `linear-gradient(135deg,#f97316,#ea580c)` |
-| Звичка | `linear-gradient(135deg,#4ade80,#16a34a)` |
-| Проект | `linear-gradient(135deg,#5c4a2a,#3d2e1e)` |
-| Момент | відповідно до настрою |
-
-### HTML-шаблон (актуальний)
+**Ключове правило:** горизонтальний `padding: 0 20px` ставиться на **outer panel** (з `overflow:hidden`), НЕ на scroll-контейнері всередині. Інцидент 01.04 → секція 8.
 
 ```html
-<!-- MODAL: назва -->
+<!-- MODAL -->
 <div id="xxx-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <!-- Backdrop -->
   <div onclick="closeXxxModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
-  <!-- Outer panel: overflow:hidden + padding:0 20px для горизонтальних відступів -->
+  <!-- Outer panel: overflow:hidden + padding:0 20px (ГОРИЗОНТАЛЬНИЙ) -->
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
-    <!-- Scroll container: тільки вертикальний padding -->
-    <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
+    <!-- Scroll: тільки ВЕРТИКАЛЬНИЙ padding + safe-area-inset-bottom -->
+    <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <!-- Handle -->
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-      <!-- Заголовок + кнопка видалити -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Заголовок</div>
-        <button style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
-      </div>
-      <!-- Поле вводу -->
-      <input type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Текст…">
-      <!-- Кнопки -->
-      <div style="display:flex;gap:8px">
+      <!-- Заголовок -->
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Заголовок</div>
+      <!-- Контент / поля вводу -->
+      <input type="text" style="..." placeholder="Текст…">
+      <!-- Кнопки внизу -->
+      <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="closeXxxModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
         <button onclick="saveXxx()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
       </div>
@@ -196,72 +222,364 @@ font-size: 16px; font-weight: 700; color: white;
 </div>
 ```
 
-### JS: відкриття + свайп
+**JS відкриття + свайп закриття:**
 ```javascript
-// Відкрити:
 document.getElementById('xxx-modal').style.display = 'flex';
-
-// Закрити:
-document.getElementById('xxx-modal').style.display = 'none';
-
-// Свайп вниз щоб закрити (викликати після відкриття):
 setupModalSwipeClose(
   document.querySelector('#xxx-modal > div:last-child'),
   closeXxxModal
 );
-// setupModalSwipeClose знаходиться в src/tabs/tasks.js
+// setupModalSwipeClose у src/tabs/tasks.js
 ```
+
+**Розрахунок ширини** (приклад для max-width 480px):
+- outer panel 480px, padding 0 20px → вміст 480 − 40 = **440px**
+- На iPhone (вікно 390-430px) → outer схрипне до 100% мінус `padding:0 16px 16px` overlay → 358-398px → вміст ~318-358px
+
+<a id="opaque-модалка"></a>
+### Opaque-модалка
+
+**Де використовується:** проект, момент, нотатка. Майже непрозорий білий фон (`0.88`) — для контенту з більшою кількістю тексту.
+
+**Відмінність від Glass:** `background: rgba(255,255,255,0.88)` замість `0.30`. blur 24px замість 32px. Решта однакова.
+
+```html
+<!-- ВІДМІННИЙ РЯДОК (інший background): -->
+<div style="...background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);...">
+```
+
+<a id="картка-у-списку"></a>
+### Картка у списку
+
+**Де використовується:** задача, нотатка, звичка, операція, проект, подія. Кожна вкладка має свій акцент-градієнт.
+
+**Базовий шаблон** (Задача — пастельно-блакитний):
+```html
+<div class="task-item-wrap" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
+  <div onclick="taskCardClick('${id}', event)"
+    style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);
+           border:1.5px solid rgba(255,255,255,0.4);
+           border-radius:16px;
+           padding:var(--card-pad-y) var(--card-pad-x);
+           box-shadow:0 2px 12px rgba(0,0,0,0.04);
+           opacity:${isDone ? '0.5' : '1'};
+           cursor:pointer;
+           position:relative;z-index:1;
+           touch-action:pan-y">
+    <!-- Чекбокс + контент -->
+  </div>
+</div>
+```
+
+**Акцентні градієнти за типом:**
+| Вкладка | Background | Тип |
+|---|---|---|
+| Задача | `linear-gradient(135deg,#c6f3fd,#a8ecfb)` | пастельно-блакитний |
+| Нотатка | див. `src/tabs/notes.js → renderNotesList` | світло-бежевий |
+| Звичка | див. `src/tabs/habits.js` | пастельно-зелений |
+| Операція | див. `src/tabs/finance.js` | за категорією |
+| Проект | див. `src/tabs/projects.js` | темний коричневий |
+
+**ВАЖЛИВО про onclick з UUID** (B-108 fix Aps79 27.04):
+ID задачі — це UUID-string (`abc-def-123`). У HTML атрибуті onclick **обов'язково обгортай у одинарні лапки**: `onclick="fn('${id}')"`, інакше JS парсить як арифметику ідентифікаторів і викидає ReferenceError.
+
+**Свайп-видалення:** використовуй `attachSwipeDelete(wrap, card, onDelete)` з `src/ui/swipe-delete.js`. Для **анімації схлопу перед `renderXxx()`** дзеркаль патерн `_animateSwipeRemoval` з `src/tabs/notes.js` (B-80 fix). Без цього перша картка стрибатиме під чіпи зверху.
+
+<a id="кнопки"></a>
+### Кнопки
+
+**Primary (Зберегти, головна дія):**
+```html
+<button style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);
+               border:none;border-radius:12px;padding:13px;
+               font-size:16px;font-weight:700;color:white;cursor:pointer">
+  Зберегти
+</button>
+```
+
+**Secondary (Скасувати, нейтральне):**
+```html
+<button style="flex:1;background:rgba(30,16,64,0.06);
+               border:none;border-radius:12px;padding:13px;
+               font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">
+  Скасувати
+</button>
+```
+
+**Pill (фільтр/категорія, активний):**
+```html
+<button style="background:rgba(194,121,10,0.12);color:#5b3d12;
+               border:1px solid rgba(194,121,10,0.35);
+               border-radius:999px;padding:5px 10px;
+               font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+  На завтра
+</button>
+```
+
+**Розміри padding** (з токенів):
+- `var(--btn-pad-sm)` = `8px 12px` — фільтри, чіпи
+- `var(--btn-pad-md)` = `10px 14px` — дії в картці
+- `var(--btn-pad-lg)` = `13px 14px` — Зберегти/Скасувати у модалці
+
+**Заборонені кольори у градієнтах:** фіолет (`#7c3aed`, `#a855f7`, `purple-*`, `indigo-*`). Якщо здається що треба «третій акцент» — використовуй `--accent-amber`.
+
+<a id="чіп"></a>
+### Чіп OWL
+
+**Де використовується:** swipe-row під OWL-баблом. Швидкі дії (відкрити календар, закрити задачу, додати звичку).
+
+**Аналог у коді:** `src/owl/chips.js → renderChips(container, chips, tab)`.
+
+**Структура:**
+```javascript
+const chips = [
+  { label: 'Відкрити календар', action: 'nav', target: 'calendar' },
+  { label: 'Зробив', action: 'chat' },
+];
+renderChips(chipEl, chips, 'tasks');
+```
+
+**Чотири типи `action`:**
+| action | Поведінка |
+|---|---|
+| `chat` | відправляє label у чат-бар поточної вкладки |
+| `nav` | переключає на вкладку `target` |
+| `tool` | викликає UI-tool через AI-диспетчер |
+| `link` | відкриває URL |
+
+**Правила label:** до 3 слів, без крапок у кінці. Не дублюй варіанти.
+
+<a id="поле-вводу"></a>
+### Поле вводу
+
+**Standard input/textarea (всередині модалки):**
+```html
+<input type="text"
+  style="width:100%;box-sizing:border-box;
+         background:rgba(255,255,255,0.7);
+         border:1.5px solid rgba(30,16,64,0.12);
+         border-radius:12px;
+         padding:12px 14px;
+         font-size:17px;font-family:inherit;
+         color:#1e1040;outline:none"
+  placeholder="Текст…">
+```
+
+**Чому `font-size:17px`:** менше → iOS Safari автоматично робить zoom при focus. 17px — мінімум щоб zoom не запускався.
+
+**Рядок списку (наприклад, крок задачі) — той самий фон:**
+```html
+<div style="display:flex;align-items:center;gap:8px;
+            background:rgba(255,255,255,0.7);
+            border:1.5px solid rgba(30,16,64,0.12);
+            border-radius:10px;
+            padding:8px 10px">
+  <!-- чекбокс + текст кроку -->
+</div>
+```
+
+<a id="safe-areas"></a>
+### Safe Areas (iPhone notch + home indicator)
+
+**Проблема:** на iPhone X+ зверху «вухо» (notch), знизу — горизонтальна риска (home indicator). Контент може заходити під них → юзер не бачить кнопку «Зберегти» або вона перекрита.
+
+**Рішення:** використовуй `env(safe-area-inset-*)` у CSS. Браузер сам підставить правильне число для конкретного пристрою.
+
+**4 змінні які варто знати:**
+- `env(safe-area-inset-top)` — простір під «вухом» (~47px на iPhone 14)
+- `env(safe-area-inset-bottom)` — простір над home indicator (~34px)
+- `env(safe-area-inset-left)` / `right` — для landscape
+
+**Стандартні місця:**
+```css
+/* Модалка — нижній padding щоб «Зберегти» не залазив під home indicator */
+padding-bottom: calc(env(safe-area-inset-bottom) + 28px);
+
+/* Tab bar внизу — щоб не залазив під home indicator */
+padding-bottom: env(safe-area-inset-bottom);
+
+/* Page header зверху — щоб не залазив під «вухо» */
+padding-top: calc(env(safe-area-inset-top) + 12px);
+
+/* AI-bar внизу */
+padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+```
+
+**Перевірка:** на iPhone 14+ якщо контент НЕ використовує `env(...)` — він **точно** перекритий «вухом» або рискою. На iPhone SE проблем немає (немає notch/indicator).
+
+<a id="haptics"></a>
+### Haptics (вібрація на дії)
+
+**Проблема:** користувач не відчуває «зробив» — натиснув кнопку, нічого не дзенькнуло, не зрозуміло чи спрацювало. На iPhone Reminders/Things при тапі ✓ — телефон віддає легкий «тук». У NeverMind зараз немає.
+
+**Рішення:** `navigator.vibrate(ms)` на ключових подіях. Доступно на Android + iOS Safari (з обмеженнями).
+
+**4 базові патерни:**
+```javascript
+// Success — закриття задачі, додавання моменту, save
+navigator.vibrate?.(15);
+
+// Warning — сповіщення, attention
+navigator.vibrate?.([20, 50, 20]);
+
+// Error — несправний ввід, відмова
+navigator.vibrate?.([50, 30, 50]);
+
+// Swipe-delete trigger — перетинання порогу свайпу
+navigator.vibrate?.(10);
+```
+
+**Де викликати:**
+| Подія | Патерн |
+|---|---|
+| Завершення задачі/звички (✓) | `vibrate(15)` |
+| Save modal | `vibrate(15)` |
+| Свайп досягнув threshold для delete | `vibrate(10)` |
+| Помилка валідації форми | `vibrate([50,30,50])` |
+| Таймер/нагадування спрацювало | `vibrate([20,50,20])` |
+
+**Важливо:** загортай у `?.` — `navigator.vibrate?.(15)`. На desktop і деяких iOS — функції просто немає, без `?.` буде помилка.
+
+**Не зловживай:** не додавай vibrate на КОЖНУ дію (тап картки, відкриття модалки) — це дратує. Тільки на події які юзер **активно ініціював** і де треба підтвердження що **щось важливе сталось**.
+
+**Стан у проекті:** `navigator.vibrate` ще не використовується. Додавати поступово при наступних UI-задачах.
+
+<a id="empty-states"></a>
+### Empty States (порожній список)
+
+**Проблема:** список порожній → юзер бачить білу пустоту → думає «застосунок зламався» або «я в неправильному місці».
+
+**Рішення:** замість порожнечі — **дружнє повідомлення** + іконка/емодзі + chip-кнопка з пропозицією дії.
+
+**Структура:**
+```html
+<div style="text-align:center;padding:60px 32px;color:rgba(30,16,64,0.35)">
+  <div style="font-size:48px;margin-bottom:12px">📝</div>
+  <div style="font-size:16px;font-weight:600;color:rgba(30,16,64,0.6);margin-bottom:6px">
+    Поки немає нотаток
+  </div>
+  <div style="font-size:14px;line-height:1.5;margin-bottom:20px">
+    Натисни «+» зверху або скажи «запам'ятай що...» в Inbox.
+  </div>
+</div>
+```
+
+**Тон копірайту:**
+- ✅ «Поки немає нотаток» (тимчасово, юзер додасть)
+- ❌ «Список порожній» (констатація факту, неінформативно)
+- ✅ «Натисни '+' зверху або скажи 'запам'ятай що...'» (конкретна підказка дії)
+- ❌ «Тут будуть твої нотатки» (без дії)
+
+**Стандарт по вкладках:**
+| Вкладка | Емодзі | Пропозиція дії |
+|---|---|---|
+| Задачі | 📋 | «Натисни '+' або скажи 'купити X' в Inbox» |
+| Нотатки | 📝 | «Скажи 'запам'ятай що...' в Inbox» |
+| Звички | 🎯 | «Створи першу звичку через '+'» |
+| Календар | 📅 | «Скажи 'нагадай завтра' в Inbox» |
+| Фінанси | 💰 | «Запиши першу витрату — 'купив X на Y євро'» |
+
+<a id="skeletons"></a>
+### Loading Skeletons (заглушки даних)
+
+**Проблема:** після Supabase дані вантажаться з мережі (300-1500мс). Якщо показувати порожній екран — здається що нічого не сталось. Якщо `Loading...` — теж не круто.
+
+**Рішення:** **сірі пульсуючі прямокутники** на місці майбутніх карток. Юзер бачить структуру одразу, дані з'являються як заміна.
+
+**CSS pulse:**
+```css
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(30,16,64,0.05) 0%,
+    rgba(30,16,64,0.10) 50%,
+    rgba(30,16,64,0.05) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+```
+
+**Скелетна картка задачі (приклад):**
+```html
+<div style="margin:0 14px var(--card-gap);padding:var(--card-pad-y) var(--card-pad-x);background:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px">
+  <div style="display:flex;gap:10px;align-items:center">
+    <!-- Чекбокс-заглушка -->
+    <div class="skeleton" style="width:28px;height:28px;border-radius:8px"></div>
+    <!-- Текст-заглушка -->
+    <div style="flex:1">
+      <div class="skeleton" style="width:70%;height:16px;margin-bottom:6px"></div>
+      <div class="skeleton" style="width:45%;height:12px"></div>
+    </div>
+  </div>
+</div>
+```
+
+**Скільки скелетів показувати:** 3-5 для списку. Не 1 (виглядає як справжня картка). Не 20 (заповнює екран фейком).
+
+**Коли показувати:**
+| Ситуація | Skeleton чи ні |
+|---|---|
+| Перший вхід, порожнього кешу немає | ✅ Skeleton поки не прийдуть дані |
+| Refresh — кеш є, оновлюємо у фоні | ❌ Показуй кеш, а не skeleton |
+| Юзер натиснув «оновити» явно | ✅ Skeleton 200мс мінімум |
+| Помилка мережі | ❌ Empty state з повідомленням |
+
+**Стан у проекті:** ще не використовується (немає мережевих даних). Додаємо паралельно з Supabase.
 
 ---
 
-## AI Bar (нижня панель вводу)
+<a id="-компоненти-детальні-специфікації"></a>
 
-### Опис
-Фіксована панель внизу кожної вкладки. Містить поле вводу тексту + кнопку відправки. Над полем вводу — висувне вікно чату (3 стани).
+## 🧩 Компоненти (детальні специфікації)
 
-### Поведінка — 3 стани чату
-| Стан | Опис | Як активувати |
-|------|------|---------------|
-| **Закрито** | Тільки input bar, чат схований | — |
-| **A (compact)** | Чат частково відкритий (~40% висоти) | Фокус на input або свайп вгору |
-| **B (full)** | Чат на повний екран | Свайп вгору з compact |
-
-- При **переключенні вкладок**: стан чату зберігається (не скидається автоматично)
-- При **відкритті клавіатури**: панель піднімається разом з нею
-
-### CSS
-```css
-background: rgba(15,10,22,0.72);  /* темний напівпрозорий */
-backdrop-filter: blur(16px);
-```
-
-### Handle (риска)
-```css
-/* Коли чат відкритий */
-background: rgba(255,255,255,0.45);  /* біла */
-
-/* Коли чат закритий — підказка над input */
-/* CSS ::before на .ai-bar-input-box */
-background: rgba(15,10,22,0.45);     /* темна */
-```
+> **TODO у Коміті 2**: глибокі специфікації — поведінка, варіанти, edge cases. Розгортати тільки при потребі.
 
 ---
 
-## Картки задач
+<a id="-вкладки-стандарт-картки--акцент"></a>
 
-### Опис
-Картка з заголовком, опційним описом, прогрес-баром і списком кроків. Свайп вліво — видалити.
+## 🗺 Вкладки (стандарт картки + акцент)
 
-### Поведінка кроків
-- **Тап по чекбоксу** (рух < 10px) → ставить/знімає галочку
-- **Свайп або скрол** (рух ≥ 10px) → ігнорується, галочка не ставиться
-- Коли **всі кроки виконані** → `task.status = 'done'`, картка тьмяніє, заголовок перекреслюється
-- Коли **знята хоча б одна галочка** → `task.status = 'active'`, картка відновлюється
+> **TODO у Коміті 2**: який акцентний колір і який стандарт картки на кожній з 8 вкладок.
 
-### CSS
-```css
-background: linear-gradient(135deg, #c6f3fd, #a8ecfb);
-border: 1.5px solid rgba(255,255,255,0.4);
-border-radius: 16px;
-padding: 14px 14px 12px;
-```
+---
+
+<a id="-чекліст-перед-ui-пушем"></a>
+
+## ✅ Чекліст перед UI-пушем
+
+> **TODO у Коміті 3**: 5-7 пунктів які Claude перевіряє перед `git push` будь-якої UI-зміни.
+
+---
+
+<a id="%EF%B8%8F-техборг-fileline--що-виправити"></a>
+
+## ⚠️ Техборг (file:line — що виправити)
+
+> **TODO у Коміті 3**: список конкретних місць у коді з file:line де є відхилення від токенів. Не код-фікс — інвентар для майбутніх задач.
+>
+> Знайдено 11 пріоритетизованих конфліктів у нічній сесії qG4fj 25.04 — повний інвентар у `_ai-tools/DESIGN_SYSTEM_INVENTORY.md`.
+
+---
+
+<a id="-анти-патерни-як-не-робити"></a>
+
+## 🚫 Анти-патерни (як НЕ робити)
+
+> **TODO у Коміті 4**: реальні інциденти проекту — що пробували, чому не спрацювало, що реально вирішило.
+
+---
+
+<a id="-словник"></a>
+
+## 📖 Словник
+
+> **TODO у Коміті 4**: outer, backdrop, glass, scroll-container, handle — українською з прикладами.
+
+---
+
+*Документ у процесі перепису. Сесія Aps79 27.04.2026 — Коміт 1 з 5.*
