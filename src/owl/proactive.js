@@ -35,13 +35,16 @@ export function getTabBoardContext(tab) {
     const active = tasks.filter(t => t.status === 'active');
     const now = Date.now();
     const stuck = active.filter(t => t.createdAt && (now - t.createdAt) > 3 * 24 * 60 * 60 * 1000);
-    if (stuck.length > 0) parts.push(`[ВАЖЛИВО] Задачі без прогресу 3+ дні: ${stuck.map(t => '"' + t.title + '"').join(', ')}`);
+    if (stuck.length > 0) parts.push(`[ВАЖЛИВО] Задачі без прогресу 3+ дні: ${stuck.map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}`);
     parts.push(`Активних задач: ${active.length}, закрито: ${tasks.filter(t => t.status === 'done').length}`);
+    if (active.length > 0) {
+      parts.push(`Усі активні задачі: ${active.slice(0, 10).map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}.`);
+    }
 
     // Нещодавно закриті (24 год) — щоб AI не повторював їх як відкриті з boardHistory
     const recentlyDone = tasks.filter(t => t.status === 'done' && (t.completedAt || t.updatedAt) && (now - (t.completedAt || t.updatedAt)) < 24 * 60 * 60 * 1000).slice(0, 5);
     if (recentlyDone.length > 0) {
-      parts.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (вже виконані, НЕ нагадуй про них, НЕ повторюй зі свого boardHistory): ${recentlyDone.map(t => '"' + t.title + '"').join(', ')}.`);
+      parts.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (вже виконані, НЕ нагадуй про них, НЕ повторюй зі свого boardHistory): ${recentlyDone.map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}.`);
     }
     // Quit звички
     const allHabits = getHabits();
@@ -51,11 +54,11 @@ export function getTabBoardContext(tab) {
       const quitInfo = quitHabits.map(h => {
         const s = getQuitStatus(h.id);
         const heldToday = s.lastHeld === todayStr;
-        return `"${h.name}": стрік ${s.streak || 0} дн${heldToday ? ' ✓' : ' (не відмічено сьогодні)'}`;
+        return `"${h.name}" [habit_${h.id}]: стрік ${s.streak || 0} дн${heldToday ? ' ✓' : ' (не відмічено сьогодні)'}`;
       });
       parts.push(`Челенджі "Кинути": ${quitInfo.join('; ')}`);
       const notHeld = quitHabits.filter(h => getQuitStatus(h.id).lastHeld !== todayStr);
-      if (notHeld.length > 0) parts.push(`[ВАЖЛИВО] Не відмічено сьогодні: ${notHeld.map(h => '"' + h.name + '"').join(', ')}`);
+      if (notHeld.length > 0) parts.push(`[ВАЖЛИВО] Не відмічено сьогодні: ${notHeld.map(h => '"' + h.name + '" [habit_' + h.id + ']').join(', ')}`);
     }
   }
 
@@ -64,6 +67,11 @@ export function getTabBoardContext(tab) {
     const byFolder = {};
     notes.forEach(n => { const f = n.folder || 'Загальне'; byFolder[f] = (byFolder[f] || 0) + 1; });
     parts.push(`Нотатки: ${notes.length} записів. Папки: ${Object.entries(byFolder).map(([f, c]) => f + '(' + c + ')').join(', ') || 'немає'}`);
+    // Найсвіжіші 5 нотаток з ID — щоб табло могло посилатись на конкретну і відстежувати релевантність
+    const recent = notes.slice(0, 5);
+    if (recent.length > 0) {
+      parts.push(`Останні нотатки: ${recent.map(n => '"' + (n.title || (n.text || '').slice(0,30)) + '" [note_' + n.id + ']').join(', ')}.`);
+    }
   }
 
   if (tab === 'me') {
@@ -77,13 +85,17 @@ export function getTabBoardContext(tab) {
     const todayH = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
     const doneToday = todayH.filter(h => !!log[today]?.[h.id]).length;
     if (buildHabits.length > 0) {
-      const streaks = buildHabits.map(h => ({ name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
-      parts.push(`Звички сьогодні: ${doneToday}/${todayH.length}. Стріки: ${streaks.filter(s => s.streak >= 2).map(s => s.name + '🔥' + s.streak).join(', ') || 'немає'}`);
+      const streaks = buildHabits.map(h => ({ id: h.id, name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
+      parts.push(`Звички сьогодні: ${doneToday}/${todayH.length}. Стріки: ${streaks.filter(s => s.streak >= 2).map(s => s.name + ' [habit_' + s.id + ']🔥' + s.streak).join(', ') || 'немає'}`);
+      const pendingToday = todayH.filter(h => !log[today]?.[h.id]);
+      if (pendingToday.length > 0) {
+        parts.push(`Не виконано сьогодні: ${pendingToday.map(h => '"' + h.name + '" [habit_' + h.id + ']').join(', ')}.`);
+      }
     }
     if (quitHabits.length > 0) {
       const quitInfo = quitHabits.map(h => {
         const s = getQuitStatus(h.id);
-        return `"${h.name}": ${s.streak || 0} дн без зривів`;
+        return `"${h.name}" [habit_${h.id}]: ${s.streak || 0} дн без зривів`;
       });
       parts.push(`Челенджі: ${quitInfo.join(', ')}`);
     }
@@ -122,7 +134,7 @@ export function getTabBoardContext(tab) {
       const active = projects.filter(p => p.status === 'active');
       const paused = projects.filter(p => p.status === 'paused');
       parts.push(`Проектів активних: ${active.length}, на паузі: ${paused.length}, всього: ${projects.length}.`);
-      if (active.length > 0) parts.push(`Активні: ${active.slice(0,3).map(p => '"' + p.name + '"').join(', ')}`);
+      if (active.length > 0) parts.push(`Активні: ${active.slice(0,5).map(p => '"' + p.name + '" [project_' + p.id + ']').join(', ')}`);
     } catch(e) {}
   }
 
@@ -191,7 +203,7 @@ function _getInboxBoardContext() {
   // Нещодавно закриті — щоб AI не згадував їх як відкриті
   const recentlyDone = tasks.filter(t => t.status === 'done' && t.completedAt && (Date.now() - t.completedAt) < 24 * 60 * 60 * 1000);
   if (recentlyDone.length > 0) {
-    normal.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (НЕ згадуй як відкриті!): ${recentlyDone.map(t => '"' + t.title + '"').join(', ')}.`);
+    normal.push(`[ФАКТ] Нещодавно ЗАКРИТІ задачі (НЕ згадуй як відкриті!): ${recentlyDone.map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}.`);
   }
 
   // === РАНКОВИЙ БРИФ ===
@@ -199,11 +211,11 @@ function _getInboxBoardContext() {
     const todayDow = now.getDay();
     const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && (h.days || [0,1,2,3,4]).includes(todayDow));
     const briefParts = [];
-    if (activeTasks.length > 0) briefParts.push(`Задачі на сьогодні: ${activeTasks.slice(0, 5).map(t => '"' + t.title + '"').join(', ')}`);
-    if (todayHabitsAll.length > 0) briefParts.push(`Звички: ${todayHabitsAll.map(h => h.name).join(', ')}`);
+    if (activeTasks.length > 0) briefParts.push(`Задачі на сьогодні: ${activeTasks.slice(0, 5).map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}`);
+    if (todayHabitsAll.length > 0) briefParts.push(`Звички: ${todayHabitsAll.map(h => h.name + ' [habit_' + h.id + ']').join(', ')}`);
     const quitHabitsAll = getHabits().filter(h => h.type === 'quit');
     if (quitHabitsAll.length > 0) {
-      const quitInfo = quitHabitsAll.map(h => { const s = getQuitStatus(h.id); return `"${h.name}": ${s.streak || 0} дн`; });
+      const quitInfo = quitHabitsAll.map(h => { const s = getQuitStatus(h.id); return `"${h.name}" [habit_${h.id}]: ${s.streak || 0} дн`; });
       briefParts.push(`Челенджі: ${quitInfo.join(', ')}`);
     }
     if (briefParts.length > 0) important.push(`[РАНКОВИЙ БРИФ] Зведення на день:\n${briefParts.join('\n')}\nЗгадай що головне сьогодні і мотивуй коротко.`);
@@ -241,7 +253,7 @@ function _getInboxBoardContext() {
     return diff > 0 && diff <= 65;
   });
   urgent.forEach(t => {
-    critical.push(`[КРИТИЧНО] Дедлайн через ~годину: "${t.title}".`);
+    critical.push(`[КРИТИЧНО] Дедлайн через ~годину: "${t.title}" [task_${t.id}].`);
   });
 
   // Прострочені задачі (dueDate вчора або раніше) — Smart Boot-up (3.6)
@@ -251,32 +263,32 @@ function _getInboxBoardContext() {
   if (overdue.length > 0) {
     overdue.slice(0, 3).forEach(t => {
       const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t.dueDate)) / (24*60*60*1000));
-      critical.push(`[ПРОСТРОЧЕНО] Задача "${t.title}" — дедлайн минув ${days === 0 ? 'сьогодні' : days + ' дн тому'}. Запропонуй розбити на кроки, перенести або дропнути. БЕЗ докорів типу "ти не встиг".`);
+      critical.push(`[ПРОСТРОЧЕНО] Задача "${t.title}" [task_${t.id}] — дедлайн минув ${days === 0 ? 'сьогодні' : days + ' дн тому'}. Запропонуй розбити на кроки, перенести або дропнути. БЕЗ докорів типу "ти не встиг".`);
     });
   }
 
   // Задача завʼязла 3+ дні
   const stuckDays3 = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 3*24*60*60*1000 && t.createdAt >= Date.now() - 5*24*60*60*1000);
   stuckDays3.forEach(t => {
-    important.push(`[ВАЖЛИВО] Задача "${t.title}" відкрита вже 3+ дні.`);
+    important.push(`[ВАЖЛИВО] Задача "${t.title}" [task_${t.id}] відкрита вже 3+ дні.`);
   });
 
   // Забуті задачі 5+ днів — м'яке питання чи ще актуально
   const forgotten = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 5*24*60*60*1000);
   forgotten.forEach(t => {
     const days = Math.floor((Date.now() - t.createdAt) / (24*60*60*1000));
-    important.push(`[ЗАБУТА ЗАДАЧА] "${t.title}" висить ${days} днів. М'яко запитай чи ще актуально — може видалити або переформулювати?`);
+    important.push(`[ЗАБУТА ЗАДАЧА] "${t.title}" [task_${t.id}] висить ${days} днів. М'яко запитай чи ще актуально — може видалити або переформулювати?`);
   });
 
   // Прокрастинація — задачі з 3+ переносами дедлайну (3.8)
   // Формулювання БЕЗ пасивної агресії ("ти знову не виконав" ЗАБОРОНЕНО).
   const reshuffled = activeTasks.filter(t => (t.rescheduleCount || 0) >= 3);
   reshuffled.forEach(t => {
-    important.push(`[ПРОКРАСТИНАЦІЯ] Задача "${t.title}" переноситься ${t.rescheduleCount}-й раз. Юзеру важко її зрушити — запропонуй або розбити на кроки, або дропнути. Чіпи: "Розбити на кроки" (chat) і "Видалити задачу" (chat). БЕЗ осуду — це не "ти знову не виконав", а "можливо задача занадто велика або не на часі".`);
+    important.push(`[ПРОКРАСТИНАЦІЯ] Задача "${t.title}" [task_${t.id}] переноситься ${t.rescheduleCount}-й раз. Юзеру важко її зрушити — запропонуй або розбити на кроки, або дропнути. Чіпи: "Розбити на кроки" (chat) і "Видалити задачу" (chat). БЕЗ осуду — це не "ти знову не виконав", а "можливо задача занадто велика або не на часі".`);
   });
 
   if (activeTasks.length > 0) {
-    normal.push(`Відкритих задач: ${activeTasks.length}. ${activeTasks.slice(0,3).map(t=>t.title).join(', ')}${activeTasks.length>3?' і ще...':''}.`);
+    normal.push(`Відкритих задач: ${activeTasks.length}. ${activeTasks.slice(0,3).map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}${activeTasks.length>3?' і ще...':''}.`);
   } else {
     normal.push('Всі задачі виконано.');
   }
@@ -313,7 +325,7 @@ function _getInboxBoardContext() {
     if (atRisk.length > 0) {
       const details = atRisk.map(h => {
         const streak = Object.values(log).filter(d => d[h.id]).length;
-        return `"${h.name}" (вже ${streak} днів підряд, сьогодні ще не виконано)`;
+        return `"${h.name}" [habit_${h.id}] (вже ${streak} днів підряд, сьогодні ще не виконано)`;
       });
       critical.push(`[КРИТИЧНО] Звички з серією під загрозою — день закінчується а ти ще не зробив: ${details.join(', ')}.`);
     }
@@ -321,7 +333,7 @@ function _getInboxBoardContext() {
 
   // Звички не виконані в робочий час або вечір
   if ((phase === 'work' || phase === 'evening') && pendingHabits.length > 0) {
-    important.push(`[ВАЖЛИВО] Не виконано звичок: ${pendingHabits.map(h=>h.name).join(', ')}.`);
+    important.push(`[ВАЖЛИВО] Не виконано звичок: ${pendingHabits.map(h => h.name + ' [habit_' + h.id + ']').join(', ')}.`);
   }
 
   if (todayHabits.length > 0) {
@@ -333,17 +345,17 @@ function _getInboxBoardContext() {
     const todayIso = now.toISOString().slice(0, 10);
     const notHeldToday = quitHabits.filter(h => getQuitStatus(h.id).lastHeld !== todayIso);
     if ((phase === 'evening' || phase === 'night') && notHeldToday.length > 0) {
-      important.push(`[ВАЖЛИВО] Не відмічено сьогодні (кинути): ${notHeldToday.map(h => '"' + h.name + '"').join(', ')}.`);
+      important.push(`[ВАЖЛИВО] Не відмічено сьогодні (кинути): ${notHeldToday.map(h => '"' + h.name + '" [habit_' + h.id + ']').join(', ')}.`);
     }
     quitHabits.forEach(h => {
       const s = getQuitStatus(h.id);
       const streak = s.streak || 0;
       const milestones = [7, 14, 21, 30, 60, 90];
       if (milestones.includes(streak) && owlCdExpired('quit_milestone_' + h.id + '_' + streak, 24 * 60 * 60 * 1000)) {
-        important.push(`[ВАЖЛИВО] ${streak} днів без "${h.name}"! 🎉`);
+        important.push(`[ВАЖЛИВО] ${streak} днів без "${h.name}" [habit_${h.id}]! 🎉`);
       }
     });
-    const quitInfo = quitHabits.map(h => `"${h.name}": ${(getQuitStatus(h.id).streak||0)} дн`);
+    const quitInfo = quitHabits.map(h => `"${h.name}" [habit_${h.id}]: ${(getQuitStatus(h.id).streak||0)} дн`);
     normal.push(`Челенджі: ${quitInfo.join(', ')}.`);
   }
 
@@ -369,7 +381,7 @@ function _getInboxBoardContext() {
         if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
           const avg = bycat[lastTx.category].reduce((a,b)=>a+b,0) / bycat[lastTx.category].length;
           if (lastTx.amount > avg * 2.5 && owlCdExpired('unusual_tx_' + lastTx.id, 8 * 60 * 60 * 1000)) {
-            important.push(`[ВАЖЛИВО] Незвична витрата: ${formatMoney(lastTx.amount)} на "${lastTx.category}" — вище звичного вдвічі.`);
+            important.push(`[ВАЖЛИВО] Незвична витрата: ${formatMoney(lastTx.amount)} на "${lastTx.category}" [transaction_${lastTx.id}] — вище звичного вдвічі.`);
           }
         }
       }
