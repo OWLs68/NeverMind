@@ -729,37 +729,6 @@ function _getDrumEndTime() {
   return `${String(_drumValues.endHour).padStart(2, '0')}:${String(_drumValues.endMin * 5).padStart(2, '0')}`;
 }
 
-let _editEventRecurring = false;
-let _editEventWasRecurring = false;
-
-function _renderEventRecurringToggle() {
-  const toggle = document.getElementById('event-recurring-toggle');
-  const knob = document.getElementById('event-recurring-knob');
-  const hint = document.getElementById('event-recurring-hint');
-  if (!toggle || !knob) return;
-  if (_editEventRecurring) {
-    toggle.style.background = '#14b8a6';
-    knob.style.left = '21px';
-  } else {
-    toggle.style.background = 'rgba(30,16,64,0.15)';
-    knob.style.left = '3px';
-  }
-  if (hint) {
-    if (_editEventWasRecurring) {
-      hint.textContent = _editEventRecurring ? 'частина серії — зміни лише цю копію' : 'вимкнення тут не видалить інші копії';
-    } else {
-      hint.textContent = _editEventRecurring ? 'створить ще 11 копій вперед' : 'створить 12 копій вперед';
-    }
-  }
-}
-
-function toggleEventRecurring() {
-  // Якщо подія вже у серії — toggle вимкнено (не можна змінити серію через цей чекбокс)
-  if (_editEventWasRecurring) return;
-  _editEventRecurring = !_editEventRecurring;
-  _renderEventRecurringToggle();
-}
-
 function clearEventEndTime() {
   _drumValues.endHour = -1;
   _drumValues.endMin = 0;
@@ -777,11 +746,8 @@ function openEventEditModal(eventId) {
   if (!ev) return;
   _editEventId = eventId;
   _editEventPriority = ev.priority || 'normal';
-  _editEventWasRecurring = !!ev.recurringId;
-  _editEventRecurring = _editEventWasRecurring;
   document.getElementById('event-edit-title').value = ev.title || '';
   _renderEventPriority();
-  _renderEventRecurringToggle();
   const modal = document.getElementById('event-edit-modal');
   if (modal) {
     modal.style.display = 'flex';
@@ -839,11 +805,6 @@ function saveEventFromModal() {
   events[idx].endTime = endTime;
   events[idx].priority = _editEventPriority;
   saveEvents(events);
-  // Якщо юзер УВІМКНУВ повторюваність вперше для цієї події — генеруємо 11 копій
-  if (_editEventRecurring && !_editEventWasRecurring) {
-    const created = generateWeeklySeries(events[idx], 12);
-    if (created.length > 0) showUndoToast(`✓ Серія: +${created.length} копій щотижня`);
-  }
   closeEventEditModal();
   renderCalendar();
   renderUpcoming();
@@ -878,7 +839,7 @@ setInterval(_updateCalIconDay, 60 * 1000);
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
-  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime, toggleEventRecurring,
+  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime,
   closeDayScheduleModal, openRoutineFromCalendar,
   highlightEventDays,
 });
