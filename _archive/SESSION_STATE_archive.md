@@ -6,6 +6,44 @@
 
 ---
 
+## 🔧 Сесія Aps79 — 5 багів + DESIGN_SYSTEM перепис (27.04.2026)
+
+### Зроблено
+
+**Баги (5 закрито):**
+- **B-107** 🟡 — Прибрано стару фічу `askAIAboutTask` з `tasks.js` + HTML-блок `tasks-ai-comment`. Велика синя картка більше не з'являється зверху Продуктивності при створенні задачі. Коміт `f71b0b8`.
+- **B-106** 🔴 — ROOT CAUSE: AI у чаті Продуктивності викликав `complete_task` через tool_calls → `dispatchChatToolCalls` → `_toolCallToUniversalAction` → `processUniversalAction` де ОБРОБНИКА НЕ БУЛО (тільки у fallback text-JSON). Жодного `addMsg` → typing dots залишались. FIX: додано `complete_task`/`complete_habit`/`add_step` у `processUniversalAction` (habits.js) + safety net у dispatcher якщо `dispatchChatToolCalls` повернув false → fallback msg.content або «Не зрозуміла дію». Коміт `f394b40`.
+- **B-105** 🔴 — ROOT CAUSE: промпт чату Продуктивності не мав правила про минулий час → модель фузі-матчила «поміняв номер» на «Upwirk реєстрація» через спільний номер → delete_task (опис був «Видалити задачу.» — занадто розмито). FIX: правило про минулий час у `sendTasksBarMessage` + посилений опис `delete_task` у INBOX_TOOLS (поширюється на всі 8 чатів). Коміт `f394b40`.
+- **B-108** 🔴 НОВИЙ — ROOT CAUSE після xGe1H UUID-міграції: HTML `onclick="toggleTaskStatus(${t.id})"` з UUID-string давав `onclick="toggleTaskStatus(abc-def-123)"` → JS парсер бачить як арифметику ідентифікаторів `abc - def - 123` → ReferenceError. **Тап ✓ рукою на iPhone не працював** — Роман мусив закривати задачі через AI у чаті. FIX: 5 місць (`tasks.js:256/259/273`, `evening.js:201/202`) обгорнуто `'${t.id}'` у одинарні лапки + `String()` typesafety у `toggleTaskStatus/Step/openEditTask/_rescheduleTask` + AI complete_task тепер викликає експортовану `toggleTaskStatus` → 3-фазна анімація закриття як ручний тап. Коміт `2eb9347`.
+- **B-80** 🟢 — ROOT CAUSE: при тапі кошика свайпу `onDelete` викликав `saveNotes+renderNotes` миттєво → DOM перерисовувався поки swipe-transform на старому wrapEl ще активний → перша папка/нотатка ~50-250мс залазила під чіпи зверху. FIX: дзеркало `task-completing` патерну. Новий CSS клас `.swipe-deleting` (opacity:0 + max-height:0 + margin:0 з transition 0.25-0.28s) + хелпер `_animateSwipeRemoval(wrap, doRemove)` у `notes.js`. Коміти `ee2afad`, `f636d49` (syntax fix — пропущена дужка).
+
+**`docs/DESIGN_SYSTEM.md` перепис у 5 чекпоінт-комітах** (267 → 930 рядків):
+- 1/5 (`81378e0`): Skeleton 9 секцій + якорі + Шпаргалка + 🎨 Токени (повний `:root` з ролями, англомовні токени як вирішено nudNp 24.04, 4 акценти amber/orange/green/red, ❌ заборонені кольори) + 📦 10 Шаблонів (glass-modal, opaque-modal, картка, 3 типи кнопок, чіп OWL, поле вводу, **Safe Areas iPhone notch+home indicator**, **Haptics navigator.vibrate патерни**, **Empty States тон копірайту**, **Loading Skeletons CSS pulse**)
+- 2/5 (`8ac4b7b`): 🧩 Компоненти (Bottom Sheet 8 acceptance criteria, AI Bar 3 стани, Картка задачі поведінка, Чат-бар) + 🗺 Вкладки (10 акцентів) + правила додавання нової вкладки + OWL board priority
+- 3/5 (`40a3365`): ✅ Чекліст перед UI-пушем ~40 пунктів у 8 блоках + ⚠️ Техборг 11 пунктів з file:line («що зараз / має бути»)
+- 4/5 (`e0b1c97`): 🚫 Анти-патерни 4 інциденти з контекст→корінь→рішення→урок (padding 01.04, UUID-onclick xGe1H, мовчанка диспетчера Aps79, stale board R5Ejr) + загальні правила-висновки + 📖 Словник 27 термінів українською
+- 5/5 (`bda38d0`): `_ai-tools/DESIGN_SYSTEM_INVENTORY.md` → `_archive/` + оновлення посилань у `CLAUDE.md` (стара секція «Помилки які були зроблені» → «секція 6 Чекліст + секція 8 Анти-патерни») + розширено `INDEX.md` 6 нових рядків з якорями
+
+### Обговорено (без виконання)
+- Ротація старіших блоків SESSION_STATE (qG4fj, nudNp, jEWcj, R5Ejr, 8bSsE) — це борг попередніх `/finish`, не моя сесія. Залишив як є щоб не розгрібати чужий контекст у переповненому чаті.
+
+### Ключові рішення
+- **Не чіпати код фіолету у цій сесії** — задокументував 4 місця у Техборзі секція 7 з конкретними file:line, окрема задача коли черга. Принцип: «спочатку інвентар, потім фікс».
+- **Skeleton+Edit для DESIGN_SYSTEM.md** (правило 1 CLAUDE.md «>250 рядків») — Write скелета з 9 секцій-заглушок з якорями, потім Edit кожну секцію окремо. Жоден чекпоінт не залежить від наступного — обрив stream timeout не втрачає прогрес.
+- **Англомовні токени** (`--accent-amber`, не `--акцент-бурштин`) — підтверджено з консультації nudNp 24.04 (Claude мислить англійською, переклад ламає логіку).
+
+### Інциденти
+- Один syntax error у `notes.js` під час B-80 фіксу — пропустив одну закриваючу `});` після обгортання callback у `_animateSwipeRemoval`. esbuild впав з «Expected )». Виправлено окремим комітом `f636d49` без втрати прогресу.
+
+### Метрики
+- **Коміти:** `f71b0b8` → `bda38d0` (10 комітів)
+- **CACHE_NAME:** `nm-20260427-1700` (xGe1H) → `nm-20260427-1728` (B-107) → `nm-20260427-1735` (B-105/106) → `nm-20260427-1748` (B-108) → `nm-20260427-1756` (B-80)
+- **Гілка:** `claude/start-session-Aps79` (не змержена в main, чекає авто-merge через CI)
+- **Build:** чистий (esbuild 19952 рядків bundle.js)
+- **Файлів змінено:** 37 (4532 insertions, 2326 deletions)
+
+---
+
 ## 🔧 Сесія xGe1H — UUID-міграція пілот + правило 5 (27.04.2026)
 
 ### Зроблено
