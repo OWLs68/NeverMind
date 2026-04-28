@@ -122,8 +122,7 @@ export function getAIContext() {
         const diff = Math.round((new Date(ev.date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
         const when = diff === 0 ? 'СЬОГОДНІ' : diff === 1 ? 'ЗАВТРА' : `через ${diff} дн`;
         const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
-        const recTag = ev.recurringId ? ' 🔁' : '';
-        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}"${recTag} — ${when}${tStr}`);
+        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${when}${tStr}`);
       }
     });
     // Всі події (не тільки 7 днів) — для редагування
@@ -132,8 +131,7 @@ export function getAIContext() {
     if (futureEvents.length > 0) {
       futureEvents.slice(0, 10).forEach(ev => {
         const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
-        const recTag = ev.recurringId ? ' 🔁' : '';
-        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}"${recTag} — ${ev.date}${tStr}`);
+        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${ev.date}${tStr}`);
       });
     }
     getTasks().filter(t => t.status === 'active' && t.dueDate).forEach(t => {

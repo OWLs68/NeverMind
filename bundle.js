@@ -1147,33 +1147,6 @@ ${logLines}
     saveEvents(events);
     return { added: true, event: ev };
   }
-  function generateWeeklySeries(sourceEvent, weeks = 12) {
-    if (!sourceEvent || !sourceEvent.date) return [];
-    const recurringId = sourceEvent.recurringId || sourceEvent.id;
-    const events = getEvents();
-    const created = [];
-    const baseDate = /* @__PURE__ */ new Date(sourceEvent.date + "T00:00:00");
-    for (let i = 1; i < weeks; i++) {
-      const next = new Date(baseDate.getTime() + i * 7 * 864e5);
-      const dateISO = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
-      const copy = {
-        id: Date.now() + i,
-        title: sourceEvent.title,
-        date: dateISO,
-        time: sourceEvent.time || null,
-        endTime: sourceEvent.endTime || null,
-        priority: sourceEvent.priority || "normal",
-        recurringId,
-        createdAt: Date.now() + i
-      };
-      events.push(copy);
-      created.push(copy);
-    }
-    const idx = events.findIndex((e) => e.id === sourceEvent.id);
-    if (idx !== -1 && !events[idx].recurringId) events[idx].recurringId = recurringId;
-    saveEvents(events);
-    return created;
-  }
   function _zoomIn(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -1747,31 +1720,6 @@ ${logLines}
     if (_drumValues.endHour === void 0 || _drumValues.endHour < 0) return null;
     return `${String(_drumValues.endHour).padStart(2, "0")}:${String(_drumValues.endMin * 5).padStart(2, "0")}`;
   }
-  function _renderEventRecurringToggle() {
-    const toggle = document.getElementById("event-recurring-toggle");
-    const knob = document.getElementById("event-recurring-knob");
-    const hint = document.getElementById("event-recurring-hint");
-    if (!toggle || !knob) return;
-    if (_editEventRecurring) {
-      toggle.style.background = "#14b8a6";
-      knob.style.left = "21px";
-    } else {
-      toggle.style.background = "rgba(30,16,64,0.15)";
-      knob.style.left = "3px";
-    }
-    if (hint) {
-      if (_editEventWasRecurring) {
-        hint.textContent = _editEventRecurring ? "\u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u0441\u0435\u0440\u0456\u0457 \u2014 \u0437\u043C\u0456\u043D\u0438 \u043B\u0438\u0448\u0435 \u0446\u044E \u043A\u043E\u043F\u0456\u044E" : "\u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043D\u044F \u0442\u0443\u0442 \u043D\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u044C \u0456\u043D\u0448\u0456 \u043A\u043E\u043F\u0456\u0457";
-      } else {
-        hint.textContent = _editEventRecurring ? "\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u044C \u0449\u0435 11 \u043A\u043E\u043F\u0456\u0439 \u0432\u043F\u0435\u0440\u0435\u0434" : "\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u044C 12 \u043A\u043E\u043F\u0456\u0439 \u0432\u043F\u0435\u0440\u0435\u0434";
-      }
-    }
-  }
-  function toggleEventRecurring() {
-    if (_editEventWasRecurring) return;
-    _editEventRecurring = !_editEventRecurring;
-    _renderEventRecurringToggle();
-  }
   function clearEventEndTime() {
     _drumValues.endHour = -1;
     _drumValues.endMin = 0;
@@ -1788,11 +1736,8 @@ ${logLines}
     if (!ev) return;
     _editEventId = eventId;
     _editEventPriority = ev.priority || "normal";
-    _editEventWasRecurring = !!ev.recurringId;
-    _editEventRecurring = _editEventWasRecurring;
     document.getElementById("event-edit-title").value = ev.title || "";
     _renderEventPriority();
-    _renderEventRecurringToggle();
     const modal = document.getElementById("event-edit-modal");
     if (modal) {
       modal.style.display = "flex";
@@ -1843,10 +1788,6 @@ ${logLines}
     events[idx].endTime = endTime;
     events[idx].priority = _editEventPriority;
     saveEvents(events);
-    if (_editEventRecurring && !_editEventWasRecurring) {
-      const created = generateWeeklySeries(events[idx], 12);
-      if (created.length > 0) showUndoToast(`\u2713 \u0421\u0435\u0440\u0456\u044F: +${created.length} \u043A\u043E\u043F\u0456\u0439 \u0449\u043E\u0442\u0438\u0436\u043D\u044F`);
-    }
     closeEventEditModal();
     renderCalendar();
     renderUpcoming();
@@ -1870,7 +1811,7 @@ ${logLines}
     const el = document.getElementById("cal-icon-day");
     if (el) el.textContent = (/* @__PURE__ */ new Date()).getDate();
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H, MONTHS_SHORT, _editEventRecurring, _editEventWasRecurring;
+  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H, MONTHS_SHORT;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
@@ -1890,8 +1831,6 @@ ${logLines}
       _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
       DRUM_H = 40;
       MONTHS_SHORT = ["\u0421\u0456\u0447", "\u041B\u044E\u0442", "\u0411\u0435\u0440", "\u041A\u0432\u0456", "\u0422\u0440\u0430", "\u0427\u0435\u0440", "\u041B\u0438\u043F", "\u0421\u0435\u0440", "\u0412\u0435\u0440", "\u0416\u043E\u0432", "\u041B\u0438\u0441", "\u0413\u0440\u0443"];
-      _editEventRecurring = false;
-      _editEventWasRecurring = false;
       _updateCalIconDay();
       setInterval(_updateCalIconDay, 60 * 1e3);
       Object.assign(window, {
@@ -1913,7 +1852,6 @@ ${logLines}
         deleteEventFromModal,
         setEventPriority,
         clearEventEndTime,
-        toggleEventRecurring,
         closeDayScheduleModal,
         openRoutineFromCalendar,
         highlightEventDays
@@ -11501,7 +11439,6 @@ ${signalLines}
   \u041F\u0440\u0438\u043A\u043B\u0430\u0434 1: \u044E\u0437\u0435\u0440 "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F \u0432\u0456\u0434\u043C\u0456\u043D\u0438", \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 [ID:123] "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F" \u0437\u0430\u0432\u0442\u0440\u0430 \u2192 delete_event(event_id:123).
   \u041F\u0440\u0438\u043A\u043B\u0430\u0434 2: \u044E\u0437\u0435\u0440 "\u0441\u043A\u0430\u0441\u0443\u0439 \u0437\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C", \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 [ID:456] "\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0410\u043D\u0434\u0440\u0456\u0439" \u2192 delete_event(event_id:456).
 - \u041F\u0415\u0420\u0415\u041D\u0415\u0421\u0415\u041D\u041D\u042F \u041F\u041E\u0414\u0406\u0407 ("\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u0440\u0438\u0439\u043E\u043C", "\u0437\u043C\u0456\u043D\u0438 \u0447\u0430\u0441 \u0425", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0434\u0430\u0442\u0443"): edit_event(event_id:ID, date/time:...).
-- \u041F\u041E\u0412\u0422\u041E\u0420\u042E\u0412\u0410\u041D\u0406 \u041F\u041E\u0414\u0406\u0407 \u043F\u043E\u0437\u043D\u0430\u0447\u0435\u043D\u0456 \u{1F501} \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u2014 \u0446\u0435 \u0441\u0435\u0440\u0456\u044F \u043A\u043E\u043F\u0456\u0439 (12 \u0442\u0438\u0436\u043D\u0456\u0432 \u0432\u043F\u0435\u0440\u0435\u0434). edit_event/delete_event \u0417\u0410\u0412\u0416\u0414\u0418 \u0434\u0456\u0454 \u0422\u0406\u041B\u042C\u041A\u0418 \u043D\u0430 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439 event_id \u044F\u043A\u0438\u0439 \u043F\u0435\u0440\u0435\u0434\u0430\u0454\u0448 \u2014 \u0456\u043D\u0448\u0456 \u043A\u043E\u043F\u0456\u0457 \u0441\u0435\u0440\u0456\u0457 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u0442\u0440\u0435\u043D\u0443\u0432\u0430\u043D\u043D\u044F \u0443 \u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A" \u2014 \u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u044F\u0454\u0448 \u041E\u0414\u041D\u0423 \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0443 \u043A\u043E\u043F\u0456\u044E (\u0437\u0430 \u0434\u0430\u0442\u043E\u044E), \u0440\u0435\u0448\u0442\u0430 \u0441\u0435\u0440\u0456\u0457 \u0436\u0438\u0432\u0430. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C "\u0432\u0438\u0434\u0430\u043B\u0438 \u0432\u0441\u0456 \u0442\u0440\u0435\u043D\u0443\u0432\u0430\u043D\u043D\u044F" \u0430\u0431\u043E "\u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u0442\u0438" \u2014 \u0441\u043A\u0430\u0436\u0438 \u0449\u043E \u0437\u0430\u0440\u0430\u0437 \u0442\u0438 \u043C\u043E\u0436\u0435\u0448 \u0432\u0438\u0434\u0430\u043B\u044F\u0442\u0438 \u043B\u0438\u0448\u0435 \u043F\u043E \u043E\u0434\u043D\u0456\u0439 \u043A\u043E\u043F\u0456\u0457, \u043D\u0435\u0445\u0430\u0439 \u0432\u0438\u0434\u0430\u043B\u044F\u0454 \u0440\u0435\u0448\u0442\u0443 \u043E\u043A\u0440\u0435\u043C\u043E \u0430\u0431\u043E \u0447\u0435\u0440\u0435\u0437 UI.
 - \u042F\u041A\u0429\u041E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u043D\u0435\u043C\u0430 \u0436\u043E\u0434\u043D\u043E\u0457 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E\u0457 \u043F\u043E\u0434\u0456\u0457 \u2014 \u0447\u0435\u0441\u043D\u043E \u0441\u043A\u0430\u0436\u0438 "\u041D\u0435 \u0431\u0430\u0447\u0443 \u0442\u0430\u043A\u043E\u0457 \u043F\u043E\u0434\u0456\u0457 \u0443 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456. \u041C\u043E\u0436\u0435\u0448 \u0443\u0442\u043E\u0447\u043D\u0438\u0442\u0438 \u043D\u0430\u0437\u0432\u0443 \u0430\u0431\u043E \u0434\u0430\u0442\u0443?". \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0437\u0430\u0434\u0430\u0447\u0443-\u0437\u0430\u043C\u0456\u043D\u043D\u0438\u043A ("\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043F\u0440\u0438\u0439\u043E\u043C" \u2192 \u041D\u0415 save_task).`;
       REMINDER_RULES = `\u041F\u0420\u0410\u0412\u0418\u041B\u041E \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u042C (\u043E\u0434\u043D\u0430\u043A\u043E\u0432\u0435 \u0443 \u0432\u0441\u0456\u0445 \u0447\u0430\u0442\u0430\u0445):
 - \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043D\u0430\u0433\u0430\u0434\u0430\u0439", "\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0437\u0440\u0430\u043D\u043A\u0443", "\u043D\u0430\u043F\u043E\u043C\u043D\u0438 \u043C\u0435\u043D\u0456", "\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443" \u2192 \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder. \u041D\u0415 create_event, \u041D\u0415 save_task.
@@ -11641,7 +11578,7 @@ ${UI_TOOLS_RULES}`;
         { type: "function", function: { name: "save_note", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0435\u043C\u043E\u0446\u0456\u0457, \u0456\u0434\u0435\u0457, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438) \u2014 \u0446\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, folder: { type: "string", enum: ["\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0420\u043E\u0431\u043E\u0442\u0430", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456", "\u0406\u0434\u0435\u0457"], description: "\u041F\u0430\u043F\u043A\u0430. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435. \u0406\u0434\u0435\u0457 \u2014 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u0438\u0445 \u0456\u0434\u0435\u0439. \u0420\u043E\u0431\u043E\u0442\u0430 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u043E\u0431\u043E\u0447\u0456 \u0437\u0430\u043F\u0438\u0441\u0438. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043F\u043E\u0457\u0437\u0434\u043A\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["text", "folder", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_habit", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041D\u041E\u0412\u0423 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0443 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0443 \u0437\u0432\u0438\u0447\u043A\u0443. \u0429\u043E\u0434\u043D\u044F, \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A, \u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430" }, details: { type: "string", description: "\u0414\u0435\u0442\u0430\u043B\u0456 \u044F\u043A\u0449\u043E \u0454" }, days: { type: "array", items: { type: "integer" }, description: "\u0414\u043D\u0456 \u0442\u0438\u0436\u043D\u044F: 0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434. \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432 = \u0449\u043E\u0434\u043D\u044F" }, target_count: { type: "integer", description: "\u0420\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C (8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A = 8). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 1" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_moment", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F, \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443: \u043F\u043E\u0457\u0445\u0430\u0432, \u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F, \u043F\u043E\u0431\u0430\u0447\u0438\u0432, \u0431\u0443\u0432 \u043D\u0430...", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443" }, mood: { type: "string", enum: ["positive", "neutral", "negative"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["text", "mood", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: "string", description: "YYYY-MM-DD \u2014 \u0434\u0430\u0442\u0430 \u041F\u0415\u0420\u0428\u041E\u0413\u041E \u0435\u043A\u0437\u0435\u043C\u043F\u043B\u044F\u0440\u0430 \u0441\u0435\u0440\u0456\u0457 \u044F\u043A\u0449\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0454\u0442\u044C\u0441\u044F" }, time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041F\u041E\u0427\u0410\u0422\u041A\u0423 \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, end_time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041A\u0406\u041D\u0426\u042F \u044F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u044F \u043C\u0430\u0454 \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C. \u0422\u0440\u0438\u0433\u0435\u0440\u0438: '\u0437 14 \u0434\u043E 16' \u2192 time=14:00 end_time=16:00; '\u043D\u0430 \u0433\u043E\u0434\u0438\u043D\u0443'/'1 \u0433\u043E\u0434\u0438\u043D\u0443' \u2192 time+1:00; '\u043D\u0430 \u043F\u0456\u0432\u0433\u043E\u0434\u0438\u043D\u0438' \u2192 time+0:30; '2 \u0433\u043E\u0434\u0438\u043D\u0438' \u2192 time+2:00. \u0411\u0435\u0437 \u044F\u0432\u043D\u043E\u0457 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u041D\u0415 \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439." }, repeat_weekly: { type: "boolean", description: "true \u044F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u044F \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0454\u0442\u044C\u0441\u044F \u0429\u041E\u0422\u0418\u0416\u041D\u042F. \u0422\u0440\u0438\u0433\u0435\u0440\u0438: '\u043A\u043E\u0436\u043D\u043E\u0433\u043E \u0432\u0456\u0432\u0442\u043E\u0440\u043A\u0430', '\u0449\u043E\u0432\u0456\u0432\u0442\u043E\u0440\u043A\u0430', '\u0449\u043E\u0442\u0438\u0436\u043D\u044F', '\u043A\u043E\u0436\u0435\u043D \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0443...', '\u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u043E \u0443 \u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A'. \u0423 date \u0432\u043A\u0430\u0436\u0438 \u0434\u0430\u0442\u0443 \u041D\u0410\u0419\u0411\u041B\u0418\u0416\u0427\u041E\u0413\u041E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E\u0433\u043E \u0434\u043D\u044F \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u044C 12 \u043A\u043E\u043F\u0456\u0439 \u0432\u043F\u0435\u0440\u0435\u0434. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u043F\u043E\u0434\u0456\u0439." }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["title", "date", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E: \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 time \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432 \u042F\u0412\u041D\u041E \u0433\u043E\u0434\u0438\u043D\u0443/\u0447\u0430\u0441. '\u0422\u0440\u0435\u043D\u0443\u0432\u0430\u043D\u043D\u044F \u0443 \u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A' \u2014 \u0411\u0415\u0417 time. '\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0443 \u043F'\u044F\u0442\u043D\u0438\u0446\u044E' \u2014 \u0411\u0415\u0417 time. '\u041F\u0440\u0438\u0439\u043E\u043C \u0437\u0430\u0432\u0442\u0440\u0430' \u2014 \u0411\u0415\u0417 time. \u0422\u0456\u043B\u044C\u043A\u0438 \u044F\u0432\u043D\u0456 \u0444\u0440\u0430\u0437\u0438 \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u044E\u0442\u044C time: '\u043E 19', '\u043E 19:00', '\u0437 14 \u0434\u043E 16', '10 \u0440\u0430\u043D\u043A\u0443', '\u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443' (=14:00). \u0416\u043E\u0434\u043D\u0438\u0445 \u0430\u0441\u043E\u0446\u0456\u0430\u0446\u0456\u0439 '\u0442\u0440\u0435\u043D\u0443\u0432\u0430\u043D\u043D\u044F\u2192\u0432\u0435\u0447\u0456\u0440', '\u043E\u0431\u0456\u0434\u219213:00'.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043D\u0430\u0437\u0432\u0430\u0432 \u0433\u043E\u0434\u0438\u043D\u0443. \u0411\u0415\u0417 \u042F\u0412\u041D\u041E\u0407 \u0413\u041E\u0414\u0418\u041D\u0418 \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440." }, end_time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041A\u0406\u041D\u0426\u042F \u044F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u044F \u043C\u0430\u0454 \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C. \u0422\u0440\u0438\u0433\u0435\u0440\u0438: '\u0437 14 \u0434\u043E 16' \u2192 time=14:00 end_time=16:00; '\u043D\u0430 \u0433\u043E\u0434\u0438\u043D\u0443'/'1 \u0433\u043E\u0434\u0438\u043D\u0443' \u2192 time+1:00; '\u043D\u0430 \u043F\u0456\u0432\u0433\u043E\u0434\u0438\u043D\u0438' \u2192 time+0:30; '2 \u0433\u043E\u0434\u0438\u043D\u0438' \u2192 time+2:00. \u0411\u0435\u0437 \u044F\u0432\u043D\u043E\u0457 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u041D\u0415 \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439." }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["title", "date", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_finance", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 \u2014 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439.", parameters: { type: "object", properties: { fin_type: { type: "string", enum: ["expense", "income"] }, amount: { type: "number", description: "\u0421\u0443\u043C\u0430" }, category: { type: "string", description: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438: \u0407\u0436\u0430, \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442, \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438, \u0417\u0434\u043E\u0440\u043E\u0432'\u044F, \u0416\u0438\u0442\u043B\u043E, \u041F\u043E\u043A\u0443\u043F\u043A\u0438, \u0406\u043D\u0448\u0435. \u0414\u043E\u0445\u043E\u0434\u0438: \u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430, \u041D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u041F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F, \u0406\u043D\u0448\u0435" }, fin_comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, 1-3 \u0441\u043B\u043E\u0432\u0430" }, date: { type: "string", description: "YYYY-MM-DD \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E \u0432\u0447\u043E\u0440\u0430/\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430" } }, required: ["fin_type", "amount", "category", "fin_comment"], additionalProperties: false } } },
         { type: "function", function: { name: "create_project", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443, \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0430 \u0434\u043E\u0434\u0430\u0442\u043A\u0443, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0446\u0456\u044F \u0432\u0435\u0441\u0456\u043B\u043B\u044F.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, subtitle: { type: "string", description: "\u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A" }, comment: { type: "string", description: "\u0420\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name"], additionalProperties: false } } },
         // --- ПРОЕКТИ — кроки і деталі (Фаза 4 Gg3Fy 20.04.2026 "Один мозок V2") ---
@@ -12700,16 +12637,15 @@ ${UI_TOOLS_RULES}`;
       let endTime = parsed.end_time || null;
       if (!parsed.time) endTime = null;
       if (endTime && parsed.time && endTime <= parsed.time) endTime = null;
+      let conflict = null;
+      if (parsed.time) {
+        conflict = getEvents().find((e) => e.date === parsed.date && e.time === parsed.time && e.title !== title);
+      }
       const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || "normal", createdAt: Date.now() };
       const res = addEventDedup(ev);
       if (!res.added) {
         addMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
         return true;
-      }
-      let extraSeries = "";
-      if (parsed.repeat_weekly) {
-        const created = generateWeeklySeries(res.event, 12);
-        if (created.length > 0) extraSeries = ` + \u0449\u0435 ${created.length} \u0449\u043E\u0442\u0438\u0436\u043D\u044F`;
       }
       const dateObj = new Date(parsed.date);
       const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
@@ -12717,7 +12653,9 @@ ${UI_TOOLS_RULES}`;
       items.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
       saveInbox(items);
       const timeStr = parsed.time ? ` \u043E ${parsed.time}${endTime ? "\u2013" + endTime : ""}` : "";
-      addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}${timeStr}${extraSeries}`);
+      const warn = conflict ? `
+\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "${conflict.title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?` : "";
+      addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}${timeStr}${warn}`);
       return true;
     }
     if (action === "edit_event") {
@@ -13222,8 +13160,7 @@ ${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
           const diff = Math.round((/* @__PURE__ */ new Date(ev.date + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
           const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
-          const recTag = ev.recurringId ? " \u{1F501}" : "";
-          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}"${recTag} \u2014 ${when}${tStr}`);
+          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${when}${tStr}`);
         }
       });
       const allEvents = getEvents();
@@ -13231,8 +13168,7 @@ ${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
       if (futureEvents.length > 0) {
         futureEvents.slice(0, 10).forEach((ev) => {
           const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
-          const recTag = ev.recurringId ? " \u{1F501}" : "";
-          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}"${recTag} \u2014 ${ev.date}${tStr}`);
+          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${ev.date}${tStr}`);
         });
       }
       getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
@@ -15537,7 +15473,7 @@ ${userText}
       case "save_moment":
         return { action: "save", category: "event", text: args.text, mood: args.mood, comment: args.comment };
       case "create_event":
-        return { action: "create_event", title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, repeat_weekly: !!args.repeat_weekly, priority: args.priority || "normal", comment: args.comment };
+        return { action: "create_event", title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, priority: args.priority || "normal", comment: args.comment };
       case "save_finance":
         return { action: "save_finance", fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
       case "complete_habit":
@@ -15784,6 +15720,10 @@ ${aiContext}`;
             let endTime = action.end_time || null;
             if (!action.time) endTime = null;
             if (endTime && action.time && endTime <= action.time) endTime = null;
+            let conflict = null;
+            if (action.time) {
+              conflict = getEvents().find((e) => e.date === action.date && e.time === action.time && e.title !== action.title);
+            }
             const ev = { id: Date.now(), title: action.title || "\u041F\u043E\u0434\u0456\u044F", date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
             const res = addEventDedup(ev);
             if (!res.added) {
@@ -15794,15 +15734,12 @@ ${aiContext}`;
             items.unshift({ id: Date.now() + 1, text: ev.title, category: "event", ts: Date.now(), processed: true });
             saveInbox(items);
             renderInbox();
-            let extraSeries = "";
-            if (action.repeat_weekly) {
-              const created = generateWeeklySeries(res.event, 12);
-              if (created.length > 0) extraSeries = ` + \u0449\u0435 ${created.length} \u0449\u043E\u0442\u0438\u0436\u043D\u044F`;
-            }
             const dateObj = new Date(action.date);
             const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
             const timeStr = action.time ? ` \u043E ${action.time}${endTime ? "\u2013" + endTime : ""}` : "";
-            addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}${timeStr}${extraSeries}`);
+            const warn = conflict ? `
+\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "${conflict.title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?` : "";
+            addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}${timeStr}${warn}`);
           } else if (action.action === "restore_deleted") {
             const q = (action.query || "").trim();
             const typeFilter = action.type || null;

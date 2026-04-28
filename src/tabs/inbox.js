@@ -14,7 +14,7 @@ import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
-import { getEvents, saveEvents, addEventDedup, generateWeeklySeries } from './calendar.js';
+import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
 import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
@@ -342,7 +342,7 @@ function _toolCallToAction(name, args) {
     case 'save_note': return { action: 'save', category: args.folder === 'Ідеї' ? 'idea' : 'note', text: args.text, folder: args.folder, comment: args.comment };
     case 'save_habit': return { action: 'save', category: 'habit', text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
     case 'save_moment': return { action: 'save', category: 'event', text: args.text, mood: args.mood, comment: args.comment };
-    case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, repeat_weekly: !!args.repeat_weekly, priority: args.priority || 'normal', comment: args.comment };
+    case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, priority: args.priority || 'normal', comment: args.comment };
     case 'save_finance': return { action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
     case 'complete_habit': return { action: 'complete_habit', habit_ids: args.habit_ids, comment: args.comment };
     case 'complete_task': return { action: 'complete_task', task_ids: args.task_ids, comment: args.comment };
@@ -581,19 +581,20 @@ ${aiContext}`;
           let endTime = action.end_time || null;
           if (!action.time) endTime = null;
           if (endTime && action.time && endTime <= action.time) endTime = null;
+          // Перевірка конфлікту часу: якщо є подія на ту саму дату+час — попередимо.
+          let conflict = null;
+          if (action.time) {
+            conflict = getEvents().find(e => e.date === action.date && e.time === action.time && e.title !== action.title);
+          }
           const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
-          let extraSeries = '';
-          if (action.repeat_weekly) {
-            const created = generateWeeklySeries(res.event, 12);
-            if (created.length > 0) extraSeries = ` + ще ${created.length} щотижня`;
-          }
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
           const timeStr = action.time ? ` о ${action.time}${endTime ? '–' + endTime : ''}` : '';
-          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${timeStr}${extraSeries}`);
+          const warn = conflict ? `\n⚠️ На цей час уже є "${conflict.title}". Лишити обидві чи перенести?` : '';
+          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${timeStr}${warn}`);
         } else if (action.action === 'restore_deleted') {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;
