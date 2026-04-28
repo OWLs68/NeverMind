@@ -30,6 +30,7 @@
 | `src/core/utils.js` | autoResizeTextarea, formatTime, escapeHtml (safe для undefined з B-70), `extractJsonBlocks` (розбивка AI-відповіді на окремі JSON-об'єкти — для множинних дій у чат-барах, 17.04 14zLe), `parseContentChips` (помічник для парсингу чіпів з AI-відповіді, 20.04 NRw8G) |
 | `src/core/logger.js` | Error logging, console override, UI панель логу, ring buffer юзер-дій (trackUserAction), автолистенер nm-data-changed, stack trace у записах |
 | `src/core/diagnostics.js` | **Діагностична система (B-67 acZEu):** Health Check (9 перевірок стану систем), Smoke Tests (9 авто-тестів), Performance monitor (startup/longtask/fetch monkey-patch). Рендерить 3 блоки у панелі логу. Експорти: runHealthCheck, runSmokeTests, getPerformanceData |
+| `src/core/usage-meter.js` | **V3 Фаза 0 (ywA44 28.04):** лічильник витрат OpenAI. PRICING table, `logUsage(module, usageObj)` записує у `nm_usage_log`, `getUsageStats()` агрегує today/thisMonth/projection/byModule, `exportUsageJSON()` копіює у буфер обміну, `renderUsageMeter()` малює блок у Налаштуваннях. Ротація 31 день. Hook у 12 fetch-сайтах (центральний `_fetchAI` + 11 прямих) |
 
 ### AI модулі
 
