@@ -36,6 +36,40 @@ export function addEventDedup(ev) {
   return { added: true, event: ev };
 }
 
+// === RECURRING SERIES (Фаза 2) ===
+// Генерує N копій події через 7 днів кожна. Усі копії одержують спільний recurringId
+// (timestamp ID першої події) — це дозволяє згрупувати, але не блокує редагування
+// окремих копій (кожна — звичайна подія, edit/delete працює як зараз).
+// Повертає масив створених подій (без першої — вона вже у sourceEvent).
+export function generateWeeklySeries(sourceEvent, weeks = 12) {
+  if (!sourceEvent || !sourceEvent.date) return [];
+  const recurringId = sourceEvent.recurringId || sourceEvent.id;
+  const events = getEvents();
+  const created = [];
+  const baseDate = new Date(sourceEvent.date + 'T00:00:00');
+  for (let i = 1; i < weeks; i++) {
+    const next = new Date(baseDate.getTime() + i * 7 * 86400000);
+    const dateISO = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+    const copy = {
+      id: Date.now() + i,
+      title: sourceEvent.title,
+      date: dateISO,
+      time: sourceEvent.time || null,
+      endTime: sourceEvent.endTime || null,
+      priority: sourceEvent.priority || 'normal',
+      recurringId,
+      createdAt: Date.now() + i,
+    };
+    events.push(copy);
+    created.push(copy);
+  }
+  // Прив'язати recurringId до першої події (sourceEvent у сховищі)
+  const idx = events.findIndex(e => e.id === sourceEvent.id);
+  if (idx !== -1 && !events[idx].recurringId) events[idx].recurringId = recurringId;
+  saveEvents(events);
+  return created;
+}
+
 const MONTHS_UA = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
 const MONTHS_OF = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
 
@@ -695,6 +729,37 @@ function _getDrumEndTime() {
   return `${String(_drumValues.endHour).padStart(2, '0')}:${String(_drumValues.endMin * 5).padStart(2, '0')}`;
 }
 
+let _editEventRecurring = false;
+let _editEventWasRecurring = false;
+
+function _renderEventRecurringToggle() {
+  const toggle = document.getElementById('event-recurring-toggle');
+  const knob = document.getElementById('event-recurring-knob');
+  const hint = document.getElementById('event-recurring-hint');
+  if (!toggle || !knob) return;
+  if (_editEventRecurring) {
+    toggle.style.background = '#14b8a6';
+    knob.style.left = '21px';
+  } else {
+    toggle.style.background = 'rgba(30,16,64,0.15)';
+    knob.style.left = '3px';
+  }
+  if (hint) {
+    if (_editEventWasRecurring) {
+      hint.textContent = _editEventRecurring ? 'частина серії — зміни лише цю копію' : 'вимкнення тут не видалить інші копії';
+    } else {
+      hint.textContent = _editEventRecurring ? 'створить ще 11 копій вперед' : 'створить 12 копій вперед';
+    }
+  }
+}
+
+function toggleEventRecurring() {
+  // Якщо подія вже у серії — toggle вимкнено (не можна змінити серію через цей чекбокс)
+  if (_editEventWasRecurring) return;
+  _editEventRecurring = !_editEventRecurring;
+  _renderEventRecurringToggle();
+}
+
 function clearEventEndTime() {
   _drumValues.endHour = -1;
   _drumValues.endMin = 0;
@@ -712,8 +777,11 @@ function openEventEditModal(eventId) {
   if (!ev) return;
   _editEventId = eventId;
   _editEventPriority = ev.priority || 'normal';
+  _editEventWasRecurring = !!ev.recurringId;
+  _editEventRecurring = _editEventWasRecurring;
   document.getElementById('event-edit-title').value = ev.title || '';
   _renderEventPriority();
+  _renderEventRecurringToggle();
   const modal = document.getElementById('event-edit-modal');
   if (modal) {
     modal.style.display = 'flex';
@@ -771,6 +839,11 @@ function saveEventFromModal() {
   events[idx].endTime = endTime;
   events[idx].priority = _editEventPriority;
   saveEvents(events);
+  // Якщо юзер УВІМКНУВ повторюваність вперше для цієї події — генеруємо 11 копій
+  if (_editEventRecurring && !_editEventWasRecurring) {
+    const created = generateWeeklySeries(events[idx], 12);
+    if (created.length > 0) showUndoToast(`✓ Серія: +${created.length} копій щотижня`);
+  }
   closeEventEditModal();
   renderCalendar();
   renderUpcoming();
@@ -805,7 +878,7 @@ setInterval(_updateCalIconDay, 60 * 1000);
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
-  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime,
+  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime, toggleEventRecurring,
   closeDayScheduleModal, openRoutineFromCalendar,
   highlightEventDays,
 });

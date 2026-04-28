@@ -18,7 +18,7 @@ import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder,
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { getMoments, saveMoments } from './evening.js';
 import { renderMeHabitsStats } from './me.js';
-import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
+import { getEvents, saveEvents, addEventDedup, generateWeeklySeries, getRoutine, saveRoutine } from './calendar.js';
 
 // === HABITS ===
 let editingHabitId = null;
@@ -1158,11 +1158,16 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
     const res = addEventDedup(ev);
     if (!res.added) { addMsg('agent', `Така подія "${title}" вже є в календарі.`); return true; }
+    let extraSeries = '';
+    if (parsed.repeat_weekly) {
+      const created = generateWeeklySeries(res.event, 12);
+      if (created.length > 0) extraSeries = ` + ще ${created.length} щотижня`;
+    }
     const dateObj = new Date(parsed.date);
     const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
-    addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${timeStr}`);
+    addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${timeStr}${extraSeries}`);
     return true;
   }
 
