@@ -61,7 +61,7 @@ function _checkEveningPrompt() {
 async function _generateEveningPrompt() {
   try {
     const systemPrompt = getEveningPromptSystem() + '\n\n' + getAIContext();
-    const reply = await callAI(systemPrompt, 'Привітайся з юзером у чаті Вечора — він щойно відкриє вкладку.');
+    const reply = await callAI(systemPrompt, 'Привітайся з юзером у чаті Вечора — він щойно відкриє вкладку.', {}, 'followups-evening');
     if (!reply || typeof reply !== 'string') return null;
     return reply.trim().slice(0, 400);
   } catch (e) {

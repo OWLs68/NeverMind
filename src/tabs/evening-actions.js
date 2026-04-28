@@ -67,7 +67,7 @@ export async function generateEveningRitualSummary(addMsg) {
   if (addMsg) addMsg('typing', '');
 
   const systemPrompt = getEveningSummaryPromptV2() + '\n\n' + getAIContext();
-  const reply = await callAI(systemPrompt, 'Підведи підсумок цього дня — інсайт, не цифри.');
+  const reply = await callAI(systemPrompt, 'Підведи підсумок цього дня — інсайт, не цифри.', {}, 'evening-actions');
   if (!reply) {
     if (addMsg) addMsg('agent', 'Не вдалось сформулювати підсумок.');
     return { ok: false, err: 'no reply' };

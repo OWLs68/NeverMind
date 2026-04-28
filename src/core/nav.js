@@ -1138,7 +1138,7 @@ async function _migrateLegacyMemoryToFacts() {
 
   const userContent = `СТАРА ТЕКСТОВА ПАМ'ЯТЬ (кожен рядок — один факт):\n${legacy}`;
 
-  const msg = await callAIWithTools(systemPrompt, [{ role: 'user', content: userContent }], [saveMemTool]);
+  const msg = await callAIWithTools(systemPrompt, [{ role: 'user', content: userContent }], [saveMemTool], 'memory-save');
   if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
 
   let added = 0;

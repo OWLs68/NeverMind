@@ -445,7 +445,7 @@ async function refreshMeAnalysis() {
 Нотаток: ${notes.length}
 Останні 10 записів: ${inbox.slice(0,10).map(i=>`[${i.category}] ${i.text}`).join('; ')}`;
 
-  const reply = await callAI(systemPrompt, userData, {});
+  const reply = await callAI(systemPrompt, userData, {}, 'me-profile-analysis');
   el.textContent = reply || 'Не вдалось отримати аналіз. Спробуй ще раз.';
   btn.textContent = '↻';
   btn.disabled = false;
@@ -459,7 +459,7 @@ async function refreshMeAnalysis() {
       const advicePrompt = `${getOWLPersonality()} На основі аналізу дай рівно 3 конкретні, практичні поради для цієї людини. Кожна порада — одне речення, максимально конкретна і дієва. Формат відповіді: "1. [порада]\n2. [порада]\n3. [порада]". Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
       const adviceReply = await callAI(advicePrompt, `Аналіз: ${reply}
 
-Дані: ${userData}`, {});
+Дані: ${userData}`, {}, 'me-advice');
       if (adviceReply) {
         adviceEl.innerHTML = adviceReply.split('\n').filter(l => l.trim()).map(l => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join('');
       } else {

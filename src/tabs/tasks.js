@@ -350,7 +350,7 @@ function openTaskChat(id) {
   const systemPrompt = `${getOWLPersonality()} Допомагаєш реально виконати задачу. НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
 
-  callAI(systemPrompt, taskInfo, {}).then(reply => {
+  callAI(systemPrompt, taskInfo, {}, 'tasks-background').then(reply => {
     const el = document.getElementById('task-chat-intro');
     if (el) el.textContent = reply || 'Розкажи більше про цю задачу.';
     taskChatHistory.push({ role: 'assistant', content: reply || '' });

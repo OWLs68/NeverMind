@@ -696,7 +696,7 @@ async function initNoteChatGreeting(note) {
   }
   const aiContext = getAIContext();
   const systemPrompt = `${getOWLPersonality()} Тебе попросили поговорити про конкретну нотатку. Прочитай її і скажи коротко (1-2 речення): що це за нотатка і як ти можеш допомогти з нею. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
-  const greeting = await callAI(systemPrompt, `Нотатка: ${note.text}`, {});
+  const greeting = await callAI(systemPrompt, `Нотатка: ${note.text}`, {}, 'notes-greeting');
   if (greeting) addNoteChatMsg('agent', greeting);
 }
 

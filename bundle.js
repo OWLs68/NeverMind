@@ -8877,7 +8877,7 @@ ${folderList.join(", ")}
     }
     const aiContext = getAIContext();
     const systemPrompt = `${getOWLPersonality2()} \u0422\u0435\u0431\u0435 \u043F\u043E\u043F\u0440\u043E\u0441\u0438\u043B\u0438 \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443. \u041F\u0440\u043E\u0447\u0438\u0442\u0430\u0439 \u0457\u0457 \u0456 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u043E (1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F): \u0449\u043E \u0446\u0435 \u0437\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0456 \u044F\u043A \u0442\u0438 \u043C\u043E\u0436\u0435\u0448 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0437 \u043D\u0435\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
-    const greeting = await callAI(systemPrompt, `\u041D\u043E\u0442\u0430\u0442\u043A\u0430: ${note.text}`, {});
+    const greeting = await callAI(systemPrompt, `\u041D\u043E\u0442\u0430\u0442\u043A\u0430: ${note.text}`, {}, "notes-greeting");
     if (greeting) addNoteChatMsg("agent", greeting);
   }
   function addNoteChatMsg(role, text, chips = null) {
@@ -9755,7 +9755,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
     if (addMsg) addMsg("typing", "");
     const systemPrompt = getEveningSummaryPromptV2() + "\n\n" + getAIContext();
-    const reply = await callAI(systemPrompt, "\u041F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u0434\u043D\u044F \u2014 \u0456\u043D\u0441\u0430\u0439\u0442, \u043D\u0435 \u0446\u0438\u0444\u0440\u0438.");
+    const reply = await callAI(systemPrompt, "\u041F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u0434\u043D\u044F \u2014 \u0456\u043D\u0441\u0430\u0439\u0442, \u043D\u0435 \u0446\u0438\u0444\u0440\u0438.", {}, "evening-actions");
     if (!reply) {
       if (addMsg) addMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.");
       return { ok: false, err: "no reply" };
@@ -10601,7 +10601,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
 \u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status === "done").length}
 \u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
 \u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
-    const reply = await callAI(systemPrompt, userData, {});
+    const reply = await callAI(systemPrompt, userData, {}, "me-profile-analysis");
     el.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.";
     btn.textContent = "\u21BB";
     btn.disabled = false;
@@ -10616,7 +10616,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
 3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
         const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
 
-\u0414\u0430\u043D\u0456: ${userData}`, {});
+\u0414\u0430\u043D\u0456: ${userData}`, {}, "me-advice");
         if (adviceReply) {
           adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
         } else {
@@ -16567,7 +16567,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   async function _generateEveningPrompt() {
     try {
       const systemPrompt = getEveningPromptSystem() + "\n\n" + getAIContext();
-      const reply = await callAI(systemPrompt, "\u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439\u0441\u044F \u0437 \u044E\u0437\u0435\u0440\u043E\u043C \u0443 \u0447\u0430\u0442\u0456 \u0412\u0435\u0447\u043E\u0440\u0430 \u2014 \u0432\u0456\u043D \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454 \u0432\u043A\u043B\u0430\u0434\u043A\u0443.");
+      const reply = await callAI(systemPrompt, "\u041F\u0440\u0438\u0432\u0456\u0442\u0430\u0439\u0441\u044F \u0437 \u044E\u0437\u0435\u0440\u043E\u043C \u0443 \u0447\u0430\u0442\u0456 \u0412\u0435\u0447\u043E\u0440\u0430 \u2014 \u0432\u0456\u043D \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454 \u0432\u043A\u043B\u0430\u0434\u043A\u0443.", {}, "followups-evening");
       if (!reply || typeof reply !== "string") return null;
       return reply.trim().slice(0, 400);
     } catch (e) {
@@ -18606,7 +18606,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
 - \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u043E\u0434\u0438\u043D \u0444\u0430\u043A\u0442 \u0443 \u0440\u0456\u0437\u043D\u0438\u0445 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445.`;
     const userContent = `\u0421\u0422\u0410\u0420\u0410 \u0422\u0415\u041A\u0421\u0422\u041E\u0412\u0410 \u041F\u0410\u041C'\u042F\u0422\u042C (\u043A\u043E\u0436\u0435\u043D \u0440\u044F\u0434\u043E\u043A \u2014 \u043E\u0434\u0438\u043D \u0444\u0430\u043A\u0442):
 ${legacy}`;
-    const msg = await callAIWithTools(systemPrompt, [{ role: "user", content: userContent }], [saveMemTool]);
+    const msg = await callAIWithTools(systemPrompt, [{ role: "user", content: userContent }], [saveMemTool], "memory-save");
     if (!msg || !msg.tool_calls || !Array.isArray(msg.tool_calls)) return;
     let added = 0;
     for (const tc of msg.tool_calls) {
