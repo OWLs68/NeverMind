@@ -1152,13 +1152,17 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   if (action === 'create_event') {
     const title = (parsed.title || '').trim();
     if (!title || !parsed.date) return false;
-    const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+    let endTime = parsed.end_time || null;
+    if (!parsed.time) endTime = null;
+    if (endTime && parsed.time && endTime <= parsed.time) endTime = null;
+    const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
     const res = addEventDedup(ev);
     if (!res.added) { addMsg('agent', `Така подія "${title}" вже є в календарі.`); return true; }
     const dateObj = new Date(parsed.date);
     const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
-    addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${parsed.time ? ' о ' + parsed.time : ''}`);
+    const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
+    addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${timeStr}`);
     return true;
   }
 
@@ -1168,12 +1172,23 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (idx === -1) { addMsg('agent', 'Не знайшов подію для редагування.'); return true; }
     if (parsed.date) events[idx].date = parsed.date;
     if (parsed.time !== undefined) events[idx].time = parsed.time || null;
+    if (parsed.end_time !== undefined) {
+      // Порожній рядок — юзер просить прибрати тривалість
+      const newEnd = parsed.end_time || null;
+      const startT = events[idx].time;
+      events[idx].endTime = (newEnd && startT && newEnd > startT) ? newEnd : null;
+    }
+    // Якщо стартовий час прибрано — тривалість теж зникає
+    if (parsed.time === null || parsed.time === '') events[idx].endTime = null;
     if (parsed.title) events[idx].title = parsed.title;
     if (parsed.priority) events[idx].priority = parsed.priority;
     saveEvents(events);
     const dateObj = new Date(events[idx].date);
     const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
-    const editText = `✏️ Змінено: "${events[idx].title}" → ${dayStr}${events[idx].time ? ' о ' + events[idx].time : ''}`;
+    const t = events[idx].time;
+    const et = events[idx].endTime;
+    const timeStr = t ? ` о ${t}${et ? '–' + et : ''}` : '';
+    const editText = `✏️ Змінено: "${events[idx].title}" → ${dayStr}${timeStr}`;
     addMsg('agent', editText);
     // Карточка в Inbox стрічку щоб юзер бачив що було змінено
     try {

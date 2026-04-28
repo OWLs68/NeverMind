@@ -342,7 +342,7 @@ function _toolCallToAction(name, args) {
     case 'save_note': return { action: 'save', category: args.folder === 'Ідеї' ? 'idea' : 'note', text: args.text, folder: args.folder, comment: args.comment };
     case 'save_habit': return { action: 'save', category: 'habit', text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
     case 'save_moment': return { action: 'save', category: 'event', text: args.text, mood: args.mood, comment: args.comment };
-    case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, priority: args.priority || 'normal', comment: args.comment };
+    case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, priority: args.priority || 'normal', comment: args.comment };
     case 'save_finance': return { action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
     case 'complete_habit': return { action: 'complete_habit', habit_ids: args.habit_ids, comment: args.comment };
     case 'complete_task': return { action: 'complete_task', task_ids: args.task_ids, comment: args.comment };
@@ -354,7 +354,7 @@ function _toolCallToAction(name, args) {
     case 'clarify': return { action: 'clarify', question: args.question, options: args.options };
     case 'save_memory_fact': return { action: 'save_memory_fact', fact: args.fact, category: args.category, ttl_days: args.ttl_days };
     case 'set_reminder': return { action: 'set_reminder', text: args.text, time: args.time, date: args.date };
-    case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority, comment: args.comment };
+    case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, end_time: args.end_time, priority: args.priority, comment: args.comment };
     case 'delete_event': return { action: 'delete_event', event_id: args.event_id };
     case 'edit_note': return { action: 'edit_note', note_id: args.note_id, text: args.text, folder: args.folder, comment: args.comment };
     case 'edit_task': return { action: 'edit_task', task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority, comment: args.comment };
@@ -578,13 +578,17 @@ ${aiContext}`;
           addInboxChatMsg('agent', `✅ Проект "${newProject.name}" створено`);
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
         } else if (action.action === 'create_event') {
-          const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, priority: action.priority || 'normal', createdAt: Date.now() };
+          let endTime = action.end_time || null;
+          if (!action.time) endTime = null;
+          if (endTime && action.time && endTime <= action.time) endTime = null;
+          const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
-          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${action.time ? ' о ' + action.time : ''}`);
+          const timeStr = action.time ? ` о ${action.time}${endTime ? '–' + endTime : ''}` : '';
+          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${timeStr}`);
         } else if (action.action === 'restore_deleted') {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;

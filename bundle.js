@@ -1194,7 +1194,7 @@ ${logLines}
     const items = [];
     getEvents().forEach((ev) => {
       if (ev.date >= monthStart && ev.date <= monthEnd) {
-        items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, type: "event", priority: ev.priority || "normal" });
+        items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, endTime: ev.endTime || null, type: "event", priority: ev.priority || "normal" });
       }
     });
     getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
@@ -1224,7 +1224,7 @@ ${logLines}
       const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u23F0";
       const prio = prioIcons[item.priority] || "";
-      const timeStr = item.time ? ` \xB7 ${item.time}` : "";
+      const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
       const opacity = isPast ? "opacity:0.4;" : "";
       const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#14b8a6" : "rgba(30,16,64,0.45)";
       const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
@@ -1269,7 +1269,7 @@ ${logLines}
     getEvents().forEach((ev) => {
       const d = new Date(ev.date);
       if (d >= new Date(now.toDateString()) && d <= in7days) {
-        items.push({ id: ev.id, title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null });
+        items.push({ id: ev.id, title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null, endTime: ev.endTime || null });
       }
     });
     getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
@@ -1291,7 +1291,7 @@ ${logLines}
       const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${item.date.getDate()} ${MONTHS_OF[item.date.getMonth()]}`;
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u2611\uFE0F";
       const prio = prioIcons[item.priority] || "";
-      const timeStr = item.time ? ` \xB7 ${item.time}` : "";
+      const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
       const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" ` : "";
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? "cursor:pointer;" : ""}">
         <div style="font-size:16px;flex-shrink:0">${icon}</div>
@@ -1427,7 +1427,7 @@ ${logLines}
     }
     const timeline = [];
     routineBlocks.forEach((b) => timeline.push({ time: b.time, text: b.activity, type: "routine" }));
-    timedEvents.forEach((ev) => timeline.push({ time: ev.time, text: ev.title, type: "event", id: ev.id, priority: ev.priority }));
+    timedEvents.forEach((ev) => timeline.push({ time: ev.time, endTime: ev.endTime || null, text: ev.title, type: "event", id: ev.id, priority: ev.priority }));
     dayTasks.forEach((t) => {
       const m = t.title.match(/(\d{1,2}):(\d{2})/);
       const time = m ? `${String(m[1]).padStart(2, "0")}:${m[2]}` : null;
@@ -1462,8 +1462,9 @@ ${logLines}
           if (isEvent && item.id) tapAttr = `onclick="openEventEditModal(${item.id})" style="cursor:pointer;`;
           else if (item.type === "routine") tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
           else tapAttr = `style="`;
+          const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
           html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
-          <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "rgba(30,16,64,0.5)"};text-align:right">${item.time}</div>
+          <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "rgba(30,16,64,0.5)"};text-align:right;line-height:1.2">${timeLabel}</div>
           <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#14b8a6" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
           <div style="flex:1;font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${color};${strike}">${icon ? icon + " " : ""}${prio}${escapeHtml(item.text)}${isCurrent ? " \u2190" : ""}${isTask && item.dueDate ? " \u{1F4C5}" : ""}</div>
         </div>`;
@@ -1677,23 +1678,32 @@ ${logLines}
       _drumValues.year = 2024 + i;
     });
   }
-  function _initTimeDrum(timeStr) {
+  function _initTimeDrum(timeStr, prefix = "start") {
     const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
     const mins = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+    const isEnd = prefix === "end";
+    const hKey = isEnd ? "endHour" : "hour";
+    const mKey = isEnd ? "endMin" : "min";
+    const hourId = isEnd ? "drum-end-hour" : "drum-hour";
+    const minId = isEnd ? "drum-end-min" : "drum-min";
     if (timeStr) {
       const [h, m] = timeStr.split(":").map(Number);
-      _drumValues.hour = h;
-      _drumValues.min = Math.round(m / 5);
+      _drumValues[hKey] = h;
+      _drumValues[mKey] = Math.round(m / 5);
     } else {
-      _drumValues.hour = -1;
-      _drumValues.min = 0;
+      _drumValues[hKey] = -1;
+      _drumValues[mKey] = 0;
     }
-    _initDrumCol("drum-hour", hours, Math.max(0, _drumValues.hour), (i) => {
-      _drumValues.hour = i;
+    _initDrumCol(hourId, hours, Math.max(0, _drumValues[hKey]), (i) => {
+      _drumValues[hKey] = i;
     });
-    _initDrumCol("drum-min", mins, _drumValues.min, (i) => {
-      _drumValues.min = i;
+    _initDrumCol(minId, mins, _drumValues[mKey], (i) => {
+      _drumValues[mKey] = i;
     });
+    if (isEnd) {
+      const clearBtn = document.getElementById("event-end-clear-btn");
+      if (clearBtn) clearBtn.style.display = timeStr ? "block" : "none";
+    }
   }
   function _getDrumDate() {
     const y = _drumValues.year;
@@ -1705,6 +1715,20 @@ ${logLines}
   function _getDrumTime() {
     if (_drumValues.hour < 0) return null;
     return `${String(_drumValues.hour).padStart(2, "0")}:${String(_drumValues.min * 5).padStart(2, "0")}`;
+  }
+  function _getDrumEndTime() {
+    if (_drumValues.endHour === void 0 || _drumValues.endHour < 0) return null;
+    return `${String(_drumValues.endHour).padStart(2, "0")}:${String(_drumValues.endMin * 5).padStart(2, "0")}`;
+  }
+  function clearEventEndTime() {
+    _drumValues.endHour = -1;
+    _drumValues.endMin = 0;
+    const hourCol = document.getElementById("drum-end-hour");
+    const minCol = document.getElementById("drum-end-min");
+    if (hourCol) hourCol.scrollTop = 0;
+    if (minCol) minCol.scrollTop = 0;
+    const btn = document.getElementById("event-end-clear-btn");
+    if (btn) btn.style.display = "none";
   }
   function openEventEditModal(eventId) {
     const events = getEvents();
@@ -1719,7 +1743,8 @@ ${logLines}
       modal.style.display = "flex";
       requestAnimationFrame(() => {
         _initDateDrum(ev.date);
-        _initTimeDrum(ev.time);
+        _initTimeDrum(ev.time, "start");
+        _initTimeDrum(ev.endTime, "end");
       });
       setupModalSwipeClose(modal.querySelector(":scope > div:last-child"), closeEventEditModal);
     }
@@ -1751,12 +1776,16 @@ ${logLines}
     const date = _getDrumDate();
     if (!title || !date) return;
     const time = _getDrumTime();
+    let endTime = _getDrumEndTime();
+    if (!time) endTime = null;
+    if (endTime && time && endTime <= time) endTime = null;
     const events = getEvents();
     const idx = events.findIndex((e) => e.id === _editEventId);
     if (idx === -1) return;
     events[idx].title = title;
     events[idx].date = date;
     events[idx].time = time;
+    events[idx].endTime = endTime;
     events[idx].priority = _editEventPriority;
     saveEvents(events);
     closeEventEditModal();
@@ -1822,6 +1851,7 @@ ${logLines}
         saveEventFromModal,
         deleteEventFromModal,
         setEventPriority,
+        clearEventEndTime,
         closeDayScheduleModal,
         openRoutineFromCalendar,
         highlightEventDays
@@ -11548,7 +11578,7 @@ ${UI_TOOLS_RULES}`;
         { type: "function", function: { name: "save_note", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0435\u043C\u043E\u0446\u0456\u0457, \u0456\u0434\u0435\u0457, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438) \u2014 \u0446\u0435 save_task.", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, folder: { type: "string", enum: ["\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0420\u043E\u0431\u043E\u0442\u0430", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456", "\u0406\u0434\u0435\u0457"], description: "\u041F\u0430\u043F\u043A\u0430. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435. \u0406\u0434\u0435\u0457 \u2014 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u0438\u0445 \u0456\u0434\u0435\u0439. \u0420\u043E\u0431\u043E\u0442\u0430 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u043E\u0431\u043E\u0447\u0456 \u0437\u0430\u043F\u0438\u0441\u0438. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043F\u043E\u0457\u0437\u0434\u043A\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["text", "folder", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_habit", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041D\u041E\u0412\u0423 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0443 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0443 \u0437\u0432\u0438\u0447\u043A\u0443. \u0429\u043E\u0434\u043D\u044F, \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A, \u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430" }, details: { type: "string", description: "\u0414\u0435\u0442\u0430\u043B\u0456 \u044F\u043A\u0449\u043E \u0454" }, days: { type: "array", items: { type: "integer" }, description: "\u0414\u043D\u0456 \u0442\u0438\u0436\u043D\u044F: 0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434. \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432 = \u0449\u043E\u0434\u043D\u044F" }, target_count: { type: "integer", description: "\u0420\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C (8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A = 8). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 1" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_moment", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F, \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443: \u043F\u043E\u0457\u0445\u0430\u0432, \u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F, \u043F\u043E\u0431\u0430\u0447\u0438\u0432, \u0431\u0443\u0432 \u043D\u0430...", parameters: { type: "object", properties: { text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443" }, mood: { type: "string", enum: ["positive", "neutral", "negative"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["text", "mood", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["title", "date", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438.", parameters: { type: "object", properties: { title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041F\u041E\u0427\u0410\u0422\u041A\u0423 \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, end_time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041A\u0406\u041D\u0426\u042F \u044F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u044F \u043C\u0430\u0454 \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C. \u0422\u0440\u0438\u0433\u0435\u0440\u0438: '\u0437 14 \u0434\u043E 16' \u2192 time=14:00 end_time=16:00; '\u043D\u0430 \u0433\u043E\u0434\u0438\u043D\u0443'/'1 \u0433\u043E\u0434\u0438\u043D\u0443' \u2192 time+1:00; '\u043D\u0430 \u043F\u0456\u0432\u0433\u043E\u0434\u0438\u043D\u0438' \u2192 time+0:30; '2 \u0433\u043E\u0434\u0438\u043D\u0438' \u2192 time+2:00. \u0411\u0435\u0437 \u044F\u0432\u043D\u043E\u0457 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u041D\u0415 \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439." }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["title", "date", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_finance", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 \u2014 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439.", parameters: { type: "object", properties: { fin_type: { type: "string", enum: ["expense", "income"] }, amount: { type: "number", description: "\u0421\u0443\u043C\u0430" }, category: { type: "string", description: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438: \u0407\u0436\u0430, \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442, \u041F\u0456\u0434\u043F\u0438\u0441\u043A\u0438, \u0417\u0434\u043E\u0440\u043E\u0432'\u044F, \u0416\u0438\u0442\u043B\u043E, \u041F\u043E\u043A\u0443\u043F\u043A\u0438, \u0406\u043D\u0448\u0435. \u0414\u043E\u0445\u043E\u0434\u0438: \u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430, \u041D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u041F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F, \u0406\u043D\u0448\u0435" }, fin_comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, 1-3 \u0441\u043B\u043E\u0432\u0430" }, date: { type: "string", description: "YYYY-MM-DD \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E \u0432\u0447\u043E\u0440\u0430/\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430" } }, required: ["fin_type", "amount", "category", "fin_comment"], additionalProperties: false } } },
         { type: "function", function: { name: "create_project", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443, \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0430 \u0434\u043E\u0434\u0430\u0442\u043A\u0443, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0446\u0456\u044F \u0432\u0435\u0441\u0456\u043B\u043B\u044F.", parameters: { type: "object", properties: { name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, subtitle: { type: "string", description: "\u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A" }, comment: { type: "string", description: "\u0420\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["name"], additionalProperties: false } } },
         // --- ПРОЕКТИ — кроки і деталі (Фаза 4 Gg3Fy 20.04.2026 "Один мозок V2") ---
@@ -11566,7 +11596,7 @@ ${UI_TOOLS_RULES}`;
         // --- РЕДАГУВАННЯ ---
         { type: "function", function: { name: "edit_task", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0430\u0434\u0430\u0447\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438/\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0437\u0430\u0434\u0430\u0447\u0443.", parameters: { type: "object", properties: { task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A \u2014 UUID \u0430\u0431\u043E \u0447\u0438\u0441\u043B\u043E\u0432\u0438\u0439 ID \u044F\u043A \u0440\u044F\u0434\u043E\u043A)" }, title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
         { type: "function", function: { name: "edit_habit", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0437\u0432\u0438\u0447\u043A\u0443: \u043D\u0430\u0437\u0432\u0443, \u0434\u043D\u0456, \u0434\u0435\u0442\u0430\u043B\u0456. \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0443 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443!", parameters: { type: "object", properties: { habit_id: { type: "integer", description: "ID \u0437\u0432\u0438\u0447\u043A\u0438" }, name: { type: "string" }, days: { type: "array", items: { type: "integer" } }, details: { type: "string" }, comment: { type: "string" } }, required: ["habit_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_event", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043F\u043E\u0434\u0456\u044E: \u0434\u0430\u0442\u0443, \u0447\u0430\u0441, \u043D\u0430\u0437\u0432\u0443. \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438 \u043F\u043E\u0434\u0456\u044E.", parameters: { type: "object", properties: { event_id: { type: "integer", description: "ID \u043F\u043E\u0434\u0456\u0457" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM" }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_event", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043F\u043E\u0434\u0456\u044E: \u0434\u0430\u0442\u0443, \u0447\u0430\u0441, \u043D\u0430\u0437\u0432\u0443, \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C. \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438/\u0437\u043C\u0456\u043D\u0438 \u043F\u043E\u0434\u0456\u044E.", parameters: { type: "object", properties: { event_id: { type: "integer", description: "ID \u043F\u043E\u0434\u0456\u0457" }, title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041F\u041E\u0427\u0410\u0422\u041A\u0423" }, end_time: { type: "string", description: "HH:MM \u2014 \u0447\u0430\u0441 \u041A\u0406\u041D\u0426\u042F. \u041F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0440\u043E\u0434\u043E\u0432\u0436 \u0434\u043E X', '\u0442\u0435\u043F\u0435\u0440 \u0434\u043E 17:00', '\u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C 2 \u0433\u043E\u0434\u0438\u043D\u0438'. \u0429\u043E\u0431 \u041F\u0420\u0418\u0411\u0420\u0410\u0422\u0418 \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C \u2014 \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u0440\u044F\u0434\u043E\u043A." }, priority: { type: "string", enum: ["normal", "important", "critical"] }, comment: { type: "string" } }, required: ["event_id"], additionalProperties: false } } },
         { type: "function", function: { name: "edit_note", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443: \u0442\u0435\u043A\u0441\u0442 \u0430\u0431\u043E \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { note_id: { type: "integer", description: "ID \u043D\u043E\u0442\u0430\u0442\u043A\u0438" }, text: { type: "string" }, folder: { type: "string" }, comment: { type: "string" } }, required: ["note_id"], additionalProperties: false } } },
         // --- ВИДАЛЕННЯ ---
         { type: "function", function: { name: "delete_task", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u041F\u041E\u0412\u041D\u0406\u0421\u0422\u042E. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043A\u0430\u0436\u0435 '\u0432\u0438\u0434\u0430\u043B\u0438 X', '\u0437\u0430\u0431\u0443\u0434\u044C X', '\u043F\u0440\u0438\u0431\u0435\u0440\u0438 X \u0437 \u0437\u0430\u0434\u0430\u0447', '\u043D\u0435 \u0442\u0440\u0435\u0431\u0430 X'. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E \u0447\u0430\u0441\u0443 ('\u043F\u043E\u043C\u0456\u043D\u044F\u0432', '\u043F\u043E\u0434\u0430\u0432', '\u0437\u0440\u043E\u0431\u0438\u0432') \u2014 \u0446\u0435 complete_task. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u0444\u0443\u0437\u0456-\u043C\u0430\u0442\u0447\u0443 \u043D\u0435\u044F\u0432\u043D\u043E \u043F\u043E\u0432'\u044F\u0437\u0430\u043D\u0438\u0445 \u0434\u0456\u0439. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432\u0430\u0454\u0448\u0441\u044F \u2014 \u043F\u0438\u0442\u0430\u0439 '\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0447\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0438?'.", parameters: { type: "object", properties: { task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A)" }, comment: { type: "string" } }, required: ["task_id"], additionalProperties: false } } },
@@ -12604,7 +12634,10 @@ ${UI_TOOLS_RULES}`;
     if (action === "create_event") {
       const title = (parsed.title || "").trim();
       if (!title || !parsed.date) return false;
-      const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, priority: parsed.priority || "normal", createdAt: Date.now() };
+      let endTime = parsed.end_time || null;
+      if (!parsed.time) endTime = null;
+      if (endTime && parsed.time && endTime <= parsed.time) endTime = null;
+      const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || "normal", createdAt: Date.now() };
       const res = addEventDedup(ev);
       if (!res.added) {
         addMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
@@ -12615,7 +12648,8 @@ ${UI_TOOLS_RULES}`;
       const items = getInbox();
       items.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
       saveInbox(items);
-      addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}${parsed.time ? " \u043E " + parsed.time : ""}`);
+      const timeStr = parsed.time ? ` \u043E ${parsed.time}${endTime ? "\u2013" + endTime : ""}` : "";
+      addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}${timeStr}`);
       return true;
     }
     if (action === "edit_event") {
@@ -12627,12 +12661,21 @@ ${UI_TOOLS_RULES}`;
       }
       if (parsed.date) events[idx].date = parsed.date;
       if (parsed.time !== void 0) events[idx].time = parsed.time || null;
+      if (parsed.end_time !== void 0) {
+        const newEnd = parsed.end_time || null;
+        const startT = events[idx].time;
+        events[idx].endTime = newEnd && startT && newEnd > startT ? newEnd : null;
+      }
+      if (parsed.time === null || parsed.time === "") events[idx].endTime = null;
       if (parsed.title) events[idx].title = parsed.title;
       if (parsed.priority) events[idx].priority = parsed.priority;
       saveEvents(events);
       const dateObj = new Date(events[idx].date);
       const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
-      const editText = `\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "${events[idx].title}" \u2192 ${dayStr}${events[idx].time ? " \u043E " + events[idx].time : ""}`;
+      const t = events[idx].time;
+      const et = events[idx].endTime;
+      const timeStr = t ? ` \u043E ${t}${et ? "\u2013" + et : ""}` : "";
+      const editText = `\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "${events[idx].title}" \u2192 ${dayStr}${timeStr}`;
       addMsg("agent", editText);
       try {
         const inbox = getInbox();
@@ -13110,14 +13153,16 @@ ${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
         if (ev.date >= todayISO2 && ev.date <= in7) {
           const diff = Math.round((/* @__PURE__ */ new Date(ev.date + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
-          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${when}${ev.time ? " \u043E " + ev.time : ""}`);
+          const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
+          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${when}${tStr}`);
         }
       });
       const allEvents = getEvents();
       const futureEvents = allEvents.filter((ev) => ev.date >= todayISO2 && !upcoming.some((u) => u.includes(ev.id)));
       if (futureEvents.length > 0) {
         futureEvents.slice(0, 10).forEach((ev) => {
-          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${ev.date}${ev.time ? " \u043E " + ev.time : ""}`);
+          const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
+          upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${ev.date}${tStr}`);
         });
       }
       getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
@@ -15422,7 +15467,7 @@ ${userText}
       case "save_moment":
         return { action: "save", category: "event", text: args.text, mood: args.mood, comment: args.comment };
       case "create_event":
-        return { action: "create_event", title: args.title, date: args.date, time: args.time || null, priority: args.priority || "normal", comment: args.comment };
+        return { action: "create_event", title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, priority: args.priority || "normal", comment: args.comment };
       case "save_finance":
         return { action: "save_finance", fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
       case "complete_habit":
@@ -15446,7 +15491,7 @@ ${userText}
       case "set_reminder":
         return { action: "set_reminder", text: args.text, time: args.time, date: args.date };
       case "edit_event":
-        return { action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority, comment: args.comment };
+        return { action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, end_time: args.end_time, priority: args.priority, comment: args.comment };
       case "delete_event":
         return { action: "delete_event", event_id: args.event_id };
       case "edit_note":
@@ -15666,7 +15711,10 @@ ${aiContext}`;
             addInboxChatMsg("agent", `\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "${newProject.name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E`);
             setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
           } else if (action.action === "create_event") {
-            const ev = { id: Date.now(), title: action.title || "\u041F\u043E\u0434\u0456\u044F", date: action.date, time: action.time || null, priority: action.priority || "normal", createdAt: Date.now() };
+            let endTime = action.end_time || null;
+            if (!action.time) endTime = null;
+            if (endTime && action.time && endTime <= action.time) endTime = null;
+            const ev = { id: Date.now(), title: action.title || "\u041F\u043E\u0434\u0456\u044F", date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
             const res = addEventDedup(ev);
             if (!res.added) {
               addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
@@ -15678,7 +15726,8 @@ ${aiContext}`;
             renderInbox();
             const dateObj = new Date(action.date);
             const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
-            addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}${action.time ? " \u043E " + action.time : ""}`);
+            const timeStr = action.time ? ` \u043E ${action.time}${endTime ? "\u2013" + endTime : ""}` : "";
+            addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}${timeStr}`);
           } else if (action.action === "restore_deleted") {
             const q = (action.query || "").trim();
             const typeFilter = action.type || null;
