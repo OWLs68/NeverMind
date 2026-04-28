@@ -121,7 +121,8 @@ export function getAIContext() {
       if (ev.date >= todayISO && ev.date <= in7) {
         const diff = Math.round((new Date(ev.date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
         const when = diff === 0 ? 'СЬОГОДНІ' : diff === 1 ? 'ЗАВТРА' : `через ${diff} дн`;
-        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${when}${ev.time ? ' о ' + ev.time : ''}`);
+        const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
+        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${when}${tStr}`);
       }
     });
     // Всі події (не тільки 7 днів) — для редагування
@@ -129,7 +130,8 @@ export function getAIContext() {
     const futureEvents = allEvents.filter(ev => ev.date >= todayISO && !upcoming.some(u => u.includes(ev.id)));
     if (futureEvents.length > 0) {
       futureEvents.slice(0, 10).forEach(ev => {
-        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${ev.date}${ev.time ? ' о ' + ev.time : ''}`);
+        const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
+        upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${ev.date}${tStr}`);
       });
     }
     getTasks().filter(t => t.status === 'active' && t.dueDate).forEach(t => {

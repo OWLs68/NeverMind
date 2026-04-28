@@ -1039,7 +1039,7 @@
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Назва</div>
       <input id="event-edit-title" type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" autocomplete="off">
-      <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="display:flex;gap:10px;margin-bottom:10px">
         <div style="flex:3">
           <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Дата</div>
           <div id="event-date-drum" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative">
@@ -1050,7 +1050,7 @@
           </div>
         </div>
         <div style="flex:2">
-          <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Час</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">З</div>
           <div id="event-time-drum" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative">
             <div id="drum-hour" class="drum-col"></div>
             <div style="display:flex;align-items:center;font-size:18px;font-weight:700;color:#1e1040;flex-shrink:0">:</div>
@@ -1058,6 +1058,21 @@
             <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(20,184,166,0.3);border-bottom:1.5px solid rgba(20,184,166,0.3);pointer-events:none"></div>
           </div>
         </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;align-items:flex-end">
+        <div style="flex:3">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">До (опційно)</div>
+            <button id="event-end-clear-btn" type="button" onclick="clearEventEndTime()" style="background:none;border:none;font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);cursor:pointer;padding:0;display:none">очистити</button>
+          </div>
+          <div id="event-end-time-drum" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative">
+            <div id="drum-end-hour" class="drum-col"></div>
+            <div style="display:flex;align-items:center;font-size:18px;font-weight:700;color:#1e1040;flex-shrink:0">:</div>
+            <div id="drum-end-min" class="drum-col"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(20,184,166,0.3);border-bottom:1.5px solid rgba(20,184,166,0.3);pointer-events:none"></div>
+          </div>
+        </div>
+        <div style="flex:2;height:120px;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(30,16,64,0.35);text-align:center;line-height:1.4;padding:0 4px">залиш порожнім якщо подія на момент</div>
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Пріоритет</div>
       <div id="event-edit-priority" style="display:flex;gap:8px;margin-bottom:20px">

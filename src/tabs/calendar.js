@@ -88,7 +88,7 @@ function renderMonthEventsList() {
 
   getEvents().forEach(ev => {
     if (ev.date >= monthStart && ev.date <= monthEnd) {
-      items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, type: 'event', priority: ev.priority || 'normal' });
+      items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, endTime: ev.endTime || null, type: 'event', priority: ev.priority || 'normal' });
     }
   });
 
@@ -126,7 +126,7 @@ function renderMonthEventsList() {
     const dayLabel = isToday ? 'Сьогодні' : `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
     const icon = item.type === 'event' ? '📅' : '⏰';
     const prio = prioIcons[item.priority] || '';
-    const timeStr = item.time ? ` · ${item.time}` : '';
+    const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
     const opacity = isPast ? 'opacity:0.4;' : '';
     const dateColor = isToday ? '#ea580c' : item.type === 'event' ? '#14b8a6' : 'rgba(30,16,64,0.45)';
 
@@ -162,7 +162,7 @@ function renderUpcoming() {
   getEvents().forEach(ev => {
     const d = new Date(ev.date);
     if (d >= new Date(now.toDateString()) && d <= in7days) {
-      items.push({ id: ev.id, title: ev.title, date: d, type: 'event', priority: ev.priority || 'normal', time: ev.time || null });
+      items.push({ id: ev.id, title: ev.title, date: d, type: 'event', priority: ev.priority || 'normal', time: ev.time || null, endTime: ev.endTime || null });
     }
   });
 
@@ -191,7 +191,7 @@ function renderUpcoming() {
       const dayLabel = isToday ? 'Сьогодні' : `${item.date.getDate()} ${MONTHS_OF[item.date.getMonth()]}`;
       const icon = item.type === 'event' ? '📅' : '☑️';
       const prio = prioIcons[item.priority] || '';
-      const timeStr = item.time ? ` · ${item.time}` : '';
+      const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
       const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal(${item.id})" ` : '';
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? 'cursor:pointer;' : ''}">
         <div style="font-size:16px;flex-shrink:0">${icon}</div>
@@ -345,7 +345,7 @@ function _openDayScheduleModal(day) {
   // Об'єднаний таймлайн: routine + timed events + tasks з dueDate
   const timeline = [];
   routineBlocks.forEach(b => timeline.push({ time: b.time, text: b.activity, type: 'routine' }));
-  timedEvents.forEach(ev => timeline.push({ time: ev.time, text: ev.title, type: 'event', id: ev.id, priority: ev.priority }));
+  timedEvents.forEach(ev => timeline.push({ time: ev.time, endTime: ev.endTime || null, text: ev.title, type: 'event', id: ev.id, priority: ev.priority }));
   dayTasks.forEach(t => {
     // Задачі з часом у назві (HH:MM)
     const m = t.title.match(/(\d{1,2}):(\d{2})/);
@@ -386,8 +386,9 @@ function _openDayScheduleModal(day) {
         else if (item.type === 'routine') tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
         else tapAttr = `style="`;
 
+        const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
         html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? 'opacity:0.4;' : ''}${isCurrent ? 'background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;' : ''}">
-          <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : 'rgba(30,16,64,0.5)'};text-align:right">${item.time}</div>
+          <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : 'rgba(30,16,64,0.5)'};text-align:right;line-height:1.2">${timeLabel}</div>
           <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? '#14b8a6' : isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
           <div style="flex:1;font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${color};${strike}">${icon ? icon + ' ' : ''}${prio}${escapeHtml(item.text)}${isCurrent ? ' ←' : ''}${isTask && item.dueDate ? ' 📅' : ''}</div>
         </div>`;
@@ -649,21 +650,31 @@ function _initDateDrum(dateStr) {
   _initDrumCol('drum-year', years, _drumValues.year - 2024, i => { _drumValues.year = 2024 + i; });
 }
 
-function _initTimeDrum(timeStr) {
+function _initTimeDrum(timeStr, prefix = 'start') {
   const hours = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0'));
   const mins = Array.from({length: 12}, (_, i) => String(i * 5).padStart(2, '0'));
+  const isEnd = prefix === 'end';
+  const hKey = isEnd ? 'endHour' : 'hour';
+  const mKey = isEnd ? 'endMin' : 'min';
+  const hourId = isEnd ? 'drum-end-hour' : 'drum-hour';
+  const minId = isEnd ? 'drum-end-min' : 'drum-min';
 
   if (timeStr) {
     const [h, m] = timeStr.split(':').map(Number);
-    _drumValues.hour = h;
-    _drumValues.min = Math.round(m / 5);
+    _drumValues[hKey] = h;
+    _drumValues[mKey] = Math.round(m / 5);
   } else {
-    _drumValues.hour = -1;
-    _drumValues.min = 0;
+    _drumValues[hKey] = -1;
+    _drumValues[mKey] = 0;
   }
 
-  _initDrumCol('drum-hour', hours, Math.max(0, _drumValues.hour), i => { _drumValues.hour = i; });
-  _initDrumCol('drum-min', mins, _drumValues.min, i => { _drumValues.min = i; });
+  _initDrumCol(hourId, hours, Math.max(0, _drumValues[hKey]), i => { _drumValues[hKey] = i; });
+  _initDrumCol(minId, mins, _drumValues[mKey], i => { _drumValues[mKey] = i; });
+
+  if (isEnd) {
+    const clearBtn = document.getElementById('event-end-clear-btn');
+    if (clearBtn) clearBtn.style.display = timeStr ? 'block' : 'none';
+  }
 }
 
 function _getDrumDate() {
@@ -677,6 +688,22 @@ function _getDrumDate() {
 function _getDrumTime() {
   if (_drumValues.hour < 0) return null;
   return `${String(_drumValues.hour).padStart(2, '0')}:${String(_drumValues.min * 5).padStart(2, '0')}`;
+}
+
+function _getDrumEndTime() {
+  if (_drumValues.endHour === undefined || _drumValues.endHour < 0) return null;
+  return `${String(_drumValues.endHour).padStart(2, '0')}:${String(_drumValues.endMin * 5).padStart(2, '0')}`;
+}
+
+function clearEventEndTime() {
+  _drumValues.endHour = -1;
+  _drumValues.endMin = 0;
+  const hourCol = document.getElementById('drum-end-hour');
+  const minCol = document.getElementById('drum-end-min');
+  if (hourCol) hourCol.scrollTop = 0;
+  if (minCol) minCol.scrollTop = 0;
+  const btn = document.getElementById('event-end-clear-btn');
+  if (btn) btn.style.display = 'none';
 }
 
 function openEventEditModal(eventId) {
@@ -693,7 +720,8 @@ function openEventEditModal(eventId) {
     // Ініціалізуємо барабани ПІСЛЯ показу модалки — інакше scrollTop не працює
     requestAnimationFrame(() => {
       _initDateDrum(ev.date);
-      _initTimeDrum(ev.time);
+      _initTimeDrum(ev.time, 'start');
+      _initTimeDrum(ev.endTime, 'end');
     });
     setupModalSwipeClose(modal.querySelector(':scope > div:last-child'), closeEventEditModal);
   }
@@ -729,12 +757,18 @@ function saveEventFromModal() {
   const date = _getDrumDate();
   if (!title || !date) return;
   const time = _getDrumTime();
+  let endTime = _getDrumEndTime();
+  // Без часу початку — час кінця не має сенсу
+  if (!time) endTime = null;
+  // Якщо «до» <= «з» — ігноруємо (юзер мабуть забув вимкнути)
+  if (endTime && time && endTime <= time) endTime = null;
   const events = getEvents();
   const idx = events.findIndex(e => e.id === _editEventId);
   if (idx === -1) return;
   events[idx].title = title;
   events[idx].date = date;
   events[idx].time = time;
+  events[idx].endTime = endTime;
   events[idx].priority = _editEventPriority;
   saveEvents(events);
   closeEventEditModal();
@@ -771,7 +805,7 @@ setInterval(_updateCalIconDay, 60 * 1000);
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
-  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority,
+  openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime,
   closeDayScheduleModal, openRoutineFromCalendar,
   highlightEventDays,
 });
