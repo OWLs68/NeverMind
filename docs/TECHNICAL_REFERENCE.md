@@ -153,6 +153,7 @@
 | `nm_owl_ignored_msgs` | string (count 0-2) — лічильник проігнорованих повідомлень табло поспіль | `src/owl/proactive.js`, `src/owl/chips.js` |
 | `nm_owl_last_board_ts` | string (ts) — таймстемп останнього згенерованого повідомлення табло | `src/owl/proactive.js` |
 | `nm_owl_last_chip_click_ts` | string (ts) — таймстемп останнього кліку будь-якого чіпа | `src/owl/chips.js` |
+| `nm_usage_log` | `[{ts, module, model, prompt_tokens, completion_tokens, cost_usd}]` — лог витрат OpenAI (V3 Фаза 0, ywA44 28.04). Ротація 31 день. 12 fetch-сайтів пишуть з унікальними module-назвами для розбивки `today/thisMonth/byModule` у Налаштуваннях | `src/core/usage-meter.js` |
 
 **Динамічні:** `nm_chat_{tab}`, `nm_task_chat_{id}`, `nm_owl_tab_{tab}`, `nm_owl_board`
 
