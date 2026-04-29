@@ -49,12 +49,23 @@ const UKR_TECH_TERMS = [
 // вже всім зрозумілі у контексті проекту):
 const ALLOWED_LATIN = new Set([
   // Вкладки/назви проекту
-  'OWL', 'NeverMind', 'Roman', 'Claude', 'Gemini', 'AI', 'OpenAI', 'GPT',
+  'OWL', 'NeverMind', 'Roman', 'Claude', 'Code', 'Gemini', 'AI', 'OpenAI', 'GPT',
   // Стандартні
-  'iPhone', 'iOS', 'PWA', 'GitHub', 'Anthropic',
+  'iPhone', 'iOS', 'PWA', 'GitHub', 'Git', 'git', 'Anthropic',
   // Технічно повністю в укр контексті
   'CSS', 'HTML', 'JS', 'JSON',
 ]);
+
+// Регекси що повністю ігноруються (хеші коміту, ID сесій, інші ідентифікатори).
+// Перевіряємо повну форму слова (whole word match).
+const ALLOWED_PATTERNS = [
+  // хеш-коміту: 7-12 hex символів (типу f98b61f, c110b43)
+  /^[0-9a-f]{7,12}$/i,
+  // ідентифікатори сесій: 4-7 символів зі ЗМІШАНИМ регістром (велика+мала разом).
+  // Покриває m4Q1o, UG1Fr, ZJmdF, rJYkw, Gg3Fy, kGX6g, ywA44.
+  // НЕ покриває JSONL (всі великі) і hashmap (всі малі) — це справжні слова.
+  /^(?=.*[A-Z])(?=.*[a-z])[A-Za-z0-9]{4,7}$/,
+];
 
 // Прийнятні розширення файлів
 const FILE_EXT_RE = /\.(js|css|html|md|json|sh|jsonl|txt|py|sql)\b/i;
@@ -117,6 +128,28 @@ function isInsideBackticks(text, pos) {
   return count % 2 === 1;
 }
 
+// Повертає вміст backtick-блоку у якому знаходиться позиція pos.
+// null якщо позиція не у backticks. Використовується щоб визначити чи весь
+// блок схожий на identifier (file path, hash, kebab-case) — тоді всі слова
+// в ньому пропускаємо.
+function getBacktickContent(text, pos) {
+  let openPos = -1;
+  let count = 0;
+  for (let i = 0; i < pos; i++) {
+    if (text[i] === '`' && text[i - 1] !== '\\') {
+      if (count % 2 === 0) openPos = i;
+      count++;
+    }
+  }
+  if (count % 2 === 0) return null;
+  for (let i = pos; i < text.length; i++) {
+    if (text[i] === '`' && text[i - 1] !== '\\') {
+      return text.slice(openPos + 1, i);
+    }
+  }
+  return null;
+}
+
 function findViolations(text) {
   const cleaned = stripCodeBlocks(text);
   const violations = new Map(); // word → { count, sample_pos }
@@ -130,6 +163,15 @@ function findViolations(text) {
     const wordEnd = wordStart + word.length;
 
     if (ALLOWED_LATIN.has(word)) continue;
+    // Скіпаємо за регекс-патернами (хеші коміту, ID сесій типу m4Q1o)
+    if (ALLOWED_PATTERNS.some(re => re.test(word))) continue;
+    // Скіпаємо слова всередині backtick-блоку який виглядає як identifier:
+    // вміст блоку містить цифру / дефіс / крапку / слеш / підкреслення.
+    // Це покриває file paths (src/core/utils.js), kebab-case (last-violations.txt),
+    // commit hashes (f98b61f), session IDs (m4Q1o).
+    // НЕ покриває простий `t(key, fallback)` де "key" і "fallback" — порушення.
+    const btContent = getBacktickContent(cleaned, wordStart);
+    if (btContent && /[0-9./_-]/.test(btContent)) continue;
     // Скіпаємо якщо є dotted lower-case (методи `obj.method`)
     if (cleaned[wordStart - 1] === '.') continue;
     // Скіпаємо файлові розширення
