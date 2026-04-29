@@ -10254,6 +10254,19 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   });
 
   // src/tabs/me.js
+  function _habitPctInWindow(habit, startDaysAgo, endDaysAgo, log) {
+    const now = /* @__PURE__ */ new Date();
+    let total = 0, done = 0;
+    for (let i = startDaysAgo; i < endDaysAgo; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const dow = (d.getDay() + 6) % 7;
+      if (!(habit.days || [0, 1, 2, 3, 4]).includes(dow)) continue;
+      total++;
+      if (log[d.toDateString()]?.[habit.id]) done++;
+    }
+    return total > 0 ? Math.round(done / total * 100) : 0;
+  }
   function renderMeHabitsStats() {
     const habits = getHabits();
     const el = document.getElementById("me-habits-stats-list");
@@ -10267,16 +10280,38 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const log = getHabitLog();
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    el.innerHTML = habits.map((h) => {
+    const buildHabits = habits.filter((h) => h.type !== "quit");
+    let monthAvg = 0, prevAvg = 0;
+    if (buildHabits.length > 0) {
+      monthAvg = Math.round(buildHabits.reduce((s, h) => s + _habitPctInWindow(h, 0, 30, log), 0) / buildHabits.length);
+      prevAvg = Math.round(buildHabits.reduce((s, h) => s + _habitPctInWindow(h, 30, 60, log), 0) / buildHabits.length);
+    }
+    const trendDiff = monthAvg - prevAvg;
+    const trendArrow = trendDiff > 2 ? "\u2191" : trendDiff < -2 ? "\u2193" : "\u2192";
+    const trendColor = trendDiff > 2 ? "#16a34a" : trendDiff < -2 ? "#c2410c" : "rgba(30,16,64,0.4)";
+    const summaryColor = monthAvg >= 70 ? "#16a34a" : monthAvg >= 40 ? "#d97706" : "#dc2626";
+    const summaryHTML = buildHabits.length > 0 ? `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">\u041C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u043E\u0433\u043B\u044F\u0434</span>
+      <span style="font-size:18px;font-weight:900;color:${summaryColor}">${monthAvg}%
+        <span style="font-size:12px;font-weight:700;color:${trendColor};margin-left:6px">${trendArrow} ${trendDiff >= 0 ? "+" : ""}${trendDiff}%</span>
+      </span>
+    </div>` : "";
+    const itemsHTML = habits.map((h) => {
       const pct = getHabitPct(h.id);
       const streak = getHabitStreak(h.id);
       const isDoneToday = !!log[today]?.[h.id];
       const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
+      const prevPct = h.type !== "quit" ? _habitPctInWindow(h, 30, 60, log) : 0;
+      const diff = pct - prevPct;
+      const arrow = diff > 2 ? "\u2191" : diff < -2 ? "\u2193" : "\u2192";
+      const arrowColor = diff > 2 ? "#16a34a" : diff < -2 ? "#c2410c" : "rgba(30,16,64,0.3)";
+      const trendChip = h.type !== "quit" && Math.abs(diff) > 2 ? `<span style="font-size:11px;font-weight:700;color:${arrowColor};margin-left:4px">${arrow}${diff >= 0 ? "+" : ""}${diff}%</span>` : "";
       return `
     <div style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || "\u2B55"} ${escapeHtml(h.name)}</span>
-        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#dc2626"}">${pct}%</span>
+        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#dc2626"}">${pct}%${trendChip}</span>
       </div>
       <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
         <div style="height:100%;width:${pct}%;background:${pct >= 70 ? "#16a34a" : pct >= 40 ? "#d97706" : "#ef4444"};border-radius:3px;transition:width 0.5s"></div>
@@ -10284,6 +10319,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `\u{1F525} ${streak} \u0434\u043D\u0456 \u043F\u043E\u0441\u043F\u0456\u043B\u044C \xB7 ` : ""}\u0437\u0430 30 \u0434\u043D\u0456\u0432${isScheduledToday ? isDoneToday ? " \xB7 \u2705 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : " \xB7 \u23F3 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" : ""}</div>
     </div>`;
     }).join("");
+    el.innerHTML = summaryHTML + itemsHTML;
   }
   async function sendMeChatMessage() {
     const input = document.getElementById("me-chat-input");
