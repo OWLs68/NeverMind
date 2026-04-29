@@ -27,11 +27,11 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (m4Q1o + UG1Fr). Жодна з них не закрила багів — обидві документаційні/інфраструктурні. Старіші (ywA44, kGX6g, Aps79 з B-80/105/106/107/108 та раніше) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (SK6E2 + oknnM). Жодна з них не закрила багів NeverMind — обидві інфраструктурні (нові хуки автоматизації правил CLAUDE.md). Старіші (m4Q1o, UG1Fr, ywA44, kGX6g, Aps79 з B-80/105/106/107/108 та раніше) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_Сесія **m4Q1o** (29.04.2026) — i18n-інфраструктура (4 фази) + авто-детектор порушень моїх правил + 3 brain-уроки в lessons.md + правило про `.claude/` репо + CI прапор `SKIP_I18N_CHECK` + архівація C8uQD + 3 виправлення з фінального аудиту. Багів не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
+_Сесія **SK6E2** (29.04.2026) — топ-3 автоматизації з аудиту CLAUDE.md: hook ротації SESSION_STATE як pre-push блокер + hook CACHE_NAME bump як pre-push блокер + hook Read-before-estimate як Stop-хук. Повна архівація 7 блоків SESSION_STATE до 2 активних. Урок «hook smoke-test перед комітом» у lessons.md. Bug-fix `\b` у JS regex з кирилицею. Багів NeverMind не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
 
-_Сесія **UG1Fr** (29.04.2026) — cleanup-правило «🧹 Edit/Delete/Cleanup у плані фічі» + розширене правило 6 (smoke-test для AI-tools) + анти-патерн «MVP-фіча без cleanup-механізму» в lessons.md + аудит + Gemini-консультація про англ. локалізацію. Багів не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
+_Сесія **oknnM** (29.04.2026) — урок «оцінка часу без читання коду» у lessons.md + метрика тренду порушень (append у `.claude/violations-log.txt`) + pre-push hook smoke-test + cleanup перевірка (правила 6 і «🧹 cleanup» з CLAUDE.md в автомат). Багів не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
 
 ---
 
