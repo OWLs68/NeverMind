@@ -14975,10 +14975,8 @@ ${userText}
     }
   }
   function checkOnboarding() {
-    const done = localStorage.getItem("nm_onboarding_done");
-    if (!done) {
-      document.getElementById("onboarding").style.display = "block";
-      return true;
+    if (!localStorage.getItem("nm_onboarding_done")) {
+      localStorage.setItem("nm_onboarding_done", "1");
     }
     const seenUpdate = localStorage.getItem("nm_seen_update");
     if (seenUpdate !== UPDATE_VERSION) {
