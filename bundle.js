@@ -1873,7 +1873,27 @@ ${logLines}
           }
           if (t2 === "habits") {
             switchTab("tasks");
-            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
+            if (typeof window.switchProdTab === "function") {
+              setTimeout(() => {
+                try {
+                  window.switchProdTab("habits");
+                } catch (e) {
+                }
+              }, 50);
+            }
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0432\u0438\u0447\u043A\u0438." };
+          }
+          if (t2 === "tasks") {
+            switchTab("tasks");
+            if (typeof window.switchProdTab === "function") {
+              setTimeout(() => {
+                try {
+                  window.switchProdTab("tasks");
+                } catch (e) {
+                }
+              }, 50);
+            }
+            return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456." };
           }
           if (!document.getElementById(`page-${t2}`)) {
             return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t2}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
