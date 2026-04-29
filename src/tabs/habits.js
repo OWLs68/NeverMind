@@ -17,7 +17,6 @@ import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHi
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { getMoments, saveMoments } from './evening.js';
-import { renderMeHabitsStats } from './me.js';
 import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 
 // === HABITS ===
@@ -304,7 +303,6 @@ function toggleHabitToday(id) {
   saveHabitLog(log);
   if (h) logRecentAction('complete_habit', h.name, 'habits');
   renderHabits();
-  renderMeHabitsStats();
 }
 
 export function getHabitStreak(id) {

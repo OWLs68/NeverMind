@@ -13,7 +13,7 @@ import { renderHabits, renderProdHabits, updateProdTabCounters } from '../tabs/h
 import { renderNotes } from '../tabs/notes.js';
 import { renderFinance } from '../tabs/finance.js';
 import { renderEvening } from '../tabs/evening.js';
-import { renderMe, renderMeHabitsStats } from '../tabs/me.js';
+import { renderMe } from '../tabs/me.js';
 import { checkOnboarding, showFirstVisitTip } from '../tabs/onboarding.js';
 import { renderHealth } from '../tabs/health.js';
 import { renderProjects } from '../tabs/projects.js';
@@ -128,12 +128,12 @@ function setupSync() {
     'nm_habits2':         () => { if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); } catch(e) {} },
     'nm_habit_log2':      () => {
                             if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); } catch(e) {}
-                            if (currentTab === 'me')    try { renderMe(); renderMeHabitsStats(); } catch(e) {}
+                            if (currentTab === 'me')    try { renderMe(); } catch(e) {}
                           },
     'nm_notes':           () => { if (currentTab === 'notes') try { renderNotes(); } catch(e) {} },
     'nm_folders_meta':    () => { if (currentTab === 'notes') try { renderNotes(); } catch(e) {} },
     'nm_moments':         () => {
-                            if (currentTab === 'me')      try { renderMe(); renderMeHabitsStats(); } catch(e) {}
+                            if (currentTab === 'me')      try { renderMe(); } catch(e) {}
                             if (currentTab === 'evening') try { renderEvening(); } catch(e) {}
                           },
     'nm_finance':         () => { if (currentTab === 'finance')  try { renderFinance(); } catch(e) {} },
