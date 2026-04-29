@@ -769,14 +769,15 @@ function renderMeActivityChart() {
   });
 
   const validValues = values.filter(v => v !== null);
-  const maxVal = Math.max(...validValues.map(v => v.val), baseline * 2, 1);
+  const rawMax = Math.max(...validValues.map(v => v.val), baseline * 2, 1);
+  const maxVal = rawMax + Math.max(3, Math.round(rawMax * 0.25)); // +3-5 простору зверху
   const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
-  if (totalEl) totalEl.textContent = `${totalActivity} дій`;
+  if (totalEl) totalEl.textContent = '';
 
   const W = chartEl.offsetWidth || 300;
   const H = 96;
   const padL = 28;
-  const padR = 46;
+  const padR = 16;
   const padT = 12;
   const padB = 12;
   const chartH = H - padT - padB;
@@ -809,8 +810,6 @@ function renderMeActivityChart() {
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
   }).join('');
 
-  const normLabelTop = Math.max(padT, Math.round(baselineY) - 9);
-
   chartEl.innerHTML = `
     <svg width="${W}" height="${H}" style="display:block;overflow:visible">
       <defs>
@@ -828,7 +827,6 @@ function renderMeActivityChart() {
       <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       ${dots}
     </svg>
-    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.55);background:rgba(245,240,235,0.92);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">НОРМА ${baseline}</div>
   `;
 
   if (labelsEl) {
