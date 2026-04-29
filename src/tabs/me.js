@@ -195,99 +195,6 @@ export function renderMe() {
     }
   } catch(e) {}
 
-  // === ПОРІВНЯННЯ ТИЖДЕНЬ vs МИНУЛИЙ ===
-  const compareEl = document.getElementById('me-week-compare');
-  if (compareEl) {
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - todayDow); weekStart.setHours(0,0,0,0);
-    const prevStart = new Date(weekStart); prevStart.setDate(prevStart.getDate() - 7);
-    const prevEnd = new Date(weekStart);
-
-    const thisWeekTasks = getTasks().filter(t => t.status === 'done' && t.completedAt >= weekStart.getTime()).length;
-    const prevWeekTasks = getTasks().filter(t => t.status === 'done' && t.completedAt >= prevStart.getTime() && t.completedAt < prevEnd.getTime()).length;
-
-    const habits = getHabits(); const log = getHabitLog();
-    const buildHabitsMe = habits.filter(h => h.type !== 'quit');
-    let thisHabitPct = 0, prevHabitPct = 0;
-    if (buildHabitsMe.length > 0) {
-      let thisDone = 0, thisTotal = 0, prevDone = 0, prevTotal = 0;
-      for (let i = 0; i <= todayDow; i++) {
-        const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
-        const dow = (d.getDay() + 6) % 7;
-        const ds = d.toDateString();
-        const dayH = buildHabitsMe.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
-        thisTotal += dayH.length;
-        thisDone += dayH.filter(h => !!log[ds]?.[h.id]).length;
-      }
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(prevStart); d.setDate(prevStart.getDate() + i);
-        const dow = (d.getDay() + 6) % 7;
-        const ds = d.toDateString();
-        const dayH = buildHabitsMe.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
-        prevTotal += dayH.length;
-        prevDone += dayH.filter(h => !!log[ds]?.[h.id]).length;
-      }
-      thisHabitPct = thisTotal > 0 ? Math.round(thisDone / thisTotal * 100) : 0;
-      prevHabitPct = prevTotal > 0 ? Math.round(prevDone / prevTotal * 100) : 0;
-    }
-
-    const thisNotes = getNotes().filter(n => (n.ts || 0) >= weekStart.getTime()).length;
-    const prevNotes = getNotes().filter(n => (n.ts || 0) >= prevStart.getTime() && (n.ts || 0) < prevEnd.getTime()).length;
-
-    const diffColor = (a, b) => a >= b ? '#16a34a' : '#c2410c';
-    const diffArrow = (a, b) => a >= b ? '↑' : '↓';
-
-    compareEl.innerHTML = [
-      { label: 'задачі', cur: thisWeekTasks, prev: prevWeekTasks, color: '#ea580c' },
-      { label: 'звички', cur: thisHabitPct + '%', prev: prevHabitPct + '%', rawCur: thisHabitPct, rawPrev: prevHabitPct, color: '#16a34a' },
-      { label: 'нотатки', cur: thisNotes, prev: prevNotes, color: '#7c4a2a' },
-    ].map(item => {
-      const rc = item.rawCur !== undefined ? item.rawCur : item.cur;
-      const rp = item.rawPrev !== undefined ? item.rawPrev : item.prev;
-      const diff = rc - rp;
-      return `<div style="flex:1;background:rgba(255,255,255,0.55);border-radius:12px;padding:8px 6px;text-align:center">
-        <div style="font-size:20px;font-weight:900;color:${item.color};line-height:1">${item.cur}</div>
-        <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px">${item.label}</div>
-        <div style="font-size:10px;font-weight:800;color:${diffColor(rc,rp)};margin-top:2px">${diffArrow(rc,rp)} ${diff >= 0 ? '+' : ''}${item.rawCur !== undefined ? diff + '%' : diff}</div>
-      </div>`;
-    }).join('');
-  }
-
-  // === НАСТРІЙ ТИЖНЯ ===
-  const moodEl = document.getElementById('me-mood-bars');
-  if (moodEl) {
-    const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-    const moodMap = { fire: 5, good: 4, ok: 3, meh: 2, bad: 1 };
-    const bars = days.map((d, i) => {
-      const daysAgo = todayDow - i;
-      const future = daysAgo < 0;
-      if (future) return { d, h: 3, color: 'rgba(30,16,64,0.05)', future: true };
-      const date = new Date(now); date.setDate(now.getDate() - daysAgo);
-      const ds = date.toDateString();
-      try {
-        const saved = JSON.parse(localStorage.getItem('nm_evening_mood') || 'null');
-        if (saved && saved.date === ds && saved.mood) {
-          const val = moodMap[saved.mood] || 3;
-          const maxH = 26;
-          const h = Math.round((val / 5) * maxH);
-          const colors = { fire:'#ea580c', good:'#22c55e', ok:'#16a34a', meh:'#d97706', bad:'#ef4444' };
-          return { d, h: Math.max(4, h), color: colors[saved.mood] || '#16a34a', future: false };
-        }
-      } catch(e) {}
-      const dayMoments = getMoments().filter(m => new Date(m.ts).toDateString() === ds);
-      if (dayMoments.length === 0) return { d, h: 3, color: 'rgba(30,16,64,0.07)', future: false };
-      const pos = dayMoments.filter(m => m.mood === 'positive').length;
-      const pct = pos / dayMoments.length;
-      const h = Math.max(5, Math.round(pct * 26));
-      return { d, h, color: pct >= 0.6 ? '#16a34a' : pct >= 0.3 ? '#d97706' : '#ef4444', future: false };
-    });
-    moodEl.innerHTML = bars.map(b =>
-      `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end">
-        <div style="width:100%;height:${b.h}px;background:${b.color};border-radius:2px 2px 0 0"></div>
-        <div style="font-size:8px;font-weight:700;color:rgba(30,16,64,0.35)">${b.d}</div>
-      </div>`
-    ).join('');
-  }
-
   // === АКТИВНІ ПРОЕКТИ ===
   const projBlock = document.getElementById('me-projects-block');
   const projList = document.getElementById('me-projects-list');
@@ -717,135 +624,60 @@ function renderMeHeatmap() {
   if (legend) legend.textContent = `${total} дій · 2 тижні`;
 }
 
+// Два progress-кільця на сьогодні: задачі (виконані сьогодні / всі активні+закриті сьогодні)
+// + звички (виконані сьогодні / призначені на сьогодні за днями тижня).
 function renderMeActivityChart() {
   const chartEl = document.getElementById('me-activity-chart');
   const labelsEl = document.getElementById('me-activity-labels');
   const totalEl = document.getElementById('me-activity-total');
   if (!chartEl) return;
-
-  const now = new Date();
-  const todayDow = (now.getDay() + 6) % 7;
-  const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-  const accent = '#7c4a2a';
-
-  const allBuildHabits = getHabits().filter(h => h.type !== 'quit');
-  const log = getHabitLog();
-  const allTasks = getTasks();
-
-  const dayActivity = (date) => {
-    const ds = date.toDateString();
-    const dow = (date.getDay() + 6) % 7;
-    const dayH = allBuildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
-    const doneH = dayH.filter(h => !!log[ds]?.[h.id]).length;
-    const doneT = allTasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-    return doneH + doneT;
-  };
-
-  // Адаптивна норма: середнє денне виконання (задачі + звички) за 30 днів × 1.15
-  let avg30Total = 0;
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(now); d.setDate(now.getDate() - i);
-    avg30Total += dayActivity(d);
-  }
-  const avg30 = avg30Total / 30;
-
-  // Fallback на стару формулу якщо новий юзер (<7 днів даних або пусто)
-  const inb = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
-  const oldestTs = inb.length ? Math.min(...inb.map(i => i.ts || Date.now())) : Date.now();
-  const inboxAgeDays = Math.floor((Date.now() - oldestTs) / (24 * 3600 * 1000));
-  const hasEnoughData = inboxAgeDays >= 7 || avg30Total > 0;
-
-  const activeTasks = allTasks.filter(t => t.status === 'active').length;
-  const fallbackBaseline = Math.max(1, Math.round(activeTasks / 7) + 1);
-  const baseline = hasEnoughData
-    ? Math.max(1, Math.round(avg30 * 1.15))
-    : fallbackBaseline;
-
-  const values = dayLabels.map((_, i) => {
-    const daysAgo = todayDow - i;
-    if (daysAgo < 0) return null;
-    const d = new Date(now); d.setDate(now.getDate() - daysAgo);
-    return { val: dayActivity(d), norm: baseline };
-  });
-
-  const validValues = values.filter(v => v !== null);
-  const rawMax = Math.max(...validValues.map(v => v.val), baseline * 2, 1);
-  const maxVal = rawMax + Math.max(3, Math.round(rawMax * 0.25)); // +3-5 простору зверху
-  const totalActivity = validValues.reduce((s, v) => s + v.val, 0);
+  if (labelsEl) labelsEl.innerHTML = '';
   if (totalEl) totalEl.textContent = '';
 
-  const W = chartEl.offsetWidth || 300;
-  const H = 96;
-  const padL = 28;
-  const padR = 16;
-  const padT = 12;
-  const padB = 12;
-  const chartH = H - padT - padB;
-  const chartW = W - padL - padR;
+  const now = new Date();
+  const todayDS = now.toDateString();
+  const todayDow = (now.getDay() + 6) % 7;
 
-  const xOf = i => padL + (i + 0.5) * chartW / 7;
-  const yOf = val => padT + chartH * (1 - val / maxVal);
+  const allTasks = getTasks();
+  const doneToday = allTasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === todayDS).length;
+  const stillActive = allTasks.filter(t => t.status === 'active').length;
+  const tasksTotal = doneToday + stillActive;
+  const tasksDone = doneToday;
 
-  const points = values.map((v, i) => {
-    if (v === null) return null;
-    return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
-  }).filter(Boolean);
+  const buildHabits = getHabits().filter(h => h.type !== 'quit');
+  const todaysHabits = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+  const log = getHabitLog();
+  const habitsDone = todaysHabits.filter(h => !!log[todayDS]?.[h.id]).length;
+  const habitsTotal = todaysHabits.length;
 
-  if (points.length === 0) {
-    chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">Немає даних за тиждень</div>';
-    if (labelsEl) labelsEl.innerHTML = '';
-    return;
-  }
-
-  const baselineY = yOf(baseline);
-
-  const cellW = chartW / 7;
-  const barGap = Math.max(2, Math.round(cellW * 0.18));
-  const barW = Math.max(4, cellW - barGap);
-  const floorY = padT + chartH;
-
-  const bars = values.map((v, i) => {
-    const isToday = i === todayDow;
-    const isFuture = v === null;
-    const x = padL + i * cellW + (cellW - barW) / 2;
-
-    if (isFuture) {
-      const h = 2;
-      return `<rect x="${x.toFixed(1)}" y="${(floorY - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h}" fill="rgba(30,16,64,0.06)" rx="2"/>`;
-    }
-
-    const val = v.val;
-    if (val === 0) {
-      const h = 3;
-      return `<rect x="${x.toFixed(1)}" y="${(floorY - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h}" fill="rgba(124,74,42,0.22)" rx="2"/>`;
-    }
-
-    const h = chartH * (val / maxVal);
-    const y = floorY - h;
-    const aboveNorm = val >= v.norm;
-    const fill = aboveNorm ? '#16a34a' : '#c2410c';
-    const strokeAttr = isToday ? ' stroke="rgba(30,16,64,0.45)" stroke-width="1.5"' : '';
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" rx="3"${strokeAttr}/>`;
-  }).join('');
+  const ringSVG = (done, total, color, label) => {
+    const r = 38;
+    const C = 2 * Math.PI * r;
+    const pct = total > 0 ? Math.min(1, done / total) : 0;
+    const dash = `${(C * pct).toFixed(1)} ${C.toFixed(1)}`;
+    const text = total > 0 ? `${done}/${total}` : '—';
+    const textColor = total > 0 ? color : 'rgba(30,16,64,0.3)';
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
+        <svg width="92" height="92" viewBox="0 0 100 100" style="display:block">
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(30,16,64,0.08)" stroke-width="9"/>
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
+                  stroke-dasharray="${dash}" transform="rotate(-90 50 50)"
+                  style="transition:stroke-dasharray 0.4s ease"/>
+          <text x="50" y="52" text-anchor="middle" dominant-baseline="middle"
+                font-size="19" font-weight="800" fill="${textColor}" font-family="inherit">${text}</text>
+        </svg>
+        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.04em">${label}</div>
+      </div>
+    `;
+  };
 
   chartEl.innerHTML = `
-    <svg width="${W}" height="${H}" style="display:block;overflow:visible">
-      <rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="rgba(255,255,255,0.35)" stroke="rgba(30,16,64,0.12)" stroke-width="1" rx="8"/>
-      <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" font-size="9" font-weight="700" fill="rgba(30,16,64,0.4)">${maxVal}</text>
-      <text x="${padL - 6}" y="${padT + chartH + 3}" text-anchor="end" font-size="9" font-weight="700" fill="rgba(30,16,64,0.4)">0</text>
-      ${bars}
-      <line x1="${padL}" y1="${baselineY.toFixed(1)}" x2="${padL + chartW}" y2="${baselineY.toFixed(1)}"
-            stroke="rgba(30,16,64,0.45)" stroke-width="1" stroke-dasharray="4,4"/>
-    </svg>
+    <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
+      ${ringSVG(tasksDone, tasksTotal, '#ea580c', 'Задачі')}
+      ${ringSVG(habitsDone, habitsTotal, '#16a34a', 'Звички')}
+    </div>
   `;
-
-  if (labelsEl) {
-    labelsEl.innerHTML = values.map((v, i) => {
-      const isToday = i === todayDow;
-      const isFuture = v === null;
-      return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : isFuture ? 'rgba(30,16,64,0.15)' : 'rgba(30,16,64,0.35)'}">${dayLabels[i]}</div>`;
-    }).join('');
-  }
 }
 async function refreshMeAnalysis() {
   const btn = document.getElementById('me-refresh-btn');
