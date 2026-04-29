@@ -162,7 +162,7 @@ function renderMonthEventsList() {
     const prio = prioIcons[item.priority] || '';
     const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
     const opacity = isPast ? 'opacity:0.4;' : '';
-    const dateColor = isToday ? '#ea580c' : item.type === 'event' ? '#14b8a6' : 'rgba(30,16,64,0.45)';
+    const dateColor = isToday ? '#ea580c' : item.type === 'event' ? '#3b82f6' : 'rgba(30,16,64,0.45)';
 
     const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
     html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
@@ -299,10 +299,10 @@ function renderCalendar() {
     else if (isSelected) { bg = 'rgba(234,88,12,0.18)'; color = '#ea580c'; border = '#ea580c'; }
     else if (hasCritical) { bg = 'rgba(239,68,68,0.15)'; color = '#ef4444'; border = 'rgba(239,68,68,0.3)'; }
     else if (hasImportant) { bg = 'rgba(234,88,12,0.12)'; color = '#ea580c'; border = 'rgba(234,88,12,0.25)'; }
-    else if (hasEvent) { bg = 'rgba(20,184,166,0.15)'; color = '#1e1040'; border = 'rgba(20,184,166,0.45)'; }
+    else if (hasEvent) { bg = 'rgba(59,130,246,0.15)'; color = '#1e1040'; border = 'rgba(59,130,246,0.45)'; }
     else if (hasItems) { bg = 'rgba(30,16,64,0.1)'; color = '#1e1040'; }
 
-    if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#14b8a6' : 'currentColor'};margin-top:1px"></div>`;
+    if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#3b82f6' : 'currentColor'};margin-top:1px"></div>`;
 
     const cls = hasEvent ? ' class="cal-day-event"' : '';
     cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
@@ -365,9 +365,9 @@ function _openDayScheduleModal(day) {
       alldayEl.style.display = 'block';
       alldayEl.innerHTML = allDayEvents.map(ev => {
         const prio = ev.priority === 'critical' ? '🔴 ' : ev.priority === 'important' ? '🟠 ' : '';
-        return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(20,184,166,0.10)">
+        return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">📅</div>
-          <div style="flex:1;font-size:14px;font-weight:600;color:#14b8a6">${prio}${escapeHtml(ev.title)}</div>
+          <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">весь день</div>
         </div>`;
       }).join('');
@@ -411,7 +411,7 @@ function _openDayScheduleModal(day) {
         const isEvent = item.type === 'event';
         const isTask = item.type === 'task';
         const isDone = item.done;
-        const color = isDone ? 'rgba(30,16,64,0.3)' : isEvent ? '#14b8a6' : isCurrent ? '#ea580c' : '#1e1040';
+        const color = isDone ? 'rgba(30,16,64,0.3)' : isEvent ? '#3b82f6' : isCurrent ? '#ea580c' : '#1e1040';
         const icon = isEvent ? '📅' : isTask ? (isDone ? '✅' : '☑️') : '';
         const prio = (item.priority === 'critical') ? '🔴 ' : (item.priority === 'important') ? '🟠 ' : '';
         const strike = isDone ? 'text-decoration:line-through;' : '';
@@ -423,7 +423,7 @@ function _openDayScheduleModal(day) {
         const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
         html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? 'opacity:0.4;' : ''}${isCurrent ? 'background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;' : ''}">
           <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : 'rgba(30,16,64,0.5)'};text-align:right;line-height:1.2">${timeLabel}</div>
-          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? '#14b8a6' : isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
+          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? '#3b82f6' : isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
           <div style="flex:1;font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${color};${strike}">${icon ? icon + ' ' : ''}${prio}${escapeHtml(item.text)}${isCurrent ? ' ←' : ''}${isTask && item.dueDate ? ' 📅' : ''}</div>
         </div>`;
       });
@@ -775,7 +775,7 @@ function setEventPriority(p) {
 function _renderEventPriority() {
   const wrap = document.getElementById('event-edit-priority');
   if (!wrap) return;
-  const colors = { normal: '#14b8a6', important: '#ea580c', critical: '#ef4444' };
+  const colors = { normal: '#3b82f6', important: '#ea580c', critical: '#ef4444' };
   wrap.querySelectorAll('[data-p]').forEach(el => {
     const p = el.dataset.p;
     const active = p === _editEventPriority;
