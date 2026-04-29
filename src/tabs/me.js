@@ -591,7 +591,7 @@ function renderMeActivityChart() {
 
   chartEl.innerHTML = `
     <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
-      ${ringSVG(tasksDone, tasksTotal, '#ea580c', 'Задачі')}
+      ${ringSVG(tasksDone, tasksTotal, '#2fd0f9', 'Задачі')}
       ${ringSVG(habitsDone, habitsTotal, '#16a34a', 'Звички')}
     </div>
   `;
