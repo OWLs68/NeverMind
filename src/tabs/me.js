@@ -195,39 +195,6 @@ export function renderMe() {
     }
   } catch(e) {}
 
-  // === КРУЖЕЧКИ ТИЖНЯ ===
-  const ringsEl = document.getElementById('me-week-rings');
-  if (ringsEl) {
-    const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-    const accent = '#7c4a2a';
-    ringsEl.innerHTML = days.map((d, i) => {
-      const daysAgo = todayDow - i;
-      const date = new Date(now); date.setDate(now.getDate() - daysAgo);
-      const ds = date.toDateString();
-      const future = daysAgo < 0;
-      const count = future ? 0 : inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
-      const doneTasks = future ? 0 : getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-      const total = count + doneTasks;
-      const maxVal = 8;
-      const pct = future ? 0 : Math.min(total / maxVal, 1);
-      const circ = 69;
-      const offset = circ - circ * pct;
-      const isToday = daysAgo === 0;
-      const isBest = !future && pct >= 0.85;
-      const strokeColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.6)` : pct > 0 ? `rgba(124,74,42,0.3)` : 'transparent';
-      const label = future ? '–' : isBest ? '★' : total > 0 ? total : '·';
-      const labelColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.65)` : 'rgba(30,16,64,0.22)';
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-        <svg width="32" height="32" viewBox="0 0 30 30">
-          <circle cx="15" cy="15" r="11" fill="none" stroke="rgba(30,16,64,0.07)" stroke-width="3.5"/>
-          ${!future && pct > 0 ? `<circle cx="15" cy="15" r="11" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 15 15)"/>` : ''}
-          <text x="15" y="19" text-anchor="middle" font-size="${isBest ? 9 : 8}" font-weight="${isBest ? 900 : 800}" fill="${labelColor}">${label}</text>
-        </svg>
-        <div style="font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : 'rgba(30,16,64,0.35)'}">${d}</div>
-      </div>`;
-    }).join('');
-  }
-
   // === ПОРІВНЯННЯ ТИЖДЕНЬ vs МИНУЛИЙ ===
   const compareEl = document.getElementById('me-week-compare');
   if (compareEl) {
