@@ -272,7 +272,7 @@ function _getInsights() {
   catch { return null; }
 }
 
-const INSIGHTS_VERSION = 2; // bump якщо змінюється формат/контекст промпту
+const INSIGHTS_VERSION = 3; // bump якщо змінюється формат/контекст промпту
 function _isInsightsStale(insights) {
   if (!insights || !insights.generatedAt) return true;
   if (insights.version !== INSIGHTS_VERSION) return true; // примусова перегенерація після фіксу контексту

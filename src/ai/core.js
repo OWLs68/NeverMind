@@ -158,6 +158,40 @@ export function getAIContext() {
       return `- [ID:${h.id}] "${h.name}": ${done ? '✓ виконано' : '✗ не виконано'}`;
     }).join('\n');
     parts.push(`Звички (використовуй ID для complete_habit):\n${habitList}`);
+
+    // === Звички за останні 7 днів ===
+    // Табло і всі чати бачать тижневий зріз — щоб OWL не казав «не виконано жодної»
+    // коли реально 3/7. Рахуємо тільки заплановані дні (h.days), як у _buildWindowContext.
+    try {
+      const buildHabits = habits.filter(h => h.type !== 'quit');
+      const weekLines = buildHabits.map(h => {
+        let done = 0, scheduled = 0;
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(now); d.setDate(now.getDate() - i);
+          const dow = (d.getDay() + 6) % 7;
+          if (!(h.days || [0,1,2,3,4]).includes(dow)) continue;
+          scheduled++;
+          if (log[d.toDateString()]?.[h.id]) done++;
+        }
+        const pct = scheduled > 0 ? Math.round(done / scheduled * 100) : 0;
+        return `- "${h.name}": ${done}/${scheduled} (${pct}%)`;
+      }).filter(Boolean).join('\n');
+      const quitWeek = habits.filter(h => h.type === 'quit').map(h => {
+        let abstained = 0;
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(now); d.setDate(now.getDate() - i);
+          if (log[d.toDateString()]?.[h.id]) abstained++;
+        }
+        return `- "${h.name}" (відмова): ${abstained}/7 днів утримання`;
+      }).join('\n');
+      const cutoff = Date.now() - 7 * 86400000;
+      const doneTasksWeek = getTasks().filter(t => t.status === 'done' && t.completedAt && t.completedAt >= cutoff).length;
+      const weekParts = [];
+      if (weekLines) weekParts.push(`Звички за тиждень (виконано/заплановано):\n${weekLines}`);
+      if (quitWeek) weekParts.push(`Відмова від звичок:\n${quitWeek}`);
+      weekParts.push(`Закриті задачі за тиждень: ${doneTasksWeek}`);
+      parts.push(`[РЕАЛЬНІ ДАНІ ЗА 7 ДНІВ — НЕ кажи "жодної звички не виконано" якщо тут видно цифри]\n${weekParts.join('\n')}`);
+    } catch(e) {}
   }
 
   // === Записи Inbox за сьогодні (останні 8) ===
