@@ -2714,3 +2714,10 @@ Quick dialogue mode (хук + правило в CLAUDE.md): тригери ≤10
 
 **Коміти:** `463cce7` quick dialogue · `f5dc73e` TESTING_LOG + brain rule + lessons pattern · `79d1a15` remove progress rings · `ebff0fa` activity chart rebuild · `1dd01df` chart polish · `52f5fae` session-state lRnXU
 **Метрики:** 6 комітів (5 коду + 1 docs), CACHE_NAME `nm-20260429-0727` → `nm-20260429-1948`, v472→v473+ після auto-merge, гілка `claude/start-session-lRnXU`. Закриті баги: 0.
+
+## 29.04.2026 — сесія TdIqO
+
+Повна переробка вкладки «Я» + уніфікація базових кольорів сутностей. 2 progress-кільця замість 4 графіків (видалено «Цей тиждень vs минулий», «Настрій тижня», «Звички», окремий «14 днів»). Тиждень-картки 7 днів усередині блоку Активність зі шкалою заповнення %. Toast матове скло + зелена «Відновити» + видалено ~25 ✓-підтверджень дій. Базові кольори по Inbox: Подія `#3b82f6` (раніше бірюза `#14b8a6` у календарі), Задача `#2fd0f9` (раніше оранж у Я), Звичка `#16a34a`. `nm_evening_mood` лишається для AI без візуалу.
+
+**Коміти:** `2448d29` bar chart · `410b32b` 2 rings replace 4 charts · `5de033d` remove habits block · `4135c18` heatmap 7 days inside activity · `2ced655` toast frosted + green undo + cleanup confirms · `8ae7997` week cards with fill % · `7e65c79` unify entity colors · `316bd95` finish teal cleanup · `216e0de` archive 7PQ1a · `dd0067d` rotate bugs · `70bb51f` session-state TdIqO
+**Метрики:** 11 комітів (8 коду + 3 docs), CACHE_NAME `nm-20260429-1948` → `nm-20260429-2300` (4 рази), v478→v479+ після auto-merge, гілка `claude/start-session-TdIqO`. Закриті баги: 0.
