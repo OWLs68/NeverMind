@@ -44,45 +44,77 @@ function getSessionId() {
 }
 
 // === Українські технічні терміни які потребують пояснення в дужках ===
+// Порожній список після переформулювання правила 29.04.2026 (7PQ1a). Українські
+// терміни типу «функція», «коміт», «деплой» — Роман давно у словнику. Лишаємо
+// масив для майбутніх рідкісних додавань (наприклад нові концепції UVKL1).
 const UKR_TECH_TERMS = [
-  'функція', 'функції', 'функцію', 'функцій',
-  'параметр', 'параметри', 'параметрів',
-  'змінна', 'змінні', 'змінну',
-  'метод', 'методи', 'методу',
-  'клас', 'класи',
-  'масив', 'масиви', 'масиву',
-  'обʼєкт', "об'єкт", 'обʼєкти', "об'єкти",
-  'деплой', 'деплою',
-  'коміт', 'коміти', 'коміту',
-  'хук', 'хука', 'хуки',
-  'білд', 'білду',
-  'бандл', 'бандла', 'бандлу',
-  'токен', 'токени', 'токенів',
-  'парсер', 'парсинг',
-  'регекс', 'регекси',
-  'cache', 'cache_name',
+  // Залишено порожнім — додавати тільки реально незнайомі терміни.
 ];
 
-// Слова які НЕ рахуються як англомовні (вони стали фактично українськими або
-// вже всім зрозумілі у контексті проекту):
+// === Whitelist: загальні слова + назви проекту що НЕ потребують пояснення ===
+// Оновлено 29.04.2026 (7PQ1a) — розширено з 14 до 100+ слів після уроку
+// «хук флагав push/pull/merge/today/before». Усі ці слова Роман знає щодня.
 const ALLOWED_LATIN = new Set([
-  // Вкладки/назви проекту
+  // === Назви проекту/інструментів ===
   'OWL', 'NeverMind', 'Roman', 'Claude', 'Code', 'Gemini', 'AI', 'OpenAI', 'GPT',
-  // Стандартні
-  'iPhone', 'iOS', 'PWA', 'GitHub', 'Git', 'git', 'Anthropic',
-  // Технічно повністю в укр контексті
-  'CSS', 'HTML', 'JS', 'JSON',
+  'iPhone', 'iOS', 'PWA', 'GitHub', 'Git', 'git', 'Anthropic', 'Inbox',
+  // === Усталені абревіатури ===
+  'CSS', 'HTML', 'JS', 'JSON', 'API', 'URL', 'URI', 'ID', 'UI', 'UX', 'DB',
+  'CI', 'CD', 'IDE', 'CLI', 'SDK', 'PDF', 'SVG', 'PNG', 'JPG', 'GIF', 'JPEG',
+  'HTTP', 'HTTPS', 'SSL', 'TLS', 'TCP', 'IP', 'DNS', 'SQL', 'NoSQL', 'XML', 'YAML',
+  'JWT', 'OAuth', 'CORS', 'XSS', 'CSRF', 'GDPR', 'WCAG', 'A11y', 'i18n',
+  'MVP', 'PMF', 'KPI', 'ROI', 'SaaS', 'B2B', 'B2C', 'NPS',
+  // === Git-команди і терміни ===
+  'push', 'pull', 'merge', 'commit', 'commits', 'branch', 'branches', 'fetch',
+  'rebase', 'checkout', 'clone', 'fork', 'PR', 'MR', 'repo', 'repository', 'repos',
+  'hash', 'hashes', 'main', 'master', 'origin', 'upstream', 'staging', 'HEAD',
+  'tag', 'tags', 'stash', 'reset', 'revert', 'diff', 'log', 'remote', 'tracking',
+  // === Загальні англійські слова часто використовувані ===
+  'one', 'two', 'three', 'four', 'five', 'today', 'yesterday', 'tomorrow',
+  'before', 'after', 'next', 'last', 'first', 'second', 'third', 'final',
+  'week', 'month', 'year', 'day', 'hour', 'min', 'sec', 'now',
+  'update', 'updates', 'updated', 'fix', 'fixes', 'fixed', 'add', 'added', 'remove',
+  'feedback', 'review', 'audit', 'test', 'tests', 'tested', 'check', 'checked',
+  'bump', 'release', 'deploy', 'build', 'rebuild', 'fix', 'patch', 'hotfix',
+  'feature', 'bug', 'task', 'tasks', 'note', 'notes', 'project', 'projects',
+  'idea', 'ideas', 'plan', 'plans', 'phase', 'phases', 'step', 'steps', 'item',
+  'data', 'info', 'log', 'logs', 'config', 'env', 'mode', 'flag', 'flags',
+  'click', 'tap', 'swipe', 'scroll', 'drag', 'drop', 'hover', 'focus', 'blur',
+  // === IT-сленг проекту ===
+  'brain', 'roman', 'web', 'mobile', 'desktop', 'frontend', 'backend',
+  'monorepo', 'sandbox', 'production', 'prod', 'dev', 'local', 'remote',
+  // === Загальні короткі ===
+  'ok', 'OK', 'yes', 'no', 'true', 'false', 'null', 'undefined', 'void',
+  'pre', 'post', 'sub', 'super', 'meta', 'self', 'auto', 'manual',
+  // === Часто згадувані файли проекту і константи ===
+  // (всі _CASE будуть зловлені окремо як snake_case — додаємо тут щоб НЕ ловило)
+  'CACHE_NAME', 'SESSION_STATE', 'BUGS_HISTORY', 'DO_NOT_TOUCH', 'CHANGES',
+  'ROADMAP', 'CLAUDE', 'README', 'LESSONS', 'INDEX', 'TODO', 'NOTES',
+  'AGENT_INTELLIGENCE_SCALE', 'OWL_SILENCE_PRUNING_PLAN', 'EVENING',
+  'FINANCE', 'DATA_SCHEMA', 'TECHNICAL_REFERENCE', 'DESIGN_SYSTEM',
+  'FILE_STRUCTURE', 'ARCHITECTURE', 'GIT_EMERGENCY', 'AI_TOOLS', 'SKILLS_PLAN',
+  'CONCEPTS_ACTIVE', 'NEVERMIND_BUGS', 'NEVERMIND_LOGIC', 'FEATURES_ROADMAP',
+  // === Storage-ключі (nm_*) теж пропускаємо — Роман їх щодня бачить ===
+  // Ці слова сами по собі snake_case, тому потраплять у NEW логіку нижче.
+  // Додамо явно в whitelist щоб НЕ ловило.
+  'nm_inbox', 'nm_tasks', 'nm_notes', 'nm_habits2', 'nm_finance',
+  'nm_health_cards', 'nm_projects', 'nm_events', 'nm_moments', 'nm_trash',
+  'nm_settings', 'nm_facts', 'nm_owl_board', 'nm_data_changed',
+  // === Деякі назви хуків/скілів ===
+  'PostToolUse', 'PreToolUse', 'UserPromptSubmit', 'Stop', 'SessionStart',
 ]);
 
-// Регекси що повністю ігноруються (хеші коміту, ID сесій, інші ідентифікатори).
-// Перевіряємо повну форму слова (whole word match).
+// Регекси що повністю ігноруються (хеші коміту, ID сесій, версії).
 const ALLOWED_PATTERNS = [
   // хеш-коміту: 7-12 hex символів (типу f98b61f, c110b43)
   /^[0-9a-f]{7,12}$/i,
-  // ідентифікатори сесій: 4-7 символів зі ЗМІШАНИМ регістром (велика+мала разом).
-  // Покриває m4Q1o, UG1Fr, ZJmdF, rJYkw, Gg3Fy, kGX6g, ywA44.
-  // НЕ покриває JSONL (всі великі) і hashmap (всі малі) — це справжні слова.
-  /^(?=.*[A-Z])(?=.*[a-z])[A-Za-z0-9]{4,7}$/,
+  // ID сесій: 4-7 символів буква+цифра (наприклад SK6E2, m4Q1o, 7PQ1a, kGX6g).
+  // Розширено 7PQ1a 29.04 — раніше регекс вимагав ОБОВʼЯЗКОВО мала+велика,
+  // через це SK6E2 (тільки великі+цифри) флагалось.
+  // Нова умова: має бути ≥1 буква + ≥1 цифра у послідовності 4-7 символів.
+  /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{4,7}$/,
+  // Версії: v123, v1234, v12345
+  /^v\d{1,5}$/i,
 ];
 
 // Прийнятні розширення файлів
@@ -168,11 +200,33 @@ function getBacktickContent(text, pos) {
   return null;
 }
 
+// НОВА ЛОГІКА (29.04.2026 7PQ1a): флагати тільки слова що ВИГЛЯДАЮТЬ як код.
+// Раніше ловило ВСЕ що не у whitelist → засмічення повідомлень дужками над
+// загальними словами (push/pull/merge/today/before). Інверсія: пропускаємо
+// все, флагаємо тільки специфічні патерни коду.
+function looksLikeCode(word) {
+  // 1. snake_case з малими літерами (reflect_on_feeling, get_ai_context).
+  //    Принаймні одне підкреслення між літерами.
+  if (/[a-z]_[a-z]/.test(word)) return 'snake_case';
+  // 2. SCREAMING_SNAKE_CASE з великими (NEW_CONSTANT, MAX_RETRIES).
+  //    Принаймні одне підкреслення між великими літерами.
+  //    Але CACHE_NAME, SESSION_STATE — у whitelist окремо.
+  if (/[A-Z]_[A-Z]/.test(word)) return 'screaming_snake';
+  // 3. camelCase: маленька літера → велика (getAIContext, addEventListener).
+  //    НЕ флагає назви типу Roman, Claude (одна початкова велика).
+  if (/[a-z][A-Z]/.test(word)) return 'camelCase';
+  // 4. PascalCase з ≥2 великими і ≥1 малою (MyClass, BoardContext).
+  //    Має містити: 1+ велика на початку, 1+ мала після, ще 1+ велика далі.
+  if (/^[A-Z][a-z]+[A-Z]/.test(word)) return 'PascalCase';
+  // 5. Усе решта — пропускаємо (загальні слова push/pull/today/тощо).
+  return null;
+}
+
 function findViolations(text) {
   const cleaned = stripCodeBlocks(text);
   const violations = new Map(); // word → { count, sample_pos }
 
-  // === 1. Англомовні слова (Latin 3+ chars) ===
+  // === 1. Слова що виглядають як код (snake_case, camelCase, PascalCase) ===
   const latinRe = /\b([A-Za-z][A-Za-z0-9_]{2,})\b/g;
   let match;
   while ((match = latinRe.exec(cleaned)) !== null) {
@@ -181,39 +235,34 @@ function findViolations(text) {
     const wordEnd = wordStart + word.length;
 
     if (ALLOWED_LATIN.has(word)) continue;
-    // Скіпаємо за регекс-патернами (хеші коміту, ID сесій типу m4Q1o)
     if (ALLOWED_PATTERNS.some(re => re.test(word))) continue;
-    // Скіпаємо слова всередині backtick-блоку який виглядає як identifier:
-    // вміст блоку містить цифру / дефіс / крапку / слеш / підкреслення.
-    // Це покриває file paths (src/core/utils.js), kebab-case (last-violations.txt),
-    // commit hashes (f98b61f), session IDs (m4Q1o).
-    // НЕ покриває простий `t(key, fallback)` де "key" і "fallback" — порушення.
+
+    // НОВЕ: пропускаємо все що НЕ виглядає як код
+    const codeStyle = looksLikeCode(word);
+    if (!codeStyle) continue;
+
+    // Скіпаємо у backticks-блоках з identifier-вмістом (file paths, kebab-case)
     const btContent = getBacktickContent(cleaned, wordStart);
-    if (btContent && /[0-9./_-]/.test(btContent)) continue;
-    // Скіпаємо якщо є dotted lower-case (методи `obj.method`)
+    if (btContent && /[0-9./_-]/.test(btContent) && btContent !== word) continue;
+    // Скіпаємо якщо метод (`obj.method`)
     if (cleaned[wordStart - 1] === '.') continue;
-    // Скіпаємо файлові розширення
-    if (cleaned.slice(wordEnd, wordEnd + 6).match(FILE_EXT_RE)) continue;
     // Скіпаємо у файлових шляхах
+    if (cleaned.slice(wordEnd, wordEnd + 6).match(FILE_EXT_RE)) continue;
     if (isInsideFilePath(cleaned, wordStart)) continue;
     // Скіпаємо URL
     const before30 = cleaned.slice(Math.max(0, wordStart - 30), wordStart);
     if (before30.match(/https?:\/\/[^\s]*$/)) continue;
     // Скіпаємо HEX (preceded by #)
     if (cleaned[wordStart - 1] === '#') continue;
-    // Скіпаємо одиниці виміру у HEX/числах (3px, 5em тощо)
+    // Скіпаємо одиниці виміру у HEX/числах
     if (cleaned[wordStart - 1] && /[0-9]/.test(cleaned[wordStart - 1])) continue;
 
     // Перевіряємо чи є пояснення поряд
     if (hasNearbyExplanation(cleaned, wordEnd)) continue;
 
-    // Перевіряємо чи у backticks (це теж порушення, бо backticks ≠ пояснення)
-    // Для backticks-слів все одно рахуємо як порушення — Роман прямо сказав
-    // що `t(key, fallback)` без пояснення це порушення.
-
     const wordLower = word.toLowerCase();
     if (!violations.has(wordLower)) {
-      violations.set(wordLower, { word, count: 0, type: 'latin' });
+      violations.set(wordLower, { word, count: 0, type: codeStyle });
     }
     violations.get(wordLower).count++;
   }
@@ -270,13 +319,13 @@ process.stdin.on('end', () => {
     const totalCount = [...violations.values()].reduce((acc, v) => acc + v.count, 0);
 
     const lines = [
-      `🚨 ПОРУШЕННЯ ПРАВИЛА у попередній відповіді: ${violations.size} унікальних слів без пояснень у дужках (${totalCount} згадувань):`,
+      `🔍 Можливо потребують пояснення (виглядають як код, ${violations.size} унікальних, ${totalCount} згадувань):`,
       '',
-      sorted.map(v => `   • «${v.word}»${v.count > 1 ? ` ×${v.count}` : ''}`).join('\n'),
+      sorted.map(v => `   • «${v.word}»${v.count > 1 ? ` ×${v.count}` : ''} [${v.type}]`).join('\n'),
       '',
-      'Правило з CLAUDE.md: «Після КОЖНОГО англійського слова + КОЖНОГО технічного терміну — пояснення в дужках».',
+      'Правило з CLAUDE.md (переформульовано 29.04.2026 7PQ1a): пояснюй ТІЛЬКИ незнайомі коди — назви функцій (snake_case/camelCase), CSS-властивості, новий жаргон. Загальні англійські слова (push/pull/merge/today тощо) — НЕ пояснюй, Роман у словнику.',
       '',
-      'У наступній відповіді: визнай порушення коротко (1 рядок) і перепиши кожне слово зі списку як `слово (пояснення)`. Не виправдовуйся, не додавай нову інформацію — тільки переписи.',
+      'У наступній відповіді: якщо слово зі списку — реальна нова назва коду яку Роман не знає → додай пояснення. Якщо це загальний термін що випадково має camelCase — пропусти. Не визнавай «порушення» механічно як раніше.',
     ];
     fs.writeFileSync(VIOLATIONS_FILE, lines.join('\n') + '\n');
 
