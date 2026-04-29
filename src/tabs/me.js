@@ -400,6 +400,70 @@ export function renderMe() {
   renderMeActivityChart();
 }
 
+// === Helper: агрегат за вікно днів (звички + задачі + інбокс + настрій) ===
+// Збирає СПРАВЖНІ цифри за період щоб AI не казав «не виконано» бо
+// getMeStatsContext показує тільки сьогодні (баг знайдений 29.04.2026).
+function _buildWindowContext(days) {
+  const now = new Date();
+  const habits = getHabits();
+  const log = getHabitLog();
+  const buildHabits = habits.filter(h => h.type !== 'quit');
+
+  // Звички: для кожної рахуємо done/scheduled за вікно
+  const habitLines = buildHabits.map(h => {
+    let done = 0, scheduled = 0;
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      const dow = (d.getDay() + 6) % 7;
+      if (!(h.days || [0,1,2,3,4]).includes(dow)) continue;
+      scheduled++;
+      if (log[d.toDateString()]?.[h.id]) done++;
+    }
+    const pct = scheduled > 0 ? Math.round(done / scheduled * 100) : 0;
+    return `- "${h.name}": ${done}/${scheduled} (${pct}%)`;
+  }).join('\n');
+
+  // Quit-звички: скільки днів утримався
+  const quitHabits = habits.filter(h => h.type === 'quit');
+  const quitLines = quitHabits.map(h => {
+    let abstained = 0;
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      if (log[d.toDateString()]?.[h.id]) abstained++;
+    }
+    return `- "${h.name}" (відмова): ${abstained}/${days} днів утримання`;
+  }).join('\n');
+
+  // Закриті задачі за вікно
+  const cutoff = Date.now() - days * 86400000;
+  const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && t.completedAt >= cutoff).length;
+
+  // Inbox-записи за вікно
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const inboxCount = inbox.filter(i => i.ts >= cutoff).length;
+
+  // Настрій (з nm_evening_mood якщо ведеться)
+  let moodSummary = '';
+  try {
+    const moods = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      const ds = d.toDateString();
+      const saved = JSON.parse(localStorage.getItem('nm_evening_mood') || 'null');
+      if (saved && saved.date === ds && saved.mood) moods.push(saved.mood);
+    }
+    if (moods.length > 0) moodSummary = `Настрій (записано ${moods.length} днів): ${moods.join(', ')}`;
+  } catch {}
+
+  const parts = [`=== РЕАЛЬНІ ДАНІ ЗА ОСТАННІ ${days} ДНІВ ===`];
+  if (habitLines) parts.push(`Звички (виконано/заплановано):\n${habitLines}`);
+  if (quitLines) parts.push(`Відмова від звичок:\n${quitLines}`);
+  parts.push(`Закриті задачі: ${doneTasks}`);
+  parts.push(`Записів у Inbox: ${inboxCount}`);
+  if (moodSummary) parts.push(moodSummary);
+  return parts.join('\n\n');
+}
+
 // === 🦉 ТИЖНЕВІ ІНСАЙТИ ВІД AI ===
 // Один AI-виклик за тиждень → JSON {oneliner, patterns[], deepReport}.
 // Зберігається у localStorage 'nm_me_weekly_insights'.
@@ -413,8 +477,10 @@ function _getInsights() {
   catch { return null; }
 }
 
+const INSIGHTS_VERSION = 2; // bump якщо змінюється формат/контекст промпту
 function _isInsightsStale(insights) {
   if (!insights || !insights.generatedAt) return true;
+  if (insights.version !== INSIGHTS_VERSION) return true; // примусова перегенерація після фіксу контексту
   const ageMs = Date.now() - insights.generatedAt;
   return ageMs > 7 * 86400000;
 }
@@ -435,7 +501,8 @@ async function generateWeeklyInsights() {
     const systemPrompt = `${getOWLPersonality()} Ти аналізуєш дані юзера за минулий тиждень і повертаєш ТІЛЬКИ валідний JSON без markdown, без коментарів. Структура:
 {"oneliner":"одне речення-підсумок тижня (12-20 слів, чесно — не лестощі)","patterns":["патерн 1 (10-15 слів про закономірність)","патерн 2","патерн 3"],"deepReport":"4-6 речень глибокого звіту: цифри, прогрес, проблеми, рекомендації"}
 ВАЖЛИВО: пиши українською. НЕ вигадуй факти яких нема в даних. Якщо даних мало — все одно зроби короткий чесний звіт ("даних замало для патернів"). НЕ хвали без причини. Конкретика > загальні фрази.`;
-    const userMsg = 'Згенеруй тижневі інсайти на основі даних з контексту.' + (aiCtx ? '\n\n' + aiCtx : '') + (stats ? '\n\n' + stats : '');
+    const windowCtx = _buildWindowContext(7);
+    const userMsg = 'Згенеруй тижневі інсайти на основі даних. ОБОВʼЯЗКОВО використовуй РЕАЛЬНІ ЦИФРИ з секції "РЕАЛЬНІ ДАНІ ЗА ОСТАННІ 7 ДНІВ" — не кажи "не виконано жодної звички" якщо там видно цифри.\n\n' + windowCtx + (aiCtx ? '\n\n' + aiCtx : '') + (stats ? '\n\n' + stats : '');
     const reply = await callAI(systemPrompt, userMsg, {}, 'me-weekly-insights');
     if (!reply) return;
     // Витягти JSON з відповіді (іноді AI обгортає у ```json...```)
@@ -444,6 +511,7 @@ async function generateWeeklyInsights() {
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.oneliner || !parsed.patterns) return;
     const insights = {
+      version: INSIGHTS_VERSION,
       generatedAt: Date.now(),
       oneliner: String(parsed.oneliner).slice(0, 200),
       patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map(p => String(p).slice(0, 200)) : [],
@@ -541,7 +609,8 @@ async function generateMonthlyReport() {
     const systemPrompt = `${getOWLPersonality()} Ти робиш місячний звіт юзера за ПОПЕРЕДНІЙ місяць (${monthLabel}). Поверни ТІЛЬКИ валідний JSON без markdown:
 {"oneliner":"одне речення-підсумок місяця (15-25 слів, чесно)","topActivities":["заняття 1","заняття 2","заняття 3"],"moodTrend":"рядок про настрій (1 речення)","projectsProgress":"рядок про прогрес проектів (1 речення)","financeNote":"рядок про фінанси якщо є дані, інакше пустий","patterns":["патерн 1","патерн 2"]}
 ВАЖЛИВО: пиши українською. НЕ вигадуй цифр. Якщо даних мало — все одно зроби чесний короткий звіт. Конкретика > загальні фрази.`;
-    const userMsg = `Згенеруй підсумок ${monthLabel} на основі даних.${aiCtx ? '\n\n' + aiCtx : ''}${stats ? '\n\n' + stats : ''}`;
+    const windowCtx = _buildWindowContext(30);
+    const userMsg = `Згенеруй підсумок ${monthLabel} на основі даних. ОБОВʼЯЗКОВО використовуй РЕАЛЬНІ ЦИФРИ з секції "РЕАЛЬНІ ДАНІ ЗА ОСТАННІ 30 ДНІВ".\n\n${windowCtx}${aiCtx ? '\n\n' + aiCtx : ''}${stats ? '\n\n' + stats : ''}`;
     const reply = await callAI(systemPrompt, userMsg, {}, 'me-monthly-report');
     if (!reply) return;
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
