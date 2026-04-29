@@ -77,6 +77,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash .claude/hooks/show-violations.sh"
+          },
+          {
+            "type": "command",
             "command": "bash .claude/hooks/rules-reminder.sh"
           },
           {
@@ -86,6 +90,16 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/skill-triggers.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/check-response-violations.js"
           }
         ]
       }
