@@ -870,11 +870,10 @@ export async function saveGuideTopicAnswer(userText) {
 
 
 export function checkOnboarding() {
-  const done = localStorage.getItem('nm_onboarding_done');
-  if (!done) {
-    // Новий користувач — показуємо онбординг
-    document.getElementById('onboarding').style.display = 'block';
-    return true;
+  // Онбординг видалено — поля «імʼя» і «API ключ» доступні у Налаштуваннях.
+  // Один раз позначаємо як завершений щоб старі юзери більше його не бачили.
+  if (!localStorage.getItem('nm_onboarding_done')) {
+    localStorage.setItem('nm_onboarding_done', '1');
   }
   // Існуючий користувач — перевіряємо чи бачив оновлення
   const seenUpdate = localStorage.getItem('nm_seen_update');
