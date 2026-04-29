@@ -2,3 +2,5 @@ node_modules/
 bundle.js
 bundle.js.map
 .claude/hook-counter
+.claude/last-violations.txt
+.claude/settings.local.json
