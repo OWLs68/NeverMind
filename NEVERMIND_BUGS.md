@@ -27,11 +27,11 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (7PQ1a + SK6E2). Жодна з них не закрила багів NeverMind — обидві інфраструктурні (рефакторинг скіла + хуки). Старіші (oknnM, m4Q1o, UG1Fr, ywA44, kGX6g, Aps79 з B-80/105/106/107/108 та раніше) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (TdIqO + lRnXU). Жодна з них не закрила багів NeverMind — обидві UI/інфраструктурні. Старіші (7PQ1a, SK6E2, oknnM, m4Q1o, UG1Fr, ywA44, kGX6g, Aps79 з B-80/105/106/107/108) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_Сесія **7PQ1a** (29.04.2026) — рефакторинг скіла `/finish` (5 правок: Phase 0 архівація-першою, single-pass транскрипт, Phase 5 short, Phase 9 sentinel rule, Phase 2.A trim) + переформулювання правила «пояснення в дужках» у CLAUDE.md (з «КОЖНЕ англійське слово» на «тільки незнайомі коди») + інверсія детектор-хука `check-response-violations.js` (whitelist 14→150, нова `looksLikeCode()` функція, smoke-test 31/31 OK). Багів NeverMind не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
+_Сесія **TdIqO** (29.04.2026) — повна переробка вкладки «Я»: 2 progress-кільця замість 4 графіків, тиждень-картки 7 днів зі шкалою заповнення, toast матове скло + зелена «Відновити», видалено ~25 ✓-підтверджень дій. Уніфікація базових кольорів сутностей по Inbox (Подія `#3b82f6`, Задача `#2fd0f9`, Звичка `#16a34a`) — календарну бірюзу замінено. Багів NeverMind не закрила. Перевірити у v479+: помилки `No identifiers...` з логів (з закешованої версії 27.04 до B-108 фіксу). Деталі → `_ai-tools/SESSION_STATE.md`._
 
-_Сесія **SK6E2** (29.04.2026) — топ-3 автоматизації з аудиту CLAUDE.md: hook ротації SESSION_STATE як pre-push блокер + hook CACHE_NAME bump як pre-push блокер + hook Read-before-estimate як Stop-хук. Повна архівація 7 блоків SESSION_STATE до 2 активних. Урок «hook smoke-test перед комітом» у lessons.md. Bug-fix `\b` у JS regex з кирилицею. Багів NeverMind не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
+_Сесія **lRnXU** (29.04.2026) — quick dialogue mode (хук + правило в CLAUDE.md), TESTING_LOG.md з конкретними тестами v472, правило обробки brain-фідбеку, патерн «корінь vs симптом» у lessons.md, перебудова графіка «Я» з адаптивною нормою (відкочено в TdIqO на бублики). Багів NeverMind не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
 
 ---
 
