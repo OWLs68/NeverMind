@@ -10921,37 +10921,44 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       if (v === null) return null;
       return { x: xOf(i), y: yOf(v.val), v: v.val, norm: v.norm, i };
     }).filter(Boolean);
-    if (points.length < 2) {
+    if (points.length === 0) {
       chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:rgba(30,16,64,0.3)">\u041D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</div>';
       if (labelsEl) labelsEl.innerHTML = "";
       return;
     }
     const baselineY = yOf(baseline);
-    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${(padT + chartH).toFixed(1)} L ${points[0].x.toFixed(1)} ${(padT + chartH).toFixed(1)} Z`;
-    const dots = points.map((p) => {
-      const isToday = p.i === todayDow;
-      const aboveNorm = p.v >= p.norm;
-      const fill = p.v === 0 ? "rgba(124,74,42,0.2)" : aboveNorm ? "#16a34a" : "#c2410c";
-      const r = isToday ? 5 : 3.5;
-      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
+    const cellW = chartW / 7;
+    const barGap = Math.max(2, Math.round(cellW * 0.18));
+    const barW = Math.max(4, cellW - barGap);
+    const floorY = padT + chartH;
+    const bars = values.map((v, i) => {
+      const isToday = i === todayDow;
+      const isFuture = v === null;
+      const x = padL + i * cellW + (cellW - barW) / 2;
+      if (isFuture) {
+        const h2 = 2;
+        return `<rect x="${x.toFixed(1)}" y="${(floorY - h2).toFixed(1)}" width="${barW.toFixed(1)}" height="${h2}" fill="rgba(30,16,64,0.06)" rx="2"/>`;
+      }
+      const val = v.val;
+      if (val === 0) {
+        const h2 = 3;
+        return `<rect x="${x.toFixed(1)}" y="${(floorY - h2).toFixed(1)}" width="${barW.toFixed(1)}" height="${h2}" fill="rgba(124,74,42,0.22)" rx="2"/>`;
+      }
+      const h = chartH * (val / maxVal);
+      const y = floorY - h;
+      const aboveNorm = val >= v.norm;
+      const fill = aboveNorm ? "#16a34a" : "#c2410c";
+      const strokeAttr = isToday ? ' stroke="rgba(30,16,64,0.45)" stroke-width="1.5"' : "";
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" rx="3"${strokeAttr}/>`;
     }).join("");
     chartEl.innerHTML = `
     <svg width="${W}" height="${H}" style="display:block;overflow:visible">
-      <defs>
-        <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${accent}" stop-opacity="0.18"/>
-          <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
-        </linearGradient>
-      </defs>
       <rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="rgba(255,255,255,0.35)" stroke="rgba(30,16,64,0.12)" stroke-width="1" rx="8"/>
       <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" font-size="9" font-weight="700" fill="rgba(30,16,64,0.4)">${maxVal}</text>
       <text x="${padL - 6}" y="${padT + chartH + 3}" text-anchor="end" font-size="9" font-weight="700" fill="rgba(30,16,64,0.4)">0</text>
+      ${bars}
       <line x1="${padL}" y1="${baselineY.toFixed(1)}" x2="${padL + chartW}" y2="${baselineY.toFixed(1)}"
-            stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
-      <path d="${areaPath}" fill="url(#actGrad)"/>
-      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${dots}
+            stroke="rgba(30,16,64,0.45)" stroke-width="1" stroke-dasharray="4,4"/>
     </svg>
   `;
     if (labelsEl) {
