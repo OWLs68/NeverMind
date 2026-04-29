@@ -10826,7 +10826,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       meChatHistory = [];
       INSIGHTS_KEY = "nm_me_weekly_insights";
       _insightsGenerating = false;
-      INSIGHTS_VERSION = 2;
+      INSIGHTS_VERSION = 3;
       MONTHLY_KEY = "nm_me_monthly_report";
       _monthlyGenerating = false;
       Object.assign(window, {
@@ -13327,6 +13327,42 @@ ${upcoming.join("\n")}
       }).join("\n");
       parts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_habit):
 ${habitList}`);
+      try {
+        const buildHabits = habits.filter((h) => h.type !== "quit");
+        const weekLines = buildHabits.map((h) => {
+          let done = 0, scheduled = 0;
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(now);
+            d.setDate(now.getDate() - i);
+            const dow = (d.getDay() + 6) % 7;
+            if (!(h.days || [0, 1, 2, 3, 4]).includes(dow)) continue;
+            scheduled++;
+            if (log[d.toDateString()]?.[h.id]) done++;
+          }
+          const pct = scheduled > 0 ? Math.round(done / scheduled * 100) : 0;
+          return `- "${h.name}": ${done}/${scheduled} (${pct}%)`;
+        }).filter(Boolean).join("\n");
+        const quitWeek = habits.filter((h) => h.type === "quit").map((h) => {
+          let abstained = 0;
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(now);
+            d.setDate(now.getDate() - i);
+            if (log[d.toDateString()]?.[h.id]) abstained++;
+          }
+          return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/7 \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
+        }).join("\n");
+        const cutoff = Date.now() - 7 * 864e5;
+        const doneTasksWeek = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && t2.completedAt >= cutoff).length;
+        const weekParts = [];
+        if (weekLines) weekParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C (\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E/\u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E):
+${weekLines}`);
+        if (quitWeek) weekParts.push(`\u0412\u0456\u0434\u043C\u043E\u0432\u0430 \u0432\u0456\u0434 \u0437\u0432\u0438\u0447\u043E\u043A:
+${quitWeek}`);
+        weekParts.push(`\u0417\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasksWeek}`);
+        parts.push(`[\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 7 \u0414\u041D\u0406\u0412 \u2014 \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0436\u043E\u0434\u043D\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E" \u044F\u043A\u0449\u043E \u0442\u0443\u0442 \u0432\u0438\u0434\u043D\u043E \u0446\u0438\u0444\u0440\u0438]
+${weekParts.join("\n")}`);
+      } catch (e) {
+      }
     }
     const todayInbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]").filter((i) => new Date(i.ts).toDateString() === today).slice(0, 8);
     if (todayInbox.length > 0) {
