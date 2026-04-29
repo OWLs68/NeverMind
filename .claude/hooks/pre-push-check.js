@@ -19,6 +19,12 @@
 //    (паттерн «прапор архіву накопичується» — повторювалось 3 рази
 //    поспіль у kGX6g→UG1Fr→m4Q1o→oknnM до архівації у SK6E2 29.04).
 //
+// 4) Правило CACHE_NAME bump — блокує push якщо у diff проти origin/main
+//    змінено user-facing код (src/, index.html, style.css) але CACHE_NAME
+//    у sw.js не змінено. Без bump'у юзер не побачить оновлення на iPhone
+//    бо PWA закешує старі файли (Service Worker — фоновий скрипт що керує
+//    кешем браузера).
+//
 // Універсальний bypass: фраза `pre-push: ok` у будь-якому з останніх
 // повідомлень асистента — пропускає всі check-и (для випадків
 // false positive: інфраструктурні зміни в .claude/, документація тощо).
@@ -30,6 +36,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const N_RECENT_MESSAGES = 5; // дивимось у короткий хвіст щоб уникнути false positive
 
@@ -71,6 +78,47 @@ const UNIVERSAL_BYPASS = /pre-push:\s*ok/i;
 
 const MAX_ACTIVE_SESSION_BLOCKS = 2;
 const SESSION_STATE_PATH = path.join(__dirname, '..', '..', '_ai-tools', 'SESSION_STATE.md');
+
+// CACHE_NAME bump перевірка
+// Файли користувацького коду що впливають на PWA-кеш
+const CODE_FILE_REGEX = /^(src\/.+\.(js|css|html)|index\.html|style\.css)$/;
+
+function checkCacheNameBump(repoRoot) {
+  try {
+    // Пробуємо порівняти з origin/main, інакше HEAD~1
+    let diffRange = null;
+    for (const candidate of ['origin/main...HEAD', 'HEAD~1...HEAD']) {
+      try {
+        execSync(`git -C "${repoRoot}" rev-parse ${candidate.split('...')[0]}`, { stdio: 'pipe' });
+        diffRange = candidate;
+        break;
+      } catch {}
+    }
+    if (!diffRange) return null;
+
+    const filesOutput = execSync(`git -C "${repoRoot}" diff --name-only ${diffRange}`, {
+      encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore']
+    });
+    const codeFiles = filesOutput.split('\n').filter(Boolean).filter(f => CODE_FILE_REGEX.test(f));
+    if (codeFiles.length === 0) return null; // Чисто документаційний коміт
+
+    // Перевіряємо чи у diff sw.js змінилась стрічка CACHE_NAME
+    let swDiff = '';
+    try {
+      swDiff = execSync(`git -C "${repoRoot}" diff ${diffRange} -- sw.js`, {
+        encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore']
+      });
+    } catch {}
+
+    // Шукаємо рядок «+const CACHE_NAME» або «+CACHE_NAME» у diff sw.js
+    const hasBump = /^\+\s*(const\s+)?CACHE_NAME\s*=/m.test(swDiff);
+    if (hasBump) return null;
+
+    return { codeFiles, count: codeFiles.length };
+  } catch {
+    return null; // Не блокуємо push при помилках самого хука
+  }
+}
 
 function countActiveSessionBlocks() {
   if (!fs.existsSync(SESSION_STATE_PATH)) return { count: 0, blocks: [] };
@@ -150,6 +198,21 @@ process.stdin.on('end', () => {
         '— а є `delete_*` tool / UI-кнопка чистки / warning при конфлікті? ' +
         'Якщо ні — фіча буде «напівфабрикатом» (паттерн відкату Календар Phase 2 / маскот / B-104). ' +
         'Або додай cleanup, або підтверди фразою «pre-push: ok».'
+      );
+    }
+
+    // Правило CACHE_NAME bump
+    const repoRoot = path.join(__dirname, '..', '..');
+    const cacheIssue = checkCacheNameBump(repoRoot);
+    if (cacheIssue) {
+      const filesPreview = cacheIssue.codeFiles.slice(0, 3).join(', ') +
+        (cacheIssue.count > 3 ? ` ... (+${cacheIssue.count - 3})` : '');
+      issues.push(
+        `🔄 CACHE_NAME bump: змінено ${cacheIssue.count} файлів коду (${filesPreview}) ` +
+        `але CACHE_NAME у sw.js не змінено. Юзер не побачить оновлення на iPhone — ` +
+        `Service Worker (фоновий скрипт PWA) віддасть закешовані старі файли. ` +
+        `Виправ: оновити CACHE_NAME у sw.js (формат: nm-YYYYMMDD-HHMM, команда date). ` +
+        `Якщо це не торкається користувацького коду (коментарі/console.log) — додай фразу «pre-push: ok».`
       );
     }
 
