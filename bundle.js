@@ -10585,7 +10585,98 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     }
     renderMeHabitsStats();
     renderMeHeatmap();
+    renderWeeklyInsights();
     renderMeActivityChart();
+  }
+  function _getInsights() {
+    try {
+      return JSON.parse(localStorage.getItem(INSIGHTS_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+  function _isInsightsStale(insights) {
+    if (!insights || !insights.generatedAt) return true;
+    const ageMs = Date.now() - insights.generatedAt;
+    return ageMs > 7 * 864e5;
+  }
+  function _formatInsightAge(ts) {
+    const days = Math.floor((Date.now() - ts) / 864e5);
+    if (days === 0) return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (days === 1) return "\u0432\u0447\u043E\u0440\u0430";
+    return `${days} \u0434\u043D \u0442\u043E\u043C\u0443`;
+  }
+  async function generateWeeklyInsights() {
+    if (_insightsGenerating) return;
+    _insightsGenerating = true;
+    try {
+      const aiCtx = getAIContext();
+      const stats = getMeStatsContext ? getMeStatsContext() : "";
+      const systemPrompt = `${getOWLPersonality2()} \u0422\u0438 \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0454\u0448 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown, \u0431\u0435\u0437 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430:
+{"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0442\u0438\u0436\u043D\u044F (12-20 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E \u2014 \u043D\u0435 \u043B\u0435\u0441\u0442\u043E\u0449\u0456)","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1 (10-15 \u0441\u043B\u0456\u0432 \u043F\u0440\u043E \u0437\u0430\u043A\u043E\u043D\u043E\u043C\u0456\u0440\u043D\u0456\u0441\u0442\u044C)","\u043F\u0430\u0442\u0435\u0440\u043D 2","\u043F\u0430\u0442\u0435\u0440\u043D 3"],"deepReport":"4-6 \u0440\u0435\u0447\u0435\u043D\u044C \u0433\u043B\u0438\u0431\u043E\u043A\u043E\u0433\u043E \u0437\u0432\u0456\u0442\u0443: \u0446\u0438\u0444\u0440\u0438, \u043F\u0440\u043E\u0433\u0440\u0435\u0441, \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0438, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457"}
+\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0432 \u0434\u0430\u043D\u0438\u0445. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0447\u0435\u0441\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 ("\u0434\u0430\u043D\u0438\u0445 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u043B\u044F \u043F\u0430\u0442\u0435\u0440\u043D\u0456\u0432"). \u041D\u0415 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.`;
+      const userMsg = "\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443." + (aiCtx ? "\n\n" + aiCtx : "") + (stats ? "\n\n" + stats : "");
+      const reply = await callAI(systemPrompt, userMsg, {}, "me-weekly-insights");
+      if (!reply) return;
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return;
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.oneliner || !parsed.patterns) return;
+      const insights = {
+        generatedAt: Date.now(),
+        oneliner: String(parsed.oneliner).slice(0, 200),
+        patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : [],
+        deepReport: parsed.deepReport ? String(parsed.deepReport).slice(0, 1e3) : ""
+      };
+      localStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights));
+      renderWeeklyInsights();
+    } catch (e) {
+      console.warn("[me-weekly-insights] generation failed:", e);
+    } finally {
+      _insightsGenerating = false;
+    }
+  }
+  function renderWeeklyInsights() {
+    const el = document.getElementById("me-weekly-insights");
+    if (!el) return;
+    const insights = _getInsights();
+    const accent = "#7c4a2a";
+    if (_isInsightsStale(insights)) {
+      el.style.display = "block";
+      el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:14px">\u{1F989}</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435</span>
+      </div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026</div>`;
+      setTimeout(() => {
+        generateWeeklyInsights();
+      }, 800);
+      return;
+    }
+    el.style.display = "block";
+    const ageStr = _formatInsightAge(insights.generatedAt);
+    const patternsHTML = (insights.patterns || []).map((p) => `
+    <div style="display:flex;gap:8px;font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.4;margin-top:6px">
+      <span style="color:${accent};flex-shrink:0">\u2022</span>
+      <span>${escapeHtml(p)}</span>
+    </div>`).join("");
+    const deepHTML = insights.deepReport ? `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442</div>
+      <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
+    </div>` : "";
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">\u{1F989}</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435</span>
+      </div>
+      <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(insights.oneliner)}</div>
+    ${patternsHTML}
+    ${deepHTML}`;
   }
   function renderMeHeatmap() {
     const grid = document.getElementById("me-heatmap-grid");
@@ -10793,7 +10884,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
   }
-  var meChatHistory;
+  var meChatHistory, INSIGHTS_KEY, _insightsGenerating;
   var init_me = __esm({
     "src/tabs/me.js"() {
       init_nav();
@@ -10808,6 +10899,8 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       init_evening();
       init_projects();
       meChatHistory = [];
+      INSIGHTS_KEY = "nm_me_weekly_insights";
+      _insightsGenerating = false;
       Object.assign(window, {
         sendMeChatMessage,
         showMeChatMessages,
