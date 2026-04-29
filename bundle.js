@@ -10586,6 +10586,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     renderMeHabitsStats();
     renderMeHeatmap();
     renderWeeklyInsights();
+    renderMonthlyReport();
     renderMeActivityChart();
   }
   function _getInsights() {
@@ -10677,6 +10678,113 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(insights.oneliner)}</div>
     ${patternsHTML}
     ${deepHTML}`;
+  }
+  function _getMonthlyReport() {
+    try {
+      return JSON.parse(localStorage.getItem(MONTHLY_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+  function _prevMonthKey() {
+    const now = /* @__PURE__ */ new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+  }
+  function _prevMonthName() {
+    const now = /* @__PURE__ */ new Date();
+    const names = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return names[prev.getMonth()];
+  }
+  async function generateMonthlyReport() {
+    if (_monthlyGenerating) return;
+    _monthlyGenerating = true;
+    try {
+      const aiCtx = getAIContext();
+      const stats = getMeStatsContext ? getMeStatsContext() : "";
+      const monthLabel = _prevMonthName();
+      const systemPrompt = `${getOWLPersonality2()} \u0422\u0438 \u0440\u043E\u0431\u0438\u0448 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406\u0419 \u043C\u0456\u0441\u044F\u0446\u044C (${monthLabel}). \u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown:
+{"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043C\u0456\u0441\u044F\u0446\u044F (15-25 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E)","topActivities":["\u0437\u0430\u043D\u044F\u0442\u0442\u044F 1","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 2","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 3"],"moodTrend":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043D\u0430\u0441\u0442\u0440\u0456\u0439 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","projectsProgress":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","financeNote":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0438 \u044F\u043A\u0449\u043E \u0454 \u0434\u0430\u043D\u0456, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u0443\u0441\u0442\u0438\u0439","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1","\u043F\u0430\u0442\u0435\u0440\u043D 2"]}
+\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0446\u0438\u0444\u0440. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u0447\u0435\u0441\u043D\u0438\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0437\u0432\u0456\u0442. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.`;
+      const userMsg = `\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${monthLabel} \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445.${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
+      const reply = await callAI(systemPrompt, userMsg, {}, "me-monthly-report");
+      if (!reply) return;
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return;
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.oneliner) return;
+      const report = {
+        month: _prevMonthKey(),
+        generatedAt: Date.now(),
+        monthLabel,
+        oneliner: String(parsed.oneliner).slice(0, 250),
+        topActivities: Array.isArray(parsed.topActivities) ? parsed.topActivities.slice(0, 3).map((a) => String(a).slice(0, 100)) : [],
+        moodTrend: parsed.moodTrend ? String(parsed.moodTrend).slice(0, 200) : "",
+        projectsProgress: parsed.projectsProgress ? String(parsed.projectsProgress).slice(0, 200) : "",
+        financeNote: parsed.financeNote ? String(parsed.financeNote).slice(0, 200) : "",
+        patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : []
+      };
+      localStorage.setItem(MONTHLY_KEY, JSON.stringify(report));
+      renderMonthlyReport();
+    } catch (e) {
+      console.warn("[me-monthly-report] generation failed:", e);
+    } finally {
+      _monthlyGenerating = false;
+    }
+  }
+  function renderMonthlyReport() {
+    const el = document.getElementById("me-monthly-report");
+    if (!el) return;
+    const now = /* @__PURE__ */ new Date();
+    const dayOfMonth = now.getDate();
+    if (dayOfMonth > 15) {
+      el.style.display = "none";
+      return;
+    }
+    const report = _getMonthlyReport();
+    const expectedMonth = _prevMonthKey();
+    if (!report || report.month !== expectedMonth) {
+      if (_monthlyGenerating) {
+        el.style.display = "block";
+        el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:14px">\u{1F4C6}</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${_prevMonthName()}</span>
+        </div>
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026</div>`;
+      } else {
+        el.style.display = "none";
+        setTimeout(() => {
+          generateMonthlyReport();
+        }, 1500);
+      }
+      return;
+    }
+    el.style.display = "block";
+    const greenAccent = "#16a34a";
+    const sections = [];
+    if (report.topActivities && report.topActivities.length > 0) {
+      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C</span>
+      ${report.topActivities.map((a) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(a)}</div>`).join("")}
+    </div>`);
+    }
+    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">\u041D\u0430\u0441\u0442\u0440\u0456\u0439:</span> ${escapeHtml(report.moodTrend)}</div>`);
+    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">\u041F\u0440\u043E\u0435\u043A\u0442\u0438:</span> ${escapeHtml(report.projectsProgress)}</div>`);
+    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">\u0424\u0456\u043D\u0430\u043D\u0441\u0438:</span> ${escapeHtml(report.financeNote)}</div>`);
+    if (report.patterns && report.patterns.length > 0) {
+      sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">\u041F\u0430\u0442\u0435\u0440\u043D\u0438</span>
+      ${report.patterns.map((p) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(p)}</div>`).join("")}
+    </div>`);
+    }
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:14px">\u{1F4C6}</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${report.monthLabel}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
+    ${sections.join("")}`;
   }
   function renderMeHeatmap() {
     const grid = document.getElementById("me-heatmap-grid");
@@ -10884,7 +10992,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
   }
-  var meChatHistory, INSIGHTS_KEY, _insightsGenerating;
+  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, MONTHLY_KEY, _monthlyGenerating;
   var init_me = __esm({
     "src/tabs/me.js"() {
       init_nav();
@@ -10901,6 +11009,8 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       meChatHistory = [];
       INSIGHTS_KEY = "nm_me_weekly_insights";
       _insightsGenerating = false;
+      MONTHLY_KEY = "nm_me_monthly_report";
+      _monthlyGenerating = false;
       Object.assign(window, {
         sendMeChatMessage,
         showMeChatMessages,

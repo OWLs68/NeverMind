@@ -394,6 +394,7 @@ export function renderMe() {
   renderMeHabitsStats();
   renderMeHeatmap();
   renderWeeklyInsights();
+  renderMonthlyReport();
 
   // === ГРАФІК АКТИВНОСТІ ===
   renderMeActivityChart();
@@ -502,6 +503,129 @@ function renderWeeklyInsights() {
     <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(insights.oneliner)}</div>
     ${patternsHTML}
     ${deepHTML}`;
+}
+
+// === 📆 МІСЯЧНИЙ AI-ЗВІТ ===
+// Генерується автоматично 1-го числа коли юзер відкриває Я.
+// Показується з 1-го по 15-те число поточного місяця (звіт за попередній).
+// Після 15-го — ховається щоб не засмічувати, дані лишаються у localStorage.
+
+const MONTHLY_KEY = 'nm_me_monthly_report';
+let _monthlyGenerating = false;
+
+function _getMonthlyReport() {
+  try { return JSON.parse(localStorage.getItem(MONTHLY_KEY) || 'null'); }
+  catch { return null; }
+}
+
+function _prevMonthKey() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function _prevMonthName() {
+  const now = new Date();
+  const names = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return names[prev.getMonth()];
+}
+
+async function generateMonthlyReport() {
+  if (_monthlyGenerating) return;
+  _monthlyGenerating = true;
+  try {
+    const aiCtx = getAIContext();
+    const stats = getMeStatsContext ? getMeStatsContext() : '';
+    const monthLabel = _prevMonthName();
+    const systemPrompt = `${getOWLPersonality()} Ти робиш місячний звіт юзера за ПОПЕРЕДНІЙ місяць (${monthLabel}). Поверни ТІЛЬКИ валідний JSON без markdown:
+{"oneliner":"одне речення-підсумок місяця (15-25 слів, чесно)","topActivities":["заняття 1","заняття 2","заняття 3"],"moodTrend":"рядок про настрій (1 речення)","projectsProgress":"рядок про прогрес проектів (1 речення)","financeNote":"рядок про фінанси якщо є дані, інакше пустий","patterns":["патерн 1","патерн 2"]}
+ВАЖЛИВО: пиши українською. НЕ вигадуй цифр. Якщо даних мало — все одно зроби чесний короткий звіт. Конкретика > загальні фрази.`;
+    const userMsg = `Згенеруй підсумок ${monthLabel} на основі даних.${aiCtx ? '\n\n' + aiCtx : ''}${stats ? '\n\n' + stats : ''}`;
+    const reply = await callAI(systemPrompt, userMsg, {}, 'me-monthly-report');
+    if (!reply) return;
+    const jsonMatch = reply.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.oneliner) return;
+    const report = {
+      month: _prevMonthKey(),
+      generatedAt: Date.now(),
+      monthLabel,
+      oneliner: String(parsed.oneliner).slice(0, 250),
+      topActivities: Array.isArray(parsed.topActivities) ? parsed.topActivities.slice(0, 3).map(a => String(a).slice(0, 100)) : [],
+      moodTrend: parsed.moodTrend ? String(parsed.moodTrend).slice(0, 200) : '',
+      projectsProgress: parsed.projectsProgress ? String(parsed.projectsProgress).slice(0, 200) : '',
+      financeNote: parsed.financeNote ? String(parsed.financeNote).slice(0, 200) : '',
+      patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map(p => String(p).slice(0, 200)) : [],
+    };
+    localStorage.setItem(MONTHLY_KEY, JSON.stringify(report));
+    renderMonthlyReport();
+  } catch (e) {
+    console.warn('[me-monthly-report] generation failed:', e);
+  } finally {
+    _monthlyGenerating = false;
+  }
+}
+
+function renderMonthlyReport() {
+  const el = document.getElementById('me-monthly-report');
+  if (!el) return;
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+
+  // Показуємо тільки з 1-го по 15-те число поточного місяця
+  if (dayOfMonth > 15) {
+    el.style.display = 'none';
+    return;
+  }
+
+  const report = _getMonthlyReport();
+  const expectedMonth = _prevMonthKey();
+
+  // Якщо немає звіту за попередній місяць — генеруємо
+  if (!report || report.month !== expectedMonth) {
+    if (_monthlyGenerating) {
+      el.style.display = 'block';
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:14px">📆</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">Підсумок ${_prevMonthName()}</span>
+        </div>
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">Складаю місячний звіт…</div>`;
+    } else {
+      el.style.display = 'none';
+      setTimeout(() => { generateMonthlyReport(); }, 1500); // після weekly insights
+    }
+    return;
+  }
+
+  // Є звіт за поточний попередній місяць — показуємо
+  el.style.display = 'block';
+  const greenAccent = '#16a34a';
+  const sections = [];
+  if (report.topActivities && report.topActivities.length > 0) {
+    sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">Топ занять</span>
+      ${report.topActivities.map(a => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">• ${escapeHtml(a)}</div>`).join('')}
+    </div>`);
+  }
+  if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">Настрій:</span> ${escapeHtml(report.moodTrend)}</div>`);
+  if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">Проекти:</span> ${escapeHtml(report.projectsProgress)}</div>`);
+  if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">Фінанси:</span> ${escapeHtml(report.financeNote)}</div>`);
+  if (report.patterns && report.patterns.length > 0) {
+    sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">Патерни</span>
+      ${report.patterns.map(p => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">• ${escapeHtml(p)}</div>`).join('')}
+    </div>`);
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:14px">📆</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">Підсумок ${report.monthLabel}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
+    ${sections.join('')}`;
 }
 
 function renderMeHeatmap() {
