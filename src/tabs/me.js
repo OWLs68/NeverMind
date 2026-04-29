@@ -393,9 +393,115 @@ export function renderMe() {
   // === ЗВИЧКИ СТАТИСТИКА ===
   renderMeHabitsStats();
   renderMeHeatmap();
+  renderWeeklyInsights();
 
   // === ГРАФІК АКТИВНОСТІ ===
   renderMeActivityChart();
+}
+
+// === 🦉 ТИЖНЕВІ ІНСАЙТИ ВІД AI ===
+// Один AI-виклик за тиждень → JSON {oneliner, patterns[], deepReport}.
+// Зберігається у localStorage 'nm_me_weekly_insights'.
+// Авто-генерується у неділю (день тижня = 6) або якщо нема свіжих даних 7+ днів.
+
+const INSIGHTS_KEY = 'nm_me_weekly_insights';
+let _insightsGenerating = false;
+
+function _getInsights() {
+  try { return JSON.parse(localStorage.getItem(INSIGHTS_KEY) || 'null'); }
+  catch { return null; }
+}
+
+function _isInsightsStale(insights) {
+  if (!insights || !insights.generatedAt) return true;
+  const ageMs = Date.now() - insights.generatedAt;
+  return ageMs > 7 * 86400000;
+}
+
+function _formatInsightAge(ts) {
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days === 0) return 'сьогодні';
+  if (days === 1) return 'вчора';
+  return `${days} дн тому`;
+}
+
+async function generateWeeklyInsights() {
+  if (_insightsGenerating) return;
+  _insightsGenerating = true;
+  try {
+    const aiCtx = getAIContext();
+    const stats = getMeStatsContext ? getMeStatsContext() : '';
+    const systemPrompt = `${getOWLPersonality()} Ти аналізуєш дані юзера за минулий тиждень і повертаєш ТІЛЬКИ валідний JSON без markdown, без коментарів. Структура:
+{"oneliner":"одне речення-підсумок тижня (12-20 слів, чесно — не лестощі)","patterns":["патерн 1 (10-15 слів про закономірність)","патерн 2","патерн 3"],"deepReport":"4-6 речень глибокого звіту: цифри, прогрес, проблеми, рекомендації"}
+ВАЖЛИВО: пиши українською. НЕ вигадуй факти яких нема в даних. Якщо даних мало — все одно зроби короткий чесний звіт ("даних замало для патернів"). НЕ хвали без причини. Конкретика > загальні фрази.`;
+    const userMsg = 'Згенеруй тижневі інсайти на основі даних з контексту.' + (aiCtx ? '\n\n' + aiCtx : '') + (stats ? '\n\n' + stats : '');
+    const reply = await callAI(systemPrompt, userMsg, {}, 'me-weekly-insights');
+    if (!reply) return;
+    // Витягти JSON з відповіді (іноді AI обгортає у ```json...```)
+    const jsonMatch = reply.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.oneliner || !parsed.patterns) return;
+    const insights = {
+      generatedAt: Date.now(),
+      oneliner: String(parsed.oneliner).slice(0, 200),
+      patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map(p => String(p).slice(0, 200)) : [],
+      deepReport: parsed.deepReport ? String(parsed.deepReport).slice(0, 1000) : '',
+    };
+    localStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights));
+    renderWeeklyInsights();
+  } catch (e) {
+    console.warn('[me-weekly-insights] generation failed:', e);
+  } finally {
+    _insightsGenerating = false;
+  }
+}
+
+function renderWeeklyInsights() {
+  const el = document.getElementById('me-weekly-insights');
+  if (!el) return;
+  const insights = _getInsights();
+  const accent = '#7c4a2a';
+
+  // Якщо немає або застаріло — плейсхолдер + запуск генерації у фоні
+  if (_isInsightsStale(insights)) {
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:14px">🦉</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
+      </div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">Аналізую твій тиждень — інсайти зʼявляться за хвилину…</div>`;
+    // Запускаємо генерацію (не чекаємо)
+    setTimeout(() => { generateWeeklyInsights(); }, 800);
+    return;
+  }
+
+  // Є свіжі — рендеримо
+  el.style.display = 'block';
+  const ageStr = _formatInsightAge(insights.generatedAt);
+  const patternsHTML = (insights.patterns || []).map(p => `
+    <div style="display:flex;gap:8px;font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.4;margin-top:6px">
+      <span style="color:${accent};flex-shrink:0">•</span>
+      <span>${escapeHtml(p)}</span>
+    </div>`).join('');
+  const deepHTML = insights.deepReport ? `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Глибокий звіт</div>
+      <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">🦉</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
+      </div>
+      <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(insights.oneliner)}</div>
+    ${patternsHTML}
+    ${deepHTML}`;
 }
 
 function renderMeHeatmap() {
