@@ -195,39 +195,6 @@ export function renderMe() {
     }
   } catch(e) {}
 
-  // === КРУЖЕЧКИ ТИЖНЯ ===
-  const ringsEl = document.getElementById('me-week-rings');
-  if (ringsEl) {
-    const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
-    const accent = '#7c4a2a';
-    ringsEl.innerHTML = days.map((d, i) => {
-      const daysAgo = todayDow - i;
-      const date = new Date(now); date.setDate(now.getDate() - daysAgo);
-      const ds = date.toDateString();
-      const future = daysAgo < 0;
-      const count = future ? 0 : inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
-      const doneTasks = future ? 0 : getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-      const total = count + doneTasks;
-      const maxVal = 8;
-      const pct = future ? 0 : Math.min(total / maxVal, 1);
-      const circ = 69;
-      const offset = circ - circ * pct;
-      const isToday = daysAgo === 0;
-      const isBest = !future && pct >= 0.85;
-      const strokeColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.6)` : pct > 0 ? `rgba(124,74,42,0.3)` : 'transparent';
-      const label = future ? '–' : isBest ? '★' : total > 0 ? total : '·';
-      const labelColor = isBest ? accent : pct > 0.4 ? `rgba(124,74,42,0.65)` : 'rgba(30,16,64,0.22)';
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-        <svg width="32" height="32" viewBox="0 0 30 30">
-          <circle cx="15" cy="15" r="11" fill="none" stroke="rgba(30,16,64,0.07)" stroke-width="3.5"/>
-          ${!future && pct > 0 ? `<circle cx="15" cy="15" r="11" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 15 15)"/>` : ''}
-          <text x="15" y="19" text-anchor="middle" font-size="${isBest ? 9 : 8}" font-weight="${isBest ? 900 : 800}" fill="${labelColor}">${label}</text>
-        </svg>
-        <div style="font-size:9px;font-weight:${isToday ? 800 : 700};color:${isToday ? accent : 'rgba(30,16,64,0.35)'}">${d}</div>
-      </div>`;
-    }).join('');
-  }
-
   // === ПОРІВНЯННЯ ТИЖДЕНЬ vs МИНУЛИЙ ===
   const compareEl = document.getElementById('me-week-compare');
   if (compareEl) {
@@ -758,27 +725,47 @@ function renderMeActivityChart() {
 
   const now = new Date();
   const todayDow = (now.getDay() + 6) % 7;
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
   const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
   const accent = '#7c4a2a';
 
   const allBuildHabits = getHabits().filter(h => h.type !== 'quit');
-  const activeTasks = getTasks().filter(t => t.status === 'active').length;
-  const baseline = Math.max(1, Math.round(activeTasks / 7) + 1);
+  const log = getHabitLog();
+  const allTasks = getTasks();
+
+  const dayActivity = (date) => {
+    const ds = date.toDateString();
+    const dow = (date.getDay() + 6) % 7;
+    const dayH = allBuildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+    const doneH = dayH.filter(h => !!log[ds]?.[h.id]).length;
+    const doneT = allTasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+    return doneH + doneT;
+  };
+
+  // Адаптивна норма: середнє денне виконання (задачі + звички) за 30 днів × 1.15
+  let avg30Total = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now); d.setDate(now.getDate() - i);
+    avg30Total += dayActivity(d);
+  }
+  const avg30 = avg30Total / 30;
+
+  // Fallback на стару формулу якщо новий юзер (<7 днів даних або пусто)
+  const inb = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const oldestTs = inb.length ? Math.min(...inb.map(i => i.ts || Date.now())) : Date.now();
+  const inboxAgeDays = Math.floor((Date.now() - oldestTs) / (24 * 3600 * 1000));
+  const hasEnoughData = inboxAgeDays >= 7 || avg30Total > 0;
+
+  const activeTasks = allTasks.filter(t => t.status === 'active').length;
+  const fallbackBaseline = Math.max(1, Math.round(activeTasks / 7) + 1);
+  const baseline = hasEnoughData
+    ? Math.max(1, Math.round(avg30 * 1.15))
+    : fallbackBaseline;
 
   const values = dayLabels.map((_, i) => {
     const daysAgo = todayDow - i;
-    const d = new Date(now);
-    d.setDate(now.getDate() - daysAgo);
-    const ds = d.toDateString();
     if (daysAgo < 0) return null;
-    const inboxCount = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
-    const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
-    const log = getHabitLog();
-    const dow = (d.getDay() + 6) % 7;
-    const todayH = allBuildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
-    const doneH = todayH.filter(h => !!log[ds]?.[h.id]).length;
-    return { val: inboxCount + doneTasks + doneH, norm: Math.max(1, todayH.length + Math.round(activeTasks / 7)) };
+    const d = new Date(now); d.setDate(now.getDate() - daysAgo);
+    return { val: dayActivity(d), norm: baseline };
   });
 
   const validValues = values.filter(v => v !== null);
@@ -787,11 +774,15 @@ function renderMeActivityChart() {
   if (totalEl) totalEl.textContent = `${totalActivity} дій`;
 
   const W = chartEl.offsetWidth || 300;
-  const H = 64;
-  const padT = 6, padB = 10;
+  const H = 96;
+  const padL = 28;
+  const padR = 46;
+  const padT = 12;
+  const padB = 12;
   const chartH = H - padT - padB;
+  const chartW = W - padL - padR;
 
-  const xOf = i => (i + 0.5) * W / 7;
+  const xOf = i => padL + (i + 0.5) * chartW / 7;
   const yOf = val => padT + chartH * (1 - val / maxVal);
 
   const points = values.map((v, i) => {
@@ -808,7 +799,7 @@ function renderMeActivityChart() {
   const baselineY = yOf(baseline);
 
   const linePath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  const areaPath = `${linePath} L ${points[points.length-1].x.toFixed(1)} ${H} L ${points[0].x.toFixed(1)} ${H} Z`;
+  const areaPath = `${linePath} L ${points[points.length-1].x.toFixed(1)} ${(padT + chartH).toFixed(1)} L ${points[0].x.toFixed(1)} ${(padT + chartH).toFixed(1)} Z`;
 
   const dots = points.map(p => {
     const isToday = p.i === todayDow;
@@ -818,7 +809,7 @@ function renderMeActivityChart() {
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="white" stroke-width="1.5"/>`;
   }).join('');
 
-  const normLabelTop = Math.max(0, Math.round(baselineY) - 18);
+  const normLabelTop = Math.max(padT, Math.round(baselineY) - 9);
 
   chartEl.innerHTML = `
     <svg width="${W}" height="${H}" style="display:block;overflow:visible">
@@ -828,13 +819,16 @@ function renderMeActivityChart() {
           <stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/>
         </linearGradient>
       </defs>
-      <line x1="0" y1="${baselineY.toFixed(1)}" x2="${W}" y2="${baselineY.toFixed(1)}"
+      <rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="rgba(255,255,255,0.35)" stroke="rgba(30,16,64,0.12)" stroke-width="1" rx="8"/>
+      <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" font-size="9" font-weight="700" fill="rgba(30,16,64,0.4)">${maxVal}</text>
+      <text x="${padL - 6}" y="${padT + chartH + 3}" text-anchor="end" font-size="9" font-weight="700" fill="rgba(30,16,64,0.4)">0</text>
+      <line x1="${padL}" y1="${baselineY.toFixed(1)}" x2="${padL + chartW}" y2="${baselineY.toFixed(1)}"
             stroke="rgba(30,16,64,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
       <path d="${areaPath}" fill="url(#actGrad)"/>
       <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       ${dots}
     </svg>
-    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.45);background:rgba(245,240,235,0.85);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">НОРМА</div>
+    <div style="position:absolute;right:0;top:${normLabelTop}px;font-size:9px;font-weight:700;letter-spacing:0.03em;color:rgba(30,16,64,0.55);background:rgba(245,240,235,0.92);padding:1px 5px;border-radius:4px;line-height:1.4;pointer-events:none">НОРМА ${baseline}</div>
   `;
 
   if (labelsEl) {
