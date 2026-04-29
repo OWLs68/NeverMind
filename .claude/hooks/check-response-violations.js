@@ -22,8 +22,26 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const VIOLATIONS_FILE = path.resolve(__dirname, '..', 'last-violations.txt');
+// Append-only журнал для треку прогресу між сесіями. Кожен рядок:
+// ISO-timestamp [sessionId] N unique / M total: word1×K, word2, ...
+const VIOLATIONS_LOG_FILE = path.resolve(__dirname, '..', 'violations-log.txt');
+
+function getSessionId() {
+  try {
+    const branch = execSync('git branch --show-current', {
+      cwd: path.resolve(__dirname, '..', '..'),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    const m = branch.match(/claude\/start-session-([A-Za-z0-9]+)/);
+    return m ? m[1] : (branch || 'unknown');
+  } catch (e) {
+    return 'unknown';
+  }
+}
 
 // === Українські технічні терміни які потребують пояснення в дужках ===
 const UKR_TECH_TERMS = [
@@ -261,6 +279,21 @@ process.stdin.on('end', () => {
       'У наступній відповіді: визнай порушення коротко (1 рядок) і перепиши кожне слово зі списку як `слово (пояснення)`. Не виправдовуйся, не додавай нову інформацію — тільки переписи.',
     ];
     fs.writeFileSync(VIOLATIONS_FILE, lines.join('\n') + '\n');
+
+    // === Метрика прогресу: append у violations-log.txt ===
+    // Дозволяє Роману бачити тренд кількості порушень між сесіями.
+    // Якщо тренд вниз → детектор працює. Вгору → треба жорсткіший підхід.
+    try {
+      const timestamp = new Date().toISOString();
+      const sessionId = getSessionId();
+      const wordsCompact = sorted
+        .map(v => `${v.word}${v.count > 1 ? `×${v.count}` : ''}`)
+        .join(', ');
+      const logLine = `${timestamp} [${sessionId}] ${violations.size} unique / ${totalCount} total: ${wordsCompact}\n`;
+      fs.appendFileSync(VIOLATIONS_LOG_FILE, logLine);
+    } catch (e) {
+      // Метрика — bonus, не критично якщо впала
+    }
   } catch (e) {
     // Тиха помилка — не спамити стдер хука
     cleanupViolations();
