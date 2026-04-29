@@ -503,10 +503,10 @@ function renderMeHeatmap() {
   const log = getHabitLog();
   const accent = '#7c4a2a';
 
-  // 14 днів від найстарішого до сьогодні
+  // 7 днів від найстарішого до сьогодні
   const cells = [];
   let total = 0;
-  for (let i = 13; i >= 0; i--) {
+  for (let i = 6; i >= 0; i--) {
     const d = new Date(now); d.setDate(now.getDate() - i);
     const ds = d.toDateString();
     const dow = (d.getDay() + 6) % 7;
@@ -542,7 +542,7 @@ function renderMeHeatmap() {
     return `<div title="${c.score} дій" style="aspect-ratio:1;background:${bg};border-radius:5px;border:${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${txtColor}">${c.day}</div>`;
   }).join('');
 
-  if (legend) legend.textContent = `${total} дій · 2 тижні`;
+  if (legend) legend.textContent = `${total} дій`;
 }
 
 // Два progress-кільця на сьогодні: задачі (виконані сьогодні / всі активні+закриті сьогодні)

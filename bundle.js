@@ -10666,7 +10666,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const accent = "#7c4a2a";
     const cells = [];
     let total = 0;
-    for (let i = 13; i >= 0; i--) {
+    for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
       const ds = d.toDateString();
@@ -10699,7 +10699,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const border = c.isToday ? `2px solid ${accent}` : "1px solid rgba(30,16,64,0.06)";
       return `<div title="${c.score} \u0434\u0456\u0439" style="aspect-ratio:1;background:${bg};border-radius:5px;border:${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${txtColor}">${c.day}</div>`;
     }).join("");
-    if (legend) legend.textContent = `${total} \u0434\u0456\u0439 \xB7 2 \u0442\u0438\u0436\u043D\u0456`;
+    if (legend) legend.textContent = `${total} \u0434\u0456\u0439`;
   }
   function renderMeActivityChart() {
     const chartEl = document.getElementById("me-activity-chart");
