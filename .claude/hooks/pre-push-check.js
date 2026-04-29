@@ -2,7 +2,7 @@
 // .claude/hooks/pre-push-check.js
 //
 // PreToolUse hook (запускається ПЕРЕД виконанням Bash команди).
-// Активний лише для команд `git push`. Реалізує два правила з CLAUDE.md:
+// Активний лише для команд `git push`. Реалізує три правила з CLAUDE.md:
 //
 // 1) Правило 6 «UI smoke-test після міграцій ID/формату/схеми + після нових
 //    AI tools що пишуть дані» — блокує push якщо у останніх повідомленнях
@@ -14,15 +14,22 @@
 //    і немає згадки про delete-механізм / UI-кнопку чистки / warning при
 //    конфлікті.
 //
+// 3) Правило ротації SESSION_STATE — блокує push якщо у
+//    _ai-tools/SESSION_STATE.md більше 2 активних детальних блоків
+//    (паттерн «прапор архіву накопичується» — повторювалось 3 рази
+//    поспіль у kGX6g→UG1Fr→m4Q1o→oknnM до архівації у SK6E2 29.04).
+//
 // Універсальний bypass: фраза `pre-push: ok` у будь-якому з останніх
-// повідомлень асистента — пропускає обидва check-и (для випадків
+// повідомлень асистента — пропускає всі check-и (для випадків
 // false positive: інфраструктурні зміни в .claude/, документація тощо).
 //
 // Створено: 29.04.2026 oknnM (третя автоматизація після уроку «декларативне
 // правило без автоматичного контролю»). Кандидати «правило 6» і «cleanup»
 // раніше тримались на дисципліні Claude — не працювало.
+// Розширено: 29.04.2026 SK6E2 (правило ротації SESSION_STATE).
 
 const fs = require('fs');
+const path = require('path');
 
 const N_RECENT_MESSAGES = 5; // дивимось у короткий хвіст щоб уникнути false positive
 
@@ -61,6 +68,28 @@ const CLEANUP_BYPASS = [
 ];
 
 const UNIVERSAL_BYPASS = /pre-push:\s*ok/i;
+
+const MAX_ACTIVE_SESSION_BLOCKS = 2;
+const SESSION_STATE_PATH = path.join(__dirname, '..', '..', '_ai-tools', 'SESSION_STATE.md');
+
+function countActiveSessionBlocks() {
+  if (!fs.existsSync(SESSION_STATE_PATH)) return { count: 0, blocks: [] };
+  const content = fs.readFileSync(SESSION_STATE_PATH, 'utf8');
+  const lines = content.split('\n');
+  const blocks = [];
+  for (const line of lines) {
+    // Заголовок детального блоку: "## 🔧 Поточна сесія X — ..." / "## 🔧 Сесія X — ..." / "## 🔧 Попередня сесія X — ..."
+    if (/^## 🔧 (Поточна сесія|Сесія|Попередня сесія) /.test(line)) {
+      // Пропускаємо stub-посилання (заголовок містить «архівовано»)
+      if (!/архівовано/.test(line)) {
+        // Витягуємо ID сесії (5-символьний код після слова «сесія»)
+        const m = line.match(/сесія\s+([A-Za-z0-9]+)/i);
+        blocks.push(m ? m[1] : line.slice(0, 60));
+      }
+    }
+  }
+  return { count: blocks.length, blocks };
+}
 
 function readRecentAssistantTexts(transcriptPath, n) {
   if (!fs.existsSync(transcriptPath)) return '';
@@ -121,6 +150,17 @@ process.stdin.on('end', () => {
         '— а є `delete_*` tool / UI-кнопка чистки / warning при конфлікті? ' +
         'Якщо ні — фіча буде «напівфабрикатом» (паттерн відкату Календар Phase 2 / маскот / B-104). ' +
         'Або додай cleanup, або підтверди фразою «pre-push: ok».'
+      );
+    }
+
+    // Правило ротації SESSION_STATE
+    const { count: sessionBlocks, blocks } = countActiveSessionBlocks();
+    if (sessionBlocks > MAX_ACTIVE_SESSION_BLOCKS) {
+      const blocksStr = blocks.join(', ');
+      issues.push(
+        `📋 SESSION_STATE РОТАЦІЯ: у _ai-tools/SESSION_STATE.md ${sessionBlocks} активних блоків (дозволено ${MAX_ACTIVE_SESSION_BLOCKS}). ` +
+        `Активні: ${blocksStr}. Винеси найстаріші у _archive/SESSION_STATE_archive.md (паттерн з C8uQD/qG4fj/8bSsE архівації — заміни блок stub-посиланням на якір). ` +
+        `Якщо інфраструктурний коміт без чіпання SESSION_STATE — додай фразу «pre-push: ok».`
       );
     }
 
