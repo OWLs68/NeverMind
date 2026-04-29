@@ -3,5 +3,6 @@ bundle.js
 bundle.js.map
 .claude/hook-counter
 .claude/last-violations.txt
+.claude/last-estimate-warnings.txt
 .claude/violations-log.txt
 .claude/settings.local.json
