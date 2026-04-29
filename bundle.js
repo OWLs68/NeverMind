@@ -300,7 +300,7 @@
   }
   function renderSmokeTests() {
     const { tests, totalMs } = runSmokeTests();
-    const fails = tests.filter((t) => t.status === "fail").length;
+    const fails = tests.filter((t2) => t2.status === "fail").length;
     const passes = tests.length - fails;
     const overall = fails > 0 ? "fail" : "ok";
     const overallIcon = fails > 0 ? "\u2717" : "\u2713";
@@ -320,14 +320,14 @@
       <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
     </div>
     <div id="smoke-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:6px">
-      ${tests.map((t) => `
+      ${tests.map((t2) => `
         <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-          <span style="color:${statusColor[t.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t.status]}</span>
+          <span style="color:${statusColor[t2.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t2.status]}</span>
           <div style="flex:1;min-width:0">
-            <span style="color:#1e1040;font-weight:600">${t.name}</span>
-            ${t.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t.message}</span>` : ""}
+            <span style="color:#1e1040;font-weight:600">${t2.name}</span>
+            ${t2.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t2.message}</span>` : ""}
           </div>
-          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t.ms}\u043C\u0441</span>
+          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t2.ms}\u043C\u0441</span>
         </div>
       `).join("")}
     </div>
@@ -431,7 +431,7 @@
     const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E";
     const startupStatus = data.startupMs == null ? "unknown" : data.startupMs < 1500 ? "ok" : data.startupMs < 3e3 ? "warn" : "fail";
     const longTasksCount = data.longTasks.length;
-    const worstLongTask = data.longTasks.reduce((max, t) => t.duration > max ? t.duration : max, 0);
+    const worstLongTask = data.longTasks.reduce((max, t2) => t2.duration > max ? t2.duration : max, 0);
     const longTasksStatus = !data.longTaskSupported ? "unknown" : longTasksCount === 0 ? "ok" : worstLongTask > 200 ? "warn" : "ok";
     const okFetches = data.fetches.filter((f) => f.status >= 200 && f.status < 400);
     const failedFetches = data.fetches.filter((f) => f.status === 0 || f.status >= 400);
@@ -662,18 +662,18 @@
       return line;
     }).join("\n");
     const { tests: smokeTests, totalMs: smokeMs } = runSmokeTests();
-    const smokeFails = smokeTests.filter((t) => t.status === "fail").length;
+    const smokeFails = smokeTests.filter((t2) => t2.status === "fail").length;
     const smokePasses = smokeTests.length - smokeFails;
     const smokeSummary = smokeFails > 0 ? `${smokePasses}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeFails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${smokeTests.length}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeMs}\u043C\u0441`;
-    const smokeLines = smokeTests.map((t) => {
-      const ic = t.status === "pass" ? "\u2713" : "\u2717";
-      return `${ic} ${t.name}${t.status === "fail" ? ` \u2014 ${t.message}` : ""} (${t.ms}\u043C\u0441)`;
+    const smokeLines = smokeTests.map((t2) => {
+      const ic = t2.status === "pass" ? "\u2713" : "\u2717";
+      return `${ic} ${t2.name}${t2.status === "fail" ? ` \u2014 ${t2.message}` : ""} (${t2.ms}\u043C\u0441)`;
     }).join("\n");
     const perf = getPerformanceData();
     const perfLines = [];
     perfLines.push(`\u0421\u0442\u0430\u0440\u0442: ${perf.startupMs != null ? perf.startupMs + "\u043C\u0441" : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"}`);
     if (perf.longTaskSupported) {
-      const worst = perf.longTasks.reduce((m, t) => t.duration > m ? t.duration : m, 0);
+      const worst = perf.longTasks.reduce((m, t2) => t2.duration > m ? t2.duration : m, 0);
       perfLines.push(`\u041B\u0430\u0433\u0438 UI: ${perf.longTasks.length}${worst > 0 ? ` (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worst}\u043C\u0441)` : ""}`);
     } else {
       perfLines.push("\u041B\u0430\u0433\u0438 UI: \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043E\u043C");
@@ -1022,7 +1022,7 @@ ${logLines}
         });
       } catch (e) {
       }
-      ALL_TABS.filter((t) => t !== "inbox").forEach((tab) => {
+      ALL_TABS.filter((t2) => t2 !== "inbox").forEach((tab) => {
         try {
           const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "null");
           if (!raw) return;
@@ -1196,9 +1196,9 @@ ${logLines}
         items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, endTime: ev.endTime || null, type: "event", priority: ev.priority || "normal" });
       }
     });
-    getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
-      if (t.dueDate >= monthStart && t.dueDate <= monthEnd) {
-        items.push({ title: t.title, date: t.dueDate, type: "task", priority: t.priority || "normal" });
+    getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
+      if (t2.dueDate >= monthStart && t2.dueDate <= monthEnd) {
+        items.push({ title: t2.title, date: t2.dueDate, type: "task", priority: t2.priority || "normal" });
       }
     });
     if (items.length === 0) {
@@ -1271,10 +1271,10 @@ ${logLines}
         items.push({ id: ev.id, title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null, endTime: ev.endTime || null });
       }
     });
-    getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
-      const d = new Date(t.dueDate);
+    getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
+      const d = new Date(t2.dueDate);
       if (d >= new Date(now.toDateString()) && d <= in7days) {
-        items.push({ title: t.title, date: d, type: "task", priority: t.priority || "normal" });
+        items.push({ title: t2.title, date: d, type: "task", priority: t2.priority || "normal" });
       }
     });
     items.sort((a, b) => a.date - b.date);
@@ -1318,16 +1318,16 @@ ${logLines}
       if (!itemsByDay[day]) itemsByDay[day] = [];
       itemsByDay[day].push(item);
     };
-    getTasks().forEach((t) => {
-      if (t.dueDate) {
-        const d = new Date(t.dueDate);
-        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) addItem(d.getDate(), { ...t, _type: "task" });
+    getTasks().forEach((t2) => {
+      if (t2.dueDate) {
+        const d = new Date(t2.dueDate);
+        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) addItem(d.getDate(), { ...t2, _type: "task" });
       }
-      if (t.createdAt) {
-        const d = new Date(t.createdAt);
+      if (t2.createdAt) {
+        const d = new Date(t2.createdAt);
         if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
           const day = d.getDate();
-          if (!itemsByDay[day]?.some((x) => x.id === t.id)) addItem(day, { ...t, _type: "task" });
+          if (!itemsByDay[day]?.some((x) => x.id === t2.id)) addItem(day, { ...t2, _type: "task" });
         }
       }
     });
@@ -1402,9 +1402,9 @@ ${logLines}
     const allDayEvents = dayEvents.filter((ev) => !ev.time);
     const timedEvents = dayEvents.filter((ev) => ev.time);
     const dateStr = date.toDateString();
-    const dayTasks = getTasks().filter((t) => {
-      if (t.dueDate && new Date(t.dueDate).toDateString() === dateStr) return true;
-      if (t.createdAt && new Date(t.createdAt).toDateString() === dateStr) return true;
+    const dayTasks = getTasks().filter((t2) => {
+      if (t2.dueDate && new Date(t2.dueDate).toDateString() === dateStr) return true;
+      if (t2.createdAt && new Date(t2.createdAt).toDateString() === dateStr) return true;
       return false;
     });
     const routineBlocks = getRoutineForDay(dayKey);
@@ -1427,10 +1427,10 @@ ${logLines}
     const timeline = [];
     routineBlocks.forEach((b) => timeline.push({ time: b.time, text: b.activity, type: "routine" }));
     timedEvents.forEach((ev) => timeline.push({ time: ev.time, endTime: ev.endTime || null, text: ev.title, type: "event", id: ev.id, priority: ev.priority }));
-    dayTasks.forEach((t) => {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+    dayTasks.forEach((t2) => {
+      const m = t2.title.match(/(\d{1,2}):(\d{2})/);
       const time = m ? `${String(m[1]).padStart(2, "0")}:${m[2]}` : null;
-      timeline.push({ time, text: t.title, type: "task", priority: t.priority, done: t.status === "done", dueDate: t.dueDate });
+      timeline.push({ time, text: t2.title, type: "task", priority: t2.priority, done: t2.status === "done", dueDate: t2.dueDate });
     });
     const timedItems = timeline.filter((i) => i.time).sort((a, b) => a.time.localeCompare(b.time));
     const untimedTasks = timeline.filter((i) => !i.time && i.type === "task");
@@ -1471,12 +1471,12 @@ ${logLines}
         if (untimedTasks.length > 0) {
           html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
           html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">\u0417\u0430\u0434\u0430\u0447\u0456</div>`;
-          untimedTasks.forEach((t) => {
-            const prio = t.priority === "critical" ? "\u{1F534} " : t.priority === "important" ? "\u{1F7E0} " : "";
-            const doneStyle = t.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
+          untimedTasks.forEach((t2) => {
+            const prio = t2.priority === "critical" ? "\u{1F534} " : t2.priority === "important" ? "\u{1F7E0} " : "";
+            const doneStyle = t2.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
             html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-            <div style="font-size:14px">${t.done ? "\u2705" : "\u2611\uFE0F"}</div>
-            <div style="font-size:14px;font-weight:500;${doneStyle}">${prio}${escapeHtml(t.text)}${t.dueDate ? " \u{1F4C5}" : ""}</div>
+            <div style="font-size:14px">${t2.done ? "\u2705" : "\u2611\uFE0F"}</div>
+            <div style="font-size:14px;font-weight:500;${doneStyle}">${prio}${escapeHtml(t2.text)}${t2.dueDate ? " \u{1F4C5}" : ""}</div>
           </div>`;
           });
           html += `</div>`;
@@ -1863,23 +1863,23 @@ ${logLines}
     try {
       switch (name) {
         case "switch_tab": {
-          const t = args.target;
-          if (t === "calendar") {
+          const t2 = args.target;
+          if (t2 === "calendar") {
             if (typeof window.openCalendarModal === "function") {
               window.openCalendarModal();
               return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
             }
             return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
           }
-          if (t === "habits") {
+          if (t2 === "habits") {
             switchTab("tasks");
             return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456/\u0417\u0432\u0438\u0447\u043A\u0438." };
           }
-          if (!document.getElementById(`page-${t}`)) {
-            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          if (!document.getElementById(`page-${t2}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t2}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
           }
-          switchTab(t);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t)}.` };
+          switchTab(t2);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t2)}.` };
         }
         case "open_memory":
           if (typeof window.openMemoryModal === "function") {
@@ -2088,7 +2088,7 @@ ${logLines}
           }
         }
       ];
-      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t) => t.function.name));
+      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t2) => t2.function.name));
       try {
         Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
       } catch {
@@ -2127,14 +2127,14 @@ ${logLines}
     localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
   }
   function _rejectReason(text) {
-    const t = (text || "").trim();
-    if (!t) return "empty";
-    if (t.length < 6) return "too_short";
-    if (t.length > 200) return "too_long";
+    const t2 = (text || "").trim();
+    if (!t2) return "empty";
+    if (t2.length < 6) return "too_short";
+    if (t2.length > 200) return "too_long";
     for (const rx of REJECT_PATTERNS) {
-      if (rx.test(t)) return `pattern:${rx.source}`;
+      if (rx.test(t2)) return `pattern:${rx.source}`;
     }
-    const words = t.split(/\s+/).filter(Boolean);
+    const words = t2.split(/\s+/).filter(Boolean);
     if (words.length < 2) return "too_few_words";
     return null;
   }
@@ -2183,9 +2183,9 @@ ${logLines}
     const facts = getFactsRaw();
     const idx = facts.findIndex((f) => f.id === id);
     if (idx === -1) return false;
-    const t = (newText || "").trim();
-    if (t.length < 3 || t.length > 200) return false;
-    facts[idx].text = t;
+    const t2 = (newText || "").trim();
+    if (t2.length < 3 || t2.length > 200) return false;
+    facts[idx].text = t2;
     facts[idx].lastSeen = Date.now();
     _saveFacts(facts);
     return true;
@@ -2784,10 +2784,10 @@ ${lines.join("\n")}`;
     try {
       const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
       const title = `\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 ${med.name}${med.dosage ? " " + med.dosage : ""}`;
-      const existing = tasks.find((t) => t.title === title && t.status === "active");
+      const existing = tasks.find((t2) => t2.title === title && t2.status === "active");
       if (existing) return;
       const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-      const steps = schedule.map((t) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: t, done: false }));
+      const steps = schedule.map((t2) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: t2, done: false }));
       const newTask = {
         id: Date.now() + Math.floor(Math.random() * 1e3),
         title,
@@ -2964,14 +2964,14 @@ ${lines.join("\n")}`;
     const lastTrend = (card.history || []).find((h) => h.type === "status_change");
     let trendLabel = "", trendColor = "rgba(30,16,64,0.4)";
     if (lastTrend && lastTrend.text) {
-      const t = lastTrend.text.toLowerCase();
-      if (t.includes("\u043F\u043E\u043A\u0440\u0430\u0449")) {
+      const t2 = lastTrend.text.toLowerCase();
+      if (t2.includes("\u043F\u043E\u043A\u0440\u0430\u0449")) {
         trendLabel = "\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F";
         trendColor = "#16a34a";
-      } else if (t.includes("\u043F\u043E\u0433\u0456\u0440\u0448")) {
+      } else if (t2.includes("\u043F\u043E\u0433\u0456\u0440\u0448")) {
         trendLabel = "\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F";
         trendColor = "#ef4444";
-      } else if (t.includes("\u0441\u0442\u0430\u0431\u0456\u043B")) {
+      } else if (t2.includes("\u0441\u0442\u0430\u0431\u0456\u043B")) {
         trendLabel = "\u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E";
         trendColor = "#d97706";
       }
@@ -3563,8 +3563,8 @@ ${lines.join("\n")}`;
         if (card.doctor) lines.push(`  \u043B\u0456\u043A\u0430\u0440: ${card.doctor}`);
         if (card.doctorRecommendations) lines.push(`  \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${card.doctorRecommendations}`);
         if (card.nextAppointment && card.nextAppointment.date) {
-          const t = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
-          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${t}`);
+          const t2 = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
+          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${t2}`);
         }
         if (Array.isArray(card.medications) && card.medications.length > 0) {
           const meds = card.medications.map((m) => {
@@ -3865,8 +3865,8 @@ ${lines.join("\n")}`;
       closeOwlChat();
     } catch (e) {
     }
-    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      if (t !== tab) closeChatBar(t);
+    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      if (t2 !== tab) closeChatBar(t2);
     });
     setActiveChatBar(tab);
     const bar = document.getElementById(tab + "-ai-bar");
@@ -4230,9 +4230,9 @@ ${lines.join("\n")}`;
       }
     } catch (e) {
     }
-    const tasks = getTasks().filter((t) => t.status !== "done");
-    for (const t of tasks) {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+    const tasks = getTasks().filter((t2) => t2.status !== "done");
+    for (const t2 of tasks) {
+      const m = t2.title.match(/(\d{1,2}):(\d{2})/);
       if (m) {
         const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
         if (diff > 0 && diff <= 65) {
@@ -4244,7 +4244,7 @@ ${lines.join("\n")}`;
       }
     }
     const todayISO2 = now.toISOString().slice(0, 10);
-    if (tasks.some((t) => t.dueDate === todayISO2)) {
+    if (tasks.some((t2) => t2.dueDate === todayISO2)) {
       score += 2;
       reasons.push("due-today");
     }
@@ -4285,7 +4285,7 @@ ${lines.join("\n")}`;
       const budget = getFinBudget();
       if (budget.total > 0) {
         const from = getFinPeriodRange("month");
-        const exp = getFinance().filter((t) => t.ts >= from && t.type === "expense").reduce((s, t) => s + t.amount, 0);
+        const exp = getFinance().filter((t2) => t2.ts >= from && t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
         if (exp / budget.total >= 0.8) {
           score += 2;
           reasons.push("budget-warn");
@@ -4300,7 +4300,7 @@ ${lines.join("\n")}`;
         reasons.push("no-evening-summary");
       }
     }
-    const stuck = tasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
+    const stuck = tasks.filter((t2) => t2.createdAt && t2.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
     if (stuck.length > 0) {
       score += 1;
       reasons.push("stuck-tasks");
@@ -4527,7 +4527,7 @@ ${lines.join("\n")}`;
       const tasks = getTasks();
       let done = 0;
       ids.forEach((tid) => {
-        const idx = tasks.findIndex((t) => t.id === tid);
+        const idx = tasks.findIndex((t2) => t2.id === tid);
         if (idx !== -1) {
           tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
           done++;
@@ -5011,7 +5011,7 @@ ${lines.join("\n")}`;
     try {
       if (!step.done) return;
       const tasks = getTasks();
-      const match = tasks.find((t) => t.status === "active" && t.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
+      const match = tasks.find((t2) => t2.status === "active" && t2.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
       if (match) {
         match.status = "done";
         match.completedAt = Date.now();
@@ -5281,9 +5281,9 @@ ${lines}`;
       lines.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u044E\u0437\u0435\u0440 \u0441\u0430\u043C \u043E\u0431\u0440\u0430\u0432 \u0443 \u0412\u0435\u0447\u043E\u0440\u0456): ${moodMap[mood] || mood}`);
     }
     try {
-      const dueToday = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO2);
+      const dueToday = getTasks().filter((t2) => t2.status === "active" && t2.dueDate === todayISO2);
       if (dueToday.length > 0) {
-        const list = dueToday.slice(0, 6).map((t) => `- [ID:${t.id}] "${t.title}"`).join("\n");
+        const list = dueToday.slice(0, 6).map((t2) => `- [ID:${t2.id}] "${t2.title}"`).join("\n");
         lines.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u043E\u043C \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0430\u043B\u0435 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0456:
 ${list}`);
       }
@@ -5341,12 +5341,12 @@ ${evLines}`);
     } catch (e) {
     }
     try {
-      const todayExpenses = getFinance().filter((t) => t.type === "expense" && new Date(t.ts).toDateString() === today);
+      const todayExpenses = getFinance().filter((t2) => t2.type === "expense" && new Date(t2.ts).toDateString() === today);
       if (todayExpenses.length > 0) {
-        const total = todayExpenses.reduce((s, t) => s + t.amount, 0);
+        const total = todayExpenses.reduce((s, t2) => s + t2.amount, 0);
         const byCat = {};
-        todayExpenses.forEach((t) => {
-          byCat[t.category || "\u0406\u043D\u0448\u0435"] = (byCat[t.category || "\u0406\u043D\u0448\u0435"] || 0) + t.amount;
+        todayExpenses.forEach((t2) => {
+          byCat[t2.category || "\u0406\u043D\u0448\u0435"] = (byCat[t2.category || "\u0406\u043D\u0448\u0435"] || 0) + t2.amount;
         });
         const top3 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c} ${Math.round(a)}`).join(", ");
         const cur = getCurrency ? getCurrency() : "\u20B4";
@@ -5396,7 +5396,7 @@ ${lines.join("\n\n")}`;
     const container = document.getElementById("evening-undone");
     if (!container) return;
     const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const undone = getTasks().filter((t) => t.status === "active" && t.dueDate === todayISO2);
+    const undone = getTasks().filter((t2) => t2.status === "active" && t2.dueDate === todayISO2);
     const wrapBlock = document.getElementById("evening-undone-block");
     if (undone.length === 0) {
       if (wrapBlock) wrapBlock.style.display = "none";
@@ -5405,17 +5405,17 @@ ${lines.join("\n\n")}`;
     if (wrapBlock) wrapBlock.style.display = "block";
     const top = undone.slice(0, 5);
     const more = undone.length - top.length;
-    container.innerHTML = top.map((t) => `
+    container.innerHTML = top.map((t2) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t.title)}</div>
-      <button onclick="rescheduleTaskTomorrow('${t.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430</button>
-      <button onclick="rescheduleTaskWeek('${t.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</button>
+      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t2.title)}</div>
+      <button onclick="rescheduleTaskTomorrow('${t2.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430</button>
+      <button onclick="rescheduleTaskWeek('${t2.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</button>
     </div>
   `).join("") + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">\u0456 \u0449\u0435 ${more}</div>` : "");
   }
   function _rescheduleTask(taskId, daysAhead) {
     const tasks = getTasks();
-    const idx = tasks.findIndex((t) => String(t.id) === String(taskId));
+    const idx = tasks.findIndex((t2) => String(t2.id) === String(taskId));
     if (idx === -1) return;
     const d = /* @__PURE__ */ new Date();
     d.setDate(d.getDate() + daysAhead);
@@ -5727,13 +5727,13 @@ ${lines.join("\n\n")}`;
     }
     if (tab === "tasks") {
       const tasks = getTasks();
-      const active = tasks.filter((t) => t.status === "active");
+      const active = tasks.filter((t2) => t2.status === "active");
       const now = Date.now();
-      const stuck = active.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
-      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}`);
-      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t) => t.status === "done").length}`);
+      const stuck = active.filter((t2) => t2.createdAt && now - t2.createdAt > 3 * 24 * 60 * 60 * 1e3);
+      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}`);
+      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t2) => t2.status === "done").length}`);
       if (active.length > 0) {
-        parts.push(`\u0423\u0441\u0456 \u0430\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: ${active.slice(0, 10).map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}.`);
+        parts.push(`\u0423\u0441\u0456 \u0430\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: ${active.slice(0, 10).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}.`);
       }
       const allHabits = getHabits();
       const quitHabits = allHabits.filter((h) => h.type === "quit");
@@ -5789,7 +5789,7 @@ ${lines.join("\n\n")}`;
       }
       const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3;
-      parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${inbox.filter((i) => i.ts > weekAgo).length}. \u0417\u0430\u0434\u0430\u0447 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${getTasks().filter((t) => t.status === "active").length}`);
+      parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${inbox.filter((i) => i.ts > weekAgo).length}. \u0417\u0430\u0434\u0430\u0447 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${getTasks().filter((t2) => t2.status === "active").length}`);
     }
     if (tab === "evening") {
       const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
@@ -5800,7 +5800,7 @@ ${lines.join("\n\n")}`;
       const hour = (/* @__PURE__ */ new Date()).getHours();
       parts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${todayMoments.length}. \u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F: ${hasSummary ? "\u0454" : "\u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"}.`);
       if (hour >= 20 && !hasSummary) parts.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
-      const tasks = getTasks().filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
+      const tasks = getTasks().filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 24 * 60 * 60 * 1e3);
       if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${tasks.length}`);
     }
     if (tab === "finance") {
@@ -5872,12 +5872,12 @@ ${lines.join("\n\n")}`;
     if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
     normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
     const tasks = getTasks();
-    const activeTasks = tasks.filter((t) => t.status === "active");
+    const activeTasks = tasks.filter((t2) => t2.status === "active");
     if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const briefParts = [];
-      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}`);
+      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}`);
       if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name + " [habit_" + h.id + "]").join(", ")}`);
       const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
       if (quitHabitsAll.length > 0) {
@@ -5892,7 +5892,7 @@ ${briefParts.join("\n")}
 \u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
     }
     if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
-      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 24 * 60 * 60 * 1e3);
+      const doneTasks = tasks.filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 24 * 60 * 60 * 1e3);
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const todayLogAll = getHabitLog()[todayStr] || {};
@@ -5915,44 +5915,44 @@ ${briefParts.join("\n")}
 ${pulseParts.join("\n")}
 \u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
     }
-    const urgent = activeTasks.filter((t) => {
-      const m = t.title.match(/(\d{1,2}):(\d{2})/);
+    const urgent = activeTasks.filter((t2) => {
+      const m = t2.title.match(/(\d{1,2}):(\d{2})/);
       if (!m) return false;
       const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
       return diff > 0 && diff <= 65;
     });
-    urgent.forEach((t) => {
-      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t.title}" [task_${t.id}].`);
+    urgent.forEach((t2) => {
+      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t2.title}" [task_${t2.id}].`);
     });
     const todayISOLocal = now.toISOString().slice(0, 10);
-    const overdue = activeTasks.filter((t) => t.dueDate && t.dueDate < todayISOLocal);
+    const overdue = activeTasks.filter((t2) => t2.dueDate && t2.dueDate < todayISOLocal);
     if (overdue.length > 0) {
-      overdue.slice(0, 3).forEach((t) => {
-        const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t.dueDate)) / (24 * 60 * 60 * 1e3));
-        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" [task_${t.id}] \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
+      overdue.slice(0, 3).forEach((t2) => {
+        const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t2.dueDate)) / (24 * 60 * 60 * 1e3));
+        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" [task_${t2.id}] \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
       });
     }
-    const stuckDays3 = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    stuckDays3.forEach((t) => {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" [task_${t.id}] \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
+    const stuckDays3 = activeTasks.filter((t2) => t2.createdAt && t2.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t2.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    stuckDays3.forEach((t2) => {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" [task_${t2.id}] \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
     });
-    const forgotten = activeTasks.filter((t) => t.createdAt && t.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    forgotten.forEach((t) => {
-      const days = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
-      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t.title}" [task_${t.id}] \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
+    const forgotten = activeTasks.filter((t2) => t2.createdAt && t2.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    forgotten.forEach((t2) => {
+      const days = Math.floor((Date.now() - t2.createdAt) / (24 * 60 * 60 * 1e3));
+      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t2.title}" [task_${t2.id}] \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
     });
-    const reshuffled = activeTasks.filter((t) => (t.rescheduleCount || 0) >= 3);
-    reshuffled.forEach((t) => {
-      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" [task_${t.id}] \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
+    const reshuffled = activeTasks.filter((t2) => (t2.rescheduleCount || 0) >= 3);
+    reshuffled.forEach((t2) => {
+      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" [task_${t2.id}] \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t2.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
     });
     if (activeTasks.length > 0) {
-      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t) => '"' + t.title + '" [task_' + t.id + "]").join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
+      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
     } else {
       normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
     }
     if (activeTasks.length >= 3) {
       const suggested = Math.max(1, Math.round(activeTasks.length * 0.2));
-      const doneTodayCount = tasks.filter((t) => t.status === "done" && t.completedAt && Date.now() - t.completedAt < 24 * 60 * 60 * 1e3).length;
+      const doneTodayCount = tasks.filter((t2) => t2.status === "done" && t2.completedAt && Date.now() - t2.completedAt < 24 * 60 * 60 * 1e3).length;
       normal.push(`[\u0422\u0415\u041C\u041F] \u041E\u043F\u0442\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ~${suggested} \u0437\u0430\u0434\u0430\u0447 (20% \u0432\u0456\u0434 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445). \u0417\u0430\u043A\u0440\u0438\u0442\u043E: ${doneTodayCount}. \u042F\u043A\u0449\u043E \u0443 \u043F\u0430\u043C'\u044F\u0442\u0456 \u0454 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E \u0437\u0430\u043C\u0456\u0441\u0442\u044C 20%-\u0444\u043E\u0440\u043C\u0443\u043B\u0438.`);
     }
     const habits = getHabits();
@@ -6006,8 +6006,8 @@ ${pulseParts.join("\n")}
       const budget = getFinBudget();
       if (budget.total > 0) {
         const from = getFinPeriodRange("month");
-        const txs = getFinance().filter((t) => t.ts >= from && t.type === "expense");
-        const exp = txs.reduce((s, t) => s + t.amount, 0);
+        const txs = getFinance().filter((t2) => t2.ts >= from && t2.type === "expense");
+        const exp = txs.reduce((s, t2) => s + t2.amount, 0);
         const pct = Math.round(exp / budget.total * 100);
         if (exp > budget.total) {
           important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E! \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(exp)} \u0437 ${formatMoney(budget.total)} (${pct}%).`);
@@ -6018,9 +6018,9 @@ ${pulseParts.join("\n")}
         }
         if (txs.length >= 3) {
           const bycat = {};
-          txs.forEach((t) => {
-            if (!bycat[t.category]) bycat[t.category] = [];
-            bycat[t.category].push(t.amount);
+          txs.forEach((t2) => {
+            if (!bycat[t2.category]) bycat[t2.category] = [];
+            bycat[t2.category].push(t2.amount);
           });
           const lastTx = txs[0];
           if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
@@ -6043,7 +6043,7 @@ ${pulseParts.join("\n")}
       normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
     }
     if (weekDay === 5 && phase === "evening") {
-      const doneTasks = tasks.filter((t) => t.status === "done" && t.updatedAt && Date.now() - t.updatedAt < 7 * 24 * 60 * 60 * 1e3);
+      const doneTasks = tasks.filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 7 * 24 * 60 * 60 * 1e3);
       normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
     }
     const activeTabs = [];
@@ -6163,10 +6163,10 @@ ${pulseParts.join("\n")}
         moodByISO[iso][m.mood] = (moodByISO[iso][m.mood] || 0) + 1;
       });
       const expenseByISO = {};
-      finance.filter((t) => t.type === "expense").forEach((t) => {
-        if (!t.ts) return;
-        const iso = new Date(t.ts).toISOString().slice(0, 10);
-        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t.amount || 0);
+      finance.filter((t2) => t2.type === "expense").forEach((t2) => {
+        if (!t2.ts) return;
+        const iso = new Date(t2.ts).toISOString().slice(0, 10);
+        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t2.amount || 0);
       });
       const negSpend = [];
       const posSpend = [];
@@ -6194,10 +6194,10 @@ ${pulseParts.join("\n")}
   }
   function checkTabBoardTrigger(tab) {
     if (tab === "tasks") {
-      const tasks = getTasks().filter((t) => t.status === "active");
+      const tasks = getTasks().filter((t2) => t2.status === "active");
       if (tasks.length === 0) return false;
       const now = Date.now();
-      const stuck = tasks.filter((t) => t.createdAt && now - t.createdAt > 3 * 24 * 60 * 60 * 1e3);
+      const stuck = tasks.filter((t2) => t2.createdAt && now - t2.createdAt > 3 * 24 * 60 * 60 * 1e3);
       return stuck.length > 0;
     }
     if (tab === "notes") return getNotes().length > 0;
@@ -6488,7 +6488,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       return `${n} ${many}`;
     };
     try {
-      const tasks = getTasks().filter((t) => t.status === "active");
+      const tasks = getTasks().filter((t2) => t2.status === "active");
       const habits = getHabits();
       const todayStr = (/* @__PURE__ */ new Date()).toDateString();
       const habitLog = getHabitLog();
@@ -6542,16 +6542,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (tab === "finance") {
         const txs = getFinance();
         const from = getFinPeriodRange("month");
-        const monthTxs = txs.filter((t) => t.ts >= from);
-        const exp = monthTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-        const inc = monthTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+        const monthTxs = txs.filter((t2) => t2.ts >= from);
+        const exp = monthTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
+        const inc = monthTxs.filter((t2) => t2.type === "income").reduce((s, t2) => s + t2.amount, 0);
         if (monthTxs.length === 0) {
           text = "\u0426\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0432\u0438\u0442\u0440\u0430\u0442\u0443!";
         } else {
           text = `\u0417\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(exp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(inc)}.${inc > 0 ? ` \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${Math.round((inc - exp) / inc * 100)}%.` : ""}`;
         }
       } else if (tab === "tasks") {
-        const tasks = getTasks().filter((t) => t.status === "active");
+        const tasks = getTasks().filter((t2) => t2.status === "active");
         text = tasks.length > 0 ? `${tasks.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438?` : "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C!";
       } else if (tab === "health") {
         text = "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?";
@@ -6760,11 +6760,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
 
   // src/tabs/finance-insight.js
   function _finInsightHash(allTxs) {
-    const exp = allTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    const inc = allTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const exp = allTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
+    const inc = allTxs.filter((t2) => t2.type === "income").reduce((s, t2) => s + t2.amount, 0);
     const catMap = {};
-    allTxs.filter((t) => t.type === "expense").forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    allTxs.filter((t2) => t2.type === "expense").forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const top = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}:${Math.round(a)}`).join("|");
     return `${allTxs.length}_${Math.round(exp)}_${Math.round(inc)}_${top}`;
@@ -6801,13 +6801,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       } catch (e) {
       }
     }
-    const expenses = allTxs.filter((t) => t.type === "expense");
-    const incomes = allTxs.filter((t) => t.type === "income");
-    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
-    const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+    const expenses = allTxs.filter((t2) => t2.type === "expense");
+    const incomes = allTxs.filter((t2) => t2.type === "income");
+    const totalExp = expenses.reduce((s, t2) => s + t2.amount, 0);
+    const totalInc = incomes.reduce((s, t2) => s + t2.amount, 0);
     const catMap = {};
-    expenses.forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    expenses.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const budget = getFinBudget();
@@ -6912,8 +6912,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (type !== "expense") return;
     const budget = getFinBudget();
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t) => t.type === "expense" && t.ts >= from);
-    const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
+    const txs = getFinance().filter((t2) => t2.type === "expense" && t2.ts >= from);
+    const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
       if (pct >= 1) addFinanceChatMsg("agent", `\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(totalSpent)} \u0437 ${formatMoney(budget.total)}.`);
@@ -6921,7 +6921,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
-      const catSpent = txs.filter((t) => t.category === category).reduce((s, t) => s + t.amount, 0);
+      const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
       if (pct >= 1) addFinanceChatMsg("agent", `\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "${category}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: ${formatMoney(catSpent)} \u0437 ${formatMoney(catLimit)}.`);
       else if (pct >= 0.8) addFinanceChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
@@ -6944,11 +6944,11 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     financeBarLoading = true;
     addFinanceChatMsg("typing", "");
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t) => t.ts >= from);
+    const txs = getFinance().filter((t2) => t2.ts >= from);
     const budget = getFinBudget();
     const cats = getFinCats();
     const currency = getCurrency();
-    const txSummary = txs.slice(0, 20).map((t) => `[${t.type}] ${t.category} ${t.amount}${currency} ${t.comment || ""}`).join("; ");
+    const txSummary = txs.slice(0, 20).map((t2) => `[${t2.type}] ${t2.category} ${t2.amount}${currency} ${t2.comment || ""}`).join("; ");
     const systemPrompt = getFinanceChatSystem({
       currency,
       budget,
@@ -7154,7 +7154,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
     }
     const win = _getFinPeriodWindow(currentFinPeriod, currentFinPeriodOffset);
-    const allTxs = getFinance().filter((t) => t.ts >= win.from && t.ts < win.to);
+    const allTxs = getFinance().filter((t2) => t2.ts >= win.from && t2.ts < win.to);
     let gridHtml = "";
     try {
       gridHtml = _finCatsGrid(allTxs, win);
@@ -7167,8 +7167,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     refreshFinInsight(allTxs, win, currentFinPeriod, currentFinPeriodOffset);
   }
   function _deleteFinTxById(txId) {
-    const item = getFinance().find((t) => t.id === txId);
-    saveFinance(getFinance().filter((t) => t.id !== txId));
+    const item = getFinance().find((t2) => t2.id === txId);
+    saveFinance(getFinance().filter((t2) => t2.id !== txId));
     if (item) addToTrash("finance", item);
     renderFinance();
     try {
@@ -7226,12 +7226,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const cats = getFinCats();
     const isExpense = currentFinTab === "expense";
     const catList = (isExpense ? cats.expense : cats.income).filter((c) => c && c.id && c.name && !c.archived);
-    const txs = allTxs.filter((t) => t.type === (isExpense ? "expense" : "income"));
-    const totalSum = txs.reduce((s, t) => s + t.amount, 0);
+    const txs = allTxs.filter((t2) => t2.type === (isExpense ? "expense" : "income"));
+    const totalSum = txs.reduce((s, t2) => s + t2.amount, 0);
     const periodLabel = win?.label || "";
     const catMap = {};
-    txs.forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    txs.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const sorted = [...catList].sort((a, b) => (a.order || 0) - (b.order || 0));
     const inGrid = sorted.slice(0, 12);
@@ -7334,18 +7334,18 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   }
   function _finTxsBlock(allTxs) {
     const sorted = [...allTxs].sort((a, b) => b.ts - a.ts).slice(0, 8);
-    const rows = sorted.map((t) => {
-      const isExp = t.type === "expense";
-      const dateStr = new Date(t.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const categoryLine = t.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
-      return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:#fff">
+    const rows = sorted.map((t2) => {
+      const isExp = t2.type === "expense";
+      const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+      const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
+      return `<div class="fin-tx-swipe-wrap" data-tx-id="${t2.id}" style="position:relative;overflow:hidden;border-radius:10px">
+      <div class="tx-row" onclick="openEditTransaction(${t2.id})" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
-          ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ""}
+          ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t2.comment)}</div>` : ""}
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t.amount)}</div>
+          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t2.amount)}</div>
           <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
         </div>
       </div>
@@ -7363,23 +7363,23 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   }
   function openAllTransactions() {
     const from = getFinPeriodRange(currentFinPeriod);
-    const allTxs = getFinance().filter((t) => t.ts >= from).sort((a, b) => b.ts - a.ts);
+    const allTxs = getFinance().filter((t2) => t2.ts >= from).sort((a, b) => b.ts - a.ts);
     const existing = document.getElementById("fin-all-txs-modal");
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-all-txs-modal";
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
-    const rows = allTxs.map((t) => {
-      const isExp = t.type === "expense";
-      const dateStr = new Date(t.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const categoryLine = t.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
-      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
+    const rows = allTxs.map((t2) => {
+      const isExp = t2.type === "expense";
+      const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+      const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
+      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t2.id})">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
-        ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ""}
+        ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t2.comment)}</div>` : ""}
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t.amount)}</div>
+        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t2.amount)}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
       </div>
     </div>`;
@@ -7448,8 +7448,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (type !== "expense") return;
     const budget = getFinBudget();
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t) => t.type === "expense" && t.ts >= from);
-    const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
+    const txs = getFinance().filter((t2) => t2.type === "expense" && t2.ts >= from);
+    const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
       if (pct >= 1) addInboxChatMsg("agent", `\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(totalSpent)} \u0437 ${formatMoney(budget.total)}.`);
@@ -7457,7 +7457,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
-      const catSpent = txs.filter((t) => t.category === category).reduce((s, t) => s + t.amount, 0);
+      const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
       if (pct >= 1) addInboxChatMsg("agent", `\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "${category}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: ${formatMoney(catSpent)} \u0437 ${formatMoney(catLimit)}.`);
       else if (pct >= 0.8) addInboxChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
@@ -7466,26 +7466,26 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   function getFinanceContext() {
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t) => t.ts >= from);
+    const txs = getFinance().filter((t2) => t2.ts >= from);
     if (txs.length === 0) return "";
-    const expenses = txs.filter((t) => t.type === "expense");
-    const incomes = txs.filter((t) => t.type === "income");
-    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
-    const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+    const expenses = txs.filter((t2) => t2.type === "expense");
+    const incomes = txs.filter((t2) => t2.type === "income");
+    const totalExp = expenses.reduce((s, t2) => s + t2.amount, 0);
+    const totalInc = incomes.reduce((s, t2) => s + t2.amount, 0);
     const budget = getFinBudget();
     const catMap = {};
-    expenses.forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    expenses.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(", ");
-    const todayTxs = txs.filter((t) => new Date(t.ts).toDateString() === today);
-    const todaySum = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const todayTxs = txs.filter((t2) => new Date(t2.ts).toDateString() === today);
+    const todaySum = todayTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
     let parts = [`[MONTH_EXPENSES:${formatMoney(totalExp)}] [MONTH_INCOME:${formatMoney(totalInc)}] \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(totalExp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(totalInc)}`];
     if (budget.total > 0) parts.push(`[BUDGET:${formatMoney(budget.total)}] \u0431\u044E\u0434\u0436\u0435\u0442 ${formatMoney(budget.total)}, \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(budget.total - totalExp)}`);
     if (top3) parts.push(`\u0442\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: ${top3}`);
     if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(todaySum)}`);
     else parts.push("[TODAY_EXPENSES:0] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0435 \u0431\u0443\u043B\u043E");
-    const recentTxs = txs.slice(0, 5).map((t) => `[ID:${t.id}] ${t.type === "expense" ? "-" : "+"}${t.amount}${getCurrency()} ${t.category}${t.comment ? " (" + t.comment + ")" : ""}`).join("; ");
+    const recentTxs = txs.slice(0, 5).map((t2) => `[ID:${t2.id}] ${t2.type === "expense" ? "-" : "+"}${t2.amount}${getCurrency()} ${t2.category}${t2.comment ? " (" + t2.comment + ")" : ""}`).join("; ");
     if (recentTxs) parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F update_transaction): ${recentTxs}`);
     return parts.join("\n");
   }
@@ -7664,9 +7664,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (fromCat.type !== toCat.type) return { ok: false, reason: "\u0420\u0456\u0437\u043D\u0456 \u0442\u0438\u043F\u0438 (expense/income)" };
     const txs = getFinance();
     let changed = 0;
-    txs.forEach((t) => {
-      if (t.category === fromCat.cat.name) {
-        t.category = toCat.cat.name;
+    txs.forEach((t2) => {
+      if (t2.category === fromCat.cat.name) {
+        t2.category = toCat.cat.name;
         changed++;
       }
     });
@@ -8199,7 +8199,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
       case "delete_transaction": {
         const txs = getFinance();
-        const item = txs.find((t) => t.id === args.id);
+        const item = txs.find((t2) => t2.id === args.id);
         if (!item) {
           addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
           return true;
@@ -8208,7 +8208,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
           addToTrash("finance", item);
         } catch (e) {
         }
-        saveFinance(txs.filter((t) => t.id !== args.id));
+        saveFinance(txs.filter((t2) => t2.id !== args.id));
         if (currentTab === "finance") renderFinance();
         addMsg("agent", `\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0432: ${item.category} ${formatMoney(item.amount)}.`);
         return true;
@@ -9471,10 +9471,10 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const matchId = (x) => x === idRaw || x === idNum || idNum && Number(x) === idNum;
     try {
       if (type === "task") {
-        const t = getTasks().find((x) => matchId(x.id));
-        if (!t) return false;
-        if (t.status !== "active") return false;
-        if (t.dueDate && t.dueDate < todayISO()) return false;
+        const t2 = getTasks().find((x) => matchId(x.id));
+        if (!t2) return false;
+        if (t2.status !== "active") return false;
+        if (t2.dueDate && t2.dueDate < todayISO()) return false;
         return true;
       }
       if (type === "habit") {
@@ -9550,26 +9550,26 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     saveTabMessage(tab, newMsg);
   }
   function _owlTabHTML(tab) {
-    const t = tab;
+    const t2 = tab;
     return `
-    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+    <div id="owl-tab-collapsed-${t2}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t2}')">
       <div class="owl-collapsed-avatar">\u{1F989}</div>
-      <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t2}"></div>
     </div>
-    <div id="owl-tab-speech-${t}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+    <div id="owl-tab-speech-${t2}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t2}')" ontouchmove="owlTabSwipeMove(event,'${t2}')" ontouchend="owlTabSwipeEnd(event,'${t2}')">
       <div class="owl-speech-avatar">\u{1F989}</div>
       <div class="owl-tab-card">
-        <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
-          <div class="owl-speech-text" id="owl-tab-text-${t}"></div>
-          <div class="owl-speech-time" id="owl-tab-time-${t}"></div>
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t2}">
+          <div class="owl-speech-text" id="owl-tab-text-${t2}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t2}"></div>
         </div>
       </div>
     </div>
-    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">\u2039</button>
-      <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">\u203A</button>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t2}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t2}" onclick="scrollOwlTabChips('${t2}',-1)">\u2039</button>
+      <div id="owl-tab-chips-${t2}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t2}" onclick="scrollOwlTabChips('${t2}',1)">\u203A</button>
     </div>`;
   }
   function _owlTabApplyState(tab) {
@@ -9863,7 +9863,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           const tasks = getTasks();
           const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
           ids.forEach((id) => {
-            const idx = tasks.findIndex((t) => t.id === id);
+            const idx = tasks.findIndex((t2) => t2.id === id);
             if (idx !== -1) {
               tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
             }
@@ -9888,7 +9888,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         // ========== РЕДАГУВАННЯ ==========
         case "edit_task": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           if (args.title) tasks[idx].title = args.title;
           if (args.due_date) tasks[idx].dueDate = args.due_date;
@@ -9932,7 +9932,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "reopen_task": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           tasks[idx] = { ...tasks[idx], status: "active", completedAt: null, updatedAt: Date.now() };
           saveTasks(tasks);
@@ -9941,7 +9941,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "add_step": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
           (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
@@ -9961,7 +9961,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "update_transaction": {
           const txs = getFinance();
-          const idx = txs.findIndex((t) => t.id === args.id);
+          const idx = txs.findIndex((t2) => t2.id === args.id);
           if (idx === -1) return { ok: false, err: "tx not found" };
           if (args.category) txs[idx].category = args.category;
           if (args.amount) txs[idx].amount = parseFloat(args.amount);
@@ -9973,7 +9973,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         // ========== ВИДАЛЕННЯ ==========
         case "delete_task": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t) => t.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           addToTrash("task", tasks[idx]);
           tasks.splice(idx, 1);
@@ -10002,17 +10002,17 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "restore_deleted": {
           const q = (args.query || "").trim().toLowerCase();
-          const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
-          const filtered = args.type ? trash.filter((t) => t.type === args.type) : trash;
+          const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+          const filtered = args.type ? trash.filter((t2) => t2.type === args.type) : trash;
           if (q === "all") {
-            filtered.forEach((t) => restoreFromTrash(t.deletedAt));
+            filtered.forEach((t2) => restoreFromTrash(t2.deletedAt));
             return { ok: true };
           }
           if (q === "last") {
             if (filtered.length > 0) restoreFromTrash(filtered[0].deletedAt);
             return { ok: true };
           }
-          const hit = filtered.find((t) => JSON.stringify(t.data || t).toLowerCase().includes(q));
+          const hit = filtered.find((t2) => JSON.stringify(t2.data || t2).toLowerCase().includes(q));
           if (hit) {
             restoreFromTrash(hit.deletedAt);
             return { ok: true };
@@ -10263,7 +10263,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     const loadEl = document.getElementById(loadId);
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       if (loadEl) loadEl.remove();
-      dispatchChatToolCalls(msg.tool_calls, (r, t) => addMeChatMsg(r, t), text);
+      dispatchChatToolCalls(msg.tool_calls, (r, t2) => addMeChatMsg(r, t2), text);
       if (msg.content) {
         const { text: rt, chips } = parseContentChips(msg.content);
         if (rt) addMeChatMsg("agent", rt, false, "", chips);
@@ -10278,7 +10278,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     if (reply) {
       const blocks = extractJsonBlocks(reply);
       for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction(parsed, text, (r, t) => addMeChatMsg(r, t))) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
           handled = true;
         }
       }
@@ -10301,7 +10301,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         const d = new Date(now);
         d.setDate(now.getDate() - i);
         const ds = d.toDateString();
-        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t) => t.createdAt && new Date(t.createdAt).toDateString() === ds);
+        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t2) => t2.createdAt && new Date(t2.createdAt).toDateString() === ds);
         if (hasRecord) streak++;
         else if (i > 0) break;
       }
@@ -10410,7 +10410,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/${days} \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
     }).join("\n");
     const cutoff = Date.now() - days * 864e5;
-    const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && t.completedAt >= cutoff).length;
+    const doneTasks = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && t2.completedAt >= cutoff).length;
     const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
     const inboxCount = inbox.filter((i) => i.ts >= cutoff).length;
     let moodSummary = "";
@@ -10644,46 +10644,43 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const legend = document.getElementById("me-heatmap-legend");
     if (!grid) return;
     const now = /* @__PURE__ */ new Date();
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
     const habits = getHabits().filter((h) => h.type !== "quit");
     const log = getHabitLog();
     const accent = "#7c4a2a";
+    const dowLabels = [t("dow_mon", "\u041F\u043D"), t("dow_tue", "\u0412\u0442"), t("dow_wed", "\u0421\u0440"), t("dow_thu", "\u0427\u0442"), t("dow_fri", "\u041F\u0442"), t("dow_sat", "\u0421\u0431"), t("dow_sun", "\u041D\u0434")];
     const cells = [];
-    let total = 0;
+    let totalDone = 0;
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
       const ds = d.toDateString();
       const dow = (d.getDay() + 6) % 7;
-      const inboxCount = inbox.filter((item) => new Date(item.ts).toDateString() === ds).length;
-      const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
       const dayHabits = habits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
       const doneH = dayHabits.filter((h) => !!log[ds]?.[h.id]).length;
-      const score = inboxCount + doneTasks + doneH;
-      total += score;
-      cells.push({ score, day: d.getDate(), isToday: i === 0, dow });
+      const doneT = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === ds).length;
+      const total = dayHabits.length + doneT;
+      const done = doneH + doneT;
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      totalDone += done;
+      cells.push({ pct, done, total, day: d.getDate(), isToday: i === 0, dow });
     }
-    const maxScore = Math.max(...cells.map((c) => c.score), 1);
-    const levelOf = (s) => {
-      if (s === 0) return 0;
-      if (s <= maxScore * 0.33) return 1;
-      if (s <= maxScore * 0.66) return 2;
-      return 3;
-    };
-    const colorOf = (lvl) => {
-      if (lvl === 0) return "rgba(30,16,64,0.06)";
-      if (lvl === 1) return "rgba(124,74,42,0.18)";
-      if (lvl === 2) return "rgba(124,74,42,0.45)";
-      return accent;
-    };
     grid.innerHTML = cells.map((c) => {
-      const lvl = levelOf(c.score);
-      const bg = colorOf(lvl);
-      const txtColor = lvl >= 2 ? "white" : "rgba(30,16,64,0.45)";
-      const border = c.isToday ? `2px solid ${accent}` : "1px solid rgba(30,16,64,0.06)";
-      return `<div title="${c.score} \u0434\u0456\u0439" style="aspect-ratio:1;background:${bg};border-radius:5px;border:${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${txtColor}">${c.day}</div>`;
+      const border = c.isToday ? `2px solid ${accent}` : "1.5px solid rgba(30,16,64,0.10)";
+      const fillH = Math.max(0, Math.min(100, c.pct));
+      const labelColor = c.isToday ? accent : "rgba(30,16,64,0.45)";
+      const numColor = fillH >= 60 ? "white" : "rgba(30,16,64,0.7)";
+      const tooltip = c.total > 0 ? t("day_done_total", "{done}/{total} \u0434\u0456\u0439", { done: c.done, total: c.total }) : t("day_zero", "0 \u0434\u0456\u0439");
+      return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:9px;font-weight:700;color:${labelColor};text-transform:uppercase;letter-spacing:0.04em">${dowLabels[c.dow]}</div>
+        <div title="${tooltip}" style="position:relative;width:100%;aspect-ratio:1;background:rgba(30,16,64,0.06);border-radius:6px;border:${border};overflow:hidden">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:${fillH}%;background:${accent};transition:height 0.4s ease"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${numColor};z-index:1">${c.day}</div>
+        </div>
+      </div>
+    `;
     }).join("");
-    if (legend) legend.textContent = `${total} \u0434\u0456\u0439`;
+    if (legend) legend.textContent = t("week_done_count", "{n} \u0434\u0456\u0439", { n: totalDone });
   }
   function renderMeActivityChart() {
     const chartEl = document.getElementById("me-activity-chart");
@@ -10696,8 +10693,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const todayDS = now.toDateString();
     const todayDow = (now.getDay() + 6) % 7;
     const allTasks = getTasks();
-    const doneToday = allTasks.filter((t) => t.status === "done" && t.completedAt && new Date(t.completedAt).toDateString() === todayDS).length;
-    const stillActive = allTasks.filter((t) => t.status === "active").length;
+    const doneToday = allTasks.filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === todayDS).length;
+    const stillActive = allTasks.filter((t2) => t2.status === "active").length;
     const tasksTotal = doneToday + stillActive;
     const tasksDone = doneToday;
     const buildHabits = getHabits().filter((h) => h.type !== "quit");
@@ -10757,8 +10754,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
 - \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
 - \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
     const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
-\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status !== "done").length}
-\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t) => t.status === "done").length}
+\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status !== "done").length}
+\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status === "done").length}
 \u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
 \u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
     const reply = await callAI(systemPrompt, userData, {}, "me-profile-analysis");
@@ -10857,9 +10854,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       if (words.length === 0) return true;
       const stems = words.map((w) => w.slice(0, 4));
       const tasks = getTasks();
-      for (const t of tasks) {
-        if (t.status !== "done") continue;
-        const tWords = t.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+      for (const t2 of tasks) {
+        if (t2.status !== "done") continue;
+        const tWords = t2.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
         const tStems = tWords.map((w) => w.slice(0, 4));
         const matches = stems.filter((s) => tStems.some((ts) => ts === s));
         if (matches.length >= 1 && matches.length >= stems.length * 0.5) return false;
@@ -11005,13 +11002,13 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     if (chipWords.length === 0) return false;
     const chipStems = chipWords.map((w) => w.slice(0, 4));
     const tasks = getTasks();
-    const activeTasks = tasks.filter((t) => t.status === "active");
+    const activeTasks = tasks.filter((t2) => t2.status === "active");
     for (const task of activeTasks) {
       const taskWords = task.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
       const taskStems = taskWords.map((w) => w.slice(0, 4));
       const matches = chipStems.filter((cs) => taskStems.some((ts) => ts === cs));
       if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
-        const idx = tasks.findIndex((t) => t.id === task.id);
+        const idx = tasks.findIndex((t2) => t2.id === task.id);
         if (idx !== -1) {
           tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
           saveTasks(tasks);
@@ -12219,7 +12216,7 @@ ${UI_TOOLS_RULES}`;
     _attachHabitsSwipeDelete();
   }
   function updateProdTabCounters() {
-    const taskCount = getTasks().filter((t) => t.status !== "done").length;
+    const taskCount = getTasks().filter((t2) => t2.status !== "done").length;
     const taskCountEl = document.getElementById("prod-tab-tasks-count");
     const taskSubEl = document.getElementById("prod-tab-tasks-sub");
     if (taskCountEl) taskCountEl.textContent = taskCount;
@@ -12589,8 +12586,8 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "edit_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t) {
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!t2) {
         const nameQ = (parsed.title || "").toLowerCase();
         const found = tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
         if (!found) {
@@ -12609,23 +12606,23 @@ ${UI_TOOLS_RULES}`;
         addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + found.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
         return true;
       }
-      if (parsed.title) t.title = parsed.title;
-      if (parsed.dueDate && parsed.dueDate !== t.dueDate) {
-        if (t.dueDate) t.rescheduleCount = (t.rescheduleCount || 0) + 1;
-        t.dueDate = parsed.dueDate;
-        t.updatedAt = Date.now();
+      if (parsed.title) t2.title = parsed.title;
+      if (parsed.dueDate && parsed.dueDate !== t2.dueDate) {
+        if (t2.dueDate) t2.rescheduleCount = (t2.rescheduleCount || 0) + 1;
+        t2.dueDate = parsed.dueDate;
+        t2.updatedAt = Date.now();
       }
-      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) t.priority = parsed.priority;
+      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) t2.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + t.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + t2.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
       return true;
     }
     if (action === "delete_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
-      const target = t || tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      const target = t2 || tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443.");
         return true;
@@ -12658,9 +12655,9 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "reopen_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
-      const target = t || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      const target = t2 || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u043E\u044E \u043D\u0430\u0437\u0432\u043E\u044E.");
         return true;
@@ -12674,23 +12671,23 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "complete_task") {
       const tasks = getTasks();
-      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t) {
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!t2) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID.");
         return true;
       }
-      if (t.status === "done") {
-        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${t.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
+      if (t2.status === "done") {
+        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
         return true;
       }
-      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t2.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
       if (currentTab === "tasks") {
-        toggleTaskStatus(t.id);
+        toggleTaskStatus(t2.id);
       } else {
-        t.status = "done";
-        t.completedAt = Date.now();
-        t.updatedAt = Date.now();
-        if (Array.isArray(t.steps)) t.steps.forEach((s) => s.done = true);
+        t2.status = "done";
+        t2.completedAt = Date.now();
+        t2.updatedAt = Date.now();
+        if (Array.isArray(t2.steps)) t2.steps.forEach((s) => s.done = true);
         saveTasks(tasks);
       }
       return true;
@@ -12718,8 +12715,8 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "add_step") {
       const tasks = getTasks();
-      const t = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t) {
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!t2) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043B\u044F \u0434\u043E\u0434\u0430\u0432\u0430\u043D\u043D\u044F \u043A\u0440\u043E\u043A\u0443.");
         return true;
       }
@@ -12728,9 +12725,9 @@ ${UI_TOOLS_RULES}`;
         addMsg("agent", "\u041D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443.");
         return true;
       }
-      if (!Array.isArray(t.steps)) t.steps = [];
-      t.steps.push({ id: Date.now(), text: stepText, done: false });
-      t.updatedAt = Date.now();
+      if (!Array.isArray(t2.steps)) t2.steps = [];
+      t2.steps.push({ id: Date.now(), text: stepText, done: false });
+      t2.updatedAt = Date.now();
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
       addMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "${stepText}"`);
@@ -12812,9 +12809,9 @@ ${UI_TOOLS_RULES}`;
       saveEvents(events);
       const dateObj = new Date(events[idx].date);
       const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
-      const t = events[idx].time;
+      const t2 = events[idx].time;
       const et = events[idx].endTime;
-      const timeStr = t ? ` \u043E ${t}${et ? "\u2013" + et : ""}` : "";
+      const timeStr = t2 ? ` \u043E ${t2}${et ? "\u2013" + et : ""}` : "";
       const editText = `\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "${events[idx].title}" \u2192 ${dayStr}${timeStr}`;
       addMsg("agent", editText);
       try {
@@ -13017,10 +13014,10 @@ ${UI_TOOLS_RULES}`;
     addTaskBarMsg("user", text);
     setTaskBarLoading(true);
     addTaskBarMsg("typing", "");
-    const tasks = getTasks().filter((t) => t.status !== "done");
-    const tasksSummary = tasks.map((t) => {
-      const steps = (t.steps || []).map((s) => "  - " + s.text + (s.done ? " [\u2713]" : "")).join("\n");
-      return "\u0417\u0430\u0434\u0430\u0447\u0430 ID:" + t.id + ' "' + t.title + '"' + (steps ? "\n\u041A\u0440\u043E\u043A\u0438:\n" + steps : "");
+    const tasks = getTasks().filter((t2) => t2.status !== "done");
+    const tasksSummary = tasks.map((t2) => {
+      const steps = (t2.steps || []).map((s) => "  - " + s.text + (s.done ? " [\u2713]" : "")).join("\n");
+      return "\u0417\u0430\u0434\u0430\u0447\u0430 ID:" + t2.id + ' "' + t2.title + '"' + (steps ? "\n\u041A\u0440\u043E\u043A\u0438:\n" + steps : "");
     }).join("\n\n");
     const habits = getHabits();
     const log = getHabitLog();
@@ -13062,15 +13059,15 @@ ${UI_TOOLS_RULES}`;
         if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
         if (parsed.action === "complete_step") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t) {
-            const step = t.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            const step = t2.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
             if (step) {
               step.done = true;
-              if (t.steps.every((s) => s.done)) {
-                t.status = "done";
-                t.completedAt = Date.now();
-                t.updatedAt = Date.now();
+              if (t2.steps.every((s) => s.done)) {
+                t2.status = "done";
+                t2.completedAt = Date.now();
+                t2.updatedAt = Date.now();
               }
               saveTasks(allTasks);
               renderTasks();
@@ -13083,23 +13080,23 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "complete_task") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t) {
-            t.status = "done";
-            t.completedAt = Date.now();
-            t.updatedAt = Date.now();
-            t.steps.forEach((s) => s.done = true);
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            t2.status = "done";
+            t2.completedAt = Date.now();
+            t2.updatedAt = Date.now();
+            t2.steps.forEach((s) => s.done = true);
             saveTasks(allTasks);
             renderTasks();
-            addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+            addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t2.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
           }
           return true;
         }
         if (parsed.action === "add_step") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t) {
-            t.steps.push({ id: Date.now(), text: parsed.step, done: false });
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            t2.steps.push({ id: Date.now(), text: parsed.step, done: false });
             saveTasks(allTasks);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "' + parsed.step + '"');
@@ -13149,12 +13146,12 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "undo_step") {
           const allTasks = getTasks();
-          const t = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t) {
-            const step = t.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            const step = t2.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
             if (step) {
               step.done = false;
-              if (t.status === "done") t.status = "active";
+              if (t2.status === "done") t2.status = "active";
               saveTasks(allTasks);
               renderTasks();
               addTaskBarMsg("agent", `\u21A9\uFE0F \u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0432 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F "${step.text}"`);
@@ -13266,23 +13263,23 @@ ${UI_TOOLS_RULES}`;
 ${legacyMemory}`);
       }
     }
-    const tasks = getTasks().filter((t) => t.status === "active").slice(0, 8);
+    const tasks = getTasks().filter((t2) => t2.status === "active").slice(0, 8);
     if (tasks.length > 0) {
-      const taskList = tasks.map((t) => {
-        const steps = t.steps || [];
+      const taskList = tasks.map((t2) => {
+        const steps = t2.steps || [];
         const doneSteps = steps.filter((s) => s.done).length;
         const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} \u043A\u0440\u043E\u043A\u0456\u0432)` : "";
-        const dueInfo = t.dueDate ? ` \u{1F4C5}${t.dueDate}` : "";
-        const prioInfo = t.priority === "critical" ? " \u{1F534}" : t.priority === "important" ? " \u{1F7E0}" : "";
-        return `- [ID:${t.id}] ${t.title}${stepInfo}${dueInfo}${prioInfo}`;
+        const dueInfo = t2.dueDate ? ` \u{1F4C5}${t2.dueDate}` : "";
+        const prioInfo = t2.priority === "critical" ? " \u{1F534}" : t2.priority === "important" ? " \u{1F7E0}" : "";
+        return `- [ID:${t2.id}] ${t2.title}${stepInfo}${dueInfo}${prioInfo}`;
       }).join("\n");
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_task):
 ${taskList}`);
     }
-    const recentlyDone = getTasks().filter((t) => t.status === "done" && t.completedAt && now - t.completedAt < 24 * 60 * 60 * 1e3).slice(0, 5);
+    const recentlyDone = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && now - t2.completedAt < 24 * 60 * 60 * 1e3).slice(0, 5);
     if (recentlyDone.length > 0) {
       parts.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0436\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u041D\u0415 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445!):
-${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
+${recentlyDone.map((t2) => '- \u2705 "' + t2.title + '"').join("\n")}`);
     }
     try {
       const todayISO2 = now.toISOString().slice(0, 10);
@@ -13304,12 +13301,12 @@ ${recentlyDone.map((t) => '- \u2705 "' + t.title + '"').join("\n")}`);
           upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${ev.date}${tStr}`);
         });
       }
-      getTasks().filter((t) => t.status === "active" && t.dueDate).forEach((t) => {
-        if (t.dueDate >= todayISO2 && t.dueDate <= in7) {
-          const diff = Math.round((/* @__PURE__ */ new Date(t.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
+      getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
+        if (t2.dueDate >= todayISO2 && t2.dueDate <= in7) {
+          const diff = Math.round((/* @__PURE__ */ new Date(t2.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
-          if (!upcoming.some((u) => u.includes(t.title))) {
-            upcoming.push(`- \u23F0 "${t.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D ${when}`);
+          if (!upcoming.some((u) => u.includes(t2.title))) {
+            upcoming.push(`- \u23F0 "${t2.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D ${when}`);
           }
         }
       });
@@ -13368,11 +13365,11 @@ ${inboxList}`);
     } catch (e) {
     }
     try {
-      const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+      const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
       if (trash.length > 0) {
         const trashByType = {};
-        trash.forEach((t) => {
-          trashByType[t.type] = (trashByType[t.type] || 0) + 1;
+        trash.forEach((t2) => {
+          trashByType[t2.type] = (trashByType[t2.type] || 0) + 1;
         });
         const summary = Object.entries(trashByType).map(([type, count]) => {
           const labels = { task: "\u0437\u0430\u0434\u0430\u0447", note: "\u043D\u043E\u0442\u0430\u0442\u043E\u043A", habit: "\u0437\u0432\u0438\u0447\u043E\u043A", inbox: "\u0437\u0430\u043F\u0438\u0441\u0456\u0432", folder: "\u043F\u0430\u043F\u043E\u043A", finance: "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439" };
@@ -13443,12 +13440,12 @@ ${routineParts.join("\n")}${nextHint}
     return parts.join("\n\n");
   }
   function getMeStatsContext() {
-    const tasks = getTasks().filter((t) => t.status === "active").slice(0, 10);
+    const tasks = getTasks().filter((t2) => t2.status === "active").slice(0, 10);
     const habits = getHabits();
     const log = getHabitLog();
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const parts = [];
-    if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447\u0456: ${tasks.map((t) => t.title).join(", ")}`);
+    if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447\u0456: ${tasks.map((t2) => t2.title).join(", ")}`);
     if (habits.length > 0) {
       const habitStats = habits.map((h) => {
         const doneToday = !!log[today]?.[h.id];
@@ -13616,8 +13613,8 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function getRecentChatsAcrossTabs(excludeTab, limit = 5, windowMs = 60 * 60 * 1e3) {
     const now = Date.now();
     const all = [];
-    _ALL_CHAT_TABS.filter((t) => t !== excludeTab).forEach((t) => {
-      const key = "nm_chat_" + t;
+    _ALL_CHAT_TABS.filter((t2) => t2 !== excludeTab).forEach((t2) => {
+      const key = "nm_chat_" + t2;
       let msgs = [];
       try {
         msgs = JSON.parse(localStorage.getItem(key) || "[]");
@@ -13625,7 +13622,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       }
       msgs.slice(-5).forEach((m) => {
         if (m && m.ts && now - m.ts < windowMs && m.text) {
-          all.push({ role: m.role, text: m.text, ts: m.ts, tab: t, tabLabel: _TAB_LABELS_CHAT[t] || t });
+          all.push({ role: m.role, text: m.text, ts: m.ts, tab: t2, tabLabel: _TAB_LABELS_CHAT[t2] || t2 });
         }
       });
     });
@@ -13679,13 +13676,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       projects: "projects-chat-messages"
     };
     const addMsgMap = {
-      tasks: (r, t) => addTaskBarMsg(r, t, true),
-      notes: (r, t) => addNotesChatMsg(r, t, true),
-      me: (r, t) => addMeChatMsg(r, t, true),
-      evening: (r, t) => addEveningBarMsg(r, t, true),
-      finance: (r, t) => addFinanceChatMsg(r, t, true),
-      health: (r, t) => addHealthChatMsg(r, t, true),
-      projects: (r, t) => addProjectsChatMsg(r, t, true)
+      tasks: (r, t2) => addTaskBarMsg(r, t2, true),
+      notes: (r, t2) => addNotesChatMsg(r, t2, true),
+      me: (r, t2) => addMeChatMsg(r, t2, true),
+      evening: (r, t2) => addEveningBarMsg(r, t2, true),
+      finance: (r, t2) => addFinanceChatMsg(r, t2, true),
+      health: (r, t2) => addHealthChatMsg(r, t2, true),
+      projects: (r, t2) => addProjectsChatMsg(r, t2, true)
     };
     const containerId = containerMap[tab];
     if (!containerId) return;
@@ -13730,14 +13727,14 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       closeOwlChat();
     } catch (e) {
     }
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      if (t === tab) return;
-      const b = document.getElementById(t + "-ai-bar");
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      if (t2 === tab) return;
+      const b = document.getElementById(t2 + "-ai-bar");
       if (!b) return;
       const cw = b.querySelector(".ai-bar-chat-window");
       if (cw) {
         cw.classList.remove("open");
-        _tabChatState[t] = void 0;
+        _tabChatState[t2] = void 0;
       }
       const inputs = b.querySelectorAll("input, textarea");
       inputs.forEach((i) => i.blur());
@@ -13783,13 +13780,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     window.dispatchEvent(new CustomEvent("nm-chat-closed", { detail: tab }));
   }
   function closeAllChatBars(resetActive = true) {
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      const bar = document.getElementById(t + "-ai-bar");
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      const bar = document.getElementById(t2 + "-ai-bar");
       if (!bar) return;
       const chatWin = bar.querySelector(".ai-bar-chat-window");
       if (chatWin) {
         chatWin.classList.remove("open");
-        _tabChatState[t] = void 0;
+        _tabChatState[t2] = void 0;
       }
       const inputs = bar.querySelectorAll("input, textarea");
       inputs.forEach((i) => i.blur());
@@ -13878,13 +13875,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function openEditTask(id) {
     const tasks = getTasks();
-    const t = tasks.find((x) => String(x.id) === String(id));
-    if (!t) return;
+    const t2 = tasks.find((x) => String(x.id) === String(id));
+    if (!t2) return;
     editingTaskId = id;
-    tempSteps = [...t.steps || []];
+    tempSteps = [...t2.steps || []];
     document.getElementById("task-modal-title").textContent = "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443";
-    document.getElementById("task-input-title").value = t.title;
-    document.getElementById("task-input-desc").value = t.desc || "";
+    document.getElementById("task-input-title").value = t2.title;
+    document.getElementById("task-input-desc").value = t2.desc || "";
     document.getElementById("task-step-input").value = "";
     const delBtn = document.getElementById("task-delete-btn");
     if (delBtn) delBtn.style.display = "inline-block";
@@ -13942,10 +13939,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     closeTaskModal();
     renderTasks();
     if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-      const t = getTasks();
-      const idx = Math.min(taskOrigIdx, t.length);
-      t.splice(idx, 0, item);
-      saveTasks(t);
+      const t2 = getTasks();
+      const idx = Math.min(taskOrigIdx, t2.length);
+      t2.splice(idx, 0, item);
+      saveTasks(t2);
       renderTasks();
     });
   }
@@ -14003,30 +14000,30 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function toggleTaskStep(taskId, stepId) {
     const tasks = getTasks();
-    const t = tasks.find((x) => String(x.id) === String(taskId));
-    if (!t) return;
-    const s = (t.steps || []).find((x) => String(x.id) === String(stepId));
+    const t2 = tasks.find((x) => String(x.id) === String(taskId));
+    if (!t2) return;
+    const s = (t2.steps || []).find((x) => String(x.id) === String(stepId));
     if (s) s.done = !s.done;
-    const allDone = t.steps.length > 0 && t.steps.every((x) => x.done);
-    const wasDone = t.status === "done";
+    const allDone = t2.steps.length > 0 && t2.steps.every((x) => x.done);
+    const wasDone = t2.status === "done";
     const now = Date.now();
     if (allDone && !wasDone) {
-      t.status = "done";
-      t.completedAt = now;
-      t.updatedAt = now;
+      t2.status = "done";
+      t2.completedAt = now;
+      t2.updatedAt = now;
     } else if (!allDone && wasDone) {
-      t.status = "active";
-      delete t.completedAt;
-      t.updatedAt = now;
+      t2.status = "active";
+      delete t2.completedAt;
+      t2.updatedAt = now;
     }
     saveTasks(tasks);
     renderTasks();
   }
   function toggleTaskStatus(id) {
     const tasks = getTasks();
-    const t = tasks.find((x) => String(x.id) === String(id));
-    if (!t) return;
-    const isCompleting = t.status !== "done";
+    const t2 = tasks.find((x) => String(x.id) === String(id));
+    if (!t2) return;
+    const isCompleting = t2.status !== "done";
     const now = Date.now();
     if (isCompleting) {
       const wrap = document.getElementById("task-wrap-" + id);
@@ -14051,20 +14048,20 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         }, 250);
       }
       setTimeout(() => {
-        t.status = "done";
-        t.completedAt = now;
-        t.updatedAt = now;
+        t2.status = "done";
+        t2.completedAt = now;
+        t2.updatedAt = now;
         saveTasks(tasks);
-        logRecentAction("complete_task", t.title, "tasks");
+        logRecentAction("complete_task", t2.title, "tasks");
         renderTasks();
       }, 620);
       return;
     }
-    t.status = "active";
-    delete t.completedAt;
-    t.updatedAt = now;
+    t2.status = "active";
+    delete t2.completedAt;
+    t2.updatedAt = now;
     saveTasks(tasks);
-    logRecentAction("reopen_task", t.title, "tasks");
+    logRecentAction("reopen_task", t2.title, "tasks");
     renderTasks();
   }
   function renderTasks() {
@@ -14077,25 +14074,25 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return;
     }
     empty.style.display = "none";
-    const active = tasks.filter((t) => t.status !== "done");
-    const done = tasks.filter((t) => t.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
+    const active = tasks.filter((t2) => t2.status !== "done");
+    const done = tasks.filter((t2) => t2.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
     const sorted = [...active, ...done];
     updateProdTabCounters();
-    list.innerHTML = sorted.map((t) => {
-      const steps = t.steps || [];
+    list.innerHTML = sorted.map((t2) => {
+      const steps = t2.steps || [];
       const doneCount = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t.status === "done" ? 100 : 0;
-      const isDone = t.status === "done";
-      return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${t.id}" onclick="taskCardClick('${t.id}', event)"
+      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t2.status === "done" ? 100 : 0;
+      const isDone = t2.status === "done";
+      return `<div class="task-item-wrap" id="task-wrap-${t2.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
+      <div id="task-item-${t2.id}" onclick="taskCardClick('${t2.id}', event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? "8px" : "0"}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t2.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
         </div>
         <div style="flex:1">
-          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(t.title)}</div>
-          ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ""}
+          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(t2.title)}</div>
+          ${t2.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t2.desc)}</div>` : ""}
         </div>
       </div>
       ${steps.length > 0 ? `
@@ -14104,7 +14101,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map((s) => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t2.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
             </div>
@@ -14125,10 +14122,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         saveTasks(tasks2.filter((x) => String(x.id) !== id));
         renderTasks();
         if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
-          const t = getTasks();
-          const idx = Math.min(taskOrigIdx, t.length);
-          t.splice(idx, 0, item);
-          saveTasks(t);
+          const t2 = getTasks();
+          const idx = Math.min(taskOrigIdx, t2.length);
+          t2.splice(idx, 0, item);
+          saveTasks(t2);
           renderTasks();
         });
       });
@@ -14187,12 +14184,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const btn = document.getElementById("task-chat-send");
     btn.disabled = true;
     const tasks = getTasks();
-    const t = tasks.find((x) => x.id === taskChatId);
-    const steps = t ? (t.steps || []).map((s) => `- ${s.text}${s.done ? " \u2713" : ""}`).join("\n") : "";
+    const t2 = tasks.find((x) => x.id === taskChatId);
+    const steps = t2 ? (t2.steps || []).map((s) => `- ${s.text}${s.done ? " \u2713" : ""}`).join("\n") : "";
     const aiContext = getAIContext();
     const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
     const stepInstruction = wantsSteps ? ' \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u0440\u043E\u043A\u0438. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u043C JSON \u0456 \u043D\u0456\u0447\u0438\u043C \u0456\u043D\u0448\u0438\u043C: {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"]}. \u0416\u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u0434\u043E \u0430\u0431\u043E \u043F\u0456\u0441\u043B\u044F JSON.' : "";
-    const systemPrompt = `${getOWLPersonality2()} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0437\u0430\u0434\u0430\u0447\u0443: "${t?.title || ""}". ${t?.desc ? "\u041E\u043F\u0438\u0441: " + t.desc + "." : ""} ${steps ? "\u041A\u0440\u043E\u043A\u0438:\n" + steps : ""} \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u0424\u043E\u043A\u0443\u0441 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0430\u0445.${stepInstruction}
+    const systemPrompt = `${getOWLPersonality2()} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0437\u0430\u0434\u0430\u0447\u0443: "${t2?.title || ""}". ${t2?.desc ? "\u041E\u043F\u0438\u0441: " + t2.desc + "." : ""} ${steps ? "\u041A\u0440\u043E\u043A\u0438:\n" + steps : ""} \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u0424\u043E\u043A\u0443\u0441 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0430\u0445.${stepInstruction}
 \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u0440\u043E\u043A\u0438 \u2014 {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2"]}
 \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0449\u043E\u0441\u044C \u041D\u0415 \u043F\u0440\u043E \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443 (\u043D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u043F\u043E\u0434\u0456\u044F, \u043D\u043E\u0442\u0430\u0442\u043A\u0430, \u0437\u0432\u0438\u0447\u043A\u0430, \u0432\u0438\u0442\u0440\u0430\u0442\u0430) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u043C JSON:
 - \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
@@ -14418,13 +14415,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function addToTrash(type, item, extra) {
     const trash = getTrash();
     const now = Date.now();
-    const fresh = trash.filter((t) => now - t.deletedAt < TRASH_TTL);
+    const fresh = trash.filter((t2) => now - t2.deletedAt < TRASH_TTL);
     fresh.push({ type, item, extra: extra || null, deletedAt: now });
     saveTrash(fresh.slice(-200));
   }
   function restoreFromTrash(trashId) {
     const trash = getTrash();
-    const entry = trash.find((t) => t.deletedAt === trashId);
+    const entry = trash.find((t2) => t2.deletedAt === trashId);
     if (!entry) return false;
     const { type, item, extra } = entry;
     if (type === "task") {
@@ -14459,13 +14456,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       saveFinance(txs);
       if (currentTab === "finance") renderFinance();
     }
-    saveTrash(trash.filter((t) => t.deletedAt !== trashId));
+    saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
     return true;
   }
   function cleanupTrash() {
     const trash = getTrash();
     const now = Date.now();
-    const fresh = trash.filter((t) => now - t.deletedAt < TRASH_TTL);
+    const fresh = trash.filter((t2) => now - t2.deletedAt < TRASH_TTL);
     if (fresh.length !== trash.length) saveTrash(fresh);
   }
   function showUndoToast(msg, restoreFn) {
@@ -14816,14 +14813,14 @@ ${answersText}
     }
     const shownTips = JSON.parse(localStorage.getItem("nm_guide_shown_tips") || "[]");
     const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
-    const nextTip = OWL_APP_TIPS.find((t) => !shownTips.includes(t.key));
+    const nextTip = OWL_APP_TIPS.find((t2) => !shownTips.includes(t2.key));
     if (nextTip) {
       addInboxChatMsg("agent", nextTip.msg);
       shownTips.push(nextTip.key);
       localStorage.setItem("nm_guide_shown_tips", JSON.stringify(shownTips));
       return;
     }
-    const nextTopic = OWL_GUIDE_TOPICS.find((t) => !shownTopics.includes(t.key));
+    const nextTopic = OWL_GUIDE_TOPICS.find((t2) => !shownTopics.includes(t2.key));
     if (nextTopic) {
       addInboxChatMsg("agent", nextTopic.q);
       shownTopics.push(nextTopic.key);
@@ -14885,7 +14882,7 @@ ${stepsText}
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
     const currentMemory = localStorage.getItem("nm_memory") || "";
-    const topicData = OWL_GUIDE_TOPICS.find((t) => t.key === waitingTopic);
+    const topicData = OWL_GUIDE_TOPICS.find((t2) => t2.key === waitingTopic);
     if (!topicData) return;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -15503,10 +15500,10 @@ ${userText}
         upcoming.push({ type, title: ev.title, date: ev.date, time: ev.time, id: ev.id });
       }
     }
-    const tasks = getTasks().filter((t) => t.status === "active" && t.dueDate);
-    for (const t of tasks) {
-      if (t.dueDate >= todayStr && t.dueDate <= in7days) {
-        upcoming.push({ type: "task", title: t.title, date: t.dueDate, id: t.id });
+    const tasks = getTasks().filter((t2) => t2.status === "active" && t2.dueDate);
+    for (const t2 of tasks) {
+      if (t2.dueDate >= todayStr && t2.dueDate <= in7days) {
+        upcoming.push({ type: "task", title: t2.title, date: t2.dueDate, id: t2.id });
       }
     }
     if (upcoming.length === 0) return "";
@@ -15793,7 +15790,7 @@ ${aiContext}`;
             processFinanceAction(action, text);
           } else if (action.action === "update_transaction") {
             const txs = getFinance();
-            const idx = txs.findIndex((t) => t.id === action.id);
+            const idx = txs.findIndex((t2) => t2.id === action.id);
             if (idx !== -1) {
               if (action.category) txs[idx].category = action.category;
               if (action.comment !== void 0) txs[idx].comment = action.comment;
@@ -15813,7 +15810,7 @@ ${aiContext}`;
             await processCompleteTask(action, text);
           } else if (action.action === "add_step") {
             const tasks = getTasks();
-            const idx = tasks.findIndex((t) => t.id === action.task_id);
+            const idx = tasks.findIndex((t2) => t2.id === action.task_id);
             if (idx !== -1) {
               const steps = Array.isArray(action.steps) ? action.steps : [];
               steps.forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
@@ -15875,15 +15872,15 @@ ${aiContext}`;
           } else if (action.action === "restore_deleted") {
             const q = (action.query || "").trim();
             const typeFilter = action.type || null;
-            const trash = getTrash().filter((t) => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+            const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
             const typeLabel = { task: "\u0437\u0430\u0434\u0430\u0447\u0443", note: "\u043D\u043E\u0442\u0430\u0442\u043A\u0443", habit: "\u0437\u0432\u0438\u0447\u043A\u0443", inbox: "\u0437\u0430\u043F\u0438\u0441", folder: "\u043F\u0430\u043F\u043A\u0443", finance: "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E" };
             const typeIcon = { task: "\u{1F4CB}", note: "\u{1F4DD}", habit: "\u{1F331}", inbox: "\u{1F4E5}", folder: "\u{1F4C1}", finance: "\u{1F4B0}" };
-            const filtered = typeFilter ? trash.filter((t) => t.type === typeFilter) : trash;
+            const filtered = typeFilter ? trash.filter((t2) => t2.type === typeFilter) : trash;
             if (q === "all") {
               if (filtered.length === 0) {
                 addInboxChatMsg("agent", "\u041A\u0435\u0448 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439. \u0417\u0430\u043F\u0438\u0441\u0438 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F 7 \u0434\u043D\u0456\u0432.");
               } else {
-                filtered.forEach((t) => restoreFromTrash(t.deletedAt));
+                filtered.forEach((t2) => restoreFromTrash(t2.deletedAt));
                 addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${filtered.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432`);
               }
             } else if (q === "last") {
@@ -15897,14 +15894,14 @@ ${aiContext}`;
               }
             } else {
               const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
-              const results = filtered.filter((t) => {
-                const txt = (t.item.text || t.item.title || t.item.name || t.item.folder || "").toLowerCase();
+              const results = filtered.filter((t2) => {
+                const txt = (t2.item.text || t2.item.title || t2.item.name || t2.item.folder || "").toLowerCase();
                 return words.some((w) => txt.includes(w));
               }).sort((a, b) => b.deletedAt - a.deletedAt);
               if (results.length === 0) {
                 addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043D\u0456\u0447\u043E\u0433\u043E \u0441\u0445\u043E\u0436\u043E\u0433\u043E \u0432 \u043A\u0435\u0448\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445.");
               } else if (results.length <= 5) {
-                results.forEach((t) => restoreFromTrash(t.deletedAt));
+                results.forEach((t2) => restoreFromTrash(t2.deletedAt));
                 const labels = results.map((e) => `${typeIcon[e.type] || "\u2022"} ${(e.item.text || e.item.title || e.item.name || "").substring(0, 35)}`).join("\n");
                 addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${results.length} \u0437\u0430\u043F\u0438\u0441\u0438:
 ${labels}`);
@@ -16074,9 +16071,9 @@ ${list}
               if (action.new_name && action.new_name !== found.cat.name) {
                 const txs = getFinance();
                 let changed = 0;
-                txs.forEach((t) => {
-                  if (t.category === found.cat.name) {
-                    t.category = action.new_name;
+                txs.forEach((t2) => {
+                  if (t2.category === found.cat.name) {
+                    t2.category = action.new_name;
                     changed++;
                   }
                 });
@@ -16233,11 +16230,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function _detectEventDate(text) {
     if (!text) return null;
-    const t = text.toLowerCase();
+    const t2 = text.toLowerCase();
     const now = /* @__PURE__ */ new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+    const dayMatch = t2.match(/(\d{1,2})\s*(?:-?го|числа)/);
     if (dayMatch) {
       const day = parseInt(dayMatch[1]);
       if (day >= 1 && day <= 31) {
@@ -16252,7 +16249,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     const monthNames = ["\u0441\u0456\u0447\u043D", "\u043B\u044E\u0442", "\u0431\u0435\u0440\u0435\u0437", "\u043A\u0432\u0456\u0442\u043D", "\u0442\u0440\u0430\u0432\u043D", "\u0447\u0435\u0440\u0432\u043D", "\u043B\u0438\u043F\u043D", "\u0441\u0435\u0440\u043F\u043D", "\u0432\u0435\u0440\u0435\u0441\u043D", "\u0436\u043E\u0432\u0442\u043D", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0433\u0440\u0443\u0434\u043D"];
-    const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+    const monthMatch = t2.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
     if (monthMatch) {
       const day = parseInt(monthMatch[1]);
       const mIdx = monthNames.findIndex((m) => monthMatch[2].toLowerCase().startsWith(m));
@@ -16266,13 +16263,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function _detectEventFromTask(title) {
     if (!title) return null;
-    const t = title.toLowerCase();
+    const t2 = title.toLowerCase();
     const eventMarkers = /приїзд|приїжд|приліт|прибут|зустріч(?!ай)|візит|прийом|рейс|концерт|виставк|свято|день народження|ювілей|весілля|іспит|екзамен|співбесід/i;
-    if (!eventMarkers.test(t)) return null;
+    if (!eventMarkers.test(t2)) return null;
     const now = /* @__PURE__ */ new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+    const dayMatch = t2.match(/(\d{1,2})\s*(?:-?го|числа)/);
     if (dayMatch) {
       const day = parseInt(dayMatch[1]);
       if (day >= 1 && day <= 31) {
@@ -16287,7 +16284,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     const monthNames = ["\u0441\u0456\u0447\u043D", "\u043B\u044E\u0442", "\u0431\u0435\u0440\u0435\u0437", "\u043A\u0432\u0456\u0442\u043D", "\u0442\u0440\u0430\u0432\u043D", "\u0447\u0435\u0440\u0432\u043D", "\u043B\u0438\u043F\u043D", "\u0441\u0435\u0440\u043F\u043D", "\u0432\u0435\u0440\u0435\u0441\u043D", "\u0436\u043E\u0432\u0442\u043D", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0433\u0440\u0443\u0434\u043D"];
-    const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+    const monthMatch = t2.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
     if (monthMatch) {
       const day = parseInt(monthMatch[1]);
       const mIdx = monthNames.findIndex((m) => monthMatch[2].toLowerCase().startsWith(m));
@@ -16424,7 +16421,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (undoRef) {
       showUndoToast(`\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043E ${undoRef.label} \u2192 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438`, () => {
         try {
-          if (undoRef.type === "task") saveTasks(getTasks().filter((t) => t.id !== undoRef.id));
+          if (undoRef.type === "task") saveTasks(getTasks().filter((t2) => t2.id !== undoRef.id));
           else if (undoRef.type === "note") saveNotes(getNotes().filter((n) => n.id !== undoRef.id));
           else if (undoRef.type === "habit") saveHabits(getHabits().filter((h) => h.id !== undoRef.id));
           saveInbox(getInbox().filter((i) => i.id !== inboxCardId));
@@ -16475,7 +16472,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tasks = getTasks();
     const completed = [];
     ids.forEach((taskId) => {
-      const idx = tasks.findIndex((t) => t.id === taskId);
+      const idx = tasks.findIndex((t2) => t2.id === taskId);
       if (idx !== -1) {
         completed.push(tasks[idx].title);
         tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
@@ -16719,6 +16716,15 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       return [];
     }
   }
+  function t(key, fallback, params) {
+    let result = fallback;
+    if (params && typeof params === "object") {
+      for (const [k, v] of Object.entries(params)) {
+        result = result.replaceAll(`{${k}}`, String(v));
+      }
+    }
+    return result;
+  }
   var NM_RECENT_ACTIONS_KEY, NM_RECENT_ACTIONS_MAX;
   var init_utils = __esm({
     "src/core/utils.js"() {
@@ -16837,16 +16843,16 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function _collectStuckTasks() {
     const cutoff = Date.now() - STUCK_TASK_DAYS * 24 * 60 * 60 * 1e3;
-    const tasks = getTasks().filter((t2) => t2.status === "active").filter((t2) => t2.createdAt && t2.createdAt < cutoff).filter((t2) => owlCdExpired(`brain_stuck_${t2.id}`, PER_SIGNAL_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const tasks = getTasks().filter((t3) => t3.status === "active").filter((t3) => t3.createdAt && t3.createdAt < cutoff).filter((t3) => owlCdExpired(`brain_stuck_${t3.id}`, PER_SIGNAL_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     if (tasks.length === 0) return [];
-    const t = tasks[0];
-    const daysOld = Math.floor((Date.now() - t.createdAt) / (24 * 60 * 60 * 1e3));
+    const t2 = tasks[0];
+    const daysOld = Math.floor((Date.now() - t2.createdAt) / (24 * 60 * 60 * 1e3));
     return [{
       tab: "tasks",
       type: "stuck-task",
       urgency: "normal",
-      context: { title: t.title, daysOld },
-      cdKey: `brain_stuck_${t.id}`,
+      context: { title: t2.title, daysOld },
+      cdKey: `brain_stuck_${t2.id}`,
       cdMs: PER_SIGNAL_CD
     }];
   }
@@ -16907,7 +16913,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const now = /* @__PURE__ */ new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const txs = getFinance();
-    const spent = txs.filter((t) => t.type === "expense" && t.ts >= monthStart).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const spent = txs.filter((t2) => t2.type === "expense" && t2.ts >= monthStart).reduce((sum, t2) => sum + (Number(t2.amount) || 0), 0);
     const pct = Math.round(spent / budget.total * 100);
     if (pct < BUDGET_WARN_THRESHOLD) return [];
     const urgency = pct >= 100 ? "critical" : "normal";
@@ -16931,8 +16937,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     for (const c of cards) {
       const appt = c.nextAppointment;
       if (!appt || !appt.date) continue;
-      const t = appt.time || "09:00";
-      const [h, m] = t.split(":").map(Number);
+      const t2 = appt.time || "09:00";
+      const [h, m] = t2.split(":").map(Number);
       const [y, mo, d] = appt.date.split("-").map(Number);
       if ([h, m, y, mo, d].some(isNaN)) continue;
       const ts = new Date(y, mo - 1, d, h, m).getTime();
@@ -17539,13 +17545,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function runMigrations() {
     const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
     let changed = false;
-    tasks.forEach((t) => {
-      if (t.dueDate === void 0) {
-        t.dueDate = null;
+    tasks.forEach((t2) => {
+      if (t2.dueDate === void 0) {
+        t2.dueDate = null;
         changed = true;
       }
-      if (t.priority === void 0) {
-        t.priority = "normal";
+      if (t2.priority === void 0) {
+        t2.priority = "normal";
         changed = true;
       }
     });
@@ -17609,10 +17615,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const tasks2 = JSON.parse(tasksRaw);
           if (Array.isArray(tasks2)) {
             let migrated = 0;
-            tasks2.forEach((t) => {
-              if (typeof t.id === "number") {
-                t.legacy_id = t.id;
-                t.id = generateUUID();
+            tasks2.forEach((t2) => {
+              if (typeof t2.id === "number") {
+                t2.legacy_id = t2.id;
+                t2.id = generateUUID();
                 migrated++;
               }
             });
@@ -17689,7 +17695,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     try {
       document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
       document.getElementById("page-inbox").classList.add("active");
-      document.querySelectorAll(".tab-item").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".tab-item").forEach((t2) => t2.classList.remove("active"));
       document.querySelector('.tab-item[data-tab="inbox"]').classList.add("active");
     } catch (e) {
     }
@@ -17706,7 +17712,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     } catch (e) {
     }
     try {
-      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => renderTabBoard(t));
+      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => renderTabBoard(t2));
     } catch (e) {
     }
     try {
@@ -17896,13 +17902,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     pageEl.classList.add("active");
     updateDrumTabbar(tab);
     applyTheme(tab);
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t) => {
-      const bar = document.getElementById(t + "-ai-bar");
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      const bar = document.getElementById(t2 + "-ai-bar");
       if (!bar) return;
-      const show = t === tab;
+      const show = t2 === tab;
       bar.style.display = show ? "flex" : "none";
       if (!show) {
-        if (t !== "inbox") {
+        if (t2 !== "inbox") {
           const cw = bar.querySelector(".ai-bar-chat-window");
           if (cw) cw.classList.remove("open");
         }
@@ -17982,17 +17988,17 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const overlay = document.createElement("div");
     overlay.id = "tab-selector-overlay";
     overlay.style.cssText = "position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)";
-    var cardsHtml = ALL_TABS_CONFIG.map(function(t) {
-      var isActive = active.includes(t.id);
-      var isLocked = locked.includes(t.id);
-      var borderColor = isActive ? t.accent : "rgba(30,16,64,0.08)";
-      var cardBg = isActive ? t.bg : "rgba(255,255,255,0.6)";
-      var iconBg = isActive ? t.accent : "rgba(30,16,64,0.06)";
+    var cardsHtml = ALL_TABS_CONFIG.map(function(t2) {
+      var isActive = active.includes(t2.id);
+      var isLocked = locked.includes(t2.id);
+      var borderColor = isActive ? t2.accent : "rgba(30,16,64,0.08)";
+      var cardBg = isActive ? t2.bg : "rgba(255,255,255,0.6)";
+      var iconBg = isActive ? t2.accent : "rgba(30,16,64,0.06)";
       var iconColor = isActive ? "white" : "rgba(30,16,64,0.4)";
-      var labelColor = isActive ? t.accent : "rgba(30,16,64,0.45)";
-      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + t.id + "')";
-      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">\u0437\u0430\u0432\u0436\u0434\u0438</div>' : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
-      return '<div id="tab-sel-card-' + t.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t.label + "</div>" + checkHtml + "</div>";
+      var labelColor = isActive ? t2.accent : "rgba(30,16,64,0.45)";
+      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + t2.id + "')";
+      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">\u0437\u0430\u0432\u0436\u0434\u0438</div>' : '<div id="tab-sel-check-' + t2.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t2.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t2.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
+      return '<div id="tab-sel-card-' + t2.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t2.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t2.label + "</div>" + checkHtml + "</div>";
     }).join("");
     overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">\u0412\u043A\u043B\u0430\u0434\u043A\u0438</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">\u0413\u043E\u0442\u043E\u0432\u043E</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">\u041F\u043E\u0440\u044F\u0434\u043E\u043A</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F</div></div></div>';
     overlay.addEventListener("click", (e) => {
@@ -18038,12 +18044,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (idx !== -1) {
       _pendingTabs.splice(idx, 1);
     } else {
-      const order = ALL_TABS_CONFIG.map((t) => t.id);
+      const order = ALL_TABS_CONFIG.map((t2) => t2.id);
       _pendingTabs.push(tabId);
       _pendingTabs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
     }
     const isNowActive = _pendingTabs.includes(tabId);
-    const cfg = ALL_TABS_CONFIG.find((t) => t.id === tabId);
+    const cfg = ALL_TABS_CONFIG.find((t2) => t2.id === tabId);
     if (!cfg) return;
     const card = document.getElementById(`tab-sel-card-${tabId}`);
     const check = document.getElementById(`tab-sel-check-${tabId}`);
@@ -18095,7 +18101,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"
     };
     list.innerHTML = tabs.map((id, idx) => {
-      const cfg = ALL_TABS_CONFIG.find((t) => t.id === id);
+      const cfg = ALL_TABS_CONFIG.find((t2) => t2.id === id);
       const isSelected = _selectedOrderTab === id;
       const isLocked = id === "inbox";
       const accent = cfg?.accent || "rgba(30,16,64,0.2)";
@@ -18777,7 +18783,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   async function _migrateLegacyMemoryToFacts() {
     const legacy = (getLegacyMemoryText() || "").trim();
     if (!legacy || legacy.length < 10) return;
-    const saveMemTool = INBOX_TOOLS.find((t) => t.function?.name === "save_memory_fact");
+    const saveMemTool = INBOX_TOOLS.find((t2) => t2.function?.name === "save_memory_fact");
     if (!saveMemTool) return;
     const systemPrompt = `\u0422\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442 NeverMind. \u0417\u0430\u0440\u0430\u0437 \u041E\u0414\u041D\u041E\u0420\u0410\u0417\u041E\u0412\u0410 \u041C\u0406\u0413\u0420\u0410\u0426\u0406\u042F \u043F\u0430\u043C'\u044F\u0442\u0456: \u043E\u0442\u0440\u0438\u043C\u0443\u0454\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0438\u0439 \u0430\u0431\u0437\u0430\u0446 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u043C\u0430\u0454\u0448 \u0432\u0438\u0442\u044F\u0433\u0442\u0438 \u0437 \u043D\u044C\u043E\u0433\u043E \u0421\u0422\u0420\u0423\u041A\u0422\u0423\u0420\u041E\u0412\u0410\u041D\u0406 \u0444\u0430\u043A\u0442\u0438. \u0414\u043B\u044F \u041A\u041E\u0416\u041D\u041E\u0413\u041E \u0444\u0430\u043A\u0442\u0443 \u044F\u043A\u0438\u0439 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0448 \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 tool save_memory_fact.
 
@@ -19255,8 +19261,8 @@ ${legacy}`;
       const weekStart = new Date(weekEnd);
       weekStart.setDate(weekEnd.getDate() - 6);
       weekStart.setHours(0, 0, 0, 0);
-      const exp = allTxs.filter((t) => t.type === "expense" && t.ts >= weekStart.getTime() && t.ts <= weekEnd.getTime()).reduce((s, t) => s + t.amount, 0);
-      const inc = allTxs.filter((t) => t.type === "income" && t.ts >= weekStart.getTime() && t.ts <= weekEnd.getTime()).reduce((s, t) => s + t.amount, 0);
+      const exp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= weekStart.getTime() && t2.ts <= weekEnd.getTime()).reduce((s, t2) => s + t2.amount, 0);
+      const inc = allTxs.filter((t2) => t2.type === "income" && t2.ts >= weekStart.getTime() && t2.ts <= weekEnd.getTime()).reduce((s, t2) => s + t2.amount, 0);
       const label = `${weekStart.getDate()}.${String(weekStart.getMonth() + 1).padStart(2, "0")}`;
       weeks.push({ label, exp, inc, isCurrent: w === 0 });
     }
@@ -19265,8 +19271,8 @@ ${legacy}`;
     const firstWeekStart = new Date(now);
     firstWeekStart.setDate(now.getDate() - (WEEKS - 1) * 7 - 6);
     firstWeekStart.setHours(0, 0, 0, 0);
-    allTxs.filter((t) => t.ts < firstWeekStart.getTime()).forEach((t) => {
-      cumBalance += t.type === "income" ? t.amount : -t.amount;
+    allTxs.filter((t2) => t2.ts < firstWeekStart.getTime()).forEach((t2) => {
+      cumBalance += t2.type === "income" ? t2.amount : -t2.amount;
     });
     weeks.forEach((w) => {
       cumBalance += w.inc - w.exp;
@@ -19351,26 +19357,26 @@ ${legacy}`;
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
     const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
     const prevTo = from;
-    const monthExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to);
-    const monthInc = allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts < to);
-    const prevMonthExp = allTxs.filter((t) => t.type === "expense" && t.ts >= prevFrom && t.ts < prevTo);
-    const curExp = monthExp.reduce((s, t) => s + t.amount, 0);
-    const prevExp = prevMonthExp.reduce((s, t) => s + t.amount, 0);
-    const curInc = monthInc.reduce((s, t) => s + t.amount, 0);
+    const monthExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= from && t2.ts < to);
+    const monthInc = allTxs.filter((t2) => t2.type === "income" && t2.ts >= from && t2.ts < to);
+    const prevMonthExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= prevFrom && t2.ts < prevTo);
+    const curExp = monthExp.reduce((s, t2) => s + t2.amount, 0);
+    const prevExp = prevMonthExp.reduce((s, t2) => s + t2.amount, 0);
+    const curInc = monthInc.reduce((s, t2) => s + t2.amount, 0);
     const daysPassed = Math.max(1, now.getDate());
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const catMap = {};
-    monthExp.forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+    monthExp.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-    const amounts = monthExp.map((t) => t.amount);
+    const amounts = monthExp.map((t2) => t2.amount);
     const avgTx = amounts.length > 0 ? amounts.reduce((s, a) => s + a, 0) / amounts.length : 0;
     const maxTx = amounts.length > 0 ? Math.max(...amounts) : 0;
     const dayMap = {};
-    monthExp.forEach((t) => {
-      const d = new Date(t.ts).toDateString();
-      dayMap[d] = (dayMap[d] || 0) + t.amount;
+    monthExp.forEach((t2) => {
+      const d = new Date(t2.ts).toDateString();
+      dayMap[d] = (dayMap[d] || 0) + t2.amount;
     });
     const dayTotals = Object.values(dayMap);
     const maxDay = dayTotals.length > 0 ? Math.max(...dayTotals) : 0;
@@ -19465,8 +19471,8 @@ ${legacy}`;
     const now = /* @__PURE__ */ new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
-    const curInc = allTxs.filter((t) => t.type === "income" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
-    const curExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to).reduce((s, t) => s + t.amount, 0);
+    const curInc = allTxs.filter((t2) => t2.type === "income" && t2.ts >= from && t2.ts < to).reduce((s, t2) => s + t2.amount, 0);
+    const curExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= from && t2.ts < to).reduce((s, t2) => s + t2.amount, 0);
     const cfg = _getBenchmarkConfig();
     if (curInc <= 0 && !_analyticsBenchmarkEdit) {
       return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
@@ -19480,8 +19486,8 @@ ${legacy}`;
     const spent = curExp;
     const saved = Math.max(0, curInc - curExp);
     const needsCats = ["\u0457\u0436\u0430", "\u0436\u0438\u0442\u043B\u043E", "\u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442", "\u0437\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F", "\u0437\u0434\u043E\u0440\u043E\u0432\u044F"];
-    const monthExp = allTxs.filter((t) => t.type === "expense" && t.ts >= from && t.ts < to);
-    const needsAmt = monthExp.filter((t) => needsCats.includes(t.category.toLowerCase())).reduce((s, t) => s + t.amount, 0);
+    const monthExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= from && t2.ts < to);
+    const needsAmt = monthExp.filter((t2) => needsCats.includes(t2.category.toLowerCase())).reduce((s, t2) => s + t2.amount, 0);
     const wantsAmt = spent - needsAmt;
     const denom = curInc > 0 ? curInc : 1;
     const needsPct = Math.round(needsAmt / denom * 100);
@@ -19775,11 +19781,11 @@ ${legacy}`;
   }
   function openEditTransaction(id) {
     const txs = getFinance();
-    const t = txs.find((x) => x.id === id);
-    if (!t) return;
+    const t2 = txs.find((x) => x.id === id);
+    if (!t2) return;
     _finEditId = id;
-    _finTxComment = t.comment || "";
-    _showTransactionModal(t);
+    _finTxComment = t2.comment || "";
+    _showTransactionModal(t2);
   }
   function _showTransactionModal(data) {
     _finTxCurrentType = data.type === "income" ? "income" : "expense";
@@ -19932,8 +19938,8 @@ ${legacy}`;
   }
   function deleteFinTransaction() {
     if (!_finEditId) return;
-    const item = getFinance().find((t) => t.id === _finEditId);
-    saveFinance(getFinance().filter((t) => t.id !== _finEditId));
+    const item = getFinance().find((t2) => t2.id === _finEditId);
+    saveFinance(getFinance().filter((t2) => t2.id !== _finEditId));
     closeFinTxModal();
     renderFinance();
     try {
@@ -20223,8 +20229,8 @@ ${legacy}`;
     _catModalColorExpanded = false;
     _refreshCatEditModal();
   }
-  function setCatModalType(t) {
-    _finCatModalDraft.type = t;
+  function setCatModalType(t2) {
+    _finCatModalDraft.type = t2;
     _refreshCatEditModal();
   }
   function toggleCatModalArchive() {
