@@ -88,6 +88,15 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: deploy ${VERSION} · ${DEPLOY_TIME}"
 
       - name: Build bundle
+        # SKIP_I18N_CHECK дозволяє пропустити перевірку i18n-обгортання у
+        # build.js — для екстрених деплоїв коли треба швидко випустити фікс
+        # незважаючи на нові необгорнуті українські рядки. Встановлюється
+        # через GitHub Settings → Secrets and variables → Actions → Variables
+        # → New repository variable: name=SKIP_I18N_CHECK, value=1.
+        # Очистити змінну (встановити порожнє значення або видалити) — щоб
+        # повернути нормальну перевірку. Документація: scripts/check-i18n.js.
+        env:
+          SKIP_I18N_CHECK: ${{ vars.SKIP_I18N_CHECK }}
         run: |
           npm ci
           node build.js
