@@ -315,7 +315,6 @@ function applyTabSelection() {
   saveActiveTabs(tabs);
   closeTabSelector();
   rebuildDrumTabbar();
-  showToast('✓ Вкладки оновлено');
 }
 
 let _selectedOrderTab = null;
@@ -927,7 +926,6 @@ function saveMemoryCards() {
   renderMemoryCards();
   const tsEl = document.getElementById('memory-last-updated');
   if (tsEl) tsEl.textContent = 'Збережено щойно';
-  showToast('✓ Збережено');
 }
 
 function openPrivacyPolicy() {
@@ -982,7 +980,6 @@ function saveSettings() {
   if (memory) localStorage.setItem('nm_memory', memory);
 
   updateKeyStatus(!!key);
-  showToast('✓ Збережено');
   setTimeout(() => document.getElementById('settings-overlay').classList.remove('open'), 600);
 }
 
@@ -1021,7 +1018,6 @@ function saveFinanceSettings() {
   const bdg = getFinBudget();
   bdg.total = budget;
   saveFinBudget(bdg);
-  showToast('✓ Бюджет збережено');
 }
 
 function clearFinanceData() {

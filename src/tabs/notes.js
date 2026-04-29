@@ -143,7 +143,6 @@ function saveNote() {
   saveNotes(notes);
   closeNoteModal();
   renderNotes();
-  showToast(editingNoteId ? '✓ Нотатку оновлено' : '✓ Нотатку збережено');
 }
 
 function deleteNote(id) {
@@ -506,7 +505,7 @@ function noteMenuCopy() {
   if (!n) return;
   closeNoteMenu();
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(n.text).then(() => showToast('✓ Скопійовано'));
+    navigator.clipboard.writeText(n.text);
   } else {
     showToast('Копіювання недоступне');
   }
@@ -531,7 +530,6 @@ function noteMenuMove() {
     if (idx !== -1) notes[idx].folder = newFolder.trim();
     saveNotes(notes);
     renderNotes();
-    showToast(`✓ Переміщено в "${newFolder.trim()}"`);
   }
 }
 // 15.04 jMR6m: фічу "OWL пропонує структуру папок" прибрано —
@@ -844,7 +842,6 @@ function saveAgentResponseAsNote(text) {
   notes.unshift({ id: Date.now(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
   renderNotes();
-  showToast('✓ Збережено як нотатку');
   document.getElementById('note-chat-save-btn')?.remove();
   _pendingAgentNote = '';
 }
@@ -987,7 +984,6 @@ function saveFolderEdit() {
   setFolderMeta(newName, { iconKey: _selectedIconKey, colorKey: _selectedColorKey, desc, pinned });
   closeFolderEditModal();
   renderNotes();
-  showToast('✓ Папку оновлено');
 }
 
 // === NOTES AI BAR ===

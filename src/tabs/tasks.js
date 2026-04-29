@@ -155,7 +155,6 @@ function saveTask() {
   saveTasks(tasks);
   closeTaskModal();
   renderTasks();
-  showToast(editingTaskId ? '✓ Задачу оновлено' : '✓ Задачу додано');
 }
 
 function toggleTaskStep(taskId, stepId) {
