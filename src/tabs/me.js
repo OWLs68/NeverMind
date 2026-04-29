@@ -312,9 +312,63 @@ export function renderMe() {
 
   // === ЗВИЧКИ СТАТИСТИКА ===
   renderMeHabitsStats();
+  renderMeHeatmap();
 
   // === ГРАФІК АКТИВНОСТІ ===
   renderMeActivityChart();
+}
+
+function renderMeHeatmap() {
+  const grid = document.getElementById('me-heatmap-grid');
+  const legend = document.getElementById('me-heatmap-legend');
+  if (!grid) return;
+
+  const now = new Date();
+  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
+  const habits = getHabits().filter(h => h.type !== 'quit');
+  const log = getHabitLog();
+  const accent = '#7c4a2a';
+
+  // 14 днів від найстарішого до сьогодні
+  const cells = [];
+  let total = 0;
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now); d.setDate(now.getDate() - i);
+    const ds = d.toDateString();
+    const dow = (d.getDay() + 6) % 7;
+    const inboxCount = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
+    const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+    const dayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+    const doneH = dayHabits.filter(h => !!log[ds]?.[h.id]).length;
+    const score = inboxCount + doneTasks + doneH;
+    total += score;
+    cells.push({ score, day: d.getDate(), isToday: i === 0, dow });
+  }
+
+  // 4 рівні кольору (0=порожньо, 1-3 = активність)
+  const maxScore = Math.max(...cells.map(c => c.score), 1);
+  const levelOf = s => {
+    if (s === 0) return 0;
+    if (s <= maxScore * 0.33) return 1;
+    if (s <= maxScore * 0.66) return 2;
+    return 3;
+  };
+  const colorOf = lvl => {
+    if (lvl === 0) return 'rgba(30,16,64,0.06)';
+    if (lvl === 1) return 'rgba(124,74,42,0.18)';
+    if (lvl === 2) return 'rgba(124,74,42,0.45)';
+    return accent;
+  };
+
+  grid.innerHTML = cells.map(c => {
+    const lvl = levelOf(c.score);
+    const bg = colorOf(lvl);
+    const txtColor = lvl >= 2 ? 'white' : 'rgba(30,16,64,0.45)';
+    const border = c.isToday ? `2px solid ${accent}` : '1px solid rgba(30,16,64,0.06)';
+    return `<div title="${c.score} дій" style="aspect-ratio:1;background:${bg};border-radius:5px;border:${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${txtColor}">${c.day}</div>`;
+  }).join('');
+
+  if (legend) legend.textContent = `${total} дій · 2 тижні`;
 }
 
 function renderMeActivityChart() {
