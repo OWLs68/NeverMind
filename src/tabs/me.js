@@ -15,7 +15,7 @@
 // ============================================================
 
 import { showToast, switchTab } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
@@ -498,51 +498,47 @@ function renderMeHeatmap() {
   if (!grid) return;
 
   const now = new Date();
-  const inbox = JSON.parse(localStorage.getItem('nm_inbox') || '[]');
   const habits = getHabits().filter(h => h.type !== 'quit');
   const log = getHabitLog();
   const accent = '#7c4a2a';
+  const dowLabels = [t('dow_mon','Пн'),t('dow_tue','Вт'),t('dow_wed','Ср'),t('dow_thu','Чт'),t('dow_fri','Пт'),t('dow_sat','Сб'),t('dow_sun','Нд')];
 
-  // 7 днів від найстарішого до сьогодні
+  // 7 днів від найстарішого до сьогодні. Шкала заповнення = % виконаних дій
+  // (звички призначені на dow + задачі що завершились того дня).
   const cells = [];
-  let total = 0;
+  let totalDone = 0;
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now); d.setDate(now.getDate() - i);
     const ds = d.toDateString();
     const dow = (d.getDay() + 6) % 7;
-    const inboxCount = inbox.filter(item => new Date(item.ts).toDateString() === ds).length;
-    const doneTasks = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
     const dayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
     const doneH = dayHabits.filter(h => !!log[ds]?.[h.id]).length;
-    const score = inboxCount + doneTasks + doneH;
-    total += score;
-    cells.push({ score, day: d.getDate(), isToday: i === 0, dow });
+    const doneT = getTasks().filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === ds).length;
+    const total = dayHabits.length + doneT;
+    const done = doneH + doneT;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    totalDone += done;
+    cells.push({ pct, done, total, day: d.getDate(), isToday: i === 0, dow });
   }
 
-  // 4 рівні кольору (0=порожньо, 1-3 = активність)
-  const maxScore = Math.max(...cells.map(c => c.score), 1);
-  const levelOf = s => {
-    if (s === 0) return 0;
-    if (s <= maxScore * 0.33) return 1;
-    if (s <= maxScore * 0.66) return 2;
-    return 3;
-  };
-  const colorOf = lvl => {
-    if (lvl === 0) return 'rgba(30,16,64,0.06)';
-    if (lvl === 1) return 'rgba(124,74,42,0.18)';
-    if (lvl === 2) return 'rgba(124,74,42,0.45)';
-    return accent;
-  };
-
   grid.innerHTML = cells.map(c => {
-    const lvl = levelOf(c.score);
-    const bg = colorOf(lvl);
-    const txtColor = lvl >= 2 ? 'white' : 'rgba(30,16,64,0.45)';
-    const border = c.isToday ? `2px solid ${accent}` : '1px solid rgba(30,16,64,0.06)';
-    return `<div title="${c.score} дій" style="aspect-ratio:1;background:${bg};border-radius:5px;border:${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${txtColor}">${c.day}</div>`;
+    const border = c.isToday ? `2px solid ${accent}` : '1.5px solid rgba(30,16,64,0.10)';
+    const fillH = Math.max(0, Math.min(100, c.pct));
+    const labelColor = c.isToday ? accent : 'rgba(30,16,64,0.45)';
+    const numColor = fillH >= 60 ? 'white' : 'rgba(30,16,64,0.7)';
+    const tooltip = c.total > 0 ? t('day_done_total','{done}/{total} дій',{done:c.done,total:c.total}) : t('day_zero','0 дій');
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:9px;font-weight:700;color:${labelColor};text-transform:uppercase;letter-spacing:0.04em">${dowLabels[c.dow]}</div>
+        <div title="${tooltip}" style="position:relative;width:100%;aspect-ratio:1;background:rgba(30,16,64,0.06);border-radius:6px;border:${border};overflow:hidden">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:${fillH}%;background:${accent};transition:height 0.4s ease"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${numColor};z-index:1">${c.day}</div>
+        </div>
+      </div>
+    `;
   }).join('');
 
-  if (legend) legend.textContent = `${total} дій`;
+  if (legend) legend.textContent = t('week_done_count','{n} дій',{n:totalDone});
 }
 
 // Два progress-кільця на сьогодні: задачі (виконані сьогодні / всі активні+закриті сьогодні)
