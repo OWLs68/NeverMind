@@ -156,7 +156,18 @@ export function handleUITool(name, args) {
         }
         if (t === 'habits') {
           switchTab('tasks');
-          return { text: 'Відкрив Задачі/Звички.' };
+          // Перемикаємо підтаб «Звички» — інакше юзер бачить Задачі
+          if (typeof window.switchProdTab === 'function') {
+            setTimeout(() => { try { window.switchProdTab('habits'); } catch(e) {} }, 50);
+          }
+          return { text: 'Відкрив Звички.' };
+        }
+        if (t === 'tasks') {
+          switchTab('tasks');
+          if (typeof window.switchProdTab === 'function') {
+            setTimeout(() => { try { window.switchProdTab('tasks'); } catch(e) {} }, 50);
+          }
+          return { text: 'Відкрив Задачі.' };
         }
         if (!document.getElementById(`page-${t}`)) {
           return { text: `Вкладка "${t}" недоступна.` };
