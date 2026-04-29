@@ -27,11 +27,11 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (SK6E2 + oknnM). Жодна з них не закрила багів NeverMind — обидві інфраструктурні (нові хуки автоматизації правил CLAUDE.md). Старіші (m4Q1o, UG1Fr, ywA44, kGX6g, Aps79 з B-80/105/106/107/108 та раніше) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (7PQ1a + SK6E2). Жодна з них не закрила багів NeverMind — обидві інфраструктурні (рефакторинг скіла + хуки). Старіші (oknnM, m4Q1o, UG1Fr, ywA44, kGX6g, Aps79 з B-80/105/106/107/108 та раніше) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+
+_Сесія **7PQ1a** (29.04.2026) — рефакторинг скіла `/finish` (5 правок: Phase 0 архівація-першою, single-pass транскрипт, Phase 5 short, Phase 9 sentinel rule, Phase 2.A trim) + переформулювання правила «пояснення в дужках» у CLAUDE.md (з «КОЖНЕ англійське слово» на «тільки незнайомі коди») + інверсія детектор-хука `check-response-violations.js` (whitelist 14→150, нова `looksLikeCode()` функція, smoke-test 31/31 OK). Багів NeverMind не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
 
 _Сесія **SK6E2** (29.04.2026) — топ-3 автоматизації з аудиту CLAUDE.md: hook ротації SESSION_STATE як pre-push блокер + hook CACHE_NAME bump як pre-push блокер + hook Read-before-estimate як Stop-хук. Повна архівація 7 блоків SESSION_STATE до 2 активних. Урок «hook smoke-test перед комітом» у lessons.md. Bug-fix `\b` у JS regex з кирилицею. Багів NeverMind не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
-
-_Сесія **oknnM** (29.04.2026) — урок «оцінка часу без читання коду» у lessons.md + метрика тренду порушень (append у `.claude/violations-log.txt`) + pre-push hook smoke-test + cleanup перевірка (правила 6 і «🧹 cleanup» з CLAUDE.md в автомат). Багів не закрила. Деталі → `_ai-tools/SESSION_STATE.md`._
 
 ---
 
