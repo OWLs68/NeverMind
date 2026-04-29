@@ -1196,7 +1196,6 @@ async function processSaveAction(parsed, originalText) {
         else if (undoRef.type === 'habit') saveHabits(getHabits().filter(h => h.id !== undoRef.id));
         saveInbox(getInbox().filter(i => i.id !== inboxCardId));
         renderInbox();
-        showToast('↩️ Відмінено');
       } catch(e) {}
     });
   }

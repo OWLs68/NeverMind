@@ -315,7 +315,6 @@ export function saveFinTransaction() {
   saveFinance(txs);
   closeFinTxModal();
   renderFinance();
-  showToast(_finEditId ? '✓ Оновлено' : `✓ ${_finTxCurrentType === 'expense' ? 'Витрату' : 'Дохід'} додано`);
   _finEditId = null;
   _finTxComment = '';
   try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
@@ -435,7 +434,6 @@ export function saveFinBudgetFromModal() {
   saveFinBudget({ total, categories });
   closeFinBudgetModal();
   renderFinance();
-  showToast('✓ Бюджет збережено');
   try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
 }
 // === Модалка категорії ===
@@ -640,10 +638,8 @@ export function saveCategoryFromModal() {
   if (!name) { showToast('Введи назву'); return; }
   if (_finEditingCatId === 'new') {
     createFinCategory(d.type, { name, icon: d.icon, color: d.color, subcategories: subs });
-    showToast('✓ Категорію створено');
   } else {
     updateFinCategory(_finEditingCatId, { name, icon: d.icon, color: d.color, subcategories: subs, archived: d.archived });
-    showToast('✓ Збережено');
   }
   closeCategoryEditModal();
   renderFinance();
@@ -655,7 +651,6 @@ export function deleteCategoryFromModal() {
   deleteFinCategory(_finEditingCatId);
   closeCategoryEditModal();
   renderFinance();
-  showToast('✓ Видалено');
 }
 
 // === Window exports (HTML inline onclick) ===

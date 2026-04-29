@@ -537,7 +537,6 @@ async function copyHealthExport() {
       btn.textContent = '✓ Скопійовано';
       setTimeout(() => { btn.textContent = orig; }, 1500);
     }
-    showToast('✓ Медкартку скопійовано');
   } catch (e) {
     showToast('⚠️ Не вдалось скопіювати — виділи текст вручну');
   }
@@ -734,7 +733,6 @@ function skipHealthMedDose(cardId, medId, scheduledTime) {
     med.skipped.push(scheduledTs);
   }
   saveHealthCards(cards);
-  showToast('Відмічено як пропущено');
   if (activeHealthCardId === cardId) renderHealthWorkspace(cardId);
   else renderHealth();
 }
@@ -954,7 +952,6 @@ function askOwlAboutHealthCard(id) {
 function logHealthMedDose(cardId, medId) {
   const med = logMedicationDose(cardId, medId);
   if (med) {
-    showToast(`💊 ${med.name} прийнято`);
     if (activeHealthCardId === cardId) renderHealthWorkspace(cardId);
   }
 }
@@ -1296,7 +1293,6 @@ function saveHealthCardFromModal() {
         startDate, nextAppointment: syncedAppt, status, medications: meds,
       };
       saveHealthCards(cards);
-      showToast('✓ Збережено');
     }
   } else {
     // Create режим
@@ -1319,7 +1315,6 @@ function saveHealthCardFromModal() {
     newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, name, nextAppointment, null);
     cards.unshift(newCard);
     saveHealthCards(cards);
-    showToast('✓ Картку додано');
   }
 
   closeHealthCardModal();
@@ -1346,7 +1341,6 @@ function deleteHealthCardFromModal() {
     }
     cards.splice(idx, 1);
     saveHealthCards(cards);
-    showToast('Картку видалено');
   }
   closeHealthCardModal();
   activeHealthCardId = null;
@@ -1360,7 +1354,6 @@ function openAddAllergy() {
   const notes = prompt('Нотатки (необов\'язково — симптоми, деталі реакції):') || '';
   const added = addAllergy(name, notes);
   if (added) {
-    showToast('✓ Алергію додано');
     renderHealth();
   } else {
     showToast('Така алергія вже є');
@@ -1370,7 +1363,6 @@ function openAddAllergy() {
 function deleteAllergyById(id) {
   if (!confirm('Видалити алергію?')) return;
   if (deleteAllergy(id)) {
-    showToast('Алергію видалено');
     renderHealth();
   }
 }

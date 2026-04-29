@@ -261,8 +261,7 @@ ${perfLines.join('\n')}
 ${logLines}
 \`\`\``;
 
-  navigator.clipboard?.writeText(text)
-    .then(() => showToast('✓ Скопійовано — вставляй мені в чат'));
+  navigator.clipboard?.writeText(text);
 }
 
 function closeLogPanel() {
@@ -279,13 +278,11 @@ function copyErrorLog() {
     const time = new Date(e.ts).toLocaleString('uk-UA');
     return `[${time}] [${e.type}] [${e.tab}] ${e.msg}${e.src ? ' → ' + e.src : ''}`;
   }).join('\n');
-  navigator.clipboard?.writeText('NeverMind Log\n' + '='.repeat(40) + '\n' + lines)
-    .then(() => showToast('✓ Лог скопійовано (' + log.length + ' записів)'));
+  navigator.clipboard?.writeText('NeverMind Log\n' + '='.repeat(40) + '\n' + lines);
 }
 
 function clearErrorLog() {
   localStorage.removeItem(NM_LOG_KEY);
-  showToast('✓ Лог очищено');
   updateErrorLogBtn();
   // Перерендерити панель щоб Health Check залишився
   showErrorLog();

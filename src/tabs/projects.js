@@ -368,7 +368,6 @@ function saveNewProject() {
   projects.unshift(newProject);
   saveProjects(projects);
   closeProjectModal();
-  showToast('✓ Проект створено');
   openProjectWorkspace(newProject.id);
   // OWL починає інтервʼю по проекту в Inbox
   setTimeout(() => startProjectInboxInterview(name, subtitle), 600);

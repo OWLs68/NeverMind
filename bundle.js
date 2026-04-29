@@ -719,7 +719,7 @@ ${perfLines.join("\n")}
 \`\`\`
 ${logLines}
 \`\`\``;
-    navigator.clipboard?.writeText(text).then(() => showToast("\u2713 \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u2014 \u0432\u0441\u0442\u0430\u0432\u043B\u044F\u0439 \u043C\u0435\u043D\u0456 \u0432 \u0447\u0430\u0442"));
+    navigator.clipboard?.writeText(text);
   }
   function closeLogPanel() {
     const panel = document.getElementById("log-panel");
@@ -731,7 +731,6 @@ ${logLines}
   }
   function clearErrorLog() {
     localStorage.removeItem(NM_LOG_KEY);
-    showToast("\u2713 \u041B\u043E\u0433 \u043E\u0447\u0438\u0449\u0435\u043D\u043E");
     updateErrorLogBtn();
     showErrorLog();
   }
@@ -2776,7 +2775,6 @@ ${lines.join("\n")}`;
           btn.textContent = orig;
         }, 1500);
       }
-      showToast("\u2713 \u041C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0443 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
     } catch (e) {
       showToast("\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u2014 \u0432\u0438\u0434\u0456\u043B\u0438 \u0442\u0435\u043A\u0441\u0442 \u0432\u0440\u0443\u0447\u043D\u0443");
     }
@@ -2927,7 +2925,6 @@ ${lines.join("\n")}`;
       med.skipped.push(scheduledTs);
     }
     saveHealthCards(cards);
-    showToast("\u0412\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u044F\u043A \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u043E");
     if (activeHealthCardId === cardId) renderHealthWorkspace(cardId);
     else renderHealth();
   }
@@ -3138,7 +3135,6 @@ ${lines.join("\n")}`;
   function logHealthMedDose(cardId, medId) {
     const med = logMedicationDose(cardId, medId);
     if (med) {
-      showToast(`\u{1F48A} ${med.name} \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E`);
       if (activeHealthCardId === cardId) renderHealthWorkspace(cardId);
     }
   }
@@ -3416,7 +3412,6 @@ ${lines.join("\n")}`;
           medications: meds
         };
         saveHealthCards(cards);
-        showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
       }
     } else {
       const newCard = {
@@ -3441,7 +3436,6 @@ ${lines.join("\n")}`;
       newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, name, nextAppointment, null);
       cards.unshift(newCard);
       saveHealthCards(cards);
-      showToast("\u2713 \u041A\u0430\u0440\u0442\u043A\u0443 \u0434\u043E\u0434\u0430\u043D\u043E");
     }
     closeHealthCardModal();
     renderHealth();
@@ -3465,7 +3459,6 @@ ${lines.join("\n")}`;
       }
       cards.splice(idx, 1);
       saveHealthCards(cards);
-      showToast("\u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
     }
     closeHealthCardModal();
     activeHealthCardId = null;
@@ -3477,7 +3470,6 @@ ${lines.join("\n")}`;
     const notes = prompt("\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457):") || "";
     const added = addAllergy(name, notes);
     if (added) {
-      showToast("\u2713 \u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0434\u043E\u0434\u0430\u043D\u043E");
       renderHealth();
     } else {
       showToast("\u0422\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454");
@@ -3486,7 +3478,6 @@ ${lines.join("\n")}`;
   function deleteAllergyById(id) {
     if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E?")) return;
     if (deleteAllergy(id)) {
-      showToast("\u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
       renderHealth();
     }
   }
@@ -5067,7 +5058,6 @@ ${lines.join("\n")}`;
     projects.unshift(newProject);
     saveProjects(projects);
     closeProjectModal();
-    showToast("\u2713 \u041F\u0440\u043E\u0435\u043A\u0442 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
     openProjectWorkspace(newProject.id);
     setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
   }
@@ -5433,7 +5423,6 @@ ${lines.join("\n\n")}`;
     tasks[idx].updatedAt = Date.now();
     localStorage.setItem("nm_tasks", JSON.stringify(tasks));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "tasks" }));
-    showToast(daysAhead === 1 ? "\u{1F4C5} \u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430" : "\u{1F4C5} \u0427\u0435\u0440\u0435\u0437 " + daysAhead + " \u0434\u043D");
     renderEvening();
   }
   function rescheduleTaskTomorrow(taskId) {
@@ -5543,7 +5532,6 @@ ${lines.join("\n\n")}`;
     logRecentAction("add_moment", text.substring(0, 40), "evening");
     closeMomentModal();
     renderEvening();
-    showToast("\u2713 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     generateMomentSummary(newMoment.id, text);
   }
   async function generateMomentSummary(momentId, text) {
@@ -8485,7 +8473,6 @@ ${recent}`;
     saveNotes(notes);
     closeNoteModal();
     renderNotes();
-    showToast(editingNoteId ? "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E" : "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
   }
   function deleteNote(id) {
     const notes = getNotes();
@@ -8756,7 +8743,7 @@ ${recent}`;
     if (!n) return;
     closeNoteMenu();
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(n.text).then(() => showToast("\u2713 \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E"));
+      navigator.clipboard.writeText(n.text);
     } else {
       showToast("\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435");
     }
@@ -8784,7 +8771,6 @@ ${folderList.join(", ")}
       if (idx !== -1) notes[idx].folder = newFolder.trim();
       saveNotes(notes);
       renderNotes();
-      showToast(`\u2713 \u041F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043E \u0432 "${newFolder.trim()}"`);
     }
   }
   function getFolderColor(folder) {
@@ -9043,7 +9029,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     notes.unshift({ id: Date.now(), text, folder, source: "ai", ts: Date.now(), lastViewed: Date.now() });
     saveNotes(notes);
     renderNotes();
-    showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u044F\u043A \u043D\u043E\u0442\u0430\u0442\u043A\u0443");
     document.getElementById("note-chat-save-btn")?.remove();
     _pendingAgentNote = "";
   }
@@ -9142,7 +9127,6 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     setFolderMeta(newName, { iconKey: _selectedIconKey, colorKey: _selectedColorKey, desc, pinned });
     closeFolderEditModal();
     renderNotes();
-    showToast("\u2713 \u041F\u0430\u043F\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
   }
   function addNotesChatMsg(role, text, _noSave = false, chips = null) {
     const el = document.getElementById("notes-chat-messages");
@@ -14016,7 +14000,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     saveTasks(tasks);
     closeTaskModal();
     renderTasks();
-    showToast(editingTaskId ? "\u2713 \u0417\u0430\u0434\u0430\u0447\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E" : "\u2713 \u0417\u0430\u0434\u0430\u0447\u0443 \u0434\u043E\u0434\u0430\u043D\u043E");
   }
   function toggleTaskStep(taskId, stepId) {
     const tasks = getTasks();
@@ -16446,7 +16429,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           else if (undoRef.type === "habit") saveHabits(getHabits().filter((h) => h.id !== undoRef.id));
           saveInbox(getInbox().filter((i) => i.id !== inboxCardId));
           renderInbox();
-          showToast("\u21A9\uFE0F \u0412\u0456\u0434\u043C\u0456\u043D\u0435\u043D\u043E");
         } catch (e) {
         }
       });
@@ -18091,7 +18073,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     saveActiveTabs(tabs);
     closeTabSelector();
     rebuildDrumTabbar();
-    showToast("\u2713 \u0412\u043A\u043B\u0430\u0434\u043A\u0438 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
   }
   function closeTabSelector() {
     _pendingTabs = null;
@@ -18640,7 +18621,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     renderMemoryCards();
     const tsEl = document.getElementById("memory-last-updated");
     if (tsEl) tsEl.textContent = "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0449\u043E\u0439\u043D\u043E";
-    showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
   }
   function openPrivacyPolicy() {
     showToast("\u041A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u0456\u0441\u0442\u044C \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
@@ -18686,7 +18666,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     localStorage.setItem("nm_settings", JSON.stringify(settings));
     if (memory) localStorage.setItem("nm_memory", memory);
     updateKeyStatus(!!key);
-    showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     setTimeout(() => document.getElementById("settings-overlay").classList.remove("open"), 600);
   }
   function exportData() {
@@ -18720,7 +18699,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const bdg = getFinBudget();
     bdg.total = budget;
     saveFinBudget(bdg);
-    showToast("\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
   }
   function clearFinanceData() {
     if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0456 \u0434\u0430\u043D\u0456?")) return;
@@ -19944,7 +19922,6 @@ ${legacy}`;
     saveFinance(txs);
     closeFinTxModal();
     renderFinance();
-    showToast(_finEditId ? "\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E" : `\u2713 ${_finTxCurrentType === "expense" ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0443" : "\u0414\u043E\u0445\u0456\u0434"} \u0434\u043E\u0434\u0430\u043D\u043E`);
     _finEditId = null;
     _finTxComment = "";
     try {
@@ -20074,7 +20051,6 @@ ${legacy}`;
     saveFinBudget({ total, categories });
     closeFinBudgetModal();
     renderFinance();
-    showToast("\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     try {
       localStorage.setItem("nm_owl_tab_ts_finance", "0");
       tryBoardUpdate("finance");
@@ -20290,10 +20266,8 @@ ${legacy}`;
     }
     if (_finEditingCatId === "new") {
       createFinCategory(d.type, { name, icon: d.icon, color: d.color, subcategories: subs });
-      showToast("\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E");
     } else {
       updateFinCategory(_finEditingCatId, { name, icon: d.icon, color: d.color, subcategories: subs, archived: d.archived });
-      showToast("\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     }
     closeCategoryEditModal();
     renderFinance();
@@ -20304,7 +20278,6 @@ ${legacy}`;
     deleteFinCategory(_finEditingCatId);
     closeCategoryEditModal();
     renderFinance();
-    showToast("\u2713 \u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
   }
   Object.assign(window, {
     openAddTransaction,

@@ -216,7 +216,6 @@ function _rescheduleTask(taskId, daysAhead) {
   // saveTasks не експортований з цього модуля, але localStorage пишемо напряму
   localStorage.setItem('nm_tasks', JSON.stringify(tasks));
   window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' }));
-  showToast(daysAhead === 1 ? '📅 На завтра' : '📅 Через ' + daysAhead + ' дн');
   renderEvening();
 }
 
@@ -327,7 +326,6 @@ function saveMoment() {
   logRecentAction('add_moment', text.substring(0, 40), 'evening');
   closeMomentModal();
   renderEvening();
-  showToast('✓ Момент збережено');
   // Генеруємо короткий summary через ШІ (у фоні, не блокує UI)
   generateMomentSummary(newMoment.id, text);
 }
