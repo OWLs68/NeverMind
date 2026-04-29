@@ -2721,3 +2721,10 @@ Quick dialogue mode (хук + правило в CLAUDE.md): тригери ≤10
 
 **Коміти:** `2448d29` bar chart · `410b32b` 2 rings replace 4 charts · `5de033d` remove habits block · `4135c18` heatmap 7 days inside activity · `2ced655` toast frosted + green undo + cleanup confirms · `8ae7997` week cards with fill % · `7e65c79` unify entity colors · `316bd95` finish teal cleanup · `216e0de` archive 7PQ1a · `dd0067d` rotate bugs · `70bb51f` session-state TdIqO
 **Метрики:** 11 комітів (8 коду + 3 docs), CACHE_NAME `nm-20260429-1948` → `nm-20260429-2300` (4 рази), v478→v479+ після auto-merge, гілка `claude/start-session-TdIqO`. Закриті баги: 0.
+
+## 29.04.2026 — сесія H0DxS
+
+Фікс-сесія. Тижневий зріз звичок у `getAIContext` + bump `INSIGHTS_VERSION` 2→3 — корінь бага «OWL знає тебе каже жодної звички за тиждень» при реальних 3/4 виконаних. Правило «ЗОВНІШНІ ФАКТИ» у `getOWLPersonality()` проти галюцинацій (AI вигадав сюжет фільму «Кіллхаус» якого не знає) — поширюється на всі 8 чатів. Закрито 2 баги lRnXU: «Відкрий звички» з чату Я тепер реально перемикає на підтаб Звички; блок «🦉 OWL знає тебе» — білий фон + темніша рамка + тінь, чітко видно на бежевому фоні «Я». Видалено онбординг-модалку при першому вході — поля «імʼя» і «API ключ» доступні у Налаштуваннях.
+
+**Коміти:** `43010ed` cleanup 36 ghosts task · `4fc534f` weekly habits in getAIContext + insights cache bump · `886559b` external facts rule · `6bc5d5b` switch_tab habits subtab + insights block visibility · `1049c0f` remove onboarding modal · `42bf5f2` session-state H0DxS · `079f48b` rotate bugs
+**Метрики:** 7 комітів (4 fix + 3 docs), CACHE_NAME `nm-20260429-2300` → `nm-20260429-2340` (4 рази), v488→v489+ після auto-merge, гілка `claude/start-session-H0DxS`. Закриті баги: 2 з lRnXU списку (Відкрий звички, OWL знає тебе зливається).
