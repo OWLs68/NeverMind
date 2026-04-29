@@ -149,5 +149,22 @@ export function getRecentActions() {
   try { return JSON.parse(localStorage.getItem(NM_RECENT_ACTIONS_KEY) || '[]'); } catch { return []; }
 }
 
+// === i18n заглушка (24.04.2026 nudNp правило, 29.04.2026 m4Q1o реалізація) ===
+// Поки повертає fallback (українську). Колись словник у `src/i18n/<lang>.json`
+// замінить fallback на переклад. Параметри підставляються через {name}-плейсхолдери:
+//   t('greeting', 'Привіт, {name}!', { name: 'Роман' }) → "Привіт, Роман!"
+// Використовуємо replaceAll (не RegExp у циклі) — швидше і безпечніше від спецсимволів
+// у значеннях. CI-скрипт scripts/check-i18n.js ламає білд якщо новий рядок з кирилицею
+// не обгорнутий у t(). AI-промпти у src/ai/* лишаємо українськими (whitelist).
+export function t(key, fallback, params) {
+  let result = fallback;
+  if (params && typeof params === 'object') {
+    for (const [k, v] of Object.entries(params)) {
+      result = result.replaceAll(`{${k}}`, String(v));
+    }
+  }
+  return result;
+}
+
 // Functions called from HTML event handlers
 window.autoResizeTextarea = autoResizeTextarea;
