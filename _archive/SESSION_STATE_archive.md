@@ -6,6 +6,40 @@
 
 ---
 
+## 🔧 Сесія C8uQD — OWL Silence + Pruning Engine 3 фази + perf тюнінг + чіпи (27.04.2026)
+
+### Зроблено
+
+**Фаза 1 — Silence Engine** (`044bc7f`, `d89ef79`):
+- Новий AI-tool `request_quiet(duration_hours)` у `src/ai/ui-tools.js` + handler який пише `nm_owl_silence_until` у localStorage + диспатчить `nm-data-changed`
+- Чек тиші **одним рядком** на початку `shouldOwlSpeak()` у `src/owl/inbox-board.js` — блокує всі 4 канали сови
+- 11 тригер-фраз у `UI_TOOLS_RULES`: «дай спокій / не доставай / відчепись» + мапа тривалості
+
+**Фаза 2 — Pruning Engine** (7 чекпоінт-комітів `3e42600` → `d17b769`):
+- Step A — `[task_xxx]/[habit_xxx]/[note_xxx]/[project_xxx]/[transaction_xxx]` маркери у board context (25 місць)
+- Step B — `src/owl/board-utils.js` (106 рядків) з `isEntityRelevant`/`isMessageRelevant`. Per-type правила.
+- Step C — поле `entityRefs` у JSON-схемі + збереження (capped 10) у `saveTabMessage`
+- Step D — фільтр `boardHistory` через `isMessageRelevant`
+- Step E — фільтр на UI: `getTabBoardMsgs`, `getOwlBoardMessages` (на джерелі), `_pickMessageForTab`
+- Step F — одноразовий wipe + boot.js v7 міграція
+- Step G — bump CACHE_NAME
+
+**Perf тюнінг** (`51143a3`): 5-хв soft cache + видалено дубль 3-сек тригер. ~½ API запитів.
+
+**Фаза 3** (`baf91bc`, `68a2674`): прапорець РЕЖИМ ТИШІ у getAIContext + видалено блок ЗАКРИТІ задачі з board context.
+
+**Закрито B-100, B-102** (`bc8c188`) — структурно через Silence + Pruning.
+
+**Фікс UX чіпів** (`9ce78f4`): nav-чіпи з target===currentTab не показуються.
+
+### Метрики
+- 16 комітів `044bc7f` → `9ce78f4`
+- CACHE `nm-20260426-1824` → `nm-20260427-1451` (4 bump)
+- v403 → v408
+- Закриті: B-100, B-102
+
+---
+
 ## 🔧 Сесія hEtjy — Brain-meta + правило 6 + анти-патерн × 3 + фіолет 6 місць (27.04.2026)
 
 ### Зроблено
