@@ -10525,24 +10525,51 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     const projBlock = document.getElementById("me-projects-block");
     const projList = document.getElementById("me-projects-list");
     if (projBlock && projList) {
-      let activeProjects = [];
+      let allProjects = [];
       try {
-        activeProjects = getProjects().slice(0, 3);
+        allProjects = getProjects();
       } catch (e) {
       }
-      if (activeProjects.length > 0) {
+      if (allProjects.length > 0) {
         projBlock.style.display = "block";
-        projList.innerHTML = activeProjects.map((p) => {
+        const weekAgo = Date.now() - 7 * 864e5;
+        const projWithStats = allProjects.map((p) => {
           const steps = p.steps || [];
           const done = steps.filter((s) => s.done).length;
           const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
+          const stepsThisWeek = steps.filter((s) => s.done && s.doneAt && s.doneAt >= weekAgo).length;
+          const lastDoneAt = steps.filter((s) => s.done && s.doneAt).reduce((max, s) => Math.max(max, s.doneAt), 0);
+          const daysSince = lastDoneAt > 0 ? Math.floor((Date.now() - lastDoneAt) / 864e5) : null;
           const nextStep = steps.find((s) => !s.done);
+          return { p, steps, done, pct, stepsThisWeek, daysSince, nextStep };
+        });
+        projWithStats.sort((a, b) => b.stepsThisWeek - a.stepsThisWeek);
+        const moving = projWithStats.filter((s) => s.stepsThisWeek > 0).length;
+        const stagnant = projWithStats.length - moving;
+        const summaryHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} \u0430\u043A\u0442\u0438\u0432\u043D${allProjects.length === 1 ? "\u0438\u0439" : "\u0438\u0445"}</span>
+          <span style="font-size:11px;font-weight:700">
+            <span style="color:#16a34a">${moving} \u0440\u0443\u0445${moving === 1 ? "\u0430\u0454\u0442\u044C\u0441\u044F" : "\u0430\u044E\u0442\u044C\u0441\u044F"}</span>
+            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> \xB7 </span><span style="color:#c2410c">${stagnant} \u0441\u0442\u043E\u0457\u0442\u044C</span>` : ""}
+          </span>
+        </div>`;
+        const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
+          let trendChip = "";
+          if (stepsThisWeek > 0) {
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} \u043A\u0440\u043E\u043A${stepsThisWeek === 1 ? "" : stepsThisWeek < 5 ? "\u0438" : "\u0456\u0432"} \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</span>`;
+          } else if (daysSince !== null && daysSince >= 7) {
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D ${daysSince} \u0434\u043D</span>`;
+          } else if (daysSince === null) {
+            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439</span>`;
+          }
           return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
             <div style="flex:1">
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
               ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
               ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
+              ${trendChip}
             </div>
             <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
           </div>
@@ -10551,6 +10578,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
           </div>
         </div>`;
         }).join("");
+        projList.innerHTML = summaryHTML + itemsHTML;
       } else {
         projBlock.style.display = "none";
       }
