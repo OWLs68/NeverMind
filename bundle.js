@@ -10589,6 +10589,61 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     renderMonthlyReport();
     renderMeActivityChart();
   }
+  function _buildWindowContext(days) {
+    const now = /* @__PURE__ */ new Date();
+    const habits = getHabits();
+    const log = getHabitLog();
+    const buildHabits = habits.filter((h) => h.type !== "quit");
+    const habitLines = buildHabits.map((h) => {
+      let done = 0, scheduled = 0;
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dow = (d.getDay() + 6) % 7;
+        if (!(h.days || [0, 1, 2, 3, 4]).includes(dow)) continue;
+        scheduled++;
+        if (log[d.toDateString()]?.[h.id]) done++;
+      }
+      const pct = scheduled > 0 ? Math.round(done / scheduled * 100) : 0;
+      return `- "${h.name}": ${done}/${scheduled} (${pct}%)`;
+    }).join("\n");
+    const quitHabits = habits.filter((h) => h.type === "quit");
+    const quitLines = quitHabits.map((h) => {
+      let abstained = 0;
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        if (log[d.toDateString()]?.[h.id]) abstained++;
+      }
+      return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/${days} \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
+    }).join("\n");
+    const cutoff = Date.now() - days * 864e5;
+    const doneTasks = getTasks().filter((t) => t.status === "done" && t.completedAt && t.completedAt >= cutoff).length;
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const inboxCount = inbox.filter((i) => i.ts >= cutoff).length;
+    let moodSummary = "";
+    try {
+      const moods = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const ds = d.toDateString();
+        const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
+        if (saved && saved.date === ds && saved.mood) moods.push(saved.mood);
+      }
+      if (moods.length > 0) moodSummary = `\u041D\u0430\u0441\u0442\u0440\u0456\u0439 (\u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E ${moods.length} \u0434\u043D\u0456\u0432): ${moods.join(", ")}`;
+    } catch {
+    }
+    const parts = [`=== \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 ${days} \u0414\u041D\u0406\u0412 ===`];
+    if (habitLines) parts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 (\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E/\u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E):
+${habitLines}`);
+    if (quitLines) parts.push(`\u0412\u0456\u0434\u043C\u043E\u0432\u0430 \u0432\u0456\u0434 \u0437\u0432\u0438\u0447\u043E\u043A:
+${quitLines}`);
+    parts.push(`\u0417\u0430\u043A\u0440\u0438\u0442\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: ${doneTasks}`);
+    parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 Inbox: ${inboxCount}`);
+    if (moodSummary) parts.push(moodSummary);
+    return parts.join("\n\n");
+  }
   function _getInsights() {
     try {
       return JSON.parse(localStorage.getItem(INSIGHTS_KEY) || "null");
@@ -10598,6 +10653,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
   }
   function _isInsightsStale(insights) {
     if (!insights || !insights.generatedAt) return true;
+    if (insights.version !== INSIGHTS_VERSION) return true;
     const ageMs = Date.now() - insights.generatedAt;
     return ageMs > 7 * 864e5;
   }
@@ -10616,7 +10672,8 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       const systemPrompt = `${getOWLPersonality2()} \u0422\u0438 \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0454\u0448 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown, \u0431\u0435\u0437 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430:
 {"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0442\u0438\u0436\u043D\u044F (12-20 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E \u2014 \u043D\u0435 \u043B\u0435\u0441\u0442\u043E\u0449\u0456)","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1 (10-15 \u0441\u043B\u0456\u0432 \u043F\u0440\u043E \u0437\u0430\u043A\u043E\u043D\u043E\u043C\u0456\u0440\u043D\u0456\u0441\u0442\u044C)","\u043F\u0430\u0442\u0435\u0440\u043D 2","\u043F\u0430\u0442\u0435\u0440\u043D 3"],"deepReport":"4-6 \u0440\u0435\u0447\u0435\u043D\u044C \u0433\u043B\u0438\u0431\u043E\u043A\u043E\u0433\u043E \u0437\u0432\u0456\u0442\u0443: \u0446\u0438\u0444\u0440\u0438, \u043F\u0440\u043E\u0433\u0440\u0435\u0441, \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0438, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457"}
 \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0432 \u0434\u0430\u043D\u0438\u0445. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0447\u0435\u0441\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 ("\u0434\u0430\u043D\u0438\u0445 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u043B\u044F \u043F\u0430\u0442\u0435\u0440\u043D\u0456\u0432"). \u041D\u0415 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.`;
-      const userMsg = "\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443." + (aiCtx ? "\n\n" + aiCtx : "") + (stats ? "\n\n" + stats : "");
+      const windowCtx = _buildWindowContext(7);
+      const userMsg = '\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0426\u0418\u0424\u0420\u0418 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 7 \u0414\u041D\u0406\u0412" \u2014 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0436\u043E\u0434\u043D\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438" \u044F\u043A\u0449\u043E \u0442\u0430\u043C \u0432\u0438\u0434\u043D\u043E \u0446\u0438\u0444\u0440\u0438.\n\n' + windowCtx + (aiCtx ? "\n\n" + aiCtx : "") + (stats ? "\n\n" + stats : "");
       const reply = await callAI(systemPrompt, userMsg, {}, "me-weekly-insights");
       if (!reply) return;
       const jsonMatch = reply.match(/\{[\s\S]*\}/);
@@ -10624,6 +10681,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       const parsed = JSON.parse(jsonMatch[0]);
       if (!parsed.oneliner || !parsed.patterns) return;
       const insights = {
+        version: INSIGHTS_VERSION,
         generatedAt: Date.now(),
         oneliner: String(parsed.oneliner).slice(0, 200),
         patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : [],
@@ -10707,7 +10765,10 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       const systemPrompt = `${getOWLPersonality2()} \u0422\u0438 \u0440\u043E\u0431\u0438\u0448 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406\u0419 \u043C\u0456\u0441\u044F\u0446\u044C (${monthLabel}). \u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown:
 {"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043C\u0456\u0441\u044F\u0446\u044F (15-25 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E)","topActivities":["\u0437\u0430\u043D\u044F\u0442\u0442\u044F 1","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 2","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 3"],"moodTrend":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043D\u0430\u0441\u0442\u0440\u0456\u0439 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","projectsProgress":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","financeNote":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0438 \u044F\u043A\u0449\u043E \u0454 \u0434\u0430\u043D\u0456, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u0443\u0441\u0442\u0438\u0439","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1","\u043F\u0430\u0442\u0435\u0440\u043D 2"]}
 \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0446\u0438\u0444\u0440. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u0447\u0435\u0441\u043D\u0438\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0437\u0432\u0456\u0442. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.`;
-      const userMsg = `\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${monthLabel} \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445.${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
+      const windowCtx = _buildWindowContext(30);
+      const userMsg = `\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${monthLabel} \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0426\u0418\u0424\u0420\u0418 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 30 \u0414\u041D\u0406\u0412".
+
+${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const reply = await callAI(systemPrompt, userMsg, {}, "me-monthly-report");
       if (!reply) return;
       const jsonMatch = reply.match(/\{[\s\S]*\}/);
@@ -10992,7 +11053,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
   }
-  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, MONTHLY_KEY, _monthlyGenerating;
+  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating;
   var init_me = __esm({
     "src/tabs/me.js"() {
       init_nav();
@@ -11009,6 +11070,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       meChatHistory = [];
       INSIGHTS_KEY = "nm_me_weekly_insights";
       _insightsGenerating = false;
+      INSIGHTS_VERSION = 2;
       MONTHLY_KEY = "nm_me_monthly_report";
       _monthlyGenerating = false;
       Object.assign(window, {
