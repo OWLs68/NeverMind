@@ -8,7 +8,6 @@
 //   • renderMe() — головний рендер вкладки Я
 //   • renderMeActivityChart() — графік активності тижня
 //   • refreshMeAnalysis() — AI-аналіз з 3 порадами
-//   • renderMeHabitsStats() — блок статистики звичок у вкладці Я
 //   • sendMeChatMessage() / addMeChatMsg() — чат-бар вкладки Я
 //
 // Залежності: core/nav, core/utils, ai/core, tabs/tasks, tabs/habits,
@@ -30,82 +29,6 @@ import { getProjects } from './projects.js';
 // === ME TAB CHAT ===
 let meChatHistory = [];
 
-// Підраховує % виконання звички у вікні [startDaysAgo, endDaysAgo) — для тренду.
-function _habitPctInWindow(habit, startDaysAgo, endDaysAgo, log) {
-  const now = new Date();
-  let total = 0, done = 0;
-  for (let i = startDaysAgo; i < endDaysAgo; i++) {
-    const d = new Date(now); d.setDate(now.getDate() - i);
-    const dow = (d.getDay() + 6) % 7;
-    if (!(habit.days || [0,1,2,3,4]).includes(dow)) continue;
-    total++;
-    if (log[d.toDateString()]?.[habit.id]) done++;
-  }
-  return total > 0 ? Math.round(done / total * 100) : 0;
-}
-
-export function renderMeHabitsStats() {
-  const habits = getHabits();
-  const el = document.getElementById('me-habits-stats-list');
-  const block = document.getElementById('me-habits-stats');
-  if (!el) return;
-  if (habits.length === 0) {
-    if (block) block.style.display = 'none';
-    return;
-  }
-  if (block) block.style.display = 'block';
-  const log = getHabitLog();
-  const today = new Date().toDateString();
-  const todayDow = (new Date().getDay() + 6) % 7;
-
-  // Загальний місячний підсумок: середнє % всіх звичок за 30 днів vs попередні 30
-  const buildHabits = habits.filter(h => h.type !== 'quit');
-  let monthAvg = 0, prevAvg = 0;
-  if (buildHabits.length > 0) {
-    monthAvg = Math.round(buildHabits.reduce((s, h) => s + _habitPctInWindow(h, 0, 30, log), 0) / buildHabits.length);
-    prevAvg = Math.round(buildHabits.reduce((s, h) => s + _habitPctInWindow(h, 30, 60, log), 0) / buildHabits.length);
-  }
-  const trendDiff = monthAvg - prevAvg;
-  const trendArrow = trendDiff > 2 ? '↑' : trendDiff < -2 ? '↓' : '→';
-  const trendColor = trendDiff > 2 ? '#16a34a' : trendDiff < -2 ? '#c2410c' : 'rgba(30,16,64,0.4)';
-  const summaryColor = monthAvg >= 70 ? '#16a34a' : monthAvg >= 40 ? '#d97706' : '#dc2626';
-
-  const summaryHTML = buildHabits.length > 0 ? `
-    <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
-      <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">Місячний огляд</span>
-      <span style="font-size:18px;font-weight:900;color:${summaryColor}">${monthAvg}%
-        <span style="font-size:12px;font-weight:700;color:${trendColor};margin-left:6px">${trendArrow} ${trendDiff >= 0 ? '+' : ''}${trendDiff}%</span>
-      </span>
-    </div>` : '';
-
-  const itemsHTML = habits.map(h => {
-    const pct = getHabitPct(h.id);
-    const streak = getHabitStreak(h.id);
-    const isDoneToday = !!log[today]?.[h.id];
-    const isScheduledToday = (h.days || [0,1,2,3,4]).includes(todayDow);
-    // Тренд цієї звички vs попередні 30 днів
-    const prevPct = h.type !== 'quit' ? _habitPctInWindow(h, 30, 60, log) : 0;
-    const diff = pct - prevPct;
-    const arrow = diff > 2 ? '↑' : diff < -2 ? '↓' : '→';
-    const arrowColor = diff > 2 ? '#16a34a' : diff < -2 ? '#c2410c' : 'rgba(30,16,64,0.3)';
-    const trendChip = h.type !== 'quit' && Math.abs(diff) > 2
-      ? `<span style="font-size:11px;font-weight:700;color:${arrowColor};margin-left:4px">${arrow}${diff >= 0 ? '+' : ''}${diff}%</span>`
-      : '';
-    return `
-    <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:15px;font-weight:600;color:#1e1040">${h.emoji || '⭕'} ${escapeHtml(h.name)}</span>
-        <span style="font-size:13px;font-weight:700;color:${pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626'}">${pct}%${trendChip}</span>
-      </div>
-      <div style="height:5px;background:rgba(30,16,64,0.06);border-radius:3px;margin-bottom:4px">
-        <div style="height:100%;width:${pct}%;background:${pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#ef4444'};border-radius:3px;transition:width 0.5s"></div>
-      </div>
-      <div style="font-size:12px;color:rgba(30,16,64,0.4)">${streak >= 2 ? `🔥 ${streak} дні поспіль · ` : ''}за 30 днів${isScheduledToday ? (isDoneToday ? ' · ✅ сьогодні виконано' : ' · ⏳ сьогодні ще не виконано') : ''}</div>
-    </div>`;
-  }).join('');
-
-  el.innerHTML = summaryHTML + itemsHTML;
-}
 export async function sendMeChatMessage() {
   const input = document.getElementById('me-chat-input');
   const text = input.value.trim();
@@ -264,8 +187,6 @@ export function renderMe() {
     }
   }
 
-  // === ЗВИЧКИ СТАТИСТИКА ===
-  renderMeHabitsStats();
   renderMeHeatmap();
   renderWeeklyInsights();
   renderMonthlyReport();

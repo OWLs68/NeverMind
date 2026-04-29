@@ -20,7 +20,7 @@ import {
 } from '../ai/memory.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { renderEvening } from '../tabs/evening.js';
-import { renderMe, renderMeHabitsStats } from '../tabs/me.js';
+import { renderMe } from '../tabs/me.js';
 import { getFinBudget, renderFinance, saveFinBudget, setCurrency } from '../tabs/finance.js';
 import { currentProdTab, renderProdHabits, updateProdTabCounters } from '../tabs/habits.js';
 import { renderHealth } from '../tabs/health.js';
@@ -135,7 +135,7 @@ export function switchTab(tab) {
   if (tab === 'inbox') { try { renderInbox(); } catch(e) {} }
   if (tab === 'tasks') { renderTasks(); if (currentProdTab === 'habits') renderProdHabits(); updateProdTabCounters(); }
   if (tab === 'notes') { setCurrentNotesFolder(null); renderNotes(); }
-  if (tab === 'me') { renderMe(); renderMeHabitsStats(); }
+  if (tab === 'me') { renderMe(); }
   if (tab === 'evening') { renderEvening(); }
   if (tab === 'finance') { try { renderFinance(); } catch(e) { console.error('renderFinance error:', e); } }
   if (tab === 'health') { try { renderHealth(); } catch(e) {} }
