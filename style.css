@@ -1240,6 +1240,29 @@ body {
   margin-top: 0;
 }
 
+/* OWL Silence Badge — плашка тиші зверху board (Фаза 1+ UVKL1 xHQfi) */
+.owl-silence-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(251,191,36,0.16);
+  border: 1px solid rgba(251,191,36,0.32);
+  border-radius: 14px;
+  padding: 9px 14px;
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.92);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
+  user-select: none;
+}
+.owl-silence-badge:active {
+  transform: scale(0.97);
+  background: rgba(251,191,36,0.24);
+}
+
 /* === COLLAPSED: компактний рядок === */
 .owl-collapsed {
   display: flex;
