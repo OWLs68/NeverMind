@@ -4090,8 +4090,8 @@ ${lines.join("\n")}`;
         <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
-        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456</span>` : ""}
+        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">${t("projects.card.tempo_prefix", "\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456")}: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${t("projects.card.silence_days", "{n} \u0434\u043D. \u0442\u0438\u0448\u0456", { n: silenceDays })}</span>` : ""}
       </div>
       ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
@@ -4101,7 +4101,7 @@ ${lines.join("\n")}`;
       <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
       <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443..."}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || t("projects.card.notes_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443...")}</div>
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>`;
@@ -4145,7 +4145,7 @@ ${lines.join("\n")}`;
     <!-- \u041D\u0430\u0437\u0430\u0434 -->
     <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#3d2e1e">\u041F\u0440\u043E\u0435\u043A\u0442\u0438</span>
+      <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t("projects.workspace.back", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438")}</span>
     </div>
 
     <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
@@ -4164,24 +4164,24 @@ ${lines.join("\n")}`;
       <div style="display:flex;gap:5px">
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
           <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">\u0437\u0430\u0440\u0430\u0437</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">${t("projects.tempo.now", "\u0437\u0430\u0440\u0430\u0437")}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
           <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">${t("projects.tempo.more", "+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C")}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
           <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">${t("projects.tempo.ideal", "\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E")}</div>
         </div>
       </div>
     </div>
 
     <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
     ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
-      <div class="section-label" style="margin-bottom:8px">\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
+      <div class="section-label" style="margin-bottom:8px">${t("projects.section.budget", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:12px;font-weight:700;color:#1e1040">\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E</span>
+        <span style="font-size:12px;font-weight:700;color:#1e1040">${t("projects.budget.spent", "\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E")}</span>
         <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
       </div>
       <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
@@ -4203,7 +4203,7 @@ ${lines.join("\n")}`;
 
     <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
     ${metrics.length > 0 ? `<div class="card-glass">
-      <div class="section-label">\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438</div>
+      <div class="section-label">${t("projects.section.metrics", "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438")}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
           <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
@@ -4215,8 +4215,8 @@ ${lines.join("\n")}`;
     <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
     ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.section.timeline", "\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D")}</div>
+        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
       </div>
       <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
@@ -4241,8 +4241,8 @@ ${lines.join("\n")}`;
     <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
     ${decisions.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL \xB7 \u0430\u0432\u0442\u043E</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.section.decisions", "\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C")}</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t("projects.decisions.owl_auto", "OWL \xB7 \u0430\u0432\u0442\u043E")}</span>
       </div>
       ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
         <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
@@ -4256,23 +4256,23 @@ ${lines.join("\n")}`;
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${_countProjectNotes(p.name)} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "${escapeHtml(p.name)}" \u2192</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t("projects.notes.title", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t("projects.notes.count_in_folder", '{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "{name}" \u2192', { n: _countProjectNotes(p.name), name: escapeHtml(p.name) })}</div>
       </div>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
     <!-- OWL \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 -->
     ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438</div>
+      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">${t("projects.section.risks", "OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438")}</div>
       <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
     </div>` : ""}
 
     <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
     ${resources.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.section.resources", "\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430")}</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t("projects.resources.stage_label", "\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F")}</span>
       </div>
       ${resources.map((r, i) => {
       const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
@@ -4301,7 +4301,7 @@ ${lines.join("\n")}`;
     const isCollapsed = full.style.display === "none";
     collapsed.style.display = isCollapsed ? "none" : "block";
     full.style.display = isCollapsed ? "block" : "none";
-    if (toggle) toggle.textContent = isCollapsed ? "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191" : "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193";
+    if (toggle) toggle.textContent = isCollapsed ? t("projects.timeline.collapse", "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191") : t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193");
   }
   function toggleProjectStep(projectId, stepId) {
     const projects = getProjects();
@@ -4379,7 +4379,7 @@ ${lines.join("\n")}`;
     if (!key) {
       setTimeout(() => addInboxChatMsg(
         "agent",
-        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?`
+        t("projects.intro.no_key", '\u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?', { name: projectName })
       ), 400);
       return;
     }
@@ -4415,7 +4415,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     } catch (e) {
       setTimeout(() => addInboxChatMsg(
         "agent",
-        `\u041F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?`
+        t("projects.intro.network_error", '\u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?', { name: projectName })
       ), 400);
     }
   }
@@ -4479,7 +4479,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addProjectsChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      addProjectsChatMsg("agent", t("projects.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -4516,14 +4516,14 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         if (looksLikeJson) {
           try {
             JSON.parse(replyText);
-            addProjectsChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+            addProjectsChatMsg("agent", t("projects.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
           } catch {
             addProjectsChatMsg("agent", replyText, false, chips);
           }
         } else addProjectsChatMsg("agent", replyText, false, chips);
       }
     } catch {
-      addProjectsChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+      addProjectsChatMsg("agent", t("projects.chat.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     projectsBarLoading = false;
   }
@@ -4683,7 +4683,7 @@ ${lines.join("\n\n")}`;
       const notesAsItems = todayNotes.map((n) => ({ id: "note_" + n.id, text: n.title || n.text || "", mood: "neutral", ts: n.ts || n.createdAt || 0, isNote: true }));
       const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
       if (allItems.length === 0) {
-        momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0442\u0443\u0442</div>';
+        momEl.innerHTML = `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">${t("evening.moments.empty", "\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0442\u0443\u0442")}</div>`;
       } else {
         const moodDots = { positive: "#16a34a", neutral: "#f59e0b", negative: "#ef4444" };
         momEl.innerHTML = allItems.map((m) => {
@@ -4717,13 +4717,16 @@ ${lines.join("\n\n")}`;
     if (wrapBlock) wrapBlock.style.display = "block";
     const top = undone.slice(0, 5);
     const more = undone.length - top.length;
-    container.innerHTML = top.map((t2) => `
+    const lblTomorrow = t("evening.undone.tomorrow", "\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430");
+    const lblWeek = t("evening.undone.week", "\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+    const lblMore = t("evening.undone.more", "\u0456 \u0449\u0435 {n}", { n: more });
+    container.innerHTML = top.map((task) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t2.title)}</div>
-      <button onclick="rescheduleTaskTomorrow('${t2.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430</button>
-      <button onclick="rescheduleTaskWeek('${t2.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</button>
+      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(task.title)}</div>
+      <button onclick="rescheduleTaskTomorrow('${task.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblTomorrow}</button>
+      <button onclick="rescheduleTaskWeek('${task.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblWeek}</button>
     </div>
-  `).join("") + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">\u0456 \u0449\u0435 ${more}</div>` : "");
+  `).join("") + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">${lblMore}</div>` : "");
   }
   function _rescheduleTask(taskId, daysAhead) {
     const tasks = getTasks();
@@ -4754,17 +4757,20 @@ ${lines.join("\n\n")}`;
       return;
     }
     if (wrapBlock) wrapBlock.style.display = "block";
+    const lblHold = t("evening.quit.hold", "\u0422\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u{1F4AA}");
+    const lblRelapse = t("evening.quit.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F");
+    const lblNewStart = t("evening.quit.new_start", "\u043D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u0440\u0442");
     container.innerHTML = quits.map((h) => {
       const s = getQuitStatus(h.id);
       const heldToday = s.lastHeld === todayISO2;
       const streak = s.streak || 0;
-      const streakText = streak > 0 ? `\u0441\u0442\u0440\u0456\u043A ${streak} \u0434\u043D` : "\u043D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u0440\u0442";
+      const streakText = streak > 0 ? t("evening.quit.streak_days", "\u0441\u0442\u0440\u0456\u043A {n} \u0434\u043D", { n: streak }) : lblNewStart;
       if (heldToday) {
         return `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
           <div style="flex:1">
             <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
-            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713 \xB7 ${streakText}</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">${t("evening.quit.held_today", "\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713 \xB7 {s}", { s: streakText })}</div>
           </div>
         </div>`;
       }
@@ -4774,8 +4780,8 @@ ${lines.join("\n\n")}`;
           <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
         </div>
-        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u0422\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u{1F4AA}</button>
-        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button>
+        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
+        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
       </div>`;
     }).join("");
   }
@@ -4834,7 +4840,7 @@ ${lines.join("\n\n")}`;
   function saveMoment() {
     const text = document.getElementById("moment-input-text").value.trim();
     if (!text) {
-      showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443");
+      showToast(t("evening.moment.empty_error", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443"));
       return;
     }
     const moments = getMoments();
@@ -4889,7 +4895,7 @@ ${lines.join("\n\n")}`;
     const textEl = document.getElementById("moment-view-text");
     const summaryBlock = document.getElementById("moment-view-summary-block");
     const summaryEl = document.getElementById("moment-view-summary");
-    if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || "") + " \u041C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F";
+    if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || "") + " " + t("evening.moment.modal_title", "\u041C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F");
     if (timeEl && m.ts) timeEl.textContent = new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
     if (textEl) textEl.textContent = m.text || "";
     if (summaryBlock && summaryEl && m.summary && m.summary !== m.text) {
@@ -20460,9 +20466,9 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     day2.setDate(today.getDate() - 2);
     const dDate = new Date(d);
     dDate.setHours(0, 0, 0, 0);
-    if (dDate.getTime() === today.getTime()) return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    if (dDate.getTime() === yest.getTime()) return "\u0412\u0447\u043E\u0440\u0430";
-    if (dDate.getTime() === day2.getTime()) return "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430";
+    if (dDate.getTime() === today.getTime()) return t("finance.date.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+    if (dDate.getTime() === yest.getTime()) return t("finance.date.yesterday", "\u0412\u0447\u043E\u0440\u0430");
+    if (dDate.getTime() === day2.getTime()) return t("finance.date.day_before_yesterday", "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
     return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? void 0 : "numeric" });
   }
   function openAddTransaction(prefill = {}) {
@@ -20503,9 +20509,9 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const subcats = matchedCat?.subcategories || [];
     let title;
     if (_finTxCategory) {
-      title = isEdit ? isExpense ? `\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438: ${_finTxCategory}` : `\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: ${_finTxCategory}` : _finTxCategory;
+      title = isEdit ? isExpense ? t("finance.tx.edit_expense_with_cat", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438: {cat}", { cat: _finTxCategory }) : t("finance.tx.edit_income_with_cat", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {cat}", { cat: _finTxCategory }) : _finTxCategory;
     } else {
-      title = isEdit ? isExpense ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443" : "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434" : isExpense ? "\u041D\u043E\u0432\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430" : "\u041D\u043E\u0432\u0438\u0439 \u0434\u043E\u0445\u0456\u0434";
+      title = isEdit ? isExpense ? t("finance.tx.edit_expense", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443") : t("finance.tx.edit_income", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434") : isExpense ? t("finance.tx.new_expense", "\u041D\u043E\u0432\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430") : t("finance.tx.new_income", "\u041D\u043E\u0432\u0438\u0439 \u0434\u043E\u0445\u0456\u0434");
     }
     const calcResult = _safeFinCalc(_finTxExpression);
     const displayAmount = _finTxExpression || "0";
@@ -20514,7 +20520,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const showCatPicker = !_finTxCategory || isEdit;
     const catPickerHtml = showCatPicker ? `
     <div id="fntx-cats-wrap" style="margin-bottom:12px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</div>
+      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">${t("finance.tx.category_label", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map((c) => {
       const active = c.name === _finTxCategory;
@@ -20524,7 +20530,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     </div>` : "";
     const subcatsHtml = subcats.length > 0 ? `
     <div style="margin-bottom:12px;padding-left:10px;border-left:2px solid rgba(194,65,12,0.18)">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">${t("finance.tx.subcategory_label", "\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${subcats.map((s) => {
       const active = s === _finTxSubcategory;
@@ -20564,8 +20570,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
     ${isEdit ? "" : `<div style="display:flex;gap:6px;margin-bottom:10px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px">
-      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? "white" : "transparent"};color:${isExpense ? "#c2410c" : "rgba(30,16,64,0.5)"};box-shadow:${isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">\u0412\u0438\u0442\u0440\u0430\u0442\u0430</button>
-      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? "white" : "transparent"};color:${!isExpense ? "#16a34a" : "rgba(30,16,64,0.5)"};box-shadow:${!isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">\u0414\u043E\u0445\u0456\u0434</button>
+      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? "white" : "transparent"};color:${isExpense ? "#c2410c" : "rgba(30,16,64,0.5)"};box-shadow:${isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${t("finance.tx.toggle_expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430")}</button>
+      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? "white" : "transparent"};color:${!isExpense ? "#16a34a" : "rgba(30,16,64,0.5)"};box-shadow:${!isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${t("finance.tx.toggle_income", "\u0414\u043E\u0445\u0456\u0434")}</button>
     </div>`}
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
@@ -20578,16 +20584,16 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span style="font-size:13px;font-weight:600;color:#1e1040">${escapeHtml(dateLabel)}</span>
       </div>
-      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">\u0437\u043C\u0456\u043D\u0438\u0442\u0438</span>
+      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">${t("finance.tx.change_date", "\u0437\u043C\u0456\u043D\u0438\u0442\u0438")}</span>
     </div>
-    <input id="fntx-comment" type="text" placeholder="\u041D\u043E\u0442\u0430\u0442\u043A\u0430 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)" value="${escapeHtml(_finTxComment || "")}"
+    <input id="fntx-comment" type="text" placeholder="${t("finance.tx.comment_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)")}" value="${escapeHtml(_finTxComment || "")}"
       oninput="_finTxComment = this.value"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
     ${calcGrid}
     <div style="display:flex;gap:6px">
-      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
-      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u2713 \u0414\u043E\u0434\u0430\u0442\u0438"}</button>
+      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>${t("finance.tx.btn_delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}</button>` : ""}
+      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">${t("common.btn_cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? t("common.btn_save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438") : t("finance.tx.btn_add", "\u2713 \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>
     </div>
   </div>`;
@@ -20595,11 +20601,11 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   function saveFinTransaction() {
     const amount = _safeFinCalc(_finTxExpression);
     if (!amount || amount <= 0) {
-      showToast("\u0412\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u0443");
+      showToast(t("finance.tx.amount_error", "\u0412\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u0443"));
       return;
     }
     if (!_finTxCategory) {
-      showToast("\u0412\u0438\u0431\u0435\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E");
+      showToast(t("finance.tx.category_error", "\u0412\u0438\u0431\u0435\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"));
       return;
     }
     const txs = getFinance();
@@ -20639,7 +20645,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       tryBoardUpdate("finance");
     } catch (e) {
     }
-    if (item) showUndoToast("\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+    if (item) showUndoToast(t("finance.tx.deleted_toast", "\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const txs = getFinance();
       txs.unshift(item);
       saveFinance(txs);
