@@ -9,7 +9,6 @@
   "src/tabs/evening.js": 33,
   "src/tabs/finance-analytics.js": 50,
   "src/tabs/finance-cats.js": 115,
-  "src/tabs/finance-chat.js": 7,
   "src/tabs/finance-insight.js": 2,
   "src/tabs/finance-modals.js": 28,
   "src/tabs/finance.js": 47,
@@ -20,5 +19,5 @@
   "src/tabs/notes.js": 89,
   "src/tabs/onboarding.js": 192,
   "src/tabs/projects.js": 26,
-  "src/tabs/tasks.js": 17
+  "src/tabs/tasks.js": 5
 }

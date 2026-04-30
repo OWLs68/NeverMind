@@ -3,7 +3,7 @@
 // Винесено з finance.js у рефакторингу 17.04.2026 (сесія gHCOh).
 // ============================================================
 
-import { escapeHtml, parseContentChips } from '../core/utils.js';
+import { escapeHtml, parseContentChips, t } from '../core/utils.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getFinanceChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -61,15 +61,15 @@ function checkFinBudgetWarning(type, category, amount) {
   const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
   if (budget.total > 0) {
     const pct = totalSpent / budget.total;
-    if (pct >= 1) addFinanceChatMsg('agent', `⚠️ Загальний бюджет на місяць перевищено. Витрачено ${formatMoney(totalSpent)} з ${formatMoney(budget.total)}.`);
-    else if (pct >= 0.8) addFinanceChatMsg('agent', `💡 До ліміту місяця залишилось ${formatMoney(budget.total - totalSpent)}.`);
+    if (pct >= 1) addFinanceChatMsg('agent', t('finance.budget_month_exceeded', '⚠️ Загальний бюджет на місяць перевищено. Витрачено {spent} з {total}.', { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+    else if (pct >= 0.8) addFinanceChatMsg('agent', t('finance.budget_month_left', '💡 До ліміту місяця залишилось {left}.', { left: formatMoney(budget.total - totalSpent) }));
   }
   const catLimit = budget.categories?.[category];
   if (catLimit > 0) {
     const catSpent = txs.filter(t => t.category === category).reduce((s, t) => s + t.amount, 0);
     const pct = catSpent / catLimit;
-    if (pct >= 1) addFinanceChatMsg('agent', `⚠️ Ліміт по "${category}" перевищено: ${formatMoney(catSpent)} з ${formatMoney(catLimit)}.`);
-    else if (pct >= 0.8) addFinanceChatMsg('agent', `💡 По "${category}" залишилось ${formatMoney(catLimit - catSpent)}.`);
+    if (pct >= 1) addFinanceChatMsg('agent', t('finance.budget_cat_exceeded', '⚠️ Ліміт по "{cat}" перевищено: {spent} з {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+    else if (pct >= 0.8) addFinanceChatMsg('agent', t('finance.budget_cat_left', '💡 По "{cat}" залишилось {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
   }
 }
 
@@ -79,7 +79,7 @@ export async function sendFinanceBarMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addFinanceChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addFinanceChatMsg('agent', t('common.no_api_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
   addFinanceChatMsg('user', text);
@@ -130,10 +130,10 @@ export async function sendFinanceBarMessage() {
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
-      if (looksLikeJson) { try { JSON.parse(replyText); addFinanceChatMsg('agent', 'Зроблено ✓'); } catch { addFinanceChatMsg('agent', replyText, false, chips); } }
+      if (looksLikeJson) { try { JSON.parse(replyText); addFinanceChatMsg('agent', t('common.done_check', 'Зроблено ✓')); } catch { addFinanceChatMsg('agent', replyText, false, chips); } }
       else addFinanceChatMsg('agent', replyText, false, chips);
     }
-  } catch { addFinanceChatMsg('agent', 'Мережева помилка.'); }
+  } catch { addFinanceChatMsg('agent', t('common.network_error', 'Мережева помилка.')); }
   financeBarLoading = false;
 }
 
