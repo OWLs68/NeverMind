@@ -5,7 +5,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { setupModalSwipeClose } from './tasks.js';
@@ -143,9 +143,9 @@ function _finTxDateLabel(ts) {
   const yest = new Date(today); yest.setDate(today.getDate() - 1);
   const day2 = new Date(today); day2.setDate(today.getDate() - 2);
   const dDate = new Date(d); dDate.setHours(0,0,0,0);
-  if (dDate.getTime() === today.getTime()) return 'Сьогодні';
-  if (dDate.getTime() === yest.getTime()) return 'Вчора';
-  if (dDate.getTime() === day2.getTime()) return 'Позавчора';
+  if (dDate.getTime() === today.getTime()) return t('finance.date.today', 'Сьогодні');
+  if (dDate.getTime() === yest.getTime()) return t('finance.date.yesterday', 'Вчора');
+  if (dDate.getTime() === day2.getTime()) return t('finance.date.day_before_yesterday', 'Позавчора');
   return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
@@ -195,12 +195,14 @@ function _renderTransactionModalBody() {
   let title;
   if (_finTxCategory) {
     title = isEdit
-      ? (isExpense ? `Редагувати: ${_finTxCategory}` : `Редагувати дохід: ${_finTxCategory}`)
+      ? (isExpense
+          ? t('finance.tx.edit_expense_with_cat', 'Редагувати: {cat}', { cat: _finTxCategory })
+          : t('finance.tx.edit_income_with_cat', 'Редагувати дохід: {cat}', { cat: _finTxCategory }))
       : _finTxCategory;
   } else {
     title = isEdit
-      ? (isExpense ? 'Редагувати витрату' : 'Редагувати дохід')
-      : (isExpense ? 'Нова витрата' : 'Новий дохід');
+      ? (isExpense ? t('finance.tx.edit_expense', 'Редагувати витрату') : t('finance.tx.edit_income', 'Редагувати дохід'))
+      : (isExpense ? t('finance.tx.new_expense', 'Нова витрата') : t('finance.tx.new_income', 'Новий дохід'));
   }
 
   const calcResult = _safeFinCalc(_finTxExpression);
@@ -211,7 +213,7 @@ function _renderTransactionModalBody() {
   const showCatPicker = !_finTxCategory || isEdit;
   const catPickerHtml = showCatPicker ? `
     <div id="fntx-cats-wrap" style="margin-bottom:12px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Категорія</div>
+      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">${t('finance.tx.category_label', 'Категорія')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map(c => {
           const active = c.name === _finTxCategory;
@@ -222,7 +224,7 @@ function _renderTransactionModalBody() {
 
   const subcatsHtml = subcats.length > 0 ? `
     <div style="margin-bottom:12px;padding-left:10px;border-left:2px solid rgba(194,65,12,0.18)">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Підкатегорія</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">${t('finance.tx.subcategory_label', 'Підкатегорія')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${subcats.map(s => {
           const active = s === _finTxSubcategory;
@@ -264,8 +266,8 @@ function _renderTransactionModalBody() {
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
     ${isEdit ? '' : `<div style="display:flex;gap:6px;margin-bottom:10px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px">
-      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? 'white' : 'transparent'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.5)'};box-shadow:${isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">Витрата</button>
-      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? 'white' : 'transparent'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.5)'};box-shadow:${!isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">Дохід</button>
+      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? 'white' : 'transparent'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.5)'};box-shadow:${isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${t('finance.tx.toggle_expense', 'Витрата')}</button>
+      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? 'white' : 'transparent'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.5)'};box-shadow:${!isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${t('finance.tx.toggle_income', 'Дохід')}</button>
     </div>`}
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
@@ -278,16 +280,16 @@ function _renderTransactionModalBody() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span style="font-size:13px;font-weight:600;color:#1e1040">${escapeHtml(dateLabel)}</span>
       </div>
-      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">змінити</span>
+      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">${t('finance.tx.change_date', 'змінити')}</span>
     </div>
-    <input id="fntx-comment" type="text" placeholder="Нотатка (необов'язково)" value="${escapeHtml(_finTxComment || '')}"
+    <input id="fntx-comment" type="text" placeholder="${t('finance.tx.comment_placeholder', 'Нотатка (необовʼязково)')}" value="${escapeHtml(_finTxComment || '')}"
       oninput="_finTxComment = this.value"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
     ${calcGrid}
     <div style="display:flex;gap:6px">
-      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Видалити</button>` : ''}
-      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">Скасувати</button>
-      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? 'Зберегти' : '✓ Додати'}</button>
+      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>${t('finance.tx.btn_delete', 'Видалити')}</button>` : ''}
+      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">${t('common.btn_cancel', 'Скасувати')}</button>
+      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? t('common.btn_save', 'Зберегти') : t('finance.tx.btn_add', '✓ Додати')}</button>
     </div>
     </div>
   </div>`;
@@ -295,8 +297,8 @@ function _renderTransactionModalBody() {
 
 export function saveFinTransaction() {
   const amount = _safeFinCalc(_finTxExpression);
-  if (!amount || amount <= 0) { showToast('Введи суму'); return; }
-  if (!_finTxCategory) { showToast('Вибери категорію'); return; }
+  if (!amount || amount <= 0) { showToast(t('finance.tx.amount_error', 'Введи суму')); return; }
+  if (!_finTxCategory) { showToast(t('finance.tx.category_error', 'Вибери категорію')); return; }
   const txs = getFinance();
   const baseFields = {
     type: _finTxCurrentType,
@@ -327,7 +329,7 @@ export function deleteFinTransaction() {
   closeFinTxModal();
   renderFinance();
   try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
-  if (item) showUndoToast('Транзакцію видалено', () => {
+  if (item) showUndoToast(t('finance.tx.deleted_toast', 'Транзакцію видалено'), () => {
     const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
     try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
   });
