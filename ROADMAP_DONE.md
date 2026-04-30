@@ -12,6 +12,20 @@
 
 ## 🏆 Завершені Active-блоки
 
+### ✅ OWL Silence Engine + Pruning Engine (сесії UVKL1 26.04 → C8uQD 27.04 → xHQfi 30.04.2026)
+
+3 фази архітектурного плану `docs/OWL_SILENCE_PRUNING_PLAN.md`. Закриває «stale board» (сова повторює про вже закриті задачі) і дає юзеру структурний важіль «дай спокій».
+
+- **Фаза 1 — Silence Engine.** Tool `request_quiet(hours)` пише у `nm_owl_silence_until`, чек у `shouldOwlSpeak()` блокує всі 4 канали сови (Inbox-табло, Tab-табло, Brain Pulse, Followups) одним рядком. **xHQfi 30.04 розширив:** tool `cancel_quiet` для дострокового скасування (коміт `44bf7fe`) + UI-плашка «🤫 Сова мовчить до HH:MM» з тапом для скасування на 8 вкладках + Inbox (коміт `da057ae`).
+- **Фаза 2 — Pruning Engine** (C8uQD 27.04). Сова заповнює `entityRefs:[task_123,event_456]` у JSON-схемі генерації. `isMessageRelevant()` фільтр у `src/owl/board-utils.js` викидає повідомлення про неактивні сутності з UI і `boardHistory`. Wipe старої історії при rollout (`nm_pruning_wipe_v1_done`).
+- **Фаза 3 — Розділення Контексту** (C8uQD 27.04, коміти `baf91bc` + `68a2674`). Блок `[ВАЖЛИВО — РЕЖИМ ТИШІ]` у `getAIContext()` `src/ai/core.js:56` — у чаті сова відповідає на питання, але не пропонує нового. Блок `[ФАКТ] Нещодавно ЗАКРИТІ` видалено з `getTabBoardContext()` `src/owl/proactive.js:44-47`.
+
+**Закриті баги структурно:** B-100 (тригер-слова «не доставай»), B-102 (USER_STATE сигнал у Brain Pulse — заміняється централізованим silence через `shouldOwlSpeak`).
+
+**Ключові файли:** `src/ai/ui-tools.js` (request_quiet + cancel_quiet), `src/ai/prompts.js` (UI_TOOLS_RULES тригер-фрази), `src/ai/core.js` (силenсе flag у getAIContext), `src/owl/inbox-board.js` (silence-чек у shouldOwlSpeak), `src/owl/proactive.js` (entityRefs генерація + збереження), `src/owl/board.js` (UI badge + перерендер на nm-data-changed), `src/owl/board-utils.js` (isEntityRelevant + isMessageRelevant), `src/core/boot.js` (wipe історії).
+
+---
+
 ### ✅ Рефакторинг документації + «мозок» Claude (сесія g05tu 20.04.2026)
 
 5 фаз, 6 комітів. Навести порядок у документації через переміщення блоків у спеціалізовані файли + створити "мозок" Claude (lessons, INDEX, хуки) щоб у новому чаті швидше орієнтуватись.
