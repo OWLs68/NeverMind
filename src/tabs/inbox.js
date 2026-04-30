@@ -491,6 +491,15 @@ ${aiContext}`;
       // === TOOL CALLING DISPATCH ===
       for (const tc of msg.tool_calls) {
         const args = JSON.parse(tc.function.arguments);
+        // V3 Фаза 1: strip _reasoning_log + log for diagnostics (no handler should see it)
+        if (args._reasoning_log) {
+          try {
+            const log = JSON.parse(localStorage.getItem('nm_reasoning_log') || '[]');
+            log.unshift({ ts: Date.now(), tool: tc.function.name, reasoning: String(args._reasoning_log).slice(0, 400) });
+            localStorage.setItem('nm_reasoning_log', JSON.stringify(log.slice(0, 50)));
+          } catch {}
+          delete args._reasoning_log;
+        }
 
         // UI TOOLS (4.17) — hands-free навігація/фільтри/налаштування
         if (UI_TOOL_NAMES.has(tc.function.name)) {
@@ -928,6 +937,8 @@ async function sendClarifyText() {
         let primaryHandled = false;
         for (const tc of msg.tool_calls) {
           const args = JSON.parse(tc.function.arguments);
+          // V3 Фаза 1: strip _reasoning_log (already logged in primary dispatch)
+          if (args._reasoning_log) delete args._reasoning_log;
           const action = _toolCallToAction(tc.function.name, args);
           if (!action) continue;
           // Тихий канал: пам'ять — зберігаємо без UI
