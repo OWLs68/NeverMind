@@ -27,7 +27,7 @@
 **📄 Повний план з 3 фаз → [`docs/OWL_SILENCE_PRUNING_PLAN.md`](docs/OWL_SILENCE_PRUNING_PLAN.md)**
 
 **Коротко:**
-- **Фаза 1 — Silence Engine** (~1.5 год). Tool `request_quiet(hours)` пише у `nm_owl_silence_until`, чек у централізованому `shouldOwlSpeak()` блокує всі 4 канали сови (Inbox-табло, Tab-табло, Brain Pulse, Followups) одним рядком. Закриває B-100 і B-102 структурно.
+- **Фаза 1 — Silence Engine** ✅ ВИКОНАНО (C8uQD 27.04 + xHQfi 30.04). Tool `request_quiet(hours)` пише у `nm_owl_silence_until`, чек у централізованому `shouldOwlSpeak()` блокує всі 4 канали сови. **xHQfi 30.04 розширив:** tool `cancel_quiet` для дострокового скасування + UI-плашка «🤫 Сова мовчить до HH:MM» з тапом щоб скасувати (8 вкладок + Inbox). Закриває B-100 і B-102 структурно.
 - **Фаза 2 — Pruning Engine** (~3 год). Сова заповнює `entityRefs:[task_123,event_456]` у JSON-схемі генерації (де уже `response_format: json_object`). `isEntityRelevant(ref)` фільтр викидає повідомлення про неактивні сутності з UI і `boardHistory` миттєво при `nm-data-changed`. Wipe старої історії при rollout.
 - **Фаза 3 — Розділення Контексту** (~30 хв). У чат-промпті при тиші — прапорець «не пропонуй нового». Блок `[ФАКТ] Нещодавно ЗАКРИТІ` лишається у чат-контексті (для відповідей юзеру), видаляється з табло-контексту.
 
