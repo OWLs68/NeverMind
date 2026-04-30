@@ -3798,7 +3798,7 @@ ${lines.join("\n")}`;
       const w = Math.round(wrapEl.offsetWidth * openRatio);
       bin = document.createElement("button");
       bin.className = "swipe-open-bin";
-      bin.setAttribute("aria-label", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438");
+      bin.setAttribute("aria-label", t("swipe.delete_button", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438"));
       bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(${binBg},0) 0%, rgba(${binBg},0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
       bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
       bin.addEventListener("click", (e) => {
@@ -3886,6 +3886,7 @@ ${lines.join("\n")}`;
   }
   var init_swipe_delete = __esm({
     "src/ui/swipe-delete.js"() {
+      init_utils();
     }
   });
 
@@ -6880,7 +6881,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     if (allTxs.length < 2) return "";
     const cacheKey = `nm_fin_insight_${period}_${offset}`;
     const cached = localStorage.getItem(cacheKey);
-    let text = "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026";
+    let text = t("finance.insight_loading", "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026");
     if (cached) {
       try {
         text = JSON.parse(cached).text || text;
@@ -17122,9 +17123,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function formatTime(ts) {
     const diff = Date.now() - ts;
-    if (diff < 6e4) return "\u0449\u043E\u0439\u043D\u043E";
-    if (diff < 36e5) return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-    if (diff < 864e5) return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+    if (diff < 6e4) return t("time.just_now", "\u0449\u043E\u0439\u043D\u043E");
+    if (diff < 36e5) return Math.floor(diff / 6e4) + t("time.minutes_ago", " \u0445\u0432 \u0442\u043E\u043C\u0443");
+    if (diff < 864e5) return Math.floor(diff / 36e5) + t("time.hours_ago", " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
   }
   function escapeHtml(s) {
