@@ -13311,22 +13311,38 @@ ${recentlyDone.map((t2) => '- \u2705 "' + t2.title + '"').join("\n")}`);
     try {
       const todayISO2 = now.toISOString().slice(0, 10);
       const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const isPassedToday = (ev) => {
+        if (ev.date !== todayISO2 || !ev.time) return false;
+        const endStr = ev.endTime || ev.time;
+        const evMinutes = parseInt(endStr.slice(0, 2)) * 60 + parseInt(endStr.slice(3, 5));
+        return evMinutes < nowMinutes;
+      };
       const upcoming = [];
+      const passedToday = [];
       getEvents().forEach((ev) => {
         if (ev.date >= todayISO2 && ev.date <= in7) {
+          const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
+          if (isPassedToday(ev)) {
+            passedToday.push(`- \u2713 [ID:${ev.id}] "${ev.title}" \u2014 \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456${tStr} (\u041C\u0418\u041D\u0423\u041B\u041E, \u043D\u0435 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u044F\u043A \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0454)`);
+            return;
+          }
           const diff = Math.round((/* @__PURE__ */ new Date(ev.date + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
-          const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
           upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${when}${tStr}`);
         }
       });
       const allEvents = getEvents();
-      const futureEvents = allEvents.filter((ev) => ev.date >= todayISO2 && !upcoming.some((u) => u.includes(ev.id)));
+      const futureEvents = allEvents.filter((ev) => ev.date >= todayISO2 && !isPassedToday(ev) && !upcoming.some((u) => u.includes(ev.id)));
       if (futureEvents.length > 0) {
         futureEvents.slice(0, 10).forEach((ev) => {
           const tStr = ev.time ? ev.endTime ? ` \u043E ${ev.time}\u2013${ev.endTime}` : ` \u043E ${ev.time}` : "";
           upcoming.push(`- \u{1F4C5} [ID:${ev.id}] "${ev.title}" \u2014 ${ev.date}${tStr}`);
         });
+      }
+      if (passedToday.length > 0) {
+        parts.push(`[\u0424\u0410\u041A\u0422] \u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0436\u0435 \u041C\u0418\u041D\u0423\u041B\u0406 \u043F\u043E\u0434\u0456\u0457 (\u043D\u0435 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445 \u044F\u043A \u043F\u0440\u043E \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456):
+${passedToday.join("\n")}`);
       }
       getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
         if (t2.dueDate >= todayISO2 && t2.dueDate <= in7) {
