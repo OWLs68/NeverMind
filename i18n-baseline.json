@@ -2,7 +2,7 @@
   "src/core/diagnostics.js": 82,
   "src/core/logger.js": 22,
   "src/core/nav.js": 65,
-  "src/core/usage-meter.js": 6,
+  "src/core/usage-meter.js": 2,
   "src/tabs/calendar.js": 62,
   "src/tabs/evening-actions.js": 10,
   "src/tabs/evening-chat.js": 10,
@@ -20,6 +20,5 @@
   "src/tabs/notes.js": 89,
   "src/tabs/onboarding.js": 192,
   "src/tabs/projects.js": 26,
-  "src/tabs/tasks.js": 17,
-  "src/ui/voice-input.js": 6
+  "src/tabs/tasks.js": 17
 }
