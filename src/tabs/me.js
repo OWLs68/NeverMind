@@ -14,7 +14,7 @@
 //             tabs/notes, tabs/finance, tabs/projects, tabs/evening (getMoments)
 // ============================================================
 
-import { showToast, switchTab } from '../core/nav.js';
+import { showToast, switchTab, currentTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
@@ -214,8 +214,7 @@ function _buildWindowContext(days) {
       scheduled++;
       if (log[d.toDateString()]?.[h.id]) done++;
     }
-    const pct = scheduled > 0 ? Math.round(done / scheduled * 100) : 0;
-    return `- "${h.name}": ${done}/${scheduled} (${pct}%)`;
+    return `- "${h.name}": ${done} з ${scheduled} днів`;
   }).join('\n');
 
   // Quit-звички: скільки днів утримався
@@ -267,12 +266,35 @@ function _buildWindowContext(days) {
 const INSIGHTS_KEY = 'nm_me_weekly_insights';
 let _insightsGenerating = false;
 
+// B-113: Auto-refresh on data changes. Debounced 5s — burst of edits = 1 regen.
+// If Me tab not active, mark cache stale; regen on next open.
+let _insightsRegenTimer = null;
+window.addEventListener('nm-data-changed', (e) => {
+  // Skip own dispatches (insights save) — would loop.
+  if (e.detail === 'insights') return;
+  const isMeActive = currentTab === 'me';
+  if (isMeActive) {
+    clearTimeout(_insightsRegenTimer);
+    _insightsRegenTimer = setTimeout(() => {
+      generateWeeklyInsights();
+    }, 5000);
+  } else {
+    try {
+      const cached = _getInsights();
+      if (cached) {
+        cached.version = -1;
+        localStorage.setItem(INSIGHTS_KEY, JSON.stringify(cached));
+      }
+    } catch {}
+  }
+});
+
 function _getInsights() {
   try { return JSON.parse(localStorage.getItem(INSIGHTS_KEY) || 'null'); }
   catch { return null; }
 }
 
-const INSIGHTS_VERSION = 3; // bump якщо змінюється формат/контекст промпту
+const INSIGHTS_VERSION = 4; // bump якщо змінюється формат/контекст промпту
 function _isInsightsStale(insights) {
   if (!insights || !insights.generatedAt) return true;
   if (insights.version !== INSIGHTS_VERSION) return true; // примусова перегенерація після фіксу контексту
@@ -295,7 +317,13 @@ async function generateWeeklyInsights() {
     const stats = getMeStatsContext ? getMeStatsContext() : '';
     const systemPrompt = `${getOWLPersonality()} Ти аналізуєш дані юзера за минулий тиждень і повертаєш ТІЛЬКИ валідний JSON без markdown, без коментарів. Структура:
 {"oneliner":"одне речення-підсумок тижня (12-20 слів, чесно — не лестощі)","patterns":["патерн 1 (10-15 слів про закономірність)","патерн 2","патерн 3"],"deepReport":"4-6 речень глибокого звіту: цифри, прогрес, проблеми, рекомендації"}
-ВАЖЛИВО: пиши українською. НЕ вигадуй факти яких нема в даних. Якщо даних мало — все одно зроби короткий чесний звіт ("даних замало для патернів"). НЕ хвали без причини. Конкретика > загальні фрази.`;
+ВАЖЛИВО: пиши українською. НЕ вигадуй факти яких нема в даних. Якщо даних мало — все одно зроби короткий чесний звіт ("даних замало для патернів"). НЕ хвали без причини. Конкретика > загальні фрази.
+
+⚠️ ФОРМАТ МЕТРИК — ОБОВʼЯЗКОВО АБСОЛЮТНІ ЦИФРИ:
+- ❌ ЗАБОРОНЕНО: "14%", "виконана на 43%", "лише 0%". Юзер не розуміє відсотки за який період.
+- ✅ ПРАВИЛЬНО: "1 з 7 днів за тиждень", "0 з 4 днів", "3 з 7", "займався 3 з 7 днів".
+- Для звичок завжди пиши "X з Y днів" — формат уже у даних.
+- Можеш писати "жодного разу за тиждень", "всі 7 днів поспіль" — але без процентів.`;
     const windowCtx = _buildWindowContext(7);
     const userMsg = 'Згенеруй тижневі інсайти на основі даних. ОБОВʼЯЗКОВО використовуй РЕАЛЬНІ ЦИФРИ з секції "РЕАЛЬНІ ДАНІ ЗА ОСТАННІ 7 ДНІВ" — не кажи "не виконано жодної звички" якщо там видно цифри.\n\n' + windowCtx + (aiCtx ? '\n\n' + aiCtx : '') + (stats ? '\n\n' + stats : '');
     const reply = await callAI(systemPrompt, userMsg, {}, 'me-weekly-insights');

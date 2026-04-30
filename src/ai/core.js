@@ -116,23 +116,38 @@ export function getAIContext() {
   try {
     const todayISO = now.toISOString().slice(0, 10);
     const in7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const isPassedToday = (ev) => {
+      if (ev.date !== todayISO || !ev.time) return false;
+      const endStr = ev.endTime || ev.time;
+      const evMinutes = parseInt(endStr.slice(0, 2)) * 60 + parseInt(endStr.slice(3, 5));
+      return evMinutes < nowMinutes;
+    };
     const upcoming = [];
+    const passedToday = [];
     getEvents().forEach(ev => {
       if (ev.date >= todayISO && ev.date <= in7) {
+        const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
+        if (isPassedToday(ev)) {
+          passedToday.push(`- ✓ [ID:${ev.id}] "${ev.title}" — було сьогодні${tStr} (МИНУЛО, не нагадуй як майбутнє)`);
+          return;
+        }
         const diff = Math.round((new Date(ev.date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
         const when = diff === 0 ? 'СЬОГОДНІ' : diff === 1 ? 'ЗАВТРА' : `через ${diff} дн`;
-        const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
         upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${when}${tStr}`);
       }
     });
     // Всі події (не тільки 7 днів) — для редагування
     const allEvents = getEvents();
-    const futureEvents = allEvents.filter(ev => ev.date >= todayISO && !upcoming.some(u => u.includes(ev.id)));
+    const futureEvents = allEvents.filter(ev => ev.date >= todayISO && !isPassedToday(ev) && !upcoming.some(u => u.includes(ev.id)));
     if (futureEvents.length > 0) {
       futureEvents.slice(0, 10).forEach(ev => {
         const tStr = ev.time ? (ev.endTime ? ` о ${ev.time}–${ev.endTime}` : ` о ${ev.time}`) : '';
         upcoming.push(`- 📅 [ID:${ev.id}] "${ev.title}" — ${ev.date}${tStr}`);
       });
+    }
+    if (passedToday.length > 0) {
+      parts.push(`[ФАКТ] Сьогодні вже МИНУЛІ події (не нагадуй про них як про майбутні):\n${passedToday.join('\n')}`);
     }
     getTasks().filter(t => t.status === 'active' && t.dueDate).forEach(t => {
       if (t.dueDate >= todayISO && t.dueDate <= in7) {
