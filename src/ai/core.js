@@ -336,6 +336,15 @@ export function getAIContext() {
     parts.push(`Настрій дня (обрав користувач): ${moodLabels[eveningMood] || eveningMood}. Адаптуй тон: якщо погано — підтримай, якщо добре — підбадьор.`);
   }
 
+  // Фаза 6 OWL V3 (xHQfi 30.04): довгострокові патерни юзера за 30 днів
+  // (5-7 тенденцій, оновлюються раз на 24 год через requestIdleCallback).
+  try {
+    if (typeof window.getUserPatternsForContext === 'function') {
+      const patternsBlock = window.getUserPatternsForContext();
+      if (patternsBlock) parts.push(patternsBlock);
+    }
+  } catch {}
+
   return parts.join('\n\n');
 }
 

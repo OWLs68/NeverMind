@@ -13848,6 +13848,13 @@ ${routineParts.join("\n")}${nextHint}
       const moodLabels = { bad: "\u{1F614} \u043F\u043E\u0433\u0430\u043D\u043E", meh: "\u{1F610} \u0442\u0430\u043A \u0441\u043E\u0431\u0456", ok: "\u{1F642} \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E", good: "\u{1F604} \u0434\u043E\u0431\u0440\u0435", fire: "\u{1F525} \u0447\u0443\u0434\u043E\u0432\u043E" };
       parts.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u043E\u0431\u0440\u0430\u0432 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447): ${moodLabels[eveningMood] || eveningMood}. \u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D: \u044F\u043A\u0449\u043E \u043F\u043E\u0433\u0430\u043D\u043E \u2014 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0439, \u044F\u043A\u0449\u043E \u0434\u043E\u0431\u0440\u0435 \u2014 \u043F\u0456\u0434\u0431\u0430\u0434\u044C\u043E\u0440.`);
     }
+    try {
+      if (typeof window.getUserPatternsForContext === "function") {
+        const patternsBlock = window.getUserPatternsForContext();
+        if (patternsBlock) parts.push(patternsBlock);
+      }
+    } catch {
+    }
     return parts.join("\n\n");
   }
   function getMeStatsContext() {
@@ -18305,6 +18312,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       console.error("init error:", e);
     }
     showApp();
+    try {
+      if (typeof window.buildProfileIfStale === "function") {
+        window.buildProfileIfStale();
+      }
+    } catch {
+    }
   }
   var currentTabForAnim, NM_KEYS;
   var init_boot = __esm({
@@ -19738,6 +19751,164 @@ ${legacy}`;
   init_unread_badge();
   init_ui_tools();
   init_core();
+
+  // src/ai/profile-builder.js
+  init_core();
+  var KEY_PATTERNS = "nm_user_patterns";
+  var KEY_TS = "nm_user_patterns_ts";
+  var REFRESH_MS = 24 * 60 * 60 * 1e3;
+  var _DAY_MS = 864e5;
+  function _buildProfileSource() {
+    const now = Date.now();
+    const cutoff = now - 30 * _DAY_MS;
+    const sections = [];
+    try {
+      const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+      const closedRecent = tasks.filter((t2) => t2.status === "done" && t2.completedAt >= cutoff);
+      const stillOpen = tasks.filter((t2) => t2.status !== "done").length;
+      sections.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${closedRecent.length} \u0437\u0430\u043A\u0440\u0438\u0442\u043E, ${stillOpen} \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0440\u0430\u0437. \u0417\u0430\u043A\u0440\u0438\u0442\u0456 \u0437 \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u043E\u043C high: ${closedRecent.filter((t2) => t2.priority === "high").length}.`);
+      const hours = closedRecent.map((t2) => new Date(t2.completedAt).getHours()).filter((h) => !isNaN(h));
+      if (hours.length > 0) {
+        const buckets = { \u0440\u0430\u043D\u043E\u043A_6_12: 0, \u0434\u0435\u043D\u044C_12_18: 0, \u0432\u0435\u0447\u0456\u0440_18_23: 0, \u043D\u0456\u0447_23_6: 0 };
+        hours.forEach((h) => {
+          if (h >= 6 && h < 12) buckets.\u0440\u0430\u043D\u043E\u043A_6_12++;
+          else if (h >= 12 && h < 18) buckets.\u0434\u0435\u043D\u044C_12_18++;
+          else if (h >= 18 && h < 23) buckets.\u0432\u0435\u0447\u0456\u0440_18_23++;
+          else buckets.\u043D\u0456\u0447_23_6++;
+        });
+        sections.push(`\u0413\u043E\u0434\u0438\u043D\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0437\u0430\u0434\u0430\u0447: ${JSON.stringify(buckets)}.`);
+      }
+    } catch {
+    }
+    try {
+      const habits = JSON.parse(localStorage.getItem("nm_habits2") || "[]");
+      const log = JSON.parse(localStorage.getItem("nm_habit_log") || "{}");
+      const habitStats = habits.filter((h) => h.type !== "quit").map((h) => {
+        let done = 0, scheduled = 0;
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(now - i * _DAY_MS);
+          const dow = (d.getDay() + 6) % 7;
+          if (!(h.days || [0, 1, 2, 3, 4]).includes(dow)) continue;
+          scheduled++;
+          if (log[d.toDateString()]?.[h.id]) done++;
+        }
+        return `"${h.name}": ${done}/${scheduled}`;
+      });
+      if (habitStats.length > 0) {
+        sections.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${habitStats.join("; ")}.`);
+      }
+    } catch {
+    }
+    try {
+      const finance = JSON.parse(localStorage.getItem("nm_finance") || "[]");
+      const recentTx = finance.filter((t2) => t2.ts >= cutoff);
+      const expenseTx = recentTx.filter((t2) => t2.fin_type === "expense");
+      if (expenseTx.length > 0) {
+        const byCategory = {};
+        expenseTx.forEach((t2) => {
+          const cat = t2.category || "\u0406\u043D\u0448\u0435";
+          byCategory[cat] = (byCategory[cat] || 0) + (parseFloat(t2.amount) || 0);
+        });
+        const topCats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        sections.push(`\u0422\u043E\u043F-5 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${topCats.map(([c, s]) => `${c}=${Math.round(s)}`).join(", ")}.`);
+        sections.push(`\u041A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0439 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${expenseTx.length}.`);
+      }
+    } catch {
+    }
+    try {
+      const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
+      const recentMoments = moments.filter((m) => m.ts >= cutoff);
+      if (recentMoments.length > 0) {
+        const allText = recentMoments.map((m) => (m.text || "") + " " + (m.note || "")).join(" ");
+        const emotionMarkers = (allText.match(/(втомив|стрес|тривог|болить|радіс|щас|злий|сумно|виснаж|погано)/gi) || []).length;
+        sections.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0456\u0432 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${recentMoments.length}. \u041C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 \u0435\u043C\u043E\u0446\u0456\u0439: ${emotionMarkers}.`);
+      }
+    } catch {
+    }
+    try {
+      const events = JSON.parse(localStorage.getItem("nm_events") || "[]");
+      const eventsCount = events.length;
+      sections.push(`\u041F\u043E\u0434\u0456\u0439 \u0443 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456: ${eventsCount}.`);
+    } catch {
+    }
+    return sections.join("\n");
+  }
+  async function _generatePatterns() {
+    const source = _buildProfileSource();
+    if (!source || source.length < 50) return null;
+    const systemPrompt = `\u0422\u0438 \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u043F\u043E\u0432\u0435\u0434\u0456\u043D\u043A\u043E\u0432\u0456 \u0434\u0430\u043D\u0456 \u044E\u0437\u0435\u0440\u0430 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind \u0437\u0430 \u043E\u0441\u0442\u0430\u043D\u043D\u0456 30 \u0434\u043D\u0456\u0432.
+\u0417\u0410\u0412\u0414\u0410\u041D\u041D\u042F: \u0437\u043D\u0430\u0439\u0442\u0438 5-7 \u0414\u041E\u0412\u0413\u041E\u0421\u0422\u0420\u041E\u041A\u041E\u0412\u0418\u0425 \u0422\u0415\u041D\u0414\u0415\u041D\u0426\u0406\u0419 \u2014 \u043F\u0430\u0442\u0435\u0440\u043D\u0438, \u044F\u043A\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0456 \u0434\u043B\u044F \u0430\u0434\u0430\u043F\u0442\u0430\u0446\u0456\u0457 \u0430\u0433\u0435\u043D\u0442\u0430 \u0443 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u0432\u0437\u0430\u0454\u043C\u043E\u0434\u0456\u044F\u0445.
+
+\u0424\u041E\u0420\u041C\u0410\u0422 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u2014 \u0420\u0406\u0412\u041D\u041E \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown:
+{
+  "patterns": [
+    "\u041A\u043E\u0440\u043E\u0442\u043A\u043E (15-25 \u0441\u043B\u0456\u0432) \u2014 \u043E\u0434\u043D\u0430 \u0442\u0435\u043D\u0434\u0435\u043D\u0446\u0456\u044F. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0437 \u0434\u0430\u043D\u0438\u0445: \u0433\u043E\u0434\u0438\u043D\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456, \u044F\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438 \u0442\u0440\u0438\u043C\u0430\u044E\u0442\u044C\u0441\u044F/\u0440\u043E\u0437\u0432\u0430\u043B\u044E\u044E\u0442\u044C\u0441\u044F, \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442, \u0442\u0440\u0438\u0433\u0435\u0440\u0438 \u0441\u0442\u0440\u0435\u0441\u0443.",
+    "\u0414\u0440\u0443\u0433\u0430 \u0442\u0435\u043D\u0434\u0435\u043D\u0446\u0456\u044F...",
+    ...
+  ]
+}
+
+\u0412\u0418\u041C\u041E\u0413\u0418:
+- 5-7 \u043F\u0443\u043D\u043A\u0442\u0456\u0432. \u041D\u0415 \u043C\u0435\u043D\u0448\u0435, \u041D\u0415 \u0431\u0456\u043B\u044C\u0448\u0435.
+- \u0423\u041A\u0420\u0410\u0407\u041D\u0421\u042C\u041A\u0410 \u043C\u043E\u0432\u0430. \u0411\u0435\u0437 \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u0438\u0445 \u0442\u0435\u0440\u043C\u0456\u043D\u0456\u0432.
+- \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u041E \u0437 \u0434\u0430\u043D\u0438\u0445. \u041D\u0415 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438 \u0442\u0438\u043F\u0443 \xAB\u044E\u0437\u0435\u0440 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439\xBB. \u0426\u0438\u0444\u0440\u0438, \u043D\u0430\u0437\u0432\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439/\u0437\u0432\u0438\u0447\u043E\u043A.
+- \u0411\u0415\u0417 \u043E\u0446\u0456\u043D\u043E\u043A ("\u043C\u043E\u043B\u043E\u0434\u0435\u0446\u044C", "\u043F\u043E\u0433\u0430\u043D\u043E"). \u0422\u0456\u043B\u044C\u043A\u0438 \u0441\u043F\u043E\u0441\u0442\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F.
+- \u0411\u0415\u0417 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u044C. \u041A\u043E\u0436\u0435\u043D \u043F\u0443\u043D\u043A\u0442 \u2014 \u043E\u043A\u0440\u0435\u043C\u0430 \u0442\u0435\u043D\u0434\u0435\u043D\u0446\u0456\u044F.
+
+\u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0445\u043E\u0440\u043E\u0448\u043E\u0433\u043E \u043F\u0443\u043D\u043A\u0442\u0443: "\u041D\u0430\u0439\u0430\u043A\u0442\u0438\u0432\u043D\u0456\u0448\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434 \u2014 \u0440\u0430\u043D\u043E\u043A 6-12 (\u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454 18 \u0437 24 \u0437\u0430\u0434\u0430\u0447)."
+\u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u043F\u043E\u0433\u0430\u043D\u043E\u0433\u043E: "\u042E\u0437\u0435\u0440 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439." (\u0431\u0430\u043D\u0430\u043B\u044C\u043D\u043E, \u0431\u0435\u0437 \u0446\u0438\u0444\u0440)`;
+    try {
+      const reply = await callAI(systemPrompt, source, {}, "profile-builder");
+      if (!reply) return null;
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return null;
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.patterns || !Array.isArray(parsed.patterns)) return null;
+      return parsed.patterns.filter((p) => typeof p === "string" && p.length > 10).slice(0, 7);
+    } catch (e) {
+      console.warn("[profile-builder] generation error:", e);
+      return null;
+    }
+  }
+  function buildProfileIfStale() {
+    try {
+      const ts = parseInt(localStorage.getItem(KEY_TS) || "0");
+      if (Date.now() - ts < REFRESH_MS) return;
+      const run = async () => {
+        const patterns = await _generatePatterns();
+        if (patterns && patterns.length > 0) {
+          localStorage.setItem(KEY_PATTERNS, JSON.stringify(patterns));
+          localStorage.setItem(KEY_TS, String(Date.now()));
+          console.log(`[profile-builder] updated with ${patterns.length} patterns`);
+        }
+      };
+      if (typeof requestIdleCallback === "function") {
+        requestIdleCallback(() => run(), { timeout: 1e4 });
+      } else {
+        setTimeout(run, 5e3);
+      }
+    } catch (e) {
+      console.warn("[profile-builder] schedule error:", e);
+    }
+  }
+  function getUserPatternsForContext() {
+    try {
+      const raw = localStorage.getItem(KEY_PATTERNS);
+      if (!raw) return "";
+      const patterns = JSON.parse(raw);
+      if (!Array.isArray(patterns) || patterns.length === 0) return "";
+      return `[\u0414\u041E\u0412\u0413\u041E\u0421\u0422\u0420\u041E\u041A\u041E\u0412\u0406 \u041F\u0410\u0422\u0415\u0420\u041D\u0418 \u042E\u0417\u0415\u0420\u0410 \u0437\u0430 30 \u0434\u043D\u0456\u0432] (\u0434\u043B\u044F \u0441\u0442\u0438\u043B\u044E \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0456 \u0430\u0434\u0430\u043F\u0442\u0430\u0446\u0456\u0457, \u043D\u0435 \u0446\u0438\u0442\u0443\u0439 \u043F\u0440\u044F\u043C\u043E):
+${patterns.map((p) => `- ${p}`).join("\n")}`;
+    } catch {
+      return "";
+    }
+  }
+  try {
+    Object.assign(window, { buildProfileIfStale, getUserPatternsForContext });
+  } catch {
+  }
+
+  // src/app.js
   init_inbox_board();
   init_chips();
   init_board();

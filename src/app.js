@@ -18,6 +18,7 @@ import './ui/unread-badge.js';
 // AI (штучний інтелект)
 import './ai/ui-tools.js';
 import './ai/core.js';
+import './ai/profile-builder.js';
 
 // OWL (агент)
 import './owl/inbox-board.js';

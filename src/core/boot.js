@@ -470,6 +470,14 @@ function bootApp() {
   try { init(); } catch(e) { console.error('init error:', e); }
   // Показуємо одразу — без delay
   showApp();
+  // Фаза 6 OWL V3 (xHQfi 30.04): фоновий збір довгострокових патернів через
+  // requestIdleCallback. Працює раз на 24 год коли пристрій простоює — не
+  // блокує UI. Сам всередині перевіряє чи треба оновлювати.
+  try {
+    if (typeof window.buildProfileIfStale === 'function') {
+      window.buildProfileIfStale();
+    }
+  } catch {}
 }
 
 if (document.readyState === 'loading') {
