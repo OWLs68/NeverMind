@@ -7026,15 +7026,15 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
-      if (pct >= 1) addFinanceChatMsg("agent", `\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(totalSpent)} \u0437 ${formatMoney(budget.total)}.`);
-      else if (pct >= 0.8) addFinanceChatMsg("agent", `\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(budget.total - totalSpent)}.`);
+      if (pct >= 1) addFinanceChatMsg("agent", t("finance.budget_month_exceeded", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+      else if (pct >= 0.8) addFinanceChatMsg("agent", t("finance.budget_month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
       const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
-      if (pct >= 1) addFinanceChatMsg("agent", `\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "${category}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: ${formatMoney(catSpent)} \u0437 ${formatMoney(catLimit)}.`);
-      else if (pct >= 0.8) addFinanceChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
+      if (pct >= 1) addFinanceChatMsg("agent", t("finance.budget_cat_exceeded", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+      else if (pct >= 0.8) addFinanceChatMsg("agent", t("finance.budget_cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
     }
   }
   async function sendFinanceBarMessage() {
@@ -7044,7 +7044,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addFinanceChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      addFinanceChatMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -7103,14 +7103,14 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         if (looksLikeJson) {
           try {
             JSON.parse(replyText);
-            addFinanceChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+            addFinanceChatMsg("agent", t("common.done_check", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
           } catch {
             addFinanceChatMsg("agent", replyText, false, chips);
           }
         } else addFinanceChatMsg("agent", replyText, false, chips);
       }
     } catch {
-      addFinanceChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+      addFinanceChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     financeBarLoading = false;
   }
@@ -14366,7 +14366,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function openAddTask() {
     editingTaskId = null;
     tempSteps = [];
-    document.getElementById("task-modal-title").textContent = "\u041D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430";
+    document.getElementById("task-modal-title").textContent = t("tasks.modal_new", "\u041D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430");
     document.getElementById("task-input-title").value = "";
     document.getElementById("task-input-desc").value = "";
     document.getElementById("task-step-input").value = "";
@@ -14387,7 +14387,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     if (!t2) return;
     editingTaskId = id;
     tempSteps = [...t2.steps || []];
-    document.getElementById("task-modal-title").textContent = "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443";
+    document.getElementById("task-modal-title").textContent = t2("tasks.modal_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443");
     document.getElementById("task-input-title").value = t2.title;
     document.getElementById("task-input-desc").value = t2.desc || "";
     document.getElementById("task-step-input").value = "";
@@ -14446,7 +14446,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     saveTasks(tasks.filter((x) => x.id !== editingTaskId));
     closeTaskModal();
     renderTasks();
-    if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+    if (item) showUndoToast(t("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const t2 = getTasks();
       const idx = Math.min(taskOrigIdx, t2.length);
       t2.splice(idx, 0, item);
@@ -14489,7 +14489,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function saveTask() {
     const title = document.getElementById("task-input-title").value.trim();
     if (!title) {
-      showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0456");
+      showToast(t("tasks.title_required", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0456"));
       return;
     }
     const desc = document.getElementById("task-input-desc").value.trim();
@@ -14629,7 +14629,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         if (item) addToTrash("task", item);
         saveTasks(tasks2.filter((x) => String(x.id) !== id));
         renderTasks();
-        if (item) showUndoToast("\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+        if (item) showUndoToast(t("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
           const t2 = getTasks();
           const idx = Math.min(taskOrigIdx, t2.length);
           t2.splice(idx, 0, item);
@@ -14682,7 +14682,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addTaskChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      addTaskChatMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -14745,7 +14745,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
               saveTasks(allTasks);
               renderTasks();
-              addTaskChatMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 ${parsed.steps.length} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.`);
+              addTaskChatMsg("agent", t2("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
             }
           } else if (parsed.action) {
             if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
@@ -14766,7 +14766,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
                 allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
                 saveTasks(allTasks);
                 renderTasks();
-                addTaskChatMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 ${p.steps.length} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.`);
+                addTaskChatMsg("agent", t2("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
                 handled = true;
               }
             } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
@@ -14777,7 +14777,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         }
       } else handleChatError(addTaskChatMsg);
     } catch {
-      addTaskChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+      addTaskChatMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     taskChatLoading = false;
     btn.disabled = false;
