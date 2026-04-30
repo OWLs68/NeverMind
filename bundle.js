@@ -4173,25 +4173,63 @@ ${lines.join("\n")}`;
     if (h < sc.bedTime - 1) return "evening";
     return "night";
   }
+  function _classifyCdTopic(topic) {
+    if (!topic || typeof topic !== "string") return "info";
+    if (/^praise_/.test(topic)) return "praise";
+    if (/^concern_/.test(topic)) return "concern";
+    if (/^overview_/.test(topic)) return "overview";
+    if (/^(quit_milestone|topic_streak|streak_)/.test(topic)) return "praise";
+    if (/^(brain_stuck|brain_passed|brain_upcoming|brain_project|brain_budget|unusual_tx|corr_|evening_prompt_daily|streak_risk|budget_warn|appointment_soon|stuck_task|event_passed)/.test(topic)) return "concern";
+    if (/^(morning_brief|week_start|week_end|evening_pulse|phase_pulse|brain_tab_|weekly_review)/.test(topic)) return "overview";
+    if (topic === "followup_global") return "info";
+    return "info";
+  }
   function _getOwlCooldowns() {
     try {
-      return JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
+      const raw = JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
+      const isOldFormat = Object.keys(raw).length > 0 && !raw.praise && !raw.concern && !raw.overview && !raw.info;
+      if (isOldFormat) {
+        const migrated = { praise: {}, concern: {}, overview: {}, info: {} };
+        for (const [topic, ts] of Object.entries(raw)) {
+          const type = _classifyCdTopic(topic);
+          migrated[type][topic] = ts;
+        }
+        localStorage.setItem(OWL_CD_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+      return { praise: raw.praise || {}, concern: raw.concern || {}, overview: raw.overview || {}, info: raw.info || {} };
     } catch {
-      return {};
+      return { praise: {}, concern: {}, overview: {}, info: {} };
     }
   }
   function owlCdExpired(topic, ms) {
     const cd = _getOwlCooldowns();
-    return !cd[topic] || Date.now() - cd[topic] > ms;
+    const type = _classifyCdTopic(topic);
+    const ts = cd[type] && cd[type][topic];
+    return !ts || Date.now() - ts > ms;
   }
   function setOwlCd(topic) {
     const cd = _getOwlCooldowns();
-    cd[topic] = Date.now();
+    const type = _classifyCdTopic(topic);
+    if (!cd[type]) cd[type] = {};
+    cd[type][topic] = Date.now();
     const cutoff = Date.now() - 48 * 60 * 60 * 1e3;
-    Object.keys(cd).forEach((k) => {
-      if (cd[k] < cutoff) delete cd[k];
-    });
+    for (const t2 of ["praise", "concern", "overview", "info"]) {
+      if (!cd[t2]) continue;
+      Object.keys(cd[t2]).forEach((k) => {
+        if (cd[t2][k] < cutoff) delete cd[t2][k];
+      });
+    }
     localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
+  }
+  function isCooldownTypeActive(type, ms) {
+    const cd = _getOwlCooldowns();
+    const bucket = cd[type] || {};
+    const now = Date.now();
+    for (const ts of Object.values(bucket)) {
+      if (now - ts <= ms) return true;
+    }
+    return false;
   }
   function shouldOwlSpeak(trigger, opts = {}) {
     const key = localStorage.getItem("nm_gemini_key");
@@ -4215,8 +4253,9 @@ ${lines.join("\n")}`;
     if (activeChatBar && activeChatBar === targetTab) {
       return { speak: false, score: -100, reason: "active-in-target-chat" };
     }
-    if (!owlCdExpired("followup_global", FOLLOWUP_GLOBAL_CD_MS)) {
-      return { speak: false, score: -100, reason: "followup-global-cd" };
+    const followupType = _FOLLOWUP_TRIGGER_TYPE[trigger] || "info";
+    if (isCooldownTypeActive(followupType, FOLLOWUP_GLOBAL_CD_MS)) {
+      return { speak: false, score: -100, reason: `${followupType}-cd-active` };
     }
     let score = 0;
     const reasons = [];
@@ -4229,7 +4268,7 @@ ${lines.join("\n")}`;
       reasons.push("event-passed");
     }
     const speak = score >= SPEAK_THRESHOLD;
-    return { speak, score, reason: reasons.join(", ") };
+    return { speak, score, reason: reasons.join(", "), followupType };
   }
   function _judgeBoard(trigger, targetTab) {
     let score = 0;
@@ -4748,7 +4787,7 @@ ${lines.join("\n")}`;
     }
     return true;
   }
-  var _tabChatState, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var _tabChatState, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, _FOLLOWUP_TRIGGER_TYPE, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
   var init_inbox_board = __esm({
     "src/owl/inbox-board.js"() {
       init_nav();
@@ -4773,6 +4812,19 @@ ${lines.join("\n")}`;
       SPEAK_THRESHOLD = 3;
       FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1e3;
       CHAT_CLOSE_COOLDOWN_MS = 10 * 1e3;
+      _FOLLOWUP_TRIGGER_TYPE = {
+        "stuck-task": "concern",
+        "event-passed": "concern",
+        "event-upcoming": "concern",
+        "budget-warn": "concern",
+        "streak-risk": "concern",
+        "project-stuck": "concern",
+        "appointment-soon": "concern",
+        "streak-milestone": "praise",
+        "achievement": "praise",
+        "morning-brief": "overview",
+        "weekly-review": "overview"
+      };
       OWL_CHAT_KEY = "nm_owl_chat";
       OWL_CHAT_MAX = 20;
       _owlChatOpen = false;
@@ -11745,6 +11797,19 @@ UI TOOLS (\u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F/\u0444\u0456\u0
     \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u044F\u043A\u0449\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0430\u0431\u043E \u0456\u0441\u0442\u043E\u0440\u0456\u044F \u043D\u0430\u0442\u044F\u043A\u0430\u044E\u0442\u044C \u0449\u043E \u0442\u0438\u0448\u0430 \u0430\u043A\u0442\u0438\u0432\u043D\u0430. \u042F\u043A\u0449\u043E \u0442\u0438\u0448\u0456 \u043D\u0435\u043C\u0430 \u2014 tool \u0441\u0430\u043C \u043F\u043E\u0432\u0435\u0440\u043D\u0435 "\u0422\u0438\u0448\u0430 \u043D\u0435 \u0430\u043A\u0442\u0438\u0432\u043D\u0430".
 - \u041F\u0420\u0418\u041D\u0426\u0418\u041F \u041C\u0406\u041D\u0406\u041C\u0410\u041B\u042C\u041D\u041E\u0413\u041E \u0422\u0415\u0420\u0422\u042F: \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0434\u0456\u044E \u0441\u043B\u043E\u0432\u0430\u043C\u0438 ("\u0434\u043E\u0434\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0443 \u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431") \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 save_task \u043D\u0430\u043F\u0440\u044F\u043C\u0443. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 UI tools \u0434\u043B\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0442\u044F \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0445 \u0444\u043E\u0440\u043C \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F. UI tools \u2014 \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457/\u0444\u0456\u043B\u044C\u0442\u0440\u0456\u0432/\u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C.
 
+\u0422\u0418\u0425\u0410 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u042C \u0414\u041B\u042F \u041A\u041E\u0420\u041E\u0422\u041A\u0418\u0425 \u0414\u0406\u0419 (\u0424\u0430\u0437\u0430 4 OWL V3 xHQfi 30.04 \u2014 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 B):
+\u042F\u043A\u0449\u043E \u0437\u0430\u043F\u0438\u0442 \u044E\u0437\u0435\u0440\u0430 \u041A\u041E\u0420\u041E\u0422\u041A\u0418\u0419 (\u22645 \u0441\u043B\u0456\u0432) + \u0447\u0456\u0442\u043A\u043E \u043C\u0430\u043F\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u041E\u0414\u0418\u041D tool \u0431\u0435\u0437 \u0430\u043C\u0431\u0456\u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u0456 \u2192 \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0419 tool \u0456 \u0417\u0410\u041B\u0418\u0428 msg.content \u041F\u041E\u0420\u041E\u0416\u041D\u0406\u041C (null \u0430\u0431\u043E ""). Handler \u0441\u0430\u043C \u043F\u043E\u043A\u0430\u0436\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F ("\u2713 200\u20B4 \u041A\u0430\u0444\u0435"). \u042E\u0437\u0435\u0440 \u0445\u043E\u0442\u0456\u0432 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0434\u0456\u0457, \u043D\u0435 \u0434\u0456\u0430\u043B\u043E\u0433\u0443.
+- "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 200 \u043A\u0430\u0432\u0430" \u2192 save_finance, \u0411\u0415\u0417 "\u042F\u043A \u0441\u043F\u0440\u0430\u0432\u0438 \u0437 \u0444\u0456\u043D\u0430\u043D\u0441\u0430\u043C\u0438 \u0446\u044C\u043E\u0433\u043E \u0442\u0438\u0436\u043D\u044F?"
+- "\u0434\u043E\u0434\u0430\u0439 \u0445\u043B\u0456\u0431 \u0443 \u0437\u0430\u0434\u0430\u0447\u0456" \u2192 save_task, \u0411\u0415\u0417 "\u041A\u043B\u0430\u0441\u043D\u043E \u0449\u043E \u043F\u043B\u0430\u043D\u0443\u0454\u0448"
+- "\u0432\u0438\u043A\u043E\u043D\u0430\u0432 \u0431\u0456\u0433" \u2192 complete_habit, \u0411\u0415\u0417 "\u041C\u043E\u043B\u043E\u0434\u0435\u0446\u044C!"
+- "\u0432\u0438\u0434\u0430\u043B\u0438 \u043E\u0441\u0442\u0430\u043D\u043D\u0454" \u2192 restore_deleted/delete_*, \u0411\u0415\u0417 "\u0412\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E"
+- "200 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438" \u2192 save_finance, \u0411\u0415\u0417 \u0437\u0430\u0439\u0432\u043E\u0433\u043E \u0442\u0435\u043A\u0441\u0442\u0443
+\u0412\u0418\u041D\u042F\u0422\u041A\u0418 \u2014 \u043A\u043E\u043B\u0438 text \u041F\u041E\u0422\u0420\u0406\u0411\u0415\u041D \u043F\u043E\u043F\u0440\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0432\u0432\u0456\u0434:
+- \u041D\u0435\u0432\u043F\u0435\u0432\u043D\u0435\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2192 \u0432\u0438\u043A\u043B\u0438\u043A clarify (\u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u0435).
+- Tool failed (\u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0430\u043B\u0456\u0434\u0430\u0446\u0456\u0457, \u0434\u0443\u0431\u043B\u0456\u043A\u0430\u0442) \u2192 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F.
+- \u042E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 (\u043D\u0435 \u0434\u0456\u044F): "\u0449\u043E \u044F \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432?" \u2192 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.
+- 5+ \u0441\u043B\u0456\u0432 \u0430\u0431\u043E \u0441\u043A\u043B\u0430\u0434\u043D\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u2192 \u043D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0437 msg.content.
+
 \u041D\u0415\u0414\u041E\u0421\u0422\u0423\u041F\u041D\u0406 \u0424\u0423\u041D\u041A\u0426\u0406\u0407 (B-90 20.04 NRw8G \u2014 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F, \u0441\u043A\u0430\u0436\u0438 \u0447\u0435\u0441\u043D\u043E):
 - "\u0442\u0435\u043C\u043D\u0430 \u0442\u0435\u043C\u0430" / "dark mode" / "\u0442\u0435\u043C\u043D\u0438\u0439 \u0440\u0435\u0436\u0438\u043C" / "\u043D\u0456\u0447\u043D\u0438\u0439 \u0440\u0435\u0436\u0438\u043C" \u2192 \u0427\u0415\u0421\u041D\u041E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439: "\u0422\u0435\u043C\u043D\u043E\u0457 \u0442\u0435\u043C\u0438 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 \u2014 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0437\u043D\u0456\u0448\u0435." \u041D\u0415 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 "\u0437\u0440\u043E\u0431\u0438 \u0446\u0435 \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445" (\u0442\u0430\u043A\u0438\u0445 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C \u043D\u0435 \u0456\u0441\u043D\u0443\u0454).
 - "\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0448\u0440\u0438\u0444\u0442" / "\u0437\u043C\u0456\u043D\u0438 \u0440\u043E\u0437\u043C\u0456\u0440 \u0442\u0435\u043A\u0441\u0442\u0443" \u2192 "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C \u0448\u0440\u0438\u0444\u0442\u0443 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454."
@@ -17047,7 +17112,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const text = await _generateEveningPrompt();
       if (!text) return;
       addMsgForTab("evening", "agent", text);
-      setOwlCd("followup_global");
+      setOwlCd("overview_global");
       setOwlCd("evening_prompt_daily");
     } finally {
       _checkInFlight = false;
@@ -17408,7 +17473,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const { tab, text, priority, reason } = args;
       if (!tab || !text) return;
       addMsgForTab(tab, "agent", text);
-      setOwlCd("followup_global");
+      const isPraise = /^(streak-milestone|achievement|streak_milestone)$/i.test(reason || "");
+      setOwlCd(isPraise ? "praise_global" : "concern_global");
       setOwlCd(`brain_tab_${tab}`);
       const relevantSignals = allowedSignals.filter((s) => s.tab === tab);
       for (const s of relevantSignals) {

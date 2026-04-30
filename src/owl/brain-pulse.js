@@ -94,9 +94,15 @@ export async function brainPulse() {
     // Вставляємо у чат (автобейдж з Фази A)
     addMsgForTab(tab, 'agent', text);
 
-    // Cooldowns
-    setOwlCd('followup_global');      // спільний з followups.js — не спам мозком+followup
-    setOwlCd(`brain_tab_${tab}`);     // ця вкладка мовчить 24 год
+    // Typed Cooldowns (Фаза 4 OWL V3 xHQfi 30.04):
+    // Brain Pulse сигнали — переважно concern (стривожена реакція на ризики:
+    // дедлайни, бюджет, пропуски, події). Якщо буде praise-сигнал ('streak-milestone',
+    // 'achievement') — діватися окремо у concern_global+praise_global.
+    // Тип визначається з reason / signal type. За замовчуванням — concern бо
+    // 7 з 9 сигналів Brain Pulse саме про тривогу.
+    const isPraise = /^(streak-milestone|achievement|streak_milestone)$/i.test(reason || '');
+    setOwlCd(isPraise ? 'praise_global' : 'concern_global');
+    setOwlCd(`brain_tab_${tab}`);     // ця вкладка мовчить 24 год (info-тип, незалежний від global)
 
     // Per-signal cooldown — ставимо для ВСІХ сигналів тієї ж вкладки
     // (мозок вибрав один, інші того ж типу теж "погасилися")
