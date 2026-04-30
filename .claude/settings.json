@@ -81,6 +81,15 @@
             "command": "bash .claude/hooks/md-index-reminder.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/lesson-reminder.sh"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
