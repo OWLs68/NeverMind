@@ -9915,19 +9915,19 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   }
   async function generateEveningRitualSummary(addMsg) {
     if (isEveningClosed()) {
-      if (addMsg) addMsg("agent", "\u0422\u0438 \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0432 \u0434\u0435\u043D\u044C. \u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}");
+      if (addMsg) addMsg("agent", t("evening.already_closed", "\u0422\u0438 \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0432 \u0434\u0435\u043D\u044C. \u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}"));
       return { ok: true, already: true };
     }
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      if (addMsg) addMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      if (addMsg) addMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return { ok: false, err: "no key" };
     }
     if (addMsg) addMsg("typing", "");
     const systemPrompt = getEveningSummaryPromptV2() + "\n\n" + getAIContext();
     const reply = await callAI(systemPrompt, "\u041F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u0434\u043D\u044F \u2014 \u0456\u043D\u0441\u0430\u0439\u0442, \u043D\u0435 \u0446\u0438\u0444\u0440\u0438.", {}, "evening-actions");
     if (!reply) {
-      if (addMsg) addMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.");
+      if (addMsg) addMsg("agent", t("evening.summary_failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A."));
       return { ok: false, err: "no reply" };
     }
     const text = reply.trim().slice(0, 600);
@@ -9950,7 +9950,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           const tasks = getTasks();
           const newTask = {
             id: Date.now(),
-            title: args.title || args.text || "\u0417\u0430\u0434\u0430\u0447\u0430",
+            title: args.title || args.text || t("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
             desc: args.text && args.text !== args.title ? args.text : "",
             steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
             status: "active",
@@ -9985,7 +9985,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "create_event": {
-          const res = addEventDedup({ id: Date.now(), title: args.title || "\u041F\u043E\u0434\u0456\u044F", date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
+          const res = addEventDedup({ id: Date.now(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
           if (!res.added) return { ok: true, duplicate: true };
           logRecentAction("create_event", args.title || "", "evening");
           return { ok: true };
@@ -9996,7 +9996,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
             id: Date.now(),
             type: args.fin_type === "income" ? "income" : "expense",
             amount: parseFloat(args.amount) || 0,
-            category: args.category || "\u0406\u043D\u0448\u0435",
+            category: args.category || t("default.category_other", "\u0406\u043D\u0448\u0435"),
             comment: args.fin_comment || "",
             ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
           });
@@ -10006,7 +10006,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "set_reminder": {
           const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          const res = addEventDedup({ id: Date.now(), title: "\u23F0 " + (args.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
+          const res = addEventDedup({ id: Date.now(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
           if (!res.added) return { ok: true, duplicate: true };
           return { ok: true };
         }
@@ -10225,7 +10225,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (started[topic]) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      addEveningBarMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     addEveningBarMsg("typing", "");
@@ -10263,11 +10263,11 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         started[topic] = Date.now();
         localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
       } else {
-        safeAgentReply("\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?", addEveningBarMsg);
+        safeAgentReply(t("evening.tell_me_how", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?"), addEveningBarMsg);
       }
     } catch (e) {
       console.warn("[openEveningTopic]", e);
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+      addEveningBarMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
   }
   function showEveningBarMessages() {
@@ -10325,7 +10325,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addEveningBarMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      addEveningBarMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -10361,11 +10361,11 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const { text: replyText, chips } = _parseContentChips(msg.content || "");
       if (replyText) addEveningBarMsg("agent", replyText, false, chips);
       else if (!msg.tool_calls || msg.tool_calls.length === 0) {
-        safeAgentReply("\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435.", addEveningBarMsg);
+        safeAgentReply(t("common.didnt_understand", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435."), addEveningBarMsg);
       }
     } catch (e) {
       console.warn("[sendEveningBarMessage]", e);
-      addEveningBarMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+      addEveningBarMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     eveningBarLoading = false;
   }
