@@ -950,41 +950,43 @@ ${logLines}
     const el = typeof document !== "undefined" && document.getElementById("usage-meter-display");
     if (!el) return;
     const stats = getUsageStats();
-    const projLine = stats.projection !== null ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>` : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F 3 \u0434\u043D\u0456\u0432 \u0434\u0430\u043D\u0438\u0445</div>`;
+    const projLine = stats.projection !== null ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>${t("usage.projection_label", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F")}</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>` : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">${t("usage.projection_pending", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F 3 \u0434\u043D\u0456\u0432 \u0434\u0430\u043D\u0438\u0445")}</div>`;
     const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
+    const callsLabel = t("usage.calls_short", "\u0432\u0438\u043A\u043B");
     el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
-      <span>\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456</span>
-      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} \u0432\u0438\u043A\u043B)</span></span>
+      <span>${t("usage.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} ${callsLabel})</span></span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600;margin-top:6px">
-      <span>\u0426\u0435\u0439 \u043C\u0456\u0441\u044F\u0446\u044C</span>
-      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} \u0432\u0438\u043A\u043B)</span></span>
+      <span>${t("usage.this_month", "\u0426\u0435\u0439 \u043C\u0456\u0441\u044F\u0446\u044C")}</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} ${callsLabel})</span></span>
     </div>
     ${projLine}
     ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ""}
-    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F ${RETENTION_DAYS} \u0434\u043D\u0456\u0432. \u0414\u0430\u043D\u0456 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0456.</div>
+    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">${t("usage.retention_note", "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F {days} \u0434\u043D\u0456\u0432. \u0414\u0430\u043D\u0456 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0456.", { days: RETENTION_DAYS })}</div>
   `;
   }
   async function exportWithToast() {
     const r = await exportUsageJSON();
     if (r.ok && typeof window !== "undefined" && window.showToast) {
-      window.showToast(`\u{1F4CB} \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E ${r.calls} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u0431\u0443\u0444\u0435\u0440`, 2500);
+      window.showToast(t("usage.toast_copied", "\u{1F4CB} \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u0431\u0443\u0444\u0435\u0440", { n: r.calls }), 2500);
     } else if (typeof window !== "undefined" && window.showToast) {
-      window.showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438: " + (r.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"), 3e3);
+      window.showToast(t("usage.toast_copy_fail", "\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438: {err}", { err: r.error || t("usage.unknown", "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E") }), 3e3);
     }
   }
   async function clearWithConfirm() {
-    if (typeof confirm !== "undefined" && !confirm("\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u043B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442? \u0414\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0441\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438.")) return;
+    if (typeof confirm !== "undefined" && !confirm(t("usage.confirm_clear", "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u043B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442? \u0414\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0441\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438."))) return;
     clearUsageLog();
     renderUsageMeter();
     if (typeof window !== "undefined" && window.showToast) {
-      window.showToast("\u{1F5D1}\uFE0F \u041B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u043E", 2e3);
+      window.showToast(t("usage.toast_cleared", "\u{1F5D1}\uFE0F \u041B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u043E"), 2e3);
     }
   }
   var STORAGE_KEY, RETENTION_DAYS, PRICING;
   var init_usage_meter = __esm({
     "src/core/usage-meter.js"() {
+      init_utils();
       STORAGE_KEY = "nm_usage_log";
       RETENTION_DAYS = 31;
       PRICING = {
@@ -19607,6 +19609,7 @@ ${legacy}`;
   init_swipe_delete();
 
   // src/ui/voice-input.js
+  init_utils();
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var SUPPORTED = !!SR;
   var MIC_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
@@ -19614,7 +19617,7 @@ ${legacy}`;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "voice-btn";
-    btn.setAttribute("aria-label", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434");
+    btn.setAttribute("aria-label", t("voice.input", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434"));
     btn.style.cssText = "width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.2s,transform 0.2s";
     btn.innerHTML = MIC_SVG;
     return btn;
@@ -19636,7 +19639,7 @@ ${legacy}`;
         rec.maxAlternatives = 1;
       } catch (e) {
         try {
-          window.showToast && window.showToast("\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439");
+          window.showToast && window.showToast(t("voice.unavailable", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439"));
         } catch {
         }
         rec = null;
@@ -19661,10 +19664,10 @@ ${legacy}`;
       };
       rec.onerror = (ev) => {
         const err = ev.error || "";
-        let msg = "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430";
-        if (err === "not-allowed" || err === "service-not-allowed") msg = "\u0414\u043E\u0437\u0432\u043E\u043B\u044C \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445";
-        else if (err === "no-speech") msg = "\u041D\u0435 \u0447\u0443\u044E \u0433\u043E\u043B\u043E\u0441\u0443";
-        else if (err === "network") msg = "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0434\u043B\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F";
+        let msg = t("voice.error_mic", "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430");
+        if (err === "not-allowed" || err === "service-not-allowed") msg = t("voice.error_permission", "\u0414\u043E\u0437\u0432\u043E\u043B\u044C \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445");
+        else if (err === "no-speech") msg = t("voice.error_no_speech", "\u041D\u0435 \u0447\u0443\u044E \u0433\u043E\u043B\u043E\u0441\u0443");
+        else if (err === "network") msg = t("voice.error_network", "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0434\u043B\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F");
         try {
           window.showToast && window.showToast(msg);
         } catch {
