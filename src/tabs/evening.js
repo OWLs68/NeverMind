@@ -7,7 +7,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction } from '../core/utils.js';
+import { escapeHtml, logRecentAction, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
@@ -157,7 +157,7 @@ export function renderEvening() {
     const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
 
     if (allItems.length === 0) {
-      momEl.innerHTML = '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">Моменти і нотатки за сьогодні зʼявляться тут</div>';
+      momEl.innerHTML = `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">${t('evening.moments.empty', 'Моменти і нотатки за сьогодні зʼявляться тут')}</div>`;
     } else {
       const moodDots = { positive: '#16a34a', neutral: '#f59e0b', negative: '#ef4444' };
       momEl.innerHTML = allItems.map(m => {
@@ -196,13 +196,17 @@ function renderEveningUndoneTasks() {
   if (wrapBlock) wrapBlock.style.display = 'block';
   const top = undone.slice(0, 5);
   const more = undone.length - top.length;
-  container.innerHTML = top.map(t => `
+  // Виносимо переклади у константи бо у `.map(t => ...)` змінна `t` шедовить функцію перекладу
+  const lblTomorrow = t('evening.undone.tomorrow', 'На завтра');
+  const lblWeek = t('evening.undone.week', 'На тиждень');
+  const lblMore = t('evening.undone.more', 'і ще {n}', { n: more });
+  container.innerHTML = top.map(task => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
-      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(t.title)}</div>
-      <button onclick="rescheduleTaskTomorrow('${t.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На завтра</button>
-      <button onclick="rescheduleTaskWeek('${t.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">На тиждень</button>
+      <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(task.title)}</div>
+      <button onclick="rescheduleTaskTomorrow('${task.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblTomorrow}</button>
+      <button onclick="rescheduleTaskWeek('${task.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblWeek}</button>
     </div>
-  `).join('') + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">і ще ${more}</div>` : '');
+  `).join('') + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">${lblMore}</div>` : '');
 }
 
 function _rescheduleTask(taskId, daysAhead) {
@@ -236,17 +240,20 @@ function renderEveningQuitHabits() {
     return;
   }
   if (wrapBlock) wrapBlock.style.display = 'block';
+  const lblHold = t('evening.quit.hold', 'Тримався 💪');
+  const lblRelapse = t('evening.quit.relapse', 'Зірвався');
+  const lblNewStart = t('evening.quit.new_start', 'новий старт');
   container.innerHTML = quits.map(h => {
     const s = getQuitStatus(h.id);
     const heldToday = s.lastHeld === todayISO;
     const streak = s.streak || 0;
-    const streakText = streak > 0 ? `стрік ${streak} дн` : 'новий старт';
+    const streakText = streak > 0 ? t('evening.quit.streak_days', 'стрік {n} дн', { n: streak }) : lblNewStart;
     if (heldToday) {
       return `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
           <div style="flex:1">
             <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
-            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">Тримаєшся сьогодні ✓ · ${streakText}</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">${t('evening.quit.held_today', 'Тримаєшся сьогодні ✓ · {s}', { s: streakText })}</div>
           </div>
         </div>`;
     }
@@ -256,8 +263,8 @@ function renderEveningQuitHabits() {
           <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
         </div>
-        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Тримався 💪</button>
-        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Зірвався</button>
+        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
+        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
       </div>`;
   }).join('');
 }
@@ -318,7 +325,7 @@ function updateMoodButtons() {
 
 function saveMoment() {
   const text = document.getElementById('moment-input-text').value.trim();
-  if (!text) { showToast('Введіть текст моменту'); return; }
+  if (!text) { showToast(t('evening.moment.empty_error', 'Введіть текст моменту')); return; }
   const moments = getMoments();
   const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
   moments.push(newMoment);
@@ -378,7 +385,7 @@ function openMomentView(momentId) {
   const summaryBlock = document.getElementById('moment-view-summary-block');
   const summaryEl = document.getElementById('moment-view-summary');
 
-  if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || '') + ' Момент дня';
+  if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || '') + ' ' + t('evening.moment.modal_title', 'Момент дня');
   if (timeEl && m.ts) timeEl.textContent = new Date(m.ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
   if (textEl) textEl.textContent = m.text || '';
 
