@@ -376,24 +376,95 @@ export function getDayPhase() {
   return 'night';
 }
 
-// === COOLDOWN-система (замінює owlAlreadySaid) ===
-// nm_owl_cooldowns = { topicKey: lastFiredTimestamp }
+// === COOLDOWN-система (Typed Cooldowns — Фаза 4 OWL Reasoning V3, xHQfi 30.04) ===
+//
+// Раніше: nm_owl_cooldowns = { topicKey: lastFiredTimestamp } — плоский map.
+// Один глобальний "followup_global" CD блокував усі типи повідомлень разом
+// (похвала за стрик глушила тривогу про бюджет на 1 год).
+//
+// Тепер: внутрішня структура { type: { topicKey: ts } } з 4 типами:
+//   • 'praise'   — похвала, стрики, milestone, реакція на закриту дію
+//   • 'concern'  — тривога: дедлайн, бюджет, пропуск звички, stuck-task
+//   • 'overview' — огляд: ранковий брифінг, тиждень, фаза дня
+//   • 'info'     — все інше (default fallback)
+//
+// API назовні (setOwlCd/owlCdExpired) НЕ змінилось — приймають topic-string,
+// тип визначається автоматично через _classifyCdTopic(topic). Backward-compat
+// для існуючих 30+ call-sites без зміни.
+//
+// Окремі global CD per-type: praise_global / concern_global / overview_global —
+// блокують тільки свій канал follow-ups.
 const OWL_CD_KEY = 'nm_owl_cooldowns';
 
-function _getOwlCooldowns() {
-  try { return JSON.parse(localStorage.getItem(OWL_CD_KEY) || '{}'); } catch { return {}; }
+// Класифікація топіка → тип. Дивиться на префікс або підрядок.
+function _classifyCdTopic(topic) {
+  if (!topic || typeof topic !== 'string') return 'info';
+  // Явні per-type global ключі (Фаза 4)
+  if (/^praise_/.test(topic))   return 'praise';
+  if (/^concern_/.test(topic))  return 'concern';
+  if (/^overview_/.test(topic)) return 'overview';
+  // Existing topics (mapping)
+  if (/^(quit_milestone|topic_streak|streak_)/.test(topic)) return 'praise';
+  if (/^(brain_stuck|brain_passed|brain_upcoming|brain_project|brain_budget|unusual_tx|corr_|evening_prompt_daily|streak_risk|budget_warn|appointment_soon|stuck_task|event_passed)/.test(topic)) return 'concern';
+  if (/^(morning_brief|week_start|week_end|evening_pulse|phase_pulse|brain_tab_|weekly_review)/.test(topic)) return 'overview';
+  // Legacy глобальний follow-up — більше не використовується (заміна на per-type)
+  if (topic === 'followup_global') return 'info';
+  return 'info';
 }
+
+// Внутрішній формат структурного сховища. Auto-migration зі старого плоского.
+function _getOwlCooldowns() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(OWL_CD_KEY) || '{}');
+    // Migration: якщо НЕ містить ключів type-buckets — це старий плоский формат
+    const isOldFormat = Object.keys(raw).length > 0 &&
+                         !raw.praise && !raw.concern && !raw.overview && !raw.info;
+    if (isOldFormat) {
+      const migrated = { praise:{}, concern:{}, overview:{}, info:{} };
+      for (const [topic, ts] of Object.entries(raw)) {
+        const type = _classifyCdTopic(topic);
+        migrated[type][topic] = ts;
+      }
+      localStorage.setItem(OWL_CD_KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+    return { praise: raw.praise||{}, concern: raw.concern||{}, overview: raw.overview||{}, info: raw.info||{} };
+  } catch {
+    return { praise:{}, concern:{}, overview:{}, info:{} };
+  }
+}
+
 export function owlCdExpired(topic, ms) {
   const cd = _getOwlCooldowns();
-  return !cd[topic] || (Date.now() - cd[topic]) > ms;
+  const type = _classifyCdTopic(topic);
+  const ts = cd[type] && cd[type][topic];
+  return !ts || (Date.now() - ts) > ms;
 }
+
 export function setOwlCd(topic) {
   const cd = _getOwlCooldowns();
-  cd[topic] = Date.now();
-  // Чистимо записи старші 48 год
+  const type = _classifyCdTopic(topic);
+  if (!cd[type]) cd[type] = {};
+  cd[type][topic] = Date.now();
+  // Чистимо записи старші 48 год у всіх типах
   const cutoff = Date.now() - 48 * 60 * 60 * 1000;
-  Object.keys(cd).forEach(k => { if (cd[k] < cutoff) delete cd[k]; });
+  for (const t of ['praise','concern','overview','info']) {
+    if (!cd[t]) continue;
+    Object.keys(cd[t]).forEach(k => { if (cd[t][k] < cutoff) delete cd[t][k]; });
+  }
   localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
+}
+
+// Чи активний хоч один топік даного типу за останні `ms` (per-type global CD).
+// Використовується у _judgeFollowup щоб похвала і тривога не глушили одна одну.
+export function isCooldownTypeActive(type, ms) {
+  const cd = _getOwlCooldowns();
+  const bucket = cd[type] || {};
+  const now = Date.now();
+  for (const ts of Object.values(bucket)) {
+    if ((now - ts) <= ms) return true;
+  }
+  return false;
 }
 
 // ============================================================
@@ -446,14 +517,32 @@ export function shouldOwlSpeak(trigger, opts = {}) {
 // Канал 'chat-followup' — follow-up у контекстний чат вкладки
 // Тригери: 'stuck-task', 'event-passed' (детекція у followups.js)
 // ============================================================
+// Карта тригерів на тип follow-up для typed cooldown'ів (Фаза 4 OWL V3 xHQfi 30.04)
+const _FOLLOWUP_TRIGGER_TYPE = {
+  'stuck-task': 'concern',
+  'event-passed': 'concern',
+  'event-upcoming': 'concern',
+  'budget-warn': 'concern',
+  'streak-risk': 'concern',
+  'project-stuck': 'concern',
+  'appointment-soon': 'concern',
+  'streak-milestone': 'praise',
+  'achievement': 'praise',
+  'morning-brief': 'overview',
+  'weekly-review': 'overview',
+};
+
 function _judgeFollowup(trigger, targetTab) {
   // Не перебивати юзера коли він сидить у цьому ж чаті
   if (activeChatBar && activeChatBar === targetTab) {
     return { speak: false, score: -100, reason: 'active-in-target-chat' };
   }
-  // Глобальний антиспам follow-ups — не більше одного на годину
-  if (!owlCdExpired('followup_global', FOLLOWUP_GLOBAL_CD_MS)) {
-    return { speak: false, score: -100, reason: 'followup-global-cd' };
+  // Per-type global CD (Фаза 4): антиспам follow-ups розбито за типами.
+  // Похвала за стрик не глушить тривогу про бюджет — вони дивляться на свої
+  // окремі CD-buckets. Старий 'followup_global' замінено на '<type>_global'.
+  const followupType = _FOLLOWUP_TRIGGER_TYPE[trigger] || 'info';
+  if (isCooldownTypeActive(followupType, FOLLOWUP_GLOBAL_CD_MS)) {
+    return { speak: false, score: -100, reason: `${followupType}-cd-active` };
   }
   // Базове нарахування очок — follow-up тригери мають високий пріоритет
   // (юзер сам створив контекст: задача висить / подія минула)
@@ -463,7 +552,7 @@ function _judgeFollowup(trigger, targetTab) {
   if (trigger === 'event-passed') { score += 5; reasons.push('event-passed'); }
   // майбутні канальні тригери (welcome-back-in-chat, after-action) додавати тут
   const speak = score >= SPEAK_THRESHOLD;
-  return { speak, score, reason: reasons.join(', ') };
+  return { speak, score, reason: reasons.join(', '), followupType };
 }
 
 // ============================================================

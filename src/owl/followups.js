@@ -41,7 +41,9 @@ export async function checkFollowups() {
     if (!text) return;
 
     addMsgForTab('evening', 'agent', text);
-    setOwlCd('followup_global');
+    // Typed Cooldown (Фаза 4 OWL V3 xHQfi 30.04): вечірній prompt — overview-тип.
+    // Не блокує concern (тривога) ані praise (похвала за стрики) — вони у своїх CD.
+    setOwlCd('overview_global');
     setOwlCd('evening_prompt_daily');
   } finally {
     _checkInFlight = false;

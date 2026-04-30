@@ -4173,25 +4173,63 @@ ${lines.join("\n")}`;
     if (h < sc.bedTime - 1) return "evening";
     return "night";
   }
+  function _classifyCdTopic(topic) {
+    if (!topic || typeof topic !== "string") return "info";
+    if (/^praise_/.test(topic)) return "praise";
+    if (/^concern_/.test(topic)) return "concern";
+    if (/^overview_/.test(topic)) return "overview";
+    if (/^(quit_milestone|topic_streak|streak_)/.test(topic)) return "praise";
+    if (/^(brain_stuck|brain_passed|brain_upcoming|brain_project|brain_budget|unusual_tx|corr_|evening_prompt_daily|streak_risk|budget_warn|appointment_soon|stuck_task|event_passed)/.test(topic)) return "concern";
+    if (/^(morning_brief|week_start|week_end|evening_pulse|phase_pulse|brain_tab_|weekly_review)/.test(topic)) return "overview";
+    if (topic === "followup_global") return "info";
+    return "info";
+  }
   function _getOwlCooldowns() {
     try {
-      return JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
+      const raw = JSON.parse(localStorage.getItem(OWL_CD_KEY) || "{}");
+      const isOldFormat = Object.keys(raw).length > 0 && !raw.praise && !raw.concern && !raw.overview && !raw.info;
+      if (isOldFormat) {
+        const migrated = { praise: {}, concern: {}, overview: {}, info: {} };
+        for (const [topic, ts] of Object.entries(raw)) {
+          const type = _classifyCdTopic(topic);
+          migrated[type][topic] = ts;
+        }
+        localStorage.setItem(OWL_CD_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+      return { praise: raw.praise || {}, concern: raw.concern || {}, overview: raw.overview || {}, info: raw.info || {} };
     } catch {
-      return {};
+      return { praise: {}, concern: {}, overview: {}, info: {} };
     }
   }
   function owlCdExpired(topic, ms) {
     const cd = _getOwlCooldowns();
-    return !cd[topic] || Date.now() - cd[topic] > ms;
+    const type = _classifyCdTopic(topic);
+    const ts = cd[type] && cd[type][topic];
+    return !ts || Date.now() - ts > ms;
   }
   function setOwlCd(topic) {
     const cd = _getOwlCooldowns();
-    cd[topic] = Date.now();
+    const type = _classifyCdTopic(topic);
+    if (!cd[type]) cd[type] = {};
+    cd[type][topic] = Date.now();
     const cutoff = Date.now() - 48 * 60 * 60 * 1e3;
-    Object.keys(cd).forEach((k) => {
-      if (cd[k] < cutoff) delete cd[k];
-    });
+    for (const t2 of ["praise", "concern", "overview", "info"]) {
+      if (!cd[t2]) continue;
+      Object.keys(cd[t2]).forEach((k) => {
+        if (cd[t2][k] < cutoff) delete cd[t2][k];
+      });
+    }
     localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
+  }
+  function isCooldownTypeActive(type, ms) {
+    const cd = _getOwlCooldowns();
+    const bucket = cd[type] || {};
+    const now = Date.now();
+    for (const ts of Object.values(bucket)) {
+      if (now - ts <= ms) return true;
+    }
+    return false;
   }
   function shouldOwlSpeak(trigger, opts = {}) {
     const key = localStorage.getItem("nm_gemini_key");
@@ -4215,8 +4253,9 @@ ${lines.join("\n")}`;
     if (activeChatBar && activeChatBar === targetTab) {
       return { speak: false, score: -100, reason: "active-in-target-chat" };
     }
-    if (!owlCdExpired("followup_global", FOLLOWUP_GLOBAL_CD_MS)) {
-      return { speak: false, score: -100, reason: "followup-global-cd" };
+    const followupType = _FOLLOWUP_TRIGGER_TYPE[trigger] || "info";
+    if (isCooldownTypeActive(followupType, FOLLOWUP_GLOBAL_CD_MS)) {
+      return { speak: false, score: -100, reason: `${followupType}-cd-active` };
     }
     let score = 0;
     const reasons = [];
@@ -4229,7 +4268,7 @@ ${lines.join("\n")}`;
       reasons.push("event-passed");
     }
     const speak = score >= SPEAK_THRESHOLD;
-    return { speak, score, reason: reasons.join(", ") };
+    return { speak, score, reason: reasons.join(", "), followupType };
   }
   function _judgeBoard(trigger, targetTab) {
     let score = 0;
@@ -4748,7 +4787,7 @@ ${lines.join("\n")}`;
     }
     return true;
   }
-  var _tabChatState, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
+  var _tabChatState, OWL_BOARD_TS_KEY, OWL_BOARD_INTERVAL, _owlBoardMessages, _owlBoardTimer, OWL_CD_KEY, SPEAK_THRESHOLD, FOLLOWUP_GLOBAL_CD_MS, CHAT_CLOSE_COOLDOWN_MS, _FOLLOWUP_TRIGGER_TYPE, OWL_CHAT_KEY, OWL_CHAT_MAX, _owlChatOpen, _owlChatSending, _owlState;
   var init_inbox_board = __esm({
     "src/owl/inbox-board.js"() {
       init_nav();
@@ -4773,6 +4812,19 @@ ${lines.join("\n")}`;
       SPEAK_THRESHOLD = 3;
       FOLLOWUP_GLOBAL_CD_MS = 60 * 60 * 1e3;
       CHAT_CLOSE_COOLDOWN_MS = 10 * 1e3;
+      _FOLLOWUP_TRIGGER_TYPE = {
+        "stuck-task": "concern",
+        "event-passed": "concern",
+        "event-upcoming": "concern",
+        "budget-warn": "concern",
+        "streak-risk": "concern",
+        "project-stuck": "concern",
+        "appointment-soon": "concern",
+        "streak-milestone": "praise",
+        "achievement": "praise",
+        "morning-brief": "overview",
+        "weekly-review": "overview"
+      };
       OWL_CHAT_KEY = "nm_owl_chat";
       OWL_CHAT_MAX = 20;
       _owlChatOpen = false;
@@ -17047,7 +17099,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const text = await _generateEveningPrompt();
       if (!text) return;
       addMsgForTab("evening", "agent", text);
-      setOwlCd("followup_global");
+      setOwlCd("overview_global");
       setOwlCd("evening_prompt_daily");
     } finally {
       _checkInFlight = false;
@@ -17408,7 +17460,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const { tab, text, priority, reason } = args;
       if (!tab || !text) return;
       addMsgForTab(tab, "agent", text);
-      setOwlCd("followup_global");
+      const isPraise = /^(streak-milestone|achievement|streak_milestone)$/i.test(reason || "");
+      setOwlCd(isPraise ? "praise_global" : "concern_global");
       setOwlCd(`brain_tab_${tab}`);
       const relevantSignals = allowedSignals.filter((s) => s.tab === tab);
       for (const s of relevantSignals) {
