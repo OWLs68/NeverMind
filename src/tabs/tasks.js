@@ -4,7 +4,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -25,7 +25,7 @@ export function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify
 export function openAddTask() {
   editingTaskId = null;
   tempSteps = [];
-  document.getElementById('task-modal-title').textContent = 'Нова задача';
+  document.getElementById('task-modal-title').textContent = t('tasks.modal_new', 'Нова задача');
   document.getElementById('task-input-title').value = '';
   document.getElementById('task-input-desc').value = '';
   document.getElementById('task-step-input').value = '';
@@ -43,7 +43,7 @@ function openEditTask(id) {
   if (!t) return;
   editingTaskId = id;
   tempSteps = [...(t.steps || [])];
-  document.getElementById('task-modal-title').textContent = 'Редагувати задачу';
+  document.getElementById('task-modal-title').textContent = t('tasks.modal_edit', 'Редагувати задачу');
   document.getElementById('task-input-title').value = t.title;
   document.getElementById('task-input-desc').value = t.desc || '';
   document.getElementById('task-step-input').value = '';
@@ -101,7 +101,7 @@ function deleteTaskFromModal() {
   saveTasks(tasks.filter(x => x.id !== editingTaskId));
   closeTaskModal();
   renderTasks();
-  if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
+  if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
 }
 
 function addTaskStep() {
@@ -139,7 +139,7 @@ function renderTempSteps() {
 
 function saveTask() {
   const title = document.getElementById('task-input-title').value.trim();
-  if (!title) { showToast('Введіть назву задачі'); return; }
+  if (!title) { showToast(t('tasks.title_required', 'Введіть назву задачі')); return; }
   const desc = document.getElementById('task-input-desc').value.trim();
   const tasks = getTasks();
 
@@ -182,7 +182,7 @@ function deleteTask(id) {
   if (item) addToTrash('task', item);
   saveTasks(tasks.filter(x => x.id !== id));
   renderTasks();
-  if (item) showUndoToast('Задачу видалено', () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
+  if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
 }
 
 export function toggleTaskStatus(id) {
@@ -291,7 +291,7 @@ export function renderTasks() {
       if (item) addToTrash('task', item);
       saveTasks(tasks.filter(x => String(x.id) !== id));
       renderTasks();
-      if (item) showUndoToast('Задачу видалено', () => {
+      if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => {
         const t = getTasks();
         const idx = Math.min(taskOrigIdx, t.length);
         t.splice(idx, 0, item);
@@ -340,7 +340,7 @@ function openTaskChat(id) {
   const steps = (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
-    addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з Агентом.');
+    addTaskChatMsg('agent', t('tasks.no_api_key_chat', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з Агентом.'));
     return;
   }
 
@@ -351,7 +351,7 @@ function openTaskChat(id) {
 
   callAI(systemPrompt, taskInfo, {}, 'tasks-background').then(reply => {
     const el = document.getElementById('task-chat-intro');
-    if (el) el.textContent = reply || 'Розкажи більше про цю задачу.';
+    if (el) el.textContent = reply || t('tasks.tell_more', 'Розкажи більше про цю задачу.');
     taskChatHistory.push({ role: 'assistant', content: reply || '' });
     saveTaskChatHistory();
   });
@@ -398,7 +398,7 @@ async function sendTaskChatMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addTaskChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addTaskChatMsg('agent', t('common.no_api_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
 
   input.value = '';
   input.style.height = 'auto';
@@ -465,7 +465,7 @@ async function sendTaskChatMessage() {
             allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
             saveTasks(allTasks);
             renderTasks();
-            addTaskChatMsg('agent', `✅ Додав ${parsed.steps.length} кроків до задачі. Перевір картку.`);
+            addTaskChatMsg('agent', t('tasks.steps_added', '✅ Додав {n} кроків до задачі. Перевір картку.', { n: parsed.steps.length }));
           }
         } else if (parsed.action) {
           if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
@@ -488,7 +488,7 @@ async function sendTaskChatMessage() {
               allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
               saveTasks(allTasks);
               renderTasks();
-              addTaskChatMsg('agent', `✅ Додав ${p.steps.length} кроків до задачі. Перевір картку.`);
+              addTaskChatMsg('agent', t('tasks.steps_added', '✅ Додав {n} кроків до задачі. Перевір картку.', { n: p.steps.length }));
               handled = true;
             }
           } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
@@ -500,7 +500,7 @@ async function sendTaskChatMessage() {
     }
     else handleChatError(addTaskChatMsg);
   } catch {
-    addTaskChatMsg('agent', 'Мережева помилка.');
+    addTaskChatMsg('agent', t('common.network_error', 'Мережева помилка.'));
   }
   taskChatLoading = false;
   btn.disabled = false;
