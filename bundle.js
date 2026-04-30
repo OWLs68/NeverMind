@@ -9,800 +9,6 @@
       __defProp(target, name, { get: all[name], enumerable: true });
   };
 
-  // src/core/diagnostics.js
-  function getLocalStorageSize() {
-    let total = 0;
-    for (const key in localStorage) {
-      if (!Object.prototype.hasOwnProperty.call(localStorage, key)) continue;
-      total += ((localStorage[key]?.length || 0) + key.length) * 2;
-    }
-    return total;
-  }
-  function runHealthCheck() {
-    const checks = [];
-    try {
-      const testKey = "__nm_health_test__";
-      localStorage.setItem(testKey, "1");
-      localStorage.removeItem(testKey);
-      checks.push({ name: "\u0421\u0445\u043E\u0432\u0438\u0449\u0435", status: "ok", message: "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0435" });
-    } catch (e) {
-      checks.push({
-        name: "\u0421\u0445\u043E\u0432\u0438\u0449\u0435",
-        status: "fail",
-        message: "\u041D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435",
-        hint: "Safari \u0443 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u043E\u043C\u0443 \u0440\u0435\u0436\u0438\u043C\u0456 \u0430\u0431\u043E \u043A\u0432\u043E\u0442\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E"
-      });
-    }
-    try {
-      const size = getLocalStorageSize();
-      const sizeMB = (size / 1024 / 1024).toFixed(2);
-      if (size > 4 * 1024 * 1024) {
-        checks.push({
-          name: "\u041E\u0431\u0441\u044F\u0433",
-          status: "warn",
-          message: `${sizeMB} \u041C\u0411 \u2014 \u0431\u043B\u0438\u0437\u044C\u043A\u043E \u0434\u043E \u043B\u0456\u043C\u0456\u0442\u0443 5 \u041C\u0411`,
-          hint: "\u041E\u0447\u0438\u0441\u0442\u0438 \u043A\u043E\u0448\u0438\u043A \u0456 \u0441\u0442\u0430\u0440\u0456 \u043B\u043E\u0433\u0438"
-        });
-      } else if (size > 2 * 1024 * 1024) {
-        checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "warn", message: `${sizeMB} \u041C\u0411` });
-      } else {
-        checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "ok", message: `${sizeMB} \u041C\u0411` });
-      }
-    } catch (e) {
-      checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "warn", message: "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u043C\u0456\u0440\u044F\u0442\u0438" });
-    }
-    const hasKey = !!localStorage.getItem("nm_gemini_key");
-    checks.push({
-      name: "API \u043A\u043B\u044E\u0447",
-      status: hasKey ? "ok" : "fail",
-      message: hasKey ? "\u041F\u0440\u0438\u0441\u0443\u0442\u043D\u0456\u0439" : "\u0412\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439",
-      hint: hasKey ? null : "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 OpenAI API \u043A\u043B\u044E\u0447"
-    });
-    const swActive = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
-    checks.push({
-      name: "Service Worker",
-      status: swActive ? "ok" : "warn",
-      message: swActive ? "\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439" : "\u041D\u0435 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439",
-      hint: swActive ? null : "\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0435 \u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0442\u0438\u043C\u0435 \u043E\u0444\u043B\u0430\u0439\u043D"
-    });
-    const onboardingDone = !!localStorage.getItem("nm_onboarding_done");
-    checks.push({
-      name: "\u041E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433",
-      status: onboardingDone ? "ok" : "warn",
-      message: onboardingDone ? "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E" : "\u041D\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E",
-      hint: onboardingDone ? null : "\u041F\u043E\u043A\u0430\u0436\u0435\u0442\u044C\u0441\u044F \u043F\u0440\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u0437\u0430\u043F\u0443\u0441\u043A\u0443"
-    });
-    const dataKeys = [
-      { key: "nm_tasks", label: "\u0417\u0430\u0434\u0430\u0447\u0456" },
-      { key: "nm_notes", label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438" },
-      { key: "nm_habits2", label: "\u0417\u0432\u0438\u0447\u043A\u0438" },
-      { key: "nm_finance", label: "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0457" }
-    ];
-    for (const { key, label } of dataKeys) {
-      const raw = localStorage.getItem(key);
-      if (!raw) {
-        checks.push({ name: label, status: "ok", message: "0 \u0437\u0430\u043F\u0438\u0441\u0456\u0432" });
-        continue;
-      }
-      try {
-        const arr = JSON.parse(raw);
-        const n = Array.isArray(arr) ? arr.length : 0;
-        checks.push({ name: label, status: "ok", message: `${n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432` });
-      } catch (e) {
-        checks.push({
-          name: label,
-          status: "fail",
-          message: "\u0417\u043B\u0430\u043C\u0430\u043D\u0438\u0439 JSON",
-          hint: `\u041A\u043B\u044E\u0447 ${key} \u043F\u043E\u0448\u043A\u043E\u0434\u0436\u0435\u043D\u0438\u0439 \u2014 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043B\u043E\u0433\u0438 \u0414\u041E \u0434\u0456\u0439`
-        });
-      }
-    }
-    try {
-      const silenceUntil = parseInt(localStorage.getItem("nm_owl_silence_until") || "0");
-      if (silenceUntil > Date.now()) {
-        const mins = Math.ceil((silenceUntil - Date.now()) / 6e4);
-        checks.push({
-          name: "OWL Auto-silence",
-          status: "warn",
-          message: `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0449\u0435 ${mins} \u0445\u0432`,
-          hint: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u0447\u0456\u043F \u0449\u043E\u0431 \u0441\u043A\u0438\u043D\u0443\u0442\u0438, \u0430\u0431\u043E \u043E\u0447\u0438\u0441\u0442\u0438 \u0443 \u043A\u043E\u043D\u0441\u043E\u043B\u0456"
-        });
-      }
-    } catch (e) {
-    }
-    try {
-      const attemptTs = parseInt(localStorage.getItem("nm_owl_board_ts") || "0");
-      const msgs = JSON.parse(localStorage.getItem("nm_owl_board_unified") || "[]");
-      const msgTs = msgs[0]?.ts || msgs[0]?.id || 0;
-      const sinceAttempt = Date.now() - attemptTs;
-      const sinceMsg = Date.now() - msgTs;
-      if (attemptTs > 0 && sinceAttempt > 2 * 60 * 60 * 1e3 && sinceMsg > 2 * 60 * 60 * 1e3) {
-        checks.push({
-          name: "OWL \u0442\u0430\u0431\u043B\u043E",
-          status: "warn",
-          message: `\u041D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F ${Math.round(sinceAttempt / 36e5)} \u0433\u043E\u0434`,
-          hint: "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0430\u043B\u0438\u043F. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A."
-        });
-      }
-    } catch (e) {
-    }
-    const criticalGlobals = ["switchTab", "showErrorLog", "sendOwlReply", "toggleOwlTabChat"];
-    const missing = criticalGlobals.filter((g) => typeof window[g] !== "function");
-    if (missing.length > 0) {
-      checks.push({
-        name: "\u041C\u043E\u0434\u0443\u043B\u0456",
-        status: "fail",
-        message: `\u041D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E: ${missing.join(", ")}`,
-        hint: "Bundle \u043D\u0435 \u0437\u0456\u0431\u0440\u0430\u0432\u0441\u044F. \u0417\u0440\u043E\u0431\u0438 hard refresh."
-      });
-    } else {
-      checks.push({ name: "\u041C\u043E\u0434\u0443\u043B\u0456", status: "ok", message: "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u0456" });
-    }
-    return checks;
-  }
-  function renderHealthCheck() {
-    const checks = runHealthCheck();
-    const fails = checks.filter((c) => c.status === "fail").length;
-    const warns = checks.filter((c) => c.status === "warn").length;
-    const overall = fails > 0 ? "fail" : warns > 0 ? "warn" : "ok";
-    const overallIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" }[overall];
-    const overallText = fails > 0 ? `${fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 ${fails === 1 ? "\u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430" : "\u043F\u0440\u043E\u0431\u043B\u0435\u043C"}` : warns > 0 ? `${warns} ${warns === 1 ? "\u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F" : "\u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u044C"}` : "\u0423\u0441\u0435 \u0433\u0430\u0440\u0430\u0437\u0434";
-    const overallColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" }[overall];
-    const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
-    const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
-    const statusIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" };
-    const statusColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" };
-    return `<div style="margin:12px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
-    <div onclick="toggleHealthDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">\u0421\u0442\u0430\u043D \u0441\u0438\u0441\u0442\u0435\u043C</div>
-        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
-      </div>
-      <span id="health-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
-    </div>
-    <div id="health-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
-      ${checks.map((c) => `
-        <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.4">
-          <span style="color:${statusColor[c.status]};font-weight:800;flex-shrink:0;width:14px;font-size:13px">${statusIcon[c.status]}</span>
-          <div style="flex:1;min-width:0">
-            <div><span style="color:#1e1040;font-weight:600">${c.name}:</span><span style="color:rgba(30,16,64,0.75)"> ${c.message}</span></div>
-            ${c.hint ? `<div style="color:rgba(30,16,64,0.55);font-size:12px;margin-top:3px;font-style:italic">${c.hint}</div>` : ""}
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  </div>`;
-  }
-  function toggleHealthDetails() {
-    const details = document.getElementById("health-details");
-    const arrow = document.getElementById("health-expand-arrow");
-    if (!details) return;
-    const isOpen = details.style.display === "flex";
-    details.style.display = isOpen ? "none" : "flex";
-    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
-  }
-  function runSmokeTests() {
-    const tests = [];
-    const start = performance.now();
-    tests.push(_runTest("\u0421\u0445\u043E\u0432\u0438\u0449\u0435 write/read", () => {
-      const payload = { v: "ok", ts: Date.now() };
-      localStorage.setItem(SMOKE_TEST_KEY, JSON.stringify(payload));
-      const read = JSON.parse(localStorage.getItem(SMOKE_TEST_KEY));
-      if (read.v !== "ok") throw new Error("Read value mismatch");
-      localStorage.removeItem(SMOKE_TEST_KEY);
-      if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error("Remove \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0432");
-    }));
-    const arrayKeys = [
-      "nm_tasks",
-      "nm_notes",
-      "nm_habits2",
-      "nm_finance",
-      "nm_trash",
-      "nm_moments",
-      "nm_projects",
-      "nm_events",
-      "nm_health_cards",
-      "nm_inbox"
-    ];
-    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043C\u0430\u0441\u0438\u0432\u0438)", () => {
-      const broken = [];
-      for (const k of arrayKeys) {
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
-        try {
-          const v = JSON.parse(raw);
-          if (!Array.isArray(v)) broken.push(`${k}:\u043D\u0435-\u043C\u0430\u0441\u0438\u0432`);
-        } catch (e) {
-          broken.push(`${k}:invalid`);
-        }
-      }
-      if (broken.length) throw new Error(broken.join(", "));
-    }));
-    const objectKeys = [
-      "nm_settings",
-      "nm_habit_log2",
-      "nm_quit_log",
-      "nm_finance_budget",
-      "nm_finance_cats",
-      "nm_folders_meta"
-    ];
-    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043E\u0431'\u0454\u043A\u0442\u0438)", () => {
-      const broken = [];
-      for (const k of objectKeys) {
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
-        try {
-          const v = JSON.parse(raw);
-          if (typeof v !== "object" || v === null) broken.push(`${k}:\u043D\u0435-\u043E\u0431'\u0454\u043A\u0442`);
-        } catch (e) {
-          broken.push(`${k}:invalid`);
-        }
-      }
-      if (broken.length) throw new Error(broken.join(", "));
-    }));
-    tests.push(_runTest("\u0424\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442", () => {
-      const iso = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`ISO date broken: ${iso}`);
-      const utc = (/* @__PURE__ */ new Date()).toDateString();
-      if (!utc || utc.length < 10) throw new Error(`toDateString broken: ${utc}`);
-    }));
-    tests.push(_runTest("DOM \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430", () => {
-      const required = ["log-panel", "toast", "tab-bar", "onboarding", "splash"];
-      const missing = required.filter((id) => !document.getElementById(id));
-      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
-    }));
-    tests.push(_runTest("\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457", () => {
-      const required = [
-        "switchTab",
-        "showErrorLog",
-        "sendOwlReply",
-        "toggleOwlTabChat",
-        "scrollOwlTabChips",
-        "closeLogPanel",
-        "copyLogForClaude"
-      ];
-      const missing = required.filter((g) => typeof window[g] !== "function");
-      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
-    }));
-    tests.push(_runTest("CSS --tabbar-h", () => {
-      const val = getComputedStyle(document.documentElement).getPropertyValue("--tabbar-h");
-      if (!val || val.trim() === "") throw new Error("\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430");
-    }));
-    tests.push(_runTest("Event \u0441\u0438\u0441\u0442\u0435\u043C\u0430", () => {
-      let received = false;
-      const handler = (e) => {
-        if (e.detail === "smoke-test") received = true;
-      };
-      window.addEventListener("nm-data-changed", handler);
-      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "smoke-test" }));
-      window.removeEventListener("nm-data-changed", handler);
-      if (!received) throw new Error("nm-data-changed \u043D\u0435 \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E");
-    }));
-    tests.push(_runTest("Clipboard API", () => {
-      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
-        throw new Error("\u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439");
-      }
-    }));
-    const totalMs = Math.round(performance.now() - start);
-    return { tests, totalMs };
-  }
-  function _runTest(name, fn) {
-    const start = performance.now();
-    try {
-      fn();
-      const ms = Math.round((performance.now() - start) * 10) / 10;
-      return { name, status: "pass", message: "ok", ms };
-    } catch (e) {
-      const ms = Math.round((performance.now() - start) * 10) / 10;
-      return { name, status: "fail", message: e.message || String(e), ms };
-    }
-  }
-  function renderSmokeTests() {
-    const { tests, totalMs } = runSmokeTests();
-    const fails = tests.filter((t2) => t2.status === "fail").length;
-    const passes = tests.length - fails;
-    const overall = fails > 0 ? "fail" : "ok";
-    const overallIcon = fails > 0 ? "\u2717" : "\u2713";
-    const overallText = fails > 0 ? `${passes}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${fails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${tests.length}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${totalMs}\u043C\u0441`;
-    const overallColor = fails > 0 ? "#dc2626" : "#16a34a";
-    const overallBg = fails > 0 ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)";
-    const overallBorder = fails > 0 ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.25)";
-    const statusIcon = { pass: "\u2713", fail: "\u2717" };
-    const statusColor = { pass: "#16a34a", fail: "#dc2626" };
-    return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
-    <div onclick="toggleSmokeDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Smoke \u0442\u0435\u0441\u0442\u0438</div>
-        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
-      </div>
-      <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
-    </div>
-    <div id="smoke-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:6px">
-      ${tests.map((t2) => `
-        <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-          <span style="color:${statusColor[t2.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t2.status]}</span>
-          <div style="flex:1;min-width:0">
-            <span style="color:#1e1040;font-weight:600">${t2.name}</span>
-            ${t2.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t2.message}</span>` : ""}
-          </div>
-          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t2.ms}\u043C\u0441</span>
-        </div>
-      `).join("")}
-    </div>
-  </div>`;
-  }
-  function toggleSmokeDetails() {
-    const details = document.getElementById("smoke-details");
-    const arrow = document.getElementById("smoke-expand-arrow");
-    if (!details) return;
-    const isOpen = details.style.display === "flex";
-    details.style.display = isOpen ? "none" : "flex";
-    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
-  }
-  function _initPerformanceMonitor() {
-    try {
-      const nav = performance.getEntriesByType?.("navigation")?.[0];
-      if (nav) {
-        const dcl = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
-        _perfData.startupMs = dcl > 0 ? dcl : null;
-      }
-    } catch (e) {
-    }
-    if (!_perfData.startupMs) {
-      window.addEventListener("DOMContentLoaded", () => {
-        try {
-          const nav = performance.getEntriesByType("navigation")[0];
-          if (nav) _perfData.startupMs = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
-        } catch (e) {
-        }
-      }, { once: true });
-    }
-    try {
-      const supported = typeof PerformanceObserver !== "undefined" && PerformanceObserver.supportedEntryTypes?.includes("longtask");
-      if (supported) {
-        _perfData.longTaskSupported = true;
-        const obs = new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            _perfData.longTasks.push({
-              duration: Math.round(entry.duration),
-              startTime: Math.round(entry.startTime),
-              ts: Date.now()
-            });
-            if (_perfData.longTasks.length > MAX_LONGTASKS) _perfData.longTasks.shift();
-          }
-        });
-        obs.observe({ entryTypes: ["longtask"] });
-      }
-    } catch (e) {
-    }
-    try {
-      const origFetch = window.fetch.bind(window);
-      window.fetch = function(input, init2) {
-        const start = performance.now();
-        const url = typeof input === "string" ? input : input?.url || "";
-        const method = (init2?.method || typeof input === "object" && input?.method || "GET").toUpperCase();
-        const record = (status, error) => {
-          const duration = Math.round(performance.now() - start);
-          _perfData.fetches.push({
-            url: _shortenUrl(url),
-            method,
-            duration,
-            status,
-            error: error || null,
-            ts: Date.now()
-          });
-          if (_perfData.fetches.length > MAX_FETCHES) _perfData.fetches.shift();
-        };
-        return origFetch(input, init2).then(
-          (res) => {
-            record(res.status);
-            return res;
-          },
-          (err) => {
-            record(0, err?.message || "Network error");
-            throw err;
-          }
-        );
-      };
-    } catch (e) {
-    }
-  }
-  function _shortenUrl(url) {
-    try {
-      const u = new URL(url, window.location.href);
-      const path = u.pathname.length > 40 ? u.pathname.slice(0, 37) + "..." : u.pathname;
-      return u.host + path;
-    } catch {
-      return String(url).slice(0, 60);
-    }
-  }
-  function getPerformanceData() {
-    return {
-      longTasks: _perfData.longTasks.slice(),
-      fetches: _perfData.fetches.slice(),
-      startupMs: _perfData.startupMs,
-      longTaskSupported: _perfData.longTaskSupported
-    };
-  }
-  function renderPerformance() {
-    const data = getPerformanceData();
-    const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E";
-    const startupStatus = data.startupMs == null ? "unknown" : data.startupMs < 1500 ? "ok" : data.startupMs < 3e3 ? "warn" : "fail";
-    const longTasksCount = data.longTasks.length;
-    const worstLongTask = data.longTasks.reduce((max, t2) => t2.duration > max ? t2.duration : max, 0);
-    const longTasksStatus = !data.longTaskSupported ? "unknown" : longTasksCount === 0 ? "ok" : worstLongTask > 200 ? "warn" : "ok";
-    const okFetches = data.fetches.filter((f) => f.status >= 200 && f.status < 400);
-    const failedFetches = data.fetches.filter((f) => f.status === 0 || f.status >= 400);
-    const avgFetchMs = okFetches.length > 0 ? Math.round(okFetches.reduce((s, f) => s + f.duration, 0) / okFetches.length) : 0;
-    const slowFetches = data.fetches.filter((f) => f.duration > 3e3);
-    const fetchStatus = failedFetches.length > 0 ? "fail" : slowFetches.length > 0 ? "warn" : "ok";
-    const statuses = [startupStatus, longTasksStatus, fetchStatus].filter((s) => s !== "unknown");
-    const overall = statuses.includes("fail") ? "fail" : statuses.includes("warn") ? "warn" : "ok";
-    const overallIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" }[overall];
-    const overallColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" }[overall];
-    const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
-    const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
-    const summaryParts = [];
-    summaryParts.push(`\u0421\u0442\u0430\u0440\u0442 ${startupStr}`);
-    if (data.longTaskSupported) summaryParts.push(`${longTasksCount} \u043B\u0430\u0433\u0456\u0432`);
-    summaryParts.push(`${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432`);
-    if (failedFetches.length > 0) summaryParts.push(`${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E`);
-    const overallText = summaryParts.join(" \xB7 ");
-    const statusIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717", unknown: "\xB7" };
-    const statusColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626", unknown: "rgba(30,16,64,0.45)" };
-    const rows = [];
-    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-    <span style="color:${statusColor[startupStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[startupStatus]}</span>
-    <div style="flex:1;min-width:0">
-      <span style="color:#1e1040;font-weight:600">\u0427\u0430\u0441 \u0437\u0430\u043F\u0443\u0441\u043A\u0443</span>
-      <span style="color:rgba(30,16,64,0.7)">: ${startupStr}</span>
-    </div>
-  </div>`);
-    if (data.longTaskSupported) {
-      const msg = longTasksCount === 0 ? "\u043D\u0435\u043C\u0430\u0454" : `${longTasksCount} (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worstLongTask}\u043C\u0441)`;
-      rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-      <span style="color:${statusColor[longTasksStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[longTasksStatus]}</span>
-      <div style="flex:1;min-width:0">
-        <span style="color:#1e1040;font-weight:600">\u041B\u0430\u0433\u0438 UI >50\u043C\u0441</span>
-        <span style="color:rgba(30,16,64,0.7)">: ${msg}</span>
-      </div>
-    </div>`);
-    } else {
-      rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-      <span style="color:${statusColor.unknown};font-weight:800;flex-shrink:0;width:14px">\xB7</span>
-      <div style="flex:1;min-width:0">
-        <span style="color:rgba(30,16,64,0.6);font-weight:600">\u041B\u0430\u0433\u0438 UI</span>
-        <span style="color:rgba(30,16,64,0.55);font-style:italic">: Safari \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454 \u0446\u0435\u0439 API</span>
-      </div>
-    </div>`);
-    }
-    const fetchMsg = data.fetches.length === 0 ? "\u0449\u0435 \u043D\u0435 \u0431\u0443\u043B\u043E" : `${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432 \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgFetchMs}\u043C\u0441` + (failedFetches.length > 0 ? ` \xB7 ${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : "");
-    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-    <span style="color:${statusColor[fetchStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[fetchStatus]}</span>
-    <div style="flex:1;min-width:0">
-      <span style="color:#1e1040;font-weight:600">HTTP \u0437\u0430\u043F\u0438\u0442\u0438</span>
-      <span style="color:rgba(30,16,64,0.7)">: ${fetchMsg}</span>
-    </div>
-  </div>`);
-    if (data.fetches.length > 0) {
-      const recent = data.fetches.slice(-5).reverse();
-      rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438</div>' + recent.map((f) => {
-        const col = f.status === 0 || f.status >= 400 ? "#dc2626" : f.duration > 3e3 ? "#b45309" : "#16a34a";
-        const statusStr = f.status === 0 ? "FAIL" : String(f.status);
-        return `<div style="font-size:11px;line-height:1.5;font-family:ui-monospace,Menlo,monospace;color:rgba(30,16,64,0.85);display:flex;gap:8px;align-items:baseline">
-          <span style="color:${col};font-weight:700;flex-shrink:0;width:44px">${statusStr}</span>
-          <span style="color:rgba(30,16,64,0.55);flex-shrink:0;width:48px">${f.duration}\u043C\u0441</span>
-          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.method} ${f.url}</span>
-        </div>`;
-      }).join("") + "</div>");
-    }
-    return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
-    <div onclick="togglePerfDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Performance</div>
-        <div style="font-size:13px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
-      </div>
-      <span id="perf-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
-    </div>
-    <div id="perf-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
-      ${rows.join("")}
-    </div>
-  </div>`;
-  }
-  function togglePerfDetails() {
-    const details = document.getElementById("perf-details");
-    const arrow = document.getElementById("perf-expand-arrow");
-    if (!details) return;
-    const isOpen = details.style.display === "flex";
-    details.style.display = isOpen ? "none" : "flex";
-    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
-  }
-  var SMOKE_TEST_KEY, _perfData, MAX_FETCHES, MAX_LONGTASKS;
-  var init_diagnostics = __esm({
-    "src/core/diagnostics.js"() {
-      SMOKE_TEST_KEY = "__nm_smoke_test__";
-      _perfData = {
-        longTasks: [],
-        fetches: [],
-        startupMs: null,
-        longTaskSupported: false
-      };
-      MAX_FETCHES = 30;
-      MAX_LONGTASKS = 20;
-      _initPerformanceMonitor();
-      Object.assign(window, { toggleHealthDetails, toggleSmokeDetails, togglePerfDetails });
-    }
-  });
-
-  // src/core/logger.js
-  function trackUserAction(action) {
-    _recentActions.push({ action: String(action).slice(0, 80), tab: currentTab || "?", ts: Date.now() });
-    if (_recentActions.length > ACTIONS_MAX) _recentActions.shift();
-  }
-  function getErrorLog() {
-    try {
-      return JSON.parse(localStorage.getItem(NM_LOG_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  }
-  function saveErrorLog(arr) {
-    try {
-      localStorage.setItem(NM_LOG_KEY, JSON.stringify(arr.slice(-NM_LOG_MAX)));
-    } catch {
-    }
-  }
-  function _groupConsecutive(log) {
-    const out = [];
-    for (const e of log) {
-      const prev = out[out.length - 1];
-      if (prev && prev.type === e.type && prev.msg === e.msg && prev.src === e.src) {
-        prev.count++;
-        prev.lastTs = e.ts;
-      } else {
-        out.push({ ...e, count: 1, firstTs: e.ts, lastTs: e.ts });
-      }
-    }
-    return out;
-  }
-  function logError(type, message, source, stack) {
-    const log = getErrorLog();
-    log.push({
-      ts: Date.now(),
-      type,
-      msg: String(message).slice(0, 500),
-      src: source || "",
-      tab: currentTab || "?",
-      stack: stack ? String(stack).slice(0, 1500) : null,
-      actions: _recentActions.slice(-3)
-    });
-    saveErrorLog(log);
-    updateErrorLogBtn();
-  }
-  function showErrorLog() {
-    const log = getErrorLog();
-    const panel = document.getElementById("log-panel");
-    const list = document.getElementById("log-panel-list");
-    if (!panel || !list) return;
-    const typeStyle = {
-      error: { bg: "rgba(239,68,68,0.12)", color: "#dc2626", label: "ERR" },
-      promise: { bg: "rgba(239,68,68,0.12)", color: "#dc2626", label: "PROMISE" },
-      err: { bg: "rgba(239,68,68,0.12)", color: "#dc2626", label: "ERR" },
-      warn: { bg: "rgba(251,191,36,0.2)", color: "#b45309", label: "WARN" },
-      log: { bg: "rgba(59,130,246,0.12)", color: "#2563eb", label: "LOG" }
-    };
-    const healthHtml = renderHealthCheck();
-    const smokeHtml = renderSmokeTests();
-    const perfHtml = renderPerformance();
-    const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">\u041B\u043E\u0433\u0438 \u043F\u043E\u043C\u0438\u043B\u043E\u043A</div>';
-    if (log.length === 0) {
-      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}</div>';
-    } else {
-      const grouped = _groupConsecutive(log);
-      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
-        const d = new Date(e.lastTs || e.ts);
-        const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        const date = d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
-        const s = typeStyle[e.type] || { bg: "rgba(30,16,64,0.08)", color: "rgba(30,16,64,0.6)", label: e.type.toUpperCase() };
-        const countBadge = e.count > 1 ? `<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.2);color:#b45309">\xD7${e.count}</span>` : "";
-        const hasDetails = !!(e.stack || e.actions && e.actions.length);
-        const actionsHtml = e.actions && e.actions.length ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:10px">
-               <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0434\u0456\u0457 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E</div>
-               ${e.actions.map((a) => {
-          const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-          return `<div style="font-size:12px;color:rgba(30,16,64,0.8);line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">[${at}] [${escapeLog(a.tab)}] ${escapeLog(a.action)}</div>`;
-        }).join("")}
-             </div>` : "";
-        const stackHtml = e.stack ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.07);border-radius:10px;border-left:3px solid rgba(220,38,38,0.5)">
-               <div style="font-size:10px;font-weight:800;color:#dc2626;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Stack trace</div>
-               <div style="font-size:11px;color:rgba(30,16,64,0.85);white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.stack)}</div>
-             </div>` : "";
-        return `<div class="log-entry" data-idx="${idx}" ${hasDetails ? `onclick="toggleLogEntry(${idx})"` : ""} style="background:rgba(255,255,255,0.75);border:1px solid rgba(30,16,64,0.08);border-radius:12px;padding:12px 14px;cursor:${hasDetails ? "pointer" : "default"};-webkit-tap-highlight-color:transparent">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-            <span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:${s.bg};color:${s.color};letter-spacing:0.3px">${s.label}</span>
-            ${countBadge}
-            <span style="font-size:11px;color:rgba(30,16,64,0.55);font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${date} ${time}</span>
-            <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.55);margin-left:auto;padding:2px 7px;border-radius:5px;background:rgba(30,16,64,0.06);text-transform:uppercase;letter-spacing:0.3px">${escapeLog(e.tab)}</span>
-            ${hasDetails ? `<span class="log-expand-${idx}" style="font-size:13px;color:rgba(30,16,64,0.55);flex-shrink:0">\u25B8</span>` : ""}
-          </div>
-          <div style="font-size:14px;color:#1e1040;line-height:1.5;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${escapeLog(e.msg)}</div>
-          ${e.src ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.src)}</div>` : ""}
-          <div class="log-details-${idx}" style="display:none">${actionsHtml}${stackHtml}</div>
-        </div>`;
-      }).join("") + "</div>";
-    }
-    const countEl = document.getElementById("log-panel-count");
-    if (countEl) {
-      const grouped = _groupConsecutive(log);
-      const groupedN = grouped.length;
-      const txt = groupedN === log.length ? `${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443` : `${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 ${groupedN} \u0433\u0440\u0443\u043F \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443`;
-      countEl.textContent = txt;
-    }
-    panel.style.display = "flex";
-    requestAnimationFrame(() => panel.style.opacity = "1");
-  }
-  function copyLogForClaude() {
-    const log = getErrorLog();
-    const grouped = _groupConsecutive(log);
-    const lastGroups = grouped.slice(-50);
-    const badge = document.getElementById("deploy-version");
-    const deployLine = badge ? `\u0412\u0435\u0440\u0441\u0456\u044F: ${badge.textContent || "?"} \xB7 \u043A\u043E\u043C\u0456\u0442: ${badge.dataset.commit || "local"} \xB7 \u0433\u0456\u043B\u043A\u0430: ${badge.dataset.source || "dev"}` : "\u0412\u0435\u0440\u0441\u0456\u044F: \u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430";
-    const checks = runHealthCheck();
-    const fails = checks.filter((c) => c.status === "fail").length;
-    const warns = checks.filter((c) => c.status === "warn").length;
-    const overallText = fails > 0 ? `${fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 \u043F\u0440\u043E\u0431\u043B\u0435\u043C` : warns > 0 ? `${warns} \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u044C` : "\u0423\u0441\u0435 \u0433\u0430\u0440\u0430\u0437\u0434";
-    const icon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" };
-    const healthLines = checks.map((c) => {
-      let line = `${icon[c.status]} ${c.name}: ${c.message}`;
-      if (c.hint) line += `
-    \u2192 ${c.hint}`;
-      return line;
-    }).join("\n");
-    const { tests: smokeTests, totalMs: smokeMs } = runSmokeTests();
-    const smokeFails = smokeTests.filter((t2) => t2.status === "fail").length;
-    const smokePasses = smokeTests.length - smokeFails;
-    const smokeSummary = smokeFails > 0 ? `${smokePasses}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeFails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${smokeTests.length}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeMs}\u043C\u0441`;
-    const smokeLines = smokeTests.map((t2) => {
-      const ic = t2.status === "pass" ? "\u2713" : "\u2717";
-      return `${ic} ${t2.name}${t2.status === "fail" ? ` \u2014 ${t2.message}` : ""} (${t2.ms}\u043C\u0441)`;
-    }).join("\n");
-    const perf = getPerformanceData();
-    const perfLines = [];
-    perfLines.push(`\u0421\u0442\u0430\u0440\u0442: ${perf.startupMs != null ? perf.startupMs + "\u043C\u0441" : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"}`);
-    if (perf.longTaskSupported) {
-      const worst = perf.longTasks.reduce((m, t2) => t2.duration > m ? t2.duration : m, 0);
-      perfLines.push(`\u041B\u0430\u0433\u0438 UI: ${perf.longTasks.length}${worst > 0 ? ` (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worst}\u043C\u0441)` : ""}`);
-    } else {
-      perfLines.push("\u041B\u0430\u0433\u0438 UI: \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043E\u043C");
-    }
-    const okF = perf.fetches.filter((f) => f.status >= 200 && f.status < 400);
-    const failF = perf.fetches.filter((f) => f.status === 0 || f.status >= 400);
-    const avgF = okF.length > 0 ? Math.round(okF.reduce((s, f) => s + f.duration, 0) / okF.length) : 0;
-    perfLines.push(`\u0417\u0430\u043F\u0438\u0442\u0456\u0432: ${perf.fetches.length}${avgF > 0 ? ` \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgF}\u043C\u0441` : ""}${failF.length > 0 ? ` \xB7 ${failF.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : ""}`);
-    if (perf.fetches.length > 0) {
-      perfLines.push("\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438:");
-      perf.fetches.slice(-5).reverse().forEach((f) => {
-        perfLines.push(`  ${f.status === 0 ? "FAIL" : f.status} ${f.duration}\u043C\u0441 ${f.method} ${f.url}${f.error ? " \u2014 " + f.error : ""}`);
-      });
-    }
-    const logLines = lastGroups.length === 0 ? "(\u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E)" : lastGroups.map((e) => {
-      const time = new Date(e.lastTs || e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      const cnt = e.count > 1 ? ` \xD7${e.count}` : "";
-      let block = `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? " @ " + e.src : ""}`;
-      if (e.actions && e.actions.length) {
-        block += "\n  actions: " + e.actions.map((a) => {
-          const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-          return `[${at}][${a.tab}] ${a.action}`;
-        }).join(" \u2192 ");
-      }
-      if (e.stack) {
-        block += "\n  stack: " + e.stack.split("\n").slice(0, 6).join(" | ");
-      }
-      return block;
-    }).join("\n");
-    const text = `NeverMind \u0434\u0456\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430
-${deployLine}
-
-\u2501\u2501\u2501 \u0421\u0422\u0410\u041D \u0421\u0418\u0421\u0422\u0415\u041C: ${overallText} \u2501\u2501\u2501
-${healthLines}
-
-\u2501\u2501\u2501 SMOKE \u0422\u0415\u0421\u0422\u0418: ${smokeSummary} \u2501\u2501\u2501
-${smokeLines}
-
-\u2501\u2501\u2501 PERFORMANCE \u2501\u2501\u2501
-${perfLines.join("\n")}
-
-\u2501\u2501\u2501 \u041B\u041E\u0413\u0418 (${lastGroups.length} \u0433\u0440\u0443\u043F \u0437 ${grouped.length}, \u0432\u0441\u044C\u043E\u0433\u043E ${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432) \u2501\u2501\u2501
-\`\`\`
-${logLines}
-\`\`\``;
-    navigator.clipboard?.writeText(text);
-  }
-  function closeLogPanel() {
-    const panel = document.getElementById("log-panel");
-    if (!panel) return;
-    panel.style.opacity = "0";
-    setTimeout(() => {
-      panel.style.display = "none";
-    }, 250);
-  }
-  function clearErrorLog() {
-    localStorage.removeItem(NM_LOG_KEY);
-    updateErrorLogBtn();
-    showErrorLog();
-  }
-  function updateErrorLogBtn() {
-    const btn = document.getElementById("error-log-btn");
-    if (!btn) return;
-    const count = getErrorLog().length;
-    btn.textContent = count > 0 ? count : "0";
-    btn.style.background = count > 0 ? "rgba(234,88,12,0.12)" : "";
-    btn.style.color = count > 0 ? "#ea580c" : "";
-  }
-  function escapeLog(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  }
-  function toggleLogEntry(idx) {
-    const details = document.querySelector(`.log-details-${idx}`);
-    const arrow = document.querySelector(`.log-expand-${idx}`);
-    if (!details) return;
-    const isOpen = details.style.display === "block";
-    details.style.display = isOpen ? "none" : "block";
-    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
-  }
-  var NM_LOG_KEY, NM_LOG_MAX, _recentActions, ACTIONS_MAX;
-  var init_logger = __esm({
-    "src/core/logger.js"() {
-      init_nav();
-      init_diagnostics();
-      NM_LOG_KEY = "nm_error_log";
-      NM_LOG_MAX = 200;
-      _recentActions = [];
-      ACTIONS_MAX = 10;
-      window.addEventListener("error", (e) => {
-        logError(
-          "error",
-          e.error?.message || e.message,
-          (e.filename || "").replace(/.*\//, "") + ":" + e.lineno,
-          e.error?.stack
-        );
-      });
-      window.addEventListener("unhandledrejection", (e) => {
-        const r = e.reason;
-        logError(
-          "promise",
-          r ? r.message || String(r) : "Promise rejected",
-          "",
-          r?.stack
-        );
-      });
-      (function() {
-        const _log = console.log.bind(console);
-        const _warn = console.warn.bind(console);
-        const _err = console.error.bind(console);
-        console.log = (...a) => {
-          _log(...a);
-          logError("log", a.map(String).join(" "), "");
-        };
-        console.warn = (...a) => {
-          _warn(...a);
-          logError("warn", a.map(String).join(" "), "");
-        };
-        console.error = (...a) => {
-          _err(...a);
-          logError("err", a.map(String).join(" "), "");
-        };
-      })();
-      window.addEventListener("nm-data-changed", (e) => {
-        trackUserAction("data-changed:" + (e?.detail || "unknown"));
-      });
-      Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog, toggleLogEntry });
-    }
-  });
-
   // src/core/uuid.js
   function generateUUID() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -17248,6 +16454,801 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       NM_RECENT_ACTIONS_KEY = "nm_recent_actions";
       NM_RECENT_ACTIONS_MAX = 20;
       window.autoResizeTextarea = autoResizeTextarea;
+    }
+  });
+
+  // src/core/diagnostics.js
+  function getLocalStorageSize() {
+    let total = 0;
+    for (const key in localStorage) {
+      if (!Object.prototype.hasOwnProperty.call(localStorage, key)) continue;
+      total += ((localStorage[key]?.length || 0) + key.length) * 2;
+    }
+    return total;
+  }
+  function runHealthCheck() {
+    const checks = [];
+    try {
+      const testKey = "__nm_health_test__";
+      localStorage.setItem(testKey, "1");
+      localStorage.removeItem(testKey);
+      checks.push({ name: "\u0421\u0445\u043E\u0432\u0438\u0449\u0435", status: "ok", message: "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0435" });
+    } catch (e) {
+      checks.push({
+        name: "\u0421\u0445\u043E\u0432\u0438\u0449\u0435",
+        status: "fail",
+        message: "\u041D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435",
+        hint: "Safari \u0443 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u043E\u043C\u0443 \u0440\u0435\u0436\u0438\u043C\u0456 \u0430\u0431\u043E \u043A\u0432\u043E\u0442\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E"
+      });
+    }
+    try {
+      const size = getLocalStorageSize();
+      const sizeMB = (size / 1024 / 1024).toFixed(2);
+      if (size > 4 * 1024 * 1024) {
+        checks.push({
+          name: "\u041E\u0431\u0441\u044F\u0433",
+          status: "warn",
+          message: `${sizeMB} \u041C\u0411 \u2014 \u0431\u043B\u0438\u0437\u044C\u043A\u043E \u0434\u043E \u043B\u0456\u043C\u0456\u0442\u0443 5 \u041C\u0411`,
+          hint: "\u041E\u0447\u0438\u0441\u0442\u0438 \u043A\u043E\u0448\u0438\u043A \u0456 \u0441\u0442\u0430\u0440\u0456 \u043B\u043E\u0433\u0438"
+        });
+      } else if (size > 2 * 1024 * 1024) {
+        checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "warn", message: `${sizeMB} \u041C\u0411` });
+      } else {
+        checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "ok", message: `${sizeMB} \u041C\u0411` });
+      }
+    } catch (e) {
+      checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "warn", message: "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u043C\u0456\u0440\u044F\u0442\u0438" });
+    }
+    const hasKey = !!localStorage.getItem("nm_gemini_key");
+    checks.push({
+      name: "API \u043A\u043B\u044E\u0447",
+      status: hasKey ? "ok" : "fail",
+      message: hasKey ? "\u041F\u0440\u0438\u0441\u0443\u0442\u043D\u0456\u0439" : "\u0412\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439",
+      hint: hasKey ? null : "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 OpenAI API \u043A\u043B\u044E\u0447"
+    });
+    const swActive = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+    checks.push({
+      name: "Service Worker",
+      status: swActive ? "ok" : "warn",
+      message: swActive ? "\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439" : "\u041D\u0435 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439",
+      hint: swActive ? null : "\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0435 \u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0442\u0438\u043C\u0435 \u043E\u0444\u043B\u0430\u0439\u043D"
+    });
+    const onboardingDone = !!localStorage.getItem("nm_onboarding_done");
+    checks.push({
+      name: "\u041E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433",
+      status: onboardingDone ? "ok" : "warn",
+      message: onboardingDone ? "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E" : "\u041D\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E",
+      hint: onboardingDone ? null : "\u041F\u043E\u043A\u0430\u0436\u0435\u0442\u044C\u0441\u044F \u043F\u0440\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u0437\u0430\u043F\u0443\u0441\u043A\u0443"
+    });
+    const dataKeys = [
+      { key: "nm_tasks", label: "\u0417\u0430\u0434\u0430\u0447\u0456" },
+      { key: "nm_notes", label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438" },
+      { key: "nm_habits2", label: "\u0417\u0432\u0438\u0447\u043A\u0438" },
+      { key: "nm_finance", label: "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0457" }
+    ];
+    for (const { key, label } of dataKeys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        checks.push({ name: label, status: "ok", message: "0 \u0437\u0430\u043F\u0438\u0441\u0456\u0432" });
+        continue;
+      }
+      try {
+        const arr = JSON.parse(raw);
+        const n = Array.isArray(arr) ? arr.length : 0;
+        checks.push({ name: label, status: "ok", message: `${n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432` });
+      } catch (e) {
+        checks.push({
+          name: label,
+          status: "fail",
+          message: "\u0417\u043B\u0430\u043C\u0430\u043D\u0438\u0439 JSON",
+          hint: `\u041A\u043B\u044E\u0447 ${key} \u043F\u043E\u0448\u043A\u043E\u0434\u0436\u0435\u043D\u0438\u0439 \u2014 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043B\u043E\u0433\u0438 \u0414\u041E \u0434\u0456\u0439`
+        });
+      }
+    }
+    try {
+      const silenceUntil = parseInt(localStorage.getItem("nm_owl_silence_until") || "0");
+      if (silenceUntil > Date.now()) {
+        const mins = Math.ceil((silenceUntil - Date.now()) / 6e4);
+        checks.push({
+          name: "OWL Auto-silence",
+          status: "warn",
+          message: `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0449\u0435 ${mins} \u0445\u0432`,
+          hint: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u0447\u0456\u043F \u0449\u043E\u0431 \u0441\u043A\u0438\u043D\u0443\u0442\u0438, \u0430\u0431\u043E \u043E\u0447\u0438\u0441\u0442\u0438 \u0443 \u043A\u043E\u043D\u0441\u043E\u043B\u0456"
+        });
+      }
+    } catch (e) {
+    }
+    try {
+      const attemptTs = parseInt(localStorage.getItem("nm_owl_board_ts") || "0");
+      const msgs = JSON.parse(localStorage.getItem("nm_owl_board_unified") || "[]");
+      const msgTs = msgs[0]?.ts || msgs[0]?.id || 0;
+      const sinceAttempt = Date.now() - attemptTs;
+      const sinceMsg = Date.now() - msgTs;
+      if (attemptTs > 0 && sinceAttempt > 2 * 60 * 60 * 1e3 && sinceMsg > 2 * 60 * 60 * 1e3) {
+        checks.push({
+          name: "OWL \u0442\u0430\u0431\u043B\u043E",
+          status: "warn",
+          message: `\u041D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F ${Math.round(sinceAttempt / 36e5)} \u0433\u043E\u0434`,
+          hint: "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0430\u043B\u0438\u043F. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A."
+        });
+      }
+    } catch (e) {
+    }
+    const criticalGlobals = ["switchTab", "showErrorLog", "sendOwlReply", "toggleOwlTabChat"];
+    const missing = criticalGlobals.filter((g) => typeof window[g] !== "function");
+    if (missing.length > 0) {
+      checks.push({
+        name: "\u041C\u043E\u0434\u0443\u043B\u0456",
+        status: "fail",
+        message: `\u041D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E: ${missing.join(", ")}`,
+        hint: "Bundle \u043D\u0435 \u0437\u0456\u0431\u0440\u0430\u0432\u0441\u044F. \u0417\u0440\u043E\u0431\u0438 hard refresh."
+      });
+    } else {
+      checks.push({ name: "\u041C\u043E\u0434\u0443\u043B\u0456", status: "ok", message: "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u0456" });
+    }
+    return checks;
+  }
+  function renderHealthCheck() {
+    const checks = runHealthCheck();
+    const fails = checks.filter((c) => c.status === "fail").length;
+    const warns = checks.filter((c) => c.status === "warn").length;
+    const overall = fails > 0 ? "fail" : warns > 0 ? "warn" : "ok";
+    const overallIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" }[overall];
+    const overallText = fails > 0 ? `${fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 ${fails === 1 ? "\u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430" : "\u043F\u0440\u043E\u0431\u043B\u0435\u043C"}` : warns > 0 ? `${warns} ${warns === 1 ? "\u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F" : "\u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u044C"}` : "\u0423\u0441\u0435 \u0433\u0430\u0440\u0430\u0437\u0434";
+    const overallColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" }[overall];
+    const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
+    const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
+    const statusIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" };
+    const statusColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" };
+    return `<div style="margin:12px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="toggleHealthDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">\u0421\u0442\u0430\u043D \u0441\u0438\u0441\u0442\u0435\u043C</div>
+        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="health-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
+    </div>
+    <div id="health-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
+      ${checks.map((c) => `
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.4">
+          <span style="color:${statusColor[c.status]};font-weight:800;flex-shrink:0;width:14px;font-size:13px">${statusIcon[c.status]}</span>
+          <div style="flex:1;min-width:0">
+            <div><span style="color:#1e1040;font-weight:600">${c.name}:</span><span style="color:rgba(30,16,64,0.75)"> ${c.message}</span></div>
+            ${c.hint ? `<div style="color:rgba(30,16,64,0.55);font-size:12px;margin-top:3px;font-style:italic">${c.hint}</div>` : ""}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  </div>`;
+  }
+  function toggleHealthDetails() {
+    const details = document.getElementById("health-details");
+    const arrow = document.getElementById("health-expand-arrow");
+    if (!details) return;
+    const isOpen = details.style.display === "flex";
+    details.style.display = isOpen ? "none" : "flex";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  function runSmokeTests() {
+    const tests = [];
+    const start = performance.now();
+    tests.push(_runTest("\u0421\u0445\u043E\u0432\u0438\u0449\u0435 write/read", () => {
+      const payload = { v: "ok", ts: Date.now() };
+      localStorage.setItem(SMOKE_TEST_KEY, JSON.stringify(payload));
+      const read = JSON.parse(localStorage.getItem(SMOKE_TEST_KEY));
+      if (read.v !== "ok") throw new Error("Read value mismatch");
+      localStorage.removeItem(SMOKE_TEST_KEY);
+      if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error("Remove \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0432");
+    }));
+    const arrayKeys = [
+      "nm_tasks",
+      "nm_notes",
+      "nm_habits2",
+      "nm_finance",
+      "nm_trash",
+      "nm_moments",
+      "nm_projects",
+      "nm_events",
+      "nm_health_cards",
+      "nm_inbox"
+    ];
+    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043C\u0430\u0441\u0438\u0432\u0438)", () => {
+      const broken = [];
+      for (const k of arrayKeys) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const v = JSON.parse(raw);
+          if (!Array.isArray(v)) broken.push(`${k}:\u043D\u0435-\u043C\u0430\u0441\u0438\u0432`);
+        } catch (e) {
+          broken.push(`${k}:invalid`);
+        }
+      }
+      if (broken.length) throw new Error(broken.join(", "));
+    }));
+    const objectKeys = [
+      "nm_settings",
+      "nm_habit_log2",
+      "nm_quit_log",
+      "nm_finance_budget",
+      "nm_finance_cats",
+      "nm_folders_meta"
+    ];
+    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043E\u0431'\u0454\u043A\u0442\u0438)", () => {
+      const broken = [];
+      for (const k of objectKeys) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const v = JSON.parse(raw);
+          if (typeof v !== "object" || v === null) broken.push(`${k}:\u043D\u0435-\u043E\u0431'\u0454\u043A\u0442`);
+        } catch (e) {
+          broken.push(`${k}:invalid`);
+        }
+      }
+      if (broken.length) throw new Error(broken.join(", "));
+    }));
+    tests.push(_runTest("\u0424\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442", () => {
+      const iso = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`ISO date broken: ${iso}`);
+      const utc = (/* @__PURE__ */ new Date()).toDateString();
+      if (!utc || utc.length < 10) throw new Error(`toDateString broken: ${utc}`);
+    }));
+    tests.push(_runTest("DOM \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430", () => {
+      const required = ["log-panel", "toast", "tab-bar", "onboarding", "splash"];
+      const missing = required.filter((id) => !document.getElementById(id));
+      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
+    }));
+    tests.push(_runTest("\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457", () => {
+      const required = [
+        "switchTab",
+        "showErrorLog",
+        "sendOwlReply",
+        "toggleOwlTabChat",
+        "scrollOwlTabChips",
+        "closeLogPanel",
+        "copyLogForClaude"
+      ];
+      const missing = required.filter((g) => typeof window[g] !== "function");
+      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
+    }));
+    tests.push(_runTest("CSS --tabbar-h", () => {
+      const val = getComputedStyle(document.documentElement).getPropertyValue("--tabbar-h");
+      if (!val || val.trim() === "") throw new Error("\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430");
+    }));
+    tests.push(_runTest("Event \u0441\u0438\u0441\u0442\u0435\u043C\u0430", () => {
+      let received = false;
+      const handler = (e) => {
+        if (e.detail === "smoke-test") received = true;
+      };
+      window.addEventListener("nm-data-changed", handler);
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "smoke-test" }));
+      window.removeEventListener("nm-data-changed", handler);
+      if (!received) throw new Error("nm-data-changed \u043D\u0435 \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E");
+    }));
+    tests.push(_runTest("Clipboard API", () => {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+        throw new Error("\u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439");
+      }
+    }));
+    const totalMs = Math.round(performance.now() - start);
+    return { tests, totalMs };
+  }
+  function _runTest(name, fn) {
+    const start = performance.now();
+    try {
+      fn();
+      const ms = Math.round((performance.now() - start) * 10) / 10;
+      return { name, status: "pass", message: "ok", ms };
+    } catch (e) {
+      const ms = Math.round((performance.now() - start) * 10) / 10;
+      return { name, status: "fail", message: e.message || String(e), ms };
+    }
+  }
+  function renderSmokeTests() {
+    const { tests, totalMs } = runSmokeTests();
+    const fails = tests.filter((t2) => t2.status === "fail").length;
+    const passes = tests.length - fails;
+    const overall = fails > 0 ? "fail" : "ok";
+    const overallIcon = fails > 0 ? "\u2717" : "\u2713";
+    const overallText = fails > 0 ? `${passes}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${fails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${tests.length}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${totalMs}\u043C\u0441`;
+    const overallColor = fails > 0 ? "#dc2626" : "#16a34a";
+    const overallBg = fails > 0 ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)";
+    const overallBorder = fails > 0 ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.25)";
+    const statusIcon = { pass: "\u2713", fail: "\u2717" };
+    const statusColor = { pass: "#16a34a", fail: "#dc2626" };
+    return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="toggleSmokeDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Smoke \u0442\u0435\u0441\u0442\u0438</div>
+        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
+    </div>
+    <div id="smoke-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:6px">
+      ${tests.map((t2) => `
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+          <span style="color:${statusColor[t2.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t2.status]}</span>
+          <div style="flex:1;min-width:0">
+            <span style="color:#1e1040;font-weight:600">${t2.name}</span>
+            ${t2.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t2.message}</span>` : ""}
+          </div>
+          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t2.ms}\u043C\u0441</span>
+        </div>
+      `).join("")}
+    </div>
+  </div>`;
+  }
+  function toggleSmokeDetails() {
+    const details = document.getElementById("smoke-details");
+    const arrow = document.getElementById("smoke-expand-arrow");
+    if (!details) return;
+    const isOpen = details.style.display === "flex";
+    details.style.display = isOpen ? "none" : "flex";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  function _initPerformanceMonitor() {
+    try {
+      const nav = performance.getEntriesByType?.("navigation")?.[0];
+      if (nav) {
+        const dcl = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+        _perfData.startupMs = dcl > 0 ? dcl : null;
+      }
+    } catch (e) {
+    }
+    if (!_perfData.startupMs) {
+      window.addEventListener("DOMContentLoaded", () => {
+        try {
+          const nav = performance.getEntriesByType("navigation")[0];
+          if (nav) _perfData.startupMs = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+        } catch (e) {
+        }
+      }, { once: true });
+    }
+    try {
+      const supported = typeof PerformanceObserver !== "undefined" && PerformanceObserver.supportedEntryTypes?.includes("longtask");
+      if (supported) {
+        _perfData.longTaskSupported = true;
+        const obs = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            _perfData.longTasks.push({
+              duration: Math.round(entry.duration),
+              startTime: Math.round(entry.startTime),
+              ts: Date.now()
+            });
+            if (_perfData.longTasks.length > MAX_LONGTASKS) _perfData.longTasks.shift();
+          }
+        });
+        obs.observe({ entryTypes: ["longtask"] });
+      }
+    } catch (e) {
+    }
+    try {
+      const origFetch = window.fetch.bind(window);
+      window.fetch = function(input, init2) {
+        const start = performance.now();
+        const url = typeof input === "string" ? input : input?.url || "";
+        const method = (init2?.method || typeof input === "object" && input?.method || "GET").toUpperCase();
+        const record = (status, error) => {
+          const duration = Math.round(performance.now() - start);
+          _perfData.fetches.push({
+            url: _shortenUrl(url),
+            method,
+            duration,
+            status,
+            error: error || null,
+            ts: Date.now()
+          });
+          if (_perfData.fetches.length > MAX_FETCHES) _perfData.fetches.shift();
+        };
+        return origFetch(input, init2).then(
+          (res) => {
+            record(res.status);
+            return res;
+          },
+          (err) => {
+            record(0, err?.message || "Network error");
+            throw err;
+          }
+        );
+      };
+    } catch (e) {
+    }
+  }
+  function _shortenUrl(url) {
+    try {
+      const u = new URL(url, window.location.href);
+      const path = u.pathname.length > 40 ? u.pathname.slice(0, 37) + "..." : u.pathname;
+      return u.host + path;
+    } catch {
+      return String(url).slice(0, 60);
+    }
+  }
+  function getPerformanceData() {
+    return {
+      longTasks: _perfData.longTasks.slice(),
+      fetches: _perfData.fetches.slice(),
+      startupMs: _perfData.startupMs,
+      longTaskSupported: _perfData.longTaskSupported
+    };
+  }
+  function renderPerformance() {
+    const data = getPerformanceData();
+    const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E";
+    const startupStatus = data.startupMs == null ? "unknown" : data.startupMs < 1500 ? "ok" : data.startupMs < 3e3 ? "warn" : "fail";
+    const longTasksCount = data.longTasks.length;
+    const worstLongTask = data.longTasks.reduce((max, t2) => t2.duration > max ? t2.duration : max, 0);
+    const longTasksStatus = !data.longTaskSupported ? "unknown" : longTasksCount === 0 ? "ok" : worstLongTask > 200 ? "warn" : "ok";
+    const okFetches = data.fetches.filter((f) => f.status >= 200 && f.status < 400);
+    const failedFetches = data.fetches.filter((f) => f.status === 0 || f.status >= 400);
+    const avgFetchMs = okFetches.length > 0 ? Math.round(okFetches.reduce((s, f) => s + f.duration, 0) / okFetches.length) : 0;
+    const slowFetches = data.fetches.filter((f) => f.duration > 3e3);
+    const fetchStatus = failedFetches.length > 0 ? "fail" : slowFetches.length > 0 ? "warn" : "ok";
+    const statuses = [startupStatus, longTasksStatus, fetchStatus].filter((s) => s !== "unknown");
+    const overall = statuses.includes("fail") ? "fail" : statuses.includes("warn") ? "warn" : "ok";
+    const overallIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" }[overall];
+    const overallColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" }[overall];
+    const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
+    const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
+    const summaryParts = [];
+    summaryParts.push(`\u0421\u0442\u0430\u0440\u0442 ${startupStr}`);
+    if (data.longTaskSupported) summaryParts.push(`${longTasksCount} \u043B\u0430\u0433\u0456\u0432`);
+    summaryParts.push(`${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432`);
+    if (failedFetches.length > 0) summaryParts.push(`${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E`);
+    const overallText = summaryParts.join(" \xB7 ");
+    const statusIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717", unknown: "\xB7" };
+    const statusColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626", unknown: "rgba(30,16,64,0.45)" };
+    const rows = [];
+    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+    <span style="color:${statusColor[startupStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[startupStatus]}</span>
+    <div style="flex:1;min-width:0">
+      <span style="color:#1e1040;font-weight:600">\u0427\u0430\u0441 \u0437\u0430\u043F\u0443\u0441\u043A\u0443</span>
+      <span style="color:rgba(30,16,64,0.7)">: ${startupStr}</span>
+    </div>
+  </div>`);
+    if (data.longTaskSupported) {
+      const msg = longTasksCount === 0 ? "\u043D\u0435\u043C\u0430\u0454" : `${longTasksCount} (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worstLongTask}\u043C\u0441)`;
+      rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+      <span style="color:${statusColor[longTasksStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[longTasksStatus]}</span>
+      <div style="flex:1;min-width:0">
+        <span style="color:#1e1040;font-weight:600">\u041B\u0430\u0433\u0438 UI >50\u043C\u0441</span>
+        <span style="color:rgba(30,16,64,0.7)">: ${msg}</span>
+      </div>
+    </div>`);
+    } else {
+      rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+      <span style="color:${statusColor.unknown};font-weight:800;flex-shrink:0;width:14px">\xB7</span>
+      <div style="flex:1;min-width:0">
+        <span style="color:rgba(30,16,64,0.6);font-weight:600">\u041B\u0430\u0433\u0438 UI</span>
+        <span style="color:rgba(30,16,64,0.55);font-style:italic">: Safari \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454 \u0446\u0435\u0439 API</span>
+      </div>
+    </div>`);
+    }
+    const fetchMsg = data.fetches.length === 0 ? "\u0449\u0435 \u043D\u0435 \u0431\u0443\u043B\u043E" : `${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432 \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgFetchMs}\u043C\u0441` + (failedFetches.length > 0 ? ` \xB7 ${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : "");
+    rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
+    <span style="color:${statusColor[fetchStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[fetchStatus]}</span>
+    <div style="flex:1;min-width:0">
+      <span style="color:#1e1040;font-weight:600">HTTP \u0437\u0430\u043F\u0438\u0442\u0438</span>
+      <span style="color:rgba(30,16,64,0.7)">: ${fetchMsg}</span>
+    </div>
+  </div>`);
+    if (data.fetches.length > 0) {
+      const recent = data.fetches.slice(-5).reverse();
+      rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438</div>' + recent.map((f) => {
+        const col = f.status === 0 || f.status >= 400 ? "#dc2626" : f.duration > 3e3 ? "#b45309" : "#16a34a";
+        const statusStr = f.status === 0 ? "FAIL" : String(f.status);
+        return `<div style="font-size:11px;line-height:1.5;font-family:ui-monospace,Menlo,monospace;color:rgba(30,16,64,0.85);display:flex;gap:8px;align-items:baseline">
+          <span style="color:${col};font-weight:700;flex-shrink:0;width:44px">${statusStr}</span>
+          <span style="color:rgba(30,16,64,0.55);flex-shrink:0;width:48px">${f.duration}\u043C\u0441</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.method} ${f.url}</span>
+        </div>`;
+      }).join("") + "</div>");
+    }
+    return `<div style="margin:10px 14px 0;padding:14px 16px;background:${overallBg};border:1px solid ${overallBorder};border-radius:12px">
+    <div onclick="togglePerfDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Performance</div>
+        <div style="font-size:13px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
+      </div>
+      <span id="perf-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
+    </div>
+    <div id="perf-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:8px">
+      ${rows.join("")}
+    </div>
+  </div>`;
+  }
+  function togglePerfDetails() {
+    const details = document.getElementById("perf-details");
+    const arrow = document.getElementById("perf-expand-arrow");
+    if (!details) return;
+    const isOpen = details.style.display === "flex";
+    details.style.display = isOpen ? "none" : "flex";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  var SMOKE_TEST_KEY, _perfData, MAX_FETCHES, MAX_LONGTASKS;
+  var init_diagnostics = __esm({
+    "src/core/diagnostics.js"() {
+      SMOKE_TEST_KEY = "__nm_smoke_test__";
+      _perfData = {
+        longTasks: [],
+        fetches: [],
+        startupMs: null,
+        longTaskSupported: false
+      };
+      MAX_FETCHES = 30;
+      MAX_LONGTASKS = 20;
+      _initPerformanceMonitor();
+      Object.assign(window, { toggleHealthDetails, toggleSmokeDetails, togglePerfDetails });
+    }
+  });
+
+  // src/core/logger.js
+  function trackUserAction(action) {
+    _recentActions.push({ action: String(action).slice(0, 80), tab: currentTab || "?", ts: Date.now() });
+    if (_recentActions.length > ACTIONS_MAX) _recentActions.shift();
+  }
+  function getErrorLog() {
+    try {
+      return JSON.parse(localStorage.getItem(NM_LOG_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function saveErrorLog(arr) {
+    try {
+      localStorage.setItem(NM_LOG_KEY, JSON.stringify(arr.slice(-NM_LOG_MAX)));
+    } catch {
+    }
+  }
+  function _groupConsecutive(log) {
+    const out = [];
+    for (const e of log) {
+      const prev = out[out.length - 1];
+      if (prev && prev.type === e.type && prev.msg === e.msg && prev.src === e.src) {
+        prev.count++;
+        prev.lastTs = e.ts;
+      } else {
+        out.push({ ...e, count: 1, firstTs: e.ts, lastTs: e.ts });
+      }
+    }
+    return out;
+  }
+  function logError(type, message, source, stack) {
+    const log = getErrorLog();
+    log.push({
+      ts: Date.now(),
+      type,
+      msg: String(message).slice(0, 500),
+      src: source || "",
+      tab: currentTab || "?",
+      stack: stack ? String(stack).slice(0, 1500) : null,
+      actions: _recentActions.slice(-3)
+    });
+    saveErrorLog(log);
+    updateErrorLogBtn();
+  }
+  function showErrorLog() {
+    const log = getErrorLog();
+    const panel = document.getElementById("log-panel");
+    const list = document.getElementById("log-panel-list");
+    if (!panel || !list) return;
+    const typeStyle = {
+      error: { bg: "rgba(239,68,68,0.12)", color: "#dc2626", label: "ERR" },
+      promise: { bg: "rgba(239,68,68,0.12)", color: "#dc2626", label: "PROMISE" },
+      err: { bg: "rgba(239,68,68,0.12)", color: "#dc2626", label: "ERR" },
+      warn: { bg: "rgba(251,191,36,0.2)", color: "#b45309", label: "WARN" },
+      log: { bg: "rgba(59,130,246,0.12)", color: "#2563eb", label: "LOG" }
+    };
+    const healthHtml = renderHealthCheck();
+    const smokeHtml = renderSmokeTests();
+    const perfHtml = renderPerformance();
+    const logsHeader = `<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">${t("logger.section_title", "\u041B\u043E\u0433\u0438 \u043F\u043E\u043C\u0438\u043B\u043E\u043A")}</div>`;
+    if (log.length === 0) {
+      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + `<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">${t("logger.empty", "\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}")}</div>`;
+    } else {
+      const grouped = _groupConsecutive(log);
+      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
+        const d = new Date(e.lastTs || e.ts);
+        const time = d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        const date = d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
+        const s = typeStyle[e.type] || { bg: "rgba(30,16,64,0.08)", color: "rgba(30,16,64,0.6)", label: e.type.toUpperCase() };
+        const countBadge = e.count > 1 ? `<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.2);color:#b45309">\xD7${e.count}</span>` : "";
+        const hasDetails = !!(e.stack || e.actions && e.actions.length);
+        const actionsHtml = e.actions && e.actions.length ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:10px">
+               <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t("logger.recent_actions", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0434\u0456\u0457 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E")}</div>
+               ${e.actions.map((a) => {
+          const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+          return `<div style="font-size:12px;color:rgba(30,16,64,0.8);line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">[${at}] [${escapeLog(a.tab)}] ${escapeLog(a.action)}</div>`;
+        }).join("")}
+             </div>` : "";
+        const stackHtml = e.stack ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.07);border-radius:10px;border-left:3px solid rgba(220,38,38,0.5)">
+               <div style="font-size:10px;font-weight:800;color:#dc2626;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t("logger.stack_trace", "Stack trace")}</div>
+               <div style="font-size:11px;color:rgba(30,16,64,0.85);white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.stack)}</div>
+             </div>` : "";
+        return `<div class="log-entry" data-idx="${idx}" ${hasDetails ? `onclick="toggleLogEntry(${idx})"` : ""} style="background:rgba(255,255,255,0.75);border:1px solid rgba(30,16,64,0.08);border-radius:12px;padding:12px 14px;cursor:${hasDetails ? "pointer" : "default"};-webkit-tap-highlight-color:transparent">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:${s.bg};color:${s.color};letter-spacing:0.3px">${s.label}</span>
+            ${countBadge}
+            <span style="font-size:11px;color:rgba(30,16,64,0.55);font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${date} ${time}</span>
+            <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.55);margin-left:auto;padding:2px 7px;border-radius:5px;background:rgba(30,16,64,0.06);text-transform:uppercase;letter-spacing:0.3px">${escapeLog(e.tab)}</span>
+            ${hasDetails ? `<span class="log-expand-${idx}" style="font-size:13px;color:rgba(30,16,64,0.55);flex-shrink:0">\u25B8</span>` : ""}
+          </div>
+          <div style="font-size:14px;color:#1e1040;line-height:1.5;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${escapeLog(e.msg)}</div>
+          ${e.src ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.src)}</div>` : ""}
+          <div class="log-details-${idx}" style="display:none">${actionsHtml}${stackHtml}</div>
+        </div>`;
+      }).join("") + "</div>";
+    }
+    const countEl = document.getElementById("log-panel-count");
+    if (countEl) {
+      const grouped = _groupConsecutive(log);
+      const groupedN = grouped.length;
+      const txt = groupedN === log.length ? t("logger.count_simple", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443", { n: log.length }) : t("logger.count_grouped", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 {g} \u0433\u0440\u0443\u043F \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443", { n: log.length, g: groupedN });
+      countEl.textContent = txt;
+    }
+    panel.style.display = "flex";
+    requestAnimationFrame(() => panel.style.opacity = "1");
+  }
+  function copyLogForClaude() {
+    const log = getErrorLog();
+    const grouped = _groupConsecutive(log);
+    const lastGroups = grouped.slice(-50);
+    const badge = document.getElementById("deploy-version");
+    const deployLine = badge ? `\u0412\u0435\u0440\u0441\u0456\u044F: ${badge.textContent || "?"} \xB7 \u043A\u043E\u043C\u0456\u0442: ${badge.dataset.commit || "local"} \xB7 \u0433\u0456\u043B\u043A\u0430: ${badge.dataset.source || "dev"}` : "\u0412\u0435\u0440\u0441\u0456\u044F: \u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430";
+    const checks = runHealthCheck();
+    const fails = checks.filter((c) => c.status === "fail").length;
+    const warns = checks.filter((c) => c.status === "warn").length;
+    const overallText = fails > 0 ? `${fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 \u043F\u0440\u043E\u0431\u043B\u0435\u043C` : warns > 0 ? `${warns} \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u044C` : "\u0423\u0441\u0435 \u0433\u0430\u0440\u0430\u0437\u0434";
+    const icon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" };
+    const healthLines = checks.map((c) => {
+      let line = `${icon[c.status]} ${c.name}: ${c.message}`;
+      if (c.hint) line += `
+    \u2192 ${c.hint}`;
+      return line;
+    }).join("\n");
+    const { tests: smokeTests, totalMs: smokeMs } = runSmokeTests();
+    const smokeFails = smokeTests.filter((t2) => t2.status === "fail").length;
+    const smokePasses = smokeTests.length - smokeFails;
+    const smokeSummary = smokeFails > 0 ? `${smokePasses}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeFails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${smokeTests.length}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeMs}\u043C\u0441`;
+    const smokeLines = smokeTests.map((t2) => {
+      const ic = t2.status === "pass" ? "\u2713" : "\u2717";
+      return `${ic} ${t2.name}${t2.status === "fail" ? ` \u2014 ${t2.message}` : ""} (${t2.ms}\u043C\u0441)`;
+    }).join("\n");
+    const perf = getPerformanceData();
+    const perfLines = [];
+    perfLines.push(`\u0421\u0442\u0430\u0440\u0442: ${perf.startupMs != null ? perf.startupMs + "\u043C\u0441" : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"}`);
+    if (perf.longTaskSupported) {
+      const worst = perf.longTasks.reduce((m, t2) => t2.duration > m ? t2.duration : m, 0);
+      perfLines.push(`\u041B\u0430\u0433\u0438 UI: ${perf.longTasks.length}${worst > 0 ? ` (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worst}\u043C\u0441)` : ""}`);
+    } else {
+      perfLines.push("\u041B\u0430\u0433\u0438 UI: \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043E\u043C");
+    }
+    const okF = perf.fetches.filter((f) => f.status >= 200 && f.status < 400);
+    const failF = perf.fetches.filter((f) => f.status === 0 || f.status >= 400);
+    const avgF = okF.length > 0 ? Math.round(okF.reduce((s, f) => s + f.duration, 0) / okF.length) : 0;
+    perfLines.push(`\u0417\u0430\u043F\u0438\u0442\u0456\u0432: ${perf.fetches.length}${avgF > 0 ? ` \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgF}\u043C\u0441` : ""}${failF.length > 0 ? ` \xB7 ${failF.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : ""}`);
+    if (perf.fetches.length > 0) {
+      perfLines.push("\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438:");
+      perf.fetches.slice(-5).reverse().forEach((f) => {
+        perfLines.push(`  ${f.status === 0 ? "FAIL" : f.status} ${f.duration}\u043C\u0441 ${f.method} ${f.url}${f.error ? " \u2014 " + f.error : ""}`);
+      });
+    }
+    const logLines = lastGroups.length === 0 ? "(\u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E)" : lastGroups.map((e) => {
+      const time = new Date(e.lastTs || e.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const cnt = e.count > 1 ? ` \xD7${e.count}` : "";
+      let block = `[${time}][${e.type}][${e.tab}]${cnt} ${e.msg}${e.src ? " @ " + e.src : ""}`;
+      if (e.actions && e.actions.length) {
+        block += "\n  actions: " + e.actions.map((a) => {
+          const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+          return `[${at}][${a.tab}] ${a.action}`;
+        }).join(" \u2192 ");
+      }
+      if (e.stack) {
+        block += "\n  stack: " + e.stack.split("\n").slice(0, 6).join(" | ");
+      }
+      return block;
+    }).join("\n");
+    const text = `NeverMind \u0434\u0456\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430
+${deployLine}
+
+\u2501\u2501\u2501 \u0421\u0422\u0410\u041D \u0421\u0418\u0421\u0422\u0415\u041C: ${overallText} \u2501\u2501\u2501
+${healthLines}
+
+\u2501\u2501\u2501 SMOKE \u0422\u0415\u0421\u0422\u0418: ${smokeSummary} \u2501\u2501\u2501
+${smokeLines}
+
+\u2501\u2501\u2501 PERFORMANCE \u2501\u2501\u2501
+${perfLines.join("\n")}
+
+\u2501\u2501\u2501 \u041B\u041E\u0413\u0418 (${lastGroups.length} \u0433\u0440\u0443\u043F \u0437 ${grouped.length}, \u0432\u0441\u044C\u043E\u0433\u043E ${log.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432) \u2501\u2501\u2501
+\`\`\`
+${logLines}
+\`\`\``;
+    navigator.clipboard?.writeText(text);
+  }
+  function closeLogPanel() {
+    const panel = document.getElementById("log-panel");
+    if (!panel) return;
+    panel.style.opacity = "0";
+    setTimeout(() => {
+      panel.style.display = "none";
+    }, 250);
+  }
+  function clearErrorLog() {
+    localStorage.removeItem(NM_LOG_KEY);
+    updateErrorLogBtn();
+    showErrorLog();
+  }
+  function updateErrorLogBtn() {
+    const btn = document.getElementById("error-log-btn");
+    if (!btn) return;
+    const count = getErrorLog().length;
+    btn.textContent = count > 0 ? count : "0";
+    btn.style.background = count > 0 ? "rgba(234,88,12,0.12)" : "";
+    btn.style.color = count > 0 ? "#ea580c" : "";
+  }
+  function escapeLog(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+  function toggleLogEntry(idx) {
+    const details = document.querySelector(`.log-details-${idx}`);
+    const arrow = document.querySelector(`.log-expand-${idx}`);
+    if (!details) return;
+    const isOpen = details.style.display === "block";
+    details.style.display = isOpen ? "none" : "block";
+    if (arrow) arrow.textContent = isOpen ? "\u25B8" : "\u25BE";
+  }
+  var NM_LOG_KEY, NM_LOG_MAX, _recentActions, ACTIONS_MAX;
+  var init_logger = __esm({
+    "src/core/logger.js"() {
+      init_nav();
+      init_utils();
+      init_diagnostics();
+      NM_LOG_KEY = "nm_error_log";
+      NM_LOG_MAX = 200;
+      _recentActions = [];
+      ACTIONS_MAX = 10;
+      window.addEventListener("error", (e) => {
+        logError(
+          "error",
+          e.error?.message || e.message,
+          (e.filename || "").replace(/.*\//, "") + ":" + e.lineno,
+          e.error?.stack
+        );
+      });
+      window.addEventListener("unhandledrejection", (e) => {
+        const r = e.reason;
+        logError(
+          "promise",
+          r ? r.message || String(r) : "Promise rejected",
+          "",
+          r?.stack
+        );
+      });
+      (function() {
+        const _log = console.log.bind(console);
+        const _warn = console.warn.bind(console);
+        const _err = console.error.bind(console);
+        console.log = (...a) => {
+          _log(...a);
+          logError("log", a.map(String).join(" "), "");
+        };
+        console.warn = (...a) => {
+          _warn(...a);
+          logError("warn", a.map(String).join(" "), "");
+        };
+        console.error = (...a) => {
+          _err(...a);
+          logError("err", a.map(String).join(" "), "");
+        };
+      })();
+      window.addEventListener("nm-data-changed", (e) => {
+        trackUserAction("data-changed:" + (e?.detail || "unknown"));
+      });
+      Object.assign(window, { showErrorLog, copyLogForClaude, closeLogPanel, clearErrorLog, toggleLogEntry });
     }
   });
 
