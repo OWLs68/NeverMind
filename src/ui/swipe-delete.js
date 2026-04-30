@@ -1,4 +1,6 @@
 // === UNIVERSAL SWIPE DELETE TRAIL (#32) ===
+import { t } from '../core/utils.js';
+
 export const SWIPE_DELETE_THRESHOLD = 90; // єдиний поріг для всіх вкладок
 
 // === SWIPE-OPEN DELETE (B-54 механізм Фінансів, винесений 18.04.2026 14zLe) ===
@@ -34,7 +36,7 @@ export function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
     const w = Math.round(wrapEl.offsetWidth * openRatio);
     bin = document.createElement('button');
     bin.className = 'swipe-open-bin';
-    bin.setAttribute('aria-label', 'Видалити');
+    bin.setAttribute('aria-label', t('swipe.delete_button', 'Видалити'));
     bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(${binBg},0) 0%, rgba(${binBg},0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
     bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
     bin.addEventListener('click', (e) => {

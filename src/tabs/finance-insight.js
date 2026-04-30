@@ -4,7 +4,7 @@
 // Одна динамічна картка з AI-обраним фактом замість 3 статичних.
 // ============================================================
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { getOWLPersonality } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getCurrency, formatMoney, getFinBudget } from './finance.js';
@@ -28,7 +28,7 @@ export function finDailyInsight(allTxs, period, offset) {
   if (allTxs.length < 2) return '';
   const cacheKey = `nm_fin_insight_${period}_${offset}`;
   const cached = localStorage.getItem(cacheKey);
-  let text = 'OWL аналізує фінанси…';
+  let text = t('finance.insight_loading', 'OWL аналізує фінанси…');
   if (cached) { try { text = JSON.parse(cached).text || text; } catch(e) {} }
   return `<div id="fin-insight-card" style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:12px 14px;margin-bottom:12px">
     <div style="width:28px;height:28px;border-radius:10px;background:rgba(194,65,12,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">

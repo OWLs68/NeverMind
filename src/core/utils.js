@@ -47,9 +47,9 @@ export function saveOffline(text) {
 
 export function formatTime(ts) {
   const diff = Date.now() - ts;
-  if (diff < 60000) return 'щойно';
-  if (diff < 3600000) return Math.floor(diff / 60000) + ' хв тому';
-  if (diff < 86400000) return Math.floor(diff / 3600000) + ' год тому';
+  if (diff < 60000) return t('time.just_now', 'щойно');
+  if (diff < 3600000) return Math.floor(diff / 60000) + t('time.minutes_ago', ' хв тому');
+  if (diff < 86400000) return Math.floor(diff / 3600000) + t('time.hours_ago', ' год тому');
   return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 }
 
