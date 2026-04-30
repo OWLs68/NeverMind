@@ -509,16 +509,110 @@ export async function callAIWithHistory(systemPrompt, history, module = 'callAIW
   }
 }
 
+// === V3 Фаза 1.5 — Dynamic Tool Loading (фільтрація 60→15 tools по контексту) ===
+// Regex-класифікатор економить токени (~30-40% на запит) + зменшує Context Window
+// Bloat коли всі 60 tools передаються у промпт.
+// Базові tools завжди включаються (модель може потребувати їх для будь-якого запиту).
+// Якщо матч слабкий — fallback на повний набір (через `keepFullThreshold`).
+const _BASE_TOOL_NAMES = new Set([
+  'save_memory_fact', 'save_task', 'save_note', 'save_finance', 'create_event', 'clarify',
+  'switch_tab', 'request_quiet'
+]);
+
+const _TOOL_CATEGORIES = {
+  finance: {
+    rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|купив|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
+    tools: ['save_finance', 'update_transaction', 'delete_transaction', 'set_finance_budget', 'add_finance_category', 'rename_finance_category', 'delete_finance_category', 'add_finance_subcategory', 'rename_finance_subcategory', 'delete_finance_subcategory', 'set_finance_period', 'open_finance_analytics']
+  },
+  habit: {
+    rx: /\b(звичк|щодня|повторюй|кожен ?(день|ранок|вечір)|трекер|стрік|streak)/i,
+    tools: ['save_habit', 'edit_habit', 'delete_habit', 'complete_habit']
+  },
+  task: {
+    rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|купи|відправ|зателефонуй|написати|подати|оплатити|закрив|зробив|поприбирай|поміняй)/i,
+    tools: ['save_task', 'edit_task', 'delete_task', 'complete_task', 'reopen_task', 'add_step', 'set_reminder']
+  },
+  event: {
+    rx: /\b(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))/i,
+    tools: ['create_event', 'edit_event', 'delete_event', 'open_calendar']
+  },
+  health: {
+    rx: /\b(болить|симптом|лікар|тиск|пігулк|таблетк|шкір|алерг|тренуван|травм|діагно|алерг|висип)/i,
+    tools: ['create_health_card', 'edit_health_card', 'delete_health_card', 'add_health_history_entry', 'export_health_card']
+  },
+  note: {
+    rx: /\b(нотатк|запиши думк|щоден|рефлекс|папк[уи])/i,
+    tools: ['save_note', 'edit_note', 'move_note', 'delete_folder']
+  },
+  project: {
+    rx: /\b(проект|ремонт|запуск|розробк|організац|крок проект|етап|віх|milestone|метрик|ризик)/i,
+    tools: ['create_project', 'complete_project_step', 'add_project_step', 'update_project_progress', 'add_project_decision', 'add_project_metric', 'add_project_resource', 'update_project_tempo', 'update_project_risks']
+  },
+  moment: {
+    rx: /\b(момент|щойно|поїхав|зустрів(ся|ла)|побачив|був на)/i,
+    tools: ['save_moment']
+  },
+  routine: {
+    rx: /\b(розклад|розпорядок|прокидаюсь|лягаю|режим дня)/i,
+    tools: ['save_routine']
+  },
+  trash: {
+    rx: /\b(відновити|повернути назад|з кошика|undo|поверни)/i,
+    tools: ['restore_deleted']
+  },
+  memory: {
+    rx: /\b(запамʼятай|що ти про мене|памʼять|memory)/i,
+    tools: ['save_memory_fact', 'open_memory']
+  },
+  ui: {
+    rx: /\b(відкрий|покажи|перейди|переключи|режим тиші|дай спокій|не доставай|тренер|партнер|ментор)/i,
+    tools: ['switch_tab', 'open_settings', 'set_owl_mode', 'request_quiet']
+  }
+};
+
+export function selectRelevantTools(userText, fullTools) {
+  if (!userText || typeof userText !== 'string' || !Array.isArray(fullTools)) return fullTools;
+  const text = userText.toLowerCase();
+  const matched = new Set();
+  let hits = 0;
+  for (const cat of Object.values(_TOOL_CATEGORIES)) {
+    if (cat.rx.test(text)) {
+      hits++;
+      cat.tools.forEach(n => matched.add(n));
+    }
+  }
+  // Якщо нема матчу або матчів забагато (>4 категорій — амбівалентний запит) — повний набір.
+  if (hits === 0 || hits > 4) return fullTools;
+  // Завжди додаємо базові tools.
+  _BASE_TOOL_NAMES.forEach(n => matched.add(n));
+  const filtered = fullTools.filter(t => matched.has(t.function?.name));
+  // Sanity check — мінімум 5 tools має лишитись.
+  return filtered.length >= 5 ? filtered : fullTools;
+}
+
 // === callAIWithTools — tool calling для Inbox ===
 // Повертає message object { content?, tool_calls? } або null
 // Temperature 0.2 — класифікація має бути стабільною, не творчою
 // `module` — ідентифікатор для лічильника витрат (inbox/tasks-bar/notes-bar тощо).
+// V3 Фаза 1.5 — авто-фільтрація tools на основі останньої репліки юзера у history.
 export async function callAIWithTools(systemPrompt, history, tools, module = 'callAIWithTools') {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
+    // Витягуємо останній user message для класифікатора.
+    const lastUser = [...history].reverse().find(m => m.role === 'user');
+    const userText = lastUser ? (typeof lastUser.content === 'string' ? lastUser.content : '') : '';
+    const filteredTools = selectRelevantTools(userText, tools);
+    // Лог для діагностики ефективності класифікатора (перші 2 тижні моніторити).
+    if (Array.isArray(tools) && filteredTools.length < tools.length) {
+      try {
+        const log = JSON.parse(localStorage.getItem('nm_tool_filter_log') || '[]');
+        log.unshift({ ts: Date.now(), module, full: tools.length, picked: filteredTools.length, text: userText.slice(0, 80) });
+        localStorage.setItem('nm_tool_filter_log', JSON.stringify(log.slice(0, 50)));
+      } catch {}
+    }
     const messages = [{ role: 'system', content: systemPrompt }, ...history];
-    const msg = await _fetchAI(messages, controller.signal, tools, 0.2, module);
+    const msg = await _fetchAI(messages, controller.signal, filteredTools, 0.2, module);
     clearTimeout(timeout);
     return msg;
   } catch(e) {
