@@ -11,6 +11,8 @@
 //   - `getUsageStats()` повертає агрегати: today/thisMonth/projection/byModule.
 //   - `exportUsageJSON()` копіює сирий лог у буфер обміну (для порівняння Роман+друг).
 
+import { t } from './utils.js';
+
 const STORAGE_KEY = 'nm_usage_log';
 const RETENTION_DAYS = 31;
 
@@ -185,21 +187,22 @@ export function renderUsageMeter() {
   if (!el) return;
   const stats = getUsageStats();
   const projLine = stats.projection !== null
-    ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>Прогноз кінця місяця</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>`
-    : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">Прогноз з'явиться після 3 днів даних</div>`;
+    ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>${t('usage.projection_label', 'Прогноз кінця місяця')}</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>`
+    : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">${t('usage.projection_pending', "Прогноз з'явиться після 3 днів даних")}</div>`;
   const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
+  const callsLabel = t('usage.calls_short', 'викл');
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
-      <span>Сьогодні</span>
-      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} викл)</span></span>
+      <span>${t('usage.today', 'Сьогодні')}</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} ${callsLabel})</span></span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600;margin-top:6px">
-      <span>Цей місяць</span>
-      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} викл)</span></span>
+      <span>${t('usage.this_month', 'Цей місяць')}</span>
+      <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} ${callsLabel})</span></span>
     </div>
     ${projLine}
     ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ''}
-    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">Зберігається ${RETENTION_DAYS} днів. Дані локальні.</div>
+    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">${t('usage.retention_note', 'Зберігається {days} днів. Дані локальні.', { days: RETENTION_DAYS })}</div>
   `;
 }
 
@@ -214,18 +217,18 @@ if (typeof window !== 'undefined') {
 async function exportWithToast() {
   const r = await exportUsageJSON();
   if (r.ok && typeof window !== 'undefined' && window.showToast) {
-    window.showToast(`📋 Скопійовано ${r.calls} записів у буфер`, 2500);
+    window.showToast(t('usage.toast_copied', '📋 Скопійовано {n} записів у буфер', { n: r.calls }), 2500);
   } else if (typeof window !== 'undefined' && window.showToast) {
-    window.showToast('❌ Не вдалось скопіювати: ' + (r.error || 'невідомо'), 3000);
+    window.showToast(t('usage.toast_copy_fail', '❌ Не вдалось скопіювати: {err}', { err: r.error || t('usage.unknown', 'невідомо') }), 3000);
   }
 }
 
 async function clearWithConfirm() {
-  if (typeof confirm !== 'undefined' && !confirm('Очистити лог витрат? Дію не можна скасувати.')) return;
+  if (typeof confirm !== 'undefined' && !confirm(t('usage.confirm_clear', 'Очистити лог витрат? Дію не можна скасувати.'))) return;
   clearUsageLog();
   renderUsageMeter();
   if (typeof window !== 'undefined' && window.showToast) {
-    window.showToast('🗑️ Лог витрат очищено', 2000);
+    window.showToast(t('usage.toast_cleared', '🗑️ Лог витрат очищено'), 2000);
   }
 }
 

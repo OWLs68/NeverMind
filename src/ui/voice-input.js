@@ -12,6 +12,8 @@
 //   - Fallback: якщо браузер не підтримує API — кнопка просто не з'являється
 // ============================================================
 
+import { t } from '../core/utils.js';
+
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const SUPPORTED = !!SR;
 
@@ -21,7 +23,7 @@ function createMicButton() {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'voice-btn';
-  btn.setAttribute('aria-label', 'Голосовий ввід');
+  btn.setAttribute('aria-label', t('voice.input', 'Голосовий ввід'));
   btn.style.cssText = 'width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.2s,transform 0.2s';
   btn.innerHTML = MIC_SVG;
   return btn;
@@ -45,7 +47,7 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
       rec.interimResults = true;
       rec.maxAlternatives = 1;
     } catch (e) {
-      try { window.showToast && window.showToast('Голосовий ввід недоступний'); } catch {}
+      try { window.showToast && window.showToast(t('voice.unavailable', 'Голосовий ввід недоступний')); } catch {}
       rec = null;
       return;
     }
@@ -68,10 +70,10 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
 
     rec.onerror = (ev) => {
       const err = ev.error || '';
-      let msg = 'Помилка мікрофона';
-      if (err === 'not-allowed' || err === 'service-not-allowed') msg = 'Дозволь мікрофон у налаштуваннях';
-      else if (err === 'no-speech') msg = 'Не чую голосу';
-      else if (err === 'network') msg = 'Немає інтернету для розпізнавання';
+      let msg = t('voice.error_mic', 'Помилка мікрофона');
+      if (err === 'not-allowed' || err === 'service-not-allowed') msg = t('voice.error_permission', 'Дозволь мікрофон у налаштуваннях');
+      else if (err === 'no-speech') msg = t('voice.error_no_speech', 'Не чую голосу');
+      else if (err === 'network') msg = t('voice.error_network', 'Немає інтернету для розпізнавання');
       try { window.showToast && window.showToast(msg); } catch {}
     };
 
