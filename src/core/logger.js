@@ -1,4 +1,5 @@
 import { currentTab, showToast } from './nav.js';
+import { t } from './utils.js';
 import { runHealthCheck, renderHealthCheck, runSmokeTests, renderSmokeTests, getPerformanceData, renderPerformance } from './diagnostics.js';
 
 // === LOGGER ===
@@ -103,11 +104,11 @@ function showErrorLog() {
   const healthHtml = renderHealthCheck();
   const smokeHtml = renderSmokeTests();
   const perfHtml = renderPerformance();
-  const logsHeader = '<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">Логи помилок</div>';
+  const logsHeader = `<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">${t('logger.section_title', 'Логи помилок')}</div>`;
 
   if (log.length === 0) {
     list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader +
-      '<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">Лог порожній — помилок не знайдено 👍</div>';
+      `<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">${t('logger.empty', 'Лог порожній — помилок не знайдено 👍')}</div>`;
   } else {
     const grouped = _groupConsecutive(log);
     list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader +
@@ -123,7 +124,7 @@ function showErrorLog() {
         const hasDetails = !!(e.stack || (e.actions && e.actions.length));
         const actionsHtml = (e.actions && e.actions.length)
           ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:10px">
-               <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Останні дії перед помилкою</div>
+               <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t('logger.recent_actions', 'Останні дії перед помилкою')}</div>
                ${e.actions.map(a => {
                  const at = new Date(a.ts).toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
                  return `<div style="font-size:12px;color:rgba(30,16,64,0.8);line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">[${at}] [${escapeLog(a.tab)}] ${escapeLog(a.action)}</div>`;
@@ -132,7 +133,7 @@ function showErrorLog() {
           : '';
         const stackHtml = e.stack
           ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.07);border-radius:10px;border-left:3px solid rgba(220,38,38,0.5)">
-               <div style="font-size:10px;font-weight:800;color:#dc2626;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Stack trace</div>
+               <div style="font-size:10px;font-weight:800;color:#dc2626;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t('logger.stack_trace', 'Stack trace')}</div>
                <div style="font-size:11px;color:rgba(30,16,64,0.85);white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.stack)}</div>
              </div>`
           : '';
@@ -157,8 +158,8 @@ function showErrorLog() {
     const grouped = _groupConsecutive(log);
     const groupedN = grouped.length;
     const txt = groupedN === log.length
-      ? `${log.length} записів · свіжіші зверху`
-      : `${log.length} записів · ${groupedN} груп · свіжіші зверху`;
+      ? t('logger.count_simple', '{n} записів · свіжіші зверху', { n: log.length })
+      : t('logger.count_grouped', '{n} записів · {g} груп · свіжіші зверху', { n: log.length, g: groupedN });
     countEl.textContent = txt;
   }
 
@@ -273,7 +274,7 @@ function closeLogPanel() {
 
 function copyErrorLog() {
   const log = getErrorLog();
-  if (!log.length) { showToast('Лог порожній'); return; }
+  if (!log.length) { showToast(t('logger.empty_short', 'Лог порожній')); return; }
   const lines = log.map(e => {
     const time = new Date(e.ts).toLocaleString('uk-UA');
     return `[${time}] [${e.type}] [${e.tab}] ${e.msg}${e.src ? ' → ' + e.src : ''}`;
