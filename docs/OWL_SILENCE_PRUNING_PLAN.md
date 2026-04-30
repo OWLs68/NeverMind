@@ -78,7 +78,12 @@ R5Ejr закрив **B-104** через 2 кроки:
 
 ---
 
-## Фаза 1 — Silence Engine (~1.5 год)
+## Фаза 1 — Silence Engine (~1.5 год) ✅ ВИКОНАНО (C8uQD 27.04 + xHQfi 30.04)
+
+**Статус (30.04 xHQfi):** базова Фаза 1 закрита у C8uQD 27.04 (`request_quiet` tool + handler + silence-чек у `shouldOwlSpeak` + тригер-фрази у `UI_TOOLS_RULES`). У xHQfi 30.04 додано:
+- **Tool `cancel_quiet`** — голосова команда «можеш говорити / повертайся / досить мовчати» стирає `nm_owl_silence_until`. Закриває gap «юзер передумав, не може скасувати достроково».
+- **UI-плашка `.owl-silence-badge`** зверху board (8 вкладок + Inbox) — «🤫 Сова мовчить до HH:MM. Тапни щоб скасувати». Тап миттєво стирає тишу + перерендерить усі активні табло через `nm-data-changed` listener.
+- Коміти xHQfi: `44bf7fe` (cancel_quiet tool), `da057ae` (UI badge + перерендер).
 
 **Мета:** структурний важіль для юзера «дай спокій на N годин» через AI tool. Усі 4 канали сови читають один і той самий ключ `nm_owl_silence_until` через централізований Judge Layer — guard clause не дублюється у кожному модулі.
 
