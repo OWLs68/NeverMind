@@ -2728,3 +2728,10 @@ Quick dialogue mode (хук + правило в CLAUDE.md): тригери ≤10
 
 **Коміти:** `43010ed` cleanup 36 ghosts task · `4fc534f` weekly habits in getAIContext + insights cache bump · `886559b` external facts rule · `6bc5d5b` switch_tab habits subtab + insights block visibility · `1049c0f` remove onboarding modal · `42bf5f2` session-state H0DxS · `079f48b` rotate bugs
 **Метрики:** 7 комітів (4 fix + 3 docs), CACHE_NAME `nm-20260429-2300` → `nm-20260429-2340` (4 рази), v488→v489+ після auto-merge, гілка `claude/start-session-H0DxS`. Закриті баги: 2 з lRnXU списку (Відкрий звички, OWL знає тебе зливається).
+
+## 30.04.2026 — сесія EhxzJ
+
+6 OWL-багів закрито одним заходом (B-109 розмір табло, B-110 одна тема, B-111 минулі події, B-112 формат «X з Y днів», B-113 авто-ререндер, B-114 розрізнення сутностей). V3 Фаза 1 — `_reasoning_log` обовʼязковий у всіх 60 tools (zero-shot CoT, dispatcher strip + лог), закриває B-97. V3 Фаза 1.5 — Dynamic Tool Loading regex-класифікатор з 12 категорій фільтрує 60→15 tools, очікувана економія 30-40% токенів.
+
+**Коміти:** `087b00c` add B-109..B-113 · `8bb0daf` B-111 past events · `45390be` B-110 one topic · `3797258` B-109 shrink board · `e9e6d44` B-112 X з Y · `de17837` B-113 auto-refresh · `40ebc94` B-114 entity distinction · `a5556df` V3 Phase 1 _reasoning_log · `33fd846` V3 Phase 1.5 dynamic tools · `d6729b2` archive lRnXU · `81e4ddd` session-state EhxzJ · `2b68788` rotate bugs · `7bb2e2a` roadmap sync
+**Метрики:** 12 робочих + 4 /finish docs комітів, CACHE_NAME `nm-20260429-2340` → `nm-20260430-0432` (3 bumps), v494→v497+ після auto-merge, гілка `claude/start-session-EhxzJ`. Закриті баги: 7 (B-97 + B-109..B-114).
