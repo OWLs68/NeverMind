@@ -30,7 +30,7 @@ import { saveMoments, getMoments } from './evening.js';
 import { addFact } from '../ai/memory.js';
 import { addToTrash, restoreFromTrash, getTrash } from '../core/trash.js';
 import { currentTab } from '../core/nav.js';
-import { logRecentAction } from '../core/utils.js';
+import { logRecentAction, t } from '../core/utils.js';
 import { callAI, getAIContext } from '../ai/core.js';
 import { getEveningSummaryPromptV2 } from '../ai/prompts.js';
 
@@ -56,12 +56,12 @@ function _markEveningClosed(summaryText) {
 // Сама функція: AI → підсумок у чат Вечора + save_memory_fact + значок активується.
 export async function generateEveningRitualSummary(addMsg) {
   if (isEveningClosed()) {
-    if (addMsg) addMsg('agent', 'Ти вже закрив день. До завтра. 🌙');
+    if (addMsg) addMsg('agent', t('evening.already_closed', 'Ти вже закрив день. До завтра. 🌙'));
     return { ok: true, already: true };
   }
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
-    if (addMsg) addMsg('agent', 'Введи OpenAI ключ в налаштуваннях.');
+    if (addMsg) addMsg('agent', t('common.no_api_key', 'Введи OpenAI ключ в налаштуваннях.'));
     return { ok: false, err: 'no key' };
   }
   if (addMsg) addMsg('typing', '');
@@ -69,7 +69,7 @@ export async function generateEveningRitualSummary(addMsg) {
   const systemPrompt = getEveningSummaryPromptV2() + '\n\n' + getAIContext();
   const reply = await callAI(systemPrompt, 'Підведи підсумок цього дня — інсайт, не цифри.', {}, 'evening-actions');
   if (!reply) {
-    if (addMsg) addMsg('agent', 'Не вдалось сформулювати підсумок.');
+    if (addMsg) addMsg('agent', t('evening.summary_failed', 'Не вдалось сформулювати підсумок.'));
     return { ok: false, err: 'no reply' };
   }
   const text = reply.trim().slice(0, 600);
@@ -99,7 +99,7 @@ export function dispatchEveningTool(name, args) {
         const tasks = getTasks();
         const newTask = {
           id: Date.now(),
-          title: args.title || args.text || 'Задача',
+          title: args.title || args.text || t('default.task_title', 'Задача'),
           desc: (args.text && args.text !== args.title) ? args.text : '',
           steps: Array.isArray(args.steps) ? args.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
           status: 'active',
@@ -134,7 +134,7 @@ export function dispatchEveningTool(name, args) {
         return { ok: true };
       }
       case 'create_event': {
-        const res = addEventDedup({ id: Date.now(), title: args.title || 'Подія', date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() });
+        const res = addEventDedup({ id: Date.now(), title: args.title || t('default.event_title', 'Подія'), date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() });
         if (!res.added) return { ok: true, duplicate: true };
         logRecentAction('create_event', args.title || '', 'evening');
         return { ok: true };
@@ -145,7 +145,7 @@ export function dispatchEveningTool(name, args) {
           id: Date.now(),
           type: args.fin_type === 'income' ? 'income' : 'expense',
           amount: parseFloat(args.amount) || 0,
-          category: args.category || 'Інше',
+          category: args.category || t('default.category_other', 'Інше'),
           comment: args.fin_comment || '',
           ts: args.date ? new Date(args.date + 'T12:00:00').getTime() : Date.now(),
         });
@@ -157,7 +157,7 @@ export function dispatchEveningTool(name, args) {
         // MVP: reminder як подія у календарі. Повна реалізація Динамічного
         // розпорядку + push-нотифікацій — окрема фіча у ROADMAP.
         const dateISO = args.date || new Date().toISOString().slice(0, 10);
-        const res = addEventDedup({ id: Date.now(), title: '⏰ ' + (args.text || 'Нагадування'), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() });
+        const res = addEventDedup({ id: Date.now(), title: '⏰ ' + (args.text || t('default.reminder_title', 'Нагадування')), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() });
         if (!res.added) return { ok: true, duplicate: true };
         return { ok: true };
       }
