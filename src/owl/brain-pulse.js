@@ -78,6 +78,16 @@ export async function brainPulse() {
     try { args = JSON.parse(call.function.arguments || '{}'); }
     catch (e) { console.warn('[brain-pulse] bad tool args:', e); return; }
 
+    // V3 Фаза 1: лог _reasoning_log і strip перед обробкою
+    if (args._reasoning_log) {
+      try {
+        const log = JSON.parse(localStorage.getItem('nm_reasoning_log') || '[]');
+        log.unshift({ ts: Date.now(), tool: 'post_chat_message', reasoning: String(args._reasoning_log).slice(0, 400) });
+        localStorage.setItem('nm_reasoning_log', JSON.stringify(log.slice(0, 50)));
+      } catch {}
+      delete args._reasoning_log;
+    }
+
     const { tab, text, priority, reason } = args;
     if (!tab || !text) return;
 

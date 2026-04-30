@@ -451,6 +451,18 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
     try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
     const name = tc.function.name;
 
+    // V3 Фаза 1: _reasoning_log — обов'язкове поле для zero-shot CoT (chain-of-thought).
+    // Модель пише думки ПЕРЕД параметрами — токени-роздуми покращують вибір tool.
+    // Dispatcher НЕ передає це поле у handler (службове). Логуємо для діагностики.
+    if (args._reasoning_log) {
+      try {
+        const log = JSON.parse(localStorage.getItem('nm_reasoning_log') || '[]');
+        log.unshift({ ts: Date.now(), tool: name, reasoning: String(args._reasoning_log).slice(0, 400) });
+        localStorage.setItem('nm_reasoning_log', JSON.stringify(log.slice(0, 50)));
+      } catch {}
+      delete args._reasoning_log;
+    }
+
     // 1. UI tools — навігація/фільтри/налаштування
     if (UI_TOOL_NAMES.has(name)) {
       const res = handleUITool(name, args);

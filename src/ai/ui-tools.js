@@ -27,13 +27,14 @@ export const UI_TOOLS = [
       parameters: {
         type: "object",
         properties: {
+          _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." },
           target: {
             type: "string",
             enum: ["inbox", "tasks", "notes", "finance", "habits", "me", "evening", "health", "projects", "calendar"],
             description: "Назва вкладки"
           }
         },
-        required: ["target"],
+        required: ["_reasoning_log","target"],
         additionalProperties: false
       }
     }
@@ -43,7 +44,7 @@ export const UI_TOOLS = [
     function: {
       name: "open_memory",
       description: "Відкрити модалку 'Пам'ять агента' — що агент знає про юзера. Юзер каже 'що ти про мене знаєш', 'покажи пам'ять'.",
-      parameters: { type: "object", properties: {}, additionalProperties: false }
+      parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." } }, required: ["_reasoning_log"], additionalProperties: false }
     }
   },
   {
@@ -55,12 +56,13 @@ export const UI_TOOLS = [
       parameters: {
         type: "object",
         properties: {
+          _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." },
           highlight_events: {
             type: "boolean",
             description: "true — коли юзер питає ПРО події (підсвітити пульсацією дні з подіями). false — коли юзер просто попросив ВІДКРИТИ календар (без підсвічень)."
           }
         },
-        required: ["highlight_events"],
+        required: ["_reasoning_log","highlight_events"],
         additionalProperties: false
       }
     }
@@ -70,7 +72,7 @@ export const UI_TOOLS = [
     function: {
       name: "open_settings",
       description: "Відкрити модалку Налаштувань. Юзер каже 'відкрий налаштування', 'покажи налаштування'.",
-      parameters: { type: "object", properties: {}, additionalProperties: false }
+      parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." } }, required: ["_reasoning_log"], additionalProperties: false }
     }
   },
   {
@@ -81,9 +83,10 @@ export const UI_TOOLS = [
       parameters: {
         type: "object",
         properties: {
+          _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." },
           period: { type: "string", enum: ["week", "month", "3months"] }
         },
-        required: ["period"],
+        required: ["_reasoning_log","period"],
         additionalProperties: false
       }
     }
@@ -93,7 +96,7 @@ export const UI_TOOLS = [
     function: {
       name: "open_finance_analytics",
       description: "Відкрити екран Аналітики Фінансів (графіки, метрики, 50/30/20). Юзер каже 'відкрий аналітику', 'покажи графіки витрат'.",
-      parameters: { type: "object", properties: {}, additionalProperties: false }
+      parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." } }, required: ["_reasoning_log"], additionalProperties: false }
     }
   },
   {
@@ -104,9 +107,10 @@ export const UI_TOOLS = [
       parameters: {
         type: "object",
         properties: {
+          _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." },
           mode: { type: "string", enum: ["coach", "partner", "mentor"] }
         },
-        required: ["mode"],
+        required: ["_reasoning_log","mode"],
         additionalProperties: false
       }
     }
@@ -116,7 +120,7 @@ export const UI_TOOLS = [
     function: {
       name: "export_health_card",
       description: "Відкрити модалку 'Медична картка' — готовий текст з алергіями/станами/ліками для копіювання лікарю. Юзер каже 'експортуй медкартку', 'зроби медичну картку'.",
-      parameters: { type: "object", properties: {}, additionalProperties: false }
+      parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." } }, required: ["_reasoning_log"], additionalProperties: false }
     }
   },
   {
@@ -127,12 +131,13 @@ export const UI_TOOLS = [
       parameters: {
         type: "object",
         properties: {
+          _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." },
           duration_hours: {
             type: "number",
             description: "Тривалість тиші у годинах (1-24). За замовчуванням 4."
           }
         },
-        required: ["duration_hours"]
+        required: ["_reasoning_log","duration_hours"]
       }
     }
   }
