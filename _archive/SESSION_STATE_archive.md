@@ -6,6 +6,84 @@
 
 ---
 
+## 🔧 Сесія xHQfi — 4 OWL V3 фази (4/5/2/6) + 5 хуків + Silence cancel/UI + sync ROADMAP (30.04.2026)
+
+### Зроблено
+
+1. **OWL Silence Engine добив (Фаза 1+):** `cancel_quiet` tool у `ui-tools.js` для дострокового скасування тиші + UI-плашка `.owl-silence-badge` зверху board (8 вкладок + Inbox) з тапом для скасування + listener `nm-data-changed` для перерендеру всіх board миттєво. Тригер-фрази «можеш говорити»/«повертайся»/«досить мовчати»/«я передумав» → cancel_quiet. Коміти `44bf7fe` + `da057ae`.
+
+2. **OWL Reasoning V3 Фаза 4 — Typed Cooldowns + Silent Reply** (`ce9ab58` + `7b9ecb0`):
+   - `nm_owl_cooldowns` структура `{type:{topic:ts}}` з 4 типами (praise/concern/overview/info). `_classifyCdTopic()` авто-визначає тип з префікса. API `setOwlCd/owlCdExpired` без зміни сигнатур.
+   - Auto-migration старого плоского формату при першому `_getOwlCooldowns()`.
+   - `isCooldownTypeActive(type, ms)` — per-type global CD. Replaced `followup_global` на `<type>_global` у `_judgeFollowup`, `followups.js` (overview_global), `brain-pulse.js` (concern_global для більшості, praise_global для streak-milestone).
+   - Silent reply: правило у `UI_TOOLS_RULES` для запитів ≤5 слів + чіткий tool → `msg.content` порожній. Inbox handler показує тільки коротке підтвердження.
+
+3. **OWL V3 Фаза 5 — Personality States** (`90bc732`):
+   - `_detectOwlState()` читає `nm_moments` (маркери втоми за 24 год), `nm_evening_mood`, `nm_habits2`+`nm_habit_log` (3+ дні пропусків / стрик ≥7), `nm_tasks` (3+ закритих сьогодні / велика задача за 6 год). Повертає 1 з 5 станів.
+   - `_STATE_STYLES` — 4 стиль-блоки (depressive/concern/streak/achievement) + порожній routine. Інжектиться між persona і universal у `getOWLPersonality()`.
+   - Пріоритет: depressive>concern>streak>achievement>routine.
+
+4. **OWL V3 Фаза 2 — Brain Pulse за станом** (`111bc2c`):
+   - `getBrainPulseSystemPrompt(signals)` викликає `_detectOwlState()` і додає блок `[СТАН ЮЗЕРА]` з правилами тиші per-state.
+   - Depressive → SKIP усі stuck-task/streak-risk/budget-warn, тільки critical events <3 год.
+   - Concern → SKIP streak-risk, тільки critical events <2 год + budget-overflow.
+   - Streak/achievement → дозволено усі сигнали з нюансами.
+   - `nightOverride`: ніч 22:00-06:00 + сумний вечірній настрій → SKIP усі окрім critical events <2 год.
+
+5. **OWL V3 Фаза 6 — Lazy Profile Builder** (`a6c609f`):
+   - Новий модуль `src/ai/profile-builder.js` (~150 рядків).
+   - `_buildProfileSource()` — дані за 30 днів: задачі (закриті + години активності), звички (X/Y), фінанси (топ-5 категорій), моменти (емоційні маркери), події.
+   - `_generatePatterns()` — gpt-4o-mini запит з інструкцією «5-7 ДОВГОСТРОКОВИХ ТЕНДЕНЦІЙ», JSON відповідь.
+   - `buildProfileIfStale()` через `requestIdleCallback` (fallback `setTimeout`) — раз на 24 год.
+   - `getUserPatternsForContext()` — інжектить `[ДОВГОСТРОКОВІ ПАТЕРНИ]` у `getAIContext()`.
+   - Інтеграція: `app.js` import + `boot.js bootApp()` виклик + `core.js getAIContext()` інжект.
+
+6. **5 хуків полагоджено/створено:**
+   - `lesson-reminder.sh` (`367be59` + `0e9d088`) — нагадує спитати Романа про урок після `fix:`/`feat:`/`refactor:` коміту. ДОДАНО testing-trigger: після `feat:` що чіпає `src/`/`index.html`/`style.css` АВТОМАТИЧНО додати сценарій у `TESTING_LOG.md`. (Виявилось d6Fgh: реально це нагадувач, не writer — додано блокувальний `pre-commit-testing-log.js` у d6Fgh.)
+   - `pre-push-check.js` (`5b7743e`) — `isDocOnlyPush()` через `git diff @{u}..HEAD`. Doc-only пуш проходить без bypass-фрази.
+   - `check-response-violations.js` БЛОКУВАЛЬНИЙ (`050ce4a` + `863c971`) — exit-code 2 з reason у stderr → Claude Code примусово показує мені «треба переписати». Anti-loop counter 3 блоки за 30 хв → пропуск. Whitelist для ID сесій без цифр.
+   - `/finish` скіл (`8fa64e7`) — Фаза 4 ROADMAP має sanity-check Active vs реальний код. Фаза 6 покриває `docs/*_PLAN.md`.
+
+7. **ROADMAP+плани синхронізовано** (`b5ceaa9` + `2bdf910`):
+   - Аудит виявив що `/finish C8uQD` 27.04 НЕ оновив ROADMAP/плани попри що 3 фази Silence закриті у коді з 27.04.
+   - Перенесено блок «OWL Silence + Pruning Engine» з Active у DONE.
+   - Pre-Migration Підсесія 1 теж позначено DONE.
+   - Підсесія 3 (payload `nm-data-changed`) — ВІДКРИТА. 37 call-sites.
+
+8. **3 уроки у `lessons.md`** (`aeca62b` + `49a2541`):
+   - «Регулярна структурна зміна 10+ файлів → скрипт, не руки»
+   - «Велика переробка вкладки → iPhone-smoke-test ДО наступної переробки»
+   - «Закриття фази у коді = одразу синхрон планового документу»
+
+9. **TESTING_LOG.md** — 14 нових сценаріїв у v504+ для xHQfi-фіч.
+
+### Обговорено (без виконання)
+
+- **Кнопка «👎 не те»** як альтернатива OWL V3 Фази 3 (correction log).
+- **`micro_insight` чіп** (Фаза 4C) — Роман відклав, «косметика без щоденного болю».
+- **`nm_backup_v*` бекап перед міграціями** — Gemini-патерн.
+
+### Ключові рішення
+
+- Вирішили робити Фазу 4A+4B без 4C — два дають миттєвий вихлоп.
+- Вирішили робити блокувальний Stop-хук замість тільки логу.
+- Вирішили додати `isDocOnlyPush()` через `git diff @{u}..HEAD`.
+- Вирішили почати з Фази 0 архівації у `/finish` ще до підсумку.
+
+### Інциденти
+
+- **Дірка у `/finish`** — `/finish C8uQD` 27.04 не оновив ROADMAP/плани. Закрито виправленням скіла і ретроактивним sync.
+- Без `git reset` / `git push --force` / без skip hooks.
+
+### Метрики
+
+- Коміти: `367be59` → `611f4de` (20 комітів)
+- Версії: v500 → v508+
+- CACHE_NAME: `nm-20260430-1226`
+- Build: чистий
+
+---
+
 ## 🔧 Сесія EhxzJ — 6 OWL-багів + V3 Фази 1 і 1.5 (30.04.2026)
 
 ### Зроблено
