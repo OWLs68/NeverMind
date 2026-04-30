@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { escapeHtml, parseContentChips } from '../core/utils.js';
+import { escapeHtml, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
@@ -73,8 +73,8 @@ function renderProjectsList() {
         <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
-        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">При темпі: ~${escapeHtml(p.tempo)}</span>` : '<span></span>'}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${silenceDays} дн. тиші</span>` : ''}
+        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">${t('projects.card.tempo_prefix', 'При темпі')}: ~${escapeHtml(p.tempo)}</span>` : '<span></span>'}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${t('projects.card.silence_days', '{n} дн. тиші', { n: silenceDays })}</span>` : ''}
       </div>
       ${visibleSteps.length > 0 ? visibleSteps.map(s => `
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
@@ -84,7 +84,7 @@ function renderProjectsList() {
       <!-- Нотатки -->
       <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || 'Нотатки проекту...'}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || t('projects.card.notes_placeholder', 'Нотатки проекту...')}</div>
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>`;
@@ -134,7 +134,7 @@ function renderProjectWorkspace(id) {
     <!-- Назад -->
     <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#3d2e1e">Проекти</span>
+      <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t('projects.workspace.back', 'Проекти')}</span>
     </div>
 
     <!-- Назва + % + 3 сценарії темпу -->
@@ -153,24 +153,24 @@ function renderProjectWorkspace(id) {
       <div style="display:flex;gap:5px">
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
           <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || '?'}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">зараз</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">${t('projects.tempo.now', 'зараз')}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
           <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || '?'}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">+1год/день</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">${t('projects.tempo.more', '+1год/день')}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
           <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || '?'}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">ідеально</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">${t('projects.tempo.ideal', 'ідеально')}</div>
         </div>
       </div>
     </div>
 
     <!-- Бюджет -->
     ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
-      <div class="section-label" style="margin-bottom:8px">Бюджет проекту</div>
+      <div class="section-label" style="margin-bottom:8px">${t('projects.section.budget', 'Бюджет проекту')}</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:12px;font-weight:700;color:#1e1040">Витрачено</span>
+        <span style="font-size:12px;font-weight:700;color:#1e1040">${t('projects.budget.spent', 'Витрачено')}</span>
         <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
       </div>
       <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
@@ -192,7 +192,7 @@ function renderProjectWorkspace(id) {
 
     <!-- Ключові метрики -->
     ${metrics.length > 0 ? `<div class="card-glass">
-      <div class="section-label">Ключові метрики</div>
+      <div class="section-label">${t('projects.section.metrics', 'Ключові метрики')}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${metrics.map(m => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
           <div style="font-size:18px;font-weight:900;color:${m.color || '#3d2e1e'}">${escapeHtml(String(m.value))}</div>
@@ -204,8 +204,8 @@ function renderProjectWorkspace(id) {
     <!-- Хронологія / план -->
     ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">Хронологія · план</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">розгорнути ↓</span>
+        <div class="section-label" style="margin-bottom:0">${t('projects.section.timeline', 'Хронологія · план')}</div>
+        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t('projects.timeline.expand', 'розгорнути ↓')}</span>
       </div>
       <!-- Згорнутий вигляд -->
       <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
@@ -230,8 +230,8 @@ function renderProjectWorkspace(id) {
     <!-- Лог рішень -->
     ${decisions.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">Лог рішень</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">OWL · авто</span>
+        <div class="section-label" style="margin-bottom:0">${t('projects.section.decisions', 'Лог рішень')}</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t('projects.decisions.owl_auto', 'OWL · авто')}</span>
       </div>
       ${decisions.map((d,i) => `<div style="padding:5px 0;${i < decisions.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
         <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
@@ -245,23 +245,23 @@ function renderProjectWorkspace(id) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">Нотатки проекту</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${_countProjectNotes(p.name)} записів у папці "${escapeHtml(p.name)}" →</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t('projects.notes.title', 'Нотатки проекту')}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t('projects.notes.count_in_folder', '{n} записів у папці "{name}" →', { n: _countProjectNotes(p.name), name: escapeHtml(p.name) })}</div>
       </div>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
     <!-- OWL персональні ризики -->
     ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL · персональні ризики</div>
+      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">${t('projects.section.risks', 'OWL · персональні ризики')}</div>
       <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
     </div>` : ''}
 
     <!-- Корисна інфа -->
     ${resources.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">Корисна інфа</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">поточний етап</span>
+        <div class="section-label" style="margin-bottom:0">${t('projects.section.resources', 'Корисна інфа')}</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t('projects.resources.stage_label', 'поточний етап')}</span>
       </div>
       ${resources.map((r,i) => {
         const badgeColors = { 'Книга':'rgba(99,102,241,0.1)|#6366f1', 'Спільнота':'rgba(234,88,12,0.1)|#ea580c', 'Інструмент':'rgba(22,163,74,0.1)|#16a34a', 'Стаття':'rgba(251,191,36,0.15)|#d97706' };
@@ -290,7 +290,7 @@ function toggleProjectTimeline(id) {
   const isCollapsed = full.style.display === 'none';
   collapsed.style.display = isCollapsed ? 'none' : 'block';
   full.style.display = isCollapsed ? 'block' : 'none';
-  if (toggle) toggle.textContent = isCollapsed ? 'згорнути ↑' : 'розгорнути ↓';
+  if (toggle) toggle.textContent = isCollapsed ? t('projects.timeline.collapse', 'згорнути ↑') : t('projects.timeline.expand', 'розгорнути ↓');
 }
 
 function toggleProjectStep(projectId, stepId) {
@@ -380,7 +380,7 @@ export async function startProjectInboxInterview(projectName, projectSubtitle) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
     setTimeout(() => addInboxChatMsg('agent',
-      `Проект "${projectName}" створено! Розкажи — який у тебе стартовий капітал, скільки часу на тиждень можеш вкладати, і що найбільше лякає в цьому?`
+      t('projects.intro.no_key', 'Проект "{name}" створено! Розкажи — який у тебе стартовий капітал, скільки часу на тиждень можеш вкладати, і що найбільше лякає в цьому?', { name: projectName })
     ), 400);
     return;
   }
@@ -420,7 +420,7 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
     }
   } catch(e) {
     setTimeout(() => addInboxChatMsg('agent',
-      `Проект "${projectName}" створено! Розкажи — який у тебе стартовий капітал для цього?`
+      t('projects.intro.network_error', 'Проект "{name}" створено! Розкажи — який у тебе стартовий капітал для цього?', { name: projectName })
     ), 400);
   }
 }
@@ -482,7 +482,7 @@ export async function sendProjectsBarMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addProjectsChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addProjectsChatMsg('agent', t('projects.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
   addProjectsChatMsg('user', text);
@@ -517,10 +517,10 @@ export async function sendProjectsBarMessage() {
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
-      if (looksLikeJson) { try { JSON.parse(replyText); addProjectsChatMsg('agent', 'Зроблено ✓'); } catch { addProjectsChatMsg('agent', replyText, false, chips); } }
+      if (looksLikeJson) { try { JSON.parse(replyText); addProjectsChatMsg('agent', t('projects.chat.done', 'Зроблено ✓')); } catch { addProjectsChatMsg('agent', replyText, false, chips); } }
       else addProjectsChatMsg('agent', replyText, false, chips);
     }
-  } catch { addProjectsChatMsg('agent', 'Мережева помилка.'); }
+  } catch { addProjectsChatMsg('agent', t('projects.chat.network_error', 'Мережева помилка.')); }
   projectsBarLoading = false;
 }
 
