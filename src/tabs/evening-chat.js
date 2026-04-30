@@ -16,7 +16,7 @@
 //             owl/chips, ui/unread-badge.
 // ============================================================
 
-import { escapeHtml, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { escapeHtml, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
@@ -54,7 +54,7 @@ async function openEveningTopic(topic) {
   if (started[topic]) return; // сценарій вже стартував сьогодні — не дублюємо
 
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addEveningBarMsg('agent', t('common.no_api_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
 
   addEveningBarMsg('typing', '');
 
@@ -91,11 +91,11 @@ async function openEveningTopic(topic) {
       started[topic] = Date.now();
       localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
     } else {
-      safeAgentReply('Розкажи як воно?', addEveningBarMsg);
+      safeAgentReply(t('evening.tell_me_how', 'Розкажи як воно?'), addEveningBarMsg);
     }
   } catch (e) {
     console.warn('[openEveningTopic]', e);
-    addEveningBarMsg('agent', 'Мережева помилка.');
+    addEveningBarMsg('agent', t('common.network_error', 'Мережева помилка.'));
   }
 }
 
@@ -166,7 +166,7 @@ export async function sendEveningBarMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addEveningBarMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addEveningBarMsg('agent', t('common.no_api_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
   addEveningBarMsg('user', text);
@@ -201,11 +201,11 @@ export async function sendEveningBarMessage() {
     if (replyText) addEveningBarMsg('agent', replyText, false, chips);
     else if (!msg.tool_calls || msg.tool_calls.length === 0) {
       // Нема ні tool calls ні тексту — fallback щоб юзер щось побачив
-      safeAgentReply('Не зрозумів. Спробуй інакше.', addEveningBarMsg);
+      safeAgentReply(t('common.didnt_understand', 'Не зрозумів. Спробуй інакше.'), addEveningBarMsg);
     }
   } catch (e) {
     console.warn('[sendEveningBarMessage]', e);
-    addEveningBarMsg('agent', 'Мережева помилка.');
+    addEveningBarMsg('agent', t('common.network_error', 'Мережева помилка.'));
   }
   eveningBarLoading = false;
 }
