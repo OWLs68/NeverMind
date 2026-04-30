@@ -17,6 +17,124 @@ import { CHIP_PROMPT_RULES } from '../owl/chips.js';
 import { UI_TOOLS } from './ui-tools.js';
 
 // ===== 1. getOWLPersonality — особистість OWL =====
+
+// Маркери емоційного стану у моментах/повідомленнях (Фаза 5 OWL V3 xHQfi 30.04)
+const _DEPRESSIVE_MARKERS = /(втомив|немає сил|виснажен|болить|стрес|сумно|тривог|погано|зле|дістало|не можу|здатися|самотн|депрес)/i;
+
+// Визначає поточний стан юзера для адаптації стилю сови (5 станів з пріоритетом).
+// Повертає: 'depressive' | 'concern' | 'streak' | 'achievement' | 'routine'
+function _detectOwlState() {
+  try {
+    const now = Date.now();
+    const dayMs = 86400000;
+
+    // === 1. depressive — маркери втоми/болю у моментах за 24 год ===
+    try {
+      const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
+      const recent = moments.filter(m => m.ts && (now - m.ts) < dayMs);
+      for (const m of recent) {
+        const text = (m.text || '') + ' ' + (m.note || '');
+        if (_DEPRESSIVE_MARKERS.test(text)) return 'depressive';
+      }
+      // Також перевіряємо вечірній настрій
+      const mood = JSON.parse(localStorage.getItem('nm_evening_mood') || 'null');
+      if (mood && mood.date === new Date().toDateString() && /^(😔|😢|🥺|😞|😩|😫)/.test(mood.mood || '')) {
+        return 'depressive';
+      }
+    } catch {}
+
+    // === 2. concern — 3+ дні пропусків звичок поспіль ===
+    try {
+      const habits = JSON.parse(localStorage.getItem('nm_habits2') || '[]');
+      const log = JSON.parse(localStorage.getItem('nm_habit_log') || '{}');
+      const buildHabits = habits.filter(h => h.type !== 'quit');
+      if (buildHabits.length > 0) {
+        let missedDays = 0;
+        for (let i = 1; i <= 5; i++) {
+          const d = new Date(now - i * dayMs);
+          const dow = (d.getDay() + 6) % 7;
+          const ds = d.toDateString();
+          const scheduledToday = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(dow));
+          if (scheduledToday.length === 0) continue;
+          const doneToday = scheduledToday.filter(h => log[ds]?.[h.id]).length;
+          // День провалений якщо виконано <50% запланованих звичок
+          if (doneToday / scheduledToday.length < 0.5) missedDays++;
+          else break; // стрик пропусків розірвався
+        }
+        if (missedDays >= 3) return 'concern';
+      }
+    } catch {}
+
+    // === 3. streak — стрик ≥7 днів поспіль для будь-якої звички ===
+    try {
+      const habits = JSON.parse(localStorage.getItem('nm_habits2') || '[]');
+      const log = JSON.parse(localStorage.getItem('nm_habit_log') || '{}');
+      for (const h of habits.filter(x => x.type !== 'quit')) {
+        let streak = 0;
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(now - i * dayMs);
+          const dow = (d.getDay() + 6) % 7;
+          if (!(h.days || [0,1,2,3,4]).includes(dow)) continue; // не запланований день — пропускаємо без розриву
+          const ds = d.toDateString();
+          if (log[ds]?.[h.id]) streak++;
+          else break;
+        }
+        if (streak >= 7) return 'streak';
+      }
+    } catch {}
+
+    // === 4. achievement — 3+ закриті задачі сьогодні АБО велика задача за 6 год ===
+    try {
+      const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+      const todayMs = new Date().setHours(0, 0, 0, 0);
+      const sixHoursAgo = now - 6 * 3600000;
+      const closedToday = tasks.filter(t => t.status === 'done' && t.completedAt >= todayMs).length;
+      const recentBigTask = tasks.some(t => t.status === 'done' && t.completedAt >= sixHoursAgo && t.priority === 'high');
+      if (closedToday >= 3 || recentBigTask) return 'achievement';
+    } catch {}
+
+    return 'routine';
+  } catch {
+    return 'routine';
+  }
+}
+
+// Стиль-блоки для кожного стану — синтаксичні обмеження замість слів-емоцій.
+// Підмішується у системний промпт ПІСЛЯ persona, ДО universal-правил.
+const _STATE_STYLES = {
+  depressive: `
+СТИЛЬ ДЛЯ ПОТОЧНОГО СТАНУ ЮЗЕРА — ВТОМА/СУМ:
+- Юзер недавно (за 24 год) показав сигнали втоми чи стресу. Будь м'яким.
+- Коротко, тепло, без оклику. Без емодзі радості. Без «давай зробимо», «класно».
+- Питай замість пропонувати дію: «Як ти?», «Що допомогло б зараз?», «Спочинеш чи поговоримо?»
+- НЕ пропонуй нові задачі/звички/нагадування. НЕ читай лекцій про дисципліну. НЕ кажи «треба».
+- Якщо юзер просить відкласти/відмінити — підтримай без вмовлянь.
+- Максимум 1-2 короткі речення.`,
+  concern: `
+СТИЛЬ ДЛЯ ПОТОЧНОГО СТАНУ — 3+ ДНІ ПРОПУСКІВ:
+- Юзер пропустив звички 3+ дні підряд. НЕ панікуй, не нав'язуй провини.
+- Короткі рубані речення. Без оклику. Без «треба», «має», «зобов'язаний».
+- Без оцінок («це погано», «ти молодець»). Тільки факти і пропозиція мікро-дії.
+- Пропозиція має бути ДРІБНА (≤2 хв): «5 присідань. Зараз. І все», не «давай повернемось до тренувань».
+- Без вступів типу «слухай», «давай поговоримо». Одразу до суті.
+- 1-3 короткі речення.`,
+  streak: `
+СТИЛЬ ДЛЯ ПОТОЧНОГО СТАНУ — СТРИК ≥7 ДНІВ:
+- Юзер на хвилі. Тепло реагуй, але без розтягування і захвату.
+- Коротка щира констатація («7 днів поспіль. Працює.»). Без «вау», «нереально», «ти супер».
+- Не зупиняйся на похвалі — плавний перехід до того ЩО далі: пропозиція наступної дії або нагадування про маленьку звичку поряд.
+- Емодзі — мінімум, тільки якщо точно доречно (🔥, ✓).
+- 1-2 речення.`,
+  achievement: `
+СТИЛЬ ДЛЯ ПОТОЧНОГО СТАНУ — ДОСЯГНЕННЯ ЗА СЬОГОДНІ:
+- Юзер щойно закрив велику задачу або багато справ. Реагуй щиро але стисло.
+- Коротка реакція без розтягування. Без «нарешті», «вау», «це круто».
+- Можеш зазначити кількість («3 задачі сьогодні»), не оцінювати («багато»).
+- НЕ пропонуй одразу нову задачу — дай юзеру передих. Якщо є наступний пріоритет — згадай ПІЗНІШЕ, не зараз.
+- 1 коротке речення.`,
+  routine: '' // нейтральний стан — без додаткового стилю-блоку
+};
+
 export function getOWLPersonality() {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const mode = settings.owl_mode || 'partner';
@@ -82,7 +200,13 @@ export function getOWLPersonality() {
 - Не повторюй ту саму тему більше 2-3 разів у діалозі. Якщо вже сказав щось двічі і юзер не реагує конкретно — мовчи (text:"") або зміни тему. Не зациклюйся.
 - Не нав'язуй уточнення якщо юзер ігнорує. Дві спроби — і відпускаєш.
 - Чат — це короткий обмін, не довга розмова. Дав відповідь → дочекайся реакції → НЕ продовжуй про те саме.`;
-  return persona + universal;
+  // Фаза 5 OWL V3 (xHQfi 30.04): додаємо стиль-блок на основі поточного стану юзера.
+  // Стан визначається з даних (моменти/звички/задачі). 5 станів з пріоритетом:
+  // depressive > concern > streak > achievement > routine.
+  const state = _detectOwlState();
+  const stateStyle = _STATE_STYLES[state] || '';
+
+  return persona + stateStyle + universal;
 }
 
 // ===== 2. UI_TOOLS_RULES — спільний блок правил UI-навігації =====
