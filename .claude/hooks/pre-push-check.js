@@ -83,6 +83,38 @@ const SESSION_STATE_PATH = path.join(__dirname, '..', '..', '_ai-tools', 'SESSIO
 // Файли користувацького коду що впливають на PWA-кеш
 const CODE_FILE_REGEX = /^(src\/.+\.(js|css|html)|index\.html|style\.css)$/;
 
+// === Doc-only check (xHQfi 30.04 — false-positive whitelist) ===
+// Якщо у пуші змінено ТІЛЬКИ документацію/хуки/конфіги — пропускаємо
+// SMOKE_TRIGGERS і CLEANUP_TRIGGERS бо у коміт-меседжі могли бути згадані
+// слова типу "нова tool" / "міграція" / "create_*" — описані, а не зроблені.
+// CACHE_NAME bump check уже має свою логіку (тільки src/ файли) — не чіпаємо.
+const DOC_FILE_REGEX = /^(.*\.md|\.claude\/.+|_ai-tools\/.+|_archive\/.+|docs\/.+|scripts\/.+|i18n-baseline\.json|package(-lock)?\.json|\.gitignore|build\.js|package\.json)$/;
+
+function isDocOnlyPush(repoRoot) {
+  try {
+    // Беремо ТІЛЬКИ коміти які зараз пушаться (нелижі у upstream).
+    // Якщо upstream нема (перший пуш гілки) — fallback на останній коміт.
+    let diffRange = null;
+    try {
+      execSync(`git -C "${repoRoot}" rev-parse @{u}`, { stdio: 'pipe' });
+      diffRange = '@{u}..HEAD';
+    } catch {
+      diffRange = 'HEAD~1..HEAD';
+    }
+
+    const filesOutput = execSync(`git -C "${repoRoot}" diff --name-only ${diffRange}`, {
+      encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore']
+    });
+    const files = filesOutput.split('\n').filter(Boolean);
+    if (files.length === 0) return false;
+
+    // Якщо хоч один файл НЕ підпадає під DOC_FILE_REGEX — це не doc-only пуш
+    return files.every(f => DOC_FILE_REGEX.test(f));
+  } catch {
+    return false;
+  }
+}
+
 function checkCacheNameBump(repoRoot) {
   try {
     // Пробуємо порівняти з origin/main, інакше HEAD~1
@@ -178,9 +210,15 @@ process.stdin.on('end', () => {
     // Універсальний bypass
     if (UNIVERSAL_BYPASS.test(haystack)) process.exit(0);
 
-    const smokeTriggered = SMOKE_TRIGGERS.some(re => re.test(haystack));
+    const repoRoot = path.join(__dirname, '..', '..');
+    const docOnly = isDocOnlyPush(repoRoot);
+
+    // Якщо doc-only пуш — пропускаємо SMOKE і CLEANUP тригери (false-positive
+    // на згадку слів у меседжі без реальних змін у src/). CACHE_NAME і
+    // SESSION_STATE checks лишаються активними — мають свою власну логіку.
+    const smokeTriggered = !docOnly && SMOKE_TRIGGERS.some(re => re.test(haystack));
     const smokeBypassed = SMOKE_BYPASS.some(re => re.test(haystack));
-    const cleanupTriggered = CLEANUP_TRIGGERS.some(re => re.test(haystack));
+    const cleanupTriggered = !docOnly && CLEANUP_TRIGGERS.some(re => re.test(haystack));
     const cleanupBypassed = CLEANUP_BYPASS.some(re => re.test(haystack));
 
     const issues = [];
@@ -201,8 +239,7 @@ process.stdin.on('end', () => {
       );
     }
 
-    // Правило CACHE_NAME bump
-    const repoRoot = path.join(__dirname, '..', '..');
+    // Правило CACHE_NAME bump (вже використовує repoRoot з блоку doc-only check)
     const cacheIssue = checkCacheNameBump(repoRoot);
     if (cacheIssue) {
       const filesPreview = cacheIssue.codeFiles.slice(0, 3).join(', ') +
