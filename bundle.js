@@ -10838,7 +10838,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     el.scrollTop = el.scrollHeight;
     if (!_noSave) saveChatMsg("me", role, text);
   }
-  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating;
+  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, _insightsRegenTimer, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating;
   var init_me = __esm({
     "src/tabs/me.js"() {
       init_nav();
@@ -10855,6 +10855,26 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       meChatHistory = [];
       INSIGHTS_KEY = "nm_me_weekly_insights";
       _insightsGenerating = false;
+      _insightsRegenTimer = null;
+      window.addEventListener("nm-data-changed", (e) => {
+        if (e.detail === "insights") return;
+        const isMeActive = currentTab === "me";
+        if (isMeActive) {
+          clearTimeout(_insightsRegenTimer);
+          _insightsRegenTimer = setTimeout(() => {
+            generateWeeklyInsights();
+          }, 5e3);
+        } else {
+          try {
+            const cached = _getInsights();
+            if (cached) {
+              cached.version = -1;
+              localStorage.setItem(INSIGHTS_KEY, JSON.stringify(cached));
+            }
+          } catch {
+          }
+        }
+      });
       INSIGHTS_VERSION = 4;
       MONTHLY_KEY = "nm_me_monthly_report";
       _monthlyGenerating = false;
