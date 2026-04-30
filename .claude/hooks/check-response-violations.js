@@ -28,6 +28,25 @@ const VIOLATIONS_FILE = path.resolve(__dirname, '..', 'last-violations.txt');
 // Append-only журнал для треку прогресу між сесіями. Кожен рядок:
 // ISO-timestamp [sessionId] N unique / M total: word1×K, word2, ...
 const VIOLATIONS_LOG_FILE = path.resolve(__dirname, '..', 'violations-log.txt');
+// Anti-loop: якщо 3+ блоки підряд за 30 хв — не блокуємо (шанс що regex дурить).
+const BLOCK_COUNTER_FILE = path.resolve(__dirname, '..', 'block-counter.json');
+const ANTI_LOOP_WINDOW_MS = 30 * 60 * 1000;
+const ANTI_LOOP_MAX = 3;
+
+function readBlockCounter() {
+  try {
+    if (!fs.existsSync(BLOCK_COUNTER_FILE)) return { count: 0, lastTs: 0 };
+    const data = JSON.parse(fs.readFileSync(BLOCK_COUNTER_FILE, 'utf8'));
+    if (Date.now() - (data.lastTs || 0) > ANTI_LOOP_WINDOW_MS) return { count: 0, lastTs: 0 };
+    return data;
+  } catch { return { count: 0, lastTs: 0 }; }
+}
+function writeBlockCounter(data) {
+  try { fs.writeFileSync(BLOCK_COUNTER_FILE, JSON.stringify(data)); } catch {}
+}
+function resetBlockCounter() {
+  try { if (fs.existsSync(BLOCK_COUNTER_FILE)) fs.unlinkSync(BLOCK_COUNTER_FILE); } catch {}
+}
 
 function getSessionId() {
   try {
@@ -311,12 +330,15 @@ process.stdin.on('end', () => {
     const violations = findViolations(lastText);
     if (violations.size === 0) {
       cleanupViolations();
+      resetBlockCounter();
       return;
     }
 
     // Сортуємо за частотою + типом, обмежуємо 15 елементами
     const sorted = [...violations.values()].sort((a, b) => b.count - a.count).slice(0, 15);
     const totalCount = [...violations.values()].reduce((acc, v) => acc + v.count, 0);
+
+    const wordsList = sorted.map(v => `«${v.word}»${v.count > 1 ? ` ×${v.count}` : ''}`).join(', ');
 
     const lines = [
       `🔍 Можливо потребують пояснення (виглядають як код, ${violations.size} унікальних, ${totalCount} згадувань):`,
@@ -330,8 +352,6 @@ process.stdin.on('end', () => {
     fs.writeFileSync(VIOLATIONS_FILE, lines.join('\n') + '\n');
 
     // === Метрика прогресу: append у violations-log.txt ===
-    // Дозволяє Роману бачити тренд кількості порушень між сесіями.
-    // Якщо тренд вниз → детектор працює. Вгору → треба жорсткіший підхід.
     try {
       const timestamp = new Date().toISOString();
       const sessionId = getSessionId();
@@ -340,11 +360,41 @@ process.stdin.on('end', () => {
         .join(', ');
       const logLine = `${timestamp} [${sessionId}] ${violations.size} unique / ${totalCount} total: ${wordsCompact}\n`;
       fs.appendFileSync(VIOLATIONS_LOG_FILE, logLine);
-    } catch (e) {
-      // Метрика — bonus, не критично якщо впала
+    } catch (e) {}
+
+    // === БЛОКУВАЛЬНИЙ РЕЖИМ (xHQfi 30.04) ===
+    // exit-code 2 — Stop hook повертає Claude примусове повідомлення про необхідність переписати.
+    // Anti-loop: якщо вже ANTI_LOOP_MAX блоків підряд за 30 хв — пропускаємо (regex може дурити).
+    const counter = readBlockCounter();
+    if (counter.count >= ANTI_LOOP_MAX) {
+      // Перевищили ліміт — лише пишемо у файл (як раніше), не блокуємо.
+      // Counter сам обнулиться через 30 хв тиші або при чистій відповіді.
+      writeBlockCounter({ count: counter.count + 1, lastTs: Date.now() });
+      return;
     }
+    writeBlockCounter({ count: counter.count + 1, lastTs: Date.now() });
+
+    const reasonLines = [
+      '',
+      '=== ⚠️ ВІДПОВІДЬ ЗАБЛОКОВАНА (.claude/hooks/check-response-violations.js) ===',
+      '',
+      `Знайдено ${violations.size} слів які виглядають як код без пояснень: ${wordsList}.`,
+      '',
+      'ПРАВИЛО CLAUDE.md (UI-задачі і пояснення в дужках):',
+      '• Назви функцій (snake_case/camelCase), CSS-властивості, технічний жаргон → пояснюй у дужках простими словами що це робить для юзера.',
+      '• Описуй ВИГЛЯД на екрані замість назв коду — Роман не дивиться у код, він дивиться на телефон.',
+      '• Загальні англійські слова (push/pull/merge/today/before) — НЕ потребують пояснення.',
+      '',
+      `ДІЯ: перепиши ОСТАННЮ відповідь Роману людською мовою. Кожне слово зі списку (${wordsList}) — або заміни на людський опис («плашка зверху», «кнопка», «значення часу»), або поясни в дужках одним реченням що це.`,
+      '',
+      `Anti-loop: блокувань підряд ${counter.count + 1}/${ANTI_LOOP_MAX}. Після ${ANTI_LOOP_MAX} підряд — пропускатиму на 30 хв (можливі false-positive).`,
+      '',
+      '=== Перепиши відповідь і надішли заново. ===',
+      ''
+    ];
+    console.error(reasonLines.join('\n'));
+    process.exit(2);
   } catch (e) {
-    // Тиха помилка — не спамити стдер хука
     cleanupViolations();
   }
 });
