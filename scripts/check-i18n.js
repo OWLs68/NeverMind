@@ -174,6 +174,26 @@ function isInsideAllowedCall(src, pos) {
   return false;
 }
 
+// Для backtick-літералів вирізаємо ${...} блоки (balanced) — кирилиця всередині
+// інтерполяцій уже могла бути обгорнута у t() і не рахується як «гола».
+// Виправляє false-positive: `Привіт ${t('name', 'юзер')}` без зміни → 0 кирилиці поза ${}.
+function stripInterpolations(content) {
+  let out = ''; let i = 0;
+  while (i < content.length) {
+    if (content[i] === '$' && content[i + 1] === '{') {
+      let depth = 1; i += 2;
+      while (i < content.length && depth > 0) {
+        if (content[i] === '{') depth++;
+        else if (content[i] === '}') depth--;
+        i++;
+      }
+      continue;
+    }
+    out += content[i++];
+  }
+  return out;
+}
+
 // Аналізує файл, повертає масив unwrapped-літералів.
 function analyzeFile(absPath) {
   const src = fs.readFileSync(absPath, 'utf8');
@@ -181,7 +201,8 @@ function analyzeFile(absPath) {
   const literals = findStringLiterals(stripped);
   const unwrapped = [];
   for (const lit of literals) {
-    if (!CYRILLIC_RE.test(lit.content)) continue;
+    const check = lit.type === '`' ? stripInterpolations(lit.content) : lit.content;
+    if (!CYRILLIC_RE.test(check)) continue;
     if (isInsideAllowedCall(stripped, lit.start)) continue;
     unwrapped.push({
       line: lit.line,
