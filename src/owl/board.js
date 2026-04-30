@@ -151,6 +151,8 @@ export function renderTabBoard(tab) {
     _owlTabApplyState(tab);
   }
 
+  _renderSilenceBadge(board, tab);
+
   const tEl = document.getElementById('owl-tab-text-' + tab);
   const cEl = document.getElementById('owl-tab-ctext-' + tab);
   const tmEl = document.getElementById('owl-tab-time-' + tab);
@@ -205,6 +207,49 @@ function _applyTabText(el, text) {
 // === WINDOW GLOBALS (HTML handlers only) ===
 Object.assign(window, {
   toggleOwlTabChat, owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
-  scrollOwlTabChips, openChatBar,
+  scrollOwlTabChips, openChatBar, cancelOwlSilenceFromBadge,
+});
+
+// Silence Engine UI-індикатор (Фаза 1+ UVKL1 30.04 xHQfi):
+// Плашка зверху board «🤫 Сова мовчить до HH:MM. Тапни щоб скасувати».
+// Видно поки nm_owl_silence_until у майбутньому. Тап — скасовує тишу
+// і dispatchEvent nm-data-changed → всі активні таб-board перерендерять.
+function _renderSilenceBadge(board, tab) {
+  const badgeId = `owl-silence-badge-${tab}`;
+  let badge = board.querySelector(`#${badgeId}`);
+  const until = parseInt(localStorage.getItem('nm_owl_silence_until') || '0');
+  const active = until > Date.now();
+
+  if (!active) {
+    if (badge) badge.remove();
+    return;
+  }
+
+  const endTime = new Date(until).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  const text = `🤫 Сова мовчить до ${endTime}. Тапни щоб скасувати.`;
+
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = badgeId;
+    badge.className = 'owl-silence-badge';
+    badge.setAttribute('role', 'button');
+    badge.onclick = cancelOwlSilenceFromBadge;
+    board.insertAdjacentElement('afterbegin', badge);
+  }
+  if (badge.textContent !== text) badge.textContent = text;
+}
+
+export function cancelOwlSilenceFromBadge() {
+  localStorage.removeItem('nm_owl_silence_until');
+  try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'silence' })); } catch {}
+}
+
+// Перерендер усіх активних таб-board при зміні тиші (старт/скасування/закінчення)
+window.addEventListener('nm-data-changed', (e) => {
+  if (e.detail !== 'silence') return;
+  ['inbox','tasks','finance','notes','health','evening','me','projects'].forEach(tab => {
+    const el = document.getElementById(tab === 'inbox' ? 'owl-board' : 'owl-tab-board-' + tab);
+    if (el && el._owlReady) _renderSilenceBadge(el, tab);
+  });
 });
 

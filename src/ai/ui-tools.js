@@ -140,6 +140,20 @@ export const UI_TOOLS = [
         required: ["_reasoning_log","duration_hours"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_quiet",
+      description: "Скасовує режим тиші ДОСТРОКОВО коли юзер передумав. Тригер-фрази: 'можеш говорити', 'повертайся', 'досить мовчати', 'скасуй тишу', 'продовжуй', 'я передумав', 'знов пиши', 'все ок'. Викликати ТІЛЬКИ якщо зараз активний режим тиші — інакше повернеться повідомлення-помилка. Після скасування сова відразу може писати на табло і у проактивних повідомленнях.",
+      parameters: {
+        type: "object",
+        properties: {
+          _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." }
+        },
+        required: ["_reasoning_log"]
+      }
+    }
   }
 ];
 
@@ -241,6 +255,15 @@ export function handleUITool(name, args) {
         try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'silence' })); } catch {}
         const endTime = new Date(expiresAt).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
         return { text: `🤫 Зрозуміла. Мовчу до ${endTime}. У чаті можеш питати — відповім.` };
+      }
+      case 'cancel_quiet': {
+        const until = parseInt(localStorage.getItem('nm_owl_silence_until') || '0');
+        if (!until || Date.now() >= until) {
+          return { text: 'Тиша зараз не активна — мовчати нема чого скасовувати.' };
+        }
+        localStorage.removeItem('nm_owl_silence_until');
+        try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'silence' })); } catch {}
+        return { text: '🦉 Окей, повернулась. Знову на звʼязку.' };
       }
 
       default:
