@@ -312,9 +312,9 @@ function _isInsightsStale(insights) {
 
 function _formatInsightAge(ts) {
   const days = Math.floor((Date.now() - ts) / 86400000);
-  if (days === 0) return 'сьогодні';
-  if (days === 1) return 'вчора';
-  return `${days} дн тому`;
+  if (days === 0) return t('me.weekly.age_today', 'сьогодні');
+  if (days === 1) return t('me.weekly.age_yesterday', 'вчора');
+  return t('me.weekly.age_days_ago', '{n} дн тому', { n: days });
 }
 
 async function generateWeeklyInsights() {
