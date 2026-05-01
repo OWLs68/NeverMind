@@ -147,23 +147,31 @@ export function renderMe() {
       // Загальний підсумок: скільки рухаються vs стоять
       const moving = projWithStats.filter(s => s.stepsThisWeek > 0).length;
       const stagnant = projWithStats.length - moving;
+      const activeWord = allProjects.length === 1 ? t('me.proj.active_one', 'активний') : t('me.proj.active_many', 'активних');
+      const movingWord = moving === 1 ? t('me.proj.moving_one', 'рухається') : t('me.proj.moving_many', 'рухаються');
+      const stagnantWord = t('me.proj.stagnant', 'стоїть');
       const summaryHTML = `
         <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} активн${allProjects.length === 1 ? 'ий' : 'их'}</span>
+          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} ${activeWord}</span>
           <span style="font-size:11px;font-weight:700">
-            <span style="color:#16a34a">${moving} рух${moving === 1 ? 'ається' : 'аються'}</span>
-            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> · </span><span style="color:#c2410c">${stagnant} стоїть</span>` : ''}
+            <span style="color:#16a34a">${moving} ${movingWord}</span>
+            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> · </span><span style="color:#c2410c">${stagnant} ${stagnantWord}</span>` : ''}
           </span>
         </div>`;
 
       const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
         let trendChip = '';
         if (stepsThisWeek > 0) {
-          trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} крок${stepsThisWeek === 1 ? '' : stepsThisWeek < 5 ? 'и' : 'ів'} за тиждень</span>`;
+          const stepWord = stepsThisWeek === 1
+            ? t('me.proj.step_one', 'крок')
+            : stepsThisWeek < 5
+              ? t('me.proj.step_few', 'кроки')
+              : t('me.proj.step_many', 'кроків');
+          trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t('me.proj.per_week', 'за тиждень')}</span>`;
         } else if (daysSince !== null && daysSince >= 7) {
-          trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">⏸ без змін ${daysSince} дн</span>`;
+          trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t('me.proj.no_changes', '⏸ без змін {n} дн', { n: daysSince })}</span>`;
         } else if (daysSince === null) {
-          trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">щойно створений</span>`;
+          trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t('me.proj.just_created', 'щойно створений')}</span>`;
         }
         return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
