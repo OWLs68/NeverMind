@@ -89,7 +89,7 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
 
   if (!handled) {
     if (loadEl) loadEl.remove();
-    addMeChatMsg('agent', reply || 'Не вдалося отримати відповідь.', false, '', extractedChips);
+    addMeChatMsg('agent', reply || t('me.chat.no_reply', 'Не вдалося отримати відповідь.'), false, '', extractedChips);
   }
   if (reply) meChatHistory.push({ role: 'assistant', content: reply });
   if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
@@ -370,7 +370,7 @@ function renderWeeklyInsights() {
         <span style="font-size:14px">🦉</span>
         <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
       </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">Аналізую твій тиждень — інсайти зʼявляться за хвилину…</div>`;
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t('me.insights.loading', 'Аналізую твій тиждень — інсайти зʼявляться за хвилину…')}</div>`;
     // Запускаємо генерацію (не чекаємо)
     setTimeout(() => { generateWeeklyInsights(); }, 800);
     return;
@@ -491,7 +491,7 @@ function renderMonthlyReport() {
           <span style="font-size:14px">📆</span>
           <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">Підсумок ${_prevMonthName()}</span>
         </div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">Складаю місячний звіт…</div>`;
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t('me.monthly.loading', 'Складаю місячний звіт…')}</div>`;
     } else {
       el.style.display = 'none';
       setTimeout(() => { generateMonthlyReport(); }, 1500); // після weekly insights
@@ -665,7 +665,7 @@ async function refreshMeAnalysis() {
 Останні 10 записів: ${inbox.slice(0,10).map(i=>`[${i.category}] ${i.text}`).join('; ')}`;
 
   const reply = await callAI(systemPrompt, userData, {}, 'me-profile-analysis');
-  el.textContent = reply || 'Не вдалось отримати аналіз. Спробуй ще раз.';
+  el.textContent = reply || t('me.analysis.no_reply', 'Не вдалось отримати аналіз. Спробуй ще раз.');
   btn.textContent = '↻';
   btn.disabled = false;
 
