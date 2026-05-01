@@ -7,7 +7,7 @@
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { escapeHtml, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
-import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { renderChips } from '../owl/chips.js';
