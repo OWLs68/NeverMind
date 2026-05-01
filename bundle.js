@@ -20677,18 +20677,18 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
       <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">\u0414\u0430\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457</div>
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${t("finance.date.modal_title", "\u0414\u0430\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457")}</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 ${fmt(0)}</button>
-        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0412\u0447\u043E\u0440\u0430 \xB7 ${fmt(-1)}</button>
-        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430 \xB7 ${fmt(-2)}</button>
-        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443 \xB7 ${fmt(-7)}</button>
+        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456")} \xB7 ${fmt(0)}</button>
+        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.yesterday", "\u0412\u0447\u043E\u0440\u0430")} \xB7 ${fmt(-1)}</button>
+        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.day_before_yesterday", "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430")} \xB7 ${fmt(-2)}</button>
+        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.week_ago", "\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443")} \xB7 ${fmt(-7)}</button>
       </div>
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C</div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.date.choose_day", "\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C")}</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}"
         onchange="setFinTxDateFromInput(this.value)"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
-      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">\u0417\u0430\u043A\u0440\u0438\u0442\u0438</button>
+      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">${t("common.close", "\u0417\u0430\u043A\u0440\u0438\u0442\u0438")}</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -20722,24 +20722,24 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div onclick="closeFinBudgetModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
-      <div class="modal-title">\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C</div>
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442</div>
-      <input id="finbdg-total" type="number" placeholder="\u20AC 0 \u2014 \u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443" inputmode="decimal"
+      <div class="modal-title">${t("finance.budget.modal_title", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C")}</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.budget.total_limit", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442")}</div>
+      <input id="finbdg-total" type="number" placeholder="${t("finance.budget.placeholder_total", "\u20AC 0 \u2014 \u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443")}" inputmode="decimal"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:17px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
         value="${budget.total || ""}">
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">\u041F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t("finance.budget.by_categories", "\u041F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445")}</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
         ${cats.expense.filter((c) => !c.archived).map((cat) => `
           <div style="display:flex;align-items:center;gap:10px">
             <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat.name)}</div>
-            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="\u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443" inputmode="decimal"
+            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="${t("finance.budget.placeholder_cat", "\u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443")}" inputmode="decimal"
               style="width:100px;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;text-align:right"
               value="${budget.categories?.[cat.name] || ""}">
           </div>`).join("")}
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="closeFinBudgetModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+        <button onclick="closeFinBudgetModal()" class="btn-cancel">${t("common.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">${t("common.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -20801,7 +20801,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const iconTrigger = `<button onclick="toggleCatModalIcons()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 18)}</div>
     <div style="flex:1;text-align:left;min-width:0">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">\u0406\u043A\u043E\u043D\u043A\u0430</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t("finance.cat.icon_label", "\u0406\u043A\u043E\u043D\u043A\u0430")}</div>
       <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.icon)}</div>
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
@@ -20809,7 +20809,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const colorTrigger = `<button onclick="toggleCatModalColors()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
     <div style="flex:1;text-align:left;min-width:0">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">\u041A\u043E\u043B\u0456\u0440</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t("finance.cat.color_label", "\u041A\u043E\u043B\u0456\u0440")}</div>
       <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.color)}</div>
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
@@ -20818,7 +20818,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div onclick="closeCatPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
       <div onclick="event.stopPropagation()" style="width:100%;max-width:340px;background:rgba(255,255,255,0.95);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:22px;padding:18px;max-height:70vh;overflow-y:auto;border:1.5px solid rgba(255,255,255,0.6);box-shadow:0 20px 60px rgba(0,0,0,0.18);box-sizing:border-box">
         ${_catModalIconExpanded ? `
-          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">\u041E\u0431\u0435\u0440\u0438 \u0456\u043A\u043E\u043D\u043A\u0443</div>
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t("finance.cat.choose_icon", "\u041E\u0431\u0435\u0440\u0438 \u0456\u043A\u043E\u043D\u043A\u0443")}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
             ${FIN_CAT_ICON_NAMES.map((name) => {
       const active = name === d.icon;
@@ -20827,7 +20827,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
           </div>
         ` : ""}
         ${_catModalColorExpanded ? `
-          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">\u041E\u0431\u0435\u0440\u0438 \u043A\u043E\u043B\u0456\u0440</div>
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t("finance.cat.choose_color", "\u041E\u0431\u0435\u0440\u0438 \u043A\u043E\u043B\u0456\u0440")}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;justify-items:center">
             ${FIN_CAT_PALETTE2.map((c) => {
       const active = c === d.color;
@@ -20847,32 +20847,32 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F" : "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"}</div>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? t("finance.cat.new_title", "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F") : t("finance.cat.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E")}</div>
     ${isNew ? `<div style="display:flex;gap:6px;margin-bottom:12px">
-      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${d.type === "expense" ? "rgba(194,65,12,0.08)" : "white"};color:${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.4)"}">\u0412\u0438\u0442\u0440\u0430\u0442\u0430</button>
-      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.1)"};background:${d.type === "income" ? "rgba(22,163,74,0.08)" : "white"};color:${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.4)"}">\u0414\u043E\u0445\u0456\u0434</button>
+      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${d.type === "expense" ? "rgba(194,65,12,0.08)" : "white"};color:${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.4)"}">${t("finance.tx.toggle_expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430")}</button>
+      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.1)"};background:${d.type === "income" ? "rgba(22,163,74,0.08)" : "white"};color:${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.4)"}">${t("finance.tx.toggle_income", "\u0414\u043E\u0445\u0456\u0434")}</button>
     </div>` : ""}
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041D\u0430\u0437\u0432\u0430</div>
-    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456"
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.cat.name_label", "\u041D\u0430\u0437\u0432\u0430")}</div>
+    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="${t("finance.cat.name_placeholder", "\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456")}"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0412\u0438\u0433\u043B\u044F\u0434</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.cat.appearance_label", "\u0412\u0438\u0433\u043B\u044F\u0434")}</div>
     <div style="display:flex;gap:8px;margin-bottom:14px">${iconTrigger}${colorTrigger}</div>
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.cat.subcats_label", "\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}</div>
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
-    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</button>
+    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">${t("finance.cat.add_subcat", "+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</button>
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
-        <div style="font-size:13px;font-weight:700;color:#1e1040">\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438, \u0434\u0430\u043D\u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t("finance.cat.archive", "\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438")}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${t("finance.cat.archive_hint", "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438, \u0434\u0430\u043D\u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F")}</div>
       </div>
       <button onclick="toggleCatModalArchive()" style="width:44px;height:24px;border-radius:14px;border:none;background:${d.archived ? "#c2410c" : "rgba(30,16,64,0.12)"};position:relative;cursor:pointer;font-family:inherit">
         <div style="width:18px;height:18px;border-radius:50%;background:white;position:absolute;top:3px;${d.archived ? "right:3px" : "left:3px"};transition:all 0.2s"></div>
       </button>
     </div>` : ""}
     <div style="display:flex;gap:8px;margin-top:14px">
-      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
-      <button onclick="closeCategoryEditModal()" class="btn-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438"}</button>
+      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">${t("common.delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}</button>` : ""}
+      <button onclick="closeCategoryEditModal()" class="btn-cancel">${t("common.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? t("common.create", "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438") : t("common.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
     </div>
     </div>
   </div>
@@ -20965,7 +20965,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const subs = (d.subcategories || []).map((s) => (s || "").trim()).filter(Boolean);
     const name = (d.name || "").trim();
     if (!name) {
-      showToast("\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443");
+      showToast(t("finance.cat.enter_name", "\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443"));
       return;
     }
     if (_finEditingCatId === "new") {
@@ -20978,7 +20978,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   }
   function deleteCategoryFromModal() {
     if (_finEditingCatId === "new") return;
-    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E? \u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F, \u0430\u043B\u0435 \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430.")) return;
+    if (!confirm(t("finance.cat.delete_confirm", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E? \u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F, \u0430\u043B\u0435 \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430."))) return;
     deleteFinCategory(_finEditingCatId);
     closeCategoryEditModal();
     renderFinance();
