@@ -376,7 +376,7 @@ function renderWeeklyInsights() {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:14px">🦉</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t('me.weekly.title', 'OWL знає тебе')}</span>
       </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t('me.insights.loading', 'Аналізую твій тиждень — інсайти зʼявляться за хвилину…')}</div>`;
     // Запускаємо генерацію (не чекаємо)
@@ -394,7 +394,7 @@ function renderWeeklyInsights() {
     </div>`).join('');
   const deepHTML = insights.deepReport ? `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
-      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Глибокий звіт</div>
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('me.weekly.deep_report', 'Глибокий звіт')}</div>
       <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
     </div>` : '';
 
@@ -402,7 +402,7 @@ function renderWeeklyInsights() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:14px">🦉</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t('me.weekly.title', 'OWL знає тебе')}</span>
       </div>
       <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
     </div>
@@ -497,7 +497,7 @@ function renderMonthlyReport() {
       el.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:14px">📆</span>
-          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">Підсумок ${_prevMonthName()}</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t('me.monthly.title', 'Підсумок {month}', { month: _prevMonthName() })}</span>
         </div>
         <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t('me.monthly.loading', 'Складаю місячний звіт…')}</div>`;
     } else {
@@ -512,16 +512,16 @@ function renderMonthlyReport() {
   const greenAccent = '#16a34a';
   const sections = [];
   if (report.topActivities && report.topActivities.length > 0) {
-    sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">Топ занять</span>
+    sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t('me.monthly.top_activities', 'Топ занять')}</span>
       ${report.topActivities.map(a => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">• ${escapeHtml(a)}</div>`).join('')}
     </div>`);
   }
-  if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">Настрій:</span> ${escapeHtml(report.moodTrend)}</div>`);
-  if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">Проекти:</span> ${escapeHtml(report.projectsProgress)}</div>`);
-  if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">Фінанси:</span> ${escapeHtml(report.financeNote)}</div>`);
+  if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t('me.monthly.mood', 'Настрій:')}</span> ${escapeHtml(report.moodTrend)}</div>`);
+  if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t('me.monthly.projects', 'Проекти:')}</span> ${escapeHtml(report.projectsProgress)}</div>`);
+  if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t('me.monthly.finance', 'Фінанси:')}</span> ${escapeHtml(report.financeNote)}</div>`);
   if (report.patterns && report.patterns.length > 0) {
     sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
-      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">Патерни</span>
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t('me.monthly.patterns', 'Патерни')}</span>
       ${report.patterns.map(p => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">• ${escapeHtml(p)}</div>`).join('')}
     </div>`);
   }
@@ -529,7 +529,7 @@ function renderMonthlyReport() {
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="font-size:14px">📆</span>
-      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">Підсумок ${report.monthLabel}</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t('me.monthly.title', 'Підсумок {month}', { month: report.monthLabel })}</span>
     </div>
     <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
     ${sections.join('')}`;
@@ -634,8 +634,8 @@ function renderMeActivityChart() {
 
   chartEl.innerHTML = `
     <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
-      ${ringSVG(tasksDone, tasksTotal, '#2fd0f9', 'Задачі')}
-      ${ringSVG(habitsDone, habitsTotal, '#16a34a', 'Звички')}
+      ${ringSVG(tasksDone, tasksTotal, '#2fd0f9', t('me.chart.tasks', 'Задачі'))}
+      ${ringSVG(habitsDone, habitsTotal, '#16a34a', t('me.chart.habits', 'Звички'))}
     </div>
   `;
 }
@@ -653,7 +653,7 @@ async function refreshMeAnalysis() {
   const totalRecords = inbox.length + tasks.length + notes.length;
 
   if (totalRecords < 3) {
-    el.textContent = 'Ще замало даних для аналізу. Додай кілька записів в Inbox, створи задачі або нотатки — і я дам тобі корисний аналіз.';
+    el.textContent = t('me.analysis.too_few_records', 'Ще замало даних для аналізу. Додай кілька записів в Inbox, створи задачі або нотатки — і я дам тобі корисний аналіз.');
     btn.textContent = '↻';
     btn.disabled = false;
     return;
