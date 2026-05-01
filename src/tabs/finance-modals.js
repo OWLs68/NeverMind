@@ -354,18 +354,18 @@ export function openFinDateModal() {
     <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
       <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">Дата операції</div>
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${t('finance.date.modal_title', 'Дата операції')}</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">Сьогодні · ${fmt(0)}</button>
-        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">Вчора · ${fmt(-1)}</button>
-        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">Позавчора · ${fmt(-2)}</button>
-        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">Тиждень тому · ${fmt(-7)}</button>
+        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.today', 'Сьогодні')} · ${fmt(0)}</button>
+        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.yesterday', 'Вчора')} · ${fmt(-1)}</button>
+        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.day_before_yesterday', 'Позавчора')} · ${fmt(-2)}</button>
+        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.week_ago', 'Тиждень тому')} · ${fmt(-7)}</button>
       </div>
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Виберіть день</div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.date.choose_day', 'Виберіть день')}</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${new Date().toISOString().slice(0,10)}"
         onchange="setFinTxDateFromInput(this.value)"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
-      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">Закрити</button>
+      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">${t('common.close', 'Закрити')}</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -402,24 +402,24 @@ export function openFinBudgetModal() {
     <div onclick="closeFinBudgetModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
-      <div class="modal-title">Бюджет на місяць</div>
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Загальний ліміт</div>
-      <input id="finbdg-total" type="number" placeholder="€ 0 — без ліміту" inputmode="decimal"
+      <div class="modal-title">${t('finance.budget.modal_title', 'Бюджет на місяць')}</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.budget.total_limit', 'Загальний ліміт')}</div>
+      <input id="finbdg-total" type="number" placeholder="${t('finance.budget.placeholder_total', '€ 0 — без ліміту')}" inputmode="decimal"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:17px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
         value="${budget.total || ''}">
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">По категоріях</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t('finance.budget.by_categories', 'По категоріях')}</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
         ${cats.expense.filter(c => !c.archived).map(cat => `
           <div style="display:flex;align-items:center;gap:10px">
             <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat.name)}</div>
-            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="без ліміту" inputmode="decimal"
+            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="${t('finance.budget.placeholder_cat', 'без ліміту')}" inputmode="decimal"
               style="width:100px;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;text-align:right"
               value="${budget.categories?.[cat.name] || ''}">
           </div>`).join('')}
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="closeFinBudgetModal()" class="btn-cancel">Скасувати</button>
-        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">Зберегти</button>
+        <button onclick="closeFinBudgetModal()" class="btn-cancel">${t('common.cancel', 'Скасувати')}</button>
+        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">${t('common.save', 'Зберегти')}</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -481,7 +481,7 @@ function _renderCatEditModalBody() {
   const iconTrigger = `<button onclick="toggleCatModalIcons()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 18)}</div>
     <div style="flex:1;text-align:left;min-width:0">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Іконка</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t('finance.cat.icon_label', 'Іконка')}</div>
       <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.icon)}</div>
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
@@ -489,7 +489,7 @@ function _renderCatEditModalBody() {
   const colorTrigger = `<button onclick="toggleCatModalColors()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
     <div style="flex:1;text-align:left;min-width:0">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">Колір</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t('finance.cat.color_label', 'Колір')}</div>
       <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.color)}</div>
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
@@ -499,7 +499,7 @@ function _renderCatEditModalBody() {
     <div onclick="closeCatPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
       <div onclick="event.stopPropagation()" style="width:100%;max-width:340px;background:rgba(255,255,255,0.95);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:22px;padding:18px;max-height:70vh;overflow-y:auto;border:1.5px solid rgba(255,255,255,0.6);box-shadow:0 20px 60px rgba(0,0,0,0.18);box-sizing:border-box">
         ${_catModalIconExpanded ? `
-          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">Обери іконку</div>
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t('finance.cat.choose_icon', 'Обери іконку')}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
             ${FIN_CAT_ICON_NAMES.map(name => {
               const active = name === d.icon;
@@ -508,7 +508,7 @@ function _renderCatEditModalBody() {
           </div>
         ` : ''}
         ${_catModalColorExpanded ? `
-          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">Обери колір</div>
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t('finance.cat.choose_color', 'Обери колір')}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;justify-items:center">
             ${FIN_CAT_PALETTE.map(c => {
               const active = c === d.color;
@@ -529,32 +529,32 @@ function _renderCatEditModalBody() {
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? 'Нова категорія' : 'Редагувати категорію'}</div>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? t('finance.cat.new_title', 'Нова категорія') : t('finance.cat.edit_title', 'Редагувати категорію')}</div>
     ${isNew ? `<div style="display:flex;gap:6px;margin-bottom:12px">
-      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${d.type === 'expense' ? 'rgba(194,65,12,0.08)' : 'white'};color:${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.4)'}">Витрата</button>
-      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.1)'};background:${d.type === 'income' ? 'rgba(22,163,74,0.08)' : 'white'};color:${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.4)'}">Дохід</button>
+      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${d.type === 'expense' ? 'rgba(194,65,12,0.08)' : 'white'};color:${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.4)'}">${t('finance.tx.toggle_expense', 'Витрата')}</button>
+      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.1)'};background:${d.type === 'income' ? 'rgba(22,163,74,0.08)' : 'white'};color:${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.4)'}">${t('finance.tx.toggle_income', 'Дохід')}</button>
     </div>` : ''}
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Назва</div>
-    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="напр. Подорожі"
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.cat.name_label', 'Назва')}</div>
+    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="${t('finance.cat.name_placeholder', 'напр. Подорожі')}"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Вигляд</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.cat.appearance_label', 'Вигляд')}</div>
     <div style="display:flex;gap:8px;margin-bottom:14px">${iconTrigger}${colorTrigger}</div>
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Підкатегорії</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.cat.subcats_label', 'Підкатегорії')}</div>
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
-    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">+ підкатегорія</button>
+    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">${t('finance.cat.add_subcat', '+ підкатегорія')}</button>
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
-        <div style="font-size:13px;font-weight:700;color:#1e1040">Архівувати</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">Сховати з сітки, дані зберігаються</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t('finance.cat.archive', 'Архівувати')}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${t('finance.cat.archive_hint', 'Сховати з сітки, дані зберігаються')}</div>
       </div>
       <button onclick="toggleCatModalArchive()" style="width:44px;height:24px;border-radius:14px;border:none;background:${d.archived ? '#c2410c' : 'rgba(30,16,64,0.12)'};position:relative;cursor:pointer;font-family:inherit">
         <div style="width:18px;height:18px;border-radius:50%;background:white;position:absolute;top:3px;${d.archived ? 'right:3px' : 'left:3px'};transition:all 0.2s"></div>
       </button>
     </div>` : ''}
     <div style="display:flex;gap:8px;margin-top:14px">
-      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">Видалити</button>` : ''}
-      <button onclick="closeCategoryEditModal()" class="btn-cancel">Скасувати</button>
-      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? 'Створити' : 'Зберегти'}</button>
+      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">${t('common.delete', 'Видалити')}</button>` : ''}
+      <button onclick="closeCategoryEditModal()" class="btn-cancel">${t('common.cancel', 'Скасувати')}</button>
+      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? t('common.create', 'Створити') : t('common.save', 'Зберегти')}</button>
     </div>
     </div>
   </div>
@@ -627,7 +627,7 @@ function _finCatModalPositionInfo() {
   const found = findFinCatById(_finEditingCatId);
   if (!found) return '';
   const list = getFinCats()[found.type];
-  return `позиція ${found.idx + 1} з ${list.length}`;
+  return t('finance.cat.position_info', 'позиція {idx} з {total}', { idx: found.idx + 1, total: list.length });
 }
 
 export function moveCatModalUp()   { if (_finEditingCatId && _finEditingCatId !== 'new') { moveFinCategory(_finEditingCatId, -1); _refreshCatEditModal(); renderFinance(); } }
@@ -637,7 +637,7 @@ export function saveCategoryFromModal() {
   const d = _finCatModalDraft;
   const subs = (d.subcategories || []).map(s => (s || '').trim()).filter(Boolean);
   const name = (d.name || '').trim();
-  if (!name) { showToast('Введи назву'); return; }
+  if (!name) { showToast(t('finance.cat.enter_name', 'Введи назву')); return; }
   if (_finEditingCatId === 'new') {
     createFinCategory(d.type, { name, icon: d.icon, color: d.color, subcategories: subs });
   } else {
@@ -649,7 +649,7 @@ export function saveCategoryFromModal() {
 
 export function deleteCategoryFromModal() {
   if (_finEditingCatId === 'new') return;
-  if (!confirm('Видалити категорію? Транзакції збережуться, але без візуального кружечка.')) return;
+  if (!confirm(t('finance.cat.delete_confirm', 'Видалити категорію? Транзакції збережуться, але без візуального кружечка.'))) return;
   deleteFinCategory(_finEditingCatId);
   closeCategoryEditModal();
   renderFinance();
