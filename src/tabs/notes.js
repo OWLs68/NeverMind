@@ -689,7 +689,7 @@ function switchNoteViewTab(tab) {
 async function initNoteChatGreeting(note) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
-    addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з агентом.');
+    addNoteChatMsg('agent', t('notes.chat.no_key_greeting', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з агентом.'));
     return;
   }
   const aiContext = getAIContext();
@@ -722,7 +722,7 @@ async function sendNoteChatMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addNoteChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addNoteChatMsg('agent', t('notes.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
 
   input.value = '';
   input.style.height = 'auto';
@@ -793,9 +793,9 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
             const textEl = document.getElementById('note-view-text');
             if (textEl) textEl.textContent = parsed.text;
             renderNotes();
-            addNoteChatMsg('agent', '✓ Нотатку оновлено.');
+            addNoteChatMsg('agent', t('notes.chat.updated', '✓ Нотатку оновлено.'));
           } else {
-            addNoteChatMsg('agent', 'Не вдалося знайти нотатку.');
+            addNoteChatMsg('agent', t('notes.chat.not_found', 'Не вдалося знайти нотатку.'));
           }
         } else {
           addNoteChatMsg('agent', reply, extractedChips);
@@ -809,7 +809,7 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
       handleChatError(addNoteChatMsg);
     }
   } catch {
-    addNoteChatMsg('agent', 'Мережева помилка.');
+    addNoteChatMsg('agent', t('common.network_error', 'Мережева помилка.'));
   }
   noteChatLoading = false;
   btn.disabled = false;
@@ -827,7 +827,7 @@ function showSaveAsNoteBtn(replyText) {
   btn.id = 'note-chat-save-btn';
   btn.style.cssText = 'display:flex;justify-content:flex-end;margin-top:-4px';
   const button = document.createElement('button');
-  button.textContent = '+ Зберегти як нотатку';
+  button.textContent = t('notes.chat.save_as_note', '+ Зберегти як нотатку');
   button.style.cssText = 'background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer';
   button.addEventListener('click', () => saveAgentResponseAsNote(_pendingAgentNote));
   btn.appendChild(button);
@@ -919,14 +919,14 @@ function selectFolderIcon(key) {
 }
 
 const FOLDER_COLOR_PALETTE = {
-  default: { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', label: 'Пісок' },
-  blue:    { bg: 'linear-gradient(135deg,#dbeafe,#bfdbfe)', label: 'Блакитний' },
-  green:   { bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', label: 'Зелений' },
-  yellow:  { bg: 'linear-gradient(135deg,#fef9c3,#fef08a)', label: 'Жовтий' },
-  pink:    { bg: 'linear-gradient(135deg,#fce7f3,#fbcfe8)', label: 'Рожевий' },
-  purple:  { bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', label: 'Фіолетовий' },
-  orange:  { bg: 'linear-gradient(135deg,#ffedd5,#fed7aa)', label: 'Оранжевий' },
-  gray:    { bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', label: 'Сірий' },
+  default: { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', label: t('notes.color.sand', 'Пісок') },
+  blue:    { bg: 'linear-gradient(135deg,#dbeafe,#bfdbfe)', label: t('notes.color.blue', 'Блакитний') },
+  green:   { bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', label: t('notes.color.green', 'Зелений') },
+  yellow:  { bg: 'linear-gradient(135deg,#fef9c3,#fef08a)', label: t('notes.color.yellow', 'Жовтий') },
+  pink:    { bg: 'linear-gradient(135deg,#fce7f3,#fbcfe8)', label: t('notes.color.pink', 'Рожевий') },
+  purple:  { bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', label: t('notes.color.purple', 'Фіолетовий') },
+  orange:  { bg: 'linear-gradient(135deg,#ffedd5,#fed7aa)', label: t('notes.color.orange', 'Оранжевий') },
+  gray:    { bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', label: t('notes.color.gray', 'Сірий') },
 };
 
 function renderFolderColorGrid(activeKey) {
@@ -1029,7 +1029,7 @@ export async function sendNotesBarMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addNotesChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addNotesChatMsg('agent', t('notes.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
   addNotesChatMsg('user', text);
@@ -1102,9 +1102,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
           (n.folder || '').toLowerCase().includes(q)
         ).slice(0, 5);
         if (results.length === 0) {
-          addNotesChatMsg('agent', `Нічого не знайдено по запиту "${parsed.query}".`);
+          addNotesChatMsg('agent', t('notes.chat.nothing_found_query', 'Нічого не знайдено по запиту "{query}".', { query: parsed.query }));
         } else {
-          addNotesChatMsg('agent', `Знайдено ${results.length}:`);
+          addNotesChatMsg('agent', t('notes.chat.found_n', 'Знайдено {n}:', { n: results.length }));
           results.forEach(n => {
             const preview = n.text.length > 60 ? n.text.substring(0, 60) + '…' : n.text;
             const el = document.getElementById('notes-chat-messages');
@@ -1132,9 +1132,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
         );
         if (match) {
           openNotesFolder(match);
-          addNotesChatMsg('agent', `Відкрив папку "${match}".`);
+          addNotesChatMsg('agent', t('notes.chat.opened_folder', 'Відкрив папку "{folder}".', { folder: match }));
         } else {
-          addNotesChatMsg('agent', `Папку "${parsed.folder}" не знайдено. Доступні: ${folders.join(', ')}.`);
+          addNotesChatMsg('agent', t('notes.chat.folder_not_found', 'Папку "{folder}" не знайдено. Доступні: {available}.', { folder: parsed.folder, available: folders.join(', ') }));
         }
         notesBarLoading = false;
         return;
@@ -1148,9 +1148,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
           currentNotesFolder = note.folder || t('notes.default_folder', 'Загальне');
           renderNotes();
           setTimeout(() => openNoteView(note.id), 100);
-          addNotesChatMsg('agent', `Відкрив нотатку.`);
+          addNotesChatMsg('agent', t('notes.chat.opened_note', 'Відкрив нотатку.'));
         } else {
-          addNotesChatMsg('agent', `Нотатку не знайдено.`);
+          addNotesChatMsg('agent', t('notes.chat.note_not_found', 'Нотатку не знайдено.'));
         }
         notesBarLoading = false;
         return;
@@ -1158,15 +1158,15 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
       if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
         const looksLikeJson = (reply.startsWith('{') && reply.endsWith('}')) || (reply.startsWith('[') && reply.endsWith(']'));
-        if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', 'Зроблено ✓'); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
+        if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', t('notes.chat.done', 'Зроблено ✓')); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
         else addNotesChatMsg('agent', reply, false, extractedChips);
       }
     } catch {
       const looksLikeJson = (reply.startsWith('{') && reply.endsWith('}')) || (reply.startsWith('[') && reply.endsWith(']'));
-      if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', 'Зроблено ✓'); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
+      if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', t('notes.chat.done', 'Зроблено ✓')); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
       else addNotesChatMsg('agent', reply, false, extractedChips);
     }
-  } catch { addNotesChatMsg('agent', 'Мережева помилка.'); }
+  } catch { addNotesChatMsg('agent', t('common.network_error', 'Мережева помилка.')); }
   notesBarLoading = false;
 }
 

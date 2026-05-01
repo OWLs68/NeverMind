@@ -16,7 +16,7 @@
   "src/tabs/health.js": 100,
   "src/tabs/inbox.js": 175,
   "src/tabs/me.js": 50,
-  "src/tabs/notes.js": 74,
+  "src/tabs/notes.js": 72,
   "src/tabs/onboarding.js": 192,
   "src/tabs/projects.js": 17,
   "src/tabs/tasks.js": 5
