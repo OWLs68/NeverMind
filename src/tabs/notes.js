@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, formatTime, parseContentChips } from '../core/utils.js';
+import { escapeHtml, formatTime, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -13,6 +13,7 @@ import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
+import { findCategoryByFolder } from '../data/notes-categories.js';
 import { processUniversalAction } from './habits.js';
 
 // === NOTES ===
@@ -217,31 +218,19 @@ const ICON_SVG = {
   shopping: _ico('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>'),
 };
 
-// Маппінг назва → іконка
-const FOLDER_ICON_MAP = {
-  'Харчування': 'food', 'Фінанси': 'money', "Здоровʼя": 'heart', 'Здоровя': 'heart',
-  'Робота': 'work', 'Навчання': 'book', 'Ідеї': 'bulb', 'Особисте': 'person',
-  'Подорожі': 'plane', 'Цілі': 'target', 'Спорт': 'sport', 'Музика': 'music',
-  'Дім': 'home', 'Авто': 'car', 'Покупки': 'shopping', 'Люди': 'users',
-  'Проекти': 'zap', 'Природа': 'leaf', 'Кава': 'coffee', 'Фото': 'camera',
-};
-
-const FOLDER_ICONS = Object.fromEntries(
-  Object.entries(FOLDER_ICON_MAP).map(([name, key]) => [name, ICON_SVG[key]])
-);
+// Іконки папок — пошук через канонічний довідник з src/data/notes-categories.js.
+// Назви категорій (Харчування, Робота, Здоров'я тощо) — через t() для локалізації.
+// findCategoryByFolder покриває exact-match + нормалізацію апострофів (legacy
+// 'Здоровя' без апострофа теж знаходиться).
 const FOLDER_ICON_DEFAULT = ICON_SVG.note;
-
-// Всі іконки як масив для вибору в модалці
 const ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
 
 function getFolderIcon(folder) {
   if (!folder) return FOLDER_ICON_DEFAULT;
   const meta = getFolderMeta(folder);
   if (meta.iconKey && ICON_SVG[meta.iconKey]) return ICON_SVG[meta.iconKey];
-  if (FOLDER_ICONS[folder]) return FOLDER_ICONS[folder];
-  const normalized = folder.replace(/[ʼ']/g, '').toLowerCase();
-  const found = Object.keys(FOLDER_ICONS).find(k => k.replace(/[ʼ']/g, '').toLowerCase() === normalized);
-  return found ? FOLDER_ICONS[found] : FOLDER_ICON_DEFAULT;
+  const cat = findCategoryByFolder(folder);
+  return cat && ICON_SVG[cat.icon] ? ICON_SVG[cat.icon] : FOLDER_ICON_DEFAULT;
 }
 
 // === FOLDER META — кастомна іконка, колір, закріплення ===
@@ -257,18 +246,12 @@ function setFolderMeta(folder, data) {
   saveFoldersMeta(all);
 }
 
-const FOLDER_COLORS = {
-  'Харчування': { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🥑' },
-  'Фінанси':   { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💸' },
-  "Здоровʼя":  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
-  'Здоровя':   { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💪' },
-  'Робота':    { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🎯' },
-  'Навчання':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '🧠' },
-  'Ідеї':      { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '💡' },
-  'Особисте':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '⚡' },
-  'Подорожі':  { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '✈️' },
-};
-const DEFAULT_NOTE_FOLDER = { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', border: 'rgba(255,255,255,0.4)', dot: '📝' };
+// Кольори/емодзі папок — спільний пісковий градієнт для всіх категорій,
+// emoji-крапка береться з канонічного довідника (src/data/notes-categories.js).
+// Якщо категорія не знайдена або без `dot` — дефолтний 📝.
+const FOLDER_BG = 'linear-gradient(135deg,#f5ede0,#ede0cc)';
+const FOLDER_BORDER = 'rgba(255,255,255,0.4)';
+const DEFAULT_NOTE_FOLDER = { bg: FOLDER_BG, border: FOLDER_BORDER, dot: '📝' };
 
 export function renderNotes(searchQuery = '') {
   let notes = getNotes();
@@ -548,12 +531,9 @@ let noteChatLoading = false;
 
 function getFolderColor(folder) {
   if (!folder) return DEFAULT_NOTE_FOLDER;
-  // Пряме співпадіння
-  if (FOLDER_COLORS[folder]) return FOLDER_COLORS[folder];
-  // Нечутливе до апострофа (ʼ vs ' vs без)
-  const normalized = folder.replace(/[ʼ']/g, '').toLowerCase();
-  const found = Object.keys(FOLDER_COLORS).find(k => k.replace(/[ʼ']/g, '').toLowerCase() === normalized);
-  return found ? FOLDER_COLORS[found] : DEFAULT_NOTE_FOLDER;
+  const cat = findCategoryByFolder(folder);
+  if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
+  return DEFAULT_NOTE_FOLDER;
 }
 
 function openNoteView(id) {
@@ -886,11 +866,7 @@ function closeFolderEditModal() {
 }
 
 function _autoIconKey(folder) {
-  const norm = folder.replace(/[ʼ']/g, '').toLowerCase();
-  const match = Object.entries(FOLDER_ICON_MAP).find(([name]) =>
-    name.replace(/[ʼ']/g, '').toLowerCase() === norm
-  );
-  return match ? match[1] : 'folder';
+  return findCategoryByFolder(folder)?.icon || 'folder';
 }
 
 let _selectedIconKey = 'folder';
