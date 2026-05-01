@@ -113,12 +113,25 @@ const ALLOWED_LATIN = new Set([
   'FINANCE', 'DATA_SCHEMA', 'TECHNICAL_REFERENCE', 'DESIGN_SYSTEM',
   'FILE_STRUCTURE', 'ARCHITECTURE', 'GIT_EMERGENCY', 'AI_TOOLS', 'SKILLS_PLAN',
   'CONCEPTS_ACTIVE', 'NEVERMIND_BUGS', 'NEVERMIND_LOGIC', 'FEATURES_ROADMAP',
+  'HOT_RULES', 'TESTING_LOG', 'EVENING_2', 'FINANCE_V2', 'REFACTOR_PLAN',
+  // === AI tools / константи коду які Роман щодня бачить ===
+  'INBOX_TOOLS', 'UI_TOOLS', 'BRAIN_TOOLS', 'INBOX_SYSTEM_PROMPT',
+  'REASONING_LOG_RULE', 'UI_TOOLS_RULES', 'REMINDER_RULES',
   // === Storage-ключі (nm_*) теж пропускаємо — Роман їх щодня бачить ===
   // Ці слова сами по собі snake_case, тому потраплять у NEW логіку нижче.
   // Додамо явно в whitelist щоб НЕ ловило.
   'nm_inbox', 'nm_tasks', 'nm_notes', 'nm_habits2', 'nm_finance',
   'nm_health_cards', 'nm_projects', 'nm_events', 'nm_moments', 'nm_trash',
   'nm_settings', 'nm_facts', 'nm_owl_board', 'nm_data_changed',
+  'nm_owl_cooldowns', 'nm_user_patterns', 'nm_reasoning_log',
+  'nm_tool_filter_log', 'nm_agent_corrections', 'nm_backup_v',
+  'nm_gemini_key', 'nm_chat_', 'nm_owl_tab_', 'nm_owl_board_unified',
+  // === Назви хуків (snake_case) Роман сам бачить у settings.json ===
+  'show_violations', 'rules_reminder', 'context_warning', 'skill_triggers',
+  'check_response_violations', 'check_estimate_without_read',
+  'cache_name_reminder', 'ai_tools_sync', 'i18n_reminder', 'md_index_reminder',
+  'lesson_reminder', 'pre_push_check', 'pre_commit_testing_log',
+  'start_self_test',
   // === Деякі назви хуків/скілів ===
   'PostToolUse', 'PreToolUse', 'UserPromptSubmit', 'Stop', 'SessionStart',
 ]);
