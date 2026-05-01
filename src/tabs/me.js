@@ -89,7 +89,7 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
 
   if (!handled) {
     if (loadEl) loadEl.remove();
-    addMeChatMsg('agent', reply || 'Не вдалося отримати відповідь.', false, '', extractedChips);
+    addMeChatMsg('agent', reply || t('me.chat.no_reply', 'Не вдалося отримати відповідь.'), false, '', extractedChips);
   }
   if (reply) meChatHistory.push({ role: 'assistant', content: reply });
   if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
@@ -147,23 +147,31 @@ export function renderMe() {
       // Загальний підсумок: скільки рухаються vs стоять
       const moving = projWithStats.filter(s => s.stepsThisWeek > 0).length;
       const stagnant = projWithStats.length - moving;
+      const activeWord = allProjects.length === 1 ? t('me.proj.active_one', 'активний') : t('me.proj.active_many', 'активних');
+      const movingWord = moving === 1 ? t('me.proj.moving_one', 'рухається') : t('me.proj.moving_many', 'рухаються');
+      const stagnantWord = t('me.proj.stagnant', 'стоїть');
       const summaryHTML = `
         <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} активн${allProjects.length === 1 ? 'ий' : 'их'}</span>
+          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} ${activeWord}</span>
           <span style="font-size:11px;font-weight:700">
-            <span style="color:#16a34a">${moving} рух${moving === 1 ? 'ається' : 'аються'}</span>
-            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> · </span><span style="color:#c2410c">${stagnant} стоїть</span>` : ''}
+            <span style="color:#16a34a">${moving} ${movingWord}</span>
+            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> · </span><span style="color:#c2410c">${stagnant} ${stagnantWord}</span>` : ''}
           </span>
         </div>`;
 
       const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
         let trendChip = '';
         if (stepsThisWeek > 0) {
-          trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} крок${stepsThisWeek === 1 ? '' : stepsThisWeek < 5 ? 'и' : 'ів'} за тиждень</span>`;
+          const stepWord = stepsThisWeek === 1
+            ? t('me.proj.step_one', 'крок')
+            : stepsThisWeek < 5
+              ? t('me.proj.step_few', 'кроки')
+              : t('me.proj.step_many', 'кроків');
+          trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t('me.proj.per_week', 'за тиждень')}</span>`;
         } else if (daysSince !== null && daysSince >= 7) {
-          trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">⏸ без змін ${daysSince} дн</span>`;
+          trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t('me.proj.no_changes', '⏸ без змін {n} дн', { n: daysSince })}</span>`;
         } else if (daysSince === null) {
-          trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">щойно створений</span>`;
+          trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t('me.proj.just_created', 'щойно створений')}</span>`;
         }
         return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
@@ -304,9 +312,9 @@ function _isInsightsStale(insights) {
 
 function _formatInsightAge(ts) {
   const days = Math.floor((Date.now() - ts) / 86400000);
-  if (days === 0) return 'сьогодні';
-  if (days === 1) return 'вчора';
-  return `${days} дн тому`;
+  if (days === 0) return t('me.weekly.age_today', 'сьогодні');
+  if (days === 1) return t('me.weekly.age_yesterday', 'вчора');
+  return t('me.weekly.age_days_ago', '{n} дн тому', { n: days });
 }
 
 async function generateWeeklyInsights() {
@@ -368,9 +376,9 @@ function renderWeeklyInsights() {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:14px">🦉</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t('me.weekly.title', 'OWL знає тебе')}</span>
       </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">Аналізую твій тиждень — інсайти зʼявляться за хвилину…</div>`;
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t('me.insights.loading', 'Аналізую твій тиждень — інсайти зʼявляться за хвилину…')}</div>`;
     // Запускаємо генерацію (не чекаємо)
     setTimeout(() => { generateWeeklyInsights(); }, 800);
     return;
@@ -386,7 +394,7 @@ function renderWeeklyInsights() {
     </div>`).join('');
   const deepHTML = insights.deepReport ? `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
-      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Глибокий звіт</div>
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('me.weekly.deep_report', 'Глибокий звіт')}</div>
       <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
     </div>` : '';
 
@@ -394,7 +402,7 @@ function renderWeeklyInsights() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:14px">🦉</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL знає тебе</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t('me.weekly.title', 'OWL знає тебе')}</span>
       </div>
       <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
     </div>
@@ -489,9 +497,9 @@ function renderMonthlyReport() {
       el.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:14px">📆</span>
-          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">Підсумок ${_prevMonthName()}</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t('me.monthly.title', 'Підсумок {month}', { month: _prevMonthName() })}</span>
         </div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">Складаю місячний звіт…</div>`;
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t('me.monthly.loading', 'Складаю місячний звіт…')}</div>`;
     } else {
       el.style.display = 'none';
       setTimeout(() => { generateMonthlyReport(); }, 1500); // після weekly insights
@@ -504,16 +512,16 @@ function renderMonthlyReport() {
   const greenAccent = '#16a34a';
   const sections = [];
   if (report.topActivities && report.topActivities.length > 0) {
-    sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">Топ занять</span>
+    sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t('me.monthly.top_activities', 'Топ занять')}</span>
       ${report.topActivities.map(a => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">• ${escapeHtml(a)}</div>`).join('')}
     </div>`);
   }
-  if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">Настрій:</span> ${escapeHtml(report.moodTrend)}</div>`);
-  if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">Проекти:</span> ${escapeHtml(report.projectsProgress)}</div>`);
-  if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">Фінанси:</span> ${escapeHtml(report.financeNote)}</div>`);
+  if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t('me.monthly.mood', 'Настрій:')}</span> ${escapeHtml(report.moodTrend)}</div>`);
+  if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t('me.monthly.projects', 'Проекти:')}</span> ${escapeHtml(report.projectsProgress)}</div>`);
+  if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t('me.monthly.finance', 'Фінанси:')}</span> ${escapeHtml(report.financeNote)}</div>`);
   if (report.patterns && report.patterns.length > 0) {
     sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
-      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">Патерни</span>
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t('me.monthly.patterns', 'Патерни')}</span>
       ${report.patterns.map(p => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">• ${escapeHtml(p)}</div>`).join('')}
     </div>`);
   }
@@ -521,7 +529,7 @@ function renderMonthlyReport() {
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="font-size:14px">📆</span>
-      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">Підсумок ${report.monthLabel}</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t('me.monthly.title', 'Підсумок {month}', { month: report.monthLabel })}</span>
     </div>
     <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
     ${sections.join('')}`;
@@ -626,8 +634,8 @@ function renderMeActivityChart() {
 
   chartEl.innerHTML = `
     <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
-      ${ringSVG(tasksDone, tasksTotal, '#2fd0f9', 'Задачі')}
-      ${ringSVG(habitsDone, habitsTotal, '#16a34a', 'Звички')}
+      ${ringSVG(tasksDone, tasksTotal, '#2fd0f9', t('me.chart.tasks', 'Задачі'))}
+      ${ringSVG(habitsDone, habitsTotal, '#16a34a', t('me.chart.habits', 'Звички'))}
     </div>
   `;
 }
@@ -645,7 +653,7 @@ async function refreshMeAnalysis() {
   const totalRecords = inbox.length + tasks.length + notes.length;
 
   if (totalRecords < 3) {
-    el.textContent = 'Ще замало даних для аналізу. Додай кілька записів в Inbox, створи задачі або нотатки — і я дам тобі корисний аналіз.';
+    el.textContent = t('me.analysis.too_few_records', 'Ще замало даних для аналізу. Додай кілька записів в Inbox, створи задачі або нотатки — і я дам тобі корисний аналіз.');
     btn.textContent = '↻';
     btn.disabled = false;
     return;
@@ -665,7 +673,7 @@ async function refreshMeAnalysis() {
 Останні 10 записів: ${inbox.slice(0,10).map(i=>`[${i.category}] ${i.text}`).join('; ')}`;
 
   const reply = await callAI(systemPrompt, userData, {}, 'me-profile-analysis');
-  el.textContent = reply || 'Не вдалось отримати аналіз. Спробуй ще раз.';
+  el.textContent = reply || t('me.analysis.no_reply', 'Не вдалось отримати аналіз. Спробуй ще раз.');
   btn.textContent = '↻';
   btn.disabled = false;
 
