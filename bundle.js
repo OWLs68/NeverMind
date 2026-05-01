@@ -9677,7 +9677,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     }
     if (!handled) {
       if (loadEl) loadEl.remove();
-      addMeChatMsg("agent", reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.", false, "", extractedChips);
+      addMeChatMsg("agent", reply || t("me.chat.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C."), false, "", extractedChips);
     }
     if (reply) meChatHistory.push({ role: "assistant", content: reply });
     if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
@@ -9730,22 +9730,26 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         projWithStats.sort((a, b) => b.stepsThisWeek - a.stepsThisWeek);
         const moving = projWithStats.filter((s) => s.stepsThisWeek > 0).length;
         const stagnant = projWithStats.length - moving;
+        const activeWord = allProjects.length === 1 ? t("me.proj.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439") : t("me.proj.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
+        const movingWord = moving === 1 ? t("me.proj.moving_one", "\u0440\u0443\u0445\u0430\u0454\u0442\u044C\u0441\u044F") : t("me.proj.moving_many", "\u0440\u0443\u0445\u0430\u044E\u0442\u044C\u0441\u044F");
+        const stagnantWord = t("me.proj.stagnant", "\u0441\u0442\u043E\u0457\u0442\u044C");
         const summaryHTML = `
         <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} \u0430\u043A\u0442\u0438\u0432\u043D${allProjects.length === 1 ? "\u0438\u0439" : "\u0438\u0445"}</span>
+          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} ${activeWord}</span>
           <span style="font-size:11px;font-weight:700">
-            <span style="color:#16a34a">${moving} \u0440\u0443\u0445${moving === 1 ? "\u0430\u0454\u0442\u044C\u0441\u044F" : "\u0430\u044E\u0442\u044C\u0441\u044F"}</span>
-            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> \xB7 </span><span style="color:#c2410c">${stagnant} \u0441\u0442\u043E\u0457\u0442\u044C</span>` : ""}
+            <span style="color:#16a34a">${moving} ${movingWord}</span>
+            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> \xB7 </span><span style="color:#c2410c">${stagnant} ${stagnantWord}</span>` : ""}
           </span>
         </div>`;
         const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
           let trendChip = "";
           if (stepsThisWeek > 0) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} \u043A\u0440\u043E\u043A${stepsThisWeek === 1 ? "" : stepsThisWeek < 5 ? "\u0438" : "\u0456\u0432"} \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C</span>`;
+            const stepWord = stepsThisWeek === 1 ? t("me.proj.step_one", "\u043A\u0440\u043E\u043A") : stepsThisWeek < 5 ? t("me.proj.step_few", "\u043A\u0440\u043E\u043A\u0438") : t("me.proj.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t("me.proj.per_week", "\u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}</span>`;
           } else if (daysSince !== null && daysSince >= 7) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D ${daysSince} \u0434\u043D</span>`;
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t("me.proj.no_changes", "\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D {n} \u0434\u043D", { n: daysSince })}</span>`;
           } else if (daysSince === null) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439</span>`;
+            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t("me.proj.just_created", "\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439")}</span>`;
           }
           return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
@@ -9841,9 +9845,9 @@ ${quitLines}`);
   }
   function _formatInsightAge(ts) {
     const days = Math.floor((Date.now() - ts) / 864e5);
-    if (days === 0) return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    if (days === 1) return "\u0432\u0447\u043E\u0440\u0430";
-    return `${days} \u0434\u043D \u0442\u043E\u043C\u0443`;
+    if (days === 0) return t("me.weekly.age_today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+    if (days === 1) return t("me.weekly.age_yesterday", "\u0432\u0447\u043E\u0440\u0430");
+    return t("me.weekly.age_days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: days });
   }
   async function generateWeeklyInsights() {
     if (_insightsGenerating) return;
@@ -9900,9 +9904,9 @@ ${quitLines}`);
       el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:14px">\u{1F989}</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
       </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026</div>`;
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.insights.loading", "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026")}</div>`;
       setTimeout(() => {
         generateWeeklyInsights();
       }, 800);
@@ -9917,14 +9921,14 @@ ${quitLines}`);
     </div>`).join("");
     const deepHTML = insights.deepReport ? `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
-      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442</div>
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("me.weekly.deep_report", "\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442")}</div>
       <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
     </div>` : "";
     el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:14px">\u{1F989}</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
       </div>
       <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
     </div>
@@ -10006,9 +10010,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         el.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:14px">\u{1F4C6}</span>
-          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${_prevMonthName()}</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: _prevMonthName() })}</span>
         </div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026</div>`;
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.monthly.loading", "\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026")}</div>`;
       } else {
         el.style.display = "none";
         setTimeout(() => {
@@ -10021,23 +10025,23 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const greenAccent = "#16a34a";
     const sections = [];
     if (report.topActivities && report.topActivities.length > 0) {
-      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C</span>
+      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.top_activities", "\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C")}</span>
       ${report.topActivities.map((a) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(a)}</div>`).join("")}
     </div>`);
     }
-    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">\u041D\u0430\u0441\u0442\u0440\u0456\u0439:</span> ${escapeHtml(report.moodTrend)}</div>`);
-    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">\u041F\u0440\u043E\u0435\u043A\u0442\u0438:</span> ${escapeHtml(report.projectsProgress)}</div>`);
-    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">\u0424\u0456\u043D\u0430\u043D\u0441\u0438:</span> ${escapeHtml(report.financeNote)}</div>`);
+    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t("me.monthly.mood", "\u041D\u0430\u0441\u0442\u0440\u0456\u0439:")}</span> ${escapeHtml(report.moodTrend)}</div>`);
+    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438:")}</span> ${escapeHtml(report.projectsProgress)}</div>`);
+    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438:")}</span> ${escapeHtml(report.financeNote)}</div>`);
     if (report.patterns && report.patterns.length > 0) {
       sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
-      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">\u041F\u0430\u0442\u0435\u0440\u043D\u0438</span>
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.patterns", "\u041F\u0430\u0442\u0435\u0440\u043D\u0438")}</span>
       ${report.patterns.map((p) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(p)}</div>`).join("")}
     </div>`);
     }
     el.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="font-size:14px">\u{1F4C6}</span>
-      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${report.monthLabel}</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: report.monthLabel })}</span>
     </div>
     <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
     ${sections.join("")}`;
@@ -10128,8 +10132,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     };
     chartEl.innerHTML = `
     <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
-      ${ringSVG(tasksDone, tasksTotal, "#2fd0f9", "\u0417\u0430\u0434\u0430\u0447\u0456")}
-      ${ringSVG(habitsDone, habitsTotal, "#16a34a", "\u0417\u0432\u0438\u0447\u043A\u0438")}
+      ${ringSVG(tasksDone, tasksTotal, "#2fd0f9", t("me.chart.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456"))}
+      ${ringSVG(habitsDone, habitsTotal, "#16a34a", t("me.chart.habits", "\u0417\u0432\u0438\u0447\u043A\u0438"))}
     </div>
   `;
   }
@@ -10145,7 +10149,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const aiContext = getAIContext();
     const totalRecords = inbox.length + tasks.length + notes.length;
     if (totalRecords < 3) {
-      el.textContent = "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.";
+      el.textContent = t("me.analysis.too_few_records", "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.");
       btn.textContent = "\u21BB";
       btn.disabled = false;
       return;
@@ -10162,7 +10166,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
 \u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
 \u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
     const reply = await callAI(systemPrompt, userData, {}, "me-profile-analysis");
-    el.textContent = reply || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.";
+    el.textContent = reply || t("me.analysis.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
     btn.textContent = "\u21BB";
     btn.disabled = false;
     if (reply && totalRecords >= 5) {
