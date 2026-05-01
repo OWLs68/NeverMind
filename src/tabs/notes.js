@@ -62,7 +62,7 @@ export function getNotesContext() {
   const notes = getNotes();
   if (notes.length === 0) return '';
   const folderCount = {};
-  notes.forEach(n => { const f = n.folder || 'Загальне'; folderCount[f] = (folderCount[f] || 0) + 1; });
+  notes.forEach(n => { const f = n.folder || t('notes.default_folder', 'Загальне'); folderCount[f] = (folderCount[f] || 0) + 1; });
   const foldersStr = Object.entries(folderCount)
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => `${name} (${count})`)
@@ -70,21 +70,21 @@ export function getNotesContext() {
   const recent = notes.slice(0, 5).map(n => {
     const txt = (n.text || '').slice(0, 60).replace(/\n/g, ' ');
     const more = (n.text || '').length > 60 ? '…' : '';
-    return `- [ID:${n.id}] [${n.folder || 'Загальне'}] "${txt}${more}"`;
+    return `- [ID:${n.id}] [${n.folder || t('notes.default_folder', 'Загальне')}] "${txt}${more}"`;
   }).join('\n');
   return `Нотатки (${notes.length} загалом, папки: ${foldersStr}):\n${recent}`;
 }
 
 function getFolders() {
   const notes = getNotes();
-  const set = new Set(notes.map(n => n.folder || 'Загальне'));
+  const set = new Set(notes.map(n => n.folder || t('notes.default_folder', 'Загальне')));
   return [...set].sort();
 }
 
 export function addNoteFromInbox(text, category, folder = null, source = 'inbox') {
   const notes = getNotes();
   // B-47: нормалізуємо апострофи + дедуплікуємо проти існуючих папок (case-insensitive fuzzy match)
-  const rawFolder = folder || (category === 'idea' ? 'Ідеї' : 'Загальне');
+  const rawFolder = folder || (category === 'idea' ? t('notes.folder_ideas', 'Ідеї') : t('notes.default_folder', 'Загальне'));
   const normalized = normalizeFolderName(rawFolder);
   // Якщо нормалізована назва збігається з існуючою папкою (case-insensitive) — використовуємо існуючу
   const existingFolders = [...new Set(notes.map(n => n.folder).filter(Boolean))];
@@ -96,7 +96,7 @@ export function addNoteFromInbox(text, category, folder = null, source = 'inbox'
 
 function openAddNote() {
   editingNoteId = null;
-  document.getElementById('note-modal-title').textContent = 'Нова нотатка';
+  document.getElementById('note-modal-title').textContent = t('notes.modal.new_title', 'Нова нотатка');
   document.getElementById('note-input-text').value = '';
   document.getElementById('note-input-folder').value = '';
   updateFolderSuggestions();
@@ -109,7 +109,7 @@ function openEditNote(id) {
   const n = notes.find(x => x.id === id);
   if (!n) return;
   editingNoteId = id;
-  document.getElementById('note-modal-title').textContent = 'Редагувати нотатку';
+  document.getElementById('note-modal-title').textContent = t('notes.modal.edit_title', 'Редагувати нотатку');
   document.getElementById('note-input-text').value = n.text;
   document.getElementById('note-input-folder').value = n.folder || '';
   updateFolderSuggestions();
@@ -130,8 +130,8 @@ function updateFolderSuggestions() {
 
 function saveNote() {
   const text = document.getElementById('note-input-text').value.trim();
-  if (!text) { showToast('Введіть текст нотатки'); return; }
-  const folder = document.getElementById('note-input-folder').value.trim() || 'Загальне';
+  if (!text) { showToast(t('notes.toast.enter_text', 'Введіть текст нотатки')); return; }
+  const folder = document.getElementById('note-input-folder').value.trim() || t('notes.default_folder', 'Загальне');
   const notes = getNotes();
 
   if (editingNoteId) {
@@ -153,7 +153,7 @@ function deleteNote(id) {
   if (item) addToTrash('note', item);
   saveNotes(notes.filter(x => x.id !== id));
   renderNotes();
-  if (item) showUndoToast('Нотатку видалено', () => {
+  if (item) showUndoToast(t('notes.toast.deleted', 'Нотатку видалено'), () => {
     const n = getNotes();
     let idx;
     if (predecessorId === null) {
@@ -290,7 +290,7 @@ export function renderNotes(searchQuery = '') {
     const q = searchQuery.toLowerCase();
     notes = notes.filter(n => n.text.toLowerCase().includes(q) || (n.folder || '').toLowerCase().includes(q));
     if (notes.length === 0) {
-      content.innerHTML = '<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">Нічого не знайдено</div>';
+      content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t('notes.search.empty', 'Нічого не знайдено')}</div>`;
       return;
     }
     content.innerHTML = renderNotesList(notes);
@@ -306,16 +306,16 @@ export function renderNotes(searchQuery = '') {
       header.innerHTML = `
         <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          Назад
+          ${t('common.back', 'Назад')}
         </button>
         <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:#1e1040">${getFolderIcon(currentNotesFolder)} ${escapeHtml(currentNotesFolder)}</span>
-        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter(n=>(n.folder||'Загальне')===currentNotesFolder).length}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter(n=>(n.folder||t('notes.default_folder', 'Загальне'))===currentNotesFolder).length}</span>
       `;
     }
-    const folderNotes = notes.filter(n => (n.folder || 'Загальне') === currentNotesFolder);
+    const folderNotes = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === currentNotesFolder);
     content.innerHTML = folderNotes.length
       ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + '</div>'
-      : '<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">Папка порожня</div>';
+      : `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t('notes.folder.empty', 'Папка порожня')}</div>`;
     _attachNotesSwipeDelete();
     return;
   }
@@ -324,7 +324,7 @@ export function renderNotes(searchQuery = '') {
   if (header) header.style.display = 'none';
   const byFolder = {};
   notes.forEach(n => {
-    const f = n.folder || 'Загальне';
+    const f = n.folder || t('notes.default_folder', 'Загальне');
     if (!byFolder[f]) byFolder[f] = [];
     byFolder[f].push(n);
   });
@@ -362,7 +362,7 @@ export function renderNotes(searchQuery = '') {
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:44px">
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
-            <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">записів</div>
+            <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('notes.folder.entries', 'записів')}</div>
           </div>
           <div ontouchend="event.stopPropagation();event.preventDefault();openFolderEditModal('${safeFolder}')" onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
         </div>
@@ -374,7 +374,7 @@ export function renderNotes(searchQuery = '') {
 function renderNotesList(notes) {
   const now = Date.now();
   return notes.map(n => {
-    const fc = getFolderColor(n.folder || 'Загальне');
+    const fc = getFolderColor(n.folder || t('notes.default_folder', 'Загальне'));
     const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
     return `
       <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
@@ -423,7 +423,7 @@ function _attachNotesSwipeDelete() {
         if (item) addToTrash('note', item);
         saveNotes(allNotes.filter(x => String(x.id) !== id));
         renderNotes();
-        if (item) showUndoToast('Нотатку видалено', () => {
+        if (item) showUndoToast(t('notes.toast.deleted', 'Нотатку видалено'), () => {
           const notes = getNotes();
           let idx;
           if (swipePredecessorId === null) idx = 0;
@@ -445,8 +445,8 @@ function _attachNotesSwipeDelete() {
     const folder = wrap.dataset.folder;
     attachSwipeDelete(wrap, card, () => {
       const notes = getNotes();
-      const folderNotes = notes.filter(n => (n.folder || 'Загальне') === folder);
-      const remaining = notes.filter(n => (n.folder || 'Загальне') !== folder);
+      const folderNotes = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === folder);
+      const remaining = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) !== folder);
       _animateSwipeRemoval(wrap, () => {
         if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
         saveNotes(remaining);
@@ -517,7 +517,7 @@ function noteMenuMove() {
   const n = notes.find(x => x.id === id);
   if (!n) return;
   const folders = getFolders();
-  const current = n.folder || 'Загальне';
+  const current = n.folder || t('notes.default_folder', 'Загальне');
   const folderList = folders.filter(f => f !== current);
   if (folderList.length === 0) {
     showToast('Немає інших папок');
@@ -569,7 +569,7 @@ function openNoteView(id) {
   const modal = document.getElementById('note-view-modal');
   if (modal) modal.style.background = fc.bg;
 
-  document.getElementById('note-view-folder').textContent = n.folder || 'Загальне';
+  document.getElementById('note-view-folder').textContent = n.folder || t('notes.default_folder', 'Загальне');
   const preview = n.text.length > 50 ? n.text.substring(0, 50) + '…' : n.text;
   document.getElementById('note-view-preview').textContent = preview;
 
@@ -838,7 +838,7 @@ function showSaveAsNoteBtn(replyText) {
 function saveAgentResponseAsNote(text) {
   const notes = getNotes();
   const originalNote = notes.find(x => x.id === activeNoteViewId);
-  const folder = originalNote?.folder || 'Загальне';
+  const folder = originalNote?.folder || t('notes.default_folder', 'Загальне');
   notes.unshift({ id: Date.now(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
   renderNotes();
@@ -970,7 +970,7 @@ function saveFolderEdit() {
   // Перейменування — оновлюємо всі нотатки
   if (newName !== _editingFolder) {
     const notes = getNotes();
-    notes.forEach(n => { if ((n.folder || 'Загальне') === _editingFolder) n.folder = newName; });
+    notes.forEach(n => { if ((n.folder || t('notes.default_folder', 'Загальне')) === _editingFolder) n.folder = newName; });
     saveNotes(notes);
     // Переносимо мету
     const allMeta = getFoldersMeta();
@@ -1067,7 +1067,7 @@ export async function sendNotesBarMessage() {
 
 ${REMINDER_RULES}
 ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
-Наявні папки: ${[...new Set(getNotes().map(n => n.folder || 'Загальне'))].join(', ') || 'немає'}
+Наявні папки: ${[...new Set(getNotes().map(n => n.folder || t('notes.default_folder', 'Загальне')))].join(', ') || 'немає'}
 НЕ вигадуй дані яких немає в контексті.
 
 ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
@@ -1112,7 +1112,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
             const div = document.createElement('div');
             div.style.cssText = 'display:flex';
             div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView(${n.id})" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
-              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || 'Загальне')}</div>
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t('notes.default_folder', 'Загальне'))}</div>
               ${escapeHtml(preview)}
             </div>`;
             el.appendChild(div);
@@ -1125,7 +1125,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
       if (parsed.action === 'open_folder') {
         const target = (parsed.folder || '').toLowerCase().replace(/[ʼ']/g, '');
-        const folders = [...new Set(getNotes().map(n => n.folder || 'Загальне'))];
+        const folders = [...new Set(getNotes().map(n => n.folder || t('notes.default_folder', 'Загальне')))];
         const match = folders.find(f =>
           f.toLowerCase().replace(/[ʼ']/g, '').includes(target) ||
           target.includes(f.toLowerCase().replace(/[ʼ']/g, ''))
@@ -1145,7 +1145,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
         const note = getNotes().find(n => n.text.toLowerCase().includes(q));
         if (note) {
           // Відкриваємо папку і потім нотатку
-          currentNotesFolder = note.folder || 'Загальне';
+          currentNotesFolder = note.folder || t('notes.default_folder', 'Загальне');
           renderNotes();
           setTimeout(() => openNoteView(note.id), 100);
           addNotesChatMsg('agent', `Відкрив нотатку.`);
