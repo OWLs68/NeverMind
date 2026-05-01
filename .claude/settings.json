@@ -114,10 +114,6 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/skill-triggers.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/quick-dialogue-detector.sh"
           }
         ]
       }
