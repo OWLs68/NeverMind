@@ -13,6 +13,7 @@ import { getHealthChatSystem } from '../ai/prompts.js';
 import { renderChips } from '../owl/chips.js';
 import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
+import { saveTasks } from './tasks.js';
 
 // === STORAGE ===
 
@@ -548,7 +549,6 @@ async function copyHealthExport() {
 function _syncMedicationToTask(cardName, med) {
   if (!med || !med.createTasks) return;
   try {
-    // Lazy-import щоб уникнути циклічних залежностей при ES-bundling
     const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
     const title = `Прийняти ${med.name}${med.dosage ? ' ' + med.dosage : ''}`;
     // Перевірка на дубль
@@ -567,8 +567,7 @@ function _syncMedicationToTask(cardName, med) {
       sourceMedId: med.id, // маркер що задача створена з препарату
     };
     tasks.unshift(newTask);
-    localStorage.setItem('nm_tasks', JSON.stringify(tasks));
-    window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' }));
+    saveTasks(tasks);
   } catch (e) {
     console.warn('[health] syncMedicationToTask failed:', e);
   }
