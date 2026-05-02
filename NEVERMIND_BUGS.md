@@ -9,7 +9,10 @@
 
 ## 🔴 Критичні (зламана функціональність)
 
-_Немає відкритих критичних багів._
+| ID | Файл | Симптом | Аналіз |
+|---|---|---|---|
+| **B-118** | `src/tabs/projects.js:174` (back-link у workspace) | Кнопка «< Проекти» у воркспейсі проекту не працює — тап нічого не робить, юзер залипає всередині картки проекту. iPhone v563, скрін 21:40. | `closeProjectWorkspace` експортована у window (`projects.js:573`), функція тривіальна (`activeProjectId=null; renderProjectsList()`). Корінь скоріше у CSS: back-кнопка без `position:relative; z-index:N`, hit-area тільки 16×16 (svg) + текст без padding. OWL board overlay зверху (з чіпами «Запишу підсумок / Нічого більше / Поговорити» у вечірньому підсумку — з proactive.js) може мати невидимий розширений елемент що перехоплює клік. **Фікс:** `position:relative; z-index:10; padding:8px 4px; margin:-8px -4px 4px -4px` (більша hit-area + гарантований z-index вище за overlay). |
+| **B-119** | `src/tabs/inbox.js:96` (`addInboxChatMsg`) | Чіпи clarify-guard ([У щоденник] / [Як момент] / [Не зберігати]) рендеряться у Inbox чаті але візуально обрізаються знизу контейнером. iPhone v563, скрін 21:52. | `el.scrollTop = el.scrollHeight` (рядок 96) виконується СИНХРОННО після `el.appendChild(chipsRow)` (рядок 93). У iOS Safari браузер не встигає порахувати висоту нового chipsRow до scrollTop → скрол ігнорує chips, вони залишаються нижче viewport. **Фікс:** обернути scrollTop у `requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; })` щоб дочекатись layout. Аналогічна проблема може бути в інших 6 чатах з `addNotesChatMsg`, `addHealthChatMsg` тощо — перевірити. |
 
 ---
 
