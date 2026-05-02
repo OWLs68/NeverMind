@@ -8,6 +8,18 @@
 
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
+### Сесія bOqdI (02.05.2026) — Council механізм + 3 архітектурні фікси
+
+Конкретні B-XX баги не закривала. **3 архітектурні борги без B-XX закриті** (знайшов перший Council 5 агентів):
+- `evening.js / _rescheduleTask` (`19e112f`) — пряма запис `nm_tasks` через `localStorage.setItem` обходив канон `saveTasks()`.
+- `health.js / _syncMedicationToTask` (`25e60da`) — те саме + видалено застарілий коментар «lazy-import щоб уникнути циклічних залежностей» (у IIFE bundle циклу не існує).
+- `proactive.js` (`8c3fe8d`) — два окремі `addEventListener('nm-data-changed')` об'єднано в один. Гігієна перед Pre-Migration Підсесією 3.
+
+### Сесія rKQPT (02.05.2026) — i18n міграція + 2 critical fixes + Council чернетка
+
+**Закрила 1 critical bug:** `projects.js` ReferenceError при створенні нового проекту (`e64cf28`). Корінь: функція `getOWLPersonality` перенесена з `core.js` у `prompts.js` 17.04, у `projects.js` import не оновили → esbuild перейменував на `getOWLPersonality2` через колізію → ReferenceError. Створено `scripts/check-imports.js` як guard (інтегрований у `build.js`). Виправлено дефект самого guard (пропускав `t()` через `if (name.length<=1) continue;`).
+
+
 _Сесія **6ANWm** (01.05.2026) — інфраструктурна. CLAUDE.md 561→94 + 4 RULES_*.md + видалено 2 шумних хуки (`quick-dialogue-detector.sh` + `check-response-violations.js`). Конкретні B-XX баги не закривала. 1 підозра (Stop-хук дублів `exit 2`) — корінь у архітектурі Stop-хуків (не можуть скасувати вже відправлене повідомлення), вирішено видаленням, не лагодженням. Винесено з NEVERMIND_BUGS.md у BqTWF 02.05.2026 Phase 5._
 
 _Сесія **LW3j8** (01.05.2026) — інфраструктурна. HOT_RULES + самотест-хук після `/start` + i18n обгортки `finance-modals.js` (24) + `notes.js` (30) + рефакторинг категорій папок нотаток (`src/data/notes-categories.js`). Конкретні B-XX баги не закривала. 2 підозри: (1) lazy `t()` без явного імпорту в `notes.js` працював через esbuild IIFE bundle (виправлено явним імпортом у `03f70c7`); (2) ризик legacy папок без апострофа (`Здоровя`) — потребує iPhone smoke-test. Винесено з NEVERMIND_BUGS.md у BqTWF 02.05.2026 Phase 5._
