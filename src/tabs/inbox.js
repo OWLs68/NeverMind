@@ -542,7 +542,7 @@ ${aiContext}`;
             const updParts = [];
             if (action.category) updParts.push('категорія: ' + txs[idx].category);
             if (action.amount) updParts.push('сума: ' + formatMoney(txs[idx].amount));
-            addInboxChatMsg('agent', '✓ Оновлено: ' + (updParts.join(', ') || txs[idx].category));
+            addInboxChatMsg('agent', t('inbox.fin.tx_updated', '✓ Оновлено: {parts}', { parts: updParts.join(', ') || txs[idx].category }));
           } else {
             addInboxChatMsg('agent', t('inbox.chat.tx_not_found', 'Не знайшов операцію. Спробуй ще раз.'));
           }
@@ -568,7 +568,7 @@ ${aiContext}`;
             addInboxChatMsg('agent', t('inbox.chat.task_not_found', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.'));
           }
         } else if (action.action === 'create_project' && !fromChip) {
-          addInboxChatMsg('agent', `Створюю проект "${action.name || text}"...`);
+          addInboxChatMsg('agent', t('inbox.proj.creating', 'Створюю проект "{name}"...', { name: action.name || text }));
           const projects = getProjects();
           const newProject = {
             id: Date.now(),
@@ -590,7 +590,7 @@ ${aiContext}`;
           };
           projects.unshift(newProject);
           saveProjects(projects);
-          addInboxChatMsg('agent', `✅ Проект "${newProject.name}" створено`);
+          addInboxChatMsg('agent', t('inbox.proj.created', '✅ Проект "{name}" створено', { name: newProject.name }));
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
         } else if (action.action === 'create_event') {
           let endTime = action.end_time || null;
@@ -658,7 +658,7 @@ ${aiContext}`;
                 const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
                 return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? t('inbox.date.today', 'сьогодні') : t('inbox.time.days_ago', '{n} дн тому', { n: ago })})`;
               }).join('\n');
-              addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме.`);
+              addInboxChatMsg('agent', t('inbox.chat.trash_many', 'Знайшов {n} схожих. Ось перші 5:\n{list}\n\nУточни який саме.', { n: results.length, list }));
             }
           }
         } else if (action.action === 'save_routine') {
@@ -883,7 +883,7 @@ ${aiContext}`;
         if (replyText) addInboxChatMsg('agent', replyText, chips);
       } else if (msg.tool_calls.every(tc => tc.function.name === 'save_memory_fact')) {
         // Якщо AI викликав ТІЛЬКИ save_memory_fact без тексту — показати fallback
-        addInboxChatMsg('agent', 'Запам\'ятав ✓');
+        addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
       }
     } else if (msg.content) {
       // Текстова відповідь без tool calls = reply
@@ -912,7 +912,7 @@ function showClarify(parsed, originalText) {
   clarifyParsed = parsed;
   clarifyOriginalText = originalText;
 
-  document.getElementById('clarify-question').textContent = parsed.question || 'Уточни будь ласка:';
+  document.getElementById('clarify-question').textContent = parsed.question || t('inbox.chat.clarify', 'Уточни будь ласка:');
   document.getElementById('clarify-input').value = '';
 
   const optEl = document.getElementById('clarify-options');
@@ -983,7 +983,7 @@ async function sendClarifyText() {
         const { text: replyText, chips } = _parseContentChips(msg.content);
         if (replyText) addInboxChatMsg('agent', replyText, chips);
       } else if (!primaryHandled) {
-        addInboxChatMsg('agent', 'Запам\'ятав ✓');
+        addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
       }
     } catch(e) {}
   }
@@ -1104,10 +1104,10 @@ async function processSaveAction(parsed, originalText) {
     if (eventDetected) {
       const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
       const res = addEventDedup(ev);
-      if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return; }
+      if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-      addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+      addInboxChatMsg('agent', t('inbox.event.added_simple', '📅 Подію "{title}" додано в календар на {day}', { title: ev.title, day: dayStr }));
       return;
     }
     const taskId = generateUUID();
@@ -1121,12 +1121,12 @@ async function processSaveAction(parsed, originalText) {
     tasks.unshift(newTask);
     saveTasks(tasks);
     if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
-    undoRef = { type: 'task', id: taskId, label: 'задачу' };
+    undoRef = { type: 'task', id: taskId, label: t('inbox.type.task', 'задачу') };
   }
   if (cat === 'note' || cat === 'idea') {
     addNoteFromInbox(savedText, cat, folder);
     const allNotes = getNotes();
-    if (allNotes[0]) undoRef = { type: 'note', id: allNotes[0].id, label: cat === 'idea' ? 'ідею' : 'нотатку' };
+    if (allNotes[0]) undoRef = { type: 'note', id: allNotes[0].id, label: cat === 'idea' ? t('inbox.type.idea_acc', 'ідею') : t('inbox.type.note', 'нотатку') };
   }
   if (cat === 'habit') {
     const habits = getHabits();
@@ -1175,7 +1175,7 @@ async function processSaveAction(parsed, originalText) {
       const habitId = Date.now();
       habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: '⭕', days, targetCount, createdAt: habitId });
       saveHabits(habits);
-      undoRef = { type: 'habit', id: habitId, label: 'звичку' };
+      undoRef = { type: 'habit', id: habitId, label: t('inbox.type.habit', 'звичку') };
     }
   }
   if (cat === 'event') {
@@ -1223,7 +1223,7 @@ async function processSaveAction(parsed, originalText) {
   // 18.04 pvZG1: тост-відкат для task/note/idea/habit.
   // Випадково створив? Один тап "Відмінити" — і запис зникає з відповідної вкладки + Inbox.
   if (undoRef) {
-    showUndoToast(`Створено ${undoRef.label} → Відмінити`, () => {
+    showUndoToast(t('inbox.undo.created', 'Створено {label} → Відмінити', { label: undoRef.label }), () => {
       try {
         if (undoRef.type === 'task') saveTasks(getTasks().filter(t => t.id !== undoRef.id));
         else if (undoRef.type === 'note') saveNotes(getNotes().filter(n => n.id !== undoRef.id));
