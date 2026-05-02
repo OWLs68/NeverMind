@@ -170,6 +170,9 @@ function _inboxDateLabel(ts) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round((today - itemDay) / 86400000);
+  // *_caps — UPPERCASE для секцій-роздільників стрічки. Lowercase варіанти
+  // 'inbox.date.today/tomorrow' — для карток _renderUpcoming. Різний регістр —
+  // дизайн-вимога; перекладам теж зберігати дві форми.
   if (diff === 0) return t('inbox.date.today_caps', 'СЬОГОДНІ');
   if (diff === 1) return t('inbox.date.yesterday_caps', 'ВЧОРА');
   return `${d.getDate()} ${monthShortCaps(d.getMonth())}`;
