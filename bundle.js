@@ -4180,7 +4180,8 @@ ${lines.join("\n")}`;
       const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
       const silenceWarn = silenceDays !== null && silenceDays >= 3;
       const visibleSteps = steps.slice(0, 4);
-      return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
+      return `<div class="project-card-wrap" data-id="${p.id}" style="position:relative">
+      <div onclick="openProjectWorkspace(${p.id})" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -4206,8 +4207,38 @@ ${lines.join("\n")}`;
         <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || t("projects.card.notes_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443...")}</div>
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      </div>
     </div>`;
     }).join("");
+    _attachProjectsSwipeDelete();
+  }
+  function _attachProjectsSwipeDelete() {
+    document.querySelectorAll(".project-card-wrap").forEach((wrap) => {
+      const card = wrap.querySelector(".project-card");
+      if (!card) return;
+      const id = wrap.dataset.id;
+      attachSwipeDelete(wrap, card, () => {
+        const all = getProjects();
+        const item = all.find((x) => String(x.id) === id);
+        const idx = all.findIndex((x) => String(x.id) === id);
+        const predecessorId = idx > 0 ? all[idx - 1].id : null;
+        if (item) addToTrash("project", item);
+        saveProjects(all.filter((x) => String(x.id) !== id));
+        renderProjectsList();
+        if (item) showUndoToast(t("projects.toast.deleted", "\u041F\u0440\u043E\u0435\u043A\u0442 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+          const projs = getProjects();
+          let insertIdx;
+          if (predecessorId === null) insertIdx = 0;
+          else {
+            const predIdx = projs.findIndex((x) => x.id === predecessorId);
+            insertIdx = predIdx !== -1 ? predIdx + 1 : projs.length;
+          }
+          projs.splice(insertIdx, 0, item);
+          saveProjects(projs);
+          renderProjectsList();
+        });
+      });
+    });
   }
   function openProjectWorkspace(id) {
     activeProjectId = id;
@@ -4650,6 +4681,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       init_tasks();
       init_notes();
       init_finance();
+      init_trash();
+      init_swipe_delete();
       activeProjectId = null;
       projectsBarLoading = false;
       projectsBarHistory = [];
