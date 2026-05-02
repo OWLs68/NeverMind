@@ -805,17 +805,17 @@ ${aiContext}`;
           // Фаза 4 (K-02): створити нову категорію
           const existing = findFinCatByName(action.name);
           if (existing) {
-            addInboxChatMsg('agent', `Категорія "${action.name}" вже існує у ${existing.type === 'expense' ? 'витратах' : 'доходах'}.`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_dupe', 'Категорія "{name}" вже існує у {bucket}.', { name: action.name, bucket: existing.type === 'expense' ? t('inbox.fin.in_expenses', 'витратах') : t('inbox.fin.in_incomes', 'доходах') }));
           } else {
             const type = action.cat_type === 'income' ? 'income' : 'expense';
             createFinCategory(type, { name: action.name, icon: action.icon, color: action.color, subcategories: action.subcategories });
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.name}" (${type === 'expense' ? 'витрата' : 'дохід'}) створено. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_created', '✓ Категорію "{name}" ({type}) створено. {comment}', { name: action.name, type: type === 'expense' ? t('inbox.fin.expense', 'витрата') : t('inbox.fin.income', 'дохід'), comment: action.comment || '' }));
           }
         } else if (action.action === 'edit_finance_category') {
           const found = findFinCatByName(action.current_name);
           if (!found) {
-            addInboxChatMsg('agent', `Не знайшов категорію "${action.current_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_not_found', 'Не знайшов категорію "{name}".', { name: action.current_name }));
           } else {
             const updates = {};
             if (action.new_name) updates.name = action.new_name;
@@ -832,42 +832,42 @@ ${aiContext}`;
               if (changed > 0) saveFinance(txs);
             }
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.current_name}" оновлено. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_updated', '✓ Категорію "{name}" оновлено. {comment}', { name: action.current_name, comment: action.comment || '' }));
           }
         } else if (action.action === 'delete_finance_category') {
           const found = findFinCatByName(action.name);
           if (!found) {
-            addInboxChatMsg('agent', `Не знайшов категорію "${action.name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_not_found', 'Не знайшов категорію "{name}".', { name: action.name }));
           } else {
             deleteFinCategory(found.cat.id);
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.name}" видалено. Старі операції збережено з цим ім'ям. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_deleted', '✓ Категорію "{name}" видалено. Старі операції збережено з цим імʼям. {comment}', { name: action.name, comment: action.comment || '' }));
           }
         } else if (action.action === 'merge_finance_categories') {
           const from = findFinCatByName(action.from_name);
           const to = findFinCatByName(action.to_name);
           if (!from || !to) {
-            addInboxChatMsg('agent', `Не знайшов категорії "${action.from_name}" або "${action.to_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.merge_not_found', 'Не знайшов категорії "{from}" або "{to}".', { from: action.from_name, to: action.to_name }));
           } else if (from.type !== to.type) {
-            addInboxChatMsg('agent', `"${action.from_name}" і "${action.to_name}" мають різні типи (витрата/дохід) — не можу об'єднати.`);
+            addInboxChatMsg('agent', t('inbox.fin.merge_diff_types', '"{from}" і "{to}" мають різні типи (витрата/дохід) — не можу обʼєднати.', { from: action.from_name, to: action.to_name }));
           } else {
             const res = mergeFinCategories(from.cat.id, to.cat.id);
             if (res.ok) {
               if (currentTab === 'finance') renderFinance();
-              addInboxChatMsg('agent', `✓ Об'єднав "${res.from}" → "${res.to}". Перенесено ${res.txsMoved} операцій. ${action.comment || ''}`);
+              addInboxChatMsg('agent', t('inbox.fin.merged', '✓ Обʼєднав "{from}" → "{to}". Перенесено {n} операцій. {comment}', { from: res.from, to: res.to, n: res.txsMoved, comment: action.comment || '' }));
             } else {
-              addInboxChatMsg('agent', `Не вдалось об'єднати: ${res.reason}`);
+              addInboxChatMsg('agent', t('inbox.fin.merge_failed', 'Не вдалось обʼєднати: {reason}', { reason: res.reason }));
             }
           }
         } else if (action.action === 'add_finance_subcategory') {
           const res = addFinSubcategory(action.category_name, action.subcategory);
           if (!res || !res.ok) {
-            addInboxChatMsg('agent', `Не знайшов категорію "${action.category_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_not_found', 'Не знайшов категорію "{name}".', { name: action.category_name }));
           } else if (res.alreadyExists) {
-            addInboxChatMsg('agent', `Підкатегорія "${action.subcategory}" вже є у "${action.category_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.subcat_dupe', 'Підкатегорія "{sub}" вже є у "{cat}".', { sub: action.subcategory, cat: action.category_name }));
           } else {
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Додав "${action.subcategory}" у "${action.category_name}". ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.subcat_added', '✓ Додав "{sub}" у "{cat}". {comment}', { sub: action.subcategory, cat: action.category_name, comment: action.comment || '' }));
           }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // edit_event, delete_event, edit_note, edit_task, set_reminder, etc.
