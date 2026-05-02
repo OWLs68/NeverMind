@@ -16,6 +16,8 @@ import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
 import { getNotes, openNotesFolder } from './notes.js';
 import { getCurrency } from './finance.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
 
 // === STORAGE ===
 export function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
@@ -62,7 +64,8 @@ function renderProjectsList() {
     // Перші 3 кроки для картки
     const visibleSteps = steps.slice(0, 4);
 
-    return `<div onclick="openProjectWorkspace(${p.id})" class="card-glass" style="cursor:pointer">
+    return `<div class="project-card-wrap" data-id="${p.id}" style="position:relative">
+      <div onclick="openProjectWorkspace(${p.id})" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -88,8 +91,43 @@ function renderProjectsList() {
         <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || t('projects.card.notes_placeholder', 'Нотатки проекту...')}</div>
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
+      </div>
     </div>`;
   }).join('');
+
+  // Свайп вліво → видалити проект з відкатом 5 сек (B-116 fix mUpS8 02.05).
+  // Pattern як у notes.js — обгортка .project-card-wrap, всередині .project-card,
+  // addToTrash + showUndoToast з можливістю відновлення.
+  _attachProjectsSwipeDelete();
+}
+
+function _attachProjectsSwipeDelete() {
+  document.querySelectorAll('.project-card-wrap').forEach(wrap => {
+    const card = wrap.querySelector('.project-card');
+    if (!card) return;
+    const id = wrap.dataset.id;
+    attachSwipeDelete(wrap, card, () => {
+      const all = getProjects();
+      const item = all.find(x => String(x.id) === id);
+      const idx = all.findIndex(x => String(x.id) === id);
+      const predecessorId = idx > 0 ? all[idx - 1].id : null;
+      if (item) addToTrash('project', item);
+      saveProjects(all.filter(x => String(x.id) !== id));
+      renderProjectsList();
+      if (item) showUndoToast(t('projects.toast.deleted', 'Проект видалено'), () => {
+        const projs = getProjects();
+        let insertIdx;
+        if (predecessorId === null) insertIdx = 0;
+        else {
+          const predIdx = projs.findIndex(x => x.id === predecessorId);
+          insertIdx = predIdx !== -1 ? predIdx + 1 : projs.length;
+        }
+        projs.splice(insertIdx, 0, item);
+        saveProjects(projs);
+        renderProjectsList();
+      });
+    });
+  });
 }
 
 // === ВОРКСПЕЙС ПРОЕКТУ ===
