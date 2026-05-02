@@ -4275,8 +4275,10 @@ ${lines.join("\n")}`;
     const scrollEl = document.getElementById("projects-scroll");
     if (!scrollEl) return;
     scrollEl.innerHTML = `
-    <!-- \u041D\u0430\u0437\u0430\u0434 -->
-    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
+    <!-- \u041D\u0430\u0437\u0430\u0434. B-118 (mUpS8 02.05): position+z-index \u0449\u043E\u0431 OWL board overlay
+         \u043D\u0435 \u043F\u0435\u0440\u0435\u0445\u043E\u043F\u043B\u044E\u0432\u0430\u0432 \u043A\u043B\u0456\u043A. Padding 8\xD74 + negative margin = \u0431\u0456\u043B\u044C\u0448\u0430 hit-area
+         (44px \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u0438\u0439 Apple HIG) \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u0438\u0445 \u0437\u0441\u0443\u0432\u0456\u0432. -->
+    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;padding:8px 4px;margin:-8px -4px 4px -4px;cursor:pointer;position:relative;z-index:10">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t("projects.workspace.back", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438")}</span>
     </div>
@@ -15412,6 +15414,9 @@ ${userText}
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     saveChatMsg("inbox", role, text);
     if (role === "agent") {
       const bar = document.getElementById("inbox-ai-bar");
