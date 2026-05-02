@@ -60,10 +60,10 @@ export function addInboxChatMsg(role, text, chips = null) {
     if (_lastUserMsgTs > 0 && gap > 5 * 60 * 1000) {
       const mins = Math.round(gap / 60000);
       const label = mins < 60
-        ? `${mins} хв тому`
+        ? t('inbox.time.mins_ago', '{n} хв тому', { n: mins })
         : mins < 1440
-        ? `${Math.round(mins/60)} год тому`
-        : 'раніше';
+        ? t('inbox.time.hours_ago', '{n} год тому', { n: Math.round(mins/60) })
+        : t('inbox.time.earlier', 'раніше');
       const sep = document.createElement('div');
       sep.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;opacity:0.45';
       sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:500">${label}</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
@@ -169,8 +169,8 @@ function _inboxDateLabel(ts) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round((today - itemDay) / 86400000);
-  if (diff === 0) return 'СЬОГОДНІ';
-  if (diff === 1) return 'ВЧОРА';
+  if (diff === 0) return t('inbox.date.today_caps', 'СЬОГОДНІ');
+  if (diff === 1) return t('inbox.date.yesterday_caps', 'ВЧОРА');
   const months = ['СІЧ','ЛЮТ','БЕР','КВІТ','ТРАВ','ЧЕРВ','ЛИП','СЕРП','ВЕР','ЖОВТ','ЛИСТ','ГРУД'];
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
@@ -232,12 +232,12 @@ function _renderUpcoming() {
     const d = new Date(item.date + 'T00:00:00');
     const diffDays = Math.round((d - new Date(todayStr + 'T00:00:00')) / 86400000);
     let when;
-    if (diffDays === 0) when = 'сьогодні';
-    else if (diffDays === 1) when = 'завтра';
+    if (diffDays === 0) when = t('inbox.date.today', 'сьогодні');
+    else if (diffDays === 1) when = t('inbox.date.tomorrow', 'завтра');
     else when = `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
 
     const icon = item.type === 'task' ? '📌' : item.type === 'reminder' ? '⏰' : '📅';
-    const timeStr = item.time ? ` о ${item.time}` : '';
+    const timeStr = item.time ? t('inbox.date.at_time', ' о {time}', { time: item.time }) : '';
     const action = item.type === 'task'
       ? `onclick="switchTab('tasks')"`
       : `onclick="openCalendarModal()"`;
@@ -260,8 +260,8 @@ export function renderInbox() {
   if (items.length === 0) {
     list.innerHTML = _renderUpcoming() + `<div class="inbox-empty">
       <div class="inbox-empty-icon">📥</div>
-      <div class="inbox-empty-title">Inbox порожній</div>
-      <div class="inbox-empty-sub">Напиши що завгодно — Агент розбереться</div>
+      <div class="inbox-empty-title">${t('inbox.empty.title', 'Inbox порожній')}</div>
+      <div class="inbox-empty-sub">${t('inbox.empty.sub', 'Напиши що завгодно — Агент розбереться')}</div>
     </div>`;
     countEl.style.display = 'none';
     return;
