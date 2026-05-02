@@ -708,8 +708,8 @@ ${aiContext}`;
           });
           if (created) {
             if (currentTab === 'health') renderHealth();
-            const items = getInbox(); items.unshift({ id: Date.now() + 1, text: `🏥 Стан: ${created.name}`, category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
-            addInboxChatMsg('agent', `🏥 Створив картку "${created.name}" у Здоров'ї. ${action.comment || ''}`);
+            const items = getInbox(); items.unshift({ id: Date.now() + 1, text: t('inbox.health.state_inbox', '🏥 Стан: {name}', { name: created.name }), category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
+            addInboxChatMsg('agent', t('inbox.health.card_created', '🏥 Створив картку "{name}" у Здоровʼї. {comment}', { name: created.name, comment: action.comment || '' }));
           } else {
             addInboxChatMsg('agent', t('inbox.chat.health_no_name', 'Не вдалось створити картку — потрібна назва.'));
           }
@@ -731,17 +731,17 @@ ${aiContext}`;
           const updated = editHealthCardProgrammatic(action.card_id, updates);
           if (updated) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `✓ Оновив картку "${updated.name}". ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.card_updated', '✓ Оновив картку "{name}". {comment}', { name: updated.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку. Спробуй ще раз.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found', 'Не знайшов картку. Спробуй ще раз.'));
           }
         } else if (action.action === 'delete_health_card') {
           const ok = deleteHealthCardProgrammatic(action.card_id);
           if (ok) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `🗑️ Картку видалено (7 днів у кошику). ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.card_deleted', '🗑️ Картку видалено (7 днів у кошику). {comment}', { comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку для видалення.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found_del', 'Не знайшов картку для видалення.'));
           }
         } else if (action.action === 'add_medication') {
           const med = addMedicationToCard(action.card_id, {
@@ -752,9 +752,9 @@ ${aiContext}`;
           });
           if (med) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `💊 Додав ${med.name}${med.dosage ? ' (' + med.dosage + ')' : ''}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.med_added', '💊 Додав {name}{dose}. {comment}', { name: med.name, dose: med.dosage ? ' (' + med.dosage + ')' : '', comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку. Створи її спочатку.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found_first', 'Не знайшов картку. Створи її спочатку.'));
           }
         } else if (action.action === 'edit_medication') {
           const updates = {};
@@ -765,41 +765,41 @@ ${aiContext}`;
           const med = editMedicationInCard(action.card_id, action.med_id, updates);
           if (med) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `✓ Оновив ${med.name}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.med_updated', '✓ Оновив {name}. {comment}', { name: med.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов препарат у картці.');
+            addInboxChatMsg('agent', t('inbox.health.med_not_found', 'Не знайшов препарат у картці.'));
           }
         } else if (action.action === 'log_medication_dose') {
           const med = logMedicationDose(action.card_id, action.med_name);
           if (med) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `💊✓ Прийняв ${med.name}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.med_taken', '💊✓ Прийняв {name}. {comment}', { name: med.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов препарат у картці. Уточни назву.');
+            addInboxChatMsg('agent', t('inbox.health.med_not_found_clarify', 'Не знайшов препарат у картці. Уточни назву.'));
           }
         } else if (action.action === 'add_allergy') {
           const added = addAllergy(action.name, action.notes || '');
           if (added) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `🚨 Додав алергію: ${action.name}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.allergy_added', '🚨 Додав алергію: {name}. {comment}', { name: action.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', `Алергія "${action.name}" вже є у списку.`);
+            addInboxChatMsg('agent', t('inbox.health.allergy_dupe', 'Алергія "{name}" вже є у списку.', { name: action.name }));
           }
         } else if (action.action === 'delete_allergy') {
           const ok = deleteAllergy(action.allergy_id);
           if (ok) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `🗑️ Алергію видалено. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.allergy_deleted', '🗑️ Алергію видалено. {comment}', { comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов алергію для видалення.');
+            addInboxChatMsg('agent', t('inbox.health.allergy_not_found', 'Не знайшов алергію для видалення.'));
           }
         } else if (action.action === 'add_health_history_entry') {
           const entry = addHealthHistoryEntry(action.card_id, action.entry_type, action.text);
           if (entry) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `📝 Додав запис у історію. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.history_added', '📝 Додав запис у історію. {comment}', { comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку для запису.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found_history', 'Не знайшов картку для запису.'));
           }
         } else if (action.action === 'create_finance_category') {
           // Фаза 4 (K-02): створити нову категорію
