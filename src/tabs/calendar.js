@@ -5,6 +5,7 @@
 import { escapeHtml } from '../core/utils.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
+import { monthNominative, monthGenitive, monthShort } from '../data/months.js';
 
 // === EVENTS STORAGE ===
 export function getEvents() { return JSON.parse(localStorage.getItem('nm_events') || '[]'); }
@@ -70,8 +71,7 @@ export function generateWeeklySeries(sourceEvent, weeks = 12) {
   return created;
 }
 
-const MONTHS_UA = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
-const MONTHS_OF = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+// Місяці — через canonical довідник src/data/months.js (monthNominative / monthGenitive / monthShort).
 
 // === CALENDAR MODAL ===
 let _calYear, _calMonth;
@@ -151,13 +151,13 @@ function renderMonthEventsList() {
 
   const prioIcons = { critical: '🔴 ', important: '🟠 ', normal: '' };
 
-  let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Події · ${MONTHS_UA[_calMonth]}</div>`;
+  let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Події · ${monthNominative(_calMonth)}</div>`;
 
   items.forEach(item => {
     const d = new Date(item.date + 'T00:00:00');
     const isPast = item.date < todayStr;
     const isToday = item.date === todayStr;
-    const dayLabel = isToday ? 'Сьогодні' : `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
+    const dayLabel = isToday ? 'Сьогодні' : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
     const icon = item.type === 'event' ? '📅' : '⏰';
     const prio = prioIcons[item.priority] || '';
     const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
@@ -222,7 +222,7 @@ function renderUpcoming() {
   el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Найближче</div>` +
     items.map(item => {
       const isToday = item.date.toDateString() === todayStr;
-      const dayLabel = isToday ? 'Сьогодні' : `${item.date.getDate()} ${MONTHS_OF[item.date.getMonth()]}`;
+      const dayLabel = isToday ? 'Сьогодні' : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
       const icon = item.type === 'event' ? '📅' : '☑️';
       const prio = prioIcons[item.priority] || '';
       const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
@@ -246,7 +246,7 @@ function renderCalendar() {
   const dayDetails = document.getElementById('calendar-day-tasks');
   if (!label || !grid) return;
 
-  label.textContent = `${MONTHS_UA[_calMonth]} ${_calYear}`;
+  label.textContent = `${monthNominative(_calMonth)} ${_calYear}`;
   if (dayDetails) dayDetails.style.display = 'none';
 
   const firstDay = new Date(_calYear, _calMonth, 1);
@@ -340,7 +340,7 @@ function _openDayScheduleModal(day) {
 
   // Заголовок
   const titleEl = document.getElementById('day-schedule-title');
-  if (titleEl) titleEl.textContent = `${day} ${MONTHS_OF[_calMonth]} · ${DAYS_UA_FULL[date.getDay()]}`;
+  if (titleEl) titleEl.textContent = `${day} ${monthGenitive(_calMonth)} · ${DAYS_UA_FULL[date.getDay()]}`;
 
   // Events на цей день
   const dayEvents = getEvents().filter(ev => ev.date === dateISO);
@@ -649,7 +649,7 @@ let _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
 
 // === DRUM PICKER ===
 const DRUM_H = 40;
-const MONTHS_SHORT = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+// MONTHS_SHORT — через canonical monthShort() з src/data/months.js.
 
 function _initDrumCol(colId, items, selectedIdx, onSelect) {
   const col = document.getElementById(colId);
@@ -680,7 +680,7 @@ function _initDateDrum(dateStr) {
   const years = Array.from({length: 8}, (_, i) => String(2024 + i));
 
   _initDrumCol('drum-day', days, _drumValues.day - 1, i => { _drumValues.day = i + 1; });
-  _initDrumCol('drum-month', MONTHS_SHORT, _drumValues.month, i => { _drumValues.month = i; });
+  _initDrumCol('drum-month', Array.from({ length: 12 }, (_, i) => monthShort(i)), _drumValues.month, i => { _drumValues.month = i; });
   _initDrumCol('drum-year', years, _drumValues.year - 2024, i => { _drumValues.year = 2024 + i; });
 }
 

@@ -13,6 +13,7 @@ import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE } from '../ai/prompts
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
+import { monthGenitive } from '../data/months.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose, toggleTaskStatus } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
@@ -936,7 +937,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       const res = addEventDedup(ev);
       if (!res.added) { addMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return true; }
       const dateObj = new Date(eventDetected.date);
-      const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+      const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
       addMsg('agent', `📅 Подію "${ev.title}" додано на ${dayStr}`);
       return true;
@@ -1161,7 +1162,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const res = addEventDedup(ev);
     if (!res.added) { addMsg('agent', `Така подія "${title}" вже є в календарі.`); return true; }
     const dateObj = new Date(parsed.date);
-    const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+    const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
     const warn = conflict ? `\n⚠️ На цей час уже є "${conflict.title}". Лишити обидві чи перенести?` : '';
@@ -1187,7 +1188,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (parsed.priority) events[idx].priority = parsed.priority;
     saveEvents(events);
     const dateObj = new Date(events[idx].date);
-    const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+    const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
     const t = events[idx].time;
     const et = events[idx].endTime;
     const timeStr = t ? ` о ${t}${et ? '–' + et : ''}` : '';
