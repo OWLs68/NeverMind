@@ -2082,8 +2082,7 @@ ${lines.join("\n")}`;
         // маркер що задача створена з препарату
       };
       tasks.unshift(newTask);
-      localStorage.setItem("nm_tasks", JSON.stringify(tasks));
-      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "tasks" }));
+      saveTasks(tasks);
     } catch (e) {
       console.warn("[health] syncMedicationToTask failed:", e);
     }
@@ -2965,6 +2964,7 @@ ${lines.join("\n")}`;
       init_chips();
       init_notes();
       init_calendar();
+      init_tasks();
       activeHealthCardId = null;
       healthBarLoading = false;
       healthBarHistory = [];
@@ -4759,8 +4759,7 @@ ${lines.join("\n\n")}`;
     d.setDate(d.getDate() + daysAhead);
     tasks[idx].dueDate = d.toISOString().slice(0, 10);
     tasks[idx].updatedAt = Date.now();
-    localStorage.setItem("nm_tasks", JSON.stringify(tasks));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "tasks" }));
+    saveTasks(tasks);
     renderEvening();
   }
   function rescheduleTaskTomorrow(taskId) {
@@ -6041,6 +6040,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         ]
       };
       window.addEventListener("nm-data-changed", (e) => {
+        try {
+          localStorage.setItem("nm_owl_ignored_msgs", "0");
+          localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
+        } catch (_) {
+        }
         const tab = currentTab || "inbox";
         if (e.detail !== "chat") _showInstantReaction(tab);
         if (e.detail === "chat") return;
@@ -6090,16 +6094,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
           }
         }
       });
-      try {
-        window.addEventListener("nm-data-changed", () => {
-          try {
-            localStorage.setItem("nm_owl_ignored_msgs", "0");
-            localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
-          } catch (e) {
-          }
-        });
-      } catch (e) {
-      }
     }
   });
 
