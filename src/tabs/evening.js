@@ -9,7 +9,7 @@
 import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
-import { getTasks, setupModalSwipeClose } from './tasks.js';
+import { getTasks, saveTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
 import { getNotes } from './notes.js';
 import { getCurrency, getFinance } from './finance.js';
@@ -217,9 +217,7 @@ function _rescheduleTask(taskId, daysAhead) {
   d.setDate(d.getDate() + daysAhead);
   tasks[idx].dueDate = d.toISOString().slice(0, 10);
   tasks[idx].updatedAt = Date.now();
-  // saveTasks не експортований з цього модуля, але localStorage пишемо напряму
-  localStorage.setItem('nm_tasks', JSON.stringify(tasks));
-  window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' }));
+  saveTasks(tasks);
   renderEvening();
 }
 
