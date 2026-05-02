@@ -7,6 +7,7 @@ import { escapeHtml, parseContentChips, t } from '../core/utils.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getFinanceChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { renderChips } from '../owl/chips.js';
 import {
@@ -105,6 +106,12 @@ export async function sendFinanceBarMessage() {
     const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS, 'finance-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const guard = shouldClarify(text, msg.tool_calls, 'finance');
+      if (guard) {
+        addFinanceChatMsg('agent', guard.question, false, guard.chips);
+        financeBarLoading = false;
+        return;
+      }
       dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
       // Budget warning після save_finance (Finance-specific реакція — залишається у чаті).
       for (const tc of msg.tool_calls) {

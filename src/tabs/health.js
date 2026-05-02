@@ -9,6 +9,7 @@ import { escapeHtml, parseContentChips } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { getHealthChatSystem } from '../ai/prompts.js';
 import { renderChips } from '../owl/chips.js';
 import { openNotesFolder } from './notes.js';
@@ -1544,6 +1545,12 @@ export async function sendHealthBarMessage() {
     const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS, 'health-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const guard = shouldClarify(text, msg.tool_calls, 'health');
+      if (guard) {
+        addHealthChatMsg('agent', guard.question, false, guard.chips);
+        healthBarLoading = false;
+        return;
+      }
       dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);
       if (msg.content) {
         const { text: replyText, chips } = parseContentChips(msg.content);

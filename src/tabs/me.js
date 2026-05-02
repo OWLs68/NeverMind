@@ -20,6 +20,7 @@ import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsCon
 import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { getTasks } from './tasks.js';
 import { getHabits, getHabitLog, getHabitPct, getHabitStreak, processUniversalAction } from './habits.js';
 import { getNotes } from './notes.js';
@@ -62,6 +63,11 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
   // Tool dispatch — через спільний dispatcher (UI tool OR CRUD через universal action)
   if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
     if (loadEl) loadEl.remove();
+    const guard = shouldClarify(text, msg.tool_calls, 'me');
+    if (guard) {
+      addMeChatMsg('agent', guard.question, false, '', guard.chips);
+      return;
+    }
     dispatchChatToolCalls(msg.tool_calls, (r, t) => addMeChatMsg(r, t), text);
     if (msg.content) {
       const { text: rt, chips } = parseContentChips(msg.content);

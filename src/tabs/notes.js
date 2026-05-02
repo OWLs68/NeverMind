@@ -12,6 +12,7 @@ import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, 
 import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { findCategoryByFolder } from '../data/notes-categories.js';
 import { processUniversalAction } from './habits.js';
@@ -1053,6 +1054,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
     const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS, 'notes-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      // Clarify guard (mUpS8 02.05) — інлайн-чіпи замість галюцинації типу B-115
+      const guard = shouldClarify(text, msg.tool_calls, 'notes');
+      if (guard) {
+        addNotesChatMsg('agent', guard.question, false, guard.chips);
+        notesBarLoading = false;
+        return;
+      }
       dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
       if (msg.content) {
         const { text: rt, chips } = parseContentChips(msg.content);

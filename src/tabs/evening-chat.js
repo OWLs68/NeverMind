@@ -20,6 +20,7 @@ import { escapeHtml, extractJsonBlocks, parseContentChips, t } from '../core/uti
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { showUnreadBadge } from '../ui/unread-badge.js';
 import { renderChips } from '../owl/chips.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { getEveningChatSystem } from '../ai/prompts.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { dispatchEveningTool, generateEveningRitualSummary } from './evening-actions.js';
@@ -184,6 +185,12 @@ export async function sendEveningBarMessage() {
     // Виконуємо tool calls через локальний dispatcher (без Inbox side effects)
     // UI tools ("Один мозок #1") — навігація/фільтри доступні з Вечора.
     if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const guard = shouldClarify(text, msg.tool_calls, 'evening');
+      if (guard) {
+        addEveningBarMsg('agent', guard.question, false, guard.chips);
+        eveningBarLoading = false;
+        return;
+      }
       for (const tc of msg.tool_calls) {
         let args = {};
         try { args = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}

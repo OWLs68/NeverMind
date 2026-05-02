@@ -10,6 +10,7 @@ import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { renderChips } from '../owl/chips.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
@@ -503,6 +504,12 @@ export async function sendProjectsBarMessage() {
     const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS, 'projects-bar');
 
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const guard = shouldClarify(text, msg.tool_calls, 'projects');
+      if (guard) {
+        addProjectsChatMsg('agent', guard.question, false, guard.chips);
+        projectsBarLoading = false;
+        return;
+      }
       dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
       if (msg.content) {
         const { text: replyText, chips } = parseContentChips(msg.content);
