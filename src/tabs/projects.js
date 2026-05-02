@@ -170,8 +170,10 @@ function renderProjectWorkspace(id) {
   if (!scrollEl) return;
 
   scrollEl.innerHTML = `
-    <!-- Назад -->
-    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
+    <!-- Назад. B-118 (mUpS8 02.05): position+z-index щоб OWL board overlay
+         не перехоплював клік. Padding 8×4 + negative margin = більша hit-area
+         (44px рекомендований Apple HIG) без візуальних зсувів. -->
+    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;padding:8px 4px;margin:-8px -4px 4px -4px;cursor:pointer;position:relative;z-index:10">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t('projects.workspace.back', 'Проекти')}</span>
     </div>
