@@ -29,19 +29,21 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (bOqdI + rKQPT). Старіші перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у BqTWF 02.05.2026 Phase 5._
+_Зберігаються закриті у 2 останніх активних сесіях (BqTWF + mUpS8). Старіші (rKQPT + bOqdI) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у mUpS8 02.05.2026 Phase 3._
 
-_Сесія **BqTWF** (02.05.2026, продовження) — iPhone smoke-test v556 → знайдено 🔴 **B-115** при пункті 1 чек-ліста. Закрито промпт-фіксом у тій самій сесії._
+_Сесія **mUpS8** (02.05.2026) — Universal clarify-guard + Pattern Learning roadmap + B-116. Закрила 1 🟡 bug._
 
 | ID | Файл | Симптом | Корінь + фікс |
 |---|---|---|---|
-| **B-115** ✅ | `src/ai/prompts.js` (INBOX_SYSTEM_PROMPT, блок «РОЗРІЗНЕННЯ»). Знайдено BqTWF iPhone v556. | Доконаний факт минулого «**Відкрив автомийку**» → AI створив (1) дубль проекту з НЕПРАВИЛЬНОЮ назвою «Хімчистка» (контекст попереднього інтерв'ю переважив), (2) `create_event` замість `save_note`/`save_moment`. Додатково: чіпи у Inbox чаті не відображаються (окремий не закритий баг). | Корінь: промпт не розрізняв ЧАСОВУ форму (минуле/намір/команда). Старий блок «РОЗРІЗНЕННЯ task vs event vs project» 6 рядків → новий 17 рядків з: (1) часовою формою як головним індикатором («МИНУЛЕ → save_moment/save_note, НЕ create_project»), (2) явним правилом для project («ТІЛЬКИ при ЯВНОМУ "створи проект" АБО "хочу запустити/побудувати [велике]"», НЕ для «вже відкрив»), (3) КОНТЕКСТ ІНТЕРВ'Ю — якщо щойно ставив питання про проект і відповідь містить НОВУ сутність → `clarify` з чіпами `[Цей проект][Окремий момент][Окрема нотатка]`. CACHE bump → `nm-20260502-1645`. |
+| **B-116** ✅ | `src/tabs/projects.js` (`renderProjectsList`). Знайдено mUpS8 02.05. | Картка проекту не мала способу видалення — ні свайпа, ні кнопки. Функціонал відсутній цілком (grep `attachSwipeDelete\|deleteProject\|delete-btn` дав 0 результатів). | Додано свайп вліво → корзина з 5-сек відкатом (як у Notes/Inbox). Pattern: `<div class="project-card-wrap" data-id="${p.id}">` обгортка, всередині `<div class="card-glass project-card">`. Імпортовано `attachSwipeDelete`, `addToTrash`, `showUndoToast`. Нова функція `_attachProjectsSwipeDelete()` викликається після кожного `renderProjectsList`. Callback: `addToTrash('project', item)` + `saveProjects(filtered)` + `showUndoToast` з restore через `splice` назад на оригінальну позицію. Уніфіковано з 7 іншими вкладками. Коміт `fdf370f`. CACHE bump → `nm-20260502-1900`. |
 
-_Сесія **bOqdI** (02.05.2026) — Council механізм у CLAUDE.md (5 паралельних агентів за тригер-словами + об'єктивними маркерами) + архівація `COUNCIL_CONCEPT.md` → `_archive/`. Конкретні B-XX баги не закривала. **3 архітектурні борги без B-XX закриті** (знайшов перший Council 5 агентів): (1) `evening.js / _rescheduleTask` (`19e112f`) — пряма запис `nm_tasks` через `localStorage.setItem` обходив канон `saveTasks()`; (2) `health.js / _syncMedicationToTask` (`25e60da`) — те саме + видалено застарілий коментар «lazy-import щоб уникнути циклічних залежностей» (у IIFE bundle циклу не існує); (3) `proactive.js` (`8c3fe8d`) — два окремі `addEventListener('nm-data-changed')` об'єднано в один. Це гігієна перед Pre-Migration Підсесією 3._
+_Сесія **BqTWF** (02.05.2026) — iPhone smoke-test v556 → знайдено 🔴 **B-115** при пункті 1 чек-ліста. Закрито промпт-фіксом у тій самій сесії._
 
-_Сесія **rKQPT** (02.05.2026) — i18n міграція + 2 critical fixes + чернетка `/council`. **Закрила 1 critical bug:** `projects.js` ReferenceError при створенні нового проекту (`e64cf28`). Корінь: функція `getOWLPersonality` перенесена з `core.js` у `prompts.js` 17.04, у `projects.js` import не оновили → esbuild перейменував на `getOWLPersonality2` через колізію → ReferenceError. Створено `scripts/check-imports.js` як guard (інтегрований у `build.js`). Виправлено дефект самого guard (пропускав `t()` через `if (name.length<=1) continue;`)._
+| ID | Файл | Симптом | Корінь + фікс |
+|---|---|---|---|
+| **B-115** ✅ | `src/ai/prompts.js` (INBOX_SYSTEM_PROMPT, блок «РОЗРІЗНЕННЯ»). Знайдено BqTWF iPhone v556. | Доконаний факт минулого «**Відкрив автомийку**» → AI створив (1) дубль проекту з НЕПРАВИЛЬНОЮ назвою «Хімчистка» (контекст попереднього інтерв'ю переважив), (2) `create_event` замість `save_note`/`save_moment`. | Корінь: промпт не розрізняв ЧАСОВУ форму. Старий блок 6 рядків → новий 17 рядків з: (1) часовою формою як головним індикатором («МИНУЛЕ → save_moment/save_note, НЕ create_project»), (2) явним правилом для project («ТІЛЬКИ при ЯВНОМУ "створи проект"»), (3) КОНТЕКСТ ІНТЕРВ'Ю → `clarify` з чіпами. CACHE bump → `nm-20260502-1645`. **mUpS8 додав** soft safety net через `src/owl/clarify-guard.js` бо промпт сам по собі ймовірнісний. |
 
-_Старіші сесії (LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Старіші сесії (rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
