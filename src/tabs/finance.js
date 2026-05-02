@@ -20,6 +20,7 @@ import { processUniversalAction } from './habits.js';
 import { setupModalSwipeClose } from './tasks.js';
 // Фаза 5 (15.04 6v2eR): синк медичних витрат → history картки Здоров'я
 import { syncHealthFinanceToHistory } from './health.js';
+import { monthNominative } from '../data/months.js';
 
 // Категорії винесено у finance-cats.js (рефакторинг 17.04 gHCOh).
 // Імпортуємо те що потрібно локально + re-export для backward compat.
@@ -98,7 +99,7 @@ export function getFinPeriodRange(period) {
 
 // Фаза 2 крок Б: вікно з offset для свайп-навігації місяців.
 // Повертає {from, to, label}. offset=0 — поточний, -1 — попередній, +1 — наступний.
-const _MONTH_NAMES = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+// _MONTH_NAMES → через canonical monthNominative() з src/data/months.js.
 function _getFinPeriodWindow(period, offset) {
   const now = new Date();
   let from, to, label;
@@ -122,7 +123,7 @@ function _getFinPeriodWindow(period, offset) {
     const end   = new Date(now.getFullYear(), baseMonth + 1, 1);
     from = start.getTime();
     to = end.getTime();
-    label = `${_MONTH_NAMES[start.getMonth()]} ${start.getFullYear()}`;
+    label = `${monthNominative(start.getMonth())} ${start.getFullYear()}`;
   } else { // 3months
     // Поточний 3-місячний блок: останні 3 місяці включаючи поточний (offset=0)
     const startMonth = now.getMonth() - 2 + (offset * 3);

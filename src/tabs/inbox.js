@@ -26,6 +26,7 @@ import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from 
 import { renderChips } from '../owl/chips.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
 import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry } from './health.js';
+import { monthGenitive, monthShortCaps } from '../data/months.js';
 // Unread badge (універсальна червона крапка — QV1n2 19.04 Фаза 0)
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
 
@@ -171,8 +172,7 @@ function _inboxDateLabel(ts) {
   const diff = Math.round((today - itemDay) / 86400000);
   if (diff === 0) return t('inbox.date.today_caps', 'СЬОГОДНІ');
   if (diff === 1) return t('inbox.date.yesterday_caps', 'ВЧОРА');
-  const months = ['СІЧ','ЛЮТ','БЕР','КВІТ','ТРАВ','ЧЕРВ','ЛИП','СЕРП','ВЕР','ЖОВТ','ЛИСТ','ГРУД'];
-  return `${d.getDate()} ${months[d.getMonth()]}`;
+  return `${d.getDate()} ${monthShortCaps(d.getMonth())}`;
 }
 
 // Тап: перекинути на відповідну вкладку (блокування після свайпу — у attachSwipeDelete)
@@ -226,15 +226,13 @@ function _renderUpcoming() {
   // Сортуємо по даті (найближчі першими)
   upcoming.sort((a, b) => a.date.localeCompare(b.date));
 
-  const MONTHS_OF = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
-
   const cards = upcoming.slice(0, 3).map(item => {
     const d = new Date(item.date + 'T00:00:00');
     const diffDays = Math.round((d - new Date(todayStr + 'T00:00:00')) / 86400000);
     let when;
     if (diffDays === 0) when = t('inbox.date.today', 'сьогодні');
     else if (diffDays === 1) when = t('inbox.date.tomorrow', 'завтра');
-    else when = `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
+    else when = `${d.getDate()} ${monthGenitive(d.getMonth())}`;
 
     const icon = item.type === 'task' ? '📌' : item.type === 'reminder' ? '⏰' : '📅';
     const timeStr = item.time ? t('inbox.date.at_time', ' о {time}', { time: item.time }) : '';
@@ -605,7 +603,7 @@ ${aiContext}`;
           if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
-          const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+          const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
           const timeStr = action.time ? ` о ${action.time}${endTime ? '–' + endTime : ''}` : '';
           const warn = conflict ? `\n⚠️ На цей час уже є "${conflict.title}". Лишити обидві чи перенести?` : '';
           addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${timeStr}${warn}`);
@@ -1088,7 +1086,7 @@ async function processSaveAction(parsed, originalText) {
       const res = addEventDedup(ev);
       if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return; }
       const dateObj = new Date(eventDetected.date);
-      const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+      const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
       return;
     }
@@ -1171,7 +1169,7 @@ async function processSaveAction(parsed, originalText) {
         addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`);
       } else {
         const dateObj = new Date(eventDetected.date);
-        const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
+        const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
         addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
       }
     } else {
