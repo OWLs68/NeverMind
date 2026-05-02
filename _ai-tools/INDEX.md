@@ -45,7 +45,7 @@
 | Що вже зроблено (хронологія) | `ROADMAP_DONE.md` |
 | Детальний план Вечора 2.0 | `docs/EVENING_2.0_PLAN.md` |
 | Детальний план Фінансів v2 (6 фаз) | `docs/FINANCE_V2_PLAN.md` |
-| Поточний рефакторинг документації (g05tu) | `_ai-tools/REFACTOR_PLAN.md` |
+| Поточний рефакторинг документації (g05tu) | `_archive/REFACTOR_PLAN.md` |
 
 ### Сесії і баги
 
@@ -93,7 +93,7 @@
 |---|---|
 | Екстрений скид (reset --hard + force push) | `docs/GIT_EMERGENCY.md` |
 | Історія інциденту v54-v130 | `docs/GIT_EMERGENCY.md` → "Історія події" |
-| Відкат рефакторингу g05tu | `docs/GIT_EMERGENCY.md` → "Відкат рефакторингу документації" + `_ai-tools/REFACTOR_PLAN.md` |
+| Відкат рефакторингу g05tu | `docs/GIT_EMERGENCY.md` → "Відкат рефакторингу документації" + `_archive/REFACTOR_PLAN.md` |
 
 ### Скіли Claude Code
 

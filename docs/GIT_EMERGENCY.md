@@ -86,4 +86,4 @@ git push --force
 - **Безпечний відкат:** `git revert <phase-N-hash>...<phase-0-hash>` — створить коміти-відміни
 - **Небезпечний (потребує "Роби скид"):** `git reset --hard e64eb58`
 
-Детальний план + hash кожної фази → `_ai-tools/REFACTOR_PLAN.md`.
+Детальний план + hash кожної фази → `_archive/REFACTOR_PLAN.md`.

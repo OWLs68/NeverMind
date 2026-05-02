@@ -67,7 +67,7 @@
 | Скіли — коли який спрацьовує (16 скілів з тригерами) | `_ai-tools/SKILLS_PLAN.md` |
 | Технічна довідка (деплой, AI-логіка, localStorage, структури) | `docs/TECHNICAL_REFERENCE.md` |
 | Файлова структура src/ | `docs/FILE_STRUCTURE.md` |
-| Архівний план рефакторингу документації (g05tu, для довідки) | `_ai-tools/REFACTOR_PLAN.md` |
+| Архівний план рефакторингу документації (g05tu, для довідки) | `_archive/REFACTOR_PLAN.md` |
 
 ---
 

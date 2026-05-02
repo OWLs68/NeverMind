@@ -84,7 +84,7 @@
 
 ### Закриття фази у коді = одразу синхрон планового документу (додано 30.04.2026 xHQfi)
 
-**Тригер:** ти закрив у коді блок з `🚀 Active` ROADMAP — або повністю фазу з планового документу (`docs/OWL_SILENCE_PRUNING_PLAN.md`, `docs/EVENING_2.0_PLAN.md`, `docs/FINANCE_V2_PLAN.md`, `docs/AGENT_INTELLIGENCE_SCALE.md`).
+**Тригер:** ти закрив у коді блок з `🚀 Active` ROADMAP — або повністю фазу з планового документу (`_archive/OWL_SILENCE_PRUNING_PLAN.md`, `docs/EVENING_2.0_PLAN.md`, `docs/FINANCE_V2_PLAN.md`, `docs/AGENT_INTELLIGENCE_SCALE.md`).
 
 **Дія:** **у тій самій сесії, ДО фінального коміту** — оновити обидва місця:
 1. `ROADMAP.md` → перенести блок з Active у короткий покажчик на ROADMAP_DONE.

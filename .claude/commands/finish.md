@@ -190,7 +190,7 @@
 | Нова модалка / палітра / компонент | `docs/DESIGN_SYSTEM.md` |
 | Додано/видалено/перейменовано скіл | `_ai-tools/SKILLS_PLAN.md` + `START_HERE.md` |
 | Змінилась файлова структура верхнього рівня | `START_HERE.md` |
-| **Закрита фаза з планового документу** (`docs/OWL_SILENCE_PRUNING_PLAN.md`, `docs/EVENING_2.0_PLAN.md`, `docs/FINANCE_V2_PLAN.md`, `docs/AGENT_INTELLIGENCE_SCALE.md`, інші `docs/*_PLAN.md`) | відповідний `docs/*_PLAN.md` — позначити фазу `✅ ВИКОНАНО ({сесія} {дата})` з посиланнями на коміти |
+| **Закрита фаза з планового документу** (`_archive/OWL_SILENCE_PRUNING_PLAN.md`, `docs/EVENING_2.0_PLAN.md`, `docs/FINANCE_V2_PLAN.md`, `docs/AGENT_INTELLIGENCE_SCALE.md`, інші `docs/*_PLAN.md`) | відповідний `docs/*_PLAN.md` — позначити фазу `✅ ВИКОНАНО ({сесія} {дата})` з посиланнями на коміти |
 
 **Правило:** для `CLAUDE.md` — ЗАВЖДИ питати дозвіл. Для інших файлів — можна правити автоматично, у звіті згадати що саме змінено.
 

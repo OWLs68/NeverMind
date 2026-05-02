@@ -20,7 +20,7 @@
 
 3 фази архітектурного плану закриті. Деталі переїхали у [`ROADMAP_DONE.md`](ROADMAP_DONE.md). Закриті баги: B-100, B-102.
 
-**📄 План з реалізованими цитатами коду → [`docs/OWL_SILENCE_PRUNING_PLAN.md`](docs/OWL_SILENCE_PRUNING_PLAN.md)**
+**📄 План з реалізованими цитатами коду → [`_archive/OWL_SILENCE_PRUNING_PLAN.md`](_archive/OWL_SILENCE_PRUNING_PLAN.md)**
 
 ---
 

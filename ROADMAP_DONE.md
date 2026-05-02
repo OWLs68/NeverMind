@@ -28,7 +28,7 @@
 
 ### ✅ OWL Silence Engine + Pruning Engine (сесії UVKL1 26.04 → C8uQD 27.04 → xHQfi 30.04.2026)
 
-3 фази архітектурного плану `docs/OWL_SILENCE_PRUNING_PLAN.md`. Закриває «stale board» (сова повторює про вже закриті задачі) і дає юзеру структурний важіль «дай спокій».
+3 фази архітектурного плану `_archive/OWL_SILENCE_PRUNING_PLAN.md`. Закриває «stale board» (сова повторює про вже закриті задачі) і дає юзеру структурний важіль «дай спокій».
 
 - **Фаза 1 — Silence Engine.** Tool `request_quiet(hours)` пише у `nm_owl_silence_until`, чек у `shouldOwlSpeak()` блокує всі 4 канали сови (Inbox-табло, Tab-табло, Brain Pulse, Followups) одним рядком. **xHQfi 30.04 розширив:** tool `cancel_quiet` для дострокового скасування (коміт `44bf7fe`) + UI-плашка «🤫 Сова мовчить до HH:MM» з тапом для скасування на 8 вкладках + Inbox (коміт `da057ae`).
 - **Фаза 2 — Pruning Engine** (C8uQD 27.04). Сова заповнює `entityRefs:[task_123,event_456]` у JSON-схемі генерації. `isMessageRelevant()` фільтр у `src/owl/board-utils.js` викидає повідомлення про неактивні сутності з UI і `boardHistory`. Wipe старої історії при rollout (`nm_pruning_wipe_v1_done`).
@@ -44,7 +44,7 @@
 
 5 фаз, 6 комітів. Навести порядок у документації через переміщення блоків у спеціалізовані файли + створити "мозок" Claude (lessons, INDEX, хуки) щоб у новому чаті швидше орієнтуватись.
 
-- **Фаза 0 `d8ecab1`** — `_ai-tools/REFACTOR_PLAN.md` + snapshot `e64eb58`
+- **Фаза 0 `d8ecab1`** — `_archive/REFACTOR_PLAN.md` + snapshot `e64eb58`
 - **Фаза 1 `f579492`** — 5 нових файлів (`ROADMAP_DONE`, `docs/FILE_STRUCTURE`, `docs/GIT_EMERGENCY`, `docs/DO_NOT_TOUCH`, `docs/FINANCE_V2_PLAN`) + скорочено CLAUDE 521→416, ROADMAP 715→539, SESSION_STATE 293→103, START_HERE 114→56 + додано "Один мозок на все" у NEVERMIND_LOGIC
 - **Фаза 2 `80f9846`** — `lessons.md` з 3 секціями (🔄 патерни / ❌ анти-патерни / 📋 журнал рішень)
 - **Фаза 3 `90e0f7f`** — 4 автоматичні хуки у `.claude/hooks/`: `cache-name-reminder`, `md-index-reminder`, `ai-tools-sync`, `skill-triggers` (+"Роби" детекція)
