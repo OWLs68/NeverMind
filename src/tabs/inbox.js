@@ -601,20 +601,27 @@ ${aiContext}`;
           if (action.time) {
             conflict = getEvents().find(e => e.date === action.date && e.time === action.time && e.title !== action.title);
           }
-          const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
+          const ev = { id: Date.now(), title: action.title || t('inbox.event.default_title', 'Подія'), date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-          const timeStr = action.time ? ` о ${action.time}${endTime ? '–' + endTime : ''}` : '';
-          const warn = conflict ? `\n⚠️ На цей час уже є "${conflict.title}". Лишити обидві чи перенести?` : '';
-          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${timeStr}${warn}`);
+          const timeStr = action.time ? t('inbox.date.at_time_range', ' о {time}{end}', { time: action.time, end: endTime ? '–' + endTime : '' }) : '';
+          const warn = conflict ? t('inbox.event.conflict_warn', '\n⚠️ На цей час уже є "{title}". Лишити обидві чи перенести?', { title: conflict.title }) : '';
+          addInboxChatMsg('agent', t('inbox.event.added', '📅 Подію "{title}" додано в календар на {day}{time}{warn}', { title: ev.title, day: dayStr, time: timeStr, warn }));
         } else if (action.action === 'restore_deleted') {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;
           const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
-          const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'операцію' };
+          const typeLabel = {
+            task:    t('inbox.type.task',    'задачу'),
+            note:    t('inbox.type.note',    'нотатку'),
+            habit:   t('inbox.type.habit',   'звичку'),
+            inbox:   t('inbox.type.inbox',   'запис'),
+            folder:  t('inbox.type.folder',  'папку'),
+            finance: t('inbox.type.finance', 'операцію'),
+          };
           const typeIcon = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' };
           const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
           if (q === 'all') {
@@ -622,7 +629,7 @@ ${aiContext}`;
               addInboxChatMsg('agent', t('inbox.chat.trash_empty', 'Кеш видалених порожній. Записи зберігаються 7 днів.'));
             } else {
               filtered.forEach(t => restoreFromTrash(t.deletedAt));
-              addInboxChatMsg('agent', `✅ Відновив ${filtered.length} записів`);
+              addInboxChatMsg('agent', t('inbox.chat.restored_count', '✅ Відновив {n} записів', { n: filtered.length }));
             }
           } else if (q === 'last') {
             const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
@@ -631,7 +638,7 @@ ${aiContext}`;
             } else {
               const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || 'запис';
               restoreFromTrash(last.deletedAt);
-              addInboxChatMsg('agent', `✅ Відновив ${typeLabel[last.type] || 'запис'} "${itemLabel}"`);
+              addInboxChatMsg('agent', t('inbox.chat.restored_one', '✅ Відновив {type} "{label}"', { type: typeLabel[last.type] || t('inbox.type.inbox', 'запис'), label: itemLabel }));
             }
           } else {
             const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
@@ -644,7 +651,7 @@ ${aiContext}`;
             } else if (results.length <= 5) {
               results.forEach(t => restoreFromTrash(t.deletedAt));
               const labels = results.map(e => `${typeIcon[e.type] || '•'} ${(e.item.text || e.item.title || e.item.name || '').substring(0, 35)}`).join('\n');
-              addInboxChatMsg('agent', `✅ Відновив ${results.length} записи:\n${labels}`);
+              addInboxChatMsg('agent', t('inbox.chat.restored_list', '✅ Відновив {n} записи:\n{labels}', { n: results.length, labels }));
             } else {
               const list = results.slice(0, 5).map(e => {
                 const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || 'запис').substring(0, 40);
@@ -658,11 +665,21 @@ ${aiContext}`;
           const routine = getRoutine();
           const blocks = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
           const days = Array.isArray(action.day) ? action.day : [action.day || 'default'];
-          const dayLabels = { default:'будні', mon:'понеділок', tue:'вівторок', wed:'середу', thu:'четвер', fri:'п\'ятницю', sat:'суботу', sun:'неділю' };
+          // Знахідний відмінок: «на середу/п'ятницю/суботу/неділю» — для речення "Розпорядок збережено на X".
+          const dayLabels = {
+            default: t('inbox.day.default', 'будні'),
+            mon:     t('inbox.day.mon_acc', 'понеділок'),
+            tue:     t('inbox.day.tue_acc', 'вівторок'),
+            wed:     t('inbox.day.wed_acc', 'середу'),
+            thu:     t('inbox.day.thu_acc', 'четвер'),
+            fri:     t('inbox.day.fri_acc', 'п\'ятницю'),
+            sat:     t('inbox.day.sat_acc', 'суботу'),
+            sun:     t('inbox.day.sun_acc', 'неділю'),
+          };
           days.forEach(d => { routine[d] = [...blocks]; });
           saveRoutine(routine);
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
-          addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
+          addInboxChatMsg('agent', t('inbox.chat.routine_saved', '🕐 Розпорядок збережено на {label} ({n} блоків)', { label, n: blocks.length }));
         } else if (action.action === 'save_memory_fact') {
           // Безшумно зберігаємо факт — user feedback приходить через msg.content
           // (AI проінструктований також писати коротке "Запам'ятав..." у content)
