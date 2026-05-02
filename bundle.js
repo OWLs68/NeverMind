@@ -329,6 +329,31 @@
     }
   });
 
+  // src/data/months.js
+  function monthGenitive(idx) {
+    return t(`month.${KEYS[idx]}.gen`, FALL_GENITIVE[idx]);
+  }
+  function monthNominative(idx) {
+    return t(`month.${KEYS[idx]}.nom`, FALL_NOMINATIVE[idx]);
+  }
+  function monthShortCaps(idx) {
+    return t(`month.${KEYS[idx]}.short_caps`, FALL_SHORT_CAPS[idx]);
+  }
+  function monthShort(idx) {
+    return t(`month.${KEYS[idx]}.short`, FALL_SHORT[idx]);
+  }
+  var KEYS, FALL_GENITIVE, FALL_NOMINATIVE, FALL_SHORT_CAPS, FALL_SHORT;
+  var init_months = __esm({
+    "src/data/months.js"() {
+      init_utils();
+      KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+      FALL_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      FALL_NOMINATIVE = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
+      FALL_SHORT_CAPS = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406\u0422", "\u0422\u0420\u0410\u0412", "\u0427\u0415\u0420\u0412", "\u041B\u0418\u041F", "\u0421\u0415\u0420\u041F", "\u0412\u0415\u0420", "\u0416\u041E\u0412\u0422", "\u041B\u0418\u0421\u0422", "\u0413\u0420\u0423\u0414"];
+      FALL_SHORT = ["\u0421\u0456\u0447", "\u041B\u044E\u0442", "\u0411\u0435\u0440", "\u041A\u0432\u0456", "\u0422\u0440\u0430", "\u0427\u0435\u0440", "\u041B\u0438\u043F", "\u0421\u0435\u0440", "\u0412\u0435\u0440", "\u0416\u043E\u0432", "\u041B\u0438\u0441", "\u0413\u0440\u0443"];
+    }
+  });
+
   // src/tabs/calendar.js
   function getEvents() {
     return JSON.parse(localStorage.getItem("nm_events") || "[]");
@@ -423,12 +448,12 @@
       return ba === 2 ? tb.localeCompare(ta) : ta.localeCompare(tb);
     });
     const prioIcons = { critical: "\u{1F534} ", important: "\u{1F7E0} ", normal: "" };
-    let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041F\u043E\u0434\u0456\u0457 \xB7 ${MONTHS_UA[_calMonth]}</div>`;
+    let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041F\u043E\u0434\u0456\u0457 \xB7 ${monthNominative(_calMonth)}</div>`;
     items.forEach((item) => {
       const d = /* @__PURE__ */ new Date(item.date + "T00:00:00");
       const isPast = item.date < todayStr;
       const isToday = item.date === todayStr;
-      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${d.getDate()} ${MONTHS_OF[d.getMonth()]}`;
+      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u23F0";
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
@@ -495,7 +520,7 @@
     el.style.display = "block";
     el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0435</div>` + items.map((item) => {
       const isToday = item.date.toDateString() === todayStr;
-      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${item.date.getDate()} ${MONTHS_OF[item.date.getMonth()]}`;
+      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u2611\uFE0F";
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
@@ -514,7 +539,7 @@
     const grid = document.getElementById("calendar-grid");
     const dayDetails = document.getElementById("calendar-day-tasks");
     if (!label || !grid) return;
-    label.textContent = `${MONTHS_UA[_calMonth]} ${_calYear}`;
+    label.textContent = `${monthNominative(_calMonth)} ${_calYear}`;
     if (dayDetails) dayDetails.style.display = "none";
     const firstDay = new Date(_calYear, _calMonth, 1);
     const firstDow = (firstDay.getDay() + 6) % 7;
@@ -605,7 +630,7 @@
     const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayKey = DAY_KEYS[date.getDay()];
     const titleEl = document.getElementById("day-schedule-title");
-    if (titleEl) titleEl.textContent = `${day} ${MONTHS_OF[_calMonth]} \xB7 ${DAYS_UA_FULL[date.getDay()]}`;
+    if (titleEl) titleEl.textContent = `${day} ${monthGenitive(_calMonth)} \xB7 ${DAYS_UA_FULL[date.getDay()]}`;
     const dayEvents = getEvents().filter((ev) => ev.date === dateISO);
     const allDayEvents = dayEvents.filter((ev) => !ev.time);
     const timedEvents = dayEvents.filter((ev) => ev.time);
@@ -878,7 +903,7 @@
     _initDrumCol("drum-day", days, _drumValues.day - 1, (i) => {
       _drumValues.day = i + 1;
     });
-    _initDrumCol("drum-month", MONTHS_SHORT, _drumValues.month, (i) => {
+    _initDrumCol("drum-month", Array.from({ length: 12 }, (_, i) => monthShort(i)), _drumValues.month, (i) => {
       _drumValues.month = i;
     });
     _initDrumCol("drum-year", years, _drumValues.year - 2024, (i) => {
@@ -1018,14 +1043,13 @@
     const el = document.getElementById("cal-icon-day");
     if (el) el.textContent = (/* @__PURE__ */ new Date()).getDate();
   }
-  var MONTHS_UA, MONTHS_OF, _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H, MONTHS_SHORT;
+  var _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
       init_tasks();
       init_trash();
-      MONTHS_UA = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
-      MONTHS_OF = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      init_months();
       _selectedDay = null;
       DAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
       NM_ROUTINE_KEY = "nm_routine";
@@ -1037,7 +1061,6 @@
       _editEventPriority = "normal";
       _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
       DRUM_H = 40;
-      MONTHS_SHORT = ["\u0421\u0456\u0447", "\u041B\u044E\u0442", "\u0411\u0435\u0440", "\u041A\u0432\u0456", "\u0422\u0440\u0430", "\u0427\u0435\u0440", "\u041B\u0438\u043F", "\u0421\u0435\u0440", "\u0412\u0435\u0440", "\u0416\u043E\u0432", "\u041B\u0438\u0441", "\u0413\u0440\u0443"];
       _updateCalIconDay();
       setInterval(_updateCalIconDay, 60 * 1e3);
       Object.assign(window, {
@@ -6413,7 +6436,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const end = new Date(now.getFullYear(), baseMonth + 1, 1);
       from = start.getTime();
       to = end.getTime();
-      label = `${_MONTH_NAMES[start.getMonth()]} ${start.getFullYear()}`;
+      label = `${monthNominative(start.getMonth())} ${start.getFullYear()}`;
     } else {
       const startMonth = now.getMonth() - 2 + offset * 3;
       const start = new Date(now.getFullYear(), startMonth, 1);
@@ -6811,7 +6834,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (recentTxs) parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F update_transaction): ${recentTxs}`);
     return parts.join("\n");
   }
-  var currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, _MONTH_NAMES, SWIPE_OPEN_RATIO, _finSwipeAttached;
+  var currentFinTab, currentFinPeriod, currentFinPeriodOffset, _finEditMode, SWIPE_OPEN_RATIO, _finSwipeAttached;
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
@@ -6824,6 +6847,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_habits();
       init_tasks();
       init_health();
+      init_months();
       init_finance_cats();
       init_finance_insight();
       init_finance_chat();
@@ -6831,7 +6855,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       currentFinPeriod = "month";
       currentFinPeriodOffset = 0;
       _finEditMode = false;
-      _MONTH_NAMES = ["\u0421\u0456\u0447\u0435\u043D\u044C", "\u041B\u044E\u0442\u0438\u0439", "\u0411\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "\u041A\u0432\u0456\u0442\u0435\u043D\u044C", "\u0422\u0440\u0430\u0432\u0435\u043D\u044C", "\u0427\u0435\u0440\u0432\u0435\u043D\u044C", "\u041B\u0438\u043F\u0435\u043D\u044C", "\u0421\u0435\u0440\u043F\u0435\u043D\u044C", "\u0412\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "\u0416\u043E\u0432\u0442\u0435\u043D\u044C", "\u041B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0413\u0440\u0443\u0434\u0435\u043D\u044C"];
       SWIPE_OPEN_RATIO = 0.5;
       _finSwipeAttached = false;
       Object.assign(window, {
@@ -9628,19 +9651,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
-  // src/data/months.js
-  function monthGenitive(idx) {
-    return t(`month.${KEYS[idx]}.gen`, FALL_GENITIVE[idx]);
-  }
-  var KEYS, FALL_GENITIVE;
-  var init_months = __esm({
-    "src/data/months.js"() {
-      init_utils();
-      KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-      FALL_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-    }
-  });
-
   // src/tabs/me.js
   async function sendMeChatMessage() {
     const input = document.getElementById("me-chat-input");
@@ -12148,7 +12158,7 @@ ${UI_TOOLS_RULES}`;
           return true;
         }
         const dateObj = new Date(eventDetected.date);
-        const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+        const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
         const items2 = getInbox();
         items2.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
         saveInbox(items2);
@@ -12393,7 +12403,7 @@ ${UI_TOOLS_RULES}`;
         return true;
       }
       const dateObj = new Date(parsed.date);
-      const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+      const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       const items = getInbox();
       items.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
       saveInbox(items);
@@ -12422,7 +12432,7 @@ ${UI_TOOLS_RULES}`;
       if (parsed.priority) events[idx].priority = parsed.priority;
       saveEvents(events);
       const dateObj = new Date(events[idx].date);
-      const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+      const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       const t2 = events[idx].time;
       const et = events[idx].endTime;
       const timeStr = t2 ? ` \u043E ${t2}${et ? "\u2013" + et : ""}` : "";
@@ -12801,6 +12811,7 @@ ${UI_TOOLS_RULES}`;
       init_tool_dispatcher();
       init_swipe_delete();
       init_inbox();
+      init_months();
       init_tasks();
       init_notes();
       init_finance();
@@ -15232,8 +15243,7 @@ ${userText}
     const diff = Math.round((today - itemDay) / 864e5);
     if (diff === 0) return t("inbox.date.today_caps", "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406");
     if (diff === 1) return t("inbox.date.yesterday_caps", "\u0412\u0427\u041E\u0420\u0410");
-    const months = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406\u0422", "\u0422\u0420\u0410\u0412", "\u0427\u0415\u0420\u0412", "\u041B\u0418\u041F", "\u0421\u0415\u0420\u041F", "\u0412\u0415\u0420", "\u0416\u041E\u0412\u0422", "\u041B\u0418\u0421\u0422", "\u0413\u0420\u0423\u0414"];
-    return `${d.getDate()} ${months[d.getMonth()]}`;
+    return `${d.getDate()} ${monthShortCaps(d.getMonth())}`;
   }
   function navigateInboxItem(id) {
     const el = document.getElementById("item-" + id);
@@ -15266,14 +15276,13 @@ ${userText}
     }
     if (upcoming.length === 0) return "";
     upcoming.sort((a, b) => a.date.localeCompare(b.date));
-    const MONTHS_OF2 = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
     const cards = upcoming.slice(0, 3).map((item) => {
       const d = /* @__PURE__ */ new Date(item.date + "T00:00:00");
       const diffDays = Math.round((d - /* @__PURE__ */ new Date(todayStr + "T00:00:00")) / 864e5);
       let when;
       if (diffDays === 0) when = t("inbox.date.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
       else if (diffDays === 1) when = t("inbox.date.tomorrow", "\u0437\u0430\u0432\u0442\u0440\u0430");
-      else when = `${d.getDate()} ${MONTHS_OF2[d.getMonth()]}`;
+      else when = `${d.getDate()} ${monthGenitive(d.getMonth())}`;
       const icon = item.type === "task" ? "\u{1F4CC}" : item.type === "reminder" ? "\u23F0" : "\u{1F4C5}";
       const timeStr = item.time ? t("inbox.date.at_time", " \u043E {time}", { time: item.time }) : "";
       const action = item.type === "task" ? `onclick="switchTab('tasks')"` : `onclick="openCalendarModal()"`;
@@ -15632,7 +15641,7 @@ ${aiContext}`;
             saveInbox(items);
             renderInbox();
             const dateObj = new Date(action.date);
-            const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+            const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
             const timeStr = action.time ? ` \u043E ${action.time}${endTime ? "\u2013" + endTime : ""}` : "";
             const warn = conflict ? `
 \u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "${conflict.title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?` : "";
@@ -16088,7 +16097,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           return;
         }
         const dateObj = new Date(eventDetected.date);
-        const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+        const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
         addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
         return;
       }
@@ -16163,7 +16172,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
         } else {
           const dateObj = new Date(eventDetected.date);
-          const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
+          const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
           addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
         }
       } else {
@@ -16287,6 +16296,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_onboarding();
       init_chips();
       init_health();
+      init_months();
       init_unread_badge();
       _inboxTypingEl = null;
       _parseContentChips2 = parseContentChips;
