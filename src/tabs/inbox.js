@@ -144,13 +144,13 @@ const CAT_TAG_STYLE = {
   reminder: 'background:rgba(194,121,10,0.18);color:#7a4e05',
 };
 const CAT_META = {
-  idea:     { icon: '💡', label: 'Ідея',        dotClass: 'cat-dot-idea',     tagClass: 'cat-idea'     },
-  task:     { icon: '📌', label: 'Задача',      dotClass: 'cat-dot-task',     tagClass: 'cat-task'     },
-  habit:    { icon: '🌱', label: 'Звичка',      dotClass: 'cat-dot-habit',    tagClass: 'cat-habit'    },
-  note:     { icon: '📝', label: 'Нотатка',     dotClass: 'cat-dot-note',     tagClass: 'cat-note'     },
-  event:    { icon: '📅', label: 'Подія',       dotClass: 'cat-dot-event',    tagClass: 'cat-event'    },
-  finance:  { icon: '₴',  label: 'Фінанси',     dotClass: 'cat-dot-finance',  tagClass: 'cat-finance'  },
-  reminder: { icon: '⏰', label: 'Нагадування', dotClass: 'cat-dot-reminder', tagClass: 'cat-reminder' },
+  idea:     { icon: '💡', label: t('inbox.cat.idea',     'Ідея'),        dotClass: 'cat-dot-idea',     tagClass: 'cat-idea'     },
+  task:     { icon: '📌', label: t('inbox.cat.task',     'Задача'),      dotClass: 'cat-dot-task',     tagClass: 'cat-task'     },
+  habit:    { icon: '🌱', label: t('inbox.cat.habit',    'Звичка'),      dotClass: 'cat-dot-habit',    tagClass: 'cat-habit'    },
+  note:     { icon: '📝', label: t('inbox.cat.note',     'Нотатка'),     dotClass: 'cat-dot-note',     tagClass: 'cat-note'     },
+  event:    { icon: '📅', label: t('inbox.cat.event',    'Подія'),       dotClass: 'cat-dot-event',    tagClass: 'cat-event'    },
+  finance:  { icon: '₴',  label: t('inbox.cat.finance',  'Фінанси'),     dotClass: 'cat-dot-finance',  tagClass: 'cat-finance'  },
+  reminder: { icon: '⏰', label: t('inbox.cat.reminder', 'Нагадування'), dotClass: 'cat-dot-reminder', tagClass: 'cat-reminder' },
 };
 
 export function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
@@ -457,7 +457,7 @@ ${aiContext}`;
     const reply = await callAIWithHistory(qPrompt, historySlice, 'inbox-quick-q');
     const elapsedQ = Date.now() - _aiStart;
     if (elapsedQ < 800) await new Promise(r => setTimeout(r, 800 - elapsedQ));
-    addInboxChatMsg('agent', reply || 'Не зрозумів, переформулюй?');
+    addInboxChatMsg('agent', reply || t('inbox.chat.misunderstood', 'Не зрозумів, переформулюй?'));
     inboxChatHistory.push({ role: 'assistant', content: reply || '' });
     aiLoading = false;
     btn.disabled = false;
@@ -474,7 +474,7 @@ ${aiContext}`;
 
   if (!msg) {
     saveOffline(text);
-    addInboxChatMsg('agent', '✓ Збережено');
+    addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
     aiLoading = false;
     btn.disabled = false;
     btn.innerHTML = SEND_SVG;
@@ -523,7 +523,7 @@ ${aiContext}`;
         }
         if (action.action === 'save') {
           if (fromChip) {
-            addInboxChatMsg('agent', 'Окей, записав у чат як відповідь.');
+            addInboxChatMsg('agent', t('inbox.chat.saved_as_reply', 'Окей, записав у чат як відповідь.'));
           } else {
             await processSaveAction(action, text);
           }
@@ -543,7 +543,7 @@ ${aiContext}`;
             if (action.amount) updParts.push('сума: ' + formatMoney(txs[idx].amount));
             addInboxChatMsg('agent', '✓ Оновлено: ' + (updParts.join(', ') || txs[idx].category));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов операцію. Спробуй ще раз.');
+            addInboxChatMsg('agent', t('inbox.chat.tx_not_found', 'Не знайшов операцію. Спробуй ще раз.'));
           }
         } else if (action.action === 'complete_habit') {
           await processCompleteHabit(action, text);
@@ -559,7 +559,7 @@ ${aiContext}`;
             renderTasks();
             addInboxChatMsg('agent', `✓ Додано ${steps.length} крок(и) до "${tasks[idx].title}"`);
           } else {
-            addInboxChatMsg('agent', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.');
+            addInboxChatMsg('agent', t('inbox.chat.task_not_found', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.'));
           }
         } else if (action.action === 'create_project' && !fromChip) {
           addInboxChatMsg('agent', `Створюю проект "${action.name || text}"...`);
@@ -868,12 +868,12 @@ ${aiContext}`;
       if (replyText) addInboxChatMsg('agent', replyText, chips);
     } else {
       saveOffline(text);
-      addInboxChatMsg('agent', '✓ Збережено');
+      addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
     }
   } catch(e) {
     console.error('Tool call processing error:', e);
     saveOffline(text);
-    addInboxChatMsg('agent', '✓ Збережено');
+    addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
   }
 
   aiLoading = false;
