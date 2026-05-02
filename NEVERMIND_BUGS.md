@@ -27,13 +27,17 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (6ANWm + LW3j8). Старіші (Ph8ym + d6Fgh + xHQfi + EhxzJ і раніше) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (bOqdI + rKQPT). Старіші (LW3j8 + 6ANWm + Ph8ym) — будуть перенесені у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у `_ai-tools/CLEANUP_PLAN_bOqdI.md` Фаза 4 (новий чат)._
 
-_Сесія **6ANWm** (01.05.2026) — інфраструктурна сесія: рефакторинг CLAUDE.md 561→94 рядки + 4 нові `RULES_*.md` під задачу + видалено 2 хуки що створювали більше шуму ніж дисципліни (`quick-dialogue-detector.sh` і `check-response-violations.js`) + повна архівація 5 блоків SESSION_STATE. Конкретні B-XX баги не закривала. **1 підозра без B-XX:** хук `check-response-violations` створював дублі моїх повідомлень через `exit 2` — Stop-хук не може скасувати вже відправлене повідомлення, тільки змусити написати нове. Видалено повністю — як корінне виправлення._
+_Сесія **bOqdI** (02.05.2026) — Council механізм у CLAUDE.md (5 паралельних агентів за тригер-словами + об'єктивними маркерами) + архівація `COUNCIL_CONCEPT.md` → `_archive/`. Конкретні B-XX баги не закривала. **3 архітектурні борги без B-XX закриті** (знайшов перший Council 5 агентів): (1) `evening.js / _rescheduleTask` (`19e112f`) — пряма запис `nm_tasks` через `localStorage.setItem` обходив канон `saveTasks()`; (2) `health.js / _syncMedicationToTask` (`25e60da`) — те саме + видалено застарілий коментар «lazy-import щоб уникнути циклічних залежностей» (у IIFE bundle циклу не існує); (3) `proactive.js` (`8c3fe8d`) — два окремі `addEventListener('nm-data-changed')` об'єднано в один. Це гігієна перед Pre-Migration Підсесією 3._
 
-_Сесія **LW3j8** (01.05.2026) — інфраструктурна сесія: HOT_RULES + самотест-хук активують правила після `/start` + i18n обгортки finance-modals/notes (54 рядки) + рефакторинг категорій папок нотаток через канонічний довідник `src/data/notes-categories.js`. Конкретні B-XX баги не закривала. **2 підозри без B-XX:** (1) попередні мої коміти `040c30f` + `27f1ef0` додавали `t()` без явного імпорту у `notes.js` — гіпотетично працювало через esbuild IIFE bundle, виправлено явним імпортом у `03f70c7`; (2) ризик зламаних іконок для legacy папок без апострофа (`Здоровя`) — потребує iPhone-перевірки._
+_Сесія **rKQPT** (02.05.2026) — i18n міграція + 2 critical fixes + чернетка `/council`. **Закрила 1 critical bug:** `projects.js` ReferenceError при створенні нового проекту (`e64cf28`). Корінь: функція `getOWLPersonality` перенесена з `core.js` у `prompts.js` 17.04, у `projects.js` import не оновили → esbuild перейменував на `getOWLPersonality2` через колізію → ReferenceError. Створено `scripts/check-imports.js` як guard (інтегрований у `build.js`). Виправлено дефект самого guard (пропускав `t()` через `if (name.length<=1) continue;`)._
 
-_Сесія **Ph8ym** (30.04.2026) — деталі перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у /finish 6ANWm 01.05 (Ph8ym конкретні баги не закривала, інфраструктурна)._
+_Сесія **6ANWm** (01.05.2026) — інфраструктурна. CLAUDE.md 561→94 + 4 RULES_*.md + видалено 2 шумних хуки. 1 підозра (хук дублів `exit 2`). **→ архів у CLEANUP Фаза 4.**_
+
+_Сесія **LW3j8** (01.05.2026) — інфраструктурна. HOT_RULES + самотест-хук + i18n notes/finance. 2 підозри (lazy t() + ризик legacy папок). **→ архів у CLEANUP Фаза 4.**_
+
+_Сесія **Ph8ym** (30.04.2026) — деталі вже у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
