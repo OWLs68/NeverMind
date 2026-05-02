@@ -4,13 +4,59 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-02 (сесія **BqTWF** — продовження bOqdI: виконано всі 9 фаз `CLEANUP_PLAN_bOqdI.md`, додано модуль 4.50 Email/Comm Bridge у roadmap, iPhone smoke-test виявив **B-115** (доконаний факт «Відкрив автомийку» → дубль проекту з неправильною назвою + create_event замість save_note) — закрито промпт-фіксом у `src/ai/prompts.js` (часова форма + контекст інтерв'ю + clarify chips), CACHE bump → `nm-20260502-1645`, деплой v554+).
+**Оновлено:** 2026-05-02 (сесія **mUpS8** — універсальний clarify-guard у 7 чатах: новий `src/owl/clarify-guard.js` + `chips.js` тип `clarify_save` з payload + `CLARIFY_INLINE_RULES` блок промпта. ROADMAP 4.29.1 ✅ Done, 4.29.2 Pattern Learning Engine NEXT. CLAUDE.md правило #11 i18n. B-116 swipe-delete для картки проекту. B-117 (табло звичок stale) записано детально — не закрите бо потребує live DevTools. CACHE `nm-20260502-1900`, v561).
+
+---
+
+## 🔧 Поточна сесія mUpS8 — Universal clarify-guard + Pattern Learning roadmap + B-116 (02.05.2026)
+
+### Зроблено
+1. **Phase 1 Inbox clarify-guard** (`9eb9edc`) — `src/owl/clarify-guard.js` `shouldClarify(text, toolCalls, tab)` ловить минулий час дієслова (20+ типових українських) АБО голий іменник без числа/команди. Замість виконання `create_project/create_event/save_task/save_moment/save_note` → 3 інлайн-чіпи [У щоденник] [Як момент] [Не зберігати]. `applyClarifyChoice` локально через `dispatchChatToolCalls` без round-trip до AI. Новий тип `action: 'clarify_save'` з payload через `data-chip-payload`. Спільний `CLARIFY_INLINE_RULES` інжектиться у 5 промптів.
+2. **Phase 2 rollout** (`3e419f6`) — guard у 6 чатах: Notes, Health, Finance, Evening, Projects, Me. Tasks НЕ зачеплено (`addTaskBarMsg` без chips параметра — у Phase 3).
+3. **CLAUDE.md правило #11 i18n** (`5c8cb55` + `b3a2162`) — «усе нове UI обгортай у `t('key', 'fallback')`». Whitelist у `RULES_TECH.md` §4. Перелік мов прибрано на просьбу Романа.
+4. **ROADMAP 4.29.1+4.29.2** — 4.29.1 ✅ Done. 4.29.2 Pattern Learning Engine NEXT (поріг 7-10, decay 90 днів, ключ `nm_clarify_patterns`).
+5. **B-116 swipe-delete для картки проекту** (`fdf370f`) — `src/tabs/projects.js` обгортка `.project-card-wrap` з data-id, `attachSwipeDelete` + `addToTrash('project', item)` + `showUndoToast` 5-сек відкат.
+6. **B-117 запис у NEVERMIND_BUGS** — табло звичок stale після виконання. 4 гілки розслідування + 3 опції фіксу. Логи діагностики Романа підтвердили: `[OWL board] stale message detected, forcing generation` тільки для INBOX (`inbox-board.js:1185`), для tab-board аналога 60хв SAFETY NET НЕМАЄ.
+7. **CACHE_NAME bumps** — `1645` → `1810` → `1830` → `1900`.
+8. **TESTING_LOG.md v559+** — 17 пунктів smoke-test для iPhone.
+
+### Обговорено (без виконання)
+- **Pattern Learning Engine** — поріг 7-10 виборів (Роман: «3 разів недостатньо»). Decay 90 днів. Мікро-індикатор «✨ за паттерном». Reset UI у «Я». Локальна реалізація 4.29 ДО Supabase — після Edge Functions переходить у 4.49 Anti-Pattern Engine з gpt-5-pro.
+- **AI пише першим у чат** — концептуальна фіча для інтерв'ю/збору профілю. Зараз тільки реактивний.
+- **Council 5 агентів** запущено один раз у цій сесії — розслідування архітектури universal clarify. 5 паралельних `general-purpose` (Критик/Стратег/Оптиміст/Свіжий/Виконавець).
+
+### Ключові рішення
+- **Inline-чіпи (не модалка `showClarify`)** — частина живого діалогу Jarvis, модалка обриває потік.
+- **Локальне виконання через payload `resolve_as`** — детермінізм проти галюцинацій, без round-trip.
+- **Варіант Б (промпт + код-guard)** — промпт сам по собі ймовірнісний (B-115 регрес підтвердив).
+- **Pattern Learning окремою сесією** — велика концепція з shape detector.
+- **Tasks без chips зараз** — `addTaskBarMsg` сигнатура без chips. Phase 3.
+- **B-117 не фіксити наосліп** — без live DevTools ризик зламати Brain Pulse.
+
+### Інциденти
+- **pre-commit-testing-log хук блокував перший Phase 1 коміт** — TESTING_LOG.md був у unstaged через те що `git add A && git commit` не залишив A у staged коли commit заблокувався хуком. Stage явно через повторний add, повтор commit пройшов.
+- Без `git reset` / `git push --force` / skip hooks.
+
+### Конфлікти/суперечності
+- **Помилка моя про «купив каву на 50»** — спочатку додав у список неоднозначних кейсів для clarify. Роман виправив: «минулий час + сума → витрата, очевидно». Прибрав з списку.
+- **Перелік мов у правилі #11** — додав англ/польська/німецька. Роман: «сам вирішу які мови, перша англ але інші ще не вирішив». Виправлено на «інші мови».
+
+### Метрики
+- Коміти: `9eb9edc` → `f9b404b` (5 фічей + 1 phase 0 archive = 6)
+- Версії: v558 → v561 (auto-merge після Phase 2 деплою)
+- CACHE_NAME: `nm-20260502-1645` → `nm-20260502-1900` (3 bump-и)
+- Build: `node --check` + `check-imports.js` чисті, `check-i18n.js` без зростання baseline.
+- Гілка: `claude/start-session-mUpS8`
 
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚨 iPhone smoke-test v554+** — продовжити з пункту 2 чек-ліста (BqTWF дав шпаргалку 61 пункт). Спочатку повторити пункт 1 щоб перевірити що B-115 фікс працює: «Відкрив автомийку» → має бути save_note/save_moment, НЕ дубль проекту.
+**🚨 iPhone smoke-test v561** — 17 пунктів TESTING_LOG.md секція v559+ (clarify-guard у 7 чатах, виключення для сум/дат/команд, B-115 повторний тест, B-116 свайп проекту). Плюс продовжити 61-пунктову шпаргалку BqTWF з пункту 2.
+
+**🟡 B-117 — табло звичок не оновлюється після виконання звички.** Корінь: `inbox-board.js:1185` має SAFETY NET 60хв тільки для Inbox; `proactive.js:1091` (tab-boards) — НЕ має, лише 5хв-кеш блокує. Юзер виконав 2/2 звичок (✓ зелені), сова показує застаріле «не виконано». Потребує live DevTools: `localStorage.nm_unified_board` для tab=tasks + `_boardGenerating` стан + перевірка `_pickMessageForTab` чи обирає critical-priority зі старого. **Опції фіксу** (з NEVERMIND_BUGS): (а) `force` параметр у `tryBoardUpdate`, listener викликає з `force:true` для `e.detail !== 'chat'`; (б) розширити `entityRefs` для habit-related повідомлень щоб Pruning ловив; (в) інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js`. Найбезпечніше — (в).
+
+**🚀 Phase 3 Pattern Learning Engine** — поріг 7-10 виборів = вивчений патерн, `nm_clarify_patterns`, decay 90 днів, мікро-індикатор «✨ за паттерном», reset UI у «Я», + Tasks інтеграція (додати chips параметр у `addTaskBarMsg`).
 
 **🐛 Чіпи у Inbox чаті не показуються** (Роман повідомив під час smoke-test). Окремий баг рендерингу `parseContentChips` — мало бути зроблено в L67Xf, чомусь не активне у Inbox. Потребує окремого фіксу.
 
