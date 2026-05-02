@@ -1409,14 +1409,14 @@
     localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
   }
   function _rejectReason(text) {
-    const t2 = (text || "").trim();
-    if (!t2) return "empty";
-    if (t2.length < 6) return "too_short";
-    if (t2.length > 200) return "too_long";
+    const trimmed = (text || "").trim();
+    if (!trimmed) return "empty";
+    if (trimmed.length < 6) return "too_short";
+    if (trimmed.length > 200) return "too_long";
     for (const rx of REJECT_PATTERNS) {
-      if (rx.test(t2)) return `pattern:${rx.source}`;
+      if (rx.test(trimmed)) return `pattern:${rx.source}`;
     }
-    const words = t2.split(/\s+/).filter(Boolean);
+    const words = trimmed.split(/\s+/).filter(Boolean);
     if (words.length < 2) return "too_few_words";
     return null;
   }
@@ -1465,9 +1465,9 @@
     const facts = getFactsRaw();
     const idx = facts.findIndex((f) => f.id === id);
     if (idx === -1) return false;
-    const t2 = (newText || "").trim();
-    if (t2.length < 3 || t2.length > 200) return false;
-    facts[idx].text = t2;
+    const trimmed = (newText || "").trim();
+    if (trimmed.length < 3 || trimmed.length > 200) return false;
+    facts[idx].text = trimmed;
     facts[idx].lastSeen = Date.now();
     _saveFacts(facts);
     return true;
@@ -15576,7 +15576,7 @@ ${aiContext}`;
               const updParts = [];
               if (action.category) updParts.push("\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + txs[idx].category);
               if (action.amount) updParts.push("\u0441\u0443\u043C\u0430: " + formatMoney(txs[idx].amount));
-              addInboxChatMsg("agent", "\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: " + (updParts.join(", ") || txs[idx].category));
+              addInboxChatMsg("agent", t("inbox.fin.tx_updated", "\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: {parts}", { parts: updParts.join(", ") || txs[idx].category }));
             } else {
               addInboxChatMsg("agent", t("inbox.chat.tx_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437."));
             }
@@ -15598,7 +15598,7 @@ ${aiContext}`;
               addInboxChatMsg("agent", t("inbox.chat.task_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0447\u0435\u0440\u0435\u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C."));
             }
           } else if (action.action === "create_project" && !fromChip) {
-            addInboxChatMsg("agent", `\u0421\u0442\u0432\u043E\u0440\u044E\u044E \u043F\u0440\u043E\u0435\u043A\u0442 "${action.name || text}"...`);
+            addInboxChatMsg("agent", t("inbox.proj.creating", '\u0421\u0442\u0432\u043E\u0440\u044E\u044E \u043F\u0440\u043E\u0435\u043A\u0442 "{name}"...', { name: action.name || text }));
             const projects = getProjects();
             const newProject = {
               id: Date.now(),
@@ -15620,7 +15620,7 @@ ${aiContext}`;
             };
             projects.unshift(newProject);
             saveProjects(projects);
-            addInboxChatMsg("agent", `\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "${newProject.name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E`);
+            addInboxChatMsg("agent", t("inbox.proj.created", '\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E', { name: newProject.name }));
             setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
           } else if (action.action === "create_event") {
             let endTime = action.end_time || null;
@@ -15630,7 +15630,7 @@ ${aiContext}`;
             if (action.time) {
               conflict = getEvents().find((e) => e.date === action.date && e.time === action.time && e.title !== action.title);
             }
-            const ev = { id: Date.now(), title: action.title || "\u041F\u043E\u0434\u0456\u044F", date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
+            const ev = { id: Date.now(), title: action.title || t("inbox.event.default_title", "\u041F\u043E\u0434\u0456\u044F"), date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
             const res = addEventDedup(ev);
             if (!res.added) {
               addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -15642,15 +15642,21 @@ ${aiContext}`;
             renderInbox();
             const dateObj = new Date(action.date);
             const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-            const timeStr = action.time ? ` \u043E ${action.time}${endTime ? "\u2013" + endTime : ""}` : "";
-            const warn = conflict ? `
-\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "${conflict.title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?` : "";
-            addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}${timeStr}${warn}`);
+            const timeStr = action.time ? t("inbox.date.at_time_range", " \u043E {time}{end}", { time: action.time, end: endTime ? "\u2013" + endTime : "" }) : "";
+            const warn = conflict ? t("inbox.event.conflict_warn", '\n\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "{title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?', { title: conflict.title }) : "";
+            addInboxChatMsg("agent", t("inbox.event.added", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 {day}{time}{warn}', { title: ev.title, day: dayStr, time: timeStr, warn }));
           } else if (action.action === "restore_deleted") {
             const q = (action.query || "").trim();
             const typeFilter = action.type || null;
             const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
-            const typeLabel = { task: "\u0437\u0430\u0434\u0430\u0447\u0443", note: "\u043D\u043E\u0442\u0430\u0442\u043A\u0443", habit: "\u0437\u0432\u0438\u0447\u043A\u0443", inbox: "\u0437\u0430\u043F\u0438\u0441", folder: "\u043F\u0430\u043F\u043A\u0443", finance: "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E" };
+            const typeLabel = {
+              task: t("inbox.type.task", "\u0437\u0430\u0434\u0430\u0447\u0443"),
+              note: t("inbox.type.note", "\u043D\u043E\u0442\u0430\u0442\u043A\u0443"),
+              habit: t("inbox.type.habit", "\u0437\u0432\u0438\u0447\u043A\u0443"),
+              inbox: t("inbox.type.inbox", "\u0437\u0430\u043F\u0438\u0441"),
+              folder: t("inbox.type.folder", "\u043F\u0430\u043F\u043A\u0443"),
+              finance: t("inbox.type.finance", "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E")
+            };
             const typeIcon = { task: "\u{1F4CB}", note: "\u{1F4DD}", habit: "\u{1F331}", inbox: "\u{1F4E5}", folder: "\u{1F4C1}", finance: "\u{1F4B0}" };
             const filtered = typeFilter ? trash.filter((t2) => t2.type === typeFilter) : trash;
             if (q === "all") {
@@ -15658,7 +15664,7 @@ ${aiContext}`;
                 addInboxChatMsg("agent", t("inbox.chat.trash_empty", "\u041A\u0435\u0448 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439. \u0417\u0430\u043F\u0438\u0441\u0438 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F 7 \u0434\u043D\u0456\u0432."));
               } else {
                 filtered.forEach((t2) => restoreFromTrash(t2.deletedAt));
-                addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${filtered.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432`);
+                addInboxChatMsg("agent", t("inbox.chat.restored_count", "\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432", { n: filtered.length }));
               }
             } else if (q === "last") {
               const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
@@ -15667,7 +15673,7 @@ ${aiContext}`;
               } else {
                 const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || "\u0437\u0430\u043F\u0438\u0441";
                 restoreFromTrash(last.deletedAt);
-                addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${typeLabel[last.type] || "\u0437\u0430\u043F\u0438\u0441"} "${itemLabel}"`);
+                addInboxChatMsg("agent", t("inbox.chat.restored_one", '\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {type} "{label}"', { type: typeLabel[last.type] || t("inbox.type.inbox", "\u0437\u0430\u043F\u0438\u0441"), label: itemLabel }));
               }
             } else {
               const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
@@ -15680,31 +15686,36 @@ ${aiContext}`;
               } else if (results.length <= 5) {
                 results.forEach((t2) => restoreFromTrash(t2.deletedAt));
                 const labels = results.map((e) => `${typeIcon[e.type] || "\u2022"} ${(e.item.text || e.item.title || e.item.name || "").substring(0, 35)}`).join("\n");
-                addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${results.length} \u0437\u0430\u043F\u0438\u0441\u0438:
-${labels}`);
+                addInboxChatMsg("agent", t("inbox.chat.restored_list", "\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {n} \u0437\u0430\u043F\u0438\u0441\u0438:\n{labels}", { n: results.length, labels }));
               } else {
                 const list = results.slice(0, 5).map((e) => {
                   const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || "\u0437\u0430\u043F\u0438\u0441").substring(0, 40);
                   const ago = Math.round((Date.now() - e.deletedAt) / 864e5);
                   return `${typeIcon[e.type] || "\u2022"} ${lbl} (${ago === 0 ? t("inbox.date.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("inbox.time.days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: ago })})`;
                 }).join("\n");
-                addInboxChatMsg("agent", `\u0417\u043D\u0430\u0439\u0448\u043E\u0432 ${results.length} \u0441\u0445\u043E\u0436\u0438\u0445. \u041E\u0441\u044C \u043F\u0435\u0440\u0448\u0456 5:
-${list}
-
-\u0423\u0442\u043E\u0447\u043D\u0438 \u044F\u043A\u0438\u0439 \u0441\u0430\u043C\u0435.`);
+                addInboxChatMsg("agent", t("inbox.chat.trash_many", "\u0417\u043D\u0430\u0439\u0448\u043E\u0432 {n} \u0441\u0445\u043E\u0436\u0438\u0445. \u041E\u0441\u044C \u043F\u0435\u0440\u0448\u0456 5:\n{list}\n\n\u0423\u0442\u043E\u0447\u043D\u0438 \u044F\u043A\u0438\u0439 \u0441\u0430\u043C\u0435.", { n: results.length, list }));
               }
             }
           } else if (action.action === "save_routine") {
             const routine = getRoutine();
             const blocks = (action.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
             const days = Array.isArray(action.day) ? action.day : [action.day || "default"];
-            const dayLabels = { default: "\u0431\u0443\u0434\u043D\u0456", mon: "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", tue: "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", wed: "\u0441\u0435\u0440\u0435\u0434\u0443", thu: "\u0447\u0435\u0442\u0432\u0435\u0440", fri: "\u043F'\u044F\u0442\u043D\u0438\u0446\u044E", sat: "\u0441\u0443\u0431\u043E\u0442\u0443", sun: "\u043D\u0435\u0434\u0456\u043B\u044E" };
+            const dayLabels = {
+              default: t("inbox.day.default", "\u0431\u0443\u0434\u043D\u0456"),
+              mon: t("inbox.day.mon_acc", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A"),
+              tue: t("inbox.day.tue_acc", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A"),
+              wed: t("inbox.day.wed_acc", "\u0441\u0435\u0440\u0435\u0434\u0443"),
+              thu: t("inbox.day.thu_acc", "\u0447\u0435\u0442\u0432\u0435\u0440"),
+              fri: t("inbox.day.fri_acc", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044E"),
+              sat: t("inbox.day.sat_acc", "\u0441\u0443\u0431\u043E\u0442\u0443"),
+              sun: t("inbox.day.sun_acc", "\u043D\u0435\u0434\u0456\u043B\u044E")
+            };
             days.forEach((d) => {
               routine[d] = [...blocks];
             });
             saveRoutine(routine);
             const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map((d) => dayLabels[d] || d).join(", ");
-            addInboxChatMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 ${label} (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+            addInboxChatMsg("agent", t("inbox.chat.routine_saved", "\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 {label} ({n} \u0431\u043B\u043E\u043A\u0456\u0432)", { label, n: blocks.length }));
           } else if (action.action === "save_memory_fact") {
             try {
               addFact({
@@ -15731,10 +15742,10 @@ ${list}
             if (created) {
               if (currentTab === "health") renderHealth();
               const items = getInbox();
-              items.unshift({ id: Date.now() + 1, text: `\u{1F3E5} \u0421\u0442\u0430\u043D: ${created.name}`, category: "note", ts: Date.now(), processed: true });
+              items.unshift({ id: Date.now() + 1, text: t("inbox.health.state_inbox", "\u{1F3E5} \u0421\u0442\u0430\u043D: {name}", { name: created.name }), category: "note", ts: Date.now(), processed: true });
               saveInbox(items);
               renderInbox();
-              addInboxChatMsg("agent", `\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${created.name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u0457. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.card_created", '\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u0457. {comment}', { name: created.name, comment: action.comment || "" }));
             } else {
               addInboxChatMsg("agent", t("inbox.chat.health_no_name", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u2014 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0430\u0437\u0432\u0430."));
             }
@@ -15753,17 +15764,17 @@ ${list}
             const updated = editHealthCardProgrammatic(action.card_id, updates);
             if (updated) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${updated.name}". ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.card_updated", '\u2713 \u041E\u043D\u043E\u0432\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}". {comment}', { name: updated.name, comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+              addInboxChatMsg("agent", t("inbox.health.card_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437."));
             }
           } else if (action.action === "delete_health_card") {
             const ok = deleteHealthCardProgrammatic(action.card_id);
             if (ok) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u{1F5D1}\uFE0F \u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (7 \u0434\u043D\u0456\u0432 \u0443 \u043A\u043E\u0448\u0438\u043A\u0443). ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.card_deleted", "\u{1F5D1}\uFE0F \u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (7 \u0434\u043D\u0456\u0432 \u0443 \u043A\u043E\u0448\u0438\u043A\u0443). {comment}", { comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
+              addInboxChatMsg("agent", t("inbox.health.card_not_found_del", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F."));
             }
           } else if (action.action === "add_medication") {
             const med = addMedicationToCard(action.card_id, {
@@ -15774,9 +15785,9 @@ ${list}
             });
             if (med) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u{1F48A} \u0414\u043E\u0434\u0430\u0432 ${med.name}${med.dosage ? " (" + med.dosage + ")" : ""}. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.med_added", "\u{1F48A} \u0414\u043E\u0434\u0430\u0432 {name}{dose}. {comment}", { name: med.name, dose: med.dosage ? " (" + med.dosage + ")" : "", comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u0442\u0432\u043E\u0440\u0438 \u0457\u0457 \u0441\u043F\u043E\u0447\u0430\u0442\u043A\u0443.");
+              addInboxChatMsg("agent", t("inbox.health.card_not_found_first", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u0442\u0432\u043E\u0440\u0438 \u0457\u0457 \u0441\u043F\u043E\u0447\u0430\u0442\u043A\u0443."));
             }
           } else if (action.action === "edit_medication") {
             const updates = {};
@@ -15787,56 +15798,56 @@ ${list}
             const med = editMedicationInCard(action.card_id, action.med_id, updates);
             if (med) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u0438\u0432 ${med.name}. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.med_updated", "\u2713 \u041E\u043D\u043E\u0432\u0438\u0432 {name}. {comment}", { name: med.name, comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456.");
+              addInboxChatMsg("agent", t("inbox.health.med_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456."));
             }
           } else if (action.action === "log_medication_dose") {
             const med = logMedicationDose(action.card_id, action.med_name);
             if (med) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u{1F48A}\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432 ${med.name}. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.med_taken", "\u{1F48A}\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432 {name}. {comment}", { name: med.name, comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456. \u0423\u0442\u043E\u0447\u043D\u0438 \u043D\u0430\u0437\u0432\u0443.");
+              addInboxChatMsg("agent", t("inbox.health.med_not_found_clarify", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456. \u0423\u0442\u043E\u0447\u043D\u0438 \u043D\u0430\u0437\u0432\u0443."));
             }
           } else if (action.action === "add_allergy") {
             const added = addAllergy(action.name, action.notes || "");
             if (added) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u{1F6A8} \u0414\u043E\u0434\u0430\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E: ${action.name}. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.allergy_added", "\u{1F6A8} \u0414\u043E\u0434\u0430\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E: {name}. {comment}", { name: action.name, comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", `\u0410\u043B\u0435\u0440\u0433\u0456\u044F "${action.name}" \u0432\u0436\u0435 \u0454 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443.`);
+              addInboxChatMsg("agent", t("inbox.health.allergy_dupe", '\u0410\u043B\u0435\u0440\u0433\u0456\u044F "{name}" \u0432\u0436\u0435 \u0454 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443.', { name: action.name }));
             }
           } else if (action.action === "delete_allergy") {
             const ok = deleteAllergy(action.allergy_id);
             if (ok) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u{1F5D1}\uFE0F \u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.allergy_deleted", "\u{1F5D1}\uFE0F \u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E. {comment}", { comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
+              addInboxChatMsg("agent", t("inbox.health.allergy_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F."));
             }
           } else if (action.action === "add_health_history_entry") {
             const entry = addHealthHistoryEntry(action.card_id, action.entry_type, action.text);
             if (entry) {
               if (currentTab === "health") renderHealth();
-              addInboxChatMsg("agent", `\u{1F4DD} \u0414\u043E\u0434\u0430\u0432 \u0437\u0430\u043F\u0438\u0441 \u0443 \u0456\u0441\u0442\u043E\u0440\u0456\u044E. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.health.history_added", "\u{1F4DD} \u0414\u043E\u0434\u0430\u0432 \u0437\u0430\u043F\u0438\u0441 \u0443 \u0456\u0441\u0442\u043E\u0440\u0456\u044E. {comment}", { comment: action.comment || "" }));
             } else {
-              addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443.");
+              addInboxChatMsg("agent", t("inbox.health.card_not_found_history", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443."));
             }
           } else if (action.action === "create_finance_category") {
             const existing = findFinCatByName(action.name);
             if (existing) {
-              addInboxChatMsg("agent", `\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F "${action.name}" \u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0454 \u0443 ${existing.type === "expense" ? "\u0432\u0438\u0442\u0440\u0430\u0442\u0430\u0445" : "\u0434\u043E\u0445\u043E\u0434\u0430\u0445"}.`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_dupe", '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F "{name}" \u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0454 \u0443 {bucket}.', { name: action.name, bucket: existing.type === "expense" ? t("inbox.fin.in_expenses", "\u0432\u0438\u0442\u0440\u0430\u0442\u0430\u0445") : t("inbox.fin.in_incomes", "\u0434\u043E\u0445\u043E\u0434\u0430\u0445") }));
             } else {
               const type = action.cat_type === "income" ? "income" : "expense";
               createFinCategory(type, { name: action.name, icon: action.icon, color: action.color, subcategories: action.subcategories });
               if (currentTab === "finance") renderFinance();
-              addInboxChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${action.name}" (${type === "expense" ? "\u0432\u0438\u0442\u0440\u0430\u0442\u0430" : "\u0434\u043E\u0445\u0456\u0434"}) \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_created", '\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}" ({type}) \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E. {comment}', { name: action.name, type: type === "expense" ? t("inbox.fin.expense", "\u0432\u0438\u0442\u0440\u0430\u0442\u0430") : t("inbox.fin.income", "\u0434\u043E\u0445\u0456\u0434"), comment: action.comment || "" }));
             }
           } else if (action.action === "edit_finance_category") {
             const found = findFinCatByName(action.current_name);
             if (!found) {
-              addInboxChatMsg("agent", `\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${action.current_name}".`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_not_found", '\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}".', { name: action.current_name }));
             } else {
               const updates = {};
               if (action.new_name) updates.name = action.new_name;
@@ -15857,42 +15868,42 @@ ${list}
                 if (changed > 0) saveFinance(txs);
               }
               if (currentTab === "finance") renderFinance();
-              addInboxChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${action.current_name}" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_updated", '\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E. {comment}', { name: action.current_name, comment: action.comment || "" }));
             }
           } else if (action.action === "delete_finance_category") {
             const found = findFinCatByName(action.name);
             if (!found) {
-              addInboxChatMsg("agent", `\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${action.name}".`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_not_found", '\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}".', { name: action.name }));
             } else {
               deleteFinCategory(found.cat.id);
               if (currentTab === "finance") renderFinance();
-              addInboxChatMsg("agent", `\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${action.name}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E. \u0421\u0442\u0430\u0440\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0437 \u0446\u0438\u043C \u0456\u043C'\u044F\u043C. ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_deleted", '\u2713 \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E. \u0421\u0442\u0430\u0440\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0437 \u0446\u0438\u043C \u0456\u043C\u02BC\u044F\u043C. {comment}', { name: action.name, comment: action.comment || "" }));
             }
           } else if (action.action === "merge_finance_categories") {
             const from = findFinCatByName(action.from_name);
             const to = findFinCatByName(action.to_name);
             if (!from || !to) {
-              addInboxChatMsg("agent", `\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "${action.from_name}" \u0430\u0431\u043E "${action.to_name}".`);
+              addInboxChatMsg("agent", t("inbox.fin.merge_not_found", '\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "{from}" \u0430\u0431\u043E "{to}".', { from: action.from_name, to: action.to_name }));
             } else if (from.type !== to.type) {
-              addInboxChatMsg("agent", `"${action.from_name}" \u0456 "${action.to_name}" \u043C\u0430\u044E\u0442\u044C \u0440\u0456\u0437\u043D\u0456 \u0442\u0438\u043F\u0438 (\u0432\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434) \u2014 \u043D\u0435 \u043C\u043E\u0436\u0443 \u043E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438.`);
+              addInboxChatMsg("agent", t("inbox.fin.merge_diff_types", '"{from}" \u0456 "{to}" \u043C\u0430\u044E\u0442\u044C \u0440\u0456\u0437\u043D\u0456 \u0442\u0438\u043F\u0438 (\u0432\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434) \u2014 \u043D\u0435 \u043C\u043E\u0436\u0443 \u043E\u0431\u02BC\u0454\u0434\u043D\u0430\u0442\u0438.', { from: action.from_name, to: action.to_name }));
             } else {
               const res = mergeFinCategories(from.cat.id, to.cat.id);
               if (res.ok) {
                 if (currentTab === "finance") renderFinance();
-                addInboxChatMsg("agent", `\u2713 \u041E\u0431'\u0454\u0434\u043D\u0430\u0432 "${res.from}" \u2192 "${res.to}". \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u043E ${res.txsMoved} \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439. ${action.comment || ""}`);
+                addInboxChatMsg("agent", t("inbox.fin.merged", '\u2713 \u041E\u0431\u02BC\u0454\u0434\u043D\u0430\u0432 "{from}" \u2192 "{to}". \u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u043E {n} \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439. {comment}', { from: res.from, to: res.to, n: res.txsMoved, comment: action.comment || "" }));
               } else {
-                addInboxChatMsg("agent", `\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438: ${res.reason}`);
+                addInboxChatMsg("agent", t("inbox.fin.merge_failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0431\u02BC\u0454\u0434\u043D\u0430\u0442\u0438: {reason}", { reason: res.reason }));
               }
             }
           } else if (action.action === "add_finance_subcategory") {
             const res = addFinSubcategory(action.category_name, action.subcategory);
             if (!res || !res.ok) {
-              addInboxChatMsg("agent", `\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "${action.category_name}".`);
+              addInboxChatMsg("agent", t("inbox.fin.cat_not_found", '\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}".', { name: action.category_name }));
             } else if (res.alreadyExists) {
-              addInboxChatMsg("agent", `\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F "${action.subcategory}" \u0432\u0436\u0435 \u0454 \u0443 "${action.category_name}".`);
+              addInboxChatMsg("agent", t("inbox.fin.subcat_dupe", '\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F "{sub}" \u0432\u0436\u0435 \u0454 \u0443 "{cat}".', { sub: action.subcategory, cat: action.category_name }));
             } else {
               if (currentTab === "finance") renderFinance();
-              addInboxChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u0432 "${action.subcategory}" \u0443 "${action.category_name}". ${action.comment || ""}`);
+              addInboxChatMsg("agent", t("inbox.fin.subcat_added", '\u2713 \u0414\u043E\u0434\u0430\u0432 "{sub}" \u0443 "{cat}". {comment}', { sub: action.subcategory, cat: action.category_name, comment: action.comment || "" }));
             }
           } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
@@ -15904,7 +15915,7 @@ ${list}
           const { text: replyText, chips } = _parseContentChips2(msg.content);
           if (replyText) addInboxChatMsg("agent", replyText, chips);
         } else if (msg.tool_calls.every((tc) => tc.function.name === "save_memory_fact")) {
-          addInboxChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
+          addInboxChatMsg("agent", t("inbox.chat.memorized", "\u0417\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0432 \u2713"));
         }
       } else if (msg.content) {
         const { text: replyText, chips } = _parseContentChips2(msg.content);
@@ -15925,7 +15936,7 @@ ${list}
   function showClarify(parsed, originalText) {
     clarifyParsed = parsed;
     clarifyOriginalText = originalText;
-    document.getElementById("clarify-question").textContent = parsed.question || "\u0423\u0442\u043E\u0447\u043D\u0438 \u0431\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430:";
+    document.getElementById("clarify-question").textContent = parsed.question || t("inbox.chat.clarify", "\u0423\u0442\u043E\u0447\u043D\u0438 \u0431\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430:");
     document.getElementById("clarify-input").value = "";
     const optEl = document.getElementById("clarify-options");
     optEl.innerHTML = (parsed.options || []).map((opt, i) => {
@@ -16000,7 +16011,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const { text: replyText, chips } = _parseContentChips2(msg.content);
           if (replyText) addInboxChatMsg("agent", replyText, chips);
         } else if (!primaryHandled) {
-          addInboxChatMsg("agent", "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0432 \u2713");
+          addInboxChatMsg("agent", t("inbox.chat.memorized", "\u0417\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0432 \u2713"));
         }
       } catch (e) {
       }
@@ -16093,12 +16104,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
         const res = addEventDedup(ev);
         if (!res.added) {
-          addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+          addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
           return;
         }
         const dateObj = new Date(eventDetected.date);
         const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-        addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
+        addInboxChatMsg("agent", t("inbox.event.added_simple", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 {day}', { title: ev.title, day: dayStr }));
         return;
       }
       const taskId = generateUUID();
@@ -16110,12 +16121,12 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       tasks.unshift(newTask);
       saveTasks(tasks);
       if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
-      undoRef = { type: "task", id: taskId, label: "\u0437\u0430\u0434\u0430\u0447\u0443" };
+      undoRef = { type: "task", id: taskId, label: t("inbox.type.task", "\u0437\u0430\u0434\u0430\u0447\u0443") };
     }
     if (cat === "note" || cat === "idea") {
       addNoteFromInbox(savedText, cat, folder);
       const allNotes = getNotes();
-      if (allNotes[0]) undoRef = { type: "note", id: allNotes[0].id, label: cat === "idea" ? "\u0456\u0434\u0435\u044E" : "\u043D\u043E\u0442\u0430\u0442\u043A\u0443" };
+      if (allNotes[0]) undoRef = { type: "note", id: allNotes[0].id, label: cat === "idea" ? t("inbox.type.idea_acc", "\u0456\u0434\u0435\u044E") : t("inbox.type.note", "\u043D\u043E\u0442\u0430\u0442\u043A\u0443") };
     }
     if (cat === "habit") {
       const habits = getHabits();
@@ -16160,7 +16171,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const habitId = Date.now();
         habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: "\u2B55", days, targetCount, createdAt: habitId });
         saveHabits(habits);
-        undoRef = { type: "habit", id: habitId, label: "\u0437\u0432\u0438\u0447\u043A\u0443" };
+        undoRef = { type: "habit", id: habitId, label: t("inbox.type.habit", "\u0437\u0432\u0438\u0447\u043A\u0443") };
       }
     }
     if (cat === "event") {
@@ -16197,7 +16208,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       setTimeout(() => addInboxChatMsg("agent", parsed.ask_after), 600);
     }
     if (undoRef) {
-      showUndoToast(`\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043E ${undoRef.label} \u2192 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438`, () => {
+      showUndoToast(t("inbox.undo.created", "\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043E {label} \u2192 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438", { label: undoRef.label }), () => {
         try {
           if (undoRef.type === "task") saveTasks(getTasks().filter((t2) => t2.id !== undoRef.id));
           else if (undoRef.type === "note") saveNotes(getNotes().filter((n) => n.id !== undoRef.id));
