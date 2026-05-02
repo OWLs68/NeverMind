@@ -42,7 +42,7 @@
 
 ## 2. AI tools (INBOX_TOOLS / UI_TOOLS / BRAIN_TOOLS)
 
-**Кількість:** 47 tools (31 у `src/ai/prompts.js` + 8 нових UI у `src/ai/ui-tools.js` + 8 health/memory/cat).
+**Кількість:** 60 tools (станом на EhxzJ 30.04: 50 INBOX_TOOLS у `src/ai/prompts.js` + 9 UI_TOOLS у `src/ai/ui-tools.js` + 1 BRAIN_TOOLS `post_chat_message`). Усі мають обовʼязкове перше поле `_reasoning_log:string` (V3 Фаза 1).
 
 ### При додаванні / зміні AI tool
 
