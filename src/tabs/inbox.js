@@ -557,7 +557,12 @@ ${aiContext}`;
             steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
             saveTasks(tasks);
             renderTasks();
-            addInboxChatMsg('agent', `✓ Додано ${steps.length} крок(и) до "${tasks[idx].title}"`);
+            const stepWord = steps.length === 1
+              ? t('inbox.step_one', 'крок')
+              : steps.length < 5
+                ? t('inbox.step_few', 'кроки')
+                : t('inbox.step_many', 'кроків');
+            addInboxChatMsg('agent', t('inbox.chat.steps_added', '✓ Додано {n} {word} до "{title}"', { n: steps.length, word: stepWord, title: tasks[idx].title }));
           } else {
             addInboxChatMsg('agent', t('inbox.chat.task_not_found', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.'));
           }
@@ -643,7 +648,7 @@ ${aiContext}`;
               const list = results.slice(0, 5).map(e => {
                 const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || 'запис').substring(0, 40);
                 const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
-                return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? 'сьогодні' : ago + ' дн. тому'})`;
+                return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? t('inbox.date.today', 'сьогодні') : t('inbox.time.days_ago', '{n} дн тому', { n: ago })})`;
               }).join('\n');
               addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме.`);
             }
