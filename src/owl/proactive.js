@@ -1164,6 +1164,13 @@ function _showInstantReaction(tab) {
 }
 
 window.addEventListener('nm-data-changed', (e) => {
+  // 4.40 — Reset ignored counter на будь-яку зміну даних (включно з 'chat').
+  // Раніше це був окремий listener — об'єднано щоб не дублювати реєстрацію.
+  try {
+    localStorage.setItem('nm_owl_ignored_msgs', '0');
+    localStorage.setItem('nm_owl_last_chip_click_ts', String(Date.now()));
+  } catch(_) {}
+
   const tab = currentTab || 'inbox';
 
   // Миттєва локальна реакція (без API)
@@ -1241,17 +1248,5 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
-
-// 4.40 — розширені сигнали активності юзера: будь-яка зміна даних (CRUD з Inbox,
-// edit задачі, додавання звички тощо) скидає лічильник ignored. Не полагодженими
-// лишаються випадки "тільки дивлюсь без дії" — для них допомагає знижений silence 2 год.
-try {
-  window.addEventListener('nm-data-changed', () => {
-    try {
-      localStorage.setItem('nm_owl_ignored_msgs', '0');
-      localStorage.setItem('nm_owl_last_chip_click_ts', String(Date.now()));
-    } catch(e) {}
-  });
-} catch(e) {}
 
 // No window globals needed — all consumed via imports
