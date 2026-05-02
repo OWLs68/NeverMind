@@ -48,7 +48,7 @@ Claude пушить у `claude/**` → auto-merge в `main` → esbuild збир
 
 Всі скіли у `.claude/commands/*.md`. Індекс з тригер-правилами → [`_ai-tools/SKILLS_PLAN.md`](_ai-tools/SKILLS_PLAN.md).
 
-**Базові:** `/start` `/finish` `/audit` `/fix B-XX` `/deploy` `/mockup` `/new-file` `/obsidian` `/gemini`
+**Базові:** `/start` `/finish` `/audit` `/fix B-XX` `/deploy` `/mockup` `/new-file` `/gemini`
 
 **Спеціалізовані:** `/ux-ui` `/prompt-engineer` `/pwa-ios-fix` `/supabase-prep` `/a11y-enforcer` `/gamification-engine` (⏸️ `/owl-motion` відкладено)
 

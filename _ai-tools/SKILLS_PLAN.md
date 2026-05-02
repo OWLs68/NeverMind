@@ -4,7 +4,7 @@
 >
 > **Як працює:** при старті сесії Claude читає цей файл. Коли Роман просить щось — Claude сканує запит на тригери. Якщо збіг → читає `.claude/commands/<name>.md` ДО початку роботи.
 >
-> **Статус 17.04.2026 (сесія gHCOh):** 7 скілів написані + 1 новий (`/refactor-large`) запланований. **Автоматична активація за тригерами нижче.**
+> **Статус 02.05.2026 (сесія bOqdI):** 16 скілів написані (`/start`, `/finish`, `/audit`, `/fix`, `/deploy`, `/mockup`, `/new-file`, `/gemini`, `/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/supabase-prep`, `/refactor-large`, `/a11y-enforcer`, `/gamification-engine`, `/owl-motion` ⏸️ відкладено). **Автоматична активація за тригерами нижче.**
 
 ---
 

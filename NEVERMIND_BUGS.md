@@ -27,17 +27,13 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (bOqdI + rKQPT). Старіші (LW3j8 + 6ANWm + Ph8ym) — будуть перенесені у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у `_ai-tools/CLEANUP_PLAN_bOqdI.md` Фаза 4 (новий чат)._
+_Зберігаються закриті у 2 останніх активних сесіях (bOqdI + rKQPT). Старіші перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у BqTWF 02.05.2026 Phase 5._
 
 _Сесія **bOqdI** (02.05.2026) — Council механізм у CLAUDE.md (5 паралельних агентів за тригер-словами + об'єктивними маркерами) + архівація `COUNCIL_CONCEPT.md` → `_archive/`. Конкретні B-XX баги не закривала. **3 архітектурні борги без B-XX закриті** (знайшов перший Council 5 агентів): (1) `evening.js / _rescheduleTask` (`19e112f`) — пряма запис `nm_tasks` через `localStorage.setItem` обходив канон `saveTasks()`; (2) `health.js / _syncMedicationToTask` (`25e60da`) — те саме + видалено застарілий коментар «lazy-import щоб уникнути циклічних залежностей» (у IIFE bundle циклу не існує); (3) `proactive.js` (`8c3fe8d`) — два окремі `addEventListener('nm-data-changed')` об'єднано в один. Це гігієна перед Pre-Migration Підсесією 3._
 
 _Сесія **rKQPT** (02.05.2026) — i18n міграція + 2 critical fixes + чернетка `/council`. **Закрила 1 critical bug:** `projects.js` ReferenceError при створенні нового проекту (`e64cf28`). Корінь: функція `getOWLPersonality` перенесена з `core.js` у `prompts.js` 17.04, у `projects.js` import не оновили → esbuild перейменував на `getOWLPersonality2` через колізію → ReferenceError. Створено `scripts/check-imports.js` як guard (інтегрований у `build.js`). Виправлено дефект самого guard (пропускав `t()` через `if (name.length<=1) continue;`)._
 
-_Сесія **6ANWm** (01.05.2026) — інфраструктурна. CLAUDE.md 561→94 + 4 RULES_*.md + видалено 2 шумних хуки. 1 підозра (хук дублів `exit 2`). **→ архів у CLEANUP Фаза 4.**_
-
-_Сесія **LW3j8** (01.05.2026) — інфраструктурна. HOT_RULES + самотест-хук + i18n notes/finance. 2 підозри (lazy t() + ризик legacy папок). **→ архів у CLEANUP Фаза 4.**_
-
-_Сесія **Ph8ym** (30.04.2026) — деталі вже у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Старіші сесії (LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 

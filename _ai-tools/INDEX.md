@@ -20,6 +20,7 @@
 | UI-задачі: вигляд замість назв коду / mockup перед кодом | `_ai-tools/RULES_UI.md` + `docs/DESIGN_SYSTEM.md` |
 | Великі файли (skeleton+Edit) / checkpoint-коміти / CACHE_NAME bump / i18n / AI tools | `_ai-tools/RULES_TECH.md` |
 | Болючі правила з прикладами ❌/✅ (8 шт) | `_ai-tools/HOT_RULES.md` |
+| Великі задачі / 5 паралельних поглядів агентів | `CLAUDE.md` секція 🧠 Council |
 | Уроки Claude — патерни, анти-патерни, рішення | `lessons.md` |
 
 ### Концепція і продукт
@@ -44,7 +45,7 @@
 | Що вже зроблено (хронологія) | `ROADMAP_DONE.md` |
 | Детальний план Вечора 2.0 | `docs/EVENING_2.0_PLAN.md` |
 | Детальний план Фінансів v2 (6 фаз) | `docs/FINANCE_V2_PLAN.md` |
-| Поточний рефакторинг документації (g05tu) | `_ai-tools/REFACTOR_PLAN.md` |
+| Поточний рефакторинг документації (g05tu) | `_archive/REFACTOR_PLAN.md` |
 
 ### Сесії і баги
 
@@ -92,7 +93,7 @@
 |---|---|
 | Екстрений скид (reset --hard + force push) | `docs/GIT_EMERGENCY.md` |
 | Історія інциденту v54-v130 | `docs/GIT_EMERGENCY.md` → "Історія події" |
-| Відкат рефакторингу g05tu | `docs/GIT_EMERGENCY.md` → "Відкат рефакторингу документації" + `_ai-tools/REFACTOR_PLAN.md` |
+| Відкат рефакторингу g05tu | `docs/GIT_EMERGENCY.md` → "Відкат рефакторингу документації" + `_archive/REFACTOR_PLAN.md` |
 
 ### Скіли Claude Code
 
@@ -166,7 +167,7 @@
 
 ### `.claude/`
 
-- `commands/` — всі скіли (`/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/refactor-large`, `/supabase-prep`, `/audit`, `/fix`, `/new-file`, `/start`, `/finish`, `/deploy`, `/mockup`, `/obsidian`, `/gemini`, `/a11y-enforcer`, `/gamification-engine`)
+- `commands/` — всі скіли (`/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/refactor-large`, `/supabase-prep`, `/audit`, `/fix`, `/new-file`, `/start`, `/finish`, `/deploy`, `/mockup`, `/gemini`, `/a11y-enforcer`, `/gamification-engine`)
 - `hooks/` — автоматичні нагадування:
   - `rules-reminder.sh` — нагадує правила CLAUDE.md тільки на сигнали болю Романа («простіше / коротше / не розумію»). Спрощено 6ANWm 01.05 — раніше було ще «кожне 5-те повідомлення» (це створювало шум коли все нормально).
   - `context-warning.sh` — попередження при 80/90% контексту
@@ -174,6 +175,12 @@
   - `md-index-reminder.sh` — додати новий .md у INDEX
   - `ai-tools-sync.sh` — оновити AI_TOOLS.md при зміні промптів
   - `skill-triggers.sh` — детектор ключових слів скілів + "Роби"
+  - `pre-push-check.js` — pre-push guard (блокує без CACHE bump при правці src/, ламається i18n білд)
+  - `pre-commit-testing-log.js` — блокує `feat:` коміти що чіпають src/ без `TESTING_LOG.md` у staged
+  - `check-estimate-without-read.js` — попереджає коли я даю оцінку часу/складності без Read коду
+  - `lesson-reminder.sh` — показує `lessons.md` пункти при відкритті файлу що згадується в уроках
+  - `i18n-reminder.sh` — PostToolUse hook: показує необгорнуті рядки у файлі який щойно правив
+  - `start-self-test.sh` — на `/start` показує 3 питання про найболючіші правила (свої слова, не цитати)
 - `settings.json` — конфіг хуків + permissions (deny git reset --hard, push --force, rm -rf)
 
 ---
@@ -186,7 +193,7 @@
 4. **Якщо не знайшов** → тільки тоді повне читання файлу через Read без offset.
 
 **Приклад економії:**
-- Було: Роман питає про свайп закриття модалки → читаю весь `CLAUDE.md` (94 рядки після рефакторингу 6ANWm 01.05) + `docs/DESIGN_SYSTEM.md` (930 рядків) = 1024.
+- Було: Роман питає про свайп закриття модалки → читаю весь `CLAUDE.md` (118 рядків — 94 з 6ANWm 01.05 + 24 секція Council у bOqdI 02.05) + `docs/DESIGN_SYSTEM.md` (930 рядків) = 1048.
 - З INDEX: "свайп" → `src/ui/swipe-delete.js` + `docs/DO_NOT_TOUCH.md` → читаю два файли по 50 рядків = 100.
 
 **Економія 88%.**
