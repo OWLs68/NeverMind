@@ -25,6 +25,7 @@ import { getHabits, getHabitLog, getHabitPct, getHabitStreak, processUniversalAc
 import { getNotes } from './notes.js';
 import { getMoments } from './evening.js';
 import { getProjects } from './projects.js';
+import { monthGenitive } from '../data/months.js';
 
 // === ME TAB CHAT ===
 let meChatHistory = [];
@@ -432,9 +433,8 @@ function _prevMonthKey() {
 
 function _prevMonthName() {
   const now = new Date();
-  const names = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return names[prev.getMonth()];
+  return monthGenitive(prev.getMonth());
 }
 
 async function generateMonthlyReport() {

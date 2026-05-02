@@ -29,7 +29,9 @@ const BASELINE_PATH = path.resolve(__dirname, '..', 'i18n-baseline.json');
 
 // === WHITELIST ===
 // Директорії що ігноруються повністю (AI-промпти лишаються українськими)
-const DIR_WHITELIST = ['ai', 'owl'];
+// 'data' — канонічні довідники з fallback-масивами (months.js, notes-categories.js
+// тощо). Самі масиви українською — це fallback що замінюється через t() у getter'ах.
+const DIR_WHITELIST = ['ai', 'owl', 'data'];
 
 // Виклики у яких літерал НЕ рахується як необгорнутий
 // Перевірка: чи передують літералу один з цих pattern'ів (через дужки враховуючи depth)

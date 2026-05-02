@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips } from '../core/utils.js';
+import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
@@ -557,7 +557,12 @@ ${aiContext}`;
             steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
             saveTasks(tasks);
             renderTasks();
-            addInboxChatMsg('agent', `✓ Додано ${steps.length} крок(и) до "${tasks[idx].title}"`);
+            const stepWord = steps.length === 1
+              ? t('inbox.step_one', 'крок')
+              : steps.length < 5
+                ? t('inbox.step_few', 'кроки')
+                : t('inbox.step_many', 'кроків');
+            addInboxChatMsg('agent', t('inbox.chat.steps_added', '✓ Додано {n} {word} до "{title}"', { n: steps.length, word: stepWord, title: tasks[idx].title }));
           } else {
             addInboxChatMsg('agent', t('inbox.chat.task_not_found', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.'));
           }
@@ -643,7 +648,7 @@ ${aiContext}`;
               const list = results.slice(0, 5).map(e => {
                 const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || 'запис').substring(0, 40);
                 const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
-                return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? 'сьогодні' : ago + ' дн. тому'})`;
+                return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? t('inbox.date.today', 'сьогодні') : t('inbox.time.days_ago', '{n} дн тому', { n: ago })})`;
               }).join('\n');
               addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме.`);
             }
@@ -980,13 +985,13 @@ async function sendClarifyText() {
 // ============================================================
 function _detectEventDate(text) {
   if (!text) return null;
-  const t = text.toLowerCase();
+  const lower = text.toLowerCase();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
 
   // Паттерн 1: "20го", "20-го", "20 числа"
-  const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+  const dayMatch = lower.match(/(\d{1,2})\s*(?:-?го|числа)/);
   if (dayMatch) {
     const day = parseInt(dayMatch[1]);
     if (day >= 1 && day <= 31) {
@@ -1001,7 +1006,7 @@ function _detectEventDate(text) {
 
   // Паттерн 2: "15 травня", "3 січня"
   const monthNames = ['січн','лют','берез','квітн','травн','червн','липн','серпн','вересн','жовтн','листопад','грудн'];
-  const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+  const monthMatch = lower.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
   if (monthMatch) {
     const day = parseInt(monthMatch[1]);
     const mIdx = monthNames.findIndex(m => monthMatch[2].toLowerCase().startsWith(m));
@@ -1017,18 +1022,18 @@ function _detectEventDate(text) {
 
 export function _detectEventFromTask(title) {
   if (!title) return null;
-  const t = title.toLowerCase();
+  const lower = title.toLowerCase();
 
   // Слова-маркери що це ПОДІЯ а не задача (дія)
   const eventMarkers = /приїзд|приїжд|приліт|прибут|зустріч(?!ай)|візит|прийом|рейс|концерт|виставк|свято|день народження|ювілей|весілля|іспит|екзамен|співбесід/i;
-  if (!eventMarkers.test(t)) return null;
+  if (!eventMarkers.test(lower)) return null;
 
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth(); // 0-based
 
   // Паттерн 1: "20го", "20-го", "20 числа"
-  const dayMatch = t.match(/(\d{1,2})\s*(?:-?го|числа)/);
+  const dayMatch = lower.match(/(\d{1,2})\s*(?:-?го|числа)/);
   if (dayMatch) {
     const day = parseInt(dayMatch[1]);
     if (day >= 1 && day <= 31) {
@@ -1044,7 +1049,7 @@ export function _detectEventFromTask(title) {
 
   // Паттерн 2: "15 травня", "3 січня"
   const monthNames = ['січн','лют','берез','квітн','травн','червн','липн','серпн','вересн','жовтн','листопад','грудн'];
-  const monthMatch = t.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+  const monthMatch = lower.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
   if (monthMatch) {
     const day = parseInt(monthMatch[1]);
     const mIdx = monthNames.findIndex(m => monthMatch[2].toLowerCase().startsWith(m));

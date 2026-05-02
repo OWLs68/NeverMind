@@ -144,11 +144,15 @@ function main() {
       const name = m[1];
       if (seen.has(name)) continue;
       seen.add(name);
-      if (name.length <= 1) continue;
       if (imported.has(name)) continue;
       if (localDecl.has(name)) continue;
       if (ownExports.has(name)) continue;
-      // Зарезервоване слово / built-in
+      // Не експорт з src/ → точно не наша функція (built-in/lambda param/etc).
+      // ВАЖЛИВО: цю перевірку не можна викидати на основі довжини імені —
+      // `t()` (1 літера) є експортом з utils.js, попередня версія guard
+      // пропускала виклики `t()` через `name.length <= 1` (виявлено rKQPT
+      // 01.05.2026 під час ревізії — 3 батчі i18n у inbox.js пройшли guard
+      // хоча t() у файлі викликалося без import).
       if (!allExportedNames.has(name)) continue;
       // Це експорт з ІНШОГО файлу `src/` — а у нас імпорту нема
       // Знайдемо у якому файлі експортовано (для повідомлення)
