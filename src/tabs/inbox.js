@@ -597,7 +597,7 @@ ${aiContext}`;
           }
           const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
-          if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); continue; }
+          if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][dateObj.getMonth()]}`;
@@ -613,7 +613,7 @@ ${aiContext}`;
           const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
           if (q === 'all') {
             if (filtered.length === 0) {
-              addInboxChatMsg('agent', 'Кеш видалених порожній. Записи зберігаються 7 днів.');
+              addInboxChatMsg('agent', t('inbox.chat.trash_empty', 'Кеш видалених порожній. Записи зберігаються 7 днів.'));
             } else {
               filtered.forEach(t => restoreFromTrash(t.deletedAt));
               addInboxChatMsg('agent', `✅ Відновив ${filtered.length} записів`);
@@ -621,7 +621,7 @@ ${aiContext}`;
           } else if (q === 'last') {
             const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
             if (!last) {
-              addInboxChatMsg('agent', 'Нічого не знайшов в кеші видалених.');
+              addInboxChatMsg('agent', t('inbox.chat.trash_no_match', 'Нічого не знайшов в кеші видалених.'));
             } else {
               const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || 'запис';
               restoreFromTrash(last.deletedAt);
@@ -634,7 +634,7 @@ ${aiContext}`;
               return words.some(w => txt.includes(w));
             }).sort((a, b) => b.deletedAt - a.deletedAt);
             if (results.length === 0) {
-              addInboxChatMsg('agent', 'Не знайшов нічого схожого в кеші видалених.');
+              addInboxChatMsg('agent', t('inbox.chat.trash_no_similar', 'Не знайшов нічого схожого в кеші видалених.'));
             } else if (results.length <= 5) {
               results.forEach(t => restoreFromTrash(t.deletedAt));
               const labels = results.map(e => `${typeIcon[e.type] || '•'} ${(e.item.text || e.item.title || e.item.name || '').substring(0, 35)}`).join('\n');
@@ -688,7 +688,7 @@ ${aiContext}`;
             const items = getInbox(); items.unshift({ id: Date.now() + 1, text: `🏥 Стан: ${created.name}`, category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
             addInboxChatMsg('agent', `🏥 Створив картку "${created.name}" у Здоров'ї. ${action.comment || ''}`);
           } else {
-            addInboxChatMsg('agent', 'Не вдалось створити картку — потрібна назва.');
+            addInboxChatMsg('agent', t('inbox.chat.health_no_name', 'Не вдалось створити картку — потрібна назва.'));
           }
         } else if (action.action === 'edit_health_card') {
           const updates = {};
