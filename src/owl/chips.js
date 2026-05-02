@@ -6,18 +6,20 @@
 import { switchTab, showToast, currentTab } from '../core/nav.js';
 import { openChatBar, saveChatMsg } from '../ai/core.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
-import { sendToAI } from '../tabs/inbox.js';
+import { sendToAI, addInboxChatMsg } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
 import { downgradeBriefingPriority } from './unified-storage.js';
 import { renderTabBoard } from './board.js';
-import { sendNotesBarMessage } from '../tabs/notes.js';
+import { sendNotesBarMessage, addNotesChatMsg } from '../tabs/notes.js';
 import { sendFinanceBarMessage } from '../tabs/finance.js';
-import { sendEveningBarMessage } from '../tabs/evening-chat.js';
-import { sendMeChatMessage } from '../tabs/me.js';
-import { sendHealthBarMessage } from '../tabs/health.js';
-import { sendProjectsBarMessage } from '../tabs/projects.js';
+import { addFinanceChatMsg } from '../tabs/finance-chat.js';
+import { sendEveningBarMessage, addEveningBarMsg } from '../tabs/evening-chat.js';
+import { sendMeChatMessage, addMeChatMsg } from '../tabs/me.js';
+import { sendHealthBarMessage, addHealthChatMsg } from '../tabs/health.js';
+import { sendProjectsBarMessage, addProjectsChatMsg } from '../tabs/projects.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, getQuitStatus } from '../tabs/habits.js';
+import { applyClarifyChoice } from './clarify-guard.js';
 
 // === ВАЛІДНІ ЦІЛІ НАВІГАЦІЇ ===
 const VALID_NAV_TARGETS = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
@@ -191,9 +193,14 @@ export function renderChips(containerEl, chips, tab, options = {}) {
 
   const chipsHTML = normChips.map(c => {
     const label = c.label || '';
-    const action = c.action === 'nav' ? 'nav' : 'chat';
+    // 'clarify_save' — новий тип (BqTWF→mUpS8 02.05): локальне виконання save_note/save_moment
+    // через payload без round-trip до AI. Запобігає галюцинаціям типу B-115.
+    const action = c.action === 'nav' ? 'nav'
+                 : c.action === 'clarify_save' ? 'clarify_save'
+                 : 'chat';
     const target = c.target || '';
-    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
+    const payload = c.payload ? JSON.stringify(c.payload) : '';
+    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${escapeHtml(payload)}">${escapeHtml(label)}</div>`;
   });
 
   if (options.showSpeak) {
@@ -220,6 +227,7 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     const text = chipEl.dataset.chipText || '';
     const action = chipEl.dataset.chipAction;
     const target = chipEl.dataset.chipTarget;
+    const payloadRaw = chipEl.dataset.chipPayload || '';
 
     // Трекінг: записуємо клік
     trackChipClick(action, text);
@@ -237,15 +245,25 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     }
 
     // Стандартна обробка
-    handleChipClick(tab, text, action, target);
+    handleChipClick(tab, text, action, target, payloadRaw);
   };
   containerEl.addEventListener('click', containerEl._chipClickHandler);
 }
 
 // ============================================================
 // handleChipClick — головна логіка обробки кліку на чіп
+// payloadRaw — JSON-строка з payload для action='clarify_save' (опціонально)
 // ============================================================
-export function handleChipClick(tab, text, action, target) {
+export function handleChipClick(tab, text, action, target, payloadRaw) {
+  // 0. Clarify-чіп (mUpS8 02.05) — локальне виконання вибору юзера
+  // через save_note/save_moment без round-trip до AI. Запобігає B-115.
+  if (action === 'clarify_save') {
+    let payload = {};
+    try { payload = payloadRaw ? JSON.parse(payloadRaw) : {}; } catch {}
+    handleClarifySaveChip(tab, target, payload);
+    return;
+  }
+
   // Спеціальний target:'calendar' → відкриваємо модалку календаря + пульсація
   // (rJYkw 21.04.2026). Календар не є вкладкою — це модалка, тому окремо.
   if (action === 'nav' && target === 'calendar') {
@@ -372,6 +390,27 @@ function handleCompletionChip(text, tab) {
   }
 
   return false;
+}
+
+// ============================================================
+// handleClarifySaveChip — обробка кліку на чіп clarify_save (mUpS8 02.05).
+// Локально виконує save_note/save_moment/(none) у потрібному чаті без AI.
+// Запобігає B-115 — навіть якщо AI вгадало неправильно, юзер одним тапом
+// скеровує запис куди треба.
+// ============================================================
+const _CLARIFY_ADDMSG = {
+  inbox:    (role, text) => addInboxChatMsg(role, text),
+  notes:    (role, text) => addNotesChatMsg(role, text),
+  health:   (role, text) => addHealthChatMsg(role, text),
+  finance:  (role, text) => addFinanceChatMsg(role, text),
+  evening:  (role, text) => addEveningBarMsg(role, text),
+  projects: (role, text) => addProjectsChatMsg(role, text),
+  me:       (role, text) => addMeChatMsg(role, text),
+};
+
+function handleClarifySaveChip(tab, target, payload) {
+  const addMsg = _CLARIFY_ADDMSG[tab] || _CLARIFY_ADDMSG.inbox;
+  applyClarifyChoice(target, payload, tab, addMsg);
 }
 
 // ============================================================

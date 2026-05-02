@@ -12,6 +12,7 @@ import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHi
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
@@ -489,6 +490,21 @@ ${aiContext}`;
 
   try {
     if (msg.tool_calls && msg.tool_calls.length > 0) {
+      // GUARD (mUpS8 02.05): неоднозначний минулий час або голий іменник → інлайн-чіпи
+      // замість виконання tool_calls. Перехоплює галюцинації типу B-115
+      // ("Відкрив автомийку" → дубль проекту з невірною назвою + create_event).
+      // fromChip пропускаємо — це вже вибір юзера через chip click.
+      if (!fromChip) {
+        const guard = shouldClarify(text, msg.tool_calls, 'inbox');
+        if (guard) {
+          addInboxChatMsg('agent', guard.question, guard.chips);
+          aiLoading = false;
+          btn.disabled = false;
+          btn.innerHTML = SEND_SVG;
+          return;
+        }
+      }
+
       // === TOOL CALLING DISPATCH ===
       for (const tc of msg.tool_calls) {
         const args = JSON.parse(tc.function.arguments);

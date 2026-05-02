@@ -234,6 +234,23 @@ export const REMINDER_RULES = `ПРАВИЛО НАГАДУВАНЬ (однако
 - МАПА ЧАСУ: зранку/вранці/з ранку/ранком=08:00, пізніше зранку=09:00, опівдні=12:00, вдень=13:00, після обіду=14:00, ввечері=18:00, пізно ввечері=21:00, перед сном=22:00, вночі=02:00. НЕ обирай 05:00-06:00 якщо юзер не сказав явно "о 5 ранку".
 - Викликай set_reminder РІВНО ОДИН раз за запит. Якщо юзер підтверджує ("Ок", "Добре", "Зрозумів", "Поняв") — НЕ створюй ще одне нагадування, просто підтверджуй текстом.`;
 
+// CLARIFY_INLINE_RULES — спільний блок (mUpS8 02.05) щоб AI НЕ галюцинував
+// тип запису для неоднозначних повідомлень. Замість здогадки — питання + чіпи.
+// Працює у парі з кодовим guard `shouldClarify` (src/owl/clarify-guard.js)
+// як safety net якщо модель проігнорує промпт.
+export const CLARIFY_INLINE_RULES = `УТОЧНЕННЯ ПЕРЕД ЗБЕРЕЖЕННЯМ (інлайн-чіпи замість здогадки):
+- Якщо повідомлення коротке (≤3 слова) АБО МИНУЛИЙ час дієслова без суми/дати без явної команди ("Відкрив автомийку", "Запустив сайт", "Купив костюм") АБО голий іменник без дієслова і числа ("Хімчистка", "Олег") — НЕ виклик save_task/save_note/save_moment/create_project/create_event одразу. Замість цього напиши коротке питання у content + інлайн-чіпи варіантів збереження.
+- Формат чіпа: {"label":"текст","action":"clarify_save","target":"save_note|save_moment|none","payload":{"text":"оригінал"}}
+- Стандартний набір (3 чіпи): [{"label":"У щоденник","action":"clarify_save","target":"save_note","payload":{"text":"<text>","folder":"Особисте"}},{"label":"Як момент","action":"clarify_save","target":"save_moment","payload":{"text":"<text>"}},{"label":"Не зберігати","action":"clarify_save","target":"none","payload":{}}]
+- Приклад content: "\\"Відкрив автомийку\\" — куди це записати? {\\"chips\\":[{\\"label\\":\\"У щоденник\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"save_note\\",\\"payload\\":{\\"text\\":\\"Відкрив автомийку\\",\\"folder\\":\\"Особисте\\"}},{\\"label\\":\\"Як момент\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"save_moment\\",\\"payload\\":{\\"text\\":\\"Відкрив автомийку\\"}},{\\"label\\":\\"Не зберігати\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"none\\",\\"payload\\":{}}]}"
+- ВИНЯТКИ (зберігай без уточнення, як зараз):
+  - Явна команда: "створи/додай/запиши/нагадай/постав" → tool за змістом.
+  - Сума з валютою → save_finance.
+  - Дата/час у тексті → create_event або save_task.
+  - Дієслово в інфінітиві ("купити", "зателефонувати") → save_task.
+  - "Запам'ятай"/"запиши що"/"знай що" → save_memory_fact.
+- ЦЕ НЕ ПРО clarify-tool — НЕ викликай tool clarify (він через модалку). Інлайн-чіпи у content.`;
+
 // V3 Фаза 1: спільний блок про обовʼязковий _reasoning_log — інжектиться у всі промпти що використовують tools.
 export const REASONING_LOG_RULE = `⚠️ ПОЛЕ "_reasoning_log" — ОБОВʼЯЗКОВЕ У КОЖНОМУ TOOL CALL:
 Перед параметрами tool — заповни _reasoning_log одним-двома реченнями: чому саме цей tool, які сутності з контексту врахував (id-маркери [task_X], [habit_Y], [event_Z]), які ризики/альтернативи розглянув. Це твоє внутрішнє мислення (zero-shot CoT), юзер його не побачить. ЗАБОРОНЕНО залишати це поле порожнім або писати "ok"/"done"/"-". Приклад: "_reasoning_log": "Юзер каже 'забудь про прийом' — у контексті є [event_42] 'Прийом у лікаря завтра'. Це delete_event попри те що ми у чаті Задач — сутність глобальна. complete_task відкинуто бо це не задача."
@@ -290,6 +307,8 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 ГРАМАТИКА: Якщо бачиш помилку або опечатку — виправляй в тексті без питань.
 
 ${REMINDER_RULES}
+
+${CLARIFY_INLINE_RULES}
 
 ПРІОРИТЕТ ПЕРЕВІРКИ (завжди перевіряй СПОЧАТКУ):
 1. Чи це ВИКОНАННЯ звички/задачі зі списку? → complete_habit / complete_task. "Все готово", "зробив все" після переліку → передай ВСІ ID
@@ -505,6 +524,8 @@ export function getEveningChatSystem() {
 
 ${REMINDER_RULES}
 
+${CLARIFY_INLINE_RULES}
+
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools — їх ~45 у доступі):
 - Задача → save_task / complete_task / edit_task / delete_task / reopen_task / add_step
 - Подія → create_event / edit_event / delete_event
@@ -676,6 +697,8 @@ ${contextBlock}
 
 ${REMINDER_RULES}
 
+${CLARIFY_INLINE_RULES}
+
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools):
 - Кроки → complete_project_step / add_project_step
 - Прогрес → update_project_progress (0-100)
@@ -718,6 +741,8 @@ export function getFinanceChatSystem({ currency, budget, txSummary, expenseCats,
 
 ${REMINDER_RULES}
 
+${CLARIFY_INLINE_RULES}
+
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools):
 - Витрата/дохід → save_finance (fin_type="expense" або "income")
 - Змінити операцію → update_transaction
@@ -754,6 +779,8 @@ export function getHealthChatSystem(activeCard) {
 - ЗАБОРОНЕНО давати альтернативи призначеному лікарем лікуванню
 
 ${REMINDER_RULES}
+
+${CLARIFY_INLINE_RULES}
 
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools — їх ~46 у доступі):
 - Алергії → add_allergy / delete_allergy
