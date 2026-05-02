@@ -1596,6 +1596,78 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/owl/clarify-guard.js
+  function shouldClarify(text, toolCalls, tab) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return null;
+    if (!text || typeof text !== "string") return null;
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return null;
+    const firstName = toolCalls[0]?.function?.name;
+    if (!SUSPICIOUS_TOOLS.has(firstName)) return null;
+    if (COMMAND_RE.test(trimmed)) return null;
+    if (HAS_NUMBER_RE.test(trimmed)) return null;
+    const isPastTense = PAST_VERBS_RE.test(trimmed);
+    const isBareNoun = BARE_NOUN_RE.test(trimmed) && !PAST_VERBS_RE.test(trimmed);
+    if (!isPastTense && !isBareNoun) return null;
+    const question = isBareNoun ? t("clarify.where_save_noun", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed }) : t("clarify.where_save_past", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed });
+    const chips = [
+      {
+        label: t("clarify.chip.note", "\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A"),
+        action: "clarify_save",
+        target: "save_note",
+        payload: { text: trimmed, folder: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435" }
+      },
+      {
+        label: t("clarify.chip.moment", "\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442"),
+        action: "clarify_save",
+        target: "save_moment",
+        payload: { text: trimmed }
+      },
+      {
+        label: t("clarify.chip.skip", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438"),
+        action: "clarify_save",
+        target: "none",
+        payload: {}
+      }
+    ];
+    return { question, chips };
+  }
+  function applyClarifyChoice(target, payload, tab, addMsg) {
+    if (target === "none" || !target) {
+      addMsg("agent", t("clarify.skipped", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E."));
+      return true;
+    }
+    const fakeToolCall = {
+      function: {
+        name: target,
+        arguments: JSON.stringify(payload || {})
+      }
+    };
+    const ok = dispatchChatToolCalls([fakeToolCall], addMsg, payload?.text || "");
+    if (!ok) {
+      addMsg("agent", t("clarify.failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438."));
+    }
+    return ok;
+  }
+  var PAST_VERBS_RE, BARE_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
+  var init_clarify_guard = __esm({
+    "src/owl/clarify-guard.js"() {
+      init_utils();
+      init_tool_dispatcher();
+      PAST_VERBS_RE = /\b(відкрив|купив|зробив|написав|зателефонував|з[’']їв|сходив|помив|поправ|виправ|запустив|створив|закінчив|почав|поставив|віддав|отримав|продав|замовив|скачав|встановив|подивився|прочитав|випив|забув|знайшов|вивчив|відремонтував|посадив|зустрів|приготував|зварив|спік|закрив|відкупив|оновив|вилікував)\b/i;
+      BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\- ]{2,30}$/;
+      COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|купи|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
+      HAS_NUMBER_RE = /\d/;
+      SUSPICIOUS_TOOLS = /* @__PURE__ */ new Set([
+        "create_project",
+        "create_event",
+        "save_task",
+        "save_moment",
+        "save_note"
+      ]);
+    }
+  });
+
   // src/tabs/health.js
   function _migrateHealthCard(card) {
     let changed = false;
@@ -2921,6 +2993,12 @@ ${lines.join("\n")}`;
     try {
       const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS, "health-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "health");
+        if (guard) {
+          addHealthChatMsg("agent", guard.question, false, guard.chips);
+          healthBarLoading = false;
+          return;
+        }
         dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);
         if (msg.content) {
           const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
@@ -2960,6 +3038,7 @@ ${lines.join("\n")}`;
       init_trash();
       init_core();
       init_tool_dispatcher();
+      init_clarify_guard();
       init_prompts();
       init_chips();
       init_notes();
@@ -4519,6 +4598,12 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     try {
       const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS, "projects-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "projects");
+        if (guard) {
+          addProjectsChatMsg("agent", guard.question, false, guard.chips);
+          projectsBarLoading = false;
+          return;
+        }
         dispatchChatToolCalls(msg.tool_calls, addProjectsChatMsg, text);
         if (msg.content) {
           const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
@@ -4559,6 +4644,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       init_core();
       init_prompts();
       init_tool_dispatcher();
+      init_clarify_guard();
       init_chips();
       init_inbox();
       init_tasks();
@@ -6298,6 +6384,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     try {
       const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS, "finance-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "finance");
+        if (guard) {
+          addFinanceChatMsg("agent", guard.question, false, guard.chips);
+          financeBarLoading = false;
+          return;
+        }
         dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
         for (const tc of msg.tool_calls) {
           if (tc.function.name === "save_finance") {
@@ -6350,6 +6442,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_core();
       init_prompts();
       init_tool_dispatcher();
+      init_clarify_guard();
       init_proactive();
       init_chips();
       init_finance();
@@ -8625,6 +8718,12 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     try {
       const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS, "notes-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "notes");
+        if (guard) {
+          addNotesChatMsg("agent", guard.question, false, guard.chips);
+          notesBarLoading = false;
+          return;
+        }
         dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
         if (msg.content) {
           const { text: rt, chips } = parseContentChips(msg.content);
@@ -8735,6 +8834,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_chips();
       init_prompts();
       init_tool_dispatcher();
+      init_clarify_guard();
       init_swipe_delete();
       init_notes_categories();
       init_habits();
@@ -9596,6 +9696,12 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         return;
       }
       if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "evening");
+        if (guard) {
+          addEveningBarMsg("agent", guard.question, false, guard.chips);
+          eveningBarLoading = false;
+          return;
+        }
         for (const tc of msg.tool_calls) {
           let args = {};
           try {
@@ -9628,6 +9734,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_core();
       init_unread_badge();
       init_chips();
+      init_clarify_guard();
       init_prompts();
       init_ui_tools();
       init_evening_actions();
@@ -9671,6 +9778,11 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     const loadEl = document.getElementById(loadId);
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       if (loadEl) loadEl.remove();
+      const guard = shouldClarify(text, msg.tool_calls, "me");
+      if (guard) {
+        addMeChatMsg("agent", guard.question, false, "", guard.chips);
+        return;
+      }
       dispatchChatToolCalls(msg.tool_calls, (r, t2) => addMeChatMsg(r, t2), text);
       if (msg.content) {
         const { text: rt, chips } = parseContentChips(msg.content);
@@ -10241,6 +10353,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_chips();
       init_prompts();
       init_tool_dispatcher();
+      init_clarify_guard();
       init_tasks();
       init_habits();
       init_notes();
@@ -10374,9 +10487,10 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
     const chipsHTML = normChips.map((c) => {
       const label = c.label || "";
-      const action = c.action === "nav" ? "nav" : "chat";
+      const action = c.action === "nav" ? "nav" : c.action === "clarify_save" ? "clarify_save" : "chat";
       const target = c.target || "";
-      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}">${escapeHtml(label)}</div>`;
+      const payload = c.payload ? JSON.stringify(c.payload) : "";
+      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${escapeHtml(payload)}">${escapeHtml(label)}</div>`;
     });
     if (options.showSpeak) {
       chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
@@ -10396,6 +10510,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const text = chipEl.dataset.chipText || "";
       const action = chipEl.dataset.chipAction;
       const target = chipEl.dataset.chipTarget;
+      const payloadRaw = chipEl.dataset.chipPayload || "";
       trackChipClick(action, text);
       chipEl.style.transition = "opacity 0.2s, transform 0.2s";
       chipEl.style.opacity = "0";
@@ -10405,11 +10520,20 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         options.onChipClick(text, action, target, chipEl);
         return;
       }
-      handleChipClick(tab, text, action, target);
+      handleChipClick(tab, text, action, target, payloadRaw);
     };
     containerEl.addEventListener("click", containerEl._chipClickHandler);
   }
-  function handleChipClick(tab, text, action, target) {
+  function handleChipClick(tab, text, action, target, payloadRaw) {
+    if (action === "clarify_save") {
+      let payload = {};
+      try {
+        payload = payloadRaw ? JSON.parse(payloadRaw) : {};
+      } catch {
+      }
+      handleClarifySaveChip(tab, target, payload);
+      return;
+    }
     if (action === "nav" && target === "calendar") {
       if (typeof window.handleUITool === "function") {
         window.handleUITool("open_calendar", { highlight_events: true });
@@ -10503,6 +10627,10 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
     return false;
   }
+  function handleClarifySaveChip(tab, target, payload) {
+    const addMsg = _CLARIFY_ADDMSG[tab] || _CLARIFY_ADDMSG.inbox;
+    applyClarifyChoice(target, payload, tab, addMsg);
+  }
   function sendChipToChat(tab, text) {
     const barTab = tab === "inbox" ? "inbox" : tab || "inbox";
     openChatBar(barTab);
@@ -10532,7 +10660,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       }
     }));
   }
-  var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED;
+  var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED, _CLARIFY_ADDMSG;
   var init_chips = __esm({
     "src/owl/chips.js"() {
       init_nav();
@@ -10544,12 +10672,14 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_board();
       init_notes();
       init_finance();
+      init_finance_chat();
       init_evening_chat();
       init_me();
       init_health();
       init_projects();
       init_tasks();
       init_habits();
+      init_clarify_guard();
       VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
       CHIP_PROMPT_RULES = `- G11 (\u0417\u0410\u0412\u0416\u0414\u0418): chips \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456 (\u043C\u0456\u043D\u0456\u043C\u0443\u043C 1, \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3). \u042F\u043A\u0449\u043E \u0441\u0442\u0430\u0432\u0438\u0448 \u044E\u0437\u0435\u0440\u0443 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044F\u043A \u0447\u0456\u043F\u0438. \u041D\u0435 \u0437\u0430\u043B\u0438\u0448\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u0456\u043D\u043F\u0443\u0442\u043E\u043C. \u041F\u0438\u0442\u0430\u043D\u043D\u044F \u0431\u0435\u0437 \u0447\u0456\u043F\u0456\u0432 = \u0431\u0430\u0433. \u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F?" \u2192 \u0442\u0435\u043A\u0441\u0442 "\u041A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u2014 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C\u0438?" + chips: ["\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438", "\u041D\u0435 \u0442\u0440\u0435\u0431\u0430"].
 - chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
@@ -10582,6 +10712,15 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       CHIP_JSON_FORMAT = `{"text":"\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F","topic":"\u043A\u043E\u0440\u043E\u0442\u043A\u0430_\u0442\u0435\u043C\u0430_\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0435\u044E","priority":"critical|important|normal","chips":[{"label":"\u0442\u0435\u043A\u0441\u0442","action":"nav","target":"tasks"},{"label":"\u0442\u0435\u043A\u0441\u0442","action":"chat"}],"entityRefs":["task_888","habit_42"]}`;
       NM_CHIP_STATS_KEY = "nm_chip_stats";
       CHIP_STATS_MAX_CLICKED = 50;
+      _CLARIFY_ADDMSG = {
+        inbox: (role, text) => addInboxChatMsg(role, text),
+        notes: (role, text) => addNotesChatMsg(role, text),
+        health: (role, text) => addHealthChatMsg(role, text),
+        finance: (role, text) => addFinanceChatMsg(role, text),
+        evening: (role, text) => addEveningBarMsg(role, text),
+        projects: (role, text) => addProjectsChatMsg(role, text),
+        me: (role, text) => addMeChatMsg(role, text)
+      };
       window.owlChipToChat = handleChipClick;
     }
   });
@@ -10751,6 +10890,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
 
 ${REMINDER_RULES}
 
+${CLARIFY_INLINE_RULES}
+
 \u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools \u2014 \u0457\u0445 ~45 \u0443 \u0434\u043E\u0441\u0442\u0443\u043F\u0456):
 - \u0417\u0430\u0434\u0430\u0447\u0430 \u2192 save_task / complete_task / edit_task / delete_task / reopen_task / add_step
 - \u041F\u043E\u0434\u0456\u044F \u2192 create_event / edit_event / delete_event
@@ -10905,6 +11046,8 @@ ${contextBlock}
 
 ${REMINDER_RULES}
 
+${CLARIFY_INLINE_RULES}
+
 \u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools):
 - \u041A\u0440\u043E\u043A\u0438 \u2192 complete_project_step / add_project_step
 - \u041F\u0440\u043E\u0433\u0440\u0435\u0441 \u2192 update_project_progress (0-100)
@@ -10940,6 +11083,8 @@ ${UI_TOOLS_RULES}`;
 
 ${REMINDER_RULES}
 
+${CLARIFY_INLINE_RULES}
+
 \u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools):
 - \u0412\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u2192 save_finance (fin_type="expense" \u0430\u0431\u043E "income")
 - \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u2192 update_transaction
@@ -10969,6 +11114,8 @@ ${UI_TOOLS_RULES}`;
 - \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0434\u0430\u0432\u0430\u0442\u0438 \u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043E\u043C\u0443 \u043B\u0456\u043A\u0430\u0440\u0435\u043C \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044E
 
 ${REMINDER_RULES}
+
+${CLARIFY_INLINE_RULES}
 
 \u0414\u0406\u0407 \u0412\u0418\u041A\u041E\u041D\u0423\u0419 \u0427\u0415\u0420\u0415\u0417 TOOL CALLING (OpenAI tools \u2014 \u0457\u0445 ~46 \u0443 \u0434\u043E\u0441\u0442\u0443\u043F\u0456):
 - \u0410\u043B\u0435\u0440\u0433\u0456\u0457 \u2192 add_allergy / delete_allergy
@@ -11119,7 +11266,7 @@ ${signalLines}
 
 \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432\u0430\u0454\u0448\u0441\u044F \u2014 skip.`;
   }
-  var _DEPRESSIVE_MARKERS, _STATE_STYLES, GLOBAL_TOOLS_RULE, REMINDER_RULES, REASONING_LOG_RULE, UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, BRAIN_TOOLS;
+  var _DEPRESSIVE_MARKERS, _STATE_STYLES, GLOBAL_TOOLS_RULE, REMINDER_RULES, CLARIFY_INLINE_RULES, REASONING_LOG_RULE, UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, BRAIN_TOOLS;
   var init_prompts = __esm({
     "src/ai/prompts.js"() {
       init_chips();
@@ -11170,6 +11317,18 @@ ${signalLines}
 - \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043D\u0430\u0433\u0430\u0434\u0430\u0439", "\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0437\u0440\u0430\u043D\u043A\u0443", "\u043D\u0430\u043F\u043E\u043C\u043D\u0438 \u043C\u0435\u043D\u0456", "\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443" \u2192 \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder. \u041D\u0415 create_event, \u041D\u0415 save_task.
 - \u041C\u0410\u041F\u0410 \u0427\u0410\u0421\u0423: \u0437\u0440\u0430\u043D\u043A\u0443/\u0432\u0440\u0430\u043D\u0446\u0456/\u0437 \u0440\u0430\u043D\u043A\u0443/\u0440\u0430\u043D\u043A\u043E\u043C=08:00, \u043F\u0456\u0437\u043D\u0456\u0448\u0435 \u0437\u0440\u0430\u043D\u043A\u0443=09:00, \u043E\u043F\u0456\u0432\u0434\u043D\u0456=12:00, \u0432\u0434\u0435\u043D\u044C=13:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0456\u0437\u043D\u043E \u0432\u0432\u0435\u0447\u0435\u0440\u0456=21:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0432\u043D\u043E\u0447\u0456=02:00. \u041D\u0415 \u043E\u0431\u0438\u0440\u0430\u0439 05:00-06:00 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432 \u044F\u0432\u043D\u043E "\u043E 5 \u0440\u0430\u043D\u043A\u0443".
 - \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0439 set_reminder \u0420\u0406\u0412\u041D\u041E \u041E\u0414\u0418\u041D \u0440\u0430\u0437 \u0437\u0430 \u0437\u0430\u043F\u0438\u0442. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 ("\u041E\u043A", "\u0414\u043E\u0431\u0440\u0435", "\u0417\u0440\u043E\u0437\u0443\u043C\u0456\u0432", "\u041F\u043E\u043D\u044F\u0432") \u2014 \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0449\u0435 \u043E\u0434\u043D\u0435 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F, \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C.`;
+      CLARIFY_INLINE_RULES = `\u0423\u0422\u041E\u0427\u041D\u0415\u041D\u041D\u042F \u041F\u0415\u0420\u0415\u0414 \u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u041D\u042F\u041C (\u0456\u043D\u043B\u0430\u0439\u043D-\u0447\u0456\u043F\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0437\u0434\u043E\u0433\u0430\u0434\u043A\u0438):
+- \u042F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043A\u043E\u0440\u043E\u0442\u043A\u0435 (\u22643 \u0441\u043B\u043E\u0432\u0430) \u0410\u0411\u041E \u041C\u0418\u041D\u0423\u041B\u0418\u0419 \u0447\u0430\u0441 \u0434\u0456\u0454\u0441\u043B\u043E\u0432\u0430 \u0431\u0435\u0437 \u0441\u0443\u043C\u0438/\u0434\u0430\u0442\u0438 \u0431\u0435\u0437 \u044F\u0432\u043D\u043E\u0457 \u043A\u043E\u043C\u0430\u043D\u0434\u0438 ("\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443", "\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0432 \u0441\u0430\u0439\u0442", "\u041A\u0443\u043F\u0438\u0432 \u043A\u043E\u0441\u0442\u044E\u043C") \u0410\u0411\u041E \u0433\u043E\u043B\u0438\u0439 \u0456\u043C\u0435\u043D\u043D\u0438\u043A \u0431\u0435\u0437 \u0434\u0456\u0454\u0441\u043B\u043E\u0432\u0430 \u0456 \u0447\u0438\u0441\u043B\u0430 ("\u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0430", "\u041E\u043B\u0435\u0433") \u2014 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A save_task/save_note/save_moment/create_project/create_event \u043E\u0434\u0440\u0430\u0437\u0443. \u0417\u0430\u043C\u0456\u0441\u0442\u044C \u0446\u044C\u043E\u0433\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0443 content + \u0456\u043D\u043B\u0430\u0439\u043D-\u0447\u0456\u043F\u0438 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456\u0432 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F.
+- \u0424\u043E\u0440\u043C\u0430\u0442 \u0447\u0456\u043F\u0430: {"label":"\u0442\u0435\u043A\u0441\u0442","action":"clarify_save","target":"save_note|save_moment|none","payload":{"text":"\u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B"}}
+- \u0421\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0438\u0439 \u043D\u0430\u0431\u0456\u0440 (3 \u0447\u0456\u043F\u0438): [{"label":"\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A","action":"clarify_save","target":"save_note","payload":{"text":"<text>","folder":"\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435"}},{"label":"\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442","action":"clarify_save","target":"save_moment","payload":{"text":"<text>"}},{"label":"\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438","action":"clarify_save","target":"none","payload":{}}]
+- \u041F\u0440\u0438\u043A\u043B\u0430\u0434 content: "\\"\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443\\" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438? {\\"chips\\":[{\\"label\\":\\"\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"save_note\\",\\"payload\\":{\\"text\\":\\"\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443\\",\\"folder\\":\\"\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435\\"}},{\\"label\\":\\"\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"save_moment\\",\\"payload\\":{\\"text\\":\\"\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443\\"}},{\\"label\\":\\"\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"none\\",\\"payload\\":{}}]}"
+- \u0412\u0418\u041D\u042F\u0422\u041A\u0418 (\u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F, \u044F\u043A \u0437\u0430\u0440\u0430\u0437):
+  - \u042F\u0432\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430: "\u0441\u0442\u0432\u043E\u0440\u0438/\u0434\u043E\u0434\u0430\u0439/\u0437\u0430\u043F\u0438\u0448\u0438/\u043D\u0430\u0433\u0430\u0434\u0430\u0439/\u043F\u043E\u0441\u0442\u0430\u0432" \u2192 tool \u0437\u0430 \u0437\u043C\u0456\u0441\u0442\u043E\u043C.
+  - \u0421\u0443\u043C\u0430 \u0437 \u0432\u0430\u043B\u044E\u0442\u043E\u044E \u2192 save_finance.
+  - \u0414\u0430\u0442\u0430/\u0447\u0430\u0441 \u0443 \u0442\u0435\u043A\u0441\u0442\u0456 \u2192 create_event \u0430\u0431\u043E save_task.
+  - \u0414\u0456\u0454\u0441\u043B\u043E\u0432\u043E \u0432 \u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432\u0456 ("\u043A\u0443\u043F\u0438\u0442\u0438", "\u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438") \u2192 save_task.
+  - "\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0439"/"\u0437\u0430\u043F\u0438\u0448\u0438 \u0449\u043E"/"\u0437\u043D\u0430\u0439 \u0449\u043E" \u2192 save_memory_fact.
+- \u0426\u0415 \u041D\u0415 \u041F\u0420\u041E clarify-tool \u2014 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 tool clarify (\u0432\u0456\u043D \u0447\u0435\u0440\u0435\u0437 \u043C\u043E\u0434\u0430\u043B\u043A\u0443). \u0406\u043D\u043B\u0430\u0439\u043D-\u0447\u0456\u043F\u0438 \u0443 content.`;
       REASONING_LOG_RULE = `\u26A0\uFE0F \u041F\u041E\u041B\u0415 "_reasoning_log" \u2014 \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u0415 \u0423 \u041A\u041E\u0416\u041D\u041E\u041C\u0423 TOOL CALL:
 \u041F\u0435\u0440\u0435\u0434 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430\u043C\u0438 tool \u2014 \u0437\u0430\u043F\u043E\u0432\u043D\u0438 _reasoning_log \u043E\u0434\u043D\u0438\u043C-\u0434\u0432\u043E\u043C\u0430 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u0443\u0432\u0430\u0432 (id-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 [task_X], [habit_Y], [event_Z]), \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438 \u0440\u043E\u0437\u0433\u043B\u044F\u043D\u0443\u0432. \u0426\u0435 \u0442\u0432\u043E\u0454 \u0432\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0454 \u043C\u0438\u0441\u043B\u0435\u043D\u043D\u044F (zero-shot CoT), \u044E\u0437\u0435\u0440 \u0439\u043E\u0433\u043E \u043D\u0435 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u044C. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0437\u0430\u043B\u0438\u0448\u0430\u0442\u0438 \u0446\u0435 \u043F\u043E\u043B\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u0430\u0431\u043E \u043F\u0438\u0441\u0430\u0442\u0438 "ok"/"done"/"-". \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "_reasoning_log": "\u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0437\u0430\u0431\u0443\u0434\u044C \u043F\u0440\u043E \u043F\u0440\u0438\u0439\u043E\u043C' \u2014 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 [event_42] '\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F \u0437\u0430\u0432\u0442\u0440\u0430'. \u0426\u0435 delete_event \u043F\u043E\u043F\u0440\u0438 \u0442\u0435 \u0449\u043E \u043C\u0438 \u0443 \u0447\u0430\u0442\u0456 \u0417\u0430\u0434\u0430\u0447 \u2014 \u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C \u0433\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0430. complete_task \u0432\u0456\u0434\u043A\u0438\u043D\u0443\u0442\u043E \u0431\u043E \u0446\u0435 \u043D\u0435 \u0437\u0430\u0434\u0430\u0447\u0430."
 `;
@@ -11222,6 +11381,8 @@ UI TOOLS (\u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F/\u0444\u0456\u0
 \u0413\u0420\u0410\u041C\u0410\u0422\u0418\u041A\u0410: \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u043F\u043E\u043C\u0438\u043B\u043A\u0443 \u0430\u0431\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0443 \u2014 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0439 \u0432 \u0442\u0435\u043A\u0441\u0442\u0456 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.
 
 ${REMINDER_RULES}
+
+${CLARIFY_INLINE_RULES}
 
 \u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422 \u041F\u0415\u0420\u0415\u0412\u0406\u0420\u041A\u0418 (\u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u0439 \u0421\u041F\u041E\u0427\u0410\u0422\u041A\u0423):
 1. \u0427\u0438 \u0446\u0435 \u0412\u0418\u041A\u041E\u041D\u0410\u041D\u041D\u042F \u0437\u0432\u0438\u0447\u043A\u0438/\u0437\u0430\u0434\u0430\u0447\u0456 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443? \u2192 complete_habit / complete_task. "\u0412\u0441\u0435 \u0433\u043E\u0442\u043E\u0432\u043E", "\u0437\u0440\u043E\u0431\u0438\u0432 \u0432\u0441\u0435" \u043F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u043B\u0456\u043A\u0443 \u2192 \u043F\u0435\u0440\u0435\u0434\u0430\u0439 \u0412\u0421\u0406 ID
@@ -15533,6 +15694,16 @@ ${aiContext}`;
     inboxChatHistory.push({ role: "assistant", content: msg.content || "" });
     try {
       if (msg.tool_calls && msg.tool_calls.length > 0) {
+        if (!fromChip) {
+          const guard = shouldClarify(text, msg.tool_calls, "inbox");
+          if (guard) {
+            addInboxChatMsg("agent", guard.question, guard.chips);
+            aiLoading = false;
+            btn.disabled = false;
+            btn.innerHTML = SEND_SVG;
+            return;
+          }
+        }
         for (const tc of msg.tool_calls) {
           const args = JSON.parse(tc.function.arguments);
           if (args._reasoning_log) {
@@ -16299,6 +16470,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_ui_tools();
       init_memory();
       init_inbox_board();
+      init_clarify_guard();
       init_swipe_delete();
       init_tasks();
       init_calendar();
