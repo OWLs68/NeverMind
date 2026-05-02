@@ -170,6 +170,9 @@ function _inboxDateLabel(ts) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round((today - itemDay) / 86400000);
+  // *_caps — UPPERCASE для секцій-роздільників стрічки. Lowercase варіанти
+  // 'inbox.date.today/tomorrow' — для карток _renderUpcoming. Різний регістр —
+  // дизайн-вимога; перекладам теж зберігати дві форми.
   if (diff === 0) return t('inbox.date.today_caps', 'СЬОГОДНІ');
   if (diff === 1) return t('inbox.date.yesterday_caps', 'ВЧОРА');
   return `${d.getDate()} ${monthShortCaps(d.getMonth())}`;
@@ -539,7 +542,7 @@ ${aiContext}`;
             const updParts = [];
             if (action.category) updParts.push('категорія: ' + txs[idx].category);
             if (action.amount) updParts.push('сума: ' + formatMoney(txs[idx].amount));
-            addInboxChatMsg('agent', '✓ Оновлено: ' + (updParts.join(', ') || txs[idx].category));
+            addInboxChatMsg('agent', t('inbox.fin.tx_updated', '✓ Оновлено: {parts}', { parts: updParts.join(', ') || txs[idx].category }));
           } else {
             addInboxChatMsg('agent', t('inbox.chat.tx_not_found', 'Не знайшов операцію. Спробуй ще раз.'));
           }
@@ -565,7 +568,7 @@ ${aiContext}`;
             addInboxChatMsg('agent', t('inbox.chat.task_not_found', 'Не знайшов задачу. Спробуй через вкладку Продуктивність.'));
           }
         } else if (action.action === 'create_project' && !fromChip) {
-          addInboxChatMsg('agent', `Створюю проект "${action.name || text}"...`);
+          addInboxChatMsg('agent', t('inbox.proj.creating', 'Створюю проект "{name}"...', { name: action.name || text }));
           const projects = getProjects();
           const newProject = {
             id: Date.now(),
@@ -587,7 +590,7 @@ ${aiContext}`;
           };
           projects.unshift(newProject);
           saveProjects(projects);
-          addInboxChatMsg('agent', `✅ Проект "${newProject.name}" створено`);
+          addInboxChatMsg('agent', t('inbox.proj.created', '✅ Проект "{name}" створено', { name: newProject.name }));
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
         } else if (action.action === 'create_event') {
           let endTime = action.end_time || null;
@@ -598,20 +601,27 @@ ${aiContext}`;
           if (action.time) {
             conflict = getEvents().find(e => e.date === action.date && e.time === action.time && e.title !== action.title);
           }
-          const ev = { id: Date.now(), title: action.title || 'Подія', date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
+          const ev = { id: Date.now(), title: action.title || t('inbox.event.default_title', 'Подія'), date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
           const items = getInbox(); items.unshift({ id: Date.now() + 1, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-          const timeStr = action.time ? ` о ${action.time}${endTime ? '–' + endTime : ''}` : '';
-          const warn = conflict ? `\n⚠️ На цей час уже є "${conflict.title}". Лишити обидві чи перенести?` : '';
-          addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}${timeStr}${warn}`);
+          const timeStr = action.time ? t('inbox.date.at_time_range', ' о {time}{end}', { time: action.time, end: endTime ? '–' + endTime : '' }) : '';
+          const warn = conflict ? t('inbox.event.conflict_warn', '\n⚠️ На цей час уже є "{title}". Лишити обидві чи перенести?', { title: conflict.title }) : '';
+          addInboxChatMsg('agent', t('inbox.event.added', '📅 Подію "{title}" додано в календар на {day}{time}{warn}', { title: ev.title, day: dayStr, time: timeStr, warn }));
         } else if (action.action === 'restore_deleted') {
           const q = (action.query || '').trim();
           const typeFilter = action.type || null;
           const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
-          const typeLabel = { task:'задачу', note:'нотатку', habit:'звичку', inbox:'запис', folder:'папку', finance:'операцію' };
+          const typeLabel = {
+            task:    t('inbox.type.task',    'задачу'),
+            note:    t('inbox.type.note',    'нотатку'),
+            habit:   t('inbox.type.habit',   'звичку'),
+            inbox:   t('inbox.type.inbox',   'запис'),
+            folder:  t('inbox.type.folder',  'папку'),
+            finance: t('inbox.type.finance', 'операцію'),
+          };
           const typeIcon = { task:'📋', note:'📝', habit:'🌱', inbox:'📥', folder:'📁', finance:'💰' };
           const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
           if (q === 'all') {
@@ -619,7 +629,7 @@ ${aiContext}`;
               addInboxChatMsg('agent', t('inbox.chat.trash_empty', 'Кеш видалених порожній. Записи зберігаються 7 днів.'));
             } else {
               filtered.forEach(t => restoreFromTrash(t.deletedAt));
-              addInboxChatMsg('agent', `✅ Відновив ${filtered.length} записів`);
+              addInboxChatMsg('agent', t('inbox.chat.restored_count', '✅ Відновив {n} записів', { n: filtered.length }));
             }
           } else if (q === 'last') {
             const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
@@ -628,7 +638,7 @@ ${aiContext}`;
             } else {
               const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || 'запис';
               restoreFromTrash(last.deletedAt);
-              addInboxChatMsg('agent', `✅ Відновив ${typeLabel[last.type] || 'запис'} "${itemLabel}"`);
+              addInboxChatMsg('agent', t('inbox.chat.restored_one', '✅ Відновив {type} "{label}"', { type: typeLabel[last.type] || t('inbox.type.inbox', 'запис'), label: itemLabel }));
             }
           } else {
             const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
@@ -641,25 +651,35 @@ ${aiContext}`;
             } else if (results.length <= 5) {
               results.forEach(t => restoreFromTrash(t.deletedAt));
               const labels = results.map(e => `${typeIcon[e.type] || '•'} ${(e.item.text || e.item.title || e.item.name || '').substring(0, 35)}`).join('\n');
-              addInboxChatMsg('agent', `✅ Відновив ${results.length} записи:\n${labels}`);
+              addInboxChatMsg('agent', t('inbox.chat.restored_list', '✅ Відновив {n} записи:\n{labels}', { n: results.length, labels }));
             } else {
               const list = results.slice(0, 5).map(e => {
                 const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || 'запис').substring(0, 40);
                 const ago = Math.round((Date.now() - e.deletedAt) / 86400000);
                 return `${typeIcon[e.type] || '•'} ${lbl} (${ago === 0 ? t('inbox.date.today', 'сьогодні') : t('inbox.time.days_ago', '{n} дн тому', { n: ago })})`;
               }).join('\n');
-              addInboxChatMsg('agent', `Знайшов ${results.length} схожих. Ось перші 5:\n${list}\n\nУточни який саме.`);
+              addInboxChatMsg('agent', t('inbox.chat.trash_many', 'Знайшов {n} схожих. Ось перші 5:\n{list}\n\nУточни який саме.', { n: results.length, list }));
             }
           }
         } else if (action.action === 'save_routine') {
           const routine = getRoutine();
           const blocks = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
           const days = Array.isArray(action.day) ? action.day : [action.day || 'default'];
-          const dayLabels = { default:'будні', mon:'понеділок', tue:'вівторок', wed:'середу', thu:'четвер', fri:'п\'ятницю', sat:'суботу', sun:'неділю' };
+          // Знахідний відмінок: «на середу/п'ятницю/суботу/неділю» — для речення "Розпорядок збережено на X".
+          const dayLabels = {
+            default: t('inbox.day.default', 'будні'),
+            mon:     t('inbox.day.mon_acc', 'понеділок'),
+            tue:     t('inbox.day.tue_acc', 'вівторок'),
+            wed:     t('inbox.day.wed_acc', 'середу'),
+            thu:     t('inbox.day.thu_acc', 'четвер'),
+            fri:     t('inbox.day.fri_acc', 'п\'ятницю'),
+            sat:     t('inbox.day.sat_acc', 'суботу'),
+            sun:     t('inbox.day.sun_acc', 'неділю'),
+          };
           days.forEach(d => { routine[d] = [...blocks]; });
           saveRoutine(routine);
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
-          addInboxChatMsg('agent', `🕐 Розпорядок збережено на ${label} (${blocks.length} блоків)`);
+          addInboxChatMsg('agent', t('inbox.chat.routine_saved', '🕐 Розпорядок збережено на {label} ({n} блоків)', { label, n: blocks.length }));
         } else if (action.action === 'save_memory_fact') {
           // Безшумно зберігаємо факт — user feedback приходить через msg.content
           // (AI проінструктований також писати коротке "Запам'ятав..." у content)
@@ -688,8 +708,8 @@ ${aiContext}`;
           });
           if (created) {
             if (currentTab === 'health') renderHealth();
-            const items = getInbox(); items.unshift({ id: Date.now() + 1, text: `🏥 Стан: ${created.name}`, category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
-            addInboxChatMsg('agent', `🏥 Створив картку "${created.name}" у Здоров'ї. ${action.comment || ''}`);
+            const items = getInbox(); items.unshift({ id: Date.now() + 1, text: t('inbox.health.state_inbox', '🏥 Стан: {name}', { name: created.name }), category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
+            addInboxChatMsg('agent', t('inbox.health.card_created', '🏥 Створив картку "{name}" у Здоровʼї. {comment}', { name: created.name, comment: action.comment || '' }));
           } else {
             addInboxChatMsg('agent', t('inbox.chat.health_no_name', 'Не вдалось створити картку — потрібна назва.'));
           }
@@ -711,17 +731,17 @@ ${aiContext}`;
           const updated = editHealthCardProgrammatic(action.card_id, updates);
           if (updated) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `✓ Оновив картку "${updated.name}". ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.card_updated', '✓ Оновив картку "{name}". {comment}', { name: updated.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку. Спробуй ще раз.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found', 'Не знайшов картку. Спробуй ще раз.'));
           }
         } else if (action.action === 'delete_health_card') {
           const ok = deleteHealthCardProgrammatic(action.card_id);
           if (ok) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `🗑️ Картку видалено (7 днів у кошику). ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.card_deleted', '🗑️ Картку видалено (7 днів у кошику). {comment}', { comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку для видалення.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found_del', 'Не знайшов картку для видалення.'));
           }
         } else if (action.action === 'add_medication') {
           const med = addMedicationToCard(action.card_id, {
@@ -732,9 +752,9 @@ ${aiContext}`;
           });
           if (med) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `💊 Додав ${med.name}${med.dosage ? ' (' + med.dosage + ')' : ''}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.med_added', '💊 Додав {name}{dose}. {comment}', { name: med.name, dose: med.dosage ? ' (' + med.dosage + ')' : '', comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку. Створи її спочатку.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found_first', 'Не знайшов картку. Створи її спочатку.'));
           }
         } else if (action.action === 'edit_medication') {
           const updates = {};
@@ -745,57 +765,57 @@ ${aiContext}`;
           const med = editMedicationInCard(action.card_id, action.med_id, updates);
           if (med) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `✓ Оновив ${med.name}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.med_updated', '✓ Оновив {name}. {comment}', { name: med.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов препарат у картці.');
+            addInboxChatMsg('agent', t('inbox.health.med_not_found', 'Не знайшов препарат у картці.'));
           }
         } else if (action.action === 'log_medication_dose') {
           const med = logMedicationDose(action.card_id, action.med_name);
           if (med) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `💊✓ Прийняв ${med.name}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.med_taken', '💊✓ Прийняв {name}. {comment}', { name: med.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов препарат у картці. Уточни назву.');
+            addInboxChatMsg('agent', t('inbox.health.med_not_found_clarify', 'Не знайшов препарат у картці. Уточни назву.'));
           }
         } else if (action.action === 'add_allergy') {
           const added = addAllergy(action.name, action.notes || '');
           if (added) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `🚨 Додав алергію: ${action.name}. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.allergy_added', '🚨 Додав алергію: {name}. {comment}', { name: action.name, comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', `Алергія "${action.name}" вже є у списку.`);
+            addInboxChatMsg('agent', t('inbox.health.allergy_dupe', 'Алергія "{name}" вже є у списку.', { name: action.name }));
           }
         } else if (action.action === 'delete_allergy') {
           const ok = deleteAllergy(action.allergy_id);
           if (ok) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `🗑️ Алергію видалено. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.allergy_deleted', '🗑️ Алергію видалено. {comment}', { comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов алергію для видалення.');
+            addInboxChatMsg('agent', t('inbox.health.allergy_not_found', 'Не знайшов алергію для видалення.'));
           }
         } else if (action.action === 'add_health_history_entry') {
           const entry = addHealthHistoryEntry(action.card_id, action.entry_type, action.text);
           if (entry) {
             if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', `📝 Додав запис у історію. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.health.history_added', '📝 Додав запис у історію. {comment}', { comment: action.comment || '' }));
           } else {
-            addInboxChatMsg('agent', 'Не знайшов картку для запису.');
+            addInboxChatMsg('agent', t('inbox.health.card_not_found_history', 'Не знайшов картку для запису.'));
           }
         } else if (action.action === 'create_finance_category') {
           // Фаза 4 (K-02): створити нову категорію
           const existing = findFinCatByName(action.name);
           if (existing) {
-            addInboxChatMsg('agent', `Категорія "${action.name}" вже існує у ${existing.type === 'expense' ? 'витратах' : 'доходах'}.`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_dupe', 'Категорія "{name}" вже існує у {bucket}.', { name: action.name, bucket: existing.type === 'expense' ? t('inbox.fin.in_expenses', 'витратах') : t('inbox.fin.in_incomes', 'доходах') }));
           } else {
             const type = action.cat_type === 'income' ? 'income' : 'expense';
             createFinCategory(type, { name: action.name, icon: action.icon, color: action.color, subcategories: action.subcategories });
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.name}" (${type === 'expense' ? 'витрата' : 'дохід'}) створено. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_created', '✓ Категорію "{name}" ({type}) створено. {comment}', { name: action.name, type: type === 'expense' ? t('inbox.fin.expense', 'витрата') : t('inbox.fin.income', 'дохід'), comment: action.comment || '' }));
           }
         } else if (action.action === 'edit_finance_category') {
           const found = findFinCatByName(action.current_name);
           if (!found) {
-            addInboxChatMsg('agent', `Не знайшов категорію "${action.current_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_not_found', 'Не знайшов категорію "{name}".', { name: action.current_name }));
           } else {
             const updates = {};
             if (action.new_name) updates.name = action.new_name;
@@ -812,42 +832,42 @@ ${aiContext}`;
               if (changed > 0) saveFinance(txs);
             }
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.current_name}" оновлено. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_updated', '✓ Категорію "{name}" оновлено. {comment}', { name: action.current_name, comment: action.comment || '' }));
           }
         } else if (action.action === 'delete_finance_category') {
           const found = findFinCatByName(action.name);
           if (!found) {
-            addInboxChatMsg('agent', `Не знайшов категорію "${action.name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_not_found', 'Не знайшов категорію "{name}".', { name: action.name }));
           } else {
             deleteFinCategory(found.cat.id);
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Категорію "${action.name}" видалено. Старі операції збережено з цим ім'ям. ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_deleted', '✓ Категорію "{name}" видалено. Старі операції збережено з цим імʼям. {comment}', { name: action.name, comment: action.comment || '' }));
           }
         } else if (action.action === 'merge_finance_categories') {
           const from = findFinCatByName(action.from_name);
           const to = findFinCatByName(action.to_name);
           if (!from || !to) {
-            addInboxChatMsg('agent', `Не знайшов категорії "${action.from_name}" або "${action.to_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.merge_not_found', 'Не знайшов категорії "{from}" або "{to}".', { from: action.from_name, to: action.to_name }));
           } else if (from.type !== to.type) {
-            addInboxChatMsg('agent', `"${action.from_name}" і "${action.to_name}" мають різні типи (витрата/дохід) — не можу об'єднати.`);
+            addInboxChatMsg('agent', t('inbox.fin.merge_diff_types', '"{from}" і "{to}" мають різні типи (витрата/дохід) — не можу обʼєднати.', { from: action.from_name, to: action.to_name }));
           } else {
             const res = mergeFinCategories(from.cat.id, to.cat.id);
             if (res.ok) {
               if (currentTab === 'finance') renderFinance();
-              addInboxChatMsg('agent', `✓ Об'єднав "${res.from}" → "${res.to}". Перенесено ${res.txsMoved} операцій. ${action.comment || ''}`);
+              addInboxChatMsg('agent', t('inbox.fin.merged', '✓ Обʼєднав "{from}" → "{to}". Перенесено {n} операцій. {comment}', { from: res.from, to: res.to, n: res.txsMoved, comment: action.comment || '' }));
             } else {
-              addInboxChatMsg('agent', `Не вдалось об'єднати: ${res.reason}`);
+              addInboxChatMsg('agent', t('inbox.fin.merge_failed', 'Не вдалось обʼєднати: {reason}', { reason: res.reason }));
             }
           }
         } else if (action.action === 'add_finance_subcategory') {
           const res = addFinSubcategory(action.category_name, action.subcategory);
           if (!res || !res.ok) {
-            addInboxChatMsg('agent', `Не знайшов категорію "${action.category_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.cat_not_found', 'Не знайшов категорію "{name}".', { name: action.category_name }));
           } else if (res.alreadyExists) {
-            addInboxChatMsg('agent', `Підкатегорія "${action.subcategory}" вже є у "${action.category_name}".`);
+            addInboxChatMsg('agent', t('inbox.fin.subcat_dupe', 'Підкатегорія "{sub}" вже є у "{cat}".', { sub: action.subcategory, cat: action.category_name }));
           } else {
             if (currentTab === 'finance') renderFinance();
-            addInboxChatMsg('agent', `✓ Додав "${action.subcategory}" у "${action.category_name}". ${action.comment || ''}`);
+            addInboxChatMsg('agent', t('inbox.fin.subcat_added', '✓ Додав "{sub}" у "{cat}". {comment}', { sub: action.subcategory, cat: action.category_name, comment: action.comment || '' }));
           }
         } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           // edit_event, delete_event, edit_note, edit_task, set_reminder, etc.
@@ -863,7 +883,7 @@ ${aiContext}`;
         if (replyText) addInboxChatMsg('agent', replyText, chips);
       } else if (msg.tool_calls.every(tc => tc.function.name === 'save_memory_fact')) {
         // Якщо AI викликав ТІЛЬКИ save_memory_fact без тексту — показати fallback
-        addInboxChatMsg('agent', 'Запам\'ятав ✓');
+        addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
       }
     } else if (msg.content) {
       // Текстова відповідь без tool calls = reply
@@ -892,7 +912,7 @@ function showClarify(parsed, originalText) {
   clarifyParsed = parsed;
   clarifyOriginalText = originalText;
 
-  document.getElementById('clarify-question').textContent = parsed.question || 'Уточни будь ласка:';
+  document.getElementById('clarify-question').textContent = parsed.question || t('inbox.chat.clarify', 'Уточни будь ласка:');
   document.getElementById('clarify-input').value = '';
 
   const optEl = document.getElementById('clarify-options');
@@ -963,7 +983,7 @@ async function sendClarifyText() {
         const { text: replyText, chips } = _parseContentChips(msg.content);
         if (replyText) addInboxChatMsg('agent', replyText, chips);
       } else if (!primaryHandled) {
-        addInboxChatMsg('agent', 'Запам\'ятав ✓');
+        addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
       }
     } catch(e) {}
   }
@@ -1084,10 +1104,10 @@ async function processSaveAction(parsed, originalText) {
     if (eventDetected) {
       const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
       const res = addEventDedup(ev);
-      if (!res.added) { addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return; }
+      if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-      addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+      addInboxChatMsg('agent', t('inbox.event.added_simple', '📅 Подію "{title}" додано в календар на {day}', { title: ev.title, day: dayStr }));
       return;
     }
     const taskId = generateUUID();
@@ -1101,12 +1121,12 @@ async function processSaveAction(parsed, originalText) {
     tasks.unshift(newTask);
     saveTasks(tasks);
     if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
-    undoRef = { type: 'task', id: taskId, label: 'задачу' };
+    undoRef = { type: 'task', id: taskId, label: t('inbox.type.task', 'задачу') };
   }
   if (cat === 'note' || cat === 'idea') {
     addNoteFromInbox(savedText, cat, folder);
     const allNotes = getNotes();
-    if (allNotes[0]) undoRef = { type: 'note', id: allNotes[0].id, label: cat === 'idea' ? 'ідею' : 'нотатку' };
+    if (allNotes[0]) undoRef = { type: 'note', id: allNotes[0].id, label: cat === 'idea' ? t('inbox.type.idea_acc', 'ідею') : t('inbox.type.note', 'нотатку') };
   }
   if (cat === 'habit') {
     const habits = getHabits();
@@ -1155,7 +1175,7 @@ async function processSaveAction(parsed, originalText) {
       const habitId = Date.now();
       habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: '⭕', days, targetCount, createdAt: habitId });
       saveHabits(habits);
-      undoRef = { type: 'habit', id: habitId, label: 'звичку' };
+      undoRef = { type: 'habit', id: habitId, label: t('inbox.type.habit', 'звичку') };
     }
   }
   if (cat === 'event') {
@@ -1203,7 +1223,7 @@ async function processSaveAction(parsed, originalText) {
   // 18.04 pvZG1: тост-відкат для task/note/idea/habit.
   // Випадково створив? Один тап "Відмінити" — і запис зникає з відповідної вкладки + Inbox.
   if (undoRef) {
-    showUndoToast(`Створено ${undoRef.label} → Відмінити`, () => {
+    showUndoToast(t('inbox.undo.created', 'Створено {label} → Відмінити', { label: undoRef.label }), () => {
       try {
         if (undoRef.type === 'task') saveTasks(getTasks().filter(t => t.id !== undoRef.id));
         else if (undoRef.type === 'note') saveNotes(getNotes().filter(n => n.id !== undoRef.id));

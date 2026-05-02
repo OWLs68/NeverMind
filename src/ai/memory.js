@@ -112,17 +112,17 @@ const REJECT_PATTERNS = [
 
 // Повертає причину відхилення або null якщо факт валідний.
 function _rejectReason(text) {
-  const t = (text || '').trim();
-  if (!t) return 'empty';
+  const trimmed = (text || '').trim();
+  if (!trimmed) return 'empty';
   // Занадто короткий або занадто довгий
-  if (t.length < 6) return 'too_short';
-  if (t.length > 200) return 'too_long';
+  if (trimmed.length < 6) return 'too_short';
+  if (trimmed.length > 200) return 'too_long';
   // Один з заборонених патернів
   for (const rx of REJECT_PATTERNS) {
-    if (rx.test(t)) return `pattern:${rx.source}`;
+    if (rx.test(trimmed)) return `pattern:${rx.source}`;
   }
   // Надто абстрактно: 1-2 слова без конкретики
-  const words = t.split(/\s+/).filter(Boolean);
+  const words = trimmed.split(/\s+/).filter(Boolean);
   if (words.length < 2) return 'too_few_words';
   return null;
 }
@@ -188,9 +188,9 @@ export function updateFactText(id, newText) {
   const facts = getFactsRaw();
   const idx = facts.findIndex(f => f.id === id);
   if (idx === -1) return false;
-  const t = (newText || '').trim();
-  if (t.length < 3 || t.length > 200) return false;
-  facts[idx].text = t;
+  const trimmed = (newText || '').trim();
+  if (trimmed.length < 3 || trimmed.length > 200) return false;
+  facts[idx].text = trimmed;
   facts[idx].lastSeen = Date.now();
   _saveFacts(facts);
   return true;
