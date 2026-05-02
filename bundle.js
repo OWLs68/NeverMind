@@ -156,37 +156,37 @@
     const el = typeof document !== "undefined" && document.getElementById("usage-meter-display");
     if (!el) return;
     const stats = getUsageStats();
-    const projLine = stats.projection !== null ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>${t2("usage.projection_label", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F")}</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>` : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">${t2("usage.projection_pending", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F 3 \u0434\u043D\u0456\u0432 \u0434\u0430\u043D\u0438\u0445")}</div>`;
+    const projLine = stats.projection !== null ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>${t("usage.projection_label", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F")}</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>` : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">${t("usage.projection_pending", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F 3 \u0434\u043D\u0456\u0432 \u0434\u0430\u043D\u0438\u0445")}</div>`;
     const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
-    const callsLabel = t2("usage.calls_short", "\u0432\u0438\u043A\u043B");
+    const callsLabel = t("usage.calls_short", "\u0432\u0438\u043A\u043B");
     el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
-      <span>${t2("usage.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</span>
+      <span>${t("usage.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</span>
       <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.today.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.today.calls} ${callsLabel})</span></span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600;margin-top:6px">
-      <span>${t2("usage.this_month", "\u0426\u0435\u0439 \u043C\u0456\u0441\u044F\u0446\u044C")}</span>
+      <span>${t("usage.this_month", "\u0426\u0435\u0439 \u043C\u0456\u0441\u044F\u0446\u044C")}</span>
       <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} ${callsLabel})</span></span>
     </div>
     ${projLine}
     ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ""}
-    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">${t2("usage.retention_note", "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F {days} \u0434\u043D\u0456\u0432. \u0414\u0430\u043D\u0456 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0456.", { days: RETENTION_DAYS })}</div>
+    <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">${t("usage.retention_note", "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F {days} \u0434\u043D\u0456\u0432. \u0414\u0430\u043D\u0456 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0456.", { days: RETENTION_DAYS })}</div>
   `;
   }
   async function exportWithToast() {
     const r = await exportUsageJSON();
     if (r.ok && typeof window !== "undefined" && window.showToast) {
-      window.showToast(t2("usage.toast_copied", "\u{1F4CB} \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u0431\u0443\u0444\u0435\u0440", { n: r.calls }), 2500);
+      window.showToast(t("usage.toast_copied", "\u{1F4CB} \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u0431\u0443\u0444\u0435\u0440", { n: r.calls }), 2500);
     } else if (typeof window !== "undefined" && window.showToast) {
-      window.showToast(t2("usage.toast_copy_fail", "\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438: {err}", { err: r.error || t2("usage.unknown", "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E") }), 3e3);
+      window.showToast(t("usage.toast_copy_fail", "\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438: {err}", { err: r.error || t("usage.unknown", "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E") }), 3e3);
     }
   }
   async function clearWithConfirm() {
-    if (typeof confirm !== "undefined" && !confirm(t2("usage.confirm_clear", "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u043B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442? \u0414\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0441\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438."))) return;
+    if (typeof confirm !== "undefined" && !confirm(t("usage.confirm_clear", "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u043B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442? \u0414\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0441\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438."))) return;
     clearUsageLog();
     renderUsageMeter();
     if (typeof window !== "undefined" && window.showToast) {
-      window.showToast(t2("usage.toast_cleared", "\u{1F5D1}\uFE0F \u041B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u043E"), 2e3);
+      window.showToast(t("usage.toast_cleared", "\u{1F5D1}\uFE0F \u041B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u043E"), 2e3);
     }
   }
   var STORAGE_KEY, RETENTION_DAYS, PRICING;
@@ -230,7 +230,7 @@
         });
       } catch (e) {
       }
-      ALL_TABS.filter((t3) => t3 !== "inbox").forEach((tab) => {
+      ALL_TABS.filter((t2) => t2 !== "inbox").forEach((tab) => {
         try {
           const raw = JSON.parse(localStorage.getItem("nm_owl_tab_" + tab) || "null");
           if (!raw) return;
@@ -404,9 +404,9 @@
         items.push({ id: ev.id, title: ev.title, date: ev.date, time: ev.time || null, endTime: ev.endTime || null, type: "event", priority: ev.priority || "normal" });
       }
     });
-    getTasks().filter((t3) => t3.status === "active" && t3.dueDate).forEach((t3) => {
-      if (t3.dueDate >= monthStart && t3.dueDate <= monthEnd) {
-        items.push({ title: t3.title, date: t3.dueDate, type: "task", priority: t3.priority || "normal" });
+    getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
+      if (t2.dueDate >= monthStart && t2.dueDate <= monthEnd) {
+        items.push({ title: t2.title, date: t2.dueDate, type: "task", priority: t2.priority || "normal" });
       }
     });
     if (items.length === 0) {
@@ -479,10 +479,10 @@
         items.push({ id: ev.id, title: ev.title, date: d, type: "event", priority: ev.priority || "normal", time: ev.time || null, endTime: ev.endTime || null });
       }
     });
-    getTasks().filter((t3) => t3.status === "active" && t3.dueDate).forEach((t3) => {
-      const d = new Date(t3.dueDate);
+    getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
+      const d = new Date(t2.dueDate);
       if (d >= new Date(now.toDateString()) && d <= in7days) {
-        items.push({ title: t3.title, date: d, type: "task", priority: t3.priority || "normal" });
+        items.push({ title: t2.title, date: d, type: "task", priority: t2.priority || "normal" });
       }
     });
     items.sort((a, b) => a.date - b.date);
@@ -526,16 +526,16 @@
       if (!itemsByDay[day]) itemsByDay[day] = [];
       itemsByDay[day].push(item);
     };
-    getTasks().forEach((t3) => {
-      if (t3.dueDate) {
-        const d = new Date(t3.dueDate);
-        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) addItem(d.getDate(), { ...t3, _type: "task" });
+    getTasks().forEach((t2) => {
+      if (t2.dueDate) {
+        const d = new Date(t2.dueDate);
+        if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) addItem(d.getDate(), { ...t2, _type: "task" });
       }
-      if (t3.createdAt) {
-        const d = new Date(t3.createdAt);
+      if (t2.createdAt) {
+        const d = new Date(t2.createdAt);
         if (d.getFullYear() === _calYear && d.getMonth() === _calMonth) {
           const day = d.getDate();
-          if (!itemsByDay[day]?.some((x) => x.id === t3.id)) addItem(day, { ...t3, _type: "task" });
+          if (!itemsByDay[day]?.some((x) => x.id === t2.id)) addItem(day, { ...t2, _type: "task" });
         }
       }
     });
@@ -610,9 +610,9 @@
     const allDayEvents = dayEvents.filter((ev) => !ev.time);
     const timedEvents = dayEvents.filter((ev) => ev.time);
     const dateStr = date.toDateString();
-    const dayTasks = getTasks().filter((t3) => {
-      if (t3.dueDate && new Date(t3.dueDate).toDateString() === dateStr) return true;
-      if (t3.createdAt && new Date(t3.createdAt).toDateString() === dateStr) return true;
+    const dayTasks = getTasks().filter((t2) => {
+      if (t2.dueDate && new Date(t2.dueDate).toDateString() === dateStr) return true;
+      if (t2.createdAt && new Date(t2.createdAt).toDateString() === dateStr) return true;
       return false;
     });
     const routineBlocks = getRoutineForDay(dayKey);
@@ -635,10 +635,10 @@
     const timeline = [];
     routineBlocks.forEach((b) => timeline.push({ time: b.time, text: b.activity, type: "routine" }));
     timedEvents.forEach((ev) => timeline.push({ time: ev.time, endTime: ev.endTime || null, text: ev.title, type: "event", id: ev.id, priority: ev.priority }));
-    dayTasks.forEach((t3) => {
-      const m = t3.title.match(/(\d{1,2}):(\d{2})/);
+    dayTasks.forEach((t2) => {
+      const m = t2.title.match(/(\d{1,2}):(\d{2})/);
       const time = m ? `${String(m[1]).padStart(2, "0")}:${m[2]}` : null;
-      timeline.push({ time, text: t3.title, type: "task", priority: t3.priority, done: t3.status === "done", dueDate: t3.dueDate });
+      timeline.push({ time, text: t2.title, type: "task", priority: t2.priority, done: t2.status === "done", dueDate: t2.dueDate });
     });
     const timedItems = timeline.filter((i) => i.time).sort((a, b) => a.time.localeCompare(b.time));
     const untimedTasks = timeline.filter((i) => !i.time && i.type === "task");
@@ -679,12 +679,12 @@
         if (untimedTasks.length > 0) {
           html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
           html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">\u0417\u0430\u0434\u0430\u0447\u0456</div>`;
-          untimedTasks.forEach((t3) => {
-            const prio = t3.priority === "critical" ? "\u{1F534} " : t3.priority === "important" ? "\u{1F7E0} " : "";
-            const doneStyle = t3.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
+          untimedTasks.forEach((t2) => {
+            const prio = t2.priority === "critical" ? "\u{1F534} " : t2.priority === "important" ? "\u{1F7E0} " : "";
+            const doneStyle = t2.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
             html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-            <div style="font-size:14px">${t3.done ? "\u2705" : "\u2611\uFE0F"}</div>
-            <div style="font-size:14px;font-weight:500;${doneStyle}">${prio}${escapeHtml(t3.text)}${t3.dueDate ? " \u{1F4C5}" : ""}</div>
+            <div style="font-size:14px">${t2.done ? "\u2705" : "\u2611\uFE0F"}</div>
+            <div style="font-size:14px;font-weight:500;${doneStyle}">${prio}${escapeHtml(t2.text)}${t2.dueDate ? " \u{1F4C5}" : ""}</div>
           </div>`;
           });
           html += `</div>`;
@@ -1071,15 +1071,15 @@
     try {
       switch (name) {
         case "switch_tab": {
-          const t3 = args.target;
-          if (t3 === "calendar") {
+          const t2 = args.target;
+          if (t2 === "calendar") {
             if (typeof window.openCalendarModal === "function") {
               window.openCalendarModal();
               return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440." };
             }
             return { text: "\u041A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439." };
           }
-          if (t3 === "habits") {
+          if (t2 === "habits") {
             switchTab("tasks");
             if (typeof window.switchProdTab === "function") {
               setTimeout(() => {
@@ -1091,7 +1091,7 @@
             }
             return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0432\u0438\u0447\u043A\u0438." };
           }
-          if (t3 === "tasks") {
+          if (t2 === "tasks") {
             switchTab("tasks");
             if (typeof window.switchProdTab === "function") {
               setTimeout(() => {
@@ -1103,11 +1103,11 @@
             }
             return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0417\u0430\u0434\u0430\u0447\u0456." };
           }
-          if (!document.getElementById(`page-${t3}`)) {
-            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t3}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
+          if (!document.getElementById(`page-${t2}`)) {
+            return { text: `\u0412\u043A\u043B\u0430\u0434\u043A\u0430 "${t2}" \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.` };
           }
-          switchTab(t3);
-          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t3)}.` };
+          switchTab(t2);
+          return { text: `\u0412\u0456\u0434\u043A\u0440\u0438\u0432 ${_tabLabel(t2)}.` };
         }
         case "open_memory":
           if (typeof window.openMemoryModal === "function") {
@@ -1347,7 +1347,7 @@
           }
         }
       ];
-      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t3) => t3.function.name));
+      UI_TOOL_NAMES = new Set(UI_TOOLS.map((t2) => t2.function.name));
       try {
         Object.assign(window, { handleUITool, UI_TOOLS, UI_TOOL_NAMES });
       } catch {
@@ -1386,14 +1386,14 @@
     localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
   }
   function _rejectReason(text) {
-    const t3 = (text || "").trim();
-    if (!t3) return "empty";
-    if (t3.length < 6) return "too_short";
-    if (t3.length > 200) return "too_long";
+    const t2 = (text || "").trim();
+    if (!t2) return "empty";
+    if (t2.length < 6) return "too_short";
+    if (t2.length > 200) return "too_long";
     for (const rx of REJECT_PATTERNS) {
-      if (rx.test(t3)) return `pattern:${rx.source}`;
+      if (rx.test(t2)) return `pattern:${rx.source}`;
     }
-    const words = t3.split(/\s+/).filter(Boolean);
+    const words = t2.split(/\s+/).filter(Boolean);
     if (words.length < 2) return "too_few_words";
     return null;
   }
@@ -1442,9 +1442,9 @@
     const facts = getFactsRaw();
     const idx = facts.findIndex((f) => f.id === id);
     if (idx === -1) return false;
-    const t3 = (newText || "").trim();
-    if (t3.length < 3 || t3.length > 200) return false;
-    facts[idx].text = t3;
+    const t2 = (newText || "").trim();
+    if (t2.length < 3 || t2.length > 200) return false;
+    facts[idx].text = t2;
     facts[idx].lastSeen = Date.now();
     _saveFacts(facts);
     return true;
@@ -2043,10 +2043,10 @@ ${lines.join("\n")}`;
     try {
       const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
       const title = `\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 ${med.name}${med.dosage ? " " + med.dosage : ""}`;
-      const existing = tasks.find((t3) => t3.title === title && t3.status === "active");
+      const existing = tasks.find((t2) => t2.title === title && t2.status === "active");
       if (existing) return;
       const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-      const steps = schedule.map((t3) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: t3, done: false }));
+      const steps = schedule.map((t2) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: t2, done: false }));
       const newTask = {
         id: Date.now() + Math.floor(Math.random() * 1e3),
         title,
@@ -2223,14 +2223,14 @@ ${lines.join("\n")}`;
     const lastTrend = (card.history || []).find((h) => h.type === "status_change");
     let trendLabel = "", trendColor = "rgba(30,16,64,0.4)";
     if (lastTrend && lastTrend.text) {
-      const t3 = lastTrend.text.toLowerCase();
-      if (t3.includes("\u043F\u043E\u043A\u0440\u0430\u0449")) {
+      const t2 = lastTrend.text.toLowerCase();
+      if (t2.includes("\u043F\u043E\u043A\u0440\u0430\u0449")) {
         trendLabel = "\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F";
         trendColor = "#16a34a";
-      } else if (t3.includes("\u043F\u043E\u0433\u0456\u0440\u0448")) {
+      } else if (t2.includes("\u043F\u043E\u0433\u0456\u0440\u0448")) {
         trendLabel = "\u043F\u043E\u0433\u0456\u0440\u0448\u0435\u043D\u043D\u044F";
         trendColor = "#ef4444";
-      } else if (t3.includes("\u0441\u0442\u0430\u0431\u0456\u043B")) {
+      } else if (t2.includes("\u0441\u0442\u0430\u0431\u0456\u043B")) {
         trendLabel = "\u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E";
         trendColor = "#d97706";
       }
@@ -2822,8 +2822,8 @@ ${lines.join("\n")}`;
         if (card.doctor) lines.push(`  \u043B\u0456\u043A\u0430\u0440: ${card.doctor}`);
         if (card.doctorRecommendations) lines.push(`  \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${card.doctorRecommendations}`);
         if (card.nextAppointment && card.nextAppointment.date) {
-          const t3 = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
-          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${t3}`);
+          const t2 = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
+          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${t2}`);
         }
         if (Array.isArray(card.medications) && card.medications.length > 0) {
           const meds = card.medications.map((m) => {
@@ -3006,7 +3006,7 @@ ${lines.join("\n")}`;
       const w = Math.round(wrapEl.offsetWidth * openRatio);
       bin = document.createElement("button");
       bin.className = "swipe-open-bin";
-      bin.setAttribute("aria-label", t2("swipe.delete_button", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438"));
+      bin.setAttribute("aria-label", t("swipe.delete_button", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438"));
       bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(${binBg},0) 0%, rgba(${binBg},0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
       bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
       bin.addEventListener("click", (e) => {
@@ -3125,8 +3125,8 @@ ${lines.join("\n")}`;
       closeOwlChat();
     } catch (e) {
     }
-    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t3) => {
-      if (t3 !== tab) closeChatBar(t3);
+    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      if (t2 !== tab) closeChatBar(t2);
     });
     setActiveChatBar(tab);
     const bar = document.getElementById(tab + "-ai-bar");
@@ -3423,10 +3423,10 @@ ${lines.join("\n")}`;
     if (!cd[type]) cd[type] = {};
     cd[type][topic] = Date.now();
     const cutoff = Date.now() - 48 * 60 * 60 * 1e3;
-    for (const t3 of ["praise", "concern", "overview", "info"]) {
-      if (!cd[t3]) continue;
-      Object.keys(cd[t3]).forEach((k) => {
-        if (cd[t3][k] < cutoff) delete cd[t3][k];
+    for (const t2 of ["praise", "concern", "overview", "info"]) {
+      if (!cd[t2]) continue;
+      Object.keys(cd[t2]).forEach((k) => {
+        if (cd[t2][k] < cutoff) delete cd[t2][k];
       });
     }
     localStorage.setItem(OWL_CD_KEY, JSON.stringify(cd));
@@ -3529,9 +3529,9 @@ ${lines.join("\n")}`;
       }
     } catch (e) {
     }
-    const tasks = getTasks().filter((t3) => t3.status !== "done");
-    for (const t3 of tasks) {
-      const m = t3.title.match(/(\d{1,2}):(\d{2})/);
+    const tasks = getTasks().filter((t2) => t2.status !== "done");
+    for (const t2 of tasks) {
+      const m = t2.title.match(/(\d{1,2}):(\d{2})/);
       if (m) {
         const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
         if (diff > 0 && diff <= 65) {
@@ -3543,7 +3543,7 @@ ${lines.join("\n")}`;
       }
     }
     const todayISO2 = now.toISOString().slice(0, 10);
-    if (tasks.some((t3) => t3.dueDate === todayISO2)) {
+    if (tasks.some((t2) => t2.dueDate === todayISO2)) {
       score += 2;
       reasons.push("due-today");
     }
@@ -3584,7 +3584,7 @@ ${lines.join("\n")}`;
       const budget = getFinBudget();
       if (budget.total > 0) {
         const from = getFinPeriodRange("month");
-        const exp = getFinance().filter((t3) => t3.ts >= from && t3.type === "expense").reduce((s, t3) => s + t3.amount, 0);
+        const exp = getFinance().filter((t2) => t2.ts >= from && t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
         if (exp / budget.total >= 0.8) {
           score += 2;
           reasons.push("budget-warn");
@@ -3599,7 +3599,7 @@ ${lines.join("\n")}`;
         reasons.push("no-evening-summary");
       }
     }
-    const stuck = tasks.filter((t3) => t3.createdAt && t3.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
+    const stuck = tasks.filter((t2) => t2.createdAt && t2.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3);
     if (stuck.length > 0) {
       score += 1;
       reasons.push("stuck-tasks");
@@ -3826,7 +3826,7 @@ ${lines.join("\n")}`;
       const tasks = getTasks();
       let done = 0;
       ids.forEach((tid) => {
-        const idx = tasks.findIndex((t3) => t3.id === tid);
+        const idx = tasks.findIndex((t2) => t2.id === tid);
         if (idx !== -1) {
           tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
           done++;
@@ -4090,8 +4090,8 @@ ${lines.join("\n")}`;
         <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:3px;transition:width 0.5s"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
-        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">${t2("projects.card.tempo_prefix", "\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456")}: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${t2("projects.card.silence_days", "{n} \u0434\u043D. \u0442\u0438\u0448\u0456", { n: silenceDays })}</span>` : ""}
+        ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">${t("projects.card.tempo_prefix", "\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456")}: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${t("projects.card.silence_days", "{n} \u0434\u043D. \u0442\u0438\u0448\u0456", { n: silenceDays })}</span>` : ""}
       </div>
       ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
@@ -4101,7 +4101,7 @@ ${lines.join("\n")}`;
       <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
       <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || t2("projects.card.notes_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443...")}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;flex:1">${p.notesPreview || t("projects.card.notes_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443...")}</div>
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>`;
@@ -4145,7 +4145,7 @@ ${lines.join("\n")}`;
     <!-- \u041D\u0430\u0437\u0430\u0434 -->
     <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t2("projects.workspace.back", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438")}</span>
+      <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t("projects.workspace.back", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438")}</span>
     </div>
 
     <!-- \u041D\u0430\u0437\u0432\u0430 + % + 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 \u0442\u0435\u043C\u043F\u0443 -->
@@ -4164,24 +4164,24 @@ ${lines.join("\n")}`;
       <div style="display:flex;gap:5px">
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
           <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">${t2("projects.tempo.now", "\u0437\u0430\u0440\u0430\u0437")}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">${t("projects.tempo.now", "\u0437\u0430\u0440\u0430\u0437")}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
           <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">${t2("projects.tempo.more", "+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C")}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">${t("projects.tempo.more", "+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C")}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
           <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
-          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">${t2("projects.tempo.ideal", "\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E")}</div>
+          <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">${t("projects.tempo.ideal", "\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E")}</div>
         </div>
       </div>
     </div>
 
     <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
     ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
-      <div class="section-label" style="margin-bottom:8px">${t2("projects.section.budget", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
+      <div class="section-label" style="margin-bottom:8px">${t("projects.section.budget", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:12px;font-weight:700;color:#1e1040">${t2("projects.budget.spent", "\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E")}</span>
+        <span style="font-size:12px;font-weight:700;color:#1e1040">${t("projects.budget.spent", "\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E")}</span>
         <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
       </div>
       <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
@@ -4203,7 +4203,7 @@ ${lines.join("\n")}`;
 
     <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
     ${metrics.length > 0 ? `<div class="card-glass">
-      <div class="section-label">${t2("projects.section.metrics", "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438")}</div>
+      <div class="section-label">${t("projects.section.metrics", "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438")}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${metrics.map((m) => `<div style="flex:1;min-width:60px;background:rgba(255,255,255,0.5);border-radius:10px;padding:8px 5px;text-align:center">
           <div style="font-size:18px;font-weight:900;color:${m.color || "#3d2e1e"}">${escapeHtml(String(m.value))}</div>
@@ -4215,8 +4215,8 @@ ${lines.join("\n")}`;
     <!-- \u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F / \u043F\u043B\u0430\u043D -->
     ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">${t2("projects.section.timeline", "\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D")}</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t2("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.section.timeline", "\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D")}</div>
+        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
       </div>
       <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
@@ -4241,8 +4241,8 @@ ${lines.join("\n")}`;
     <!-- \u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C -->
     ${decisions.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">${t2("projects.section.decisions", "\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C")}</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t2("projects.decisions.owl_auto", "OWL \xB7 \u0430\u0432\u0442\u043E")}</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.section.decisions", "\u041B\u043E\u0433 \u0440\u0456\u0448\u0435\u043D\u044C")}</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t("projects.decisions.owl_auto", "OWL \xB7 \u0430\u0432\u0442\u043E")}</span>
       </div>
       ${decisions.map((d, i) => `<div style="padding:5px 0;${i < decisions.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
         <div style="font-size:12px;font-weight:700;color:#1e1040">${escapeHtml(d.title)}</div>
@@ -4256,23 +4256,23 @@ ${lines.join("\n")}`;
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">${t2("projects.notes.title", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t2("projects.notes.count_in_folder", '{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "{name}" \u2192', { n: _countProjectNotes(p.name), name: escapeHtml(p.name) })}</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t("projects.notes.title", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t("projects.notes.count_in_folder", '{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "{name}" \u2192', { n: _countProjectNotes(p.name), name: escapeHtml(p.name) })}</div>
       </div>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
     <!-- OWL \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 -->
     ${risks ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">${t2("projects.section.risks", "OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438")}</div>
+      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">${t("projects.section.risks", "OWL \xB7 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438")}</div>
       <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(risks)}</div>
     </div>` : ""}
 
     <!-- \u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430 -->
     ${resources.length > 0 ? `<div class="card-glass">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="section-label" style="margin-bottom:0">${t2("projects.section.resources", "\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430")}</div>
-        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t2("projects.resources.stage_label", "\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F")}</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.section.resources", "\u041A\u043E\u0440\u0438\u0441\u043D\u0430 \u0456\u043D\u0444\u0430")}</div>
+        <span style="font-size:9px;color:rgba(30,16,64,0.3);font-weight:600">${t("projects.resources.stage_label", "\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0435\u0442\u0430\u043F")}</span>
       </div>
       ${resources.map((r, i) => {
       const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
@@ -4301,7 +4301,7 @@ ${lines.join("\n")}`;
     const isCollapsed = full.style.display === "none";
     collapsed.style.display = isCollapsed ? "none" : "block";
     full.style.display = isCollapsed ? "block" : "none";
-    if (toggle) toggle.textContent = isCollapsed ? t2("projects.timeline.collapse", "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191") : t2("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193");
+    if (toggle) toggle.textContent = isCollapsed ? t("projects.timeline.collapse", "\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191") : t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193");
   }
   function toggleProjectStep(projectId, stepId) {
     const projects = getProjects();
@@ -4323,7 +4323,7 @@ ${lines.join("\n")}`;
     try {
       if (!step.done) return;
       const tasks = getTasks();
-      const match = tasks.find((t3) => t3.status === "active" && t3.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
+      const match = tasks.find((t2) => t2.status === "active" && t2.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
       if (match) {
         match.status = "done";
         match.completedAt = Date.now();
@@ -4379,7 +4379,7 @@ ${lines.join("\n")}`;
     if (!key) {
       setTimeout(() => addInboxChatMsg(
         "agent",
-        t2("projects.intro.no_key", '\u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?', { name: projectName })
+        t("projects.intro.no_key", '\u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B, \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0447\u0430\u0441\u0443 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438, \u0456 \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0432 \u0446\u044C\u043E\u043C\u0443?', { name: projectName })
       ), 400);
       return;
     }
@@ -4415,7 +4415,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     } catch (e) {
       setTimeout(() => addInboxChatMsg(
         "agent",
-        t2("projects.intro.network_error", '\u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?', { name: projectName })
+        t("projects.intro.network_error", '\u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E! \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u2014 \u044F\u043A\u0438\u0439 \u0443 \u0442\u0435\u0431\u0435 \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E?', { name: projectName })
       ), 400);
     }
   }
@@ -4479,7 +4479,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addProjectsChatMsg("agent", t2("projects.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addProjectsChatMsg("agent", t("projects.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -4516,14 +4516,14 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         if (looksLikeJson) {
           try {
             JSON.parse(replyText);
-            addProjectsChatMsg("agent", t2("projects.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
+            addProjectsChatMsg("agent", t("projects.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
           } catch {
             addProjectsChatMsg("agent", replyText, false, chips);
           }
         } else addProjectsChatMsg("agent", replyText, false, chips);
       }
     } catch {
-      addProjectsChatMsg("agent", t2("projects.chat.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addProjectsChatMsg("agent", t("projects.chat.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     projectsBarLoading = false;
   }
@@ -4593,9 +4593,9 @@ ${lines}`;
       lines.push(`\u041D\u0430\u0441\u0442\u0440\u0456\u0439 \u0434\u043D\u044F (\u044E\u0437\u0435\u0440 \u0441\u0430\u043C \u043E\u0431\u0440\u0430\u0432 \u0443 \u0412\u0435\u0447\u043E\u0440\u0456): ${moodMap[mood] || mood}`);
     }
     try {
-      const dueToday = getTasks().filter((t3) => t3.status === "active" && t3.dueDate === todayISO2);
+      const dueToday = getTasks().filter((t2) => t2.status === "active" && t2.dueDate === todayISO2);
       if (dueToday.length > 0) {
-        const list = dueToday.slice(0, 6).map((t3) => `- [ID:${t3.id}] "${t3.title}"`).join("\n");
+        const list = dueToday.slice(0, 6).map((t2) => `- [ID:${t2.id}] "${t2.title}"`).join("\n");
         lines.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u043E\u043C \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0430\u043B\u0435 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0456:
 ${list}`);
       }
@@ -4653,12 +4653,12 @@ ${evLines}`);
     } catch (e) {
     }
     try {
-      const todayExpenses = getFinance().filter((t3) => t3.type === "expense" && new Date(t3.ts).toDateString() === today);
+      const todayExpenses = getFinance().filter((t2) => t2.type === "expense" && new Date(t2.ts).toDateString() === today);
       if (todayExpenses.length > 0) {
-        const total = todayExpenses.reduce((s, t3) => s + t3.amount, 0);
+        const total = todayExpenses.reduce((s, t2) => s + t2.amount, 0);
         const byCat = {};
-        todayExpenses.forEach((t3) => {
-          byCat[t3.category || "\u0406\u043D\u0448\u0435"] = (byCat[t3.category || "\u0406\u043D\u0448\u0435"] || 0) + t3.amount;
+        todayExpenses.forEach((t2) => {
+          byCat[t2.category || "\u0406\u043D\u0448\u0435"] = (byCat[t2.category || "\u0406\u043D\u0448\u0435"] || 0) + t2.amount;
         });
         const top3 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c} ${Math.round(a)}`).join(", ");
         const cur = getCurrency ? getCurrency() : "\u20B4";
@@ -4683,7 +4683,7 @@ ${lines.join("\n\n")}`;
       const notesAsItems = todayNotes.map((n) => ({ id: "note_" + n.id, text: n.title || n.text || "", mood: "neutral", ts: n.ts || n.createdAt || 0, isNote: true }));
       const allItems = [...todayMoments, ...notesAsItems].sort((a, b) => (a.ts || 0) - (b.ts || 0));
       if (allItems.length === 0) {
-        momEl.innerHTML = `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">${t2("evening.moments.empty", "\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0442\u0443\u0442")}</div>`;
+        momEl.innerHTML = `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px 0">${t("evening.moments.empty", "\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0442\u0443\u0442")}</div>`;
       } else {
         const moodDots = { positive: "#16a34a", neutral: "#f59e0b", negative: "#ef4444" };
         momEl.innerHTML = allItems.map((m) => {
@@ -4708,7 +4708,7 @@ ${lines.join("\n\n")}`;
     const container = document.getElementById("evening-undone");
     if (!container) return;
     const todayISO2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const undone = getTasks().filter((t3) => t3.status === "active" && t3.dueDate === todayISO2);
+    const undone = getTasks().filter((t2) => t2.status === "active" && t2.dueDate === todayISO2);
     const wrapBlock = document.getElementById("evening-undone-block");
     if (undone.length === 0) {
       if (wrapBlock) wrapBlock.style.display = "none";
@@ -4717,9 +4717,9 @@ ${lines.join("\n\n")}`;
     if (wrapBlock) wrapBlock.style.display = "block";
     const top = undone.slice(0, 5);
     const more = undone.length - top.length;
-    const lblTomorrow = t2("evening.undone.tomorrow", "\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430");
-    const lblWeek = t2("evening.undone.week", "\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
-    const lblMore = t2("evening.undone.more", "\u0456 \u0449\u0435 {n}", { n: more });
+    const lblTomorrow = t("evening.undone.tomorrow", "\u041D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430");
+    const lblWeek = t("evening.undone.week", "\u041D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+    const lblMore = t("evening.undone.more", "\u0456 \u0449\u0435 {n}", { n: more });
     container.innerHTML = top.map((task) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
       <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(task.title)}</div>
@@ -4730,7 +4730,7 @@ ${lines.join("\n\n")}`;
   }
   function _rescheduleTask(taskId, daysAhead) {
     const tasks = getTasks();
-    const idx = tasks.findIndex((t3) => String(t3.id) === String(taskId));
+    const idx = tasks.findIndex((t2) => String(t2.id) === String(taskId));
     if (idx === -1) return;
     const d = /* @__PURE__ */ new Date();
     d.setDate(d.getDate() + daysAhead);
@@ -4757,20 +4757,20 @@ ${lines.join("\n\n")}`;
       return;
     }
     if (wrapBlock) wrapBlock.style.display = "block";
-    const lblHold = t2("evening.quit.hold", "\u0422\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u{1F4AA}");
-    const lblRelapse = t2("evening.quit.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F");
-    const lblNewStart = t2("evening.quit.new_start", "\u043D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u0440\u0442");
+    const lblHold = t("evening.quit.hold", "\u0422\u0440\u0438\u043C\u0430\u0432\u0441\u044F \u{1F4AA}");
+    const lblRelapse = t("evening.quit.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F");
+    const lblNewStart = t("evening.quit.new_start", "\u043D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u0440\u0442");
     container.innerHTML = quits.map((h) => {
       const s = getQuitStatus(h.id);
       const heldToday = s.lastHeld === todayISO2;
       const streak = s.streak || 0;
-      const streakText = streak > 0 ? t2("evening.quit.streak_days", "\u0441\u0442\u0440\u0456\u043A {n} \u0434\u043D", { n: streak }) : lblNewStart;
+      const streakText = streak > 0 ? t("evening.quit.streak_days", "\u0441\u0442\u0440\u0456\u043A {n} \u0434\u043D", { n: streak }) : lblNewStart;
       if (heldToday) {
         return `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
           <div style="flex:1">
             <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
-            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">${t2("evening.quit.held_today", "\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713 \xB7 {s}", { s: streakText })}</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">${t("evening.quit.held_today", "\u0422\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2713 \xB7 {s}", { s: streakText })}</div>
           </div>
         </div>`;
       }
@@ -4840,7 +4840,7 @@ ${lines.join("\n\n")}`;
   function saveMoment() {
     const text = document.getElementById("moment-input-text").value.trim();
     if (!text) {
-      showToast(t2("evening.moment.empty_error", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443"));
+      showToast(t("evening.moment.empty_error", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443"));
       return;
     }
     const moments = getMoments();
@@ -4895,7 +4895,7 @@ ${lines.join("\n\n")}`;
     const textEl = document.getElementById("moment-view-text");
     const summaryBlock = document.getElementById("moment-view-summary-block");
     const summaryEl = document.getElementById("moment-view-summary");
-    if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || "") + " " + t2("evening.moment.modal_title", "\u041C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F");
+    if (headerEl) headerEl.textContent = (moodEmoji[m.mood] || "") + " " + t("evening.moment.modal_title", "\u041C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F");
     if (timeEl && m.ts) timeEl.textContent = new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
     if (textEl) textEl.textContent = m.text || "";
     if (summaryBlock && summaryEl && m.summary && m.summary !== m.text) {
@@ -5045,13 +5045,13 @@ ${lines.join("\n\n")}`;
     }
     if (tab === "tasks") {
       const tasks = getTasks();
-      const active = tasks.filter((t3) => t3.status === "active");
+      const active = tasks.filter((t2) => t2.status === "active");
       const now = Date.now();
-      const stuck = active.filter((t3) => t3.createdAt && now - t3.createdAt > 3 * 24 * 60 * 60 * 1e3);
-      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t3) => '"' + t3.title + '" [task_' + t3.id + "]").join(", ")}`);
-      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t3) => t3.status === "done").length}`);
+      const stuck = active.filter((t2) => t2.createdAt && now - t2.createdAt > 3 * 24 * 60 * 60 * 1e3);
+      if (stuck.length > 0) parts.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0456 \u0431\u0435\u0437 \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0443 3+ \u0434\u043D\u0456: ${stuck.map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}`);
+      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${active.length}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E: ${tasks.filter((t2) => t2.status === "done").length}`);
       if (active.length > 0) {
-        parts.push(`\u0423\u0441\u0456 \u0430\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: ${active.slice(0, 10).map((t3) => '"' + t3.title + '" [task_' + t3.id + "]").join(", ")}.`);
+        parts.push(`\u0423\u0441\u0456 \u0430\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: ${active.slice(0, 10).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}.`);
       }
       const allHabits = getHabits();
       const quitHabits = allHabits.filter((h) => h.type === "quit");
@@ -5107,7 +5107,7 @@ ${lines.join("\n\n")}`;
       }
       const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3;
-      parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${inbox.filter((i) => i.ts > weekAgo).length}. \u0417\u0430\u0434\u0430\u0447 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${getTasks().filter((t3) => t3.status === "active").length}`);
+      parts.push(`\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${inbox.filter((i) => i.ts > weekAgo).length}. \u0417\u0430\u0434\u0430\u0447 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445: ${getTasks().filter((t2) => t2.status === "active").length}`);
     }
     if (tab === "evening") {
       const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
@@ -5118,7 +5118,7 @@ ${lines.join("\n\n")}`;
       const hour = (/* @__PURE__ */ new Date()).getHours();
       parts.push(`\u041C\u043E\u043C\u0435\u043D\u0442\u0438 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${todayMoments.length}. \u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0434\u043D\u044F: ${hasSummary ? "\u0454" : "\u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"}.`);
       if (hour >= 20 && !hasSummary) parts.push("[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0435\u0447\u0456\u0440 \u2014 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0449\u0435 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E.");
-      const tasks = getTasks().filter((t3) => t3.status === "done" && t3.updatedAt && Date.now() - t3.updatedAt < 24 * 60 * 60 * 1e3);
+      const tasks = getTasks().filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 24 * 60 * 60 * 1e3);
       if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${tasks.length}`);
     }
     if (tab === "finance") {
@@ -5190,12 +5190,12 @@ ${lines.join("\n\n")}`;
     if (phaseLabels[phase]) normal.push(phaseLabels[phase]);
     normal.push(`\u0417\u0430\u0440\u0430\u0437 ${now.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}.`);
     const tasks = getTasks();
-    const activeTasks = tasks.filter((t3) => t3.status === "active");
+    const activeTasks = tasks.filter((t2) => t2.status === "active");
     if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const briefParts = [];
-      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t3) => '"' + t3.title + '" [task_' + t3.id + "]").join(", ")}`);
+      if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}`);
       if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name + " [habit_" + h.id + "]").join(", ")}`);
       const quitHabitsAll = getHabits().filter((h) => h.type === "quit");
       if (quitHabitsAll.length > 0) {
@@ -5210,7 +5210,7 @@ ${briefParts.join("\n")}
 \u0417\u0433\u0430\u0434\u0430\u0439 \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0456 \u043C\u043E\u0442\u0438\u0432\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u043E.`);
     }
     if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
-      const doneTasks = tasks.filter((t3) => t3.status === "done" && t3.updatedAt && Date.now() - t3.updatedAt < 24 * 60 * 60 * 1e3);
+      const doneTasks = tasks.filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 24 * 60 * 60 * 1e3);
       const todayDow = now.getDay();
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const todayLogAll = getHabitLog()[todayStr] || {};
@@ -5233,44 +5233,44 @@ ${briefParts.join("\n")}
 ${pulseParts.join("\n")}
 \u0410\u0434\u0430\u043F\u0442\u0443\u0439 \u0442\u043E\u043D \u043F\u0456\u0434 \u043D\u0430\u0441\u0442\u0440\u0456\u0439. \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u044F\u043A \u0434\u0435\u043D\u044C \u0430\u0431\u043E \u043F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A.`);
     }
-    const urgent = activeTasks.filter((t3) => {
-      const m = t3.title.match(/(\d{1,2}):(\d{2})/);
+    const urgent = activeTasks.filter((t2) => {
+      const m = t2.title.match(/(\d{1,2}):(\d{2})/);
       if (!m) return false;
       const diff = parseInt(m[1]) * 60 + parseInt(m[2]) - (hour * 60 + min);
       return diff > 0 && diff <= 65;
     });
-    urgent.forEach((t3) => {
-      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t3.title}" [task_${t3.id}].`);
+    urgent.forEach((t2) => {
+      critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0447\u0435\u0440\u0435\u0437 ~\u0433\u043E\u0434\u0438\u043D\u0443: "${t2.title}" [task_${t2.id}].`);
     });
     const todayISOLocal = now.toISOString().slice(0, 10);
-    const overdue = activeTasks.filter((t3) => t3.dueDate && t3.dueDate < todayISOLocal);
+    const overdue = activeTasks.filter((t2) => t2.dueDate && t2.dueDate < todayISOLocal);
     if (overdue.length > 0) {
-      overdue.slice(0, 3).forEach((t3) => {
-        const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t3.dueDate)) / (24 * 60 * 60 * 1e3));
-        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t3.title}" [task_${t3.id}] \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
+      overdue.slice(0, 3).forEach((t2) => {
+        const days = Math.floor((Date.parse(todayISOLocal) - Date.parse(t2.dueDate)) / (24 * 60 * 60 * 1e3));
+        critical.push(`[\u041F\u0420\u041E\u0421\u0422\u0420\u041E\u0427\u0415\u041D\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" [task_${t2.id}] \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043C\u0438\u043D\u0443\u0432 ${days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days + " \u0434\u043D \u0442\u043E\u043C\u0443"}. \u0417\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438 \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0411\u0415\u0417 \u0434\u043E\u043A\u043E\u0440\u0456\u0432 \u0442\u0438\u043F\u0443 "\u0442\u0438 \u043D\u0435 \u0432\u0441\u0442\u0438\u0433".`);
       });
     }
-    const stuckDays3 = activeTasks.filter((t3) => t3.createdAt && t3.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t3.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    stuckDays3.forEach((t3) => {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t3.title}" [task_${t3.id}] \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
+    const stuckDays3 = activeTasks.filter((t2) => t2.createdAt && t2.createdAt < Date.now() - 3 * 24 * 60 * 60 * 1e3 && t2.createdAt >= Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    stuckDays3.forEach((t2) => {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" [task_${t2.id}] \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430 \u0432\u0436\u0435 3+ \u0434\u043D\u0456.`);
     });
-    const forgotten = activeTasks.filter((t3) => t3.createdAt && t3.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
-    forgotten.forEach((t3) => {
-      const days = Math.floor((Date.now() - t3.createdAt) / (24 * 60 * 60 * 1e3));
-      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t3.title}" [task_${t3.id}] \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
+    const forgotten = activeTasks.filter((t2) => t2.createdAt && t2.createdAt < Date.now() - 5 * 24 * 60 * 60 * 1e3);
+    forgotten.forEach((t2) => {
+      const days = Math.floor((Date.now() - t2.createdAt) / (24 * 60 * 60 * 1e3));
+      important.push(`[\u0417\u0410\u0411\u0423\u0422\u0410 \u0417\u0410\u0414\u0410\u0427\u0410] "${t2.title}" [task_${t2.id}] \u0432\u0438\u0441\u0438\u0442\u044C ${days} \u0434\u043D\u0456\u0432. \u041C'\u044F\u043A\u043E \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u0447\u0438 \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u2014 \u043C\u043E\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u0431\u043E \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438?`);
     });
-    const reshuffled = activeTasks.filter((t3) => (t3.rescheduleCount || 0) >= 3);
-    reshuffled.forEach((t3) => {
-      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t3.title}" [task_${t3.id}] \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t3.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
+    const reshuffled = activeTasks.filter((t2) => (t2.rescheduleCount || 0) >= 3);
+    reshuffled.forEach((t2) => {
+      important.push(`[\u041F\u0420\u041E\u041A\u0420\u0410\u0421\u0422\u0418\u041D\u0410\u0426\u0406\u042F] \u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" [task_${t2.id}] \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C\u0441\u044F ${t2.rescheduleCount}-\u0439 \u0440\u0430\u0437. \u042E\u0437\u0435\u0440\u0443 \u0432\u0430\u0436\u043A\u043E \u0457\u0457 \u0437\u0440\u0443\u0448\u0438\u0442\u0438 \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0430\u0431\u043E \u0440\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438, \u0430\u0431\u043E \u0434\u0440\u043E\u043F\u043D\u0443\u0442\u0438. \u0427\u0456\u043F\u0438: "\u0420\u043E\u0437\u0431\u0438\u0442\u0438 \u043D\u0430 \u043A\u0440\u043E\u043A\u0438" (chat) \u0456 "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443" (chat). \u0411\u0415\u0417 \u043E\u0441\u0443\u0434\u0443 \u2014 \u0446\u0435 \u043D\u0435 "\u0442\u0438 \u0437\u043D\u043E\u0432\u0443 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u0432", \u0430 "\u043C\u043E\u0436\u043B\u0438\u0432\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0430 \u0430\u0431\u043E \u043D\u0435 \u043D\u0430 \u0447\u0430\u0441\u0456".`);
     });
     if (activeTasks.length > 0) {
-      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t3) => '"' + t3.title + '" [task_' + t3.id + "]").join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
+      normal.push(`\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${activeTasks.length}. ${activeTasks.slice(0, 3).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}${activeTasks.length > 3 ? " \u0456 \u0449\u0435..." : ""}.`);
     } else {
       normal.push("\u0412\u0441\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E.");
     }
     if (activeTasks.length >= 3) {
       const suggested = Math.max(1, Math.round(activeTasks.length * 0.2));
-      const doneTodayCount = tasks.filter((t3) => t3.status === "done" && t3.completedAt && Date.now() - t3.completedAt < 24 * 60 * 60 * 1e3).length;
+      const doneTodayCount = tasks.filter((t2) => t2.status === "done" && t2.completedAt && Date.now() - t2.completedAt < 24 * 60 * 60 * 1e3).length;
       normal.push(`[\u0422\u0415\u041C\u041F] \u041E\u043F\u0442\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ~${suggested} \u0437\u0430\u0434\u0430\u0447 (20% \u0432\u0456\u0434 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445). \u0417\u0430\u043A\u0440\u0438\u0442\u043E: ${doneTodayCount}. \u042F\u043A\u0449\u043E \u0443 \u043F\u0430\u043C'\u044F\u0442\u0456 \u0454 \u0444\u0430\u043A\u0442 \u043F\u0440\u043E \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0439\u043E\u0433\u043E \u0437\u0430\u043C\u0456\u0441\u0442\u044C 20%-\u0444\u043E\u0440\u043C\u0443\u043B\u0438.`);
     }
     const habits = getHabits();
@@ -5324,8 +5324,8 @@ ${pulseParts.join("\n")}
       const budget = getFinBudget();
       if (budget.total > 0) {
         const from = getFinPeriodRange("month");
-        const txs = getFinance().filter((t3) => t3.ts >= from && t3.type === "expense");
-        const exp = txs.reduce((s, t3) => s + t3.amount, 0);
+        const txs = getFinance().filter((t2) => t2.ts >= from && t2.type === "expense");
+        const exp = txs.reduce((s, t2) => s + t2.amount, 0);
         const pct = Math.round(exp / budget.total * 100);
         if (exp > budget.total) {
           important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E! \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(exp)} \u0437 ${formatMoney(budget.total)} (${pct}%).`);
@@ -5336,9 +5336,9 @@ ${pulseParts.join("\n")}
         }
         if (txs.length >= 3) {
           const bycat = {};
-          txs.forEach((t3) => {
-            if (!bycat[t3.category]) bycat[t3.category] = [];
-            bycat[t3.category].push(t3.amount);
+          txs.forEach((t2) => {
+            if (!bycat[t2.category]) bycat[t2.category] = [];
+            bycat[t2.category].push(t2.amount);
           });
           const lastTx = txs[0];
           if (lastTx && bycat[lastTx.category] && bycat[lastTx.category].length >= 2) {
@@ -5361,7 +5361,7 @@ ${pulseParts.join("\n")}
       normal.push("[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041D\u043E\u0432\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C. \u041E\u0433\u043B\u044F\u0434 \u043F\u043B\u0430\u043D\u0456\u0432 \u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0445 \u0437\u0430\u0434\u0430\u0447.");
     }
     if (weekDay === 5 && phase === "evening") {
-      const doneTasks = tasks.filter((t3) => t3.status === "done" && t3.updatedAt && Date.now() - t3.updatedAt < 7 * 24 * 60 * 60 * 1e3);
+      const doneTasks = tasks.filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 7 * 24 * 60 * 60 * 1e3);
       normal.push(`[\u0422\u0418\u0416\u0414\u0415\u041D\u042C] \u041A\u0456\u043D\u0435\u0446\u044C \u0442\u0438\u0436\u043D\u044F. \u0417\u0430\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C: ${doneTasks.length}.`);
     }
     const activeTabs = [];
@@ -5481,10 +5481,10 @@ ${pulseParts.join("\n")}
         moodByISO[iso][m.mood] = (moodByISO[iso][m.mood] || 0) + 1;
       });
       const expenseByISO = {};
-      finance.filter((t3) => t3.type === "expense").forEach((t3) => {
-        if (!t3.ts) return;
-        const iso = new Date(t3.ts).toISOString().slice(0, 10);
-        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t3.amount || 0);
+      finance.filter((t2) => t2.type === "expense").forEach((t2) => {
+        if (!t2.ts) return;
+        const iso = new Date(t2.ts).toISOString().slice(0, 10);
+        expenseByISO[iso] = (expenseByISO[iso] || 0) + (t2.amount || 0);
       });
       const negSpend = [];
       const posSpend = [];
@@ -5512,10 +5512,10 @@ ${pulseParts.join("\n")}
   }
   function checkTabBoardTrigger(tab) {
     if (tab === "tasks") {
-      const tasks = getTasks().filter((t3) => t3.status === "active");
+      const tasks = getTasks().filter((t2) => t2.status === "active");
       if (tasks.length === 0) return false;
       const now = Date.now();
-      const stuck = tasks.filter((t3) => t3.createdAt && now - t3.createdAt > 3 * 24 * 60 * 60 * 1e3);
+      const stuck = tasks.filter((t2) => t2.createdAt && now - t2.createdAt > 3 * 24 * 60 * 60 * 1e3);
       return stuck.length > 0;
     }
     if (tab === "notes") return getNotes().length > 0;
@@ -5810,7 +5810,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       return `${n} ${many}`;
     };
     try {
-      const tasks = getTasks().filter((t3) => t3.status === "active");
+      const tasks = getTasks().filter((t2) => t2.status === "active");
       const habits = getHabits();
       const todayStr = (/* @__PURE__ */ new Date()).toDateString();
       const habitLog = getHabitLog();
@@ -5864,16 +5864,16 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       if (tab === "finance") {
         const txs = getFinance();
         const from = getFinPeriodRange("month");
-        const monthTxs = txs.filter((t3) => t3.ts >= from);
-        const exp = monthTxs.filter((t3) => t3.type === "expense").reduce((s, t3) => s + t3.amount, 0);
-        const inc = monthTxs.filter((t3) => t3.type === "income").reduce((s, t3) => s + t3.amount, 0);
+        const monthTxs = txs.filter((t2) => t2.ts >= from);
+        const exp = monthTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
+        const inc = monthTxs.filter((t2) => t2.type === "income").reduce((s, t2) => s + t2.amount, 0);
         if (monthTxs.length === 0) {
           text = "\u0426\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0432\u0438\u0442\u0440\u0430\u0442\u0443!";
         } else {
           text = `\u0417\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(exp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(inc)}.${inc > 0 ? ` \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ${Math.round((inc - exp) / inc * 100)}%.` : ""}`;
         }
       } else if (tab === "tasks") {
-        const tasks = getTasks().filter((t3) => t3.status === "active");
+        const tasks = getTasks().filter((t2) => t2.status === "active");
         text = tasks.length > 0 ? `${tasks.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438?` : "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C!";
       } else if (tab === "health") {
         text = "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?";
@@ -6082,11 +6082,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
 
   // src/tabs/finance-insight.js
   function _finInsightHash(allTxs) {
-    const exp = allTxs.filter((t3) => t3.type === "expense").reduce((s, t3) => s + t3.amount, 0);
-    const inc = allTxs.filter((t3) => t3.type === "income").reduce((s, t3) => s + t3.amount, 0);
+    const exp = allTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
+    const inc = allTxs.filter((t2) => t2.type === "income").reduce((s, t2) => s + t2.amount, 0);
     const catMap = {};
-    allTxs.filter((t3) => t3.type === "expense").forEach((t3) => {
-      catMap[t3.category] = (catMap[t3.category] || 0) + t3.amount;
+    allTxs.filter((t2) => t2.type === "expense").forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const top = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}:${Math.round(a)}`).join("|");
     return `${allTxs.length}_${Math.round(exp)}_${Math.round(inc)}_${top}`;
@@ -6095,7 +6095,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     if (allTxs.length < 2) return "";
     const cacheKey = `nm_fin_insight_${period}_${offset}`;
     const cached = localStorage.getItem(cacheKey);
-    let text = t2("finance.insight_loading", "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026");
+    let text = t("finance.insight_loading", "OWL \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454 \u0444\u0456\u043D\u0430\u043D\u0441\u0438\u2026");
     if (cached) {
       try {
         text = JSON.parse(cached).text || text;
@@ -6123,13 +6123,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       } catch (e) {
       }
     }
-    const expenses = allTxs.filter((t3) => t3.type === "expense");
-    const incomes = allTxs.filter((t3) => t3.type === "income");
-    const totalExp = expenses.reduce((s, t3) => s + t3.amount, 0);
-    const totalInc = incomes.reduce((s, t3) => s + t3.amount, 0);
+    const expenses = allTxs.filter((t2) => t2.type === "expense");
+    const incomes = allTxs.filter((t2) => t2.type === "income");
+    const totalExp = expenses.reduce((s, t2) => s + t2.amount, 0);
+    const totalInc = incomes.reduce((s, t2) => s + t2.amount, 0);
     const catMap = {};
-    expenses.forEach((t3) => {
-      catMap[t3.category] = (catMap[t3.category] || 0) + t3.amount;
+    expenses.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const budget = getFinBudget();
@@ -6234,19 +6234,19 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (type !== "expense") return;
     const budget = getFinBudget();
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t3) => t3.type === "expense" && t3.ts >= from);
-    const totalSpent = txs.reduce((s, t3) => s + t3.amount, 0);
+    const txs = getFinance().filter((t2) => t2.type === "expense" && t2.ts >= from);
+    const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
-      if (pct >= 1) addFinanceChatMsg("agent", t2("finance.budget_month_exceeded", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
-      else if (pct >= 0.8) addFinanceChatMsg("agent", t2("finance.budget_month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
+      if (pct >= 1) addFinanceChatMsg("agent", t("finance.budget_month_exceeded", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+      else if (pct >= 0.8) addFinanceChatMsg("agent", t("finance.budget_month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
-      const catSpent = txs.filter((t3) => t3.category === category).reduce((s, t3) => s + t3.amount, 0);
+      const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
-      if (pct >= 1) addFinanceChatMsg("agent", t2("finance.budget_cat_exceeded", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
-      else if (pct >= 0.8) addFinanceChatMsg("agent", t2("finance.budget_cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
+      if (pct >= 1) addFinanceChatMsg("agent", t("finance.budget_cat_exceeded", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+      else if (pct >= 0.8) addFinanceChatMsg("agent", t("finance.budget_cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
     }
   }
   async function sendFinanceBarMessage() {
@@ -6256,7 +6256,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addFinanceChatMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addFinanceChatMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -6266,11 +6266,11 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     financeBarLoading = true;
     addFinanceChatMsg("typing", "");
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t3) => t3.ts >= from);
+    const txs = getFinance().filter((t2) => t2.ts >= from);
     const budget = getFinBudget();
     const cats = getFinCats();
     const currency = getCurrency();
-    const txSummary = txs.slice(0, 20).map((t3) => `[${t3.type}] ${t3.category} ${t3.amount}${currency} ${t3.comment || ""}`).join("; ");
+    const txSummary = txs.slice(0, 20).map((t2) => `[${t2.type}] ${t2.category} ${t2.amount}${currency} ${t2.comment || ""}`).join("; ");
     const systemPrompt = getFinanceChatSystem({
       currency,
       budget,
@@ -6315,14 +6315,14 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         if (looksLikeJson) {
           try {
             JSON.parse(replyText);
-            addFinanceChatMsg("agent", t2("common.done_check", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
+            addFinanceChatMsg("agent", t("common.done_check", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
           } catch {
             addFinanceChatMsg("agent", replyText, false, chips);
           }
         } else addFinanceChatMsg("agent", replyText, false, chips);
       }
     } catch {
-      addFinanceChatMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addFinanceChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     financeBarLoading = false;
   }
@@ -6476,7 +6476,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
     }
     const win = _getFinPeriodWindow(currentFinPeriod, currentFinPeriodOffset);
-    const allTxs = getFinance().filter((t3) => t3.ts >= win.from && t3.ts < win.to);
+    const allTxs = getFinance().filter((t2) => t2.ts >= win.from && t2.ts < win.to);
     let gridHtml = "";
     try {
       gridHtml = _finCatsGrid(allTxs, win);
@@ -6489,8 +6489,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     refreshFinInsight(allTxs, win, currentFinPeriod, currentFinPeriodOffset);
   }
   function _deleteFinTxById(txId) {
-    const item = getFinance().find((t3) => t3.id === txId);
-    saveFinance(getFinance().filter((t3) => t3.id !== txId));
+    const item = getFinance().find((t2) => t2.id === txId);
+    saveFinance(getFinance().filter((t2) => t2.id !== txId));
     if (item) addToTrash("finance", item);
     renderFinance();
     try {
@@ -6548,12 +6548,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const cats = getFinCats();
     const isExpense = currentFinTab === "expense";
     const catList = (isExpense ? cats.expense : cats.income).filter((c) => c && c.id && c.name && !c.archived);
-    const txs = allTxs.filter((t3) => t3.type === (isExpense ? "expense" : "income"));
-    const totalSum = txs.reduce((s, t3) => s + t3.amount, 0);
+    const txs = allTxs.filter((t2) => t2.type === (isExpense ? "expense" : "income"));
+    const totalSum = txs.reduce((s, t2) => s + t2.amount, 0);
     const periodLabel = win?.label || "";
     const catMap = {};
-    txs.forEach((t3) => {
-      catMap[t3.category] = (catMap[t3.category] || 0) + t3.amount;
+    txs.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const sorted = [...catList].sort((a, b) => (a.order || 0) - (b.order || 0));
     const inGrid = sorted.slice(0, 12);
@@ -6656,18 +6656,18 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   }
   function _finTxsBlock(allTxs) {
     const sorted = [...allTxs].sort((a, b) => b.ts - a.ts).slice(0, 8);
-    const rows = sorted.map((t3) => {
-      const isExp = t3.type === "expense";
-      const dateStr = new Date(t3.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const categoryLine = t3.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t3.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t3.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t3.category)}</span>`;
-      return `<div class="fin-tx-swipe-wrap" data-tx-id="${t3.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction(${t3.id})" style="position:relative;z-index:1;background:#fff">
+    const rows = sorted.map((t2) => {
+      const isExp = t2.type === "expense";
+      const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+      const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
+      return `<div class="fin-tx-swipe-wrap" data-tx-id="${t2.id}" style="position:relative;overflow:hidden;border-radius:10px">
+      <div class="tx-row" onclick="openEditTransaction(${t2.id})" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
-          ${t3.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t3.comment)}</div>` : ""}
+          ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t2.comment)}</div>` : ""}
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t3.amount)}</div>
+          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t2.amount)}</div>
           <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
         </div>
       </div>
@@ -6685,23 +6685,23 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   }
   function openAllTransactions() {
     const from = getFinPeriodRange(currentFinPeriod);
-    const allTxs = getFinance().filter((t3) => t3.ts >= from).sort((a, b) => b.ts - a.ts);
+    const allTxs = getFinance().filter((t2) => t2.ts >= from).sort((a, b) => b.ts - a.ts);
     const existing = document.getElementById("fin-all-txs-modal");
     if (existing) existing.remove();
     const modal = document.createElement("div");
     modal.id = "fin-all-txs-modal";
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
-    const rows = allTxs.map((t3) => {
-      const isExp = t3.type === "expense";
-      const dateStr = new Date(t3.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const categoryLine = t3.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t3.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t3.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t3.category)}</span>`;
-      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t3.id})">
+    const rows = allTxs.map((t2) => {
+      const isExp = t2.type === "expense";
+      const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+      const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
+      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t2.id})">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
-        ${t3.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t3.comment)}</div>` : ""}
+        ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t2.comment)}</div>` : ""}
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t3.amount)}</div>
+        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t2.amount)}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
       </div>
     </div>`;
@@ -6770,8 +6770,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (type !== "expense") return;
     const budget = getFinBudget();
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t3) => t3.type === "expense" && t3.ts >= from);
-    const totalSpent = txs.reduce((s, t3) => s + t3.amount, 0);
+    const txs = getFinance().filter((t2) => t2.type === "expense" && t2.ts >= from);
+    const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
       if (pct >= 1) addInboxChatMsg("agent", `\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(totalSpent)} \u0437 ${formatMoney(budget.total)}.`);
@@ -6779,7 +6779,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
-      const catSpent = txs.filter((t3) => t3.category === category).reduce((s, t3) => s + t3.amount, 0);
+      const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
       if (pct >= 1) addInboxChatMsg("agent", `\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "${category}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: ${formatMoney(catSpent)} \u0437 ${formatMoney(catLimit)}.`);
       else if (pct >= 0.8) addInboxChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
@@ -6788,26 +6788,26 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   function getFinanceContext() {
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t3) => t3.ts >= from);
+    const txs = getFinance().filter((t2) => t2.ts >= from);
     if (txs.length === 0) return "";
-    const expenses = txs.filter((t3) => t3.type === "expense");
-    const incomes = txs.filter((t3) => t3.type === "income");
-    const totalExp = expenses.reduce((s, t3) => s + t3.amount, 0);
-    const totalInc = incomes.reduce((s, t3) => s + t3.amount, 0);
+    const expenses = txs.filter((t2) => t2.type === "expense");
+    const incomes = txs.filter((t2) => t2.type === "income");
+    const totalExp = expenses.reduce((s, t2) => s + t2.amount, 0);
+    const totalInc = incomes.reduce((s, t2) => s + t2.amount, 0);
     const budget = getFinBudget();
     const catMap = {};
-    expenses.forEach((t3) => {
-      catMap[t3.category] = (catMap[t3.category] || 0) + t3.amount;
+    expenses.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const top3 = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c}: ${formatMoney(a)}`).join(", ");
-    const todayTxs = txs.filter((t3) => new Date(t3.ts).toDateString() === today);
-    const todaySum = todayTxs.filter((t3) => t3.type === "expense").reduce((s, t3) => s + t3.amount, 0);
+    const todayTxs = txs.filter((t2) => new Date(t2.ts).toDateString() === today);
+    const todaySum = todayTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
     let parts = [`[MONTH_EXPENSES:${formatMoney(totalExp)}] [MONTH_INCOME:${formatMoney(totalInc)}] \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0437\u0430 \u043C\u0456\u0441\u044F\u0446\u044C: \u0432\u0438\u0442\u0440\u0430\u0442\u0438 ${formatMoney(totalExp)}, \u0434\u043E\u0445\u043E\u0434\u0438 ${formatMoney(totalInc)}`];
     if (budget.total > 0) parts.push(`[BUDGET:${formatMoney(budget.total)}] \u0431\u044E\u0434\u0436\u0435\u0442 ${formatMoney(budget.total)}, \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(budget.total - totalExp)}`);
     if (top3) parts.push(`\u0442\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: ${top3}`);
     if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(todaySum)}`);
     else parts.push("[TODAY_EXPENSES:0] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0435 \u0431\u0443\u043B\u043E");
-    const recentTxs = txs.slice(0, 5).map((t3) => `[ID:${t3.id}] ${t3.type === "expense" ? "-" : "+"}${t3.amount}${getCurrency()} ${t3.category}${t3.comment ? " (" + t3.comment + ")" : ""}`).join("; ");
+    const recentTxs = txs.slice(0, 5).map((t2) => `[ID:${t2.id}] ${t2.type === "expense" ? "-" : "+"}${t2.amount}${getCurrency()} ${t2.category}${t2.comment ? " (" + t2.comment + ")" : ""}`).join("; ");
     if (recentTxs) parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F update_transaction): ${recentTxs}`);
     return parts.join("\n");
   }
@@ -6986,9 +6986,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (fromCat.type !== toCat.type) return { ok: false, reason: "\u0420\u0456\u0437\u043D\u0456 \u0442\u0438\u043F\u0438 (expense/income)" };
     const txs = getFinance();
     let changed = 0;
-    txs.forEach((t3) => {
-      if (t3.category === fromCat.cat.name) {
-        t3.category = toCat.cat.name;
+    txs.forEach((t2) => {
+      if (t2.category === fromCat.cat.name) {
+        t2.category = toCat.cat.name;
         changed++;
       }
     });
@@ -7521,7 +7521,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
       case "delete_transaction": {
         const txs = getFinance();
-        const item = txs.find((t3) => t3.id === args.id);
+        const item = txs.find((t2) => t2.id === args.id);
         if (!item) {
           addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
           return true;
@@ -7530,7 +7530,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
           addToTrash("finance", item);
         } catch (e) {
         }
-        saveFinance(txs.filter((t3) => t3.id !== args.id));
+        saveFinance(txs.filter((t2) => t2.id !== args.id));
         if (currentTab === "finance") renderFinance();
         addMsg("agent", `\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0432: ${item.category} ${formatMoney(item.amount)}.`);
         return true;
@@ -7701,25 +7701,25 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   // src/data/notes-categories.js
   function getCategoryName(id) {
     const names = {
-      food: t2("notes.cat.food", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F"),
-      finance: t2("notes.cat.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438"),
-      health: t2("notes.cat.health", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F"),
-      work: t2("notes.cat.work", "\u0420\u043E\u0431\u043E\u0442\u0430"),
-      study: t2("notes.cat.study", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F"),
-      ideas: t2("notes.cat.ideas", "\u0406\u0434\u0435\u0457"),
-      personal: t2("notes.cat.personal", "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435"),
-      travel: t2("notes.cat.travel", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456"),
-      goals: t2("notes.cat.goals", "\u0426\u0456\u043B\u0456"),
-      sport: t2("notes.cat.sport", "\u0421\u043F\u043E\u0440\u0442"),
-      music: t2("notes.cat.music", "\u041C\u0443\u0437\u0438\u043A\u0430"),
-      home: t2("notes.cat.home", "\u0414\u0456\u043C"),
-      car: t2("notes.cat.car", "\u0410\u0432\u0442\u043E"),
-      shopping: t2("notes.cat.shopping", "\u041F\u043E\u043A\u0443\u043F\u043A\u0438"),
-      people: t2("notes.cat.people", "\u041B\u044E\u0434\u0438"),
-      projects: t2("notes.cat.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"),
-      nature: t2("notes.cat.nature", "\u041F\u0440\u0438\u0440\u043E\u0434\u0430"),
-      coffee: t2("notes.cat.coffee", "\u041A\u0430\u0432\u0430"),
-      photo: t2("notes.cat.photo", "\u0424\u043E\u0442\u043E")
+      food: t("notes.cat.food", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F"),
+      finance: t("notes.cat.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438"),
+      health: t("notes.cat.health", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F"),
+      work: t("notes.cat.work", "\u0420\u043E\u0431\u043E\u0442\u0430"),
+      study: t("notes.cat.study", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F"),
+      ideas: t("notes.cat.ideas", "\u0406\u0434\u0435\u0457"),
+      personal: t("notes.cat.personal", "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435"),
+      travel: t("notes.cat.travel", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456"),
+      goals: t("notes.cat.goals", "\u0426\u0456\u043B\u0456"),
+      sport: t("notes.cat.sport", "\u0421\u043F\u043E\u0440\u0442"),
+      music: t("notes.cat.music", "\u041C\u0443\u0437\u0438\u043A\u0430"),
+      home: t("notes.cat.home", "\u0414\u0456\u043C"),
+      car: t("notes.cat.car", "\u0410\u0432\u0442\u043E"),
+      shopping: t("notes.cat.shopping", "\u041F\u043E\u043A\u0443\u043F\u043A\u0438"),
+      people: t("notes.cat.people", "\u041B\u044E\u0434\u0438"),
+      projects: t("notes.cat.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"),
+      nature: t("notes.cat.nature", "\u041F\u0440\u0438\u0440\u043E\u0434\u0430"),
+      coffee: t("notes.cat.coffee", "\u041A\u0430\u0432\u0430"),
+      photo: t("notes.cat.photo", "\u0424\u043E\u0442\u043E")
     };
     return names[id] || null;
   }
@@ -7803,26 +7803,26 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (notes.length === 0) return "";
     const folderCount = {};
     notes.forEach((n) => {
-      const f = n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+      const f = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
       folderCount[f] = (folderCount[f] || 0) + 1;
     });
     const foldersStr = Object.entries(folderCount).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${name} (${count})`).join(", ");
     const recent = notes.slice(0, 5).map((n) => {
       const txt = (n.text || "").slice(0, 60).replace(/\n/g, " ");
       const more = (n.text || "").length > 60 ? "\u2026" : "";
-      return `- [ID:${n.id}] [${n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")}] "${txt}${more}"`;
+      return `- [ID:${n.id}] [${n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")}] "${txt}${more}"`;
     }).join("\n");
     return `\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (${notes.length} \u0437\u0430\u0433\u0430\u043B\u043E\u043C, \u043F\u0430\u043F\u043A\u0438: ${foldersStr}):
 ${recent}`;
   }
   function getFolders() {
     const notes = getNotes();
-    const set = new Set(notes.map((n) => n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")));
+    const set = new Set(notes.map((n) => n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")));
     return [...set].sort();
   }
   function addNoteFromInbox(text, category, folder = null, source = "inbox") {
     const notes = getNotes();
-    const rawFolder = folder || (category === "idea" ? t2("notes.folder_ideas", "\u0406\u0434\u0435\u0457") : t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
+    const rawFolder = folder || (category === "idea" ? t("notes.folder_ideas", "\u0406\u0434\u0435\u0457") : t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
     const normalized = normalizeFolderName(rawFolder);
     const existingFolders = [...new Set(notes.map((n) => n.folder).filter(Boolean))];
     const match = existingFolders.find((f) => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
@@ -7832,7 +7832,7 @@ ${recent}`;
   }
   function openAddNote() {
     editingNoteId = null;
-    document.getElementById("note-modal-title").textContent = t2("notes.modal.new_title", "\u041D\u043E\u0432\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430");
+    document.getElementById("note-modal-title").textContent = t("notes.modal.new_title", "\u041D\u043E\u0432\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430");
     document.getElementById("note-input-text").value = "";
     document.getElementById("note-input-folder").value = "";
     updateFolderSuggestions();
@@ -7853,10 +7853,10 @@ ${recent}`;
   function saveNote() {
     const text = document.getElementById("note-input-text").value.trim();
     if (!text) {
-      showToast(t2("notes.toast.enter_text", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"));
+      showToast(t("notes.toast.enter_text", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"));
       return;
     }
-    const folder = document.getElementById("note-input-folder").value.trim() || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+    const folder = document.getElementById("note-input-folder").value.trim() || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
     const notes = getNotes();
     if (editingNoteId) {
       const idx = notes.findIndex((x) => x.id === editingNoteId);
@@ -7876,7 +7876,7 @@ ${recent}`;
     if (item) addToTrash("note", item);
     saveNotes(notes.filter((x) => x.id !== id));
     renderNotes();
-    if (item) showUndoToast(t2("notes.toast.deleted", "\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+    if (item) showUndoToast(t("notes.toast.deleted", "\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const n = getNotes();
       let idx;
       if (predecessorId === null) {
@@ -7949,7 +7949,7 @@ ${recent}`;
       const q = searchQuery.toLowerCase();
       notes = notes.filter((n) => n.text.toLowerCase().includes(q) || (n.folder || "").toLowerCase().includes(q));
       if (notes.length === 0) {
-        content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t2("notes.search.empty", "\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E")}</div>`;
+        content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t("notes.search.empty", "\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E")}</div>`;
         return;
       }
       content.innerHTML = renderNotesList(notes);
@@ -7963,21 +7963,21 @@ ${recent}`;
         header.innerHTML = `
         <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          ${t2("common.back", "\u041D\u0430\u0437\u0430\u0434")}
+          ${t("common.back", "\u041D\u0430\u0437\u0430\u0434")}
         </button>
         <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:#1e1040">${getFolderIcon(currentNotesFolder)} ${escapeHtml(currentNotesFolder)}</span>
-        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter((n) => (n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder).length}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder).length}</span>
       `;
       }
-      const folderNotes = notes.filter((n) => (n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder);
-      content.innerHTML = folderNotes.length ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + "</div>" : `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t2("notes.folder.empty", "\u041F\u0430\u043F\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u044F")}</div>`;
+      const folderNotes = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder);
+      content.innerHTML = folderNotes.length ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + "</div>" : `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t("notes.folder.empty", "\u041F\u0430\u043F\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u044F")}</div>`;
       _attachNotesSwipeDelete();
       return;
     }
     if (header) header.style.display = "none";
     const byFolder = {};
     notes.forEach((n) => {
-      const f = n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+      const f = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
       if (!byFolder[f]) byFolder[f] = [];
       byFolder[f].push(n);
     });
@@ -8008,7 +8008,7 @@ ${recent}`;
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:44px">
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
-            <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t2("notes.folder.entries", "\u0437\u0430\u043F\u0438\u0441\u0456\u0432")}</div>
+            <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("notes.folder.entries", "\u0437\u0430\u043F\u0438\u0441\u0456\u0432")}</div>
           </div>
           <div ontouchend="event.stopPropagation();event.preventDefault();openFolderEditModal('${safeFolder}')" onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
         </div>
@@ -8019,7 +8019,7 @@ ${recent}`;
   function renderNotesList(notes) {
     const now = Date.now();
     return notes.map((n) => {
-      const fc = getFolderColor(n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
+      const fc = getFolderColor(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
       const preview = n.text.length > 80 ? n.text.substring(0, 80) + "\u2026" : n.text;
       return `
       <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
@@ -8060,7 +8060,7 @@ ${recent}`;
           if (item) addToTrash("note", item);
           saveNotes(allNotes.filter((x) => String(x.id) !== id));
           renderNotes();
-          if (item) showUndoToast(t2("notes.toast.deleted", "\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+          if (item) showUndoToast(t("notes.toast.deleted", "\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
             const notes = getNotes();
             let idx;
             if (swipePredecessorId === null) idx = 0;
@@ -8081,8 +8081,8 @@ ${recent}`;
       const folder = wrap.dataset.folder;
       attachSwipeDelete(wrap, card, () => {
         const notes = getNotes();
-        const folderNotes = notes.filter((n) => (n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === folder);
-        const remaining = notes.filter((n) => (n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) !== folder);
+        const folderNotes = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === folder);
+        const remaining = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) !== folder);
         _animateSwipeRemoval(wrap, () => {
           if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
           saveNotes(remaining);
@@ -8147,7 +8147,7 @@ ${recent}`;
     const n = notes.find((x) => x.id === id);
     if (!n) return;
     const folders = getFolders();
-    const current = n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+    const current = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
     const folderList = folders.filter((f) => f !== current);
     if (folderList.length === 0) {
       showToast("\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0448\u0438\u0445 \u043F\u0430\u043F\u043E\u043A");
@@ -8181,7 +8181,7 @@ ${folderList.join(", ")}
     const fc = getFolderColor(n.folder);
     const modal = document.getElementById("note-view-modal");
     if (modal) modal.style.background = fc.bg;
-    document.getElementById("note-view-folder").textContent = n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+    document.getElementById("note-view-folder").textContent = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
     const preview = n.text.length > 50 ? n.text.substring(0, 50) + "\u2026" : n.text;
     document.getElementById("note-view-preview").textContent = preview;
     const textEl = document.getElementById("note-view-text");
@@ -8279,7 +8279,7 @@ ${folderList.join(", ")}
   async function initNoteChatGreeting(note) {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addNoteChatMsg("agent", t2("notes.chat.no_key_greeting", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0449\u043E\u0431 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u0437 \u0430\u0433\u0435\u043D\u0442\u043E\u043C."));
+      addNoteChatMsg("agent", t("notes.chat.no_key_greeting", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0449\u043E\u0431 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u0437 \u0430\u0433\u0435\u043D\u0442\u043E\u043C."));
       return;
     }
     const aiContext = getAIContext();
@@ -8311,7 +8311,7 @@ ${folderList.join(", ")}
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addNoteChatMsg("agent", t2("notes.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addNoteChatMsg("agent", t("notes.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -8376,9 +8376,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
               const textEl = document.getElementById("note-view-text");
               if (textEl) textEl.textContent = parsed.text;
               renderNotes();
-              addNoteChatMsg("agent", t2("notes.chat.updated", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E."));
+              addNoteChatMsg("agent", t("notes.chat.updated", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E."));
             } else {
-              addNoteChatMsg("agent", t2("notes.chat.not_found", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043D\u0430\u0439\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
+              addNoteChatMsg("agent", t("notes.chat.not_found", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043D\u0430\u0439\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
             }
           } else {
             addNoteChatMsg("agent", reply, extractedChips);
@@ -8392,7 +8392,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         handleChatError(addNoteChatMsg);
       }
     } catch {
-      addNoteChatMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addNoteChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     noteChatLoading = false;
     btn.disabled = false;
@@ -8406,7 +8406,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     btn.id = "note-chat-save-btn";
     btn.style.cssText = "display:flex;justify-content:flex-end;margin-top:-4px";
     const button = document.createElement("button");
-    button.textContent = t2("notes.chat.save_as_note", "+ \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u044F\u043A \u043D\u043E\u0442\u0430\u0442\u043A\u0443");
+    button.textContent = t("notes.chat.save_as_note", "+ \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u044F\u043A \u043D\u043E\u0442\u0430\u0442\u043A\u0443");
     button.style.cssText = "background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer";
     button.addEventListener("click", () => saveAgentResponseAsNote(_pendingAgentNote));
     btn.appendChild(button);
@@ -8416,7 +8416,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
   function saveAgentResponseAsNote(text) {
     const notes = getNotes();
     const originalNote = notes.find((x) => x.id === activeNoteViewId);
-    const folder = originalNote?.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+    const folder = originalNote?.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
     notes.unshift({ id: Date.now(), text, folder, source: "ai", ts: Date.now(), lastViewed: Date.now() });
     saveNotes(notes);
     renderNotes();
@@ -8501,7 +8501,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (newName !== _editingFolder) {
       const notes = getNotes();
       notes.forEach((n) => {
-        if ((n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === _editingFolder) n.folder = newName;
+        if ((n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === _editingFolder) n.folder = newName;
       });
       saveNotes(notes);
       const allMeta = getFoldersMeta();
@@ -8561,7 +8561,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addNotesChatMsg("agent", t2("notes.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addNotesChatMsg("agent", t("notes.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -8601,7 +8601,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
 
 ${REMINDER_RULES}
 \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0434\u043B\u044F open_folder \u2014 fuzzy match \u043D\u0430\u0437\u0432\u0438, \u0434\u043B\u044F search_notes \u2014 \u0448\u0443\u043A\u0430\u0439 \u043F\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043E\u043A.
-\u041D\u0430\u044F\u0432\u043D\u0456 \u043F\u0430\u043F\u043A\u0438: ${[...new Set(getNotes().map((n) => n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")))].join(", ") || "\u043D\u0435\u043C\u0430\u0454"}
+\u041D\u0430\u044F\u0432\u043D\u0456 \u043F\u0430\u043F\u043A\u0438: ${[...new Set(getNotes().map((n) => n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")))].join(", ") || "\u043D\u0435\u043C\u0430\u0454"}
 \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0456 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.
 
 ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
@@ -8631,9 +8631,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
             (n) => n.text.toLowerCase().includes(q) || (n.folder || "").toLowerCase().includes(q)
           ).slice(0, 5);
           if (results.length === 0) {
-            addNotesChatMsg("agent", t2("notes.chat.nothing_found_query", '\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u043F\u043E \u0437\u0430\u043F\u0438\u0442\u0443 "{query}".', { query: parsed.query }));
+            addNotesChatMsg("agent", t("notes.chat.nothing_found_query", '\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u043F\u043E \u0437\u0430\u043F\u0438\u0442\u0443 "{query}".', { query: parsed.query }));
           } else {
-            addNotesChatMsg("agent", t2("notes.chat.found_n", "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n}:", { n: results.length }));
+            addNotesChatMsg("agent", t("notes.chat.found_n", "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n}:", { n: results.length }));
             results.forEach((n) => {
               const preview = n.text.length > 60 ? n.text.substring(0, 60) + "\u2026" : n.text;
               const el = document.getElementById("notes-chat-messages");
@@ -8641,7 +8641,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               const div = document.createElement("div");
               div.style.cssText = "display:flex";
               div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView(${n.id})" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
-              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))}</div>
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))}</div>
               ${escapeHtml(preview)}
             </div>`;
               el.appendChild(div);
@@ -8653,15 +8653,15 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         if (parsed.action === "open_folder") {
           const target = (parsed.folder || "").toLowerCase().replace(/[ʼ']/g, "");
-          const folders = [...new Set(getNotes().map((n) => n.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")))];
+          const folders = [...new Set(getNotes().map((n) => n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")))];
           const match = folders.find(
             (f) => f.toLowerCase().replace(/[ʼ']/g, "").includes(target) || target.includes(f.toLowerCase().replace(/[ʼ']/g, ""))
           );
           if (match) {
             openNotesFolder(match);
-            addNotesChatMsg("agent", t2("notes.chat.opened_folder", '\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u043F\u0430\u043F\u043A\u0443 "{folder}".', { folder: match }));
+            addNotesChatMsg("agent", t("notes.chat.opened_folder", '\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u043F\u0430\u043F\u043A\u0443 "{folder}".', { folder: match }));
           } else {
-            addNotesChatMsg("agent", t2("notes.chat.folder_not_found", '\u041F\u0430\u043F\u043A\u0443 "{folder}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456: {available}.', { folder: parsed.folder, available: folders.join(", ") }));
+            addNotesChatMsg("agent", t("notes.chat.folder_not_found", '\u041F\u0430\u043F\u043A\u0443 "{folder}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456: {available}.', { folder: parsed.folder, available: folders.join(", ") }));
           }
           notesBarLoading = false;
           return;
@@ -8670,12 +8670,12 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           const q = (parsed.query || "").toLowerCase();
           const note = getNotes().find((n) => n.text.toLowerCase().includes(q));
           if (note) {
-            currentNotesFolder = note.folder || t2("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+            currentNotesFolder = note.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
             renderNotes();
             setTimeout(() => openNoteView(note.id), 100);
-            addNotesChatMsg("agent", t2("notes.chat.opened_note", "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
+            addNotesChatMsg("agent", t("notes.chat.opened_note", "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
           } else {
-            addNotesChatMsg("agent", t2("notes.chat.note_not_found", "\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E."));
+            addNotesChatMsg("agent", t("notes.chat.note_not_found", "\u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E."));
           }
           notesBarLoading = false;
           return;
@@ -8685,7 +8685,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           if (looksLikeJson) {
             try {
               JSON.parse(reply);
-              addNotesChatMsg("agent", t2("notes.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
+              addNotesChatMsg("agent", t("notes.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
             } catch {
               addNotesChatMsg("agent", reply, false, extractedChips);
             }
@@ -8696,14 +8696,14 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         if (looksLikeJson) {
           try {
             JSON.parse(reply);
-            addNotesChatMsg("agent", t2("notes.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
+            addNotesChatMsg("agent", t("notes.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
           } catch {
             addNotesChatMsg("agent", reply, false, extractedChips);
           }
         } else addNotesChatMsg("agent", reply, false, extractedChips);
       }
     } catch {
-      addNotesChatMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addNotesChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     notesBarLoading = false;
   }
@@ -8772,14 +8772,14 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       _selectedIconKey = "folder";
       _selectedColorKey = "default";
       FOLDER_COLOR_PALETTE = {
-        default: { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", label: t2("notes.color.sand", "\u041F\u0456\u0441\u043E\u043A") },
-        blue: { bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)", label: t2("notes.color.blue", "\u0411\u043B\u0430\u043A\u0438\u0442\u043D\u0438\u0439") },
-        green: { bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)", label: t2("notes.color.green", "\u0417\u0435\u043B\u0435\u043D\u0438\u0439") },
-        yellow: { bg: "linear-gradient(135deg,#fef9c3,#fef08a)", label: t2("notes.color.yellow", "\u0416\u043E\u0432\u0442\u0438\u0439") },
-        pink: { bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)", label: t2("notes.color.pink", "\u0420\u043E\u0436\u0435\u0432\u0438\u0439") },
-        purple: { bg: "linear-gradient(135deg,#ede9fe,#ddd6fe)", label: t2("notes.color.purple", "\u0424\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439") },
-        orange: { bg: "linear-gradient(135deg,#ffedd5,#fed7aa)", label: t2("notes.color.orange", "\u041E\u0440\u0430\u043D\u0436\u0435\u0432\u0438\u0439") },
-        gray: { bg: "linear-gradient(135deg,#f3f4f6,#e5e7eb)", label: t2("notes.color.gray", "\u0421\u0456\u0440\u0438\u0439") }
+        default: { bg: "linear-gradient(135deg,#f5ede0,#ede0cc)", label: t("notes.color.sand", "\u041F\u0456\u0441\u043E\u043A") },
+        blue: { bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)", label: t("notes.color.blue", "\u0411\u043B\u0430\u043A\u0438\u0442\u043D\u0438\u0439") },
+        green: { bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)", label: t("notes.color.green", "\u0417\u0435\u043B\u0435\u043D\u0438\u0439") },
+        yellow: { bg: "linear-gradient(135deg,#fef9c3,#fef08a)", label: t("notes.color.yellow", "\u0416\u043E\u0432\u0442\u0438\u0439") },
+        pink: { bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)", label: t("notes.color.pink", "\u0420\u043E\u0436\u0435\u0432\u0438\u0439") },
+        purple: { bg: "linear-gradient(135deg,#ede9fe,#ddd6fe)", label: t("notes.color.purple", "\u0424\u0456\u043E\u043B\u0435\u0442\u043E\u0432\u0438\u0439") },
+        orange: { bg: "linear-gradient(135deg,#ffedd5,#fed7aa)", label: t("notes.color.orange", "\u041E\u0440\u0430\u043D\u0436\u0435\u0432\u0438\u0439") },
+        gray: { bg: "linear-gradient(135deg,#f3f4f6,#e5e7eb)", label: t("notes.color.gray", "\u0421\u0456\u0440\u0438\u0439") }
       };
       _notesTypingEl = null;
       notesBarHistory = [];
@@ -8825,10 +8825,10 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const matchId = (x) => x === idRaw || x === idNum || idNum && Number(x) === idNum;
     try {
       if (type === "task") {
-        const t3 = getTasks().find((x) => matchId(x.id));
-        if (!t3) return false;
-        if (t3.status !== "active") return false;
-        if (t3.dueDate && t3.dueDate < todayISO()) return false;
+        const t2 = getTasks().find((x) => matchId(x.id));
+        if (!t2) return false;
+        if (t2.status !== "active") return false;
+        if (t2.dueDate && t2.dueDate < todayISO()) return false;
         return true;
       }
       if (type === "habit") {
@@ -8904,26 +8904,26 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     saveTabMessage(tab, newMsg);
   }
   function _owlTabHTML(tab) {
-    const t3 = tab;
+    const t2 = tab;
     return `
-    <div id="owl-tab-collapsed-${t3}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t3}')">
+    <div id="owl-tab-collapsed-${t2}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t2}')">
       <div class="owl-collapsed-avatar">\u{1F989}</div>
-      <div class="owl-collapsed-text" id="owl-tab-ctext-${t3}"></div>
+      <div class="owl-collapsed-text" id="owl-tab-ctext-${t2}"></div>
     </div>
-    <div id="owl-tab-speech-${t3}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t3}')" ontouchmove="owlTabSwipeMove(event,'${t3}')" ontouchend="owlTabSwipeEnd(event,'${t3}')">
+    <div id="owl-tab-speech-${t2}" class="owl-speech"
+         ontouchstart="owlTabSwipeStart(event,'${t2}')" ontouchmove="owlTabSwipeMove(event,'${t2}')" ontouchend="owlTabSwipeEnd(event,'${t2}')">
       <div class="owl-speech-avatar">\u{1F989}</div>
       <div class="owl-tab-card">
-        <div class="owl-tab-bubble" id="owl-tab-bubble-${t3}">
-          <div class="owl-speech-text" id="owl-tab-text-${t3}"></div>
-          <div class="owl-speech-time" id="owl-tab-time-${t3}"></div>
+        <div class="owl-tab-bubble" id="owl-tab-bubble-${t2}">
+          <div class="owl-speech-text" id="owl-tab-text-${t2}"></div>
+          <div class="owl-speech-time" id="owl-tab-time-${t2}"></div>
         </div>
       </div>
     </div>
-    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t3}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t3}" onclick="scrollOwlTabChips('${t3}',-1)">\u2039</button>
-      <div id="owl-tab-chips-${t3}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t3}" onclick="scrollOwlTabChips('${t3}',1)">\u203A</button>
+    <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t2}">
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t2}" onclick="scrollOwlTabChips('${t2}',-1)">\u2039</button>
+      <div id="owl-tab-chips-${t2}" class="owl-speech-chips"></div>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t2}" onclick="scrollOwlTabChips('${t2}',1)">\u203A</button>
     </div>`;
   }
   function _owlTabApplyState(tab) {
@@ -9150,19 +9150,19 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   }
   async function generateEveningRitualSummary(addMsg) {
     if (isEveningClosed()) {
-      if (addMsg) addMsg("agent", t2("evening.already_closed", "\u0422\u0438 \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0432 \u0434\u0435\u043D\u044C. \u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}"));
+      if (addMsg) addMsg("agent", t("evening.already_closed", "\u0422\u0438 \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0432 \u0434\u0435\u043D\u044C. \u0414\u043E \u0437\u0430\u0432\u0442\u0440\u0430. \u{1F319}"));
       return { ok: true, already: true };
     }
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      if (addMsg) addMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      if (addMsg) addMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return { ok: false, err: "no key" };
     }
     if (addMsg) addMsg("typing", "");
     const systemPrompt = getEveningSummaryPromptV2() + "\n\n" + getAIContext();
     const reply = await callAI(systemPrompt, "\u041F\u0456\u0434\u0432\u0435\u0434\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0446\u044C\u043E\u0433\u043E \u0434\u043D\u044F \u2014 \u0456\u043D\u0441\u0430\u0439\u0442, \u043D\u0435 \u0446\u0438\u0444\u0440\u0438.", {}, "evening-actions");
     if (!reply) {
-      if (addMsg) addMsg("agent", t2("evening.summary_failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A."));
+      if (addMsg) addMsg("agent", t("evening.summary_failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A."));
       return { ok: false, err: "no reply" };
     }
     const text = reply.trim().slice(0, 600);
@@ -9185,7 +9185,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           const tasks = getTasks();
           const newTask = {
             id: Date.now(),
-            title: args.title || args.text || t2("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
+            title: args.title || args.text || t("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
             desc: args.text && args.text !== args.title ? args.text : "",
             steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
             status: "active",
@@ -9220,7 +9220,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "create_event": {
-          const res = addEventDedup({ id: Date.now(), title: args.title || t2("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
+          const res = addEventDedup({ id: Date.now(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
           if (!res.added) return { ok: true, duplicate: true };
           logRecentAction("create_event", args.title || "", "evening");
           return { ok: true };
@@ -9231,7 +9231,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
             id: Date.now(),
             type: args.fin_type === "income" ? "income" : "expense",
             amount: parseFloat(args.amount) || 0,
-            category: args.category || t2("default.category_other", "\u0406\u043D\u0448\u0435"),
+            category: args.category || t("default.category_other", "\u0406\u043D\u0448\u0435"),
             comment: args.fin_comment || "",
             ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
           });
@@ -9241,7 +9241,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "set_reminder": {
           const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          const res = addEventDedup({ id: Date.now(), title: "\u23F0 " + (args.text || t2("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
+          const res = addEventDedup({ id: Date.now(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
           if (!res.added) return { ok: true, duplicate: true };
           return { ok: true };
         }
@@ -9254,7 +9254,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           const tasks = getTasks();
           const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
           ids.forEach((id) => {
-            const idx = tasks.findIndex((t3) => t3.id === id);
+            const idx = tasks.findIndex((t2) => t2.id === id);
             if (idx !== -1) {
               tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
             }
@@ -9279,7 +9279,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         // ========== РЕДАГУВАННЯ ==========
         case "edit_task": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t3) => t3.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           if (args.title) tasks[idx].title = args.title;
           if (args.due_date) tasks[idx].dueDate = args.due_date;
@@ -9323,7 +9323,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "reopen_task": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t3) => t3.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           tasks[idx] = { ...tasks[idx], status: "active", completedAt: null, updatedAt: Date.now() };
           saveTasks(tasks);
@@ -9332,7 +9332,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "add_step": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t3) => t3.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
           (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
@@ -9352,7 +9352,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "update_transaction": {
           const txs = getFinance();
-          const idx = txs.findIndex((t3) => t3.id === args.id);
+          const idx = txs.findIndex((t2) => t2.id === args.id);
           if (idx === -1) return { ok: false, err: "tx not found" };
           if (args.category) txs[idx].category = args.category;
           if (args.amount) txs[idx].amount = parseFloat(args.amount);
@@ -9364,7 +9364,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         // ========== ВИДАЛЕННЯ ==========
         case "delete_task": {
           const tasks = getTasks();
-          const idx = tasks.findIndex((t3) => t3.id === args.task_id);
+          const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           addToTrash("task", tasks[idx]);
           tasks.splice(idx, 1);
@@ -9393,17 +9393,17 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "restore_deleted": {
           const q = (args.query || "").trim().toLowerCase();
-          const trash = getTrash().filter((t3) => Date.now() - t3.deletedAt < 7 * 24 * 60 * 60 * 1e3);
-          const filtered = args.type ? trash.filter((t3) => t3.type === args.type) : trash;
+          const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+          const filtered = args.type ? trash.filter((t2) => t2.type === args.type) : trash;
           if (q === "all") {
-            filtered.forEach((t3) => restoreFromTrash(t3.deletedAt));
+            filtered.forEach((t2) => restoreFromTrash(t2.deletedAt));
             return { ok: true };
           }
           if (q === "last") {
             if (filtered.length > 0) restoreFromTrash(filtered[0].deletedAt);
             return { ok: true };
           }
-          const hit = filtered.find((t3) => JSON.stringify(t3.data || t3).toLowerCase().includes(q));
+          const hit = filtered.find((t2) => JSON.stringify(t2.data || t2).toLowerCase().includes(q));
           if (hit) {
             restoreFromTrash(hit.deletedAt);
             return { ok: true };
@@ -9460,7 +9460,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (started[topic]) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addEveningBarMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addEveningBarMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     addEveningBarMsg("typing", "");
@@ -9498,11 +9498,11 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         started[topic] = Date.now();
         localStorage.setItem(EVENING_TOPIC_STARTED_KEY, JSON.stringify(started));
       } else {
-        safeAgentReply(t2("evening.tell_me_how", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?"), addEveningBarMsg);
+        safeAgentReply(t("evening.tell_me_how", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u044F\u043A \u0432\u043E\u043D\u043E?"), addEveningBarMsg);
       }
     } catch (e) {
       console.warn("[openEveningTopic]", e);
-      addEveningBarMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addEveningBarMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
   }
   function showEveningBarMessages() {
@@ -9560,7 +9560,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addEveningBarMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addEveningBarMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -9596,11 +9596,11 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const { text: replyText, chips } = _parseContentChips(msg.content || "");
       if (replyText) addEveningBarMsg("agent", replyText, false, chips);
       else if (!msg.tool_calls || msg.tool_calls.length === 0) {
-        safeAgentReply(t2("common.didnt_understand", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435."), addEveningBarMsg);
+        safeAgentReply(t("common.didnt_understand", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0456\u043D\u0430\u043A\u0448\u0435."), addEveningBarMsg);
       }
     } catch (e) {
       console.warn("[sendEveningBarMessage]", e);
-      addEveningBarMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addEveningBarMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     eveningBarLoading = false;
   }
@@ -9625,6 +9625,19 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         sendEveningBarMessage,
         showEveningBarMessages
       });
+    }
+  });
+
+  // src/data/months.js
+  function monthGenitive(idx) {
+    return t(`month.${KEYS[idx]}.gen`, FALL_GENITIVE[idx]);
+  }
+  var KEYS, FALL_GENITIVE;
+  var init_months = __esm({
+    "src/data/months.js"() {
+      init_utils();
+      KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+      FALL_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
     }
   });
 
@@ -9654,7 +9667,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     const loadEl = document.getElementById(loadId);
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
       if (loadEl) loadEl.remove();
-      dispatchChatToolCalls(msg.tool_calls, (r, t3) => addMeChatMsg(r, t3), text);
+      dispatchChatToolCalls(msg.tool_calls, (r, t2) => addMeChatMsg(r, t2), text);
       if (msg.content) {
         const { text: rt, chips } = parseContentChips(msg.content);
         if (rt) addMeChatMsg("agent", rt, false, "", chips);
@@ -9669,7 +9682,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     if (reply) {
       const blocks = extractJsonBlocks(reply);
       for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction(parsed, text, (r, t3) => addMeChatMsg(r, t3))) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
           handled = true;
         }
       }
@@ -9677,7 +9690,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     }
     if (!handled) {
       if (loadEl) loadEl.remove();
-      addMeChatMsg("agent", reply || t2("me.chat.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C."), false, "", extractedChips);
+      addMeChatMsg("agent", reply || t("me.chat.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C."), false, "", extractedChips);
     }
     if (reply) meChatHistory.push({ role: "assistant", content: reply });
     if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
@@ -9692,7 +9705,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         const d = new Date(now);
         d.setDate(now.getDate() - i);
         const ds = d.toDateString();
-        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t3) => t3.createdAt && new Date(t3.createdAt).toDateString() === ds);
+        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t2) => t2.createdAt && new Date(t2.createdAt).toDateString() === ds);
         if (hasRecord) streak++;
         else if (i > 0) break;
       }
@@ -9730,9 +9743,9 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         projWithStats.sort((a, b) => b.stepsThisWeek - a.stepsThisWeek);
         const moving = projWithStats.filter((s) => s.stepsThisWeek > 0).length;
         const stagnant = projWithStats.length - moving;
-        const activeWord = allProjects.length === 1 ? t2("me.proj.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439") : t2("me.proj.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
-        const movingWord = moving === 1 ? t2("me.proj.moving_one", "\u0440\u0443\u0445\u0430\u0454\u0442\u044C\u0441\u044F") : t2("me.proj.moving_many", "\u0440\u0443\u0445\u0430\u044E\u0442\u044C\u0441\u044F");
-        const stagnantWord = t2("me.proj.stagnant", "\u0441\u0442\u043E\u0457\u0442\u044C");
+        const activeWord = allProjects.length === 1 ? t("me.proj.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439") : t("me.proj.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
+        const movingWord = moving === 1 ? t("me.proj.moving_one", "\u0440\u0443\u0445\u0430\u0454\u0442\u044C\u0441\u044F") : t("me.proj.moving_many", "\u0440\u0443\u0445\u0430\u044E\u0442\u044C\u0441\u044F");
+        const stagnantWord = t("me.proj.stagnant", "\u0441\u0442\u043E\u0457\u0442\u044C");
         const summaryHTML = `
         <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
           <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} ${activeWord}</span>
@@ -9744,12 +9757,12 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
         const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
           let trendChip = "";
           if (stepsThisWeek > 0) {
-            const stepWord = stepsThisWeek === 1 ? t2("me.proj.step_one", "\u043A\u0440\u043E\u043A") : stepsThisWeek < 5 ? t2("me.proj.step_few", "\u043A\u0440\u043E\u043A\u0438") : t2("me.proj.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
-            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t2("me.proj.per_week", "\u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}</span>`;
+            const stepWord = stepsThisWeek === 1 ? t("me.proj.step_one", "\u043A\u0440\u043E\u043A") : stepsThisWeek < 5 ? t("me.proj.step_few", "\u043A\u0440\u043E\u043A\u0438") : t("me.proj.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t("me.proj.per_week", "\u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}</span>`;
           } else if (daysSince !== null && daysSince >= 7) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t2("me.proj.no_changes", "\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D {n} \u0434\u043D", { n: daysSince })}</span>`;
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t("me.proj.no_changes", "\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D {n} \u0434\u043D", { n: daysSince })}</span>`;
           } else if (daysSince === null) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t2("me.proj.just_created", "\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439")}</span>`;
+            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t("me.proj.just_created", "\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439")}</span>`;
           }
           return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
@@ -9804,7 +9817,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/${days} \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
     }).join("\n");
     const cutoff = Date.now() - days * 864e5;
-    const doneTasks = getTasks().filter((t3) => t3.status === "done" && t3.completedAt && t3.completedAt >= cutoff).length;
+    const doneTasks = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && t2.completedAt >= cutoff).length;
     const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
     const inboxCount = inbox.filter((i) => i.ts >= cutoff).length;
     let moodSummary = "";
@@ -9845,9 +9858,9 @@ ${quitLines}`);
   }
   function _formatInsightAge(ts) {
     const days = Math.floor((Date.now() - ts) / 864e5);
-    if (days === 0) return t2("me.weekly.age_today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
-    if (days === 1) return t2("me.weekly.age_yesterday", "\u0432\u0447\u043E\u0440\u0430");
-    return t2("me.weekly.age_days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: days });
+    if (days === 0) return t("me.weekly.age_today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+    if (days === 1) return t("me.weekly.age_yesterday", "\u0432\u0447\u043E\u0440\u0430");
+    return t("me.weekly.age_days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: days });
   }
   async function generateWeeklyInsights() {
     if (_insightsGenerating) return;
@@ -9904,9 +9917,9 @@ ${quitLines}`);
       el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:14px">\u{1F989}</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t2("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
       </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t2("me.insights.loading", "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026")}</div>`;
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.insights.loading", "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026")}</div>`;
       setTimeout(() => {
         generateWeeklyInsights();
       }, 800);
@@ -9921,14 +9934,14 @@ ${quitLines}`);
     </div>`).join("");
     const deepHTML = insights.deepReport ? `
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
-      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t2("me.weekly.deep_report", "\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442")}</div>
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("me.weekly.deep_report", "\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442")}</div>
       <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
     </div>` : "";
     el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:14px">\u{1F989}</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t2("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
       </div>
       <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
     </div>
@@ -9950,9 +9963,8 @@ ${quitLines}`);
   }
   function _prevMonthName() {
     const now = /* @__PURE__ */ new Date();
-    const names = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return names[prev.getMonth()];
+    return monthGenitive(prev.getMonth());
   }
   async function generateMonthlyReport() {
     if (_monthlyGenerating) return;
@@ -10010,9 +10022,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         el.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:14px">\u{1F4C6}</span>
-          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t2("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: _prevMonthName() })}</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: _prevMonthName() })}</span>
         </div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t2("me.monthly.loading", "\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026")}</div>`;
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.monthly.loading", "\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026")}</div>`;
       } else {
         el.style.display = "none";
         setTimeout(() => {
@@ -10025,23 +10037,23 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const greenAccent = "#16a34a";
     const sections = [];
     if (report.topActivities && report.topActivities.length > 0) {
-      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t2("me.monthly.top_activities", "\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C")}</span>
+      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.top_activities", "\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C")}</span>
       ${report.topActivities.map((a) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(a)}</div>`).join("")}
     </div>`);
     }
-    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t2("me.monthly.mood", "\u041D\u0430\u0441\u0442\u0440\u0456\u0439:")}</span> ${escapeHtml(report.moodTrend)}</div>`);
-    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t2("me.monthly.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438:")}</span> ${escapeHtml(report.projectsProgress)}</div>`);
-    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t2("me.monthly.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438:")}</span> ${escapeHtml(report.financeNote)}</div>`);
+    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t("me.monthly.mood", "\u041D\u0430\u0441\u0442\u0440\u0456\u0439:")}</span> ${escapeHtml(report.moodTrend)}</div>`);
+    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438:")}</span> ${escapeHtml(report.projectsProgress)}</div>`);
+    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438:")}</span> ${escapeHtml(report.financeNote)}</div>`);
     if (report.patterns && report.patterns.length > 0) {
       sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
-      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t2("me.monthly.patterns", "\u041F\u0430\u0442\u0435\u0440\u043D\u0438")}</span>
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.patterns", "\u041F\u0430\u0442\u0435\u0440\u043D\u0438")}</span>
       ${report.patterns.map((p) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(p)}</div>`).join("")}
     </div>`);
     }
     el.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="font-size:14px">\u{1F4C6}</span>
-      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t2("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: report.monthLabel })}</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: report.monthLabel })}</span>
     </div>
     <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
     ${sections.join("")}`;
@@ -10054,7 +10066,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const habits = getHabits().filter((h) => h.type !== "quit");
     const log = getHabitLog();
     const accent = "#7c4a2a";
-    const dowLabels = [t2("dow_mon", "\u041F\u043D"), t2("dow_tue", "\u0412\u0442"), t2("dow_wed", "\u0421\u0440"), t2("dow_thu", "\u0427\u0442"), t2("dow_fri", "\u041F\u0442"), t2("dow_sat", "\u0421\u0431"), t2("dow_sun", "\u041D\u0434")];
+    const dowLabels = [t("dow_mon", "\u041F\u043D"), t("dow_tue", "\u0412\u0442"), t("dow_wed", "\u0421\u0440"), t("dow_thu", "\u0427\u0442"), t("dow_fri", "\u041F\u0442"), t("dow_sat", "\u0421\u0431"), t("dow_sun", "\u041D\u0434")];
     const cells = [];
     let totalDone = 0;
     for (let i = 6; i >= 0; i--) {
@@ -10064,7 +10076,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const dow = (d.getDay() + 6) % 7;
       const dayHabits = habits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
       const doneH = dayHabits.filter((h) => !!log[ds]?.[h.id]).length;
-      const doneT = getTasks().filter((t3) => t3.status === "done" && t3.completedAt && new Date(t3.completedAt).toDateString() === ds).length;
+      const doneT = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === ds).length;
       const total = dayHabits.length + doneT;
       const done = doneH + doneT;
       const pct = total > 0 ? Math.round(done / total * 100) : 0;
@@ -10076,7 +10088,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const fillH = Math.max(0, Math.min(100, c.pct));
       const labelColor = c.isToday ? accent : "rgba(30,16,64,0.45)";
       const numColor = fillH >= 60 ? "white" : "rgba(30,16,64,0.7)";
-      const tooltip = c.total > 0 ? t2("day_done_total", "{done}/{total} \u0434\u0456\u0439", { done: c.done, total: c.total }) : t2("day_zero", "0 \u0434\u0456\u0439");
+      const tooltip = c.total > 0 ? t("day_done_total", "{done}/{total} \u0434\u0456\u0439", { done: c.done, total: c.total }) : t("day_zero", "0 \u0434\u0456\u0439");
       return `
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
         <div style="font-size:9px;font-weight:700;color:${labelColor};text-transform:uppercase;letter-spacing:0.04em">${dowLabels[c.dow]}</div>
@@ -10087,7 +10099,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       </div>
     `;
     }).join("");
-    if (legend) legend.textContent = t2("week_done_count", "{n} \u0434\u0456\u0439", { n: totalDone });
+    if (legend) legend.textContent = t("week_done_count", "{n} \u0434\u0456\u0439", { n: totalDone });
   }
   function renderMeActivityChart() {
     const chartEl = document.getElementById("me-activity-chart");
@@ -10100,8 +10112,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const todayDS = now.toDateString();
     const todayDow = (now.getDay() + 6) % 7;
     const allTasks = getTasks();
-    const doneToday = allTasks.filter((t3) => t3.status === "done" && t3.completedAt && new Date(t3.completedAt).toDateString() === todayDS).length;
-    const stillActive = allTasks.filter((t3) => t3.status === "active").length;
+    const doneToday = allTasks.filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === todayDS).length;
+    const stillActive = allTasks.filter((t2) => t2.status === "active").length;
     const tasksTotal = doneToday + stillActive;
     const tasksDone = doneToday;
     const buildHabits = getHabits().filter((h) => h.type !== "quit");
@@ -10132,8 +10144,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     };
     chartEl.innerHTML = `
     <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
-      ${ringSVG(tasksDone, tasksTotal, "#2fd0f9", t2("me.chart.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456"))}
-      ${ringSVG(habitsDone, habitsTotal, "#16a34a", t2("me.chart.habits", "\u0417\u0432\u0438\u0447\u043A\u0438"))}
+      ${ringSVG(tasksDone, tasksTotal, "#2fd0f9", t("me.chart.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456"))}
+      ${ringSVG(habitsDone, habitsTotal, "#16a34a", t("me.chart.habits", "\u0417\u0432\u0438\u0447\u043A\u0438"))}
     </div>
   `;
   }
@@ -10149,7 +10161,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const aiContext = getAIContext();
     const totalRecords = inbox.length + tasks.length + notes.length;
     if (totalRecords < 3) {
-      el.textContent = t2("me.analysis.too_few_records", "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.");
+      el.textContent = t("me.analysis.too_few_records", "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.");
       btn.textContent = "\u21BB";
       btn.disabled = false;
       return;
@@ -10161,12 +10173,12 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
 - \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
 - \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
     const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
-\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t3) => t3.status !== "done").length}
-\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t3) => t3.status === "done").length}
+\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status !== "done").length}
+\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status === "done").length}
 \u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
 \u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
     const reply = await callAI(systemPrompt, userData, {}, "me-profile-analysis");
-    el.textContent = reply || t2("me.analysis.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+    el.textContent = reply || t("me.analysis.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
     btn.textContent = "\u21BB";
     btn.disabled = false;
     if (reply && totalRecords >= 5) {
@@ -10230,6 +10242,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_notes();
       init_evening();
       init_projects();
+      init_months();
       meChatHistory = [];
       INSIGHTS_KEY = "nm_me_weekly_insights";
       _insightsGenerating = false;
@@ -10281,9 +10294,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       if (words.length === 0) return true;
       const stems = words.map((w) => w.slice(0, 4));
       const tasks = getTasks();
-      for (const t3 of tasks) {
-        if (t3.status !== "done") continue;
-        const tWords = t3.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+      for (const t2 of tasks) {
+        if (t2.status !== "done") continue;
+        const tWords = t2.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
         const tStems = tWords.map((w) => w.slice(0, 4));
         const matches = stems.filter((s) => tStems.some((ts) => ts === s));
         if (matches.length >= 1 && matches.length >= stems.length * 0.5) return false;
@@ -10429,13 +10442,13 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     if (chipWords.length === 0) return false;
     const chipStems = chipWords.map((w) => w.slice(0, 4));
     const tasks = getTasks();
-    const activeTasks = tasks.filter((t3) => t3.status === "active");
+    const activeTasks = tasks.filter((t2) => t2.status === "active");
     for (const task of activeTasks) {
       const taskWords = task.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
       const taskStems = taskWords.map((w) => w.slice(0, 4));
       const matches = chipStems.filter((cs) => taskStems.some((ts) => ts === cs));
       if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
-        const idx = tasks.findIndex((t3) => t3.id === task.id);
+        const idx = tasks.findIndex((t2) => t2.id === task.id);
         if (idx !== -1) {
           tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
           saveTasks(tasks);
@@ -10628,8 +10641,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
         const todayMs = (/* @__PURE__ */ new Date()).setHours(0, 0, 0, 0);
         const sixHoursAgo = now - 6 * 36e5;
-        const closedToday = tasks.filter((t3) => t3.status === "done" && t3.completedAt >= todayMs).length;
-        const recentBigTask = tasks.some((t3) => t3.status === "done" && t3.completedAt >= sixHoursAgo && t3.priority === "high");
+        const closedToday = tasks.filter((t2) => t2.status === "done" && t2.completedAt >= todayMs).length;
+        const recentBigTask = tasks.some((t2) => t2.status === "done" && t2.completedAt >= sixHoursAgo && t2.priority === "high");
         if (closedToday >= 3 || recentBigTask) return "achievement";
       } catch {
       }
@@ -11817,7 +11830,7 @@ ${UI_TOOLS_RULES}`;
     _attachHabitsSwipeDelete();
   }
   function updateProdTabCounters() {
-    const taskCount = getTasks().filter((t3) => t3.status !== "done").length;
+    const taskCount = getTasks().filter((t2) => t2.status !== "done").length;
     const taskCountEl = document.getElementById("prod-tab-tasks-count");
     const taskSubEl = document.getElementById("prod-tab-tasks-sub");
     if (taskCountEl) taskCountEl.textContent = taskCount;
@@ -12187,8 +12200,8 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "edit_task") {
       const tasks = getTasks();
-      const t3 = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t3) {
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!t2) {
         const nameQ = (parsed.title || "").toLowerCase();
         const found = tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
         if (!found) {
@@ -12207,23 +12220,23 @@ ${UI_TOOLS_RULES}`;
         addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + found.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
         return true;
       }
-      if (parsed.title) t3.title = parsed.title;
-      if (parsed.dueDate && parsed.dueDate !== t3.dueDate) {
-        if (t3.dueDate) t3.rescheduleCount = (t3.rescheduleCount || 0) + 1;
-        t3.dueDate = parsed.dueDate;
-        t3.updatedAt = Date.now();
+      if (parsed.title) t2.title = parsed.title;
+      if (parsed.dueDate && parsed.dueDate !== t2.dueDate) {
+        if (t2.dueDate) t2.rescheduleCount = (t2.rescheduleCount || 0) + 1;
+        t2.dueDate = parsed.dueDate;
+        t2.updatedAt = Date.now();
       }
-      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) t3.priority = parsed.priority;
+      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) t2.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + t3.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + t2.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
       return true;
     }
     if (action === "delete_task") {
       const tasks = getTasks();
-      const t3 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
-      const target = t3 || tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      const target = t2 || tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443.");
         return true;
@@ -12256,9 +12269,9 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "reopen_task") {
       const tasks = getTasks();
-      const t3 = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
-      const target = t3 || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      const target = t2 || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u043E\u044E \u043D\u0430\u0437\u0432\u043E\u044E.");
         return true;
@@ -12272,23 +12285,23 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "complete_task") {
       const tasks = getTasks();
-      const t3 = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t3) {
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!t2) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID.");
         return true;
       }
-      if (t3.status === "done") {
-        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${t3.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
+      if (t2.status === "done") {
+        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
         return true;
       }
-      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t3.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t2.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
       if (currentTab === "tasks") {
-        toggleTaskStatus(t3.id);
+        toggleTaskStatus(t2.id);
       } else {
-        t3.status = "done";
-        t3.completedAt = Date.now();
-        t3.updatedAt = Date.now();
-        if (Array.isArray(t3.steps)) t3.steps.forEach((s) => s.done = true);
+        t2.status = "done";
+        t2.completedAt = Date.now();
+        t2.updatedAt = Date.now();
+        if (Array.isArray(t2.steps)) t2.steps.forEach((s) => s.done = true);
         saveTasks(tasks);
       }
       return true;
@@ -12316,8 +12329,8 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "add_step") {
       const tasks = getTasks();
-      const t3 = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t3) {
+      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!t2) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043B\u044F \u0434\u043E\u0434\u0430\u0432\u0430\u043D\u043D\u044F \u043A\u0440\u043E\u043A\u0443.");
         return true;
       }
@@ -12326,9 +12339,9 @@ ${UI_TOOLS_RULES}`;
         addMsg("agent", "\u041D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443.");
         return true;
       }
-      if (!Array.isArray(t3.steps)) t3.steps = [];
-      t3.steps.push({ id: Date.now(), text: stepText, done: false });
-      t3.updatedAt = Date.now();
+      if (!Array.isArray(t2.steps)) t2.steps = [];
+      t2.steps.push({ id: Date.now(), text: stepText, done: false });
+      t2.updatedAt = Date.now();
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
       addMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "${stepText}"`);
@@ -12410,9 +12423,9 @@ ${UI_TOOLS_RULES}`;
       saveEvents(events);
       const dateObj = new Date(events[idx].date);
       const dayStr = `${dateObj.getDate()} ${["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][dateObj.getMonth()]}`;
-      const t3 = events[idx].time;
+      const t2 = events[idx].time;
       const et = events[idx].endTime;
-      const timeStr = t3 ? ` \u043E ${t3}${et ? "\u2013" + et : ""}` : "";
+      const timeStr = t2 ? ` \u043E ${t2}${et ? "\u2013" + et : ""}` : "";
       const editText = `\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "${events[idx].title}" \u2192 ${dayStr}${timeStr}`;
       addMsg("agent", editText);
       try {
@@ -12615,10 +12628,10 @@ ${UI_TOOLS_RULES}`;
     addTaskBarMsg("user", text);
     setTaskBarLoading(true);
     addTaskBarMsg("typing", "");
-    const tasks = getTasks().filter((t3) => t3.status !== "done");
-    const tasksSummary = tasks.map((t3) => {
-      const steps = (t3.steps || []).map((s) => "  - " + s.text + (s.done ? " [\u2713]" : "")).join("\n");
-      return "\u0417\u0430\u0434\u0430\u0447\u0430 ID:" + t3.id + ' "' + t3.title + '"' + (steps ? "\n\u041A\u0440\u043E\u043A\u0438:\n" + steps : "");
+    const tasks = getTasks().filter((t2) => t2.status !== "done");
+    const tasksSummary = tasks.map((t2) => {
+      const steps = (t2.steps || []).map((s) => "  - " + s.text + (s.done ? " [\u2713]" : "")).join("\n");
+      return "\u0417\u0430\u0434\u0430\u0447\u0430 ID:" + t2.id + ' "' + t2.title + '"' + (steps ? "\n\u041A\u0440\u043E\u043A\u0438:\n" + steps : "");
     }).join("\n\n");
     const habits = getHabits();
     const log = getHabitLog();
@@ -12660,15 +12673,15 @@ ${UI_TOOLS_RULES}`;
         if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
         if (parsed.action === "complete_step") {
           const allTasks = getTasks();
-          const t3 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t3) {
-            const step = t3.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            const step = t2.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
             if (step) {
               step.done = true;
-              if (t3.steps.every((s) => s.done)) {
-                t3.status = "done";
-                t3.completedAt = Date.now();
-                t3.updatedAt = Date.now();
+              if (t2.steps.every((s) => s.done)) {
+                t2.status = "done";
+                t2.completedAt = Date.now();
+                t2.updatedAt = Date.now();
               }
               saveTasks(allTasks);
               renderTasks();
@@ -12681,23 +12694,23 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "complete_task") {
           const allTasks = getTasks();
-          const t3 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t3) {
-            t3.status = "done";
-            t3.completedAt = Date.now();
-            t3.updatedAt = Date.now();
-            t3.steps.forEach((s) => s.done = true);
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            t2.status = "done";
+            t2.completedAt = Date.now();
+            t2.updatedAt = Date.now();
+            t2.steps.forEach((s) => s.done = true);
             saveTasks(allTasks);
             renderTasks();
-            addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t3.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+            addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t2.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
           }
           return true;
         }
         if (parsed.action === "add_step") {
           const allTasks = getTasks();
-          const t3 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t3) {
-            t3.steps.push({ id: Date.now(), text: parsed.step, done: false });
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            t2.steps.push({ id: Date.now(), text: parsed.step, done: false });
             saveTasks(allTasks);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "' + parsed.step + '"');
@@ -12747,12 +12760,12 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "undo_step") {
           const allTasks = getTasks();
-          const t3 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t3) {
-            const step = t3.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
+          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (t2) {
+            const step = t2.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
             if (step) {
               step.done = false;
-              if (t3.status === "done") t3.status = "active";
+              if (t2.status === "done") t2.status = "active";
               saveTasks(allTasks);
               renderTasks();
               addTaskBarMsg("agent", `\u21A9\uFE0F \u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0432 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F "${step.text}"`);
@@ -12864,23 +12877,23 @@ ${UI_TOOLS_RULES}`;
 ${legacyMemory}`);
       }
     }
-    const tasks = getTasks().filter((t3) => t3.status === "active").slice(0, 8);
+    const tasks = getTasks().filter((t2) => t2.status === "active").slice(0, 8);
     if (tasks.length > 0) {
-      const taskList = tasks.map((t3) => {
-        const steps = t3.steps || [];
+      const taskList = tasks.map((t2) => {
+        const steps = t2.steps || [];
         const doneSteps = steps.filter((s) => s.done).length;
         const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} \u043A\u0440\u043E\u043A\u0456\u0432)` : "";
-        const dueInfo = t3.dueDate ? ` \u{1F4C5}${t3.dueDate}` : "";
-        const prioInfo = t3.priority === "critical" ? " \u{1F534}" : t3.priority === "important" ? " \u{1F7E0}" : "";
-        return `- [ID:${t3.id}] ${t3.title}${stepInfo}${dueInfo}${prioInfo}`;
+        const dueInfo = t2.dueDate ? ` \u{1F4C5}${t2.dueDate}` : "";
+        const prioInfo = t2.priority === "critical" ? " \u{1F534}" : t2.priority === "important" ? " \u{1F7E0}" : "";
+        return `- [ID:${t2.id}] ${t2.title}${stepInfo}${dueInfo}${prioInfo}`;
       }).join("\n");
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_task):
 ${taskList}`);
     }
-    const recentlyDone = getTasks().filter((t3) => t3.status === "done" && t3.completedAt && now - t3.completedAt < 24 * 60 * 60 * 1e3).slice(0, 5);
+    const recentlyDone = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && now - t2.completedAt < 24 * 60 * 60 * 1e3).slice(0, 5);
     if (recentlyDone.length > 0) {
       parts.push(`[\u0424\u0410\u041A\u0422] \u041D\u0435\u0449\u043E\u0434\u0430\u0432\u043D\u043E \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0436\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456, \u041D\u0415 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445!):
-${recentlyDone.map((t3) => '- \u2705 "' + t3.title + '"').join("\n")}`);
+${recentlyDone.map((t2) => '- \u2705 "' + t2.title + '"').join("\n")}`);
     }
     try {
       const todayISO2 = now.toISOString().slice(0, 10);
@@ -12918,12 +12931,12 @@ ${recentlyDone.map((t3) => '- \u2705 "' + t3.title + '"').join("\n")}`);
         parts.push(`[\u0424\u0410\u041A\u0422] \u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0436\u0435 \u041C\u0418\u041D\u0423\u041B\u0406 \u043F\u043E\u0434\u0456\u0457 (\u043D\u0435 \u043D\u0430\u0433\u0430\u0434\u0443\u0439 \u043F\u0440\u043E \u043D\u0438\u0445 \u044F\u043A \u043F\u0440\u043E \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456):
 ${passedToday.join("\n")}`);
       }
-      getTasks().filter((t3) => t3.status === "active" && t3.dueDate).forEach((t3) => {
-        if (t3.dueDate >= todayISO2 && t3.dueDate <= in7) {
-          const diff = Math.round((/* @__PURE__ */ new Date(t3.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
+      getTasks().filter((t2) => t2.status === "active" && t2.dueDate).forEach((t2) => {
+        if (t2.dueDate >= todayISO2 && t2.dueDate <= in7) {
+          const diff = Math.round((/* @__PURE__ */ new Date(t2.dueDate + "T00:00:00") - /* @__PURE__ */ new Date(todayISO2 + "T00:00:00")) / 864e5);
           const when = diff === 0 ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : diff === 1 ? "\u0417\u0410\u0412\u0422\u0420\u0410" : `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0434\u043D`;
-          if (!upcoming.some((u) => u.includes(t3.title))) {
-            upcoming.push(`- \u23F0 "${t3.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D ${when}`);
+          if (!upcoming.some((u) => u.includes(t2.title))) {
+            upcoming.push(`- \u23F0 "${t2.title}" \u2014 \u0434\u0435\u0434\u043B\u0430\u0439\u043D ${when}`);
           }
         }
       });
@@ -12969,7 +12982,7 @@ ${habitList}`);
           return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/7 \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
         }).join("\n");
         const cutoff = Date.now() - 7 * 864e5;
-        const doneTasksWeek = getTasks().filter((t3) => t3.status === "done" && t3.completedAt && t3.completedAt >= cutoff).length;
+        const doneTasksWeek = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && t2.completedAt >= cutoff).length;
         const weekParts = [];
         if (weekLines) weekParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C (\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E/\u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E):
 ${weekLines}`);
@@ -13018,11 +13031,11 @@ ${inboxList}`);
     } catch (e) {
     }
     try {
-      const trash = getTrash().filter((t3) => Date.now() - t3.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+      const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
       if (trash.length > 0) {
         const trashByType = {};
-        trash.forEach((t3) => {
-          trashByType[t3.type] = (trashByType[t3.type] || 0) + 1;
+        trash.forEach((t2) => {
+          trashByType[t2.type] = (trashByType[t2.type] || 0) + 1;
         });
         const summary = Object.entries(trashByType).map(([type, count]) => {
           const labels = { task: "\u0437\u0430\u0434\u0430\u0447", note: "\u043D\u043E\u0442\u0430\u0442\u043E\u043A", habit: "\u0437\u0432\u0438\u0447\u043E\u043A", inbox: "\u0437\u0430\u043F\u0438\u0441\u0456\u0432", folder: "\u043F\u0430\u043F\u043E\u043A", finance: "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439" };
@@ -13100,12 +13113,12 @@ ${routineParts.join("\n")}${nextHint}
     return parts.join("\n\n");
   }
   function getMeStatsContext() {
-    const tasks = getTasks().filter((t3) => t3.status === "active").slice(0, 10);
+    const tasks = getTasks().filter((t2) => t2.status === "active").slice(0, 10);
     const habits = getHabits();
     const log = getHabitLog();
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const parts = [];
-    if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447\u0456: ${tasks.map((t3) => t3.title).join(", ")}`);
+    if (tasks.length > 0) parts.push(`\u0417\u0430\u0434\u0430\u0447\u0456: ${tasks.map((t2) => t2.title).join(", ")}`);
     if (habits.length > 0) {
       const habitStats = habits.map((h) => {
         const doneToday = !!log[today]?.[h.id];
@@ -13247,7 +13260,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     }
     if (hits === 0 || hits > 4) return fullTools;
     _BASE_TOOL_NAMES.forEach((n) => matched.add(n));
-    const filtered = fullTools.filter((t3) => matched.has(t3.function?.name));
+    const filtered = fullTools.filter((t2) => matched.has(t2.function?.name));
     return filtered.length >= 5 ? filtered : fullTools;
   }
   async function callAIWithTools(systemPrompt, history, tools, module = "callAIWithTools") {
@@ -13300,8 +13313,8 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function getRecentChatsAcrossTabs(excludeTab, limit = 5, windowMs = 60 * 60 * 1e3) {
     const now = Date.now();
     const all = [];
-    _ALL_CHAT_TABS.filter((t3) => t3 !== excludeTab).forEach((t3) => {
-      const key = "nm_chat_" + t3;
+    _ALL_CHAT_TABS.filter((t2) => t2 !== excludeTab).forEach((t2) => {
+      const key = "nm_chat_" + t2;
       let msgs = [];
       try {
         msgs = JSON.parse(localStorage.getItem(key) || "[]");
@@ -13309,7 +13322,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       }
       msgs.slice(-5).forEach((m) => {
         if (m && m.ts && now - m.ts < windowMs && m.text) {
-          all.push({ role: m.role, text: m.text, ts: m.ts, tab: t3, tabLabel: _TAB_LABELS_CHAT[t3] || t3 });
+          all.push({ role: m.role, text: m.text, ts: m.ts, tab: t2, tabLabel: _TAB_LABELS_CHAT[t2] || t2 });
         }
       });
     });
@@ -13363,13 +13376,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       projects: "projects-chat-messages"
     };
     const addMsgMap = {
-      tasks: (r, t3) => addTaskBarMsg(r, t3, true),
-      notes: (r, t3) => addNotesChatMsg(r, t3, true),
-      me: (r, t3) => addMeChatMsg(r, t3, true),
-      evening: (r, t3) => addEveningBarMsg(r, t3, true),
-      finance: (r, t3) => addFinanceChatMsg(r, t3, true),
-      health: (r, t3) => addHealthChatMsg(r, t3, true),
-      projects: (r, t3) => addProjectsChatMsg(r, t3, true)
+      tasks: (r, t2) => addTaskBarMsg(r, t2, true),
+      notes: (r, t2) => addNotesChatMsg(r, t2, true),
+      me: (r, t2) => addMeChatMsg(r, t2, true),
+      evening: (r, t2) => addEveningBarMsg(r, t2, true),
+      finance: (r, t2) => addFinanceChatMsg(r, t2, true),
+      health: (r, t2) => addHealthChatMsg(r, t2, true),
+      projects: (r, t2) => addProjectsChatMsg(r, t2, true)
     };
     const containerId = containerMap[tab];
     if (!containerId) return;
@@ -13414,14 +13427,14 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       closeOwlChat();
     } catch (e) {
     }
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t3) => {
-      if (t3 === tab) return;
-      const b = document.getElementById(t3 + "-ai-bar");
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      if (t2 === tab) return;
+      const b = document.getElementById(t2 + "-ai-bar");
       if (!b) return;
       const cw = b.querySelector(".ai-bar-chat-window");
       if (cw) {
         cw.classList.remove("open");
-        _tabChatState[t3] = void 0;
+        _tabChatState[t2] = void 0;
       }
       const inputs = b.querySelectorAll("input, textarea");
       inputs.forEach((i) => i.blur());
@@ -13467,13 +13480,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     window.dispatchEvent(new CustomEvent("nm-chat-closed", { detail: tab }));
   }
   function closeAllChatBars(resetActive = true) {
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t3) => {
-      const bar = document.getElementById(t3 + "-ai-bar");
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      const bar = document.getElementById(t2 + "-ai-bar");
       if (!bar) return;
       const chatWin = bar.querySelector(".ai-bar-chat-window");
       if (chatWin) {
         chatWin.classList.remove("open");
-        _tabChatState[t3] = void 0;
+        _tabChatState[t2] = void 0;
       }
       const inputs = bar.querySelectorAll("input, textarea");
       inputs.forEach((i) => i.blur());
@@ -13605,7 +13618,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function openAddTask() {
     editingTaskId = null;
     tempSteps = [];
-    document.getElementById("task-modal-title").textContent = t2("tasks.modal_new", "\u041D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430");
+    document.getElementById("task-modal-title").textContent = t("tasks.modal_new", "\u041D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430");
     document.getElementById("task-input-title").value = "";
     document.getElementById("task-input-desc").value = "";
     document.getElementById("task-step-input").value = "";
@@ -13622,13 +13635,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function openEditTask(id) {
     const tasks = getTasks();
-    const t3 = tasks.find((x) => String(x.id) === String(id));
-    if (!t3) return;
+    const t2 = tasks.find((x) => String(x.id) === String(id));
+    if (!t2) return;
     editingTaskId = id;
-    tempSteps = [...t3.steps || []];
-    document.getElementById("task-modal-title").textContent = t3("tasks.modal_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443");
-    document.getElementById("task-input-title").value = t3.title;
-    document.getElementById("task-input-desc").value = t3.desc || "";
+    tempSteps = [...t2.steps || []];
+    document.getElementById("task-modal-title").textContent = t2("tasks.modal_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443");
+    document.getElementById("task-input-title").value = t2.title;
+    document.getElementById("task-input-desc").value = t2.desc || "";
     document.getElementById("task-step-input").value = "";
     const delBtn = document.getElementById("task-delete-btn");
     if (delBtn) delBtn.style.display = "inline-block";
@@ -13685,11 +13698,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     saveTasks(tasks.filter((x) => x.id !== editingTaskId));
     closeTaskModal();
     renderTasks();
-    if (item) showUndoToast(t2("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
-      const t3 = getTasks();
-      const idx = Math.min(taskOrigIdx, t3.length);
-      t3.splice(idx, 0, item);
-      saveTasks(t3);
+    if (item) showUndoToast(t("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+      const t2 = getTasks();
+      const idx = Math.min(taskOrigIdx, t2.length);
+      t2.splice(idx, 0, item);
+      saveTasks(t2);
       renderTasks();
     });
   }
@@ -13728,7 +13741,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function saveTask() {
     const title = document.getElementById("task-input-title").value.trim();
     if (!title) {
-      showToast(t2("tasks.title_required", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0456"));
+      showToast(t("tasks.title_required", "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0456"));
       return;
     }
     const desc = document.getElementById("task-input-desc").value.trim();
@@ -13747,30 +13760,30 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function toggleTaskStep(taskId, stepId) {
     const tasks = getTasks();
-    const t3 = tasks.find((x) => String(x.id) === String(taskId));
-    if (!t3) return;
-    const s = (t3.steps || []).find((x) => String(x.id) === String(stepId));
+    const t2 = tasks.find((x) => String(x.id) === String(taskId));
+    if (!t2) return;
+    const s = (t2.steps || []).find((x) => String(x.id) === String(stepId));
     if (s) s.done = !s.done;
-    const allDone = t3.steps.length > 0 && t3.steps.every((x) => x.done);
-    const wasDone = t3.status === "done";
+    const allDone = t2.steps.length > 0 && t2.steps.every((x) => x.done);
+    const wasDone = t2.status === "done";
     const now = Date.now();
     if (allDone && !wasDone) {
-      t3.status = "done";
-      t3.completedAt = now;
-      t3.updatedAt = now;
+      t2.status = "done";
+      t2.completedAt = now;
+      t2.updatedAt = now;
     } else if (!allDone && wasDone) {
-      t3.status = "active";
-      delete t3.completedAt;
-      t3.updatedAt = now;
+      t2.status = "active";
+      delete t2.completedAt;
+      t2.updatedAt = now;
     }
     saveTasks(tasks);
     renderTasks();
   }
   function toggleTaskStatus(id) {
     const tasks = getTasks();
-    const t3 = tasks.find((x) => String(x.id) === String(id));
-    if (!t3) return;
-    const isCompleting = t3.status !== "done";
+    const t2 = tasks.find((x) => String(x.id) === String(id));
+    if (!t2) return;
+    const isCompleting = t2.status !== "done";
     const now = Date.now();
     if (isCompleting) {
       const wrap = document.getElementById("task-wrap-" + id);
@@ -13795,20 +13808,20 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         }, 250);
       }
       setTimeout(() => {
-        t3.status = "done";
-        t3.completedAt = now;
-        t3.updatedAt = now;
+        t2.status = "done";
+        t2.completedAt = now;
+        t2.updatedAt = now;
         saveTasks(tasks);
-        logRecentAction("complete_task", t3.title, "tasks");
+        logRecentAction("complete_task", t2.title, "tasks");
         renderTasks();
       }, 620);
       return;
     }
-    t3.status = "active";
-    delete t3.completedAt;
-    t3.updatedAt = now;
+    t2.status = "active";
+    delete t2.completedAt;
+    t2.updatedAt = now;
     saveTasks(tasks);
-    logRecentAction("reopen_task", t3.title, "tasks");
+    logRecentAction("reopen_task", t2.title, "tasks");
     renderTasks();
   }
   function renderTasks() {
@@ -13821,25 +13834,25 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return;
     }
     empty.style.display = "none";
-    const active = tasks.filter((t3) => t3.status !== "done");
-    const done = tasks.filter((t3) => t3.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
+    const active = tasks.filter((t2) => t2.status !== "done");
+    const done = tasks.filter((t2) => t2.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
     const sorted = [...active, ...done];
     updateProdTabCounters();
-    list.innerHTML = sorted.map((t3) => {
-      const steps = t3.steps || [];
+    list.innerHTML = sorted.map((t2) => {
+      const steps = t2.steps || [];
       const doneCount = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t3.status === "done" ? 100 : 0;
-      const isDone = t3.status === "done";
-      return `<div class="task-item-wrap" id="task-wrap-${t3.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${t3.id}" onclick="taskCardClick('${t3.id}', event)"
+      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t2.status === "done" ? 100 : 0;
+      const isDone = t2.status === "done";
+      return `<div class="task-item-wrap" id="task-wrap-${t2.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
+      <div id="task-item-${t2.id}" onclick="taskCardClick('${t2.id}', event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? "8px" : "0"}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t3.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t2.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
         </div>
         <div style="flex:1">
-          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(t3.title)}</div>
-          ${t3.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t3.desc)}</div>` : ""}
+          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(t2.title)}</div>
+          ${t2.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t2.desc)}</div>` : ""}
         </div>
       </div>
       ${steps.length > 0 ? `
@@ -13848,7 +13861,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map((s) => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t3.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t2.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
             </div>
@@ -13868,11 +13881,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         if (item) addToTrash("task", item);
         saveTasks(tasks2.filter((x) => String(x.id) !== id));
         renderTasks();
-        if (item) showUndoToast(t2("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
-          const t3 = getTasks();
-          const idx = Math.min(taskOrigIdx, t3.length);
-          t3.splice(idx, 0, item);
-          saveTasks(t3);
+        if (item) showUndoToast(t("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+          const t2 = getTasks();
+          const idx = Math.min(taskOrigIdx, t2.length);
+          t2.splice(idx, 0, item);
+          saveTasks(t2);
           renderTasks();
         });
       });
@@ -13921,7 +13934,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addTaskChatMsg("agent", t3("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addTaskChatMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -13931,12 +13944,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const btn = document.getElementById("task-chat-send");
     btn.disabled = true;
     const tasks = getTasks();
-    const t3 = tasks.find((x) => x.id === taskChatId);
-    const steps = t3 ? (t3.steps || []).map((s) => `- ${s.text}${s.done ? " \u2713" : ""}`).join("\n") : "";
+    const t2 = tasks.find((x) => x.id === taskChatId);
+    const steps = t2 ? (t2.steps || []).map((s) => `- ${s.text}${s.done ? " \u2713" : ""}`).join("\n") : "";
     const aiContext = getAIContext();
     const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
     const stepInstruction = wantsSteps ? ' \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u0440\u043E\u043A\u0438. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u043C JSON \u0456 \u043D\u0456\u0447\u0438\u043C \u0456\u043D\u0448\u0438\u043C: {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"]}. \u0416\u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u0434\u043E \u0430\u0431\u043E \u043F\u0456\u0441\u043B\u044F JSON.' : "";
-    const systemPrompt = `${getOWLPersonality()} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0437\u0430\u0434\u0430\u0447\u0443: "${t3?.title || ""}". ${t3?.desc ? "\u041E\u043F\u0438\u0441: " + t3.desc + "." : ""} ${steps ? "\u041A\u0440\u043E\u043A\u0438:\n" + steps : ""} \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u0424\u043E\u043A\u0443\u0441 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0430\u0445.${stepInstruction}
+    const systemPrompt = `${getOWLPersonality()} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0437\u0430\u0434\u0430\u0447\u0443: "${t2?.title || ""}". ${t2?.desc ? "\u041E\u043F\u0438\u0441: " + t2.desc + "." : ""} ${steps ? "\u041A\u0440\u043E\u043A\u0438:\n" + steps : ""} \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u0424\u043E\u043A\u0443\u0441 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0430\u0445.${stepInstruction}
 \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u0440\u043E\u043A\u0438 \u2014 {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2"]}
 \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0449\u043E\u0441\u044C \u041D\u0415 \u043F\u0440\u043E \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443 (\u043D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u043F\u043E\u0434\u0456\u044F, \u043D\u043E\u0442\u0430\u0442\u043A\u0430, \u0437\u0432\u0438\u0447\u043A\u0430, \u0432\u0438\u0442\u0440\u0430\u0442\u0430) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u043C JSON:
 - \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
@@ -13984,7 +13997,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
               saveTasks(allTasks);
               renderTasks();
-              addTaskChatMsg("agent", t3("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
+              addTaskChatMsg("agent", t2("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
             }
           } else if (parsed.action) {
             if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
@@ -14005,7 +14018,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
                 allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
                 saveTasks(allTasks);
                 renderTasks();
-                addTaskChatMsg("agent", t3("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
+                addTaskChatMsg("agent", t2("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
                 handled = true;
               }
             } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
@@ -14016,7 +14029,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         }
       } else handleChatError(addTaskChatMsg);
     } catch {
-      addTaskChatMsg("agent", t3("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addTaskChatMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     taskChatLoading = false;
     btn.disabled = false;
@@ -14162,13 +14175,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function addToTrash(type, item, extra) {
     const trash = getTrash();
     const now = Date.now();
-    const fresh = trash.filter((t3) => now - t3.deletedAt < TRASH_TTL);
+    const fresh = trash.filter((t2) => now - t2.deletedAt < TRASH_TTL);
     fresh.push({ type, item, extra: extra || null, deletedAt: now });
     saveTrash(fresh.slice(-200));
   }
   function restoreFromTrash(trashId) {
     const trash = getTrash();
-    const entry = trash.find((t3) => t3.deletedAt === trashId);
+    const entry = trash.find((t2) => t2.deletedAt === trashId);
     if (!entry) return false;
     const { type, item, extra } = entry;
     if (type === "task") {
@@ -14203,13 +14216,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       saveFinance(txs);
       if (currentTab === "finance") renderFinance();
     }
-    saveTrash(trash.filter((t3) => t3.deletedAt !== trashId));
+    saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
     return true;
   }
   function cleanupTrash() {
     const trash = getTrash();
     const now = Date.now();
-    const fresh = trash.filter((t3) => now - t3.deletedAt < TRASH_TTL);
+    const fresh = trash.filter((t2) => now - t2.deletedAt < TRASH_TTL);
     if (fresh.length !== trash.length) saveTrash(fresh);
   }
   function showUndoToast(msg, restoreFn) {
@@ -14560,14 +14573,14 @@ ${answersText}
     }
     const shownTips = JSON.parse(localStorage.getItem("nm_guide_shown_tips") || "[]");
     const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
-    const nextTip = OWL_APP_TIPS.find((t3) => !shownTips.includes(t3.key));
+    const nextTip = OWL_APP_TIPS.find((t2) => !shownTips.includes(t2.key));
     if (nextTip) {
       addInboxChatMsg("agent", nextTip.msg);
       shownTips.push(nextTip.key);
       localStorage.setItem("nm_guide_shown_tips", JSON.stringify(shownTips));
       return;
     }
-    const nextTopic = OWL_GUIDE_TOPICS.find((t3) => !shownTopics.includes(t3.key));
+    const nextTopic = OWL_GUIDE_TOPICS.find((t2) => !shownTopics.includes(t2.key));
     if (nextTopic) {
       addInboxChatMsg("agent", nextTopic.q);
       shownTopics.push(nextTopic.key);
@@ -14629,7 +14642,7 @@ ${stepsText}
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
     const currentMemory = localStorage.getItem("nm_memory") || "";
-    const topicData = OWL_GUIDE_TOPICS.find((t3) => t3.key === waitingTopic);
+    const topicData = OWL_GUIDE_TOPICS.find((t2) => t2.key === waitingTopic);
     if (!topicData) return;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -15245,10 +15258,10 @@ ${userText}
         upcoming.push({ type, title: ev.title, date: ev.date, time: ev.time, id: ev.id });
       }
     }
-    const tasks = getTasks().filter((t3) => t3.status === "active" && t3.dueDate);
-    for (const t3 of tasks) {
-      if (t3.dueDate >= todayStr && t3.dueDate <= in7days) {
-        upcoming.push({ type: "task", title: t3.title, date: t3.dueDate, id: t3.id });
+    const tasks = getTasks().filter((t2) => t2.status === "active" && t2.dueDate);
+    for (const t2 of tasks) {
+      if (t2.dueDate >= todayStr && t2.dueDate <= in7days) {
+        upcoming.push({ type: "task", title: t2.title, date: t2.dueDate, id: t2.id });
       }
     }
     if (upcoming.length === 0) return "";
@@ -15544,7 +15557,7 @@ ${aiContext}`;
             processFinanceAction(action, text);
           } else if (action.action === "update_transaction") {
             const txs = getFinance();
-            const idx = txs.findIndex((t3) => t3.id === action.id);
+            const idx = txs.findIndex((t2) => t2.id === action.id);
             if (idx !== -1) {
               if (action.category) txs[idx].category = action.category;
               if (action.comment !== void 0) txs[idx].comment = action.comment;
@@ -15564,13 +15577,14 @@ ${aiContext}`;
             await processCompleteTask(action, text);
           } else if (action.action === "add_step") {
             const tasks = getTasks();
-            const idx = tasks.findIndex((t3) => t3.id === action.task_id);
+            const idx = tasks.findIndex((t2) => t2.id === action.task_id);
             if (idx !== -1) {
               const steps = Array.isArray(action.steps) ? action.steps : [];
               steps.forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
               saveTasks(tasks);
               renderTasks();
-              addInboxChatMsg("agent", `\u2713 \u0414\u043E\u0434\u0430\u043D\u043E ${steps.length} \u043A\u0440\u043E\u043A(\u0438) \u0434\u043E "${tasks[idx].title}"`);
+              const stepWord = steps.length === 1 ? t("inbox.step_one", "\u043A\u0440\u043E\u043A") : steps.length < 5 ? t("inbox.step_few", "\u043A\u0440\u043E\u043A\u0438") : t("inbox.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
+              addInboxChatMsg("agent", t("inbox.chat.steps_added", '\u2713 \u0414\u043E\u0434\u0430\u043D\u043E {n} {word} \u0434\u043E "{title}"', { n: steps.length, word: stepWord, title: tasks[idx].title }));
             } else {
               addInboxChatMsg("agent", t("inbox.chat.task_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0447\u0435\u0440\u0435\u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C."));
             }
@@ -15626,15 +15640,15 @@ ${aiContext}`;
           } else if (action.action === "restore_deleted") {
             const q = (action.query || "").trim();
             const typeFilter = action.type || null;
-            const trash = getTrash().filter((t3) => Date.now() - t3.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+            const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
             const typeLabel = { task: "\u0437\u0430\u0434\u0430\u0447\u0443", note: "\u043D\u043E\u0442\u0430\u0442\u043A\u0443", habit: "\u0437\u0432\u0438\u0447\u043A\u0443", inbox: "\u0437\u0430\u043F\u0438\u0441", folder: "\u043F\u0430\u043F\u043A\u0443", finance: "\u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E" };
             const typeIcon = { task: "\u{1F4CB}", note: "\u{1F4DD}", habit: "\u{1F331}", inbox: "\u{1F4E5}", folder: "\u{1F4C1}", finance: "\u{1F4B0}" };
-            const filtered = typeFilter ? trash.filter((t3) => t3.type === typeFilter) : trash;
+            const filtered = typeFilter ? trash.filter((t2) => t2.type === typeFilter) : trash;
             if (q === "all") {
               if (filtered.length === 0) {
                 addInboxChatMsg("agent", t("inbox.chat.trash_empty", "\u041A\u0435\u0448 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439. \u0417\u0430\u043F\u0438\u0441\u0438 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F 7 \u0434\u043D\u0456\u0432."));
               } else {
-                filtered.forEach((t3) => restoreFromTrash(t3.deletedAt));
+                filtered.forEach((t2) => restoreFromTrash(t2.deletedAt));
                 addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${filtered.length} \u0437\u0430\u043F\u0438\u0441\u0456\u0432`);
               }
             } else if (q === "last") {
@@ -15648,14 +15662,14 @@ ${aiContext}`;
               }
             } else {
               const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
-              const results = filtered.filter((t3) => {
-                const txt = (t3.item.text || t3.item.title || t3.item.name || t3.item.folder || "").toLowerCase();
+              const results = filtered.filter((t2) => {
+                const txt = (t2.item.text || t2.item.title || t2.item.name || t2.item.folder || "").toLowerCase();
                 return words.some((w) => txt.includes(w));
               }).sort((a, b) => b.deletedAt - a.deletedAt);
               if (results.length === 0) {
                 addInboxChatMsg("agent", t("inbox.chat.trash_no_similar", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043D\u0456\u0447\u043E\u0433\u043E \u0441\u0445\u043E\u0436\u043E\u0433\u043E \u0432 \u043A\u0435\u0448\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445."));
               } else if (results.length <= 5) {
-                results.forEach((t3) => restoreFromTrash(t3.deletedAt));
+                results.forEach((t2) => restoreFromTrash(t2.deletedAt));
                 const labels = results.map((e) => `${typeIcon[e.type] || "\u2022"} ${(e.item.text || e.item.title || e.item.name || "").substring(0, 35)}`).join("\n");
                 addInboxChatMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 ${results.length} \u0437\u0430\u043F\u0438\u0441\u0438:
 ${labels}`);
@@ -15663,7 +15677,7 @@ ${labels}`);
                 const list = results.slice(0, 5).map((e) => {
                   const lbl = (e.item.text || e.item.title || e.item.name || e.item.folder || "\u0437\u0430\u043F\u0438\u0441").substring(0, 40);
                   const ago = Math.round((Date.now() - e.deletedAt) / 864e5);
-                  return `${typeIcon[e.type] || "\u2022"} ${lbl} (${ago === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : ago + " \u0434\u043D. \u0442\u043E\u043C\u0443"})`;
+                  return `${typeIcon[e.type] || "\u2022"} ${lbl} (${ago === 0 ? t("inbox.date.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("inbox.time.days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: ago })})`;
                 }).join("\n");
                 addInboxChatMsg("agent", `\u0417\u043D\u0430\u0439\u0448\u043E\u0432 ${results.length} \u0441\u0445\u043E\u0436\u0438\u0445. \u041E\u0441\u044C \u043F\u0435\u0440\u0448\u0456 5:
 ${list}
@@ -15825,9 +15839,9 @@ ${list}
               if (action.new_name && action.new_name !== found.cat.name) {
                 const txs = getFinance();
                 let changed = 0;
-                txs.forEach((t3) => {
-                  if (t3.category === found.cat.name) {
-                    t3.category = action.new_name;
+                txs.forEach((t2) => {
+                  if (t2.category === found.cat.name) {
+                    t2.category = action.new_name;
                     changed++;
                   }
                 });
@@ -15985,11 +15999,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function _detectEventDate(text) {
     if (!text) return null;
-    const t3 = text.toLowerCase();
+    const lower = text.toLowerCase();
     const now = /* @__PURE__ */ new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const dayMatch = t3.match(/(\d{1,2})\s*(?:-?го|числа)/);
+    const dayMatch = lower.match(/(\d{1,2})\s*(?:-?го|числа)/);
     if (dayMatch) {
       const day = parseInt(dayMatch[1]);
       if (day >= 1 && day <= 31) {
@@ -16004,7 +16018,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     const monthNames = ["\u0441\u0456\u0447\u043D", "\u043B\u044E\u0442", "\u0431\u0435\u0440\u0435\u0437", "\u043A\u0432\u0456\u0442\u043D", "\u0442\u0440\u0430\u0432\u043D", "\u0447\u0435\u0440\u0432\u043D", "\u043B\u0438\u043F\u043D", "\u0441\u0435\u0440\u043F\u043D", "\u0432\u0435\u0440\u0435\u0441\u043D", "\u0436\u043E\u0432\u0442\u043D", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0433\u0440\u0443\u0434\u043D"];
-    const monthMatch = t3.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+    const monthMatch = lower.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
     if (monthMatch) {
       const day = parseInt(monthMatch[1]);
       const mIdx = monthNames.findIndex((m) => monthMatch[2].toLowerCase().startsWith(m));
@@ -16018,13 +16032,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function _detectEventFromTask(title) {
     if (!title) return null;
-    const t3 = title.toLowerCase();
+    const lower = title.toLowerCase();
     const eventMarkers = /приїзд|приїжд|приліт|прибут|зустріч(?!ай)|візит|прийом|рейс|концерт|виставк|свято|день народження|ювілей|весілля|іспит|екзамен|співбесід/i;
-    if (!eventMarkers.test(t3)) return null;
+    if (!eventMarkers.test(lower)) return null;
     const now = /* @__PURE__ */ new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const dayMatch = t3.match(/(\d{1,2})\s*(?:-?го|числа)/);
+    const dayMatch = lower.match(/(\d{1,2})\s*(?:-?го|числа)/);
     if (dayMatch) {
       const day = parseInt(dayMatch[1]);
       if (day >= 1 && day <= 31) {
@@ -16039,7 +16053,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     const monthNames = ["\u0441\u0456\u0447\u043D", "\u043B\u044E\u0442", "\u0431\u0435\u0440\u0435\u0437", "\u043A\u0432\u0456\u0442\u043D", "\u0442\u0440\u0430\u0432\u043D", "\u0447\u0435\u0440\u0432\u043D", "\u043B\u0438\u043F\u043D", "\u0441\u0435\u0440\u043F\u043D", "\u0432\u0435\u0440\u0435\u0441\u043D", "\u0436\u043E\u0432\u0442\u043D", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "\u0433\u0440\u0443\u0434\u043D"];
-    const monthMatch = t3.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
+    const monthMatch = lower.match(/(\d{1,2})\s+(січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\w*/i);
     if (monthMatch) {
       const day = parseInt(monthMatch[1]);
       const mIdx = monthNames.findIndex((m) => monthMatch[2].toLowerCase().startsWith(m));
@@ -16176,7 +16190,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (undoRef) {
       showUndoToast(`\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043E ${undoRef.label} \u2192 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438`, () => {
         try {
-          if (undoRef.type === "task") saveTasks(getTasks().filter((t3) => t3.id !== undoRef.id));
+          if (undoRef.type === "task") saveTasks(getTasks().filter((t2) => t2.id !== undoRef.id));
           else if (undoRef.type === "note") saveNotes(getNotes().filter((n) => n.id !== undoRef.id));
           else if (undoRef.type === "habit") saveHabits(getHabits().filter((h) => h.id !== undoRef.id));
           saveInbox(getInbox().filter((i) => i.id !== inboxCardId));
@@ -16227,7 +16241,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tasks = getTasks();
     const completed = [];
     ids.forEach((taskId) => {
-      const idx = tasks.findIndex((t3) => t3.id === taskId);
+      const idx = tasks.findIndex((t2) => t2.id === taskId);
       if (idx !== -1) {
         completed.push(tasks[idx].title);
         tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
@@ -16364,9 +16378,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function formatTime(ts) {
     const diff = Date.now() - ts;
-    if (diff < 6e4) return t2("time.just_now", "\u0449\u043E\u0439\u043D\u043E");
-    if (diff < 36e5) return Math.floor(diff / 6e4) + t2("time.minutes_ago", " \u0445\u0432 \u0442\u043E\u043C\u0443");
-    if (diff < 864e5) return Math.floor(diff / 36e5) + t2("time.hours_ago", " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
+    if (diff < 6e4) return t("time.just_now", "\u0449\u043E\u0439\u043D\u043E");
+    if (diff < 36e5) return Math.floor(diff / 6e4) + t("time.minutes_ago", " \u0445\u0432 \u0442\u043E\u043C\u0443");
+    if (diff < 864e5) return Math.floor(diff / 36e5) + t("time.hours_ago", " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
   }
   function escapeHtml(s) {
@@ -16471,7 +16485,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       return [];
     }
   }
-  function t2(key, fallback, params) {
+  function t(key, fallback, params) {
     let result = fallback;
     if (params && typeof params === "object") {
       for (const [k, v] of Object.entries(params)) {
@@ -16781,7 +16795,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function renderSmokeTests() {
     const { tests, totalMs } = runSmokeTests();
-    const fails = tests.filter((t3) => t3.status === "fail").length;
+    const fails = tests.filter((t2) => t2.status === "fail").length;
     const passes = tests.length - fails;
     const overall = fails > 0 ? "fail" : "ok";
     const overallIcon = fails > 0 ? "\u2717" : "\u2713";
@@ -16801,14 +16815,14 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
     </div>
     <div id="smoke-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid ${overallBorder};flex-direction:column;gap:6px">
-      ${tests.map((t3) => `
+      ${tests.map((t2) => `
         <div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
-          <span style="color:${statusColor[t3.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t3.status]}</span>
+          <span style="color:${statusColor[t2.status]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[t2.status]}</span>
           <div style="flex:1;min-width:0">
-            <span style="color:#1e1040;font-weight:600">${t3.name}</span>
-            ${t3.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t3.message}</span>` : ""}
+            <span style="color:#1e1040;font-weight:600">${t2.name}</span>
+            ${t2.status === "fail" ? `<span style="color:#dc2626"> \u2014 ${t2.message}</span>` : ""}
           </div>
-          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t3.ms}\u043C\u0441</span>
+          <span style="font-size:11px;color:rgba(30,16,64,0.5);font-family:ui-monospace,Menlo,monospace;flex-shrink:0">${t2.ms}\u043C\u0441</span>
         </div>
       `).join("")}
     </div>
@@ -16912,7 +16926,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E";
     const startupStatus = data.startupMs == null ? "unknown" : data.startupMs < 1500 ? "ok" : data.startupMs < 3e3 ? "warn" : "fail";
     const longTasksCount = data.longTasks.length;
-    const worstLongTask = data.longTasks.reduce((max, t3) => t3.duration > max ? t3.duration : max, 0);
+    const worstLongTask = data.longTasks.reduce((max, t2) => t2.duration > max ? t2.duration : max, 0);
     const longTasksStatus = !data.longTaskSupported ? "unknown" : longTasksCount === 0 ? "ok" : worstLongTask > 200 ? "warn" : "ok";
     const okFetches = data.fetches.filter((f) => f.status >= 200 && f.status < 400);
     const failedFetches = data.fetches.filter((f) => f.status === 0 || f.status >= 400);
@@ -17078,9 +17092,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const healthHtml = renderHealthCheck();
     const smokeHtml = renderSmokeTests();
     const perfHtml = renderPerformance();
-    const logsHeader = `<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">${t2("logger.section_title", "\u041B\u043E\u0433\u0438 \u043F\u043E\u043C\u0438\u043B\u043E\u043A")}</div>`;
+    const logsHeader = `<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">${t("logger.section_title", "\u041B\u043E\u0433\u0438 \u043F\u043E\u043C\u0438\u043B\u043E\u043A")}</div>`;
     if (log.length === 0) {
-      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + `<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">${t2("logger.empty", "\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}")}</div>`;
+      list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + `<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">${t("logger.empty", "\u041B\u043E\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u2014 \u043F\u043E\u043C\u0438\u043B\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u{1F44D}")}</div>`;
     } else {
       const grouped = _groupConsecutive(log);
       list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader + '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' + [...grouped].reverse().map((e, idx) => {
@@ -17091,14 +17105,14 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const countBadge = e.count > 1 ? `<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,0.2);color:#b45309">\xD7${e.count}</span>` : "";
         const hasDetails = !!(e.stack || e.actions && e.actions.length);
         const actionsHtml = e.actions && e.actions.length ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(30,16,64,0.04);border-radius:10px">
-               <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t2("logger.recent_actions", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0434\u0456\u0457 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E")}</div>
+               <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t("logger.recent_actions", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0434\u0456\u0457 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E")}</div>
                ${e.actions.map((a) => {
           const at = new Date(a.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
           return `<div style="font-size:12px;color:rgba(30,16,64,0.8);line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">[${at}] [${escapeLog(a.tab)}] ${escapeLog(a.action)}</div>`;
         }).join("")}
              </div>` : "";
         const stackHtml = e.stack ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.07);border-radius:10px;border-left:3px solid rgba(220,38,38,0.5)">
-               <div style="font-size:10px;font-weight:800;color:#dc2626;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t2("logger.stack_trace", "Stack trace")}</div>
+               <div style="font-size:10px;font-weight:800;color:#dc2626;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${t("logger.stack_trace", "Stack trace")}</div>
                <div style="font-size:11px;color:rgba(30,16,64,0.85);white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word;overflow-wrap:anywhere">${escapeLog(e.stack)}</div>
              </div>` : "";
         return `<div class="log-entry" data-idx="${idx}" ${hasDetails ? `onclick="toggleLogEntry(${idx})"` : ""} style="background:rgba(255,255,255,0.75);border:1px solid rgba(30,16,64,0.08);border-radius:12px;padding:12px 14px;cursor:${hasDetails ? "pointer" : "default"};-webkit-tap-highlight-color:transparent">
@@ -17119,7 +17133,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (countEl) {
       const grouped = _groupConsecutive(log);
       const groupedN = grouped.length;
-      const txt = groupedN === log.length ? t2("logger.count_simple", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443", { n: log.length }) : t2("logger.count_grouped", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 {g} \u0433\u0440\u0443\u043F \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443", { n: log.length, g: groupedN });
+      const txt = groupedN === log.length ? t("logger.count_simple", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443", { n: log.length }) : t("logger.count_grouped", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \xB7 {g} \u0433\u0440\u0443\u043F \xB7 \u0441\u0432\u0456\u0436\u0456\u0448\u0456 \u0437\u0432\u0435\u0440\u0445\u0443", { n: log.length, g: groupedN });
       countEl.textContent = txt;
     }
     panel.style.display = "flex";
@@ -17143,18 +17157,18 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       return line;
     }).join("\n");
     const { tests: smokeTests, totalMs: smokeMs } = runSmokeTests();
-    const smokeFails = smokeTests.filter((t3) => t3.status === "fail").length;
+    const smokeFails = smokeTests.filter((t2) => t2.status === "fail").length;
     const smokePasses = smokeTests.length - smokeFails;
     const smokeSummary = smokeFails > 0 ? `${smokePasses}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeFails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${smokeTests.length}/${smokeTests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${smokeMs}\u043C\u0441`;
-    const smokeLines = smokeTests.map((t3) => {
-      const ic = t3.status === "pass" ? "\u2713" : "\u2717";
-      return `${ic} ${t3.name}${t3.status === "fail" ? ` \u2014 ${t3.message}` : ""} (${t3.ms}\u043C\u0441)`;
+    const smokeLines = smokeTests.map((t2) => {
+      const ic = t2.status === "pass" ? "\u2713" : "\u2717";
+      return `${ic} ${t2.name}${t2.status === "fail" ? ` \u2014 ${t2.message}` : ""} (${t2.ms}\u043C\u0441)`;
     }).join("\n");
     const perf = getPerformanceData();
     const perfLines = [];
     perfLines.push(`\u0421\u0442\u0430\u0440\u0442: ${perf.startupMs != null ? perf.startupMs + "\u043C\u0441" : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"}`);
     if (perf.longTaskSupported) {
-      const worst = perf.longTasks.reduce((m, t3) => t3.duration > m ? t3.duration : m, 0);
+      const worst = perf.longTasks.reduce((m, t2) => t2.duration > m ? t2.duration : m, 0);
       perfLines.push(`\u041B\u0430\u0433\u0438 UI: ${perf.longTasks.length}${worst > 0 ? ` (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worst}\u043C\u0441)` : ""}`);
     } else {
       perfLines.push("\u041B\u0430\u0433\u0438 UI: \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043E\u043C");
@@ -17393,16 +17407,16 @@ ${logLines}
   }
   function _collectStuckTasks() {
     const cutoff = Date.now() - STUCK_TASK_DAYS * 24 * 60 * 60 * 1e3;
-    const tasks = getTasks().filter((t4) => t4.status === "active").filter((t4) => t4.createdAt && t4.createdAt < cutoff).filter((t4) => owlCdExpired(`brain_stuck_${t4.id}`, PER_SIGNAL_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const tasks = getTasks().filter((t3) => t3.status === "active").filter((t3) => t3.createdAt && t3.createdAt < cutoff).filter((t3) => owlCdExpired(`brain_stuck_${t3.id}`, PER_SIGNAL_CD)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     if (tasks.length === 0) return [];
-    const t3 = tasks[0];
-    const daysOld = Math.floor((Date.now() - t3.createdAt) / (24 * 60 * 60 * 1e3));
+    const t2 = tasks[0];
+    const daysOld = Math.floor((Date.now() - t2.createdAt) / (24 * 60 * 60 * 1e3));
     return [{
       tab: "tasks",
       type: "stuck-task",
       urgency: "normal",
-      context: { title: t3.title, daysOld },
-      cdKey: `brain_stuck_${t3.id}`,
+      context: { title: t2.title, daysOld },
+      cdKey: `brain_stuck_${t2.id}`,
       cdMs: PER_SIGNAL_CD
     }];
   }
@@ -17463,7 +17477,7 @@ ${logLines}
     const now = /* @__PURE__ */ new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const txs = getFinance();
-    const spent = txs.filter((t3) => t3.type === "expense" && t3.ts >= monthStart).reduce((sum, t3) => sum + (Number(t3.amount) || 0), 0);
+    const spent = txs.filter((t2) => t2.type === "expense" && t2.ts >= monthStart).reduce((sum, t2) => sum + (Number(t2.amount) || 0), 0);
     const pct = Math.round(spent / budget.total * 100);
     if (pct < BUDGET_WARN_THRESHOLD) return [];
     const urgency = pct >= 100 ? "critical" : "normal";
@@ -17487,8 +17501,8 @@ ${logLines}
     for (const c of cards) {
       const appt = c.nextAppointment;
       if (!appt || !appt.date) continue;
-      const t3 = appt.time || "09:00";
-      const [h, m] = t3.split(":").map(Number);
+      const t2 = appt.time || "09:00";
+      const [h, m] = t2.split(":").map(Number);
       const [y, mo, d] = appt.date.split("-").map(Number);
       if ([h, m, y, mo, d].some(isNaN)) continue;
       const ts = new Date(y, mo - 1, d, h, m).getTime();
@@ -18105,13 +18119,13 @@ ${logLines}
   function runMigrations() {
     const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
     let changed = false;
-    tasks.forEach((t3) => {
-      if (t3.dueDate === void 0) {
-        t3.dueDate = null;
+    tasks.forEach((t2) => {
+      if (t2.dueDate === void 0) {
+        t2.dueDate = null;
         changed = true;
       }
-      if (t3.priority === void 0) {
-        t3.priority = "normal";
+      if (t2.priority === void 0) {
+        t2.priority = "normal";
         changed = true;
       }
     });
@@ -18175,10 +18189,10 @@ ${logLines}
           const tasks2 = JSON.parse(tasksRaw);
           if (Array.isArray(tasks2)) {
             let migrated = 0;
-            tasks2.forEach((t3) => {
-              if (typeof t3.id === "number") {
-                t3.legacy_id = t3.id;
-                t3.id = generateUUID();
+            tasks2.forEach((t2) => {
+              if (typeof t2.id === "number") {
+                t2.legacy_id = t2.id;
+                t2.id = generateUUID();
                 migrated++;
               }
             });
@@ -18255,7 +18269,7 @@ ${logLines}
     try {
       document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
       document.getElementById("page-inbox").classList.add("active");
-      document.querySelectorAll(".tab-item").forEach((t3) => t3.classList.remove("active"));
+      document.querySelectorAll(".tab-item").forEach((t2) => t2.classList.remove("active"));
       document.querySelector('.tab-item[data-tab="inbox"]').classList.add("active");
     } catch (e) {
     }
@@ -18272,7 +18286,7 @@ ${logLines}
     } catch (e) {
     }
     try {
-      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t3) => renderTabBoard(t3));
+      ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => renderTabBoard(t2));
     } catch (e) {
     }
     try {
@@ -18468,13 +18482,13 @@ ${logLines}
     pageEl.classList.add("active");
     updateDrumTabbar(tab);
     applyTheme(tab);
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t3) => {
-      const bar = document.getElementById(t3 + "-ai-bar");
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+      const bar = document.getElementById(t2 + "-ai-bar");
       if (!bar) return;
-      const show = t3 === tab;
+      const show = t2 === tab;
       bar.style.display = show ? "flex" : "none";
       if (!show) {
-        if (t3 !== "inbox") {
+        if (t2 !== "inbox") {
           const cw = bar.querySelector(".ai-bar-chat-window");
           if (cw) cw.classList.remove("open");
         }
@@ -18554,17 +18568,17 @@ ${logLines}
     const overlay = document.createElement("div");
     overlay.id = "tab-selector-overlay";
     overlay.style.cssText = "position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)";
-    var cardsHtml = ALL_TABS_CONFIG.map(function(t3) {
-      var isActive = active.includes(t3.id);
-      var isLocked = locked.includes(t3.id);
-      var borderColor = isActive ? t3.accent : "rgba(30,16,64,0.08)";
-      var cardBg = isActive ? t3.bg : "rgba(255,255,255,0.6)";
-      var iconBg = isActive ? t3.accent : "rgba(30,16,64,0.06)";
+    var cardsHtml = ALL_TABS_CONFIG.map(function(t2) {
+      var isActive = active.includes(t2.id);
+      var isLocked = locked.includes(t2.id);
+      var borderColor = isActive ? t2.accent : "rgba(30,16,64,0.08)";
+      var cardBg = isActive ? t2.bg : "rgba(255,255,255,0.6)";
+      var iconBg = isActive ? t2.accent : "rgba(30,16,64,0.06)";
       var iconColor = isActive ? "white" : "rgba(30,16,64,0.4)";
-      var labelColor = isActive ? t3.accent : "rgba(30,16,64,0.45)";
-      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + t3.id + "')";
-      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">\u0437\u0430\u0432\u0436\u0434\u0438</div>' : '<div id="tab-sel-check-' + t3.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t3.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t3.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
-      return '<div id="tab-sel-card-' + t3.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t3.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t3.label + "</div>" + checkHtml + "</div>";
+      var labelColor = isActive ? t2.accent : "rgba(30,16,64,0.45)";
+      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + t2.id + "')";
+      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">\u0437\u0430\u0432\u0436\u0434\u0438</div>' : '<div id="tab-sel-check-' + t2.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t2.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t2.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
+      return '<div id="tab-sel-card-' + t2.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t2.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t2.label + "</div>" + checkHtml + "</div>";
     }).join("");
     overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom)+20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">\u0412\u043A\u043B\u0430\u0434\u043A\u0438</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">\u0413\u043E\u0442\u043E\u0432\u043E</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">\u041F\u043E\u0440\u044F\u0434\u043E\u043A</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F</div></div></div>';
     overlay.addEventListener("click", (e) => {
@@ -18610,12 +18624,12 @@ ${logLines}
     if (idx !== -1) {
       _pendingTabs.splice(idx, 1);
     } else {
-      const order = ALL_TABS_CONFIG.map((t3) => t3.id);
+      const order = ALL_TABS_CONFIG.map((t2) => t2.id);
       _pendingTabs.push(tabId);
       _pendingTabs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
     }
     const isNowActive = _pendingTabs.includes(tabId);
-    const cfg = ALL_TABS_CONFIG.find((t3) => t3.id === tabId);
+    const cfg = ALL_TABS_CONFIG.find((t2) => t2.id === tabId);
     if (!cfg) return;
     const card = document.getElementById(`tab-sel-card-${tabId}`);
     const check = document.getElementById(`tab-sel-check-${tabId}`);
@@ -18667,7 +18681,7 @@ ${logLines}
       projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"
     };
     list.innerHTML = tabs.map((id, idx) => {
-      const cfg = ALL_TABS_CONFIG.find((t3) => t3.id === id);
+      const cfg = ALL_TABS_CONFIG.find((t2) => t2.id === id);
       const isSelected = _selectedOrderTab === id;
       const isLocked = id === "inbox";
       const accent = cfg?.accent || "rgba(30,16,64,0.2)";
@@ -19349,7 +19363,7 @@ ${logLines}
   async function _migrateLegacyMemoryToFacts() {
     const legacy = (getLegacyMemoryText() || "").trim();
     if (!legacy || legacy.length < 10) return;
-    const saveMemTool = INBOX_TOOLS.find((t3) => t3.function?.name === "save_memory_fact");
+    const saveMemTool = INBOX_TOOLS.find((t2) => t2.function?.name === "save_memory_fact");
     if (!saveMemTool) return;
     const systemPrompt = `\u0422\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442 NeverMind. \u0417\u0430\u0440\u0430\u0437 \u041E\u0414\u041D\u041E\u0420\u0410\u0417\u041E\u0412\u0410 \u041C\u0406\u0413\u0420\u0410\u0426\u0406\u042F \u043F\u0430\u043C'\u044F\u0442\u0456: \u043E\u0442\u0440\u0438\u043C\u0443\u0454\u0448 \u0441\u0442\u0430\u0440\u0438\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0438\u0439 \u0430\u0431\u0437\u0430\u0446 \u0444\u0430\u043A\u0442\u0456\u0432 \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u043C\u0430\u0454\u0448 \u0432\u0438\u0442\u044F\u0433\u0442\u0438 \u0437 \u043D\u044C\u043E\u0433\u043E \u0421\u0422\u0420\u0423\u041A\u0422\u0423\u0420\u041E\u0412\u0410\u041D\u0406 \u0444\u0430\u043A\u0442\u0438. \u0414\u043B\u044F \u041A\u041E\u0416\u041D\u041E\u0413\u041E \u0444\u0430\u043A\u0442\u0443 \u044F\u043A\u0438\u0439 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0448 \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 tool save_memory_fact.
 
@@ -19651,7 +19665,7 @@ ${legacy}`;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "voice-btn";
-    btn.setAttribute("aria-label", t2("voice.input", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434"));
+    btn.setAttribute("aria-label", t("voice.input", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434"));
     btn.style.cssText = "width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background 0.2s,transform 0.2s";
     btn.innerHTML = MIC_SVG;
     return btn;
@@ -19673,7 +19687,7 @@ ${legacy}`;
         rec.maxAlternatives = 1;
       } catch (e) {
         try {
-          window.showToast && window.showToast(t2("voice.unavailable", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439"));
+          window.showToast && window.showToast(t("voice.unavailable", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0432\u0432\u0456\u0434 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439"));
         } catch {
         }
         rec = null;
@@ -19698,10 +19712,10 @@ ${legacy}`;
       };
       rec.onerror = (ev) => {
         const err = ev.error || "";
-        let msg = t2("voice.error_mic", "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430");
-        if (err === "not-allowed" || err === "service-not-allowed") msg = t2("voice.error_permission", "\u0414\u043E\u0437\u0432\u043E\u043B\u044C \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445");
-        else if (err === "no-speech") msg = t2("voice.error_no_speech", "\u041D\u0435 \u0447\u0443\u044E \u0433\u043E\u043B\u043E\u0441\u0443");
-        else if (err === "network") msg = t2("voice.error_network", "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0434\u043B\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F");
+        let msg = t("voice.error_mic", "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430");
+        if (err === "not-allowed" || err === "service-not-allowed") msg = t("voice.error_permission", "\u0414\u043E\u0437\u0432\u043E\u043B\u044C \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445");
+        else if (err === "no-speech") msg = t("voice.error_no_speech", "\u041D\u0435 \u0447\u0443\u044E \u0433\u043E\u043B\u043E\u0441\u0443");
+        else if (err === "network") msg = t("voice.error_network", "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0434\u043B\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F");
         try {
           window.showToast && window.showToast(msg);
         } catch {
@@ -19802,10 +19816,10 @@ ${legacy}`;
     const sections = [];
     try {
       const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-      const closedRecent = tasks.filter((t3) => t3.status === "done" && t3.completedAt >= cutoff);
-      const stillOpen = tasks.filter((t3) => t3.status !== "done").length;
-      sections.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${closedRecent.length} \u0437\u0430\u043A\u0440\u0438\u0442\u043E, ${stillOpen} \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0440\u0430\u0437. \u0417\u0430\u043A\u0440\u0438\u0442\u0456 \u0437 \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u043E\u043C high: ${closedRecent.filter((t3) => t3.priority === "high").length}.`);
-      const hours = closedRecent.map((t3) => new Date(t3.completedAt).getHours()).filter((h) => !isNaN(h));
+      const closedRecent = tasks.filter((t2) => t2.status === "done" && t2.completedAt >= cutoff);
+      const stillOpen = tasks.filter((t2) => t2.status !== "done").length;
+      sections.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${closedRecent.length} \u0437\u0430\u043A\u0440\u0438\u0442\u043E, ${stillOpen} \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E \u0437\u0430\u0440\u0430\u0437. \u0417\u0430\u043A\u0440\u0438\u0442\u0456 \u0437 \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442\u043E\u043C high: ${closedRecent.filter((t2) => t2.priority === "high").length}.`);
+      const hours = closedRecent.map((t2) => new Date(t2.completedAt).getHours()).filter((h) => !isNaN(h));
       if (hours.length > 0) {
         const buckets = { \u0440\u0430\u043D\u043E\u043A_6_12: 0, \u0434\u0435\u043D\u044C_12_18: 0, \u0432\u0435\u0447\u0456\u0440_18_23: 0, \u043D\u0456\u0447_23_6: 0 };
         hours.forEach((h) => {
@@ -19839,13 +19853,13 @@ ${legacy}`;
     }
     try {
       const finance = JSON.parse(localStorage.getItem("nm_finance") || "[]");
-      const recentTx = finance.filter((t3) => t3.ts >= cutoff);
-      const expenseTx = recentTx.filter((t3) => t3.fin_type === "expense");
+      const recentTx = finance.filter((t2) => t2.ts >= cutoff);
+      const expenseTx = recentTx.filter((t2) => t2.fin_type === "expense");
       if (expenseTx.length > 0) {
         const byCategory = {};
-        expenseTx.forEach((t3) => {
-          const cat = t3.category || "\u0406\u043D\u0448\u0435";
-          byCategory[cat] = (byCategory[cat] || 0) + (parseFloat(t3.amount) || 0);
+        expenseTx.forEach((t2) => {
+          const cat = t2.category || "\u0406\u043D\u0448\u0435";
+          byCategory[cat] = (byCategory[cat] || 0) + (parseFloat(t2.amount) || 0);
         });
         const topCats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 5);
         sections.push(`\u0422\u043E\u043F-5 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437\u0430 30 \u0434\u043D\u0456\u0432: ${topCats.map(([c, s]) => `${c}=${Math.round(s)}`).join(", ")}.`);
@@ -19986,8 +20000,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       const weekStart = new Date(weekEnd);
       weekStart.setDate(weekEnd.getDate() - 6);
       weekStart.setHours(0, 0, 0, 0);
-      const exp = allTxs.filter((t3) => t3.type === "expense" && t3.ts >= weekStart.getTime() && t3.ts <= weekEnd.getTime()).reduce((s, t3) => s + t3.amount, 0);
-      const inc = allTxs.filter((t3) => t3.type === "income" && t3.ts >= weekStart.getTime() && t3.ts <= weekEnd.getTime()).reduce((s, t3) => s + t3.amount, 0);
+      const exp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= weekStart.getTime() && t2.ts <= weekEnd.getTime()).reduce((s, t2) => s + t2.amount, 0);
+      const inc = allTxs.filter((t2) => t2.type === "income" && t2.ts >= weekStart.getTime() && t2.ts <= weekEnd.getTime()).reduce((s, t2) => s + t2.amount, 0);
       const label = `${weekStart.getDate()}.${String(weekStart.getMonth() + 1).padStart(2, "0")}`;
       weeks.push({ label, exp, inc, isCurrent: w === 0 });
     }
@@ -19996,8 +20010,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const firstWeekStart = new Date(now);
     firstWeekStart.setDate(now.getDate() - (WEEKS - 1) * 7 - 6);
     firstWeekStart.setHours(0, 0, 0, 0);
-    allTxs.filter((t3) => t3.ts < firstWeekStart.getTime()).forEach((t3) => {
-      cumBalance += t3.type === "income" ? t3.amount : -t3.amount;
+    allTxs.filter((t2) => t2.ts < firstWeekStart.getTime()).forEach((t2) => {
+      cumBalance += t2.type === "income" ? t2.amount : -t2.amount;
     });
     weeks.forEach((w) => {
       cumBalance += w.inc - w.exp;
@@ -20082,26 +20096,26 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
     const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
     const prevTo = from;
-    const monthExp = allTxs.filter((t3) => t3.type === "expense" && t3.ts >= from && t3.ts < to);
-    const monthInc = allTxs.filter((t3) => t3.type === "income" && t3.ts >= from && t3.ts < to);
-    const prevMonthExp = allTxs.filter((t3) => t3.type === "expense" && t3.ts >= prevFrom && t3.ts < prevTo);
-    const curExp = monthExp.reduce((s, t3) => s + t3.amount, 0);
-    const prevExp = prevMonthExp.reduce((s, t3) => s + t3.amount, 0);
-    const curInc = monthInc.reduce((s, t3) => s + t3.amount, 0);
+    const monthExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= from && t2.ts < to);
+    const monthInc = allTxs.filter((t2) => t2.type === "income" && t2.ts >= from && t2.ts < to);
+    const prevMonthExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= prevFrom && t2.ts < prevTo);
+    const curExp = monthExp.reduce((s, t2) => s + t2.amount, 0);
+    const prevExp = prevMonthExp.reduce((s, t2) => s + t2.amount, 0);
+    const curInc = monthInc.reduce((s, t2) => s + t2.amount, 0);
     const daysPassed = Math.max(1, now.getDate());
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const catMap = {};
-    monthExp.forEach((t3) => {
-      catMap[t3.category] = (catMap[t3.category] || 0) + t3.amount;
+    monthExp.forEach((t2) => {
+      catMap[t2.category] = (catMap[t2.category] || 0) + t2.amount;
     });
     const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-    const amounts = monthExp.map((t3) => t3.amount);
+    const amounts = monthExp.map((t2) => t2.amount);
     const avgTx = amounts.length > 0 ? amounts.reduce((s, a) => s + a, 0) / amounts.length : 0;
     const maxTx = amounts.length > 0 ? Math.max(...amounts) : 0;
     const dayMap = {};
-    monthExp.forEach((t3) => {
-      const d = new Date(t3.ts).toDateString();
-      dayMap[d] = (dayMap[d] || 0) + t3.amount;
+    monthExp.forEach((t2) => {
+      const d = new Date(t2.ts).toDateString();
+      dayMap[d] = (dayMap[d] || 0) + t2.amount;
     });
     const dayTotals = Object.values(dayMap);
     const maxDay = dayTotals.length > 0 ? Math.max(...dayTotals) : 0;
@@ -20196,8 +20210,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const now = /* @__PURE__ */ new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
-    const curInc = allTxs.filter((t3) => t3.type === "income" && t3.ts >= from && t3.ts < to).reduce((s, t3) => s + t3.amount, 0);
-    const curExp = allTxs.filter((t3) => t3.type === "expense" && t3.ts >= from && t3.ts < to).reduce((s, t3) => s + t3.amount, 0);
+    const curInc = allTxs.filter((t2) => t2.type === "income" && t2.ts >= from && t2.ts < to).reduce((s, t2) => s + t2.amount, 0);
+    const curExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= from && t2.ts < to).reduce((s, t2) => s + t2.amount, 0);
     const cfg = _getBenchmarkConfig();
     if (curInc <= 0 && !_analyticsBenchmarkEdit) {
       return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
@@ -20211,8 +20225,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const spent = curExp;
     const saved = Math.max(0, curInc - curExp);
     const needsCats = ["\u0457\u0436\u0430", "\u0436\u0438\u0442\u043B\u043E", "\u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442", "\u0437\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F", "\u0437\u0434\u043E\u0440\u043E\u0432\u044F"];
-    const monthExp = allTxs.filter((t3) => t3.type === "expense" && t3.ts >= from && t3.ts < to);
-    const needsAmt = monthExp.filter((t3) => needsCats.includes(t3.category.toLowerCase())).reduce((s, t3) => s + t3.amount, 0);
+    const monthExp = allTxs.filter((t2) => t2.type === "expense" && t2.ts >= from && t2.ts < to);
+    const needsAmt = monthExp.filter((t2) => needsCats.includes(t2.category.toLowerCase())).reduce((s, t2) => s + t2.amount, 0);
     const wantsAmt = spent - needsAmt;
     const denom = curInc > 0 ? curInc : 1;
     const needsPct = Math.round(needsAmt / denom * 100);
@@ -20493,9 +20507,9 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     day2.setDate(today.getDate() - 2);
     const dDate = new Date(d);
     dDate.setHours(0, 0, 0, 0);
-    if (dDate.getTime() === today.getTime()) return t2("finance.date.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
-    if (dDate.getTime() === yest.getTime()) return t2("finance.date.yesterday", "\u0412\u0447\u043E\u0440\u0430");
-    if (dDate.getTime() === day2.getTime()) return t2("finance.date.day_before_yesterday", "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
+    if (dDate.getTime() === today.getTime()) return t("finance.date.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+    if (dDate.getTime() === yest.getTime()) return t("finance.date.yesterday", "\u0412\u0447\u043E\u0440\u0430");
+    if (dDate.getTime() === day2.getTime()) return t("finance.date.day_before_yesterday", "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
     return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? void 0 : "numeric" });
   }
   function openAddTransaction(prefill = {}) {
@@ -20506,11 +20520,11 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   }
   function openEditTransaction(id) {
     const txs = getFinance();
-    const t3 = txs.find((x) => x.id === id);
-    if (!t3) return;
+    const t2 = txs.find((x) => x.id === id);
+    if (!t2) return;
     _finEditId = id;
-    _finTxComment = t3.comment || "";
-    _showTransactionModal(t3);
+    _finTxComment = t2.comment || "";
+    _showTransactionModal(t2);
   }
   function _showTransactionModal(data) {
     _finTxCurrentType = data.type === "income" ? "income" : "expense";
@@ -20536,9 +20550,9 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const subcats = matchedCat?.subcategories || [];
     let title;
     if (_finTxCategory) {
-      title = isEdit ? isExpense ? t2("finance.tx.edit_expense_with_cat", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438: {cat}", { cat: _finTxCategory }) : t2("finance.tx.edit_income_with_cat", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {cat}", { cat: _finTxCategory }) : _finTxCategory;
+      title = isEdit ? isExpense ? t("finance.tx.edit_expense_with_cat", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438: {cat}", { cat: _finTxCategory }) : t("finance.tx.edit_income_with_cat", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434: {cat}", { cat: _finTxCategory }) : _finTxCategory;
     } else {
-      title = isEdit ? isExpense ? t2("finance.tx.edit_expense", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443") : t2("finance.tx.edit_income", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434") : isExpense ? t2("finance.tx.new_expense", "\u041D\u043E\u0432\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430") : t2("finance.tx.new_income", "\u041D\u043E\u0432\u0438\u0439 \u0434\u043E\u0445\u0456\u0434");
+      title = isEdit ? isExpense ? t("finance.tx.edit_expense", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443") : t("finance.tx.edit_income", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0434\u043E\u0445\u0456\u0434") : isExpense ? t("finance.tx.new_expense", "\u041D\u043E\u0432\u0430 \u0432\u0438\u0442\u0440\u0430\u0442\u0430") : t("finance.tx.new_income", "\u041D\u043E\u0432\u0438\u0439 \u0434\u043E\u0445\u0456\u0434");
     }
     const calcResult = _safeFinCalc(_finTxExpression);
     const displayAmount = _finTxExpression || "0";
@@ -20547,7 +20561,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const showCatPicker = !_finTxCategory || isEdit;
     const catPickerHtml = showCatPicker ? `
     <div id="fntx-cats-wrap" style="margin-bottom:12px">
-      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">${t2("finance.tx.category_label", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</div>
+      <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">${t("finance.tx.category_label", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map((c) => {
       const active = c.name === _finTxCategory;
@@ -20557,7 +20571,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     </div>` : "";
     const subcatsHtml = subcats.length > 0 ? `
     <div style="margin-bottom:12px;padding-left:10px;border-left:2px solid rgba(194,65,12,0.18)">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">${t2("finance.tx.subcategory_label", "\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">${t("finance.tx.subcategory_label", "\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${subcats.map((s) => {
       const active = s === _finTxSubcategory;
@@ -20597,8 +20611,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
     ${isEdit ? "" : `<div style="display:flex;gap:6px;margin-bottom:10px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px">
-      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? "white" : "transparent"};color:${isExpense ? "#c2410c" : "rgba(30,16,64,0.5)"};box-shadow:${isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${t2("finance.tx.toggle_expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430")}</button>
-      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? "white" : "transparent"};color:${!isExpense ? "#16a34a" : "rgba(30,16,64,0.5)"};box-shadow:${!isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${t2("finance.tx.toggle_income", "\u0414\u043E\u0445\u0456\u0434")}</button>
+      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? "white" : "transparent"};color:${isExpense ? "#c2410c" : "rgba(30,16,64,0.5)"};box-shadow:${isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${t("finance.tx.toggle_expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430")}</button>
+      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? "white" : "transparent"};color:${!isExpense ? "#16a34a" : "rgba(30,16,64,0.5)"};box-shadow:${!isExpense ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${t("finance.tx.toggle_income", "\u0414\u043E\u0445\u0456\u0434")}</button>
     </div>`}
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
@@ -20611,16 +20625,16 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span style="font-size:13px;font-weight:600;color:#1e1040">${escapeHtml(dateLabel)}</span>
       </div>
-      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">${t2("finance.tx.change_date", "\u0437\u043C\u0456\u043D\u0438\u0442\u0438")}</span>
+      <span style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600">${t("finance.tx.change_date", "\u0437\u043C\u0456\u043D\u0438\u0442\u0438")}</span>
     </div>
-    <input id="fntx-comment" type="text" placeholder="${t2("finance.tx.comment_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)")}" value="${escapeHtml(_finTxComment || "")}"
+    <input id="fntx-comment" type="text" placeholder="${t("finance.tx.comment_placeholder", "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)")}" value="${escapeHtml(_finTxComment || "")}"
       oninput="_finTxComment = this.value"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
     ${calcGrid}
     <div style="display:flex;gap:6px">
-      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>${t2("finance.tx.btn_delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}</button>` : ""}
-      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">${t2("common.btn_cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
-      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? t2("common.btn_save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438") : t2("finance.tx.btn_add", "\u2713 \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
+      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>${t("finance.tx.btn_delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}</button>` : ""}
+      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">${t("common.btn_cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? t("common.btn_save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438") : t("finance.tx.btn_add", "\u2713 \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>
     </div>
   </div>`;
@@ -20628,11 +20642,11 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   function saveFinTransaction() {
     const amount = _safeFinCalc(_finTxExpression);
     if (!amount || amount <= 0) {
-      showToast(t2("finance.tx.amount_error", "\u0412\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u0443"));
+      showToast(t("finance.tx.amount_error", "\u0412\u0432\u0435\u0434\u0438 \u0441\u0443\u043C\u0443"));
       return;
     }
     if (!_finTxCategory) {
-      showToast(t2("finance.tx.category_error", "\u0412\u0438\u0431\u0435\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"));
+      showToast(t("finance.tx.category_error", "\u0412\u0438\u0431\u0435\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E"));
       return;
     }
     const txs = getFinance();
@@ -20663,8 +20677,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   }
   function deleteFinTransaction() {
     if (!_finEditId) return;
-    const item = getFinance().find((t3) => t3.id === _finEditId);
-    saveFinance(getFinance().filter((t3) => t3.id !== _finEditId));
+    const item = getFinance().find((t2) => t2.id === _finEditId);
+    saveFinance(getFinance().filter((t2) => t2.id !== _finEditId));
     closeFinTxModal();
     renderFinance();
     try {
@@ -20672,7 +20686,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       tryBoardUpdate("finance");
     } catch (e) {
     }
-    if (item) showUndoToast(t2("finance.tx.deleted_toast", "\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+    if (item) showUndoToast(t("finance.tx.deleted_toast", "\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const txs = getFinance();
       txs.unshift(item);
       saveFinance(txs);
@@ -20704,18 +20718,18 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
       <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${t2("finance.date.modal_title", "\u0414\u0430\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457")}</div>
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${t("finance.date.modal_title", "\u0414\u0430\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457")}</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t2("finance.date.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456")} \xB7 ${fmt(0)}</button>
-        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t2("finance.date.yesterday", "\u0412\u0447\u043E\u0440\u0430")} \xB7 ${fmt(-1)}</button>
-        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t2("finance.date.day_before_yesterday", "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430")} \xB7 ${fmt(-2)}</button>
-        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t2("finance.date.week_ago", "\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443")} \xB7 ${fmt(-7)}</button>
+        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456")} \xB7 ${fmt(0)}</button>
+        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.yesterday", "\u0412\u0447\u043E\u0440\u0430")} \xB7 ${fmt(-1)}</button>
+        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.day_before_yesterday", "\u041F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430")} \xB7 ${fmt(-2)}</button>
+        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t("finance.date.week_ago", "\u0422\u0438\u0436\u0434\u0435\u043D\u044C \u0442\u043E\u043C\u0443")} \xB7 ${fmt(-7)}</button>
       </div>
-      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t2("finance.date.choose_day", "\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C")}</div>
+      <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.date.choose_day", "\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C")}</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}"
         onchange="setFinTxDateFromInput(this.value)"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
-      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">${t2("common.close", "\u0417\u0430\u043A\u0440\u0438\u0442\u0438")}</button>
+      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">${t("common.close", "\u0417\u0430\u043A\u0440\u0438\u0442\u0438")}</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -20749,24 +20763,24 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div onclick="closeFinBudgetModal()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom)+24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
-      <div class="modal-title">${t2("finance.budget.modal_title", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C")}</div>
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t2("finance.budget.total_limit", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442")}</div>
-      <input id="finbdg-total" type="number" placeholder="${t2("finance.budget.placeholder_total", "\u20AC 0 \u2014 \u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443")}" inputmode="decimal"
+      <div class="modal-title">${t("finance.budget.modal_title", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C")}</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.budget.total_limit", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442")}</div>
+      <input id="finbdg-total" type="number" placeholder="${t("finance.budget.placeholder_total", "\u20AC 0 \u2014 \u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443")}" inputmode="decimal"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:17px;font-weight:700;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box"
         value="${budget.total || ""}">
-      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t2("finance.budget.by_categories", "\u041F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445")}</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t("finance.budget.by_categories", "\u041F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u0445")}</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
         ${cats.expense.filter((c) => !c.archived).map((cat) => `
           <div style="display:flex;align-items:center;gap:10px">
             <div style="font-size:14px;font-weight:600;color:#1e1040;flex:1">${escapeHtml(cat.name)}</div>
-            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="${t2("finance.budget.placeholder_cat", "\u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443")}" inputmode="decimal"
+            <input type="number" id="finbdg-cat-${escapeHtml(cat.name)}" placeholder="${t("finance.budget.placeholder_cat", "\u0431\u0435\u0437 \u043B\u0456\u043C\u0456\u0442\u0443")}" inputmode="decimal"
               style="width:100px;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;text-align:right"
               value="${budget.categories?.[cat.name] || ""}">
           </div>`).join("")}
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="closeFinBudgetModal()" class="btn-cancel">${t2("common.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
-        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">${t2("common.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
+        <button onclick="closeFinBudgetModal()" class="btn-cancel">${t("common.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">${t("common.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
@@ -20828,7 +20842,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const iconTrigger = `<button onclick="toggleCatModalIcons()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 18)}</div>
     <div style="flex:1;text-align:left;min-width:0">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t2("finance.cat.icon_label", "\u0406\u043A\u043E\u043D\u043A\u0430")}</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t("finance.cat.icon_label", "\u0406\u043A\u043E\u043D\u043A\u0430")}</div>
       <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.icon)}</div>
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
@@ -20836,7 +20850,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const colorTrigger = `<button onclick="toggleCatModalColors()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
     <div style="flex:1;text-align:left;min-width:0">
-      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t2("finance.cat.color_label", "\u041A\u043E\u043B\u0456\u0440")}</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t("finance.cat.color_label", "\u041A\u043E\u043B\u0456\u0440")}</div>
       <div style="font-size:12px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.color)}</div>
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
@@ -20845,7 +20859,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div onclick="closeCatPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
       <div onclick="event.stopPropagation()" style="width:100%;max-width:340px;background:rgba(255,255,255,0.95);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:22px;padding:18px;max-height:70vh;overflow-y:auto;border:1.5px solid rgba(255,255,255,0.6);box-shadow:0 20px 60px rgba(0,0,0,0.18);box-sizing:border-box">
         ${_catModalIconExpanded ? `
-          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t2("finance.cat.choose_icon", "\u041E\u0431\u0435\u0440\u0438 \u0456\u043A\u043E\u043D\u043A\u0443")}</div>
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t("finance.cat.choose_icon", "\u041E\u0431\u0435\u0440\u0438 \u0456\u043A\u043E\u043D\u043A\u0443")}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
             ${FIN_CAT_ICON_NAMES.map((name) => {
       const active = name === d.icon;
@@ -20854,7 +20868,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
           </div>
         ` : ""}
         ${_catModalColorExpanded ? `
-          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t2("finance.cat.choose_color", "\u041E\u0431\u0435\u0440\u0438 \u043A\u043E\u043B\u0456\u0440")}</div>
+          <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t("finance.cat.choose_color", "\u041E\u0431\u0435\u0440\u0438 \u043A\u043E\u043B\u0456\u0440")}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;justify-items:center">
             ${FIN_CAT_PALETTE2.map((c) => {
       const active = c === d.color;
@@ -20874,32 +20888,32 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
-    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? t2("finance.cat.new_title", "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F") : t2("finance.cat.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E")}</div>
+    <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? t("finance.cat.new_title", "\u041D\u043E\u0432\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F") : t("finance.cat.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E")}</div>
     ${isNew ? `<div style="display:flex;gap:6px;margin-bottom:12px">
-      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${d.type === "expense" ? "rgba(194,65,12,0.08)" : "white"};color:${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.4)"}">${t2("finance.tx.toggle_expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430")}</button>
-      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.1)"};background:${d.type === "income" ? "rgba(22,163,74,0.08)" : "white"};color:${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.4)"}">${t2("finance.tx.toggle_income", "\u0414\u043E\u0445\u0456\u0434")}</button>
+      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.1)"};background:${d.type === "expense" ? "rgba(194,65,12,0.08)" : "white"};color:${d.type === "expense" ? "#c2410c" : "rgba(30,16,64,0.4)"}">${t("finance.tx.toggle_expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430")}</button>
+      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.1)"};background:${d.type === "income" ? "rgba(22,163,74,0.08)" : "white"};color:${d.type === "income" ? "#16a34a" : "rgba(30,16,64,0.4)"}">${t("finance.tx.toggle_income", "\u0414\u043E\u0445\u0456\u0434")}</button>
     </div>` : ""}
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t2("finance.cat.name_label", "\u041D\u0430\u0437\u0432\u0430")}</div>
-    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="${t2("finance.cat.name_placeholder", "\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456")}"
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.cat.name_label", "\u041D\u0430\u0437\u0432\u0430")}</div>
+    <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="${t("finance.cat.name_placeholder", "\u043D\u0430\u043F\u0440. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456")}"
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:16px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t2("finance.cat.appearance_label", "\u0412\u0438\u0433\u043B\u044F\u0434")}</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.cat.appearance_label", "\u0412\u0438\u0433\u043B\u044F\u0434")}</div>
     <div style="display:flex;gap:8px;margin-bottom:14px">${iconTrigger}${colorTrigger}</div>
-    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t2("finance.cat.subcats_label", "\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.cat.subcats_label", "\u041F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}</div>
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
-    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">${t2("finance.cat.add_subcat", "+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</button>
+    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">${t("finance.cat.add_subcat", "+ \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F")}</button>
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
-        <div style="font-size:13px;font-weight:700;color:#1e1040">${t2("finance.cat.archive", "\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438")}</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${t2("finance.cat.archive_hint", "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438, \u0434\u0430\u043D\u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F")}</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t("finance.cat.archive", "\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438")}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${t("finance.cat.archive_hint", "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437 \u0441\u0456\u0442\u043A\u0438, \u0434\u0430\u043D\u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F")}</div>
       </div>
       <button onclick="toggleCatModalArchive()" style="width:44px;height:24px;border-radius:14px;border:none;background:${d.archived ? "#c2410c" : "rgba(30,16,64,0.12)"};position:relative;cursor:pointer;font-family:inherit">
         <div style="width:18px;height:18px;border-radius:50%;background:white;position:absolute;top:3px;${d.archived ? "right:3px" : "left:3px"};transition:all 0.2s"></div>
       </button>
     </div>` : ""}
     <div style="display:flex;gap:8px;margin-top:14px">
-      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">${t2("common.delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}</button>` : ""}
-      <button onclick="closeCategoryEditModal()" class="btn-cancel">${t2("common.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
-      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? t2("common.create", "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438") : t2("common.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
+      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">${t("common.delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}</button>` : ""}
+      <button onclick="closeCategoryEditModal()" class="btn-cancel">${t("common.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? t("common.create", "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438") : t("common.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
     </div>
     </div>
   </div>
@@ -20954,8 +20968,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     _catModalColorExpanded = false;
     _refreshCatEditModal();
   }
-  function setCatModalType(t3) {
-    _finCatModalDraft.type = t3;
+  function setCatModalType(t2) {
+    _finCatModalDraft.type = t2;
     _refreshCatEditModal();
   }
   function toggleCatModalArchive() {
@@ -20992,7 +21006,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const subs = (d.subcategories || []).map((s) => (s || "").trim()).filter(Boolean);
     const name = (d.name || "").trim();
     if (!name) {
-      showToast(t2("finance.cat.enter_name", "\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443"));
+      showToast(t("finance.cat.enter_name", "\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443"));
       return;
     }
     if (_finEditingCatId === "new") {
@@ -21005,7 +21019,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   }
   function deleteCategoryFromModal() {
     if (_finEditingCatId === "new") return;
-    if (!confirm(t2("finance.cat.delete_confirm", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E? \u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F, \u0430\u043B\u0435 \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430."))) return;
+    if (!confirm(t("finance.cat.delete_confirm", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E? \u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F, \u0430\u043B\u0435 \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430."))) return;
     deleteFinCategory(_finEditingCatId);
     closeCategoryEditModal();
     renderFinance();
