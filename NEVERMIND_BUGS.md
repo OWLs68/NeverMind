@@ -36,8 +36,8 @@ _Сесія **MIeXK** (03.05.2026) — Health AI-інтерв'ю Phase A+B+C: 0 
 _Сесія **iWyjU** (03.05.2026) — самотест→Read CLAUDE.md + statusline % контексту: 0 закритих багів (інфраструктурна сесія, зміни тільки `.claude/`)._
 
 _Сесія **UvEHE** (03.05.2026) — `/c` slash + context-warning ≥75% + B-120/B-121 фікси модалки Health:_
-- **B-120 закрито** — `src/tabs/health.js`: `document.body.style.overflow='hidden'` у `_showHealthCardModal` + `''` у `closeHealthCardModal`. iOS rubber-band scroll більше не пробиває overlay. Helper для всіх модалок НЕ робили (точкове рішення; борг).
-- **B-121 закрито** — `index.html:1685` `overflow-x:hidden` на скрол-контейнері + `min-width:0` на двох flex:1 діви полів дат (1715, 1720). Inputs з `width:100%` перестали розширювати flex-children за межі.
+- **B-120 закрито v2** — `src/tabs/health.js`: v1 (`overflow:hidden`) iOS Safari ігнорує — свайп вниз все одно «зменшував» задній фон через rubber-band. Замінено на `position:fixed` + збереження `scrollY` у `body.dataset.scrollLock` + відновлення `window.scrollTo` при закритті. Стандартний iOS scroll lock хак.
+- **B-121 закрито v2** — v1 додав `overflow-x:hidden` на скрол-контейнері + `min-width:0` на батьків flex:1 (1715, 1720), але `<input type=date/time>` мають intrinsic width на iOS — потрібно `min-width:0` на самих inputs. v2: додано `min-width:0` на 3 inputs дат/часу + `placeholder="Вибери дату/час"` через type swap text↔date/time на focus/blur (нативний placeholder для date ігнорується). Плюс кнопка «Додати препарат» переоформлена (біла, по центру під списком препаратів) + `min-width:0` на med-dosage/med-course inputs (та сама flex-проблема в рядку препарату). Плюс приховано native scrollbar модалки через клас `health-modal-scroll` у `style.css`.
 
 _Старіші сесії (4xJ7n з B-118+B-119, mUpS8 з B-116, BqTWF з B-115, rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
