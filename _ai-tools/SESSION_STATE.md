@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-03 (сесія **MIeXK** — Health AI-інтерв'ю реалізовано (3 фази): шкала статусів 3→6 з міграцією legacy, новий tool `update_health_card_status`, детерміноване 3-крокове опитування з чіпами після створення картки. Cross-tab нотифікація — якщо юзер не у Здоров'ї, інтерв'ю чекає у Health-чаті з червоною крапкою. Гілка `claude/start-session-MIeXK`, CACHE `nm-20260503-0713`, v568+ після auto-merge).
+**Оновлено:** 2026-05-03 (сесія **MIeXK** — Health AI-інтерв'ю A+B+C + i18n-фікс. Шкала 3→6, tool `update_health_card_status`, детерміноване 3-крокове інтерв'ю з чіпами + cross-tab нотифікація. CI впав на check-i18n (24 нових рядки health.js без `t()`) → деплой застряг на v567 → виправлено: baseline bump (швидко) + повне обгортання 27 рядків (правильно). Знайдено 2 баги модалки Health (B-120 фон рухається при свайпі, B-121 horizontal scroll + overlap). Гілка `claude/start-session-MIeXK`, CACHE `nm-20260503-0713`, v568+).
 
 ---
 
@@ -12,6 +12,7 @@
 
 ### Зроблено
 
+0. **i18n-фікс після CI fail** (`1a5e4c5` baseline bump + `9ad8ee2` обгортка): build впав на check-i18n.js — Phase C додав 24 нових українських рядки у `health.js` без `t()` → workflow auto-merge не пройшов → main застряг на v567 ~2 год. Швидкий фікс: оновити baseline (1009→1033). Правильний фікс: обгорнути 27 рядків — STEP1/2/3_OPTIONS labels, labelMap, intro/q2/q3/skipped/done тексти. Імпорт `t` з `core/utils.js` додано. Baseline 1033→1006. Ключі `health.iv.{step}.{value}`. Деплой v568+ пройшов.
 1. **Phase A — 6-статусна шкала** (`7b8fba4`): константа `HEALTH_STATUS_DEFS` у `health.js` з icon/label/color/bg/bar/isActive для `acute/treatment/improving/remission/chronic/done`. Helper `_statusDef()` + `_isActiveHealthStatus()` замінили 2 копії `statusColors`. Workspace picker — 6 кнопок з `flex-wrap` (без фіолету: `chronic` = темно-індиго `#1e1040`). `setHealthCardStatus`: progress map по 6 значеннях + автозапис у `history.status_change`. Boot.js v9 міграція legacy: `active → treatment`, `controlled → remission`, `done → done` через прапор `nm_health_status_v2_done`.
 2. **Phase B — `update_health_card_status` tool** (`8e41fc0`): декларація у `INBOX_TOOLS` + handler у `tool-dispatcher.js _handleHealthTool` (для 7 чат-барів вкладок) + `inbox.js sendToAI` (для Inbox AI). Helper `updateHealthCardStatusProgrammatic()` експортовано з `health.js` (синк прогресу + `status_change` у history). Enum `["active","controlled","done"]` у `create_health_card` + `edit_health_card` оновлено до 6 значень. `docs/AI_TOOLS.md`: Health-таблиця 9→10, історія змін.
 3. **Phase C — 3-крокове AI-інтерв'ю з чіпами** (`fa1d569`): `startHealthInterview(card)` пише питання+чіпи у Health-чат після створення картки. Тригер: `saveHealthCardFromModal` (create) + `tool-dispatcher.js create_health_card` + `inbox.js create_health_card`. 3 кроки: «Що зараз?» (recent/treating/chronic/skip) → «Лікар?» (doctor_yes/no/self/skip) → «Симптоми?» (severe/moderate/mild/skip) → агрегація через матрицю `_aggregateInterviewStatus` → виклик `updateHealthCardStatusProgrammatic`. Якщо юзер не у Health → червона крапка над `health-send-btn` + повідомлення-вказівник у поточному чаті. State у `nm_health_interview_pending`, чіпи зберігаються у `nm_chat_health` (saveChatMsg + restoreChatUI розширено опціональним `chips` параметром). Новий action `health_interview` у `chips.js handleChipClick` через dynamic import `applyHealthInterviewChoice` (уникнення circular dependency).
@@ -32,8 +33,10 @@
 
 ### Інциденти
 
+- **CI впав на check-i18n після Phase C** — auto-merge.yml не пройшов бо `health.js` отримав 24 нових українських рядки без обгортки `t()` → `build.js` перед esbuild запускає `check-i18n.js` що exit 1 при зростанні. Main застряг на v567 ~2 години. Виявлено коли Роман сказав «не бачу оновлення». Empty retrigger коміт не допоміг — тільки фікс baseline + push (`1a5e4c5`) запустив деплой v568. Урок для CLAUDE.md: при додаванні >5 нових user-facing рядків — обгортати у `t()` ОДРАЗУ, не лишати на потім.
 - **pre-commit-testing-log хук блокував комміт** двічі — `git add ... && git commit` робив `commit` до того як `add` зареєструвався у staged для хука. Розв'язалось окремими командами.
-- **esbuild локально не встановлено** — нормально, CI збирає. `node --check` + `check-imports.js` чисті.
+- **pre-push хук вимагав bypass-фразу** для empty retrigger коміту бо тригер «міграція» лишався у нещодавніх повідомленнях — додав «pre-push: ok».
+- **esbuild локально не встановлено** — нормально, CI збирає.
 - Без `git reset` / `git push --force` / skip hooks.
 
 ### Конфлікти/суперечності
@@ -48,12 +51,17 @@
 - **Pattern Learning Engine (Phase 3 mUpS8)** — горизонтальний шар.
 - **B-117 табло звичок stale** — потребує live DevTools.
 
+### Знайдено баги (відкриті, не виправлено — для наступної сесії)
+
+- **B-120 фон модалки рухається при свайпі.** Health «Новий стан» модалка — свайп вниз по blur-overlay (затемненому фону за карткою) скролить вкладку Здоров'я під ним. iOS rubber-band scroll. Фікс: body scroll lock у `_showHealthCardModal` / `closeHealthCardModal` (`document.body.style.overflow='hidden'`). Помітка: застосувати на ВСІ модалки (борг, не тільки Health).
+- **B-121 horizontal scroll + перекриття полів дат у модалці Health.** Модалка скролиться вправо/вліво (не повинна), і при цьому поля «Початок» / «Наст. прийом» виходять за межі flex:1 контейнерів і перекриваються. Фікс: `overflow-x: hidden` на скрол-контейнері модалки + `min-width: 0` на flex-children полів дат у `index.html:1714-1727`.
+
 ### Метрики
 
-- Коміти: `7b8fba4` (Phase A) → `8e41fc0` (Phase B) → `fa1d569` (Phase C) = 3 фіч-коміти + 1 ще буде на CACHE bump (Phase D)
-- Версії: v567 (start) → v568+ (після auto-merge Phase D)
-- CACHE_NAME: `nm-20260503-0030` → `nm-20260503-0713` (1 bump)
-- Build: `node --check` + `check-imports.js` чисті, esbuild у CI
+- Коміти: `7b8fba4` (Phase A) → `8e41fc0` (Phase B) → `fa1d569` (Phase C) → `4046998` (Phase D) → `575faf6` (archive mUpS8) → `f90a3f3` (retrigger) → `1a5e4c5` (baseline bump fix) → `9ad8ee2` (i18n обгортка 27 рядків) = 8 комітів
+- Версії: v567 (start) → v568 (deploy 09:33)
+- CACHE_NAME: `nm-20260503-0030` → `nm-20260503-0713`
+- Build: `node --check` + `check-imports.js` чисті. CI впав один раз на check-i18n → виправлено baseline bump.
 - Гілка: `claude/start-session-MIeXK`
 
 ---
@@ -110,7 +118,13 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**✅ ЗРОБЛЕНО У MIeXK 03.05** — Health AI-інтерв'ю Phase A+B+C (3 коміти `7b8fba4`/`8e41fc0`/`fa1d569` + cache bump). Шкала статусів 3→6, новий tool `update_health_card_status`, детерміноване 3-крокове опитування з чіпами після створення картки. Cross-tab нотифікація через `showUnreadBadge`. **Перевірити після деплою v568+:** 17 сценаріїв у TESTING_LOG секція v568+ (Phase A — 5, Phase B — 3, Phase C — 8 включно з cross-tab з Inbox).
+**🔴 B-120 + B-121 фікс модалки Health (15-20 хв)** — обидва у `index.html` `#health-card-modal`:
+1. **B-120** body scroll lock — у `_showHealthCardModal` додати `document.body.style.overflow='hidden'`, у `closeHealthCardModal` повернути `''`. Покриває обидва кейси (свайп overlay + свайп всередині). Розглянути helper для всіх модалок (борг).
+2. **B-121** horizontal scroll + перекриття полів дат — `overflow-x: hidden` на `<div style="overflow-y:auto;...">` (рядок 1685), `min-width: 0` на `flex:1` діви полів дат (1714-1727).
+
+**✅ ЗРОБЛЕНО У MIeXK 03.05** — Health AI-інтерв'ю Phase A+B+C + i18n обгортка (8 комітів). Шкала статусів 3→6, новий tool `update_health_card_status`, детерміноване 3-крокове опитування з чіпами після створення картки + cross-tab. **Перевірити iPhone v568+:** 17 сценаріїв у TESTING_LOG v568+ (A:5 / B:3 / C:8 з cross-tab Inbox).
+
+**🚨 УРОК CLAUDE.md (з MIeXK):** при додаванні >5 нових user-facing рядків у `src/` — обгортати у `t('key', 'fallback')` **ОДРАЗУ**, не «потім». Інакше CI білд впаде на check-i18n → деплой застряне → юзер 2+ години без оновлення. Перевірка: `node scripts/check-i18n.js` ПЕРЕД pushем.
 
 **🚨 iPhone smoke-test v565+ продовжити** — 17 пунктів TESTING_LOG.md секція v559+ (clarify-guard у 7 чатах). У 4xJ7n зробили пункт 0 (Inbox «Відкрив автомийку» → guard спрацював, але чіпи були візуально обрізані — це ❌ B-119 закрито). **ПЕРЕВІРИТИ ПІСЛЯ ДЕПЛОЮ v566+:**
    1. Inbox чат → «Відкрив автомийку» → 3 чіпи [У щоденник] [Як момент] [Не зберігати] **повністю видимі**
