@@ -259,9 +259,15 @@ function _handleHealthTool(name, args, addMsg) {
       if (!args.text) { addMsg('agent', 'Потрібен текст запису.'); return true; }
       // Fallback на загальну "Здоровʼя" якщо card_id відсутній або невалідний.
       // Виправлено 21.04 Gg3Fy: Роман не хоче "10 нових папок" — все разове у одну картку.
+      // NpBmN audit fix #8: розрізняємо два кейси —
+      //   (a) card_id не передано → AI/юзер хоче загальний журнал → тихий fallback
+      //   (b) card_id передано АЛЕ картки нема (юзер видалив поки тримав чіп) → попередимо юзера
       let targetCardId = args.card_id;
       let cards = getHealthCards();
-      if (!targetCardId || !cards.find(c => c.id === targetCardId)) {
+      const requestedSpecific = targetCardId != null;
+      const cardExists = requestedSpecific && cards.some(c => c.id === targetCardId);
+      const isStale = requestedSpecific && !cardExists;
+      if (!targetCardId || !cardExists) {
         const general = cards.find(c => c.name === 'Здоровʼя' || c.name === 'Здоровя' || c.name === "Здоров'я");
         if (general) {
           targetCardId = general.id;
@@ -281,7 +287,11 @@ function _handleHealthTool(name, args, addMsg) {
         if (currentTab === 'health') renderHealth();
         cards = getHealthCards();
         const card = cards.find(c => c.id === targetCardId);
-        addMsg('agent', `📝 Записав у картку "${card ? card.name : 'Здоровʼя'}": ${args.text}`);
+        const cardName = card ? card.name : 'Здоровʼя';
+        const prefix = isStale
+          ? `⚠️ Картку видалено — записав у "${cardName}":`
+          : `📝 Записав у картку "${cardName}":`;
+        addMsg('agent', `${prefix} ${args.text}`);
       } else {
         addMsg('agent', 'Не вдалось зберегти запис.');
       }
