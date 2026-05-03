@@ -11077,6 +11077,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_utils();
       init_inbox();
       init_habits();
+      init_tasks();
       init_unified_storage();
       init_board();
       init_notes();
@@ -11128,7 +11129,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         finance: (role, text) => addFinanceChatMsg(role, text),
         evening: (role, text) => addEveningBarMsg(role, text),
         projects: (role, text) => addProjectsChatMsg(role, text),
-        me: (role, text) => addMeChatMsg(role, text)
+        me: (role, text) => addMeChatMsg(role, text),
+        tasks: (role, text) => addTaskBarMsg(role, text)
       };
       window.owlChipToChat = handleChipClick;
     }
@@ -13234,11 +13236,17 @@ ${UI_TOOLS_RULES}`;
 \u0414\u043B\u044F \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438 (\u0437\u043C\u0456\u043D\u0430 \u0434\u043D\u0456\u0432/\u043D\u0430\u0437\u0432\u0438) \u2014 edit_habit, \u041D\u0415 save_habit \u043D\u043E\u0432\u0443.
 \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0442\u0435\u043A\u0441\u0442 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0438\u0445 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454.
 
-` + GLOBAL_TOOLS_RULE + "\n\n" + REMINDER_RULES + "\n\n" + UI_TOOLS_RULES + (aiContext ? "\n\n" + aiContext : "");
+` + GLOBAL_TOOLS_RULE + "\n\n" + REMINDER_RULES + "\n\n" + UI_TOOLS_RULES + "\n\n" + CLARIFY_INLINE_RULES + (aiContext ? "\n\n" + aiContext : "");
     try {
       const history = [...taskBarHistory.slice(-8), { role: "user", content: text }];
       const msg = await callAIWithTools(systemPrompt, history, INBOX_TOOLS, "tasks-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "tasks");
+        if (guard) {
+          addTaskBarMsg("agent", guard.question, false, guard.chips);
+          setTaskBarLoading(false);
+          return;
+        }
         const handled2 = dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
         if (!handled2) {
           const fallback = msg.content && msg.content.trim();
@@ -13384,6 +13392,7 @@ ${UI_TOOLS_RULES}`;
       init_core();
       init_prompts();
       init_tool_dispatcher();
+      init_clarify_guard();
       init_swipe_delete();
       init_inbox();
       init_months();
@@ -14662,7 +14671,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function setTaskBarLoading(v) {
     taskBarLoading = v;
   }
-  function addTaskBarMsg(role, text, _noSave = false) {
+  function addTaskBarMsg(role, text, _noSave = false, chips = null) {
     const el = document.getElementById("tasks-chat-messages");
     if (!el) return;
     if (_taskTypingEl) {
@@ -14678,6 +14687,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       el.scrollTop = el.scrollHeight;
       return;
     }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     if (!_noSave) {
       try {
         openChatBar("tasks");
@@ -14689,6 +14699,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
     div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "tasks");
+      el.appendChild(chipsRow);
+    }
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") taskBarHistory.push({ role: "user", content: text });
     else taskBarHistory.push({ role: "assistant", content: text });
