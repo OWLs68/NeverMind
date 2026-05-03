@@ -1668,7 +1668,72 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/ui/unread-badge.js
+  function showUnreadBadge(tab, sendBtnId) {
+    const current = _unreadCounts.get(tab) || 0;
+    const next = current + 1;
+    _unreadCounts.set(tab, next);
+    _badgeAnchors.set(tab, sendBtnId);
+    const badgeId = `${tab}-chat-badge`;
+    let badge = document.getElementById(badgeId);
+    if (!badge) {
+      const sendBtn = document.getElementById(sendBtnId);
+      if (!sendBtn) return;
+      badge = document.createElement("div");
+      badge.id = badgeId;
+      badge.style.cssText = "position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10";
+      sendBtn.style.position = "relative";
+      sendBtn.appendChild(badge);
+    }
+    badge.textContent = next > 9 ? "9+" : next;
+  }
+  function clearUnreadBadge(tab) {
+    _unreadCounts.set(tab, 0);
+    const badge = document.getElementById(`${tab}-chat-badge`);
+    if (badge) badge.remove();
+  }
+  var _unreadCounts, _badgeAnchors;
+  var init_unread_badge = __esm({
+    "src/ui/unread-badge.js"() {
+      _unreadCounts = /* @__PURE__ */ new Map();
+      _badgeAnchors = /* @__PURE__ */ new Map();
+    }
+  });
+
   // src/tabs/health.js
+  var health_exports = {};
+  __export(health_exports, {
+    HEALTH_STATUS_DEFS: () => HEALTH_STATUS_DEFS,
+    HEALTH_STATUS_KEYS: () => HEALTH_STATUS_KEYS,
+    addAllergy: () => addAllergy,
+    addHealthChatMsg: () => addHealthChatMsg,
+    addHealthHistoryEntry: () => addHealthHistoryEntry,
+    addMedicationToCard: () => addMedicationToCard,
+    applyHealthInterviewChoice: () => applyHealthInterviewChoice,
+    clearFocusedHealthCard: () => clearFocusedHealthCard,
+    createHealthCardProgrammatic: () => createHealthCardProgrammatic,
+    deleteAllergy: () => deleteAllergy,
+    deleteHealthCardProgrammatic: () => deleteHealthCardProgrammatic,
+    editHealthCardProgrammatic: () => editHealthCardProgrammatic,
+    editMedicationInCard: () => editMedicationInCard,
+    getAllergies: () => getAllergies,
+    getFocusedHealthCard: () => getFocusedHealthCard,
+    getHealthCards: () => getHealthCards,
+    getHealthContext: () => getHealthContext,
+    logMedicationDose: () => logMedicationDose,
+    renderHealth: () => renderHealth,
+    sendHealthBarMessage: () => sendHealthBarMessage,
+    setFocusedHealthCard: () => setFocusedHealthCard,
+    startHealthInterview: () => startHealthInterview,
+    syncHealthFinanceToHistory: () => syncHealthFinanceToHistory,
+    updateHealthCardStatusProgrammatic: () => updateHealthCardStatusProgrammatic
+  });
+  function _statusDef(s) {
+    return HEALTH_STATUS_DEFS[s] || HEALTH_STATUS_DEFS.treatment;
+  }
+  function _isActiveHealthStatus(s) {
+    return _statusDef(s).isActive;
+  }
   function _migrateHealthCard(card) {
     let changed = false;
     if (card.doctor === void 0) {
@@ -1772,6 +1837,9 @@ ${lines.join("\n")}`;
   function setFocusedHealthCard(id) {
     _focusedHealthCardId = id;
   }
+  function getFocusedHealthCard() {
+    return _focusedHealthCardId;
+  }
   function clearFocusedHealthCard() {
     _focusedHealthCardId = null;
   }
@@ -1801,18 +1869,13 @@ ${lines.join("\n")}`;
     if (!scrollEl) return;
     const cards = getHealthCards();
     const allergiesHtml = _buildAllergiesCardHtml();
-    const statusColors = {
-      active: { bg: "rgba(234,88,12,0.1)", color: "#ea580c", label: "\u0410\u043A\u0442\u0438\u0432\u043D\u0435", bar: "#ea580c", opacity: 1 },
-      controlled: { bg: "rgba(217,119,6,0.1)", color: "#d97706", label: "\u041F\u0456\u0434 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0435\u043C", bar: "#d97706", opacity: 1 },
-      done: { bg: "rgba(22,163,74,0.1)", color: "#16a34a", label: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2713", bar: "#16a34a", opacity: 0.5 }
-    };
     const cardsHtml = cards.length === 0 ? `<div style="text-align:center;padding:32px 0">
         <div style="font-size:36px;margin-bottom:10px">\u{1FAC0}</div>
         <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">\u041D\u0435\u043C\u0430\u0454 \u043A\u0430\u0440\u0442\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F</div>
         <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u2014 \u0445\u0432\u043E\u0440\u043E\u0431\u0443, \u0441\u0442\u0430\u043D \u0430\u0431\u043E \u043C\u0435\u0442\u0443</div>
         <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443</button>
       </div>` : cards.map((card) => {
-      const st = statusColors[card.status] || statusColors.active;
+      const st = _statusDef(card.status);
       const pct = card.progress || 0;
       const nextStep = card.nextStep || "";
       const pills = (card.treatments || []).slice(0, 4);
@@ -1823,7 +1886,7 @@ ${lines.join("\n")}`;
             <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
           </div>
-          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.label}</div>
+          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.icon} ${st.label}</div>
         </div>
         <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
           <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
@@ -1847,7 +1910,7 @@ ${lines.join("\n")}`;
       id: Date.now() + Math.floor(Math.random() * 1e3),
       name: name.trim(),
       subtitle: (subtitle || "").trim(),
-      status: status || "active",
+      status: HEALTH_STATUS_DEFS[status] ? status : "treatment",
       progress: 0,
       nextStep: "",
       treatments: [],
@@ -1893,6 +1956,22 @@ ${lines.join("\n")}`;
     cards[idx] = next;
     saveHealthCards(cards);
     return next;
+  }
+  function updateHealthCardStatusProgrammatic(cardId, status) {
+    if (!HEALTH_STATUS_DEFS[status]) return null;
+    const cards = getHealthCards();
+    const idx = cards.findIndex((c) => c.id === cardId);
+    if (idx === -1) return null;
+    const progressMap = { acute: 20, treatment: 40, improving: 60, remission: 80, done: 100 };
+    const progress = progressMap[status] !== void 0 ? progressMap[status] : cards[idx].progress || 0;
+    const oldStatus = cards[idx].status;
+    cards[idx] = { ...cards[idx], status, progress };
+    if (oldStatus !== status) {
+      cards[idx].history = cards[idx].history || [];
+      cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: `${_statusDef(oldStatus).label} \u2192 ${_statusDef(status).label}` });
+    }
+    saveHealthCards(cards);
+    return cards[idx];
   }
   function deleteHealthCardProgrammatic(cardId) {
     const cards = getHealthCards();
@@ -1988,7 +2067,7 @@ ${lines.join("\n")}`;
   function buildHealthExportText() {
     const allergies = getAllergies();
     const cards = getHealthCards();
-    const active = cards.filter((c) => c.status === "active" || c.status === "controlled");
+    const active = cards.filter((c) => _isActiveHealthStatus(c.status));
     const done = cards.filter((c) => c.status === "done");
     const todayStr = (/* @__PURE__ */ new Date()).toLocaleDateString("uk-UA");
     const lines = [];
@@ -2011,7 +2090,7 @@ ${lines.join("\n")}`;
       lines.push(``);
       active.forEach((card, i) => {
         lines.push(`${i + 1}. ${card.name.toUpperCase()}${card.subtitle ? " \u2014 " + card.subtitle : ""}`);
-        lines.push(`   \u0421\u0442\u0430\u0442\u0443\u0441: ${card.status === "active" ? "\u0430\u043A\u0442\u0438\u0432\u043D\u0435" : "\u043F\u0456\u0434 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0435\u043C"} \xB7 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043A\u0443\u0440\u0441\u0443: ${card.progress || 0}%`);
+        lines.push(`   \u0421\u0442\u0430\u0442\u0443\u0441: ${_statusDef(card.status).label} \xB7 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043A\u0443\u0440\u0441\u0443: ${card.progress || 0}%`);
         if (card.startDate) {
           const d = new Date(card.startDate);
           if (!isNaN(d)) {
@@ -2165,7 +2244,7 @@ ${lines.join("\n")}`;
       const hasHealthMarker = category === "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F" || /аптек|ліки|препарат|лікар|аналіз|тест|рецепт/i.test(commentLower);
       if (!hasHealthMarker) return false;
       const cards = getHealthCards();
-      const active = cards.filter((c) => c.status === "active" || c.status === "controlled");
+      const active = cards.filter((c) => _isActiveHealthStatus(c.status));
       if (active.length === 0) return false;
       let target = null;
       for (const card of active) {
@@ -2300,12 +2379,7 @@ ${lines.join("\n")}`;
       closeHealthCard();
       return;
     }
-    const statusColors = {
-      active: { bg: "rgba(234,88,12,0.1)", color: "#ea580c", label: "\u0410\u043A\u0442\u0438\u0432\u043D\u0435", bar: "#ea580c" },
-      controlled: { bg: "rgba(217,119,6,0.1)", color: "#d97706", label: "\u041F\u0456\u0434 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0435\u043C", bar: "#d97706" },
-      done: { bg: "rgba(22,163,74,0.1)", color: "#16a34a", label: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2713", bar: "#16a34a" }
-    };
-    const st = statusColors[card.status] || statusColors.active;
+    const st = _statusDef(card.status);
     const pct = card.progress || 0;
     const meds = card.medications || [];
     const doctorVisits = (card.history || []).filter((h) => h.type === "doctor_visit").sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -2357,11 +2431,13 @@ ${lines.join("\n")}`;
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5);margin-bottom:8px">
         \u041A\u0443\u0440\u0441 ${pct}%${trendLabel ? ` \xB7 <span style="color:${trendColor};font-weight:800">${trendLabel}</span>` : ""}
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color}">${st.label}</div>
-        <div style="display:flex;gap:6px">
-          ${["active", "controlled", "done"].map((s) => `<button onclick="setHealthCardStatus(${id},'${s}')" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;border:1px solid ${s === card.status ? st.color : "rgba(30,16,64,0.15)"};background:${s === card.status ? st.bg : "transparent"};color:${s === card.status ? st.color : "rgba(30,16,64,0.4)"};cursor:pointer">${s === "active" ? "\u0410\u043A\u0442\u0438\u0432\u043D\u0435" : s === "controlled" ? "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C" : "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E"}</button>`).join("")}
-        </div>
+      <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};display:inline-block;margin-bottom:8px">${st.icon} ${st.label}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${HEALTH_STATUS_KEYS.map((s) => {
+      const d = _statusDef(s);
+      const on = s === card.status;
+      return `<button onclick="setHealthCardStatus(${id},'${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
+    }).join("")}
       </div>
     </div>
 
@@ -2492,11 +2568,18 @@ ${lines.join("\n")}`;
     }
   }
   function setHealthCardStatus(id, status) {
+    if (!HEALTH_STATUS_DEFS[status]) return;
     const cards = getHealthCards();
     const idx = cards.findIndex((c) => c.id === id);
     if (idx !== -1) {
-      const progress = status === "done" ? 100 : status === "controlled" ? 70 : cards[idx].progress || 0;
+      const progressMap = { acute: 20, treatment: 40, improving: 60, remission: 80, done: 100 };
+      const progress = progressMap[status] !== void 0 ? progressMap[status] : cards[idx].progress || 0;
+      const oldStatus = cards[idx].status;
       cards[idx] = { ...cards[idx], status, progress };
+      if (oldStatus !== status) {
+        cards[idx].history = cards[idx].history || [];
+        cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: `${_statusDef(oldStatus).label} \u2192 ${_statusDef(status).label}` });
+      }
       saveHealthCards(cards);
       renderHealthWorkspace(id);
     }
@@ -2545,7 +2628,7 @@ ${lines.join("\n")}`;
     setVal("health-card-start-date", c.startDate);
     setVal("health-card-appt-date", c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : "");
     setVal("health-card-appt-time", c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : "");
-    const status = c.status || "active";
+    const status = c.status || "treatment";
     document.querySelectorAll(".health-status-btn").forEach((btn) => {
       const isActive = btn.dataset.status === status;
       btn.dataset.active = isActive ? "1" : "0";
@@ -2574,7 +2657,7 @@ ${lines.join("\n")}`;
     for (const btn of document.querySelectorAll(".health-status-btn")) {
       if (btn.dataset.active === "1") return btn.dataset.status;
     }
-    return "active";
+    return "treatment";
   }
   function addHealthMedicationRow() {
     _appendMedicationRow({ name: "", dosage: "", schedule: [], courseDuration: "" });
@@ -2789,6 +2872,15 @@ ${lines.join("\n")}`;
       newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, name, nextAppointment, null);
       cards.unshift(newCard);
       saveHealthCards(cards);
+      closeHealthCardModal();
+      renderHealth();
+      setTimeout(() => {
+        try {
+          startHealthInterview(newCard);
+        } catch (e) {
+        }
+      }, 300);
+      return;
     }
     closeHealthCardModal();
     renderHealth();
@@ -2901,11 +2993,11 @@ ${lines.join("\n")}`;
       parts.push(`\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 (\u0423\u0412\u0410\u0413\u0410 \u2014 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0440\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0456\u0439 \u0437\u0433\u0430\u0434\u0446\u0456 \u0446\u0438\u0445 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0456\u0432 \u0443 \u0437\u0430\u043F\u0438\u0441\u0430\u0445 Inbox/\u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432/\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${list})`);
     }
     const cards = getHealthCards();
-    const active = cards.filter((c) => c.status === "active" || c.status === "controlled");
+    const active = cards.filter((c) => _isActiveHealthStatus(c.status));
     if (active.length > 0) {
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F (${active.length}):`);
       active.slice(0, 5).forEach((card) => {
-        const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? " \u2014 " + card.subtitle : ""} [${card.status}, \u043F\u0440\u043E\u0433\u0440\u0435\u0441: ${card.progress || 0}%]`];
+        const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? " \u2014 " + card.subtitle : ""} [${_statusDef(card.status).label}, \u043F\u0440\u043E\u0433\u0440\u0435\u0441: ${card.progress || 0}%]`];
         if (card.startDate) {
           const d = new Date(card.startDate);
           if (!isNaN(d)) {
@@ -2968,7 +3060,7 @@ ${lines.join("\n")}`;
     el.scrollTop = el.scrollHeight;
     if (role !== "agent") healthBarHistory.push({ role: "user", content: text });
     else healthBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("health", role, text);
+    if (!_noSave) saveChatMsg("health", role, text, chips);
   }
   async function sendHealthBarMessage() {
     if (healthBarLoading) return;
@@ -3030,7 +3122,141 @@ ${lines.join("\n")}`;
     }
     healthBarLoading = false;
   }
-  var activeHealthCardId, healthBarLoading, healthBarHistory, _healthTypingEl, _focusedHealthCardId, _editingHealthCardId;
+  function _interviewChips(step, options) {
+    return options.map((o) => ({
+      label: o.label,
+      action: "health_interview",
+      payload: { step, value: o.value }
+    }));
+  }
+  function _aggregateInterviewStatus(answers) {
+    const stage = answers.stage || "treating";
+    const symptoms = answers.symptoms;
+    const doctor = answers.doctor;
+    if (stage === "chronic") {
+      if (symptoms === "severe") return "treatment";
+      if (symptoms === "mild") return "remission";
+      return "chronic";
+    }
+    if (stage === "recent") {
+      if (symptoms === "mild") return "improving";
+      if (doctor === "doctor_yes") return "treatment";
+      return "acute";
+    }
+    if (symptoms === "mild") return "improving";
+    return "treatment";
+  }
+  function startHealthInterview(card) {
+    if (!card || !card.id || !card.name) return;
+    try {
+      localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify({
+        card_id: card.id,
+        card_name: card.name,
+        step: 1,
+        answers: {},
+        ts: Date.now()
+      }));
+    } catch {
+    }
+    const chips = _interviewChips(1, STEP1_OPTIONS);
+    const text = `\u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${card.name}". 3 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u0432\u0438\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0441\u0442\u0430\u0442\u0443\u0441.
+
+\u0429\u043E \u0437\u0430\u0440\u0430\u0437?`;
+    if (currentTab === "health") {
+      addHealthChatMsg("agent", text, false, chips);
+    } else {
+      saveChatMsg("health", "agent", text, chips);
+      healthBarHistory.push({ role: "assistant", content: text });
+      try {
+        showUnreadBadge("health", "health-send-btn");
+      } catch {
+      }
+    }
+  }
+  function applyHealthInterviewChoice(payload) {
+    if (!payload || typeof payload.step !== "number") return;
+    let state = null;
+    try {
+      state = JSON.parse(localStorage.getItem(HEALTH_INTERVIEW_KEY) || "null");
+    } catch {
+    }
+    if (!state || !state.card_id) return;
+    const labelMap = {
+      recent: "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C",
+      treating: "\u{1F48A} \u041B\u0456\u043A\u0443\u044E",
+      chronic: "\u267E\uFE0F \u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430",
+      skip: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438",
+      doctor_yes: "\u0422\u0430\u043A \u2014 \u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432",
+      doctor_no: "\u041D\u0435 \u0431\u0443\u0432 \u0443 \u043B\u0456\u043A\u0430\u0440\u044F",
+      self: "\u0421\u0430\u043C \u043B\u0456\u043A\u0443\u044E",
+      severe: "\u0421\u0438\u043B\u044C\u043D\u0456",
+      moderate: "\u041F\u043E\u043C\u0456\u0440\u043D\u0456",
+      mild: "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430"
+    };
+    const userText = labelMap[payload.value] || payload.value;
+    if (currentTab === "health") addHealthChatMsg("user", userText);
+    else saveChatMsg("health", "user", userText);
+    if (payload.step === 1) {
+      state.answers.stage = payload.value;
+      if (payload.value === "skip") return _finishInterview(state, true);
+      state.step = 2;
+      try {
+        localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state));
+      } catch {
+      }
+      const chips = _interviewChips(2, STEP2_OPTIONS);
+      const q = "\u041B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F?";
+      if (currentTab === "health") addHealthChatMsg("agent", q, false, chips);
+      else saveChatMsg("health", "agent", q, chips);
+      return;
+    }
+    if (payload.step === 2) {
+      state.answers.doctor = payload.value;
+      if (payload.value === "skip") return _finishInterview(state, true);
+      state.step = 3;
+      try {
+        localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state));
+      } catch {
+      }
+      const chips = _interviewChips(3, STEP3_OPTIONS);
+      const q = "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u0437\u0430\u0440\u0430\u0437?";
+      if (currentTab === "health") addHealthChatMsg("agent", q, false, chips);
+      else saveChatMsg("health", "agent", q, chips);
+      return;
+    }
+    if (payload.step === 3) {
+      state.answers.symptoms = payload.value;
+      return _finishInterview(state, payload.value === "skip");
+    }
+  }
+  function _finishInterview(state, skipped) {
+    try {
+      localStorage.removeItem(HEALTH_INTERVIEW_KEY);
+    } catch {
+    }
+    if (skipped && Object.keys(state.answers).length === 0) {
+      const text2 = "\u0413\u0430\u0440\u0430\u0437\u0434, \u0431\u0435\u0437 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F. \u0421\u0442\u0430\u0442\u0443\u0441 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0437 \u043A\u0430\u0440\u0442\u043A\u0438.";
+      if (currentTab === "health") addHealthChatMsg("agent", text2);
+      else saveChatMsg("health", "agent", text2);
+      try {
+        clearUnreadBadge("health");
+      } catch {
+      }
+      return;
+    }
+    const finalStatus = _aggregateInterviewStatus(state.answers);
+    const updated = updateHealthCardStatusProgrammatic(state.card_id, finalStatus);
+    if (!updated) return;
+    const def = HEALTH_STATUS_DEFS[finalStatus] || {};
+    const text = `\u0417\u0430\u043F\u0438\u0441\u0430\u0432. \u0421\u0442\u0430\u0442\u0443\u0441 "${updated.name}": ${def.icon || ""} ${def.label || finalStatus}.`;
+    if (currentTab === "health") addHealthChatMsg("agent", text);
+    else saveChatMsg("health", "agent", text);
+    try {
+      clearUnreadBadge("health");
+    } catch {
+    }
+  }
+  var HEALTH_STATUS_DEFS, HEALTH_STATUS_KEYS, activeHealthCardId, healthBarLoading, healthBarHistory, _healthTypingEl, _focusedHealthCardId, _editingHealthCardId, HEALTH_INTERVIEW_KEY, STEP1_OPTIONS, STEP2_OPTIONS, STEP3_OPTIONS;
   var init_health = __esm({
     "src/tabs/health.js"() {
       init_nav();
@@ -3044,6 +3270,17 @@ ${lines.join("\n")}`;
       init_notes();
       init_calendar();
       init_tasks();
+      init_unread_badge();
+      init_nav();
+      HEALTH_STATUS_DEFS = {
+        acute: { icon: "\u{1F195}", label: "\u0413\u043E\u0441\u0442\u0440\u0430", bg: "rgba(239,68,68,0.10)", color: "#ef4444", bar: "#ef4444", isActive: true, opacity: 1 },
+        treatment: { icon: "\u{1F48A}", label: "\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F", bg: "rgba(234,88,12,0.10)", color: "#ea580c", bar: "#ea580c", isActive: true, opacity: 1 },
+        improving: { icon: "\u{1F4C8}", label: "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F", bg: "rgba(217,119,6,0.10)", color: "#d97706", bar: "#d97706", isActive: true, opacity: 1 },
+        remission: { icon: "\u{1F7E2}", label: "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C", bg: "rgba(22,163,74,0.10)", color: "#16a34a", bar: "#16a34a", isActive: true, opacity: 1 },
+        chronic: { icon: "\u267E\uFE0F", label: "\u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430", bg: "rgba(30,16,64,0.10)", color: "#1e1040", bar: "#1e1040", isActive: true, opacity: 1 },
+        done: { icon: "\u2705", label: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E", bg: "rgba(100,116,139,0.10)", color: "#64748b", bar: "#64748b", isActive: false, opacity: 0.5 }
+      };
+      HEALTH_STATUS_KEYS = Object.keys(HEALTH_STATUS_DEFS);
       activeHealthCardId = null;
       healthBarLoading = false;
       healthBarHistory = [];
@@ -3067,6 +3304,25 @@ ${lines.join("\n")}`;
         } catch (e) {
         }
       }, 5 * 60 * 1e3);
+      HEALTH_INTERVIEW_KEY = "nm_health_interview_pending";
+      STEP1_OPTIONS = [
+        { label: "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C", value: "recent" },
+        { label: "\u{1F48A} \u041B\u0456\u043A\u0443\u044E", value: "treating" },
+        { label: "\u267E\uFE0F \u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430", value: "chronic" },
+        { label: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438", value: "skip" }
+      ];
+      STEP2_OPTIONS = [
+        { label: "\u0422\u0430\u043A", value: "doctor_yes" },
+        { label: "\u041D\u0435 \u0431\u0443\u0432 \u0443 \u043B\u0456\u043A\u0430\u0440\u044F", value: "doctor_no" },
+        { label: "\u0421\u0430\u043C \u043B\u0456\u043A\u0443\u044E", value: "self" },
+        { label: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438", value: "skip" }
+      ];
+      STEP3_OPTIONS = [
+        { label: "\u0421\u0438\u043B\u044C\u043D\u0456", value: "severe" },
+        { label: "\u041F\u043E\u043C\u0456\u0440\u043D\u0456", value: "moderate" },
+        { label: "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430", value: "mild" },
+        { label: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438", value: "skip" }
+      ];
       Object.assign(window, {
         openAddHealthCard,
         sendHealthBarMessage,
@@ -7450,7 +7706,17 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         });
         if (created) {
           if (currentTab === "health") renderHealth();
-          addMsg("agent", `\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${created.name}". ${args.comment || ""}`.trim());
+          if (currentTab === "health") {
+            addMsg("agent", `\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${created.name}".`);
+          } else {
+            addMsg("agent", `\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${created.name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u0457. \u041F\u0440\u043E\u0439\u0434\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0430\u043C \u2014 3 \u0447\u0456\u043F\u0438 \u0432\u0438\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441.`);
+          }
+          setTimeout(() => {
+            try {
+              startHealthInterview(created);
+            } catch (e) {
+            }
+          }, 300);
         } else {
           addMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u2014 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0430\u0437\u0432\u0430.");
         }
@@ -7484,6 +7750,17 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
           addMsg("agent", `\u{1F5D1}\uFE0F \u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (7 \u0434\u043D\u0456\u0432 \u0443 \u043A\u043E\u0448\u0438\u043A\u0443). ${args.comment || ""}`.trim());
         } else {
           addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F.");
+        }
+        return true;
+      }
+      case "update_health_card_status": {
+        const updated = updateHealthCardStatusProgrammatic(args.card_id, args.status);
+        if (updated) {
+          if (currentTab === "health") renderHealth();
+          const def = HEALTH_STATUS_DEFS[args.status] || {};
+          addMsg("agent", `\u2713 \u0421\u0442\u0430\u0442\u0443\u0441 "${updated.name}": ${def.icon || ""} ${def.label || args.status}. ${args.comment || ""}`.trim());
+        } else {
+          addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0430\u0431\u043E \u043D\u0435\u0432\u0456\u0440\u043D\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441.");
         }
         return true;
       }
@@ -9253,38 +9530,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
-  // src/ui/unread-badge.js
-  function showUnreadBadge(tab, sendBtnId) {
-    const current = _unreadCounts.get(tab) || 0;
-    const next = current + 1;
-    _unreadCounts.set(tab, next);
-    _badgeAnchors.set(tab, sendBtnId);
-    const badgeId = `${tab}-chat-badge`;
-    let badge = document.getElementById(badgeId);
-    if (!badge) {
-      const sendBtn = document.getElementById(sendBtnId);
-      if (!sendBtn) return;
-      badge = document.createElement("div");
-      badge.id = badgeId;
-      badge.style.cssText = "position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10";
-      sendBtn.style.position = "relative";
-      sendBtn.appendChild(badge);
-    }
-    badge.textContent = next > 9 ? "9+" : next;
-  }
-  function clearUnreadBadge(tab) {
-    _unreadCounts.set(tab, 0);
-    const badge = document.getElementById(`${tab}-chat-badge`);
-    if (badge) badge.remove();
-  }
-  var _unreadCounts, _badgeAnchors;
-  var init_unread_badge = __esm({
-    "src/ui/unread-badge.js"() {
-      _unreadCounts = /* @__PURE__ */ new Map();
-      _badgeAnchors = /* @__PURE__ */ new Map();
-    }
-  });
-
   // src/tabs/evening-actions.js
   function isEveningClosed() {
     try {
@@ -10569,6 +10814,17 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       handleClarifySaveChip(tab, target, payload);
       return;
     }
+    if (action === "health_interview") {
+      let payload = {};
+      try {
+        payload = payloadRaw ? JSON.parse(payloadRaw) : {};
+      } catch {
+      }
+      Promise.resolve().then(() => (init_health(), health_exports)).then((m) => {
+        if (m.applyHealthInterviewChoice) m.applyHealthInterviewChoice(payload);
+      }).catch((e) => console.warn("[chips] health_interview load failed:", e));
+      return;
+    }
     if (action === "nav" && target === "calendar") {
       if (typeof window.handleUITool === "function") {
         window.handleUITool("open_calendar", { highlight_events: true });
@@ -11570,9 +11826,10 @@ ${UI_TOOLS_RULES}`;
         // Перед create_health_card ОБОВ'ЯЗКОВО глянь "ЗДОРОВ'Я" контекст —
         // якщо схожа картка вже існує, використай edit_health_card або
         // add_health_history_entry до існуючої замість дублювання (4.12 антидублювання).
-        { type: "function", function: { name: "create_health_card", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0445\u0432\u043E\u0440\u043E\u0431\u0438/\u0441\u0442\u0430\u043D\u0443/\u043C\u0435\u0442\u0438 \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0438\u043C\u043F\u0442\u043E\u043C \u044F\u043A\u0438\u0439 \u0442\u0440\u0438\u0432\u0430\u0454 (3+ \u0434\u043D\u0456), \u0434\u0456\u0430\u0433\u043D\u043E\u0437 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u043E\u0432\u0443 \u043C\u0435\u0442\u0443 \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0434\u043B\u044F \u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0441\u043A\u0430\u0440\u0433 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456' \u2192 save_moment) \u0430\u0431\u043E \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u043F\u0440\u0438\u0439\u043E\u043C\u0456\u0432 \u043B\u0456\u043A\u0456\u0432. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0417\u0414\u041E\u0420\u041E\u0412'\u042F' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u043A\u0430\u0440\u0442\u043A\u0430 \u0437 \u0442\u043E\u044E \u0436 \u043D\u0430\u0437\u0432\u043E\u044E/\u0442\u0435\u043C\u043E\u044E \u2014 \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439, \u043A\u0440\u0430\u0449\u0435 edit_health_card \u0430\u0431\u043E add_health_history_entry.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0441\u0442\u0430\u043D\u0443 1-3 \u0441\u043B\u043E\u0432\u0430: '\u0428\u043A\u0456\u0440\u0430', '\u0422\u0438\u0441\u043A', '\u0421\u043F\u0438\u043D\u0430', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F'. \u041D\u0415 \u0434\u0456\u0430\u0433\u043D\u043E\u0437 ('\u0430\u0442\u043E\u043F\u0456\u0447\u043D\u0438\u0439 \u0434\u0435\u0440\u043C\u0430\u0442\u0438\u0442') \u2014 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438" }, subtitle: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0443: '\u0412\u0438\u0441\u0438\u043F \u043D\u0430 \u0440\u0443\u043A\u0430\u0445', '\u041F\u0456\u0434\u0432\u0438\u0449\u0435\u043D\u0438\u0439 140/90'" }, doctor: { type: "string", description: "\u0406\u043C'\u044F + \u0441\u043F\u0435\u0446\u0456\u0430\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u043E: '\u0414\u0440. \u041F\u0435\u0442\u0440\u0435\u043D\u043A\u043E \xB7 \u0434\u0435\u0440\u043C\u0430\u0442\u043E\u043B\u043E\u0433'" }, doctor_recommendations: { type: "string", description: "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0456" }, doctor_conclusion: { type: "string", description: "\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439" }, start_date: { type: "string", description: "YYYY-MM-DD \u043A\u043E\u043B\u0438 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C, \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, next_appointment_time: { type: "string", description: "HH:MM \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, status: { type: "string", enum: ["active", "controlled", "done"] }, initial_history_text: { type: "string", description: "\u041F\u0435\u0440\u0448\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u044E\u0437\u0435\u0440 \u0441\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "name", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "edit_health_card", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: \u0441\u0442\u0430\u0442\u0443\u0441, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C, \u043E\u043F\u0438\u0441. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C create_health_card \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, name: { type: "string" }, subtitle: { type: "string" }, doctor: { type: "string" }, doctor_recommendations: { type: "string" }, doctor_conclusion: { type: "string" }, start_date: { type: "string", description: "YYYY-MM-DD" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD. \u041F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 null \u0449\u043E\u0431 \u041E\u0427\u0418\u0421\u0422\u0418\u0422\u0418" }, next_appointment_time: { type: "string", description: "HH:MM" }, status: { type: "string", enum: ["active", "controlled", "done"] }, comment: { type: "string" } }, required: ["_reasoning_log", "card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "create_health_card", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0445\u0432\u043E\u0440\u043E\u0431\u0438/\u0441\u0442\u0430\u043D\u0443/\u043C\u0435\u0442\u0438 \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043E\u043F\u0438\u0441\u0443\u0454 \u0441\u0438\u043C\u043F\u0442\u043E\u043C \u044F\u043A\u0438\u0439 \u0442\u0440\u0438\u0432\u0430\u0454 (3+ \u0434\u043D\u0456), \u0434\u0456\u0430\u0433\u043D\u043E\u0437 \u0432\u0456\u0434 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u043E\u0432\u0443 \u043C\u0435\u0442\u0443 \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044E. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0434\u043B\u044F \u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u0441\u043A\u0430\u0440\u0433 ('\u0431\u043E\u043B\u0438\u0442\u044C \u0433\u043E\u043B\u043E\u0432\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456' \u2192 save_moment) \u0430\u0431\u043E \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0438\u0445 \u043F\u0440\u0438\u0439\u043E\u043C\u0456\u0432 \u043B\u0456\u043A\u0456\u0432. \u041F\u0415\u0420\u0415\u0414 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0441\u0435\u043A\u0446\u0456\u044E '\u0417\u0414\u041E\u0420\u041E\u0412'\u042F' \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456: \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0454 \u043A\u0430\u0440\u0442\u043A\u0430 \u0437 \u0442\u043E\u044E \u0436 \u043D\u0430\u0437\u0432\u043E\u044E/\u0442\u0435\u043C\u043E\u044E \u2014 \u041D\u0415 \u0434\u0443\u0431\u043B\u044E\u0439, \u043A\u0440\u0430\u0449\u0435 edit_health_card \u0430\u0431\u043E add_health_history_entry.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0441\u0442\u0430\u043D\u0443 1-3 \u0441\u043B\u043E\u0432\u0430: '\u0428\u043A\u0456\u0440\u0430', '\u0422\u0438\u0441\u043A', '\u0421\u043F\u0438\u043D\u0430', '\u0410\u043B\u0435\u0440\u0433\u0456\u044F'. \u041D\u0415 \u0434\u0456\u0430\u0433\u043D\u043E\u0437 ('\u0430\u0442\u043E\u043F\u0456\u0447\u043D\u0438\u0439 \u0434\u0435\u0440\u043C\u0430\u0442\u0438\u0442') \u2014 \u043D\u0430\u0437\u0432\u0430 \u0442\u0435\u043C\u0438" }, subtitle: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0443: '\u0412\u0438\u0441\u0438\u043F \u043D\u0430 \u0440\u0443\u043A\u0430\u0445', '\u041F\u0456\u0434\u0432\u0438\u0449\u0435\u043D\u0438\u0439 140/90'" }, doctor: { type: "string", description: "\u0406\u043C'\u044F + \u0441\u043F\u0435\u0446\u0456\u0430\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u043E: '\u0414\u0440. \u041F\u0435\u0442\u0440\u0435\u043D\u043A\u043E \xB7 \u0434\u0435\u0440\u043C\u0430\u0442\u043E\u043B\u043E\u0433'" }, doctor_recommendations: { type: "string", description: "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0456" }, doctor_conclusion: { type: "string", description: "\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439" }, start_date: { type: "string", description: "YYYY-MM-DD \u043A\u043E\u043B\u0438 \u043F\u043E\u0447\u0430\u043B\u043E\u0441\u044C, \u044F\u043A\u0449\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, next_appointment_time: { type: "string", description: "HH:MM \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u043F\u0440\u0438\u0439\u043E\u043C\u0443" }, status: { type: "string", enum: ["acute", "treatment", "improving", "remission", "chronic", "done"], description: "acute=\u043D\u043E\u0432\u0430 \u0433\u043E\u0441\u0442\u0440\u0430; treatment=\u043B\u0456\u043A\u0443\u044E; improving=\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F; remission=\u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C/\u0440\u0435\u043C\u0456\u0441\u0456\u044F; chronic=\u0445\u0440\u043E\u043D\u0456\u0447\u043D\u0430 \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0430; done=\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E" }, initial_history_text: { type: "string", description: "\u041F\u0435\u0440\u0448\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0443 timeline \u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0432 \u044E\u0437\u0435\u0440 \u0441\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "name", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "edit_health_card", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F: \u0441\u0442\u0430\u0442\u0443\u0441, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 \u043B\u0456\u043A\u0430\u0440\u044F, \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C, \u043E\u043F\u0438\u0441. \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C create_health_card \u044F\u043A\u0449\u043E \u043A\u0430\u0440\u0442\u043A\u0430 \u0432\u0436\u0435 \u0454.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, name: { type: "string" }, subtitle: { type: "string" }, doctor: { type: "string" }, doctor_recommendations: { type: "string" }, doctor_conclusion: { type: "string" }, start_date: { type: "string", description: "YYYY-MM-DD" }, next_appointment_date: { type: "string", description: "YYYY-MM-DD. \u041F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 null \u0449\u043E\u0431 \u041E\u0427\u0418\u0421\u0422\u0418\u0422\u0418" }, next_appointment_time: { type: "string", description: "HH:MM" }, status: { type: "string", enum: ["acute", "treatment", "improving", "remission", "chronic", "done"], description: "acute=\u043D\u043E\u0432\u0430 \u0433\u043E\u0441\u0442\u0440\u0430; treatment=\u043B\u0456\u043A\u0443\u044E; improving=\u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F; remission=\u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C/\u0440\u0435\u043C\u0456\u0441\u0456\u044F; chronic=\u0445\u0440\u043E\u043D\u0456\u0447\u043D\u0430 \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0430; done=\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E" }, comment: { type: "string" } }, required: ["_reasoning_log", "card_id", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "delete_health_card", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F (\u0437 \u043A\u043E\u0448\u0438\u043A\u0430 7 \u0434\u043D\u0456\u0432). \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043F\u0440\u044F\u043C\u043E \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0441\u0442\u0430\u043D.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer" }, comment: { type: "string" } }, required: ["_reasoning_log", "card_id", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "update_health_card_status", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0421\u0422\u0410\u0422\u0423\u0421 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u043F\u043E 6-\u0441\u0442\u0430\u0442\u0443\u0441\u043D\u0456\u0439 \u0448\u043A\u0430\u043B\u0456. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u043F\u0440\u043E \u0437\u043C\u0456\u043D\u0443 \u0441\u0442\u0430\u043D\u0443 ('\u043B\u0456\u043A\u0430\u0440 \u043A\u0430\u0436\u0435 \u0443 \u0440\u0435\u043C\u0456\u0441\u0456\u0457', '\u0442\u0435\u043F\u0435\u0440 \u0445\u0440\u043E\u043D\u0456\u0447\u043D\u0430', '\u0432\u0441\u0435, \u0437\u0430\u043A\u0440\u0438\u0432'), \u0410\u0411\u041E \u043A\u043E\u043B\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u0434 \u0456\u043D\u0442\u0435\u0440\u0432'\u044E \u0430\u0433\u0440\u0435\u0433\u0443\u0454 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u0447\u0456\u043F\u0456\u0432 \u0456 \u0432\u0438\u0441\u0442\u0430\u0432\u043B\u044F\u0454 \u043A\u0456\u043D\u0446\u0435\u0432\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441. \u041D\u0430 \u0432\u0456\u0434\u043C\u0456\u043D\u0443 \u0432\u0456\u0434 edit_health_card \u2014 \u0442\u043E\u0447\u043A\u043E\u0432\u043E \u043C\u0456\u043D\u044F\u0454 \u0422\u0406\u041B\u042C\u041A\u0418 status (\u043D\u0435 \u0447\u0456\u043F\u0430\u0454 \u0456\u043D\u0448\u0438\u0445 \u043F\u043E\u043B\u0456\u0432).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, status: { type: "string", enum: ["acute", "treatment", "improving", "remission", "chronic", "done"], description: "acute=\u{1F195} \u0449\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u0430\u0441\u044C (1-7 \u0434\u043D\u0456\u0432, \u0431\u0456\u043B\u044C/\u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430); treatment=\u{1F48A} \u0430\u043A\u0442\u0438\u0432\u043D\u0435 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F (\u043F\u0440\u0438\u0439\u043C\u0430\u0454 \u043B\u0456\u043A\u0438/\u043B\u0456\u043A\u0430\u0440\u0441\u044C\u043A\u0456 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F); improving=\u{1F4C8} \u0434\u0438\u043D\u0430\u043C\u0456\u043A\u0430 \u043F\u043E\u0437\u0438\u0442\u0438\u0432\u043D\u0430; remission=\u{1F7E2} \u043F\u0456\u0434 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0435\u043C (\u0440\u0435\u043C\u0456\u0441\u0456\u044F, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u043D\u0435 \u0442\u0443\u0440\u0431\u0443\u044E\u0442\u044C); chronic=\u267E\uFE0F \u0445\u0440\u043E\u043D\u0456\u0447\u043D\u0430 (\u043F\u043E\u0441\u0442\u0456\u0439\u043D\u0430, \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u043E); done=\u2705 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E" }, comment: { type: "string", description: "1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u044E\u0437\u0435\u0440\u0430: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 \u0441\u0442\u0430\u0442\u0443\u0441" } }, required: ["_reasoning_log", "card_id", "status", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "add_medication", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F. \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0422\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u043E\u043F\u0438\u0441\u0430\u0432 X' \u0430\u0431\u043E '\u043F\u043E\u0447\u0430\u0432 \u043F\u0440\u0438\u0439\u043C\u0430\u0442\u0438 X'.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443" }, dosage: { type: "string", description: "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F: '20\u043C\u0433', '1 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430'" }, schedule: { type: "string", description: "\u0413\u0440\u0430\u0444\u0456\u043A \u043F\u0440\u0438\u0439\u043E\u043C\u0443: '08:00, 20:00' \u0430\u0431\u043E '\u0432\u0440\u0430\u043D\u0446\u0456, \u0432\u0432\u0435\u0447\u0435\u0440\u0456'" }, course_duration: { type: "string", description: "\u041A\u0443\u0440\u0441: '14 \u0434\u043D\u0456\u0432', '1 \u043C\u0456\u0441\u044F\u0446\u044C'" }, comment: { type: "string" } }, required: ["_reasoning_log", "card_id", "med_name", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "edit_medication", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456: \u0434\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F, \u0433\u0440\u0430\u0444\u0456\u043A, \u043A\u0443\u0440\u0441. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043B\u0456\u043A\u0430\u0440 \u0437\u043C\u0456\u043D\u0438\u0432 \u0434\u043E\u0437\u0443 X \u043D\u0430 Y'.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer" }, med_id: { type: "integer", description: "ID \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string" }, dosage: { type: "string" }, schedule: { type: "string" }, course_duration: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "card_id", "med_id", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "log_medication_dose", description: "\u041F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0449\u043E \u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u0434\u043E\u0437\u0443 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u0417\u0410\u0420\u0410\u0417. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u041E\u043C\u0435\u0437', '\u0432\u0438\u043F\u0438\u0432 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0443', '\u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u043B\u0456\u043A\u0438'. \u042F\u043A\u0449\u043E med_name \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0439 \u2014 \u0442\u043E\u0447\u043D\u0456\u0448\u0435; \u044F\u043A\u0449\u043E \u0443 \u043A\u0430\u0440\u0442\u0446\u0456 \u0442\u0456\u043B\u044C\u043A\u0438 1 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442 \u2014 \u043C\u043E\u0436\u043D\u0430 \u0431\u0435\u0437 med_name.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, card_id: { type: "integer", description: "ID \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, med_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0430 (fuzzy match \u2014 \u043D\u0435\u0447\u0456\u0442\u043A\u0438\u0439 \u043F\u043E\u0448\u0443\u043A)" }, comment: { type: "string" } }, required: ["_reasoning_log", "card_id", "comment"], additionalProperties: false } } },
@@ -13499,13 +13756,15 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return null;
     }
   }
-  function saveChatMsg(tab, role, text) {
+  function saveChatMsg(tab, role, text, chips) {
     if (role === "typing") return;
     const key = CHAT_STORE_KEYS[tab];
     if (!key) return;
     try {
       const msgs = JSON.parse(localStorage.getItem(key) || "[]");
-      msgs.push({ role, text, ts: Date.now() });
+      const entry = { role, text, ts: Date.now() };
+      if (Array.isArray(chips) && chips.length > 0) entry.chips = chips;
+      msgs.push(entry);
       if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
       localStorage.setItem(key, JSON.stringify(msgs));
       if (role === "user") window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "chat" }));
@@ -13588,12 +13847,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     };
     const addMsgMap = {
       tasks: (r, t2) => addTaskBarMsg(r, t2, true),
-      notes: (r, t2) => addNotesChatMsg(r, t2, true),
-      me: (r, t2) => addMeChatMsg(r, t2, true),
-      evening: (r, t2) => addEveningBarMsg(r, t2, true),
-      finance: (r, t2) => addFinanceChatMsg(r, t2, true),
-      health: (r, t2) => addHealthChatMsg(r, t2, true),
-      projects: (r, t2) => addProjectsChatMsg(r, t2, true)
+      notes: (r, t2, c) => addNotesChatMsg(r, t2, true, c),
+      me: (r, t2, c) => addMeChatMsg(r, t2, true, "", c),
+      evening: (r, t2, c) => addEveningBarMsg(r, t2, true, c),
+      finance: (r, t2, c) => addFinanceChatMsg(r, t2, true, c),
+      health: (r, t2, c) => addHealthChatMsg(r, t2, true, c),
+      projects: (r, t2, c) => addProjectsChatMsg(r, t2, true, c)
     };
     const containerId = containerMap[tab];
     if (!containerId) return;
@@ -13617,7 +13876,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     if (tab === "inbox") {
       msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
     } else if (addMsgMap[tab]) {
-      msgs.forEach((m) => addMsgMap[tab](m.role, m.text));
+      msgs.forEach((m) => addMsgMap[tab](m.role, m.text, m.chips));
     }
   }
   function _renderInboxChatMsg(role, text, el) {
@@ -15622,6 +15881,8 @@ ${userText}
         return { action: "edit_health_card", card_id: args.card_id, name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, comment: args.comment };
       case "delete_health_card":
         return { action: "delete_health_card", card_id: args.card_id, comment: args.comment };
+      case "update_health_card_status":
+        return { action: "update_health_card_status", card_id: args.card_id, status: args.status, comment: args.comment };
       case "add_medication":
         return { action: "add_medication", card_id: args.card_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
       case "edit_medication":
@@ -15958,7 +16219,13 @@ ${aiContext}`;
               items.unshift({ id: Date.now() + 1, text: t("inbox.health.state_inbox", "\u{1F3E5} \u0421\u0442\u0430\u043D: {name}", { name: created.name }), category: "note", ts: Date.now(), processed: true });
               saveInbox(items);
               renderInbox();
-              addInboxChatMsg("agent", t("inbox.health.card_created", '\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u0457. {comment}', { name: created.name, comment: action.comment || "" }));
+              addInboxChatMsg("agent", t("inbox.health.card_created_redirect", '\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u0457. \u041F\u0440\u043E\u0439\u0434\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0430\u043C \u2014 3 \u0447\u0456\u043F\u0438 \u0432\u0438\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441.', { name: created.name }));
+              setTimeout(() => {
+                try {
+                  startHealthInterview(created);
+                } catch (e) {
+                }
+              }, 300);
             } else {
               addInboxChatMsg("agent", t("inbox.chat.health_no_name", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u2014 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0430\u0437\u0432\u0430."));
             }
@@ -15988,6 +16255,15 @@ ${aiContext}`;
               addInboxChatMsg("agent", t("inbox.health.card_deleted", "\u{1F5D1}\uFE0F \u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (7 \u0434\u043D\u0456\u0432 \u0443 \u043A\u043E\u0448\u0438\u043A\u0443). {comment}", { comment: action.comment || "" }));
             } else {
               addInboxChatMsg("agent", t("inbox.health.card_not_found_del", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 \u0434\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F."));
+            }
+          } else if (action.action === "update_health_card_status") {
+            const updated = updateHealthCardStatusProgrammatic(action.card_id, action.status);
+            if (updated) {
+              if (currentTab === "health") renderHealth();
+              const def = HEALTH_STATUS_DEFS[action.status] || {};
+              addInboxChatMsg("agent", t("inbox.health.status_updated", '\u2713 \u0421\u0442\u0430\u0442\u0443\u0441 "{name}": {icon} {label}. {comment}', { name: updated.name, icon: def.icon || "", label: def.label || action.status, comment: action.comment || "" }));
+            } else {
+              addInboxChatMsg("agent", t("inbox.health.card_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437."));
             }
           } else if (action.action === "add_medication") {
             const med = addMedicationToCard(action.card_id, {
@@ -18447,6 +18723,31 @@ ${logLines}
           } catch (_) {
           }
         }
+      }
+    }
+    if (!localStorage.getItem("nm_health_status_v2_done")) {
+      try {
+        const raw = localStorage.getItem("nm_health_cards");
+        if (raw) {
+          const cards = JSON.parse(raw);
+          if (Array.isArray(cards)) {
+            const map = { active: "treatment", controlled: "remission", done: "done" };
+            let migrated = 0;
+            cards.forEach((c) => {
+              if (map[c.status]) {
+                c.status = map[c.status];
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_health_cards", JSON.stringify(cards));
+              console.log(`[boot] v9 migration: ${migrated} health cards migrated to 6-status scale`);
+            }
+          }
+        }
+        localStorage.setItem("nm_health_status_v2_done", "1");
+      } catch (e) {
+        console.error("[boot] v9 migration failed:", e);
       }
     }
   }
