@@ -25,6 +25,11 @@ const PAST_VERBS_RE = /\b(відкрив|купив|зробив|написав|
 // Приклади: "Хімчистка", "Олег", "Автомийка". НЕ ловить: "Хімчистка 2026", "Купити", "що робити".
 const BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\- ]{2,30}$/;
 
+// Бізнес-іменники — для чіпа "Створити проект" (rC4TO 04.05). Якщо текст
+// містить один з них (минулий час "відкрив автомийку" АБО голий іменник
+// "хімчистка") — додаємо 4-й чіп ПЕРЕД стандартним набором [Щоденник/Момент/Не зберігати].
+const BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
+
 // Явна команда — пропускаємо guard, AI правий.
 const COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|купи|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
 
@@ -68,7 +73,21 @@ export function shouldClarify(text, toolCalls, tab) {
     ? t('clarify.where_save_noun', '"{text}" — куди це записати?', { text: trimmed })
     : t('clarify.where_save_past', '"{text}" — куди це записати?', { text: trimmed });
 
+  // Контекстний 4-й чіп "Створити проект" (rC4TO 04.05) — якщо текст
+  // містить бізнес-іменник. Capitalizуємо матч як стартову назву проекту.
+  const businessMatch = trimmed.match(BUSINESS_NOUN_RE);
+  const projectChip = businessMatch ? [{
+    label: t('clarify.chip.project', 'Створити проект'),
+    action: 'clarify_save',
+    target: 'create_project',
+    payload: {
+      name: businessMatch[1].charAt(0).toUpperCase() + businessMatch[1].slice(1).toLowerCase(),
+      subtitle: '',
+    },
+  }] : [];
+
   const chips = [
+    ...projectChip,
     {
       label: t('clarify.chip.note', 'У щоденник'),
       action: 'clarify_save',
