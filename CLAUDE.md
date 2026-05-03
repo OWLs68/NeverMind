@@ -53,12 +53,39 @@
 
 **🚫 АГЕНТИ ТІЛЬКИ READ-ONLY** (UvEHE 03.05): Council-агенти заборонено редагувати файли — тільки знаходити проблеми і звітувати. У промпті завжди явно: «🚫 СУВОРА ЗАБОРОНА: Edit, Write, git commit, sed -i». Виправлення робить тільки Голова (я). Урок: 1 раз з 5 разів агент сам зробив Edit + git commit бо я попросив «old_string + new_string для Edit» — це звучало як інструкція. Тепер промпт явно блокує.
 
-**Постійні sub-агенти** (`.claude/agents/`):
-- `ios-bug-hunter` — iOS Safari quirks (rubber-band, backdrop-filter clipping, transform composite, mask-image)
-- `code-regression-finder` — порівняти робочий vs зламаний компонент (наприклад calendar vs settings)
+**Постійні sub-агенти** (`.claude/agents/`) — **8 агентів, всі read-only**:
+
+**Діагностика проблем:**
+- `ios-bug-hunter` — iOS Safari quirks (rubber-band, backdrop-filter, mask-image, transform composite)
+- `code-regression-finder` — порівняти робочий vs зламаний компонент (calendar vs settings)
 - `silent-bug-scout` — проактивний аудит проєкту, топ-5 ризиків
 
-Всі троє — read-only за конструкцією.
+**Якість коду / архітектура:**
+- `dry-violation-finder` — повторюваний код (8 add*ChatMsg → 1 helper)
+- `prompt-engineer-auditor` — суперечності/розмиті правила в `prompts.js`
+
+**Майбутнє / грошки:**
+- `supabase-migration-scout` — інвентар перед Supabase (Date.now IDs, прямий setItem, payload nm-data-changed)
+- `ai-cost-analyst` — топ найдорожчих OpenAI ендпоінтів, кеш-кандидати
+
+**Дисципліна:**
+- `doc-consistency-checker` — sync між SESSION_STATE/CHANGES/BUGS/lessons/ROADMAP/DESIGN_SYSTEM
+
+**🤖 АВТО-АКТИВАЦІЯ за тригерами** (Голова обирає агента БЕЗ запиту Романа):
+
+| Симптом / тригер-слово | Агент |
+|------------------------|-------|
+| «модалка глючить / мерехтить / зменшується / стискається» | `ios-bug-hunter` |
+| «iOS / Safari / PWA / bfcache / rubber-band / blur клипається» | `ios-bug-hunter` |
+| «X працює, Y ні» / «calendar OK, settings ні» / «раніше працювало» | `code-regression-finder` |
+| «дивись по сторонам» / `/audit` / після великої сесії перед /finish | `silent-bug-scout` |
+| «копіпаст» / «8 функцій однакові» / «винести у helper» / перед рефакторингом | `dry-violation-finder` |
+| «AI галюцинує / створив дубль / не зрозумів» / «промпт нечіткий» / нова tool | `prompt-engineer-auditor` |
+| «Supabase» / «backend» / «синхронізація» / «multi-device» / «офлайн» | `supabase-migration-scout` |
+| «дорого» / «OpenAI bill» / «витрати ростуть» / «кешувати» | `ai-cost-analyst` |
+| перед `/finish` / `/audit` / «перевір документи» / «синхронізуй» | `doc-consistency-checker` |
+
+**Правило:** коли симптом матчить тригер — Голова викликає агента, потім синтезує. Не чекає `/команди` від Романа.
 
 **Знімок чотирьох ітерацій з Gemini** (171 рядок, від простої ідеї до бюрократичного інструменту і назад) → `_archive/COUNCIL_CONCEPT.md`. Цінний роздум як ілюстрація принципу «менше = більше».
 
