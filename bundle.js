@@ -8487,14 +8487,19 @@ ${recent}`;
     return [...set].sort();
   }
   function addNoteFromInbox(text, category, folder = null, source = "inbox") {
+    if (!text || typeof text !== "string" || !text.trim()) {
+      console.warn("[addNoteFromInbox] skip empty/invalid text:", text);
+      return false;
+    }
     const notes = getNotes();
     const rawFolder = folder || (category === "idea" ? t("notes.folder_ideas", "\u0406\u0434\u0435\u0457") : t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
     const normalized = normalizeFolderName(rawFolder);
     const existingFolders = [...new Set(notes.map((n) => n.folder).filter(Boolean))];
     const match = existingFolders.find((f) => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
     const resolvedFolder = match || normalized;
-    notes.unshift({ id: Date.now(), text, folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift({ id: Date.now(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
     saveNotes(notes);
+    return true;
   }
   function openAddNote() {
     editingNoteId = null;
@@ -8603,6 +8608,12 @@ ${recent}`;
     const content = document.getElementById("notes-content");
     const empty = document.getElementById("notes-empty");
     const header = document.getElementById("notes-folder-header");
+    const validNotes = notes.filter((n) => n && typeof n.text === "string" && n.text.trim().length > 0);
+    if (validNotes.length !== notes.length) {
+      console.warn("[renderNotes] cleanup:", notes.length - validNotes.length, "invalid notes removed");
+      saveNotes(validNotes);
+      notes = validNotes;
+    }
     if (notes.length === 0) {
       content.innerHTML = "";
       empty.style.display = "block";
@@ -8658,7 +8669,8 @@ ${recent}`;
       const meta = getFolderMeta(folder);
       const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
       const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(folder);
-      const preview = items[0].text.length > 60 ? items[0].text.substring(0, 60) + "\u2026" : items[0].text;
+      const firstText = items[0] && typeof items[0].text === "string" ? items[0].text : "";
+      const preview = firstText.length > 60 ? firstText.substring(0, 60) + "\u2026" : firstText;
       const safeFolder = escapeHtml(folder).replace(/'/g, "\\'");
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, "_");
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">\u{1F4CC}</div>' : "";
