@@ -2604,6 +2604,8 @@ ${lines.join("\n")}`;
     if (titleEl) titleEl.textContent = title;
     if (delBtn) delBtn.style.display = showDelete ? "block" : "none";
     modal.style.display = "flex";
+    const overlay = document.getElementById("health-card-modal-overlay");
+    if (overlay) overlay.style.display = "block";
     const scrollY = window.scrollY;
     document.body.dataset.scrollLock = String(scrollY);
     document.body.style.position = "fixed";
@@ -2619,6 +2621,8 @@ ${lines.join("\n")}`;
   function closeHealthCardModal() {
     const modal = document.getElementById("health-card-modal");
     if (modal) modal.style.display = "none";
+    const overlay = document.getElementById("health-card-modal-overlay");
+    if (overlay) overlay.style.display = "none";
     const savedY = parseInt(document.body.dataset.scrollLock || "0", 10);
     document.body.style.position = "";
     document.body.style.top = "";
