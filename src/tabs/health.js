@@ -14,6 +14,7 @@ import { getHealthChatSystem } from '../ai/prompts.js';
 import { renderChips } from '../owl/chips.js';
 import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
+import { setupModalSwipeClose } from './tasks.js';
 import { saveTasks } from './tasks.js';
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
 import { currentTab } from '../core/nav.js';
@@ -1038,6 +1039,8 @@ function _showHealthCardModal(title, showDelete) {
   document.body.style.top = `-${scrollY}px`;
   document.body.style.left = '0';
   document.body.style.right = '0';
+  // Swipe-to-close на картці модалки (як у task-modal).
+  setupModalSwipeClose(document.querySelector('#health-card-modal > div:last-child'), closeHealthCardModal);
   // iOS fix — фокус на перше поле з затримкою
   setTimeout(() => {
     const nameEl = document.getElementById('health-card-name');
