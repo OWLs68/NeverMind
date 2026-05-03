@@ -122,6 +122,18 @@ function _setupSwipeClose(modal) {
   }, { passive: true });
 }
 
+// Блокуємо iOS rubber-band bounce на всіх scroll-контейнерах модалки —
+// інакше при свайпі вгору на top scroll body+overlay стискаються.
+function _containOverscroll(modal) {
+  modal.querySelectorAll('*').forEach(el => {
+    const s = el.getAttribute('style') || '';
+    if (/overflow-y\s*:\s*(auto|scroll)/i.test(s) && !el._overscrollContained) {
+      el.style.overscrollBehavior = 'contain';
+      el._overscrollContained = true;
+    }
+  });
+}
+
 function _registerModal(modal) {
   if (!modal || _registered.has(modal)) return;
   _registered.add(modal);
@@ -134,6 +146,9 @@ function _registerModal(modal) {
 
   // Універсальний swipe-close (якщо tasks.js не зареєстрував)
   _setupSwipeClose(modal);
+
+  // Блокуємо iOS bounce на скрол-контейнерах
+  _containOverscroll(modal);
 
   syncOverlay(modal); // початковий стан
   new MutationObserver(() => syncOverlay(modal))
