@@ -41,7 +41,7 @@ import {
   HEALTH_STATUS_DEFS,
 } from '../tabs/health.js';
 import { processUniversalAction } from '../tabs/habits.js';
-import { currentTab } from '../core/nav.js';
+import { currentTab, switchTab } from '../core/nav.js';
 import {
   createFinCategory,
   updateFinCategory,
@@ -59,7 +59,7 @@ import {
   formatMoney,
 } from '../tabs/finance.js';
 import { addToTrash } from '../core/trash.js';
-import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
+import { getProjects, saveProjects, renderProjects, createProjectProgrammatic, startProjectInboxInterview } from '../tabs/projects.js';
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -501,10 +501,35 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
     // 4. Project-specific CRUD (кроки, рішення, метрики, ресурси, темп, ризики)
     if (_handleProjectTool(name, args, addMsg)) { any = true; continue; }
 
+    // 4.5. create_project — раніше тільки Inbox (rC4TO 04.05): тепер з будь-якого
+    // чату. Без цього у Finance/Notes/etc. dispatcher silent skip → typing висне.
+    if (name === 'create_project') {
+      const projectName = args.name || originalText || 'Без назви';
+      const newProject = createProjectProgrammatic(projectName, args.subtitle || '');
+      addMsg('agent', `✅ Проект "${newProject.name}" створено`);
+      // Якщо юзер не у Inbox — переходимо туди, щоб interview-flow з AI запустився у Inbox-чаті.
+      if (currentTab !== 'inbox') {
+        setTimeout(() => { try { switchTab('inbox'); } catch(e) {} }, 400);
+      }
+      setTimeout(() => { try { startProjectInboxInterview(newProject.name, newProject.subtitle); } catch(e) {} }, 700);
+      any = true;
+      continue;
+    }
+
     // 5. Решта CRUD через universal action
     const acts = _toolCallToUniversalAction(name, args);
+    let universalHandled = false;
     for (const a of acts) {
-      if (processUniversalAction(a, originalText, addMsg)) any = true;
+      if (processUniversalAction(a, originalText, addMsg)) { any = true; universalHandled = true; }
+    }
+
+    // 6. SILENT FALLBACK GUARD (rC4TO 04.05) — якщо tool НЕ оброблений жодним з шарів,
+    // typing-індикатор у chat-handler'ах висне вічно (бо прибирається при наступному addMsg).
+    // Той самий патерн що з chips silent failure (8a05ada). Завжди вставляти повідомлення.
+    if (acts.length === 0 || !universalHandled) {
+      console.warn('[tool-dispatcher] Unknown tool — silent failure prevented:', name, args);
+      addMsg('agent', `⚠️ Не зміг виконати "${name}". Спробуй переформулювати або в Inbox.`);
+      any = true;
     }
   }
   return any;
