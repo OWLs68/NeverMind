@@ -19685,7 +19685,14 @@ ${logLines}
   }
   function openSettings() {
     const overlay = document.getElementById("settings-overlay");
-    overlay.classList.add("open");
+    const bg = document.getElementById("settings-overlay-bg");
+    if (bg) bg.style.display = "block";
+    overlay.style.display = "flex";
+    const panel = document.getElementById("settings-panel-el");
+    if (panel) requestAnimationFrame(() => {
+      panel.style.transform = "scale(1)";
+      panel.style.opacity = "1";
+    });
     try {
       updateErrorLogBtn();
     } catch (e) {
@@ -19762,7 +19769,17 @@ ${logLines}
   function closeSettings() {
     const memory = document.getElementById("input-memory").value;
     localStorage.setItem("nm_memory", memory);
-    document.getElementById("settings-overlay").classList.remove("open");
+    const overlay = document.getElementById("settings-overlay");
+    const bg = document.getElementById("settings-overlay-bg");
+    const panel = document.getElementById("settings-panel-el");
+    if (panel) {
+      panel.style.transform = "scale(0)";
+      panel.style.opacity = "0";
+    }
+    setTimeout(() => {
+      if (overlay) overlay.style.display = "none";
+      if (bg) bg.style.display = "none";
+    }, 300);
   }
   function setLanguage(lang) {
     const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
@@ -19913,7 +19930,7 @@ ${logLines}
     localStorage.setItem("nm_settings", JSON.stringify(settings));
     if (memory) localStorage.setItem("nm_memory", memory);
     updateKeyStatus(!!key);
-    setTimeout(() => document.getElementById("settings-overlay").classList.remove("open"), 600);
+    setTimeout(() => closeSettings(), 600);
   }
   function exportData() {
     const data = {};
