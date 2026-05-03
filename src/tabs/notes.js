@@ -57,15 +57,6 @@ _migrateFoldersApostrophes();
 export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
 export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
 
-// UvEHE 03.05: re-render Notes коли nm_notes змінюється з будь-якого джерела
-// (chip-save через applyClarifyChoice, AI tool dispatch у Inbox-чаті, тощо).
-// Раніше renderNotes викликався тільки з UI-saves всередині notes.js.
-window.addEventListener('nm-data-changed', e => {
-  if (e.detail === 'notes' && currentTab === 'notes') {
-    try { renderNotes(); } catch(err) {}
-  }
-});
-
 // Контекст нотаток для AI (принцип "один мозок")
 // OWL бачить ЩО у юзера в нотатках — щоб не вигадувати "ти писав нотатку про Х" коли її немає
 // Показує: кількість + розбивка по папках + 5 останніх нотаток з ID і коротким текстом
