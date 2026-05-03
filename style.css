@@ -808,7 +808,8 @@ body {
    Перед класом фіксуємо max-height у inline-style — інакше transition від auto не працює.
    Висота сповзає до 0 → потім renderNotes — нема race зі стрибком чіпів зверху. */
 .note-item-wrap.swipe-deleting,
-.folder-item-wrap.swipe-deleting {
+.folder-item-wrap.swipe-deleting,
+.health-card-wrap.swipe-deleting {
   transition: opacity 0.25s ease, max-height 0.28s ease, margin 0.28s ease;
   opacity: 0;
   max-height: 0 !important;
