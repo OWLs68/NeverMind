@@ -716,7 +716,12 @@ export function applyTheme(tab) {
 // === SETTINGS ===
 export function openSettings() {
   const overlay = document.getElementById('settings-overlay');
-  overlay.classList.add('open');
+  const bg = document.getElementById('settings-overlay-bg');
+  if (bg) bg.style.display = 'block';
+  overlay.style.display = 'flex';
+  // calendar-pattern: rAF → transform:scale(1) + opacity:1 для slide-in анімації
+  const panel = document.getElementById('settings-panel-el');
+  if (panel) requestAnimationFrame(() => { panel.style.transform = 'scale(1)'; panel.style.opacity = '1'; });
   try { updateErrorLogBtn(); } catch(e) {}
   try { window.renderUsageMeter && window.renderUsageMeter(); } catch(e) {}
 
@@ -796,7 +801,15 @@ export function closeSettings() {
   // Save memory edits before closing
   const memory = document.getElementById('input-memory').value;
   localStorage.setItem('nm_memory', memory);
-  document.getElementById('settings-overlay').classList.remove('open');
+  // calendar-pattern: scale(0)+opacity:0 → setTimeout 300ms → display:none
+  const overlay = document.getElementById('settings-overlay');
+  const bg = document.getElementById('settings-overlay-bg');
+  const panel = document.getElementById('settings-panel-el');
+  if (panel) { panel.style.transform = 'scale(0)'; panel.style.opacity = '0'; }
+  setTimeout(() => {
+    if (overlay) overlay.style.display = 'none';
+    if (bg) bg.style.display = 'none';
+  }, 300);
 }
 
 function setLanguage(lang) {
@@ -980,7 +993,7 @@ function saveSettings() {
   if (memory) localStorage.setItem('nm_memory', memory);
 
   updateKeyStatus(!!key);
-  setTimeout(() => document.getElementById('settings-overlay').classList.remove('open'), 600);
+  setTimeout(() => closeSettings(), 600);
 }
 
 function exportData() {

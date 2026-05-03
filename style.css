@@ -460,47 +460,10 @@ body {
 }
 
 /* === SETTINGS OVERLAY === */
-#settings-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 16px 16px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  /* UvEHE 03.05: background+blur тут (не в окремому .settings-backdrop)
-     щоб уникнути iOS Safari quirk де backdrop-filter клипається при
-     transform/margin transition на settings-panel sibling. Той самий
-     патерн як у решти модалок. */
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-#settings-overlay.open {
-  opacity: 1;
-  pointer-events: all;
-}
-.settings-panel {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 480px;
-  background: rgba(255,255,255,0.30);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
-  border: 1.5px solid rgba(255,255,255,0.5);
-  border-radius: 24px;
-  padding: 12px 0 0;
-  margin-bottom: -100%;
-  transition: margin-bottom 0.4s cubic-bezier(0.32,0.72,0,1);
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* UvEHE 03.05: settings переведено на calendar-pattern — display:none/flex
+   перемикається через JS, transform:scale на panel замість margin-bottom.
+   Background+blur — на top-level sibling #settings-overlay-bg. */
+/* .settings-panel — layout/blur/transform/transition винесено інлайн (calendar-pattern). */
 .settings-scroll {
   overflow-y: auto;
   flex: 1;
@@ -514,9 +477,6 @@ body {
   /* Плавний fade зверху у зоні padding-top — перша картка не перекривається */
   mask-image: linear-gradient(to bottom, transparent 0, black 20px);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 20px);
-}
-#settings-overlay.open .settings-panel {
-  margin-bottom: 0;
 }
 .settings-handle {
   width: 36px; height: 4px;
