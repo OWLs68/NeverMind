@@ -507,9 +507,11 @@ body {
 /* Section group */
 .s-group {
   margin: 0 14px 10px;
-  background: rgba(255,255,255,0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  /* UvEHE 03.05: backdrop-filter:blur(16px) видалено — 13 .s-group вкладених
+     у panel з blur(32px) створювали стопку nested composite layers. iOS Safari
+     re-rasterize всю стопку при scroll/transform → subpixel rounding → панель
+     візуально стискається. Solid fill замість translucent — стабільно. */
+  background: rgba(255,255,255,0.92);
   border-radius: 18px;
   border: 1.5px solid rgba(255,255,255,0.75);
   overflow: hidden;
