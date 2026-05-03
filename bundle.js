@@ -1700,6 +1700,111 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/ui/swipe-delete.js
+  function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
+    if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
+    wrapEl._swipeOpenBound = true;
+    const openRatio = opts.openRatio || 0.5;
+    const binBg = opts.binBgColor || "239,68,68";
+    let startX = 0, startY = 0, dx = 0, locked = false;
+    let bin = null;
+    const ensureBin = () => {
+      if (bin) return;
+      const w = Math.round(wrapEl.offsetWidth * openRatio);
+      bin = document.createElement("button");
+      bin.className = "swipe-open-bin";
+      bin.setAttribute("aria-label", t("swipe.delete_button", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438"));
+      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(${binBg},0) 0%, rgba(${binBg},0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
+      bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      bin.addEventListener("click", (e) => {
+        e.stopPropagation();
+        try {
+          onDelete();
+        } catch (err) {
+          console.error("[swipe-delete] onDelete error:", err);
+        }
+      });
+      wrapEl.appendChild(bin);
+    };
+    const removeBin = () => {
+      if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
+      bin = null;
+    };
+    const getOpenOffset = () => -Math.round(wrapEl.offsetWidth * openRatio);
+    const setOffset = (offset, animate = false) => {
+      cardEl.style.transition = animate ? "transform 0.25s ease" : "";
+      cardEl.style.transform = `translateX(${offset}px)`;
+    };
+    const openSwipe = () => {
+      wrapEl._open = true;
+      ensureBin();
+      if (bin) {
+        bin.style.transition = "opacity 0.25s ease";
+        bin.style.opacity = "1";
+      }
+      setOffset(getOpenOffset(), true);
+    };
+    const closeSwipe = () => {
+      wrapEl._open = false;
+      if (bin) {
+        bin.style.transition = "opacity 0.25s ease";
+        bin.style.opacity = "0";
+      }
+      setOffset(0, true);
+      setTimeout(() => {
+        if (!wrapEl._open) removeBin();
+      }, 280);
+    };
+    cardEl.addEventListener("click", (e) => {
+      if (wrapEl._open) {
+        e.stopPropagation();
+        e.preventDefault();
+        closeSwipe();
+      }
+    }, true);
+    wrapEl.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0;
+      locked = false;
+      cardEl.style.transition = "";
+    }, { passive: true });
+    wrapEl.addEventListener("touchmove", (e) => {
+      if (locked) return;
+      const ddx = e.touches[0].clientX - startX;
+      const ddy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) {
+        locked = true;
+        return;
+      }
+      dx = ddx;
+      if (dx < 0 && !wrapEl._open && !bin) ensureBin();
+      const baseOffset = wrapEl._open ? getOpenOffset() : 0;
+      const newOffset = Math.min(0, baseOffset + dx);
+      setOffset(newOffset);
+    }, { passive: true });
+    wrapEl.addEventListener("touchend", () => {
+      if (locked) {
+        if (wrapEl._open) openSwipe();
+        else closeSwipe();
+        return;
+      }
+      const threshold = wrapEl.offsetWidth * openRatio * 0.5;
+      if (wrapEl._open) {
+        if (dx > 30) closeSwipe();
+        else openSwipe();
+      } else {
+        if (dx < -threshold) openSwipe();
+        else closeSwipe();
+      }
+    }, { passive: true });
+  }
+  var init_swipe_delete = __esm({
+    "src/ui/swipe-delete.js"() {
+      init_utils();
+    }
+  });
+
   // src/tabs/health.js
   var health_exports = {};
   __export(health_exports, {
@@ -1880,19 +1985,21 @@ ${lines.join("\n")}`;
       const nextStep = card.nextStep || "";
       const pills = (card.treatments || []).slice(0, 4);
       const isDone = card.status === "done";
-      return `<div onclick="openHealthCard(${card.id})" class="card-glass" style="cursor:pointer;opacity:${st.opacity}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-          <div style="flex:1">
-            <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
-            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
+      return `<div class="health-card-wrap" data-id="${card.id}" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:8px">
+        <div onclick="openHealthCard(${card.id})" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <div style="flex:1">
+              <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
+              <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
+            </div>
+            <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.icon} ${st.label}</div>
           </div>
-          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.icon} ${st.label}</div>
+          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
+            <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
+          </div>
+          ${!isDone && nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:${pills.length ? 7 : 0}px">\u2192 ${escapeHtml(nextStep)}</div>` : ""}
+          ${pills.length > 0 && !isDone ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${pills.map((p) => `<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(30,16,64,0.07);color:rgba(30,16,64,0.5)">${escapeHtml(p)}</div>`).join("")}</div>` : ""}
         </div>
-        <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
-          <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
-        </div>
-        ${!isDone && nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:${pills.length ? 7 : 0}px">\u2192 ${escapeHtml(nextStep)}</div>` : ""}
-        ${pills.length > 0 && !isDone ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${pills.map((p) => `<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(30,16,64,0.07);color:rgba(30,16,64,0.5)">${escapeHtml(p)}</div>`).join("")}</div>` : ""}
       </div>`;
     }).join("");
     const disclaimerHtml = `<div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:12px;padding:8px 12px;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px">
@@ -1901,6 +2008,51 @@ ${lines.join("\n")}`;
   </div>`;
     const missedBannerHtml = _buildMissedDosesBannerHtml();
     scrollEl.innerHTML = allergiesHtml + missedBannerHtml + disclaimerHtml + cardsHtml;
+    _attachHealthSwipeDelete();
+  }
+  function _animateHealthSwipeRemoval(wrap, doRemove) {
+    if (!wrap) {
+      doRemove();
+      return;
+    }
+    wrap.style.maxHeight = wrap.offsetHeight + "px";
+    setTimeout(() => wrap.classList.add("swipe-deleting"), 30);
+    setTimeout(doRemove, 310);
+  }
+  function _attachHealthSwipeDelete() {
+    document.querySelectorAll(".health-card-wrap").forEach((wrap) => {
+      const card = wrap.querySelector(".health-card-item");
+      if (!card) return;
+      const id = Number(wrap.dataset.id);
+      attachSwipeDelete(wrap, card, () => {
+        const cards = getHealthCards();
+        const removed = cards.find((c) => c.id === id);
+        if (!removed) return;
+        let removedEvent = null;
+        const eventId = removed.nextAppointment && removed.nextAppointment.eventId;
+        if (eventId) {
+          const events = getEvents();
+          const eIdx = events.findIndex((e) => e.id === eventId);
+          if (eIdx !== -1) removedEvent = events[eIdx];
+        }
+        _animateHealthSwipeRemoval(wrap, () => {
+          deleteHealthCardProgrammatic(id);
+          if (activeHealthCardId === id) activeHealthCardId = null;
+          renderHealth();
+          showUndoToast(t("health.toast.card_deleted", "\u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+            const arr = getHealthCards();
+            arr.unshift(removed);
+            saveHealthCards(arr);
+            if (removedEvent) {
+              const events = getEvents();
+              events.push(removedEvent);
+              saveEvents(events);
+            }
+            renderHealth();
+          });
+        });
+      });
+    });
   }
   function createHealthCardProgrammatic(opts) {
     const { name, subtitle, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment, status, medications, initialHistoryEntry } = opts || {};
@@ -3386,6 +3538,7 @@ ${lines.join("\n")}`;
       init_months();
       init_tasks();
       init_unread_badge();
+      init_swipe_delete();
       init_nav();
       HEALTH_STATUS_DEFS = {
         acute: { icon: "\u{1F195}", label: "\u0413\u043E\u0441\u0442\u0440\u0430", bg: "rgba(239,68,68,0.10)", color: "#ef4444", bar: "#ef4444", isActive: true, opacity: 1 },
@@ -3470,111 +3623,6 @@ ${lines.join("\n")}`;
         closeHealthExport,
         copyHealthExport
       });
-    }
-  });
-
-  // src/ui/swipe-delete.js
-  function attachSwipeDelete(wrapEl, cardEl, onDelete, opts = {}) {
-    if (!wrapEl || !cardEl || wrapEl._swipeOpenBound) return;
-    wrapEl._swipeOpenBound = true;
-    const openRatio = opts.openRatio || 0.5;
-    const binBg = opts.binBgColor || "239,68,68";
-    let startX = 0, startY = 0, dx = 0, locked = false;
-    let bin = null;
-    const ensureBin = () => {
-      if (bin) return;
-      const w = Math.round(wrapEl.offsetWidth * openRatio);
-      bin = document.createElement("button");
-      bin.className = "swipe-open-bin";
-      bin.setAttribute("aria-label", t("swipe.delete_button", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438"));
-      bin.style.cssText = `position:absolute;right:0;top:0;bottom:0;width:${w}px;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;background:linear-gradient(to right, rgba(${binBg},0) 0%, rgba(${binBg},0.95) 75%);border:none;cursor:pointer;z-index:0;font-family:inherit;border-radius:0 10px 10px 0`;
-      bin.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-      bin.addEventListener("click", (e) => {
-        e.stopPropagation();
-        try {
-          onDelete();
-        } catch (err) {
-          console.error("[swipe-delete] onDelete error:", err);
-        }
-      });
-      wrapEl.appendChild(bin);
-    };
-    const removeBin = () => {
-      if (bin && bin.parentNode) bin.parentNode.removeChild(bin);
-      bin = null;
-    };
-    const getOpenOffset = () => -Math.round(wrapEl.offsetWidth * openRatio);
-    const setOffset = (offset, animate = false) => {
-      cardEl.style.transition = animate ? "transform 0.25s ease" : "";
-      cardEl.style.transform = `translateX(${offset}px)`;
-    };
-    const openSwipe = () => {
-      wrapEl._open = true;
-      ensureBin();
-      if (bin) {
-        bin.style.transition = "opacity 0.25s ease";
-        bin.style.opacity = "1";
-      }
-      setOffset(getOpenOffset(), true);
-    };
-    const closeSwipe = () => {
-      wrapEl._open = false;
-      if (bin) {
-        bin.style.transition = "opacity 0.25s ease";
-        bin.style.opacity = "0";
-      }
-      setOffset(0, true);
-      setTimeout(() => {
-        if (!wrapEl._open) removeBin();
-      }, 280);
-    };
-    cardEl.addEventListener("click", (e) => {
-      if (wrapEl._open) {
-        e.stopPropagation();
-        e.preventDefault();
-        closeSwipe();
-      }
-    }, true);
-    wrapEl.addEventListener("touchstart", (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      dx = 0;
-      locked = false;
-      cardEl.style.transition = "";
-    }, { passive: true });
-    wrapEl.addEventListener("touchmove", (e) => {
-      if (locked) return;
-      const ddx = e.touches[0].clientX - startX;
-      const ddy = e.touches[0].clientY - startY;
-      if (Math.abs(dx) < 5 && Math.abs(ddy) > Math.abs(ddx)) {
-        locked = true;
-        return;
-      }
-      dx = ddx;
-      if (dx < 0 && !wrapEl._open && !bin) ensureBin();
-      const baseOffset = wrapEl._open ? getOpenOffset() : 0;
-      const newOffset = Math.min(0, baseOffset + dx);
-      setOffset(newOffset);
-    }, { passive: true });
-    wrapEl.addEventListener("touchend", () => {
-      if (locked) {
-        if (wrapEl._open) openSwipe();
-        else closeSwipe();
-        return;
-      }
-      const threshold = wrapEl.offsetWidth * openRatio * 0.5;
-      if (wrapEl._open) {
-        if (dx > 30) closeSwipe();
-        else openSwipe();
-      } else {
-        if (dx < -threshold) openSwipe();
-        else closeSwipe();
-      }
-    }, { passive: true });
-  }
-  var init_swipe_delete = __esm({
-    "src/ui/swipe-delete.js"() {
-      init_utils();
     }
   });
 
