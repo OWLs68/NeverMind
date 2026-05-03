@@ -28,6 +28,7 @@ import {
   createHealthCardProgrammatic,
   editHealthCardProgrammatic,
   deleteHealthCardProgrammatic,
+  updateHealthCardStatusProgrammatic,
   addMedicationToCard,
   editMedicationInCard,
   logMedicationDose,
@@ -36,6 +37,7 @@ import {
   addHealthHistoryEntry,
   renderHealth,
   getHealthCards,
+  HEALTH_STATUS_DEFS,
 } from '../tabs/health.js';
 import { processUniversalAction } from '../tabs/habits.js';
 import { currentTab } from '../core/nav.js';
@@ -173,6 +175,17 @@ function _handleHealthTool(name, args, addMsg) {
         addMsg('agent', `🗑️ Картку видалено (7 днів у кошику). ${args.comment || ''}`.trim());
       } else {
         addMsg('agent', 'Не знайшов картку для видалення.');
+      }
+      return true;
+    }
+    case 'update_health_card_status': {
+      const updated = updateHealthCardStatusProgrammatic(args.card_id, args.status);
+      if (updated) {
+        if (currentTab === 'health') renderHealth();
+        const def = HEALTH_STATUS_DEFS[args.status] || {};
+        addMsg('agent', `✓ Статус "${updated.name}": ${def.icon || ''} ${def.label || args.status}. ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов картку або невірний статус.');
       }
       return true;
     }

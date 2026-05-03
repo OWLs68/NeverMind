@@ -26,7 +26,7 @@ import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 import { renderChips } from '../owl/chips.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
-import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry } from './health.js';
+import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, updateHealthCardStatusProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry, HEALTH_STATUS_DEFS } from './health.js';
 import { monthGenitive, monthShortCaps } from '../data/months.js';
 // Unread badge (універсальна червона крапка — QV1n2 19.04 Фаза 0)
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
@@ -373,6 +373,7 @@ function _toolCallToAction(name, args) {
     case 'create_health_card': return { action: 'create_health_card', name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, initial_history_text: args.initial_history_text, comment: args.comment };
     case 'edit_health_card': return { action: 'edit_health_card', card_id: args.card_id, name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, comment: args.comment };
     case 'delete_health_card': return { action: 'delete_health_card', card_id: args.card_id, comment: args.comment };
+    case 'update_health_card_status': return { action: 'update_health_card_status', card_id: args.card_id, status: args.status, comment: args.comment };
     case 'add_medication': return { action: 'add_medication', card_id: args.card_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
     case 'edit_medication': return { action: 'edit_medication', card_id: args.card_id, med_id: args.med_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
     case 'log_medication_dose': return { action: 'log_medication_dose', card_id: args.card_id, med_name: args.med_name, comment: args.comment };
@@ -761,6 +762,15 @@ ${aiContext}`;
             addInboxChatMsg('agent', t('inbox.health.card_deleted', '🗑️ Картку видалено (7 днів у кошику). {comment}', { comment: action.comment || '' }));
           } else {
             addInboxChatMsg('agent', t('inbox.health.card_not_found_del', 'Не знайшов картку для видалення.'));
+          }
+        } else if (action.action === 'update_health_card_status') {
+          const updated = updateHealthCardStatusProgrammatic(action.card_id, action.status);
+          if (updated) {
+            if (currentTab === 'health') renderHealth();
+            const def = HEALTH_STATUS_DEFS[action.status] || {};
+            addInboxChatMsg('agent', t('inbox.health.status_updated', '✓ Статус "{name}": {icon} {label}. {comment}', { name: updated.name, icon: def.icon || '', label: def.label || action.status, comment: action.comment || '' }));
+          } else {
+            addInboxChatMsg('agent', t('inbox.health.card_not_found', 'Не знайшов картку. Спробуй ще раз.'));
           }
         } else if (action.action === 'add_medication') {
           const med = addMedicationToCard(action.card_id, {

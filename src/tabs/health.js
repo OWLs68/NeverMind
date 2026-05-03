@@ -279,6 +279,26 @@ export function editHealthCardProgrammatic(cardId, updates) {
   return next;
 }
 
+// Точкове оновлення статусу картки (для tool update_health_card_status + AI-інтерв'ю).
+// На відміну від editHealthCardProgrammatic — пише запис у history.status_change і
+// синхронізує progress по 6-статусній шкалі. Повертає оновлену картку або null.
+export function updateHealthCardStatusProgrammatic(cardId, status) {
+  if (!HEALTH_STATUS_DEFS[status]) return null;
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return null;
+  const progressMap = { acute: 20, treatment: 40, improving: 60, remission: 80, done: 100 };
+  const progress = progressMap[status] !== undefined ? progressMap[status] : (cards[idx].progress || 0);
+  const oldStatus = cards[idx].status;
+  cards[idx] = { ...cards[idx], status, progress };
+  if (oldStatus !== status) {
+    cards[idx].history = cards[idx].history || [];
+    cards[idx].history.unshift({ ts: Date.now(), type: 'status_change', text: `${_statusDef(oldStatus).label} → ${_statusDef(status).label}` });
+  }
+  saveHealthCards(cards);
+  return cards[idx];
+}
+
 // Видалити картку (з trash + синком події у trash).
 export function deleteHealthCardProgrammatic(cardId) {
   const cards = getHealthCards();

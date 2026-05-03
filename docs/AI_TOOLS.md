@@ -87,13 +87,14 @@
 | `save_routine` | Зберегти розпорядок дня для днів тижня |
 | `clarify` | Запитати уточнення (тільки коли 2+ типів неоднозначно) |
 
-### ЗДОРОВ'Я — Фаза 2 (9)
+### ЗДОРОВ'Я — Фаза 2 (10)
 
 | Tool | Коли | Параметри |
 |------|------|-----------|
-| `create_health_card` | Симптом 3+ днів АБО діагноз. Перевір дублі перед викликом | `name`, `subtitle`, `doctor`, `doctor_recommendations`, `status`, `initial_history_text` |
+| `create_health_card` | Симптом 3+ днів АБО діагноз. Перевір дублі перед викликом | `name`, `subtitle`, `doctor`, `doctor_recommendations`, `status` (6-шкала), `initial_history_text` |
 | `edit_health_card` | Оновлення існуючої | `card_id`, ... |
 | `delete_health_card` | Видалення | `card_id` |
+| `update_health_card_status` | Точкова зміна статусу ("у ремісії", "тепер хронічна", "закрив") АБО агрегатор AI-інтерв'ю | `card_id`, `status` (acute/treatment/improving/remission/chronic/done), `comment` |
 | `add_medication` | Лікар прописав препарат | `card_id`, `med_name`, `dosage`, `schedule`, `course_duration` |
 | `edit_medication` | Зміна дози/графіку | `card_id`, `med_id`, ... |
 | `log_medication_dose` | "прийняв Омез" — перевіри картки | `card_id`, `med_name` (fuzzy) |
@@ -197,3 +198,4 @@
 | 18.04.2026 | VJF2M | Реалізовано 8 з 14 UI Tools (`src/ai/ui-tools.js`): switch_tab, open_memory, open_settings, set_finance_period, open_finance_analytics, set_theme, set_owl_mode, export_health_card. 6 заблокованих (open_record/open_trash/calendar_jump_to/filter_tasks/clear_chat/toggle_owl_board) — винесено у підпункти 4.17.B (потребують нової інфраструктури). **Загалом 47 tools живих.** |
 | 19.04.2026 | JvzDi | **Видалено `set_theme`** — плацебо tool без реальної темної теми у застосунку. UI tools: 8 → **7 живих.** Загалом: 47 → **46 tools.** Також посилено правило `switch_tab` у промпті (ЖОРСТКЕ правило "відкрий X → switch_tab, НЕ save_task") і додано загальне правило ФОРМАТ ЧІПІВ для Inbox chat (чіпи як JSON блок у content, парсер `_parseContentChips` портовано з evening-chat). |
 | 19.04.2026 | 6GoDe | **`switch_tab` — три шари захисту** від TypeError (guard у `switchTab()` у `nav.js`, DOM-check у `handleUITool`, `strict:true` у definition). **Фаза 6 Здоров'я — інтерв'ю перед `create_health_card`:** нове правило у `INBOX_SYSTEM_PROMPT` що сова питає 1-3 короткі питання з чіпами (коли почалось, був у лікаря, які ліки) перед створенням нової картки. НЕ допитується при edit/history_entry. |
+| 03.05.2026 | MIeXK | **Health 6-шкала + `update_health_card_status` (Phase B Health AI-інтерв'ю).** Шкала статусів картки 3 → 6: `acute/treatment/improving/remission/chronic/done`. Старий enum `["active","controlled","done"]` у `create_health_card` + `edit_health_card` оновлено до 6 значень. Новий точковий tool `update_health_card_status(card_id, status, comment)` — для голосової зміни статусу і агрегатора AI-інтерв'ю. Handler у `tool-dispatcher.js` (чат-бари вкладок) + `inbox.js` (Inbox AI). Helper-функція `updateHealthCardStatusProgrammatic()` експортована з `health.js` (синк прогресу + автозапис у `history.status_change`). Загалом: ~60 tools (+1). Міграція legacy: `active → treatment`, `controlled → remission` через `runMigrations` v9. |
