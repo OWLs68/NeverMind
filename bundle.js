@@ -9286,14 +9286,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_habits();
       editingNoteId = null;
       _migrateFoldersApostrophes();
-      window.addEventListener("nm-data-changed", (e) => {
-        if (e.detail === "notes" && currentTab === "notes") {
-          try {
-            renderNotes();
-          } catch (err) {
-          }
-        }
-      });
       currentNotesFolder = null;
       ICON_SVG = {
         folder: _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
@@ -18779,6 +18771,22 @@ ${logLines}
     }
     window.addEventListener("storage", (e) => {
       if (e.key && e.key.startsWith("nm_")) handleSyncKey(e.key);
+    });
+    const DETAIL_TO_KEY = {
+      "inbox": "nm_inbox",
+      "tasks": "nm_tasks",
+      "habits": "nm_habits2",
+      "notes": "nm_notes",
+      "finance": "nm_finance",
+      "health": "nm_health_cards",
+      "projects": "nm_projects",
+      "evening": "nm_evening_summary"
+    };
+    window.addEventListener("nm-data-changed", (e) => {
+      const detail = e.detail;
+      if (typeof detail !== "string") return;
+      const key = DETAIL_TO_KEY[detail];
+      if (key) handleSyncKey(key);
     });
     let nmChannel = null;
     try {
