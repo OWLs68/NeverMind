@@ -798,9 +798,11 @@ function updateOwlModeUI(mode) {
 }
 
 export function closeSettings() {
-  // Save memory edits before closing
-  const memory = document.getElementById('input-memory').value;
-  localStorage.setItem('nm_memory', memory);
+  // Save memory edits before closing (null-safe — input може ще не бути в DOM)
+  try {
+    const memEl = document.getElementById('input-memory');
+    if (memEl) localStorage.setItem('nm_memory', memEl.value);
+  } catch(e) {}
   // calendar-pattern: scale(0)+opacity:0 → setTimeout 300ms → display:none
   const overlay = document.getElementById('settings-overlay');
   const bg = document.getElementById('settings-overlay-bg');
