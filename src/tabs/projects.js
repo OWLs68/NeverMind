@@ -129,6 +129,20 @@ function renderProjectsList() {
   _attachProjectsSwipeDelete();
 }
 
+// NpBmN audit fix #1: cleanup interview-state коли видаляється проект-тема.
+// Дивимось і за name (legacy) і за id (на майбутнє коли interview зберігатиме id).
+function _cleanupProjectInterviewIfMatches(deletedProject) {
+  if (!deletedProject) return;
+  const interviewName = localStorage.getItem('nm_project_interview_name') || '';
+  if (interviewName && deletedProject.name && interviewName === deletedProject.name) {
+    localStorage.removeItem('nm_project_interview_step');
+    localStorage.removeItem('nm_project_interview_name');
+    // Скидаємо й waiting_topic якщо він project_*
+    const wt = localStorage.getItem('nm_guide_waiting_topic') || '';
+    if (wt.startsWith('project_')) localStorage.removeItem('nm_guide_waiting_topic');
+  }
+}
+
 function _attachProjectsSwipeDelete() {
   document.querySelectorAll('.project-card-wrap').forEach(wrap => {
     const card = wrap.querySelector('.project-card');
@@ -141,6 +155,10 @@ function _attachProjectsSwipeDelete() {
       const predecessorId = idx > 0 ? all[idx - 1].id : null;
       if (item) addToTrash('project', item);
       saveProjects(all.filter(x => String(x.id) !== id));
+      // NpBmN audit fix #1: коли видалений проект був темою активного
+      // інтерв'ю — скидаємо стейт. Інакше OWL ставив би питання 2-5 про
+      // неіснуючий проект на наступному повідомленні (зомбі-інтерв'ю).
+      _cleanupProjectInterviewIfMatches(item);
       renderProjectsList();
       if (item) showUndoToast(t('projects.toast.deleted', 'Проект видалено'), () => {
         const projs = getProjects();

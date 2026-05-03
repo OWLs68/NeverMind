@@ -793,6 +793,9 @@ function owlGuideNextTip() {
     ];
     if (projectStep <= projectQuestions.length) {
       addInboxChatMsg('agent', projectQuestions[projectStep - 1]);
+      // NpBmN audit fix #7: оновлюємо last_ts на кожному питанні інтерв'ю,
+      // інакше після фінального Q5 cooldown=0 → одразу random tip без 3хв паузи.
+      localStorage.setItem('nm_guide_last_ts', Date.now().toString());
       if (projectStep < projectQuestions.length) {
         localStorage.setItem('nm_project_interview_step', (projectStep + 1).toString());
       } else {
@@ -814,6 +817,9 @@ function owlGuideNextTip() {
     addInboxChatMsg('agent', nextTip.msg);
     shownTips.push(nextTip.key);
     localStorage.setItem('nm_guide_shown_tips', JSON.stringify(shownTips));
+    // NpBmN audit fix #7: оновлюємо last_ts і для tip-шляху — раніше тільки
+    // gate-перевірка робила setItem, тепер єдина точка для всіх 3 типів питань.
+    localStorage.setItem('nm_guide_last_ts', Date.now().toString());
     return;
   }
 
@@ -824,6 +830,8 @@ function owlGuideNextTip() {
     shownTopics.push(nextTopic.key);
     localStorage.setItem('nm_guide_shown_topics', JSON.stringify(shownTopics));
     localStorage.setItem('nm_guide_waiting_topic', nextTopic.key);
+    // NpBmN audit fix #7: і тут теж — щоб 3хв пауза рахувалась від моменту питання.
+    localStorage.setItem('nm_guide_last_ts', Date.now().toString());
   }
 }
 
@@ -896,6 +904,12 @@ export async function saveGuideTopicAnswer(userText) {
   const waitingTopic = localStorage.getItem('nm_guide_waiting_topic');
   if (!waitingTopic) return;
   localStorage.removeItem('nm_guide_waiting_topic');
+  // NpBmN audit fix #6: блокуємо подвійне питання за один обмін.
+  // Без цього після консумації Q1 → maybeAskGuideQuestion міг (25% шанс)
+  // одразу поставити Q2 у тій самій відповіді AI. Тепер cooldown 3хв
+  // активний рахується від моменту консумації — наступний guide-tip
+  // буде не раніше ніж через 3 хв.
+  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
 
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
