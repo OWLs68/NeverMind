@@ -20503,6 +20503,30 @@ ${legacy}`;
 
   // src/app.js
   init_unread_badge();
+
+  // src/ui/modal-overlay-sync.js
+  function syncOverlay(modal) {
+    const overlay = document.getElementById(modal.id + "-overlay");
+    if (!overlay) return;
+    const visible = modal.style.display && modal.style.display !== "none";
+    overlay.style.display = visible ? "block" : "none";
+  }
+  function initModalOverlaySync() {
+    const modals = document.querySelectorAll('[id$="-modal"]');
+    modals.forEach((modal) => {
+      const overlay = document.getElementById(modal.id + "-overlay");
+      if (!overlay) return;
+      syncOverlay(modal);
+      new MutationObserver(() => syncOverlay(modal)).observe(modal, { attributes: true, attributeFilter: ["style"] });
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initModalOverlaySync);
+  } else {
+    initModalOverlaySync();
+  }
+
+  // src/app.js
   init_ui_tools();
   init_core();
 
