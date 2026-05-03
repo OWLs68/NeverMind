@@ -1558,7 +1558,8 @@ button:active,
    Це 4-й корінь scale-glitch у settings (mask-image, flex, nested
    backdrop-filter, body-lock були false leads). */
 #settings-overlay:active,
-[id$="-modal"]:active {
+[id$="-modal"]:active,
+#help-drawer-dim:active {
   transform: none;
 }
 
