@@ -20458,20 +20458,75 @@ ${legacy}`;
   init_unread_badge();
 
   // src/ui/modal-overlay-sync.js
+  var _registered = /* @__PURE__ */ new WeakSet();
   function syncOverlay(modal) {
     const overlay = document.getElementById(modal.id + "-overlay");
     if (!overlay) return;
     const visible = modal.style.display && modal.style.display !== "none";
     overlay.style.display = visible ? "block" : "none";
   }
+  function _findChildOverlay(modal) {
+    for (const child of modal.children) {
+      if (child.tagName !== "DIV") continue;
+      const s = child.getAttribute("style") || "";
+      const cls = child.className || "";
+      const hasBlur = /backdrop-filter\s*:\s*blur/i.test(s) || /modal-backdrop/.test(cls);
+      const isAbsolute = /position\s*:\s*absolute/i.test(s);
+      const hasInset = /inset\s*:\s*0/i.test(s) || /top\s*:\s*0/i.test(s) && /left\s*:\s*0/i.test(s);
+      if (hasBlur && (isAbsolute || hasInset)) return child;
+    }
+    return null;
+  }
+  function _externalizeOverlay(modal, childOverlay) {
+    if (!childOverlay) return null;
+    const overlayId = modal.id + "-overlay";
+    if (document.getElementById(overlayId)) return document.getElementById(overlayId);
+    const newOverlay = document.createElement("div");
+    newOverlay.id = overlayId;
+    const oldStyle = childOverlay.getAttribute("style") || "";
+    const oldClass = childOverlay.className || "";
+    if (/modal-backdrop/.test(oldClass)) newOverlay.className = oldClass;
+    const zIndex = (parseInt(modal.style.zIndex, 10) || 200) - 1;
+    let bg = "", blur = "";
+    const bgMatch = oldStyle.match(/background\s*:\s*([^;]+)/i);
+    if (bgMatch) bg = `background:${bgMatch[1]};`;
+    const blurMatch = oldStyle.match(/backdrop-filter\s*:\s*([^;]+)/i);
+    if (blurMatch) blur = `backdrop-filter:${blurMatch[1]};-webkit-backdrop-filter:${blurMatch[1]};`;
+    newOverlay.style.cssText = `display:none;position:fixed;inset:0;z-index:${zIndex};${bg}${blur}pointer-events:none`;
+    const onclickAttr = childOverlay.getAttribute("onclick");
+    if (onclickAttr && !modal.getAttribute("onclick")) {
+      modal.setAttribute("onclick", `if(event.target===this){${onclickAttr}}`);
+    }
+    modal.parentNode.insertBefore(newOverlay, modal);
+    childOverlay.remove();
+    return newOverlay;
+  }
+  function _registerModal(modal) {
+    if (!modal || _registered.has(modal)) return;
+    _registered.add(modal);
+    if (!document.getElementById(modal.id + "-overlay")) {
+      const child = _findChildOverlay(modal);
+      if (child) _externalizeOverlay(modal, child);
+    }
+    syncOverlay(modal);
+    new MutationObserver(() => syncOverlay(modal)).observe(modal, { attributes: true, attributeFilter: ["style"] });
+  }
   function initModalOverlaySync() {
-    const modals = document.querySelectorAll('[id$="-modal"]');
-    modals.forEach((modal) => {
-      const overlay = document.getElementById(modal.id + "-overlay");
-      if (!overlay) return;
-      syncOverlay(modal);
-      new MutationObserver(() => syncOverlay(modal)).observe(modal, { attributes: true, attributeFilter: ["style"] });
-    });
+    document.querySelectorAll('[id$="-modal"]').forEach(_registerModal);
+    new MutationObserver((records) => {
+      for (const r of records) {
+        r.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return;
+          if (node.id && node.id.endsWith("-modal")) {
+            _registerModal(node);
+          } else {
+            if (node.querySelectorAll) {
+              node.querySelectorAll('[id$="-modal"]').forEach(_registerModal);
+            }
+          }
+        });
+      }
+    }).observe(document.body, { childList: true, subtree: false });
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initModalOverlaySync);
