@@ -4,11 +4,61 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-03 (сесія **4xJ7n** — iPhone smoke-test v563+: 2 критичні баги (B-118 back button у Projects + B-119 chips clipped в Inbox) — обидва закрито. UI fix модалки «Новий стан» Health: зелена палітра → бурштин. Прибрано блок Статус з модалки створення (default 'active'). ROADMAP Блок 2 — нова велика фіча Health AI-інтерв'ю з шкалою 6 статусів. Council 5 агентів — огляд плану clarify-guard для Tasks: 6 серйозних дірок (`tasks` відсутній у `_CLARIFY_ADDMSG`, `save_task` у SUSPICIOUS_TOOLS = false positive у Tasks). CACHE `nm-20260503-0030`, v565+).
+**Оновлено:** 2026-05-03 (сесія **MIeXK** — Health AI-інтерв'ю реалізовано (3 фази): шкала статусів 3→6 з міграцією legacy, новий tool `update_health_card_status`, детерміноване 3-крокове опитування з чіпами після створення картки. Cross-tab нотифікація — якщо юзер не у Здоров'ї, інтерв'ю чекає у Health-чаті з червоною крапкою. Гілка `claude/start-session-MIeXK`, CACHE `nm-20260503-0713`, v568+ після auto-merge).
 
 ---
 
-## 🔧 Поточна сесія 4xJ7n — iPhone smoke-test + B-118/B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю (03.05.2026)
+## 🔧 Поточна сесія MIeXK — Health AI-інтерв'ю Phase A+B+C (03.05.2026)
+
+### Зроблено
+
+1. **Phase A — 6-статусна шкала** (`7b8fba4`): константа `HEALTH_STATUS_DEFS` у `health.js` з icon/label/color/bg/bar/isActive для `acute/treatment/improving/remission/chronic/done`. Helper `_statusDef()` + `_isActiveHealthStatus()` замінили 2 копії `statusColors`. Workspace picker — 6 кнопок з `flex-wrap` (без фіолету: `chronic` = темно-індиго `#1e1040`). `setHealthCardStatus`: progress map по 6 значеннях + автозапис у `history.status_change`. Boot.js v9 міграція legacy: `active → treatment`, `controlled → remission`, `done → done` через прапор `nm_health_status_v2_done`.
+2. **Phase B — `update_health_card_status` tool** (`8e41fc0`): декларація у `INBOX_TOOLS` + handler у `tool-dispatcher.js _handleHealthTool` (для 7 чат-барів вкладок) + `inbox.js sendToAI` (для Inbox AI). Helper `updateHealthCardStatusProgrammatic()` експортовано з `health.js` (синк прогресу + `status_change` у history). Enum `["active","controlled","done"]` у `create_health_card` + `edit_health_card` оновлено до 6 значень. `docs/AI_TOOLS.md`: Health-таблиця 9→10, історія змін.
+3. **Phase C — 3-крокове AI-інтерв'ю з чіпами** (`fa1d569`): `startHealthInterview(card)` пише питання+чіпи у Health-чат після створення картки. Тригер: `saveHealthCardFromModal` (create) + `tool-dispatcher.js create_health_card` + `inbox.js create_health_card`. 3 кроки: «Що зараз?» (recent/treating/chronic/skip) → «Лікар?» (doctor_yes/no/self/skip) → «Симптоми?» (severe/moderate/mild/skip) → агрегація через матрицю `_aggregateInterviewStatus` → виклик `updateHealthCardStatusProgrammatic`. Якщо юзер не у Health → червона крапка над `health-send-btn` + повідомлення-вказівник у поточному чаті. State у `nm_health_interview_pending`, чіпи зберігаються у `nm_chat_health` (saveChatMsg + restoreChatUI розширено опціональним `chips` параметром). Новий action `health_interview` у `chips.js handleChipClick` через dynamic import `applyHealthInterviewChoice` (уникнення circular dependency).
+
+### Обговорено (без виконання)
+
+- **AI генерує питання vs детермінований код** — обрано детермінований (швидко, передбачувано, без галюцинацій). Phase 2 mUpS8 `applyClarifyChoice` уже використовує цей патерн.
+- **Тригер 10 сек після save** — замінено на 300 мс. Простіше, юзер одразу бачить інтерв'ю при відкритті Health-чату.
+- **Якщо юзер ігнорить** — інтерв'ю просто висить у Health-чаті (Роман: «не зникає поки не відкриє»). State у localStorage переживає reload.
+
+### Ключові рішення
+
+- **Cross-tab notification без push** — використали існуючу `showUnreadBadge('health')` + повідомлення у поточному чаті «Пройди опитування у Здоровʼї». Не вигадували нову систему.
+- **6 статусів замість 5** — Роман додав `'improving'` (📈 Покращення) між treatment і remission для відображення динаміки.
+- **Chronic = темно-індиго `#1e1040`** замість фіолету (заборонений колір — Роман).
+- **saveChatMsg + restoreChatUI розширено `chips`** — універсально для всіх чат-барів, не тільки Health. Готова інфраструктура для майбутніх інтерв'ю в інших вкладках.
+- **Tasks без chips** — addTaskBarMsg сигнатура без 4-го параметра, restoreChatUI пропускає chips для Tasks (Phase 3 mUpS8 інтеграція окремо).
+
+### Інциденти
+
+- **pre-commit-testing-log хук блокував комміт** двічі — `git add ... && git commit` робив `commit` до того як `add` зареєструвався у staged для хука. Розв'язалось окремими командами.
+- **esbuild локально не встановлено** — нормально, CI збирає. `node --check` + `check-imports.js` чисті.
+- Без `git reset` / `git push --force` / skip hooks.
+
+### Конфлікти/суперечності
+
+- Жодних — Роман схвалив план A→B→C і детермінований підхід без сперечань після того як побачив переваги (швидко, передбачувано, патерн з clarify_save).
+
+### Відкладене
+
+- **Tasks інтеграція clarify-guard (Phase 3 mUpS8)** — план Council готовий, чекає UX-рішення про save_task.
+- **rAF fix B-119 розкочення на 6 інших чатів** — після iPhone-підтвердження що Inbox OK.
+- **Health interview iPhone smoke-test** — коли деплой v568+ пройде. 8 сценаріїв у TESTING_LOG.
+- **Pattern Learning Engine (Phase 3 mUpS8)** — горизонтальний шар.
+- **B-117 табло звичок stale** — потребує live DevTools.
+
+### Метрики
+
+- Коміти: `7b8fba4` (Phase A) → `8e41fc0` (Phase B) → `fa1d569` (Phase C) = 3 фіч-коміти + 1 ще буде на CACHE bump (Phase D)
+- Версії: v567 (start) → v568+ (після auto-merge Phase D)
+- CACHE_NAME: `nm-20260503-0030` → `nm-20260503-0713` (1 bump)
+- Build: `node --check` + `check-imports.js` чисті, esbuild у CI
+- Гілка: `claude/start-session-MIeXK`
+
+---
+
+## 🔧 Сесія 4xJ7n — iPhone smoke-test + B-118/B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю (03.05.2026)
 
 ### Зроблено
 1. **B-118 ✅ back button у Projects elevation** (`59067ce`) — `index.html:174` (workspace проекту). `closeProjectWorkspace` функція OK і експортована, але back-кнопка без z-index/hit-area → OWL board overlay перехоплював клік. Фікс: `position:relative; z-index:10; padding:8px 4px; margin:-8px -4px 4px -4px` = 44px hit-area за Apple HIG.
@@ -98,10 +148,14 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
+**✅ ЗРОБЛЕНО У MIeXK 03.05** — Health AI-інтерв'ю Phase A+B+C (3 коміти `7b8fba4`/`8e41fc0`/`fa1d569` + cache bump). Шкала статусів 3→6, новий tool `update_health_card_status`, детерміноване 3-крокове опитування з чіпами після створення картки. Cross-tab нотифікація через `showUnreadBadge`. **Перевірити після деплою v568+:** 17 сценаріїв у TESTING_LOG секція v568+ (Phase A — 5, Phase B — 3, Phase C — 8 включно з cross-tab з Inbox).
+
 **🚨 iPhone smoke-test v565+ продовжити** — 17 пунктів TESTING_LOG.md секція v559+ (clarify-guard у 7 чатах). У 4xJ7n зробили пункт 0 (Inbox «Відкрив автомийку» → guard спрацював, але чіпи були візуально обрізані — це ❌ B-119 закрито). **ПЕРЕВІРИТИ ПІСЛЯ ДЕПЛОЮ v566+:**
    1. Inbox чат → «Відкрив автомийку» → 3 чіпи [У щоденник] [Як момент] [Не зберігати] **повністю видимі**
    2. Проекти → відкрити «Хімчистка» → тап «< Проекти» → повернувся на список (B-118)
    3. Health → «+» → модалка «Новий стан» → кнопка «Зберегти» **бурштинова**, **немає блоку Статус**
+
+**⚠️ Архівація mUpS8** — у поточному файлі 3 активних блоки `## 🔧 Сесія` (MIeXK + 4xJ7n + mUpS8). Норма ≤2 → у наступному `/start` Step 2.5 архівувати найстарший (mUpS8) у `_archive/SESSION_STATE_archive.md`.
 
 **🚀 Tasks інтеграція clarify-guard (Phase 3 з mUpS8)** — НЕ робити поки не пройде smoke-test 6 існуючих чатів (Council Стратег). Оновлений план з 6 кроками (з огляду Council 4xJ7n):
 1. **`chips.js`** — додати `tasks: (r,t) => addTaskBarMsg(r,t)` у `_CLARIFY_ADDMSG` мапу (без цього чіпи у Tasks-чаті йдуть в Inbox-чат!)
@@ -114,8 +168,6 @@
 **🐛 Розкочення rAF фіксу B-119 на 6 інших чатів** — після підтвердження що Inbox OK, перевірити `addNotesChatMsg` / `addHealthChatMsg` тощо чи мають той самий синхронний scrollTop без rAF.
 
 **🟡 B-117 — табло звичок не оновлюється після виконання звички.** Корінь: `inbox-board.js:1185` має SAFETY NET 60хв тільки для Inbox; `proactive.js:1091` (tab-boards) — НЕ має, лише 5хв-кеш блокує. Потребує live DevTools: `localStorage.nm_unified_board` для tab=tasks + `_boardGenerating` стан. **Опції фіксу:** (в) інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js` — найбезпечніше.
-
-**🚀 ROADMAP Блок 2 — Health AI-інтерв'ю (нова фіча у 4xJ7n).** Після створення картки здоров'я — 3-крокове AI-інтерв'ю з чіпами (стан / лікар / симптоми) → виставляє точний статус через новий tool `update_health_card_status`. Розширена шкала 6 статусів: 🆕 Гостра / 💊 Лікування / 📈 Покращення / 🟢 Контроль / ♾️ Хронічна / ✅ Завершено. Перший юзкейс концепції «AI пише першим» з mUpS8.
 
 **🚀 Phase 3 Pattern Learning Engine (з mUpS8)** — поріг 7-10 виборів = вивчений патерн, `nm_clarify_patterns`, decay 90 днів, мікро-індикатор «✨ за паттерном», reset UI у «Я». Не блокується Tasks інтеграцією (горизонтальний шар).
 
