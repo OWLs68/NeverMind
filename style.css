@@ -470,10 +470,10 @@ body {
   padding-top: 20px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
   -webkit-overflow-scrolling: touch;
-  /* UvEHE 03.05: блокуємо iOS rubber-band bounce за межі скрол-контейнера —
-     інакше при свайпі вгору на top scroll-контейнера body+overlay візуально
-     стискаються (включно з backdrop-filter:blur). */
-  overscroll-behavior: contain;
+  /* UvEHE 03.05: повністю блокуємо iOS rubber-band bounce — `contain` дозволяє
+     bounce у самому скрол-контейнері (контент потягується + mask-image fade =
+     ілюзія що модалка зменшується). `none` блокує bounce повністю. */
+  overscroll-behavior: none;
   /* Плавний fade зверху у зоні padding-top — перша картка не перекривається */
   mask-image: linear-gradient(to bottom, transparent 0, black 20px);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 20px);
