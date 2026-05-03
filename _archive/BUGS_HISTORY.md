@@ -8,6 +8,19 @@
 
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
+### Сесія 4xJ7n (03.05.2026) — iPhone smoke-test + B-118/B-119 фікси
+
+| ID | Файл | Симптом | Корінь + фікс |
+|---|---|---|---|
+| **B-118** ✅ | `index.html:174` (back-link у workspace проекту). Знайдено 4xJ7n iPhone v563 21:40. | Кнопка «< Проекти» у workspace не працює — тап нічого не робить, юзер залипає у картці проекту. | `closeProjectWorkspace` експортована OK і функція тривіальна. Корінь у CSS: back-кнопка без `position:relative; z-index:N`, hit-area тільки 16×16 (svg) + текст. OWL board overlay перехоплював клік. Фікс: `position:relative; z-index:10; padding:8px 4px; margin:-8px -4px 4px -4px` (44px hit-area Apple HIG без зсуву layout). Коміт `59067ce`. CACHE bump → `nm-20260502-2200`. |
+| **B-119** ✅ | `src/tabs/inbox.js:96` (`addInboxChatMsg`). Знайдено 4xJ7n iPhone v563 21:52. | Чіпи clarify-guard ([У щоденник]/[Як момент]/[Не зберігати]) рендеряться у Inbox чаті але візуально обрізаються знизу контейнером — видно тільки верхівку. | `el.scrollTop = el.scrollHeight` синхронно після `el.appendChild(chipsRow)`. iOS Safari не встигає порахувати висоту нового chipsRow до scrollTop. Фікс: подвійний scrollTop (sync + `requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })`) — рекомендований патерн для iOS. Аналогічну регресію може мати 6 інших чатів — окремо перевірити. Коміт `0b4ed28`. |
+
+### Сесія mUpS8 (02.05.2026) — Universal clarify-guard + Pattern Learning roadmap + B-116
+
+| ID | Файл | Симптом | Корінь + фікс |
+|---|---|---|---|
+| **B-116** ✅ | `src/tabs/projects.js` (`renderProjectsList`). Знайдено mUpS8 02.05. | Картка проекту не мала способу видалення — ні свайпа, ні кнопки. Функціонал відсутній цілком (grep `attachSwipeDelete\|deleteProject\|delete-btn` дав 0 результатів). | Додано свайп вліво → корзина з 5-сек відкатом (як у Notes/Inbox). Pattern: `<div class="project-card-wrap" data-id="${p.id}">` обгортка, всередині `<div class="card-glass project-card">`. Імпортовано `attachSwipeDelete`, `addToTrash`, `showUndoToast`. Нова функція `_attachProjectsSwipeDelete()` викликається після кожного `renderProjectsList`. Callback: `addToTrash('project', item)` + `saveProjects(filtered)` + `showUndoToast` з restore через `splice` назад на оригінальну позицію. Уніфіковано з 7 іншими вкладками. Коміт `fdf370f`. CACHE bump → `nm-20260502-1900`. |
+
 ### Сесія bOqdI (02.05.2026) — Council механізм + 3 архітектурні фікси
 
 Конкретні B-XX баги не закривала. **3 архітектурні борги без B-XX закриті** (знайшов перший Council 5 агентів):

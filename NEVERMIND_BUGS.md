@@ -31,22 +31,13 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (4xJ7n + mUpS8). Старіші (BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) у 4xJ7n 03.05.2026 Phase 3._
+_Зберігаються закриті у 2 останніх активних сесіях (MIeXK + iWyjU). Старіші (4xJ7n + mUpS8 + BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_Сесія **4xJ7n** (03.05.2026) — iPhone smoke-test v563+: знайдено + закрито 2 🔴 bugs (B-118 + B-119), UI-фікс Health-модалки._
+_Сесія **MIeXK** (03.05.2026) — Health AI-інтерв'ю Phase A+B+C: 0 закритих багів (тільки фічі), знайдено B-120+B-121 (відкриті, у 🟡 секції)._
 
-| ID | Файл | Симптом | Корінь + фікс |
-|---|---|---|---|
-| **B-118** ✅ | `index.html:174` (back-link у workspace проекту). Знайдено 4xJ7n iPhone v563 21:40. | Кнопка «< Проекти» у workspace не працює — тап нічого не робить, юзер залипає у картці проекту. | `closeProjectWorkspace` експортована OK і функція тривіальна. Корінь у CSS: back-кнопка без `position:relative; z-index:N`, hit-area тільки 16×16 (svg) + текст. OWL board overlay перехоплював клік. Фікс: `position:relative; z-index:10; padding:8px 4px; margin:-8px -4px 4px -4px` (44px hit-area Apple HIG без зсуву layout). Коміт `59067ce`. CACHE bump → `nm-20260502-2200`. |
-| **B-119** ✅ | `src/tabs/inbox.js:96` (`addInboxChatMsg`). Знайдено 4xJ7n iPhone v563 21:52. | Чіпи clarify-guard ([У щоденник]/[Як момент]/[Не зберігати]) рендеряться у Inbox чаті але візуально обрізаються знизу контейнером — видно тільки верхівку. | `el.scrollTop = el.scrollHeight` синхронно після `el.appendChild(chipsRow)`. iOS Safari не встигає порахувати висоту нового chipsRow до scrollTop. Фікс: подвійний scrollTop (sync + `requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })`) — рекомендований патерн для iOS. Аналогічну регресію може мати 6 інших чатів — окремо перевірити. Коміт `0b4ed28`. |
+_Сесія **iWyjU** (03.05.2026) — самотест→Read CLAUDE.md + statusline % контексту: 0 закритих багів (інфраструктурна сесія, зміни тільки `.claude/`)._
 
-_Сесія **mUpS8** (02.05.2026) — Universal clarify-guard + Pattern Learning roadmap + B-116. Закрила 1 🟡 bug._
-
-| ID | Файл | Симптом | Корінь + фікс |
-|---|---|---|---|
-| **B-116** ✅ | `src/tabs/projects.js` (`renderProjectsList`). Знайдено mUpS8 02.05. | Картка проекту не мала способу видалення — ні свайпа, ні кнопки. Функціонал відсутній цілком (grep `attachSwipeDelete\|deleteProject\|delete-btn` дав 0 результатів). | Додано свайп вліво → корзина з 5-сек відкатом (як у Notes/Inbox). Pattern: `<div class="project-card-wrap" data-id="${p.id}">` обгортка, всередині `<div class="card-glass project-card">`. Імпортовано `attachSwipeDelete`, `addToTrash`, `showUndoToast`. Нова функція `_attachProjectsSwipeDelete()` викликається після кожного `renderProjectsList`. Callback: `addToTrash('project', item)` + `saveProjects(filtered)` + `showUndoToast` з restore через `splice` назад на оригінальну позицію. Уніфіковано з 7 іншими вкладками. Коміт `fdf370f`. CACHE bump → `nm-20260502-1900`. |
-
-_Старіші сесії (BqTWF з B-115, rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Старіші сесії (4xJ7n з B-118+B-119, mUpS8 з B-116, BqTWF з B-115, rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 
