@@ -157,6 +157,28 @@ function setupSync() {
     if (e.key && e.key.startsWith('nm_')) handleSyncKey(e.key);
   });
 
+  // --- Механізм 1b: nm-data-changed custom event (UvEHE 03.05) ---
+  // Спрацьовує у ТІЙ САМІЙ вкладці при saveX() — fix для chip-save через
+  // applyClarifyChoice / AI dispatch що раніше не викликали re-render
+  // (Роман: «папки пропали після тапу chip Зберегти у щоденник»).
+  // Mapping detail → localStorage key для KEY_RENDER_MAP.
+  const DETAIL_TO_KEY = {
+    'inbox': 'nm_inbox',
+    'tasks': 'nm_tasks',
+    'habits': 'nm_habits2',
+    'notes': 'nm_notes',
+    'finance': 'nm_finance',
+    'health': 'nm_health_cards',
+    'projects': 'nm_projects',
+    'evening': 'nm_evening_summary',
+  };
+  window.addEventListener('nm-data-changed', e => {
+    const detail = e.detail;
+    if (typeof detail !== 'string') return;
+    const key = DETAIL_TO_KEY[detail];
+    if (key) handleSyncKey(key);
+  });
+
   // --- Механізм 2: BroadcastChannel ---
   // Дозволяє поточній вкладці надсилати повідомлення іншим
   let nmChannel = null;
