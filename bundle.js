@@ -14243,7 +14243,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const swipeRoot = contentEl.parentElement || contentEl;
     let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
     swipeRoot.addEventListener("touchstart", (e) => {
-      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll");
+      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, input, textarea, select");
       startY = e.touches[0].clientY;
       startX = e.touches[0].clientX;
       dy = 0;
@@ -14981,6 +14981,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
           setTimeout(() => {
             drawer.style.display = "none";
             panel.style.transition = "";
+            panel.style.transform = "";
           }, 240);
           _helpOpen = false;
         } else {
@@ -15002,7 +15003,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     setTimeout(() => {
       const drawer = document.getElementById("help-drawer");
       if (drawer) drawer.style.display = "none";
-      if (panel) panel.style.transition = "";
+      if (panel) {
+        panel.style.transition = "";
+        panel.style.transform = "";
+      }
     }, 240);
     _helpOpen = false;
   }
@@ -19754,18 +19758,22 @@ ${logLines}
     const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
     const memory = localStorage.getItem("nm_memory") || "";
     const memoryTs = localStorage.getItem("nm_memory_ts");
-    document.getElementById("input-api-key").value = key;
-    document.getElementById("input-name").value = settings.name || "";
-    document.getElementById("input-age").value = settings.age || "";
-    document.getElementById("input-weight").value = settings.weight || "";
-    document.getElementById("input-height").value = settings.height || "";
-    document.getElementById("input-profile-notes").value = settings.profileNotes || "";
-    document.getElementById("input-memory").value = memory;
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+    setVal("input-api-key", key);
+    setVal("input-name", settings.name || "");
+    setVal("input-age", settings.age || "");
+    setVal("input-weight", settings.weight || "");
+    setVal("input-height", settings.height || "");
+    setVal("input-profile-notes", settings.profileNotes || "");
+    setVal("input-memory", memory);
     const tsEl = document.getElementById("memory-last-updated");
-    if (memoryTs) {
+    if (memoryTs && tsEl) {
       const d = new Date(parseInt(memoryTs));
       tsEl.textContent = `\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: ${d.toLocaleDateString("uk-UA")} \u043E ${d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`;
-    } else {
+    } else if (tsEl) {
       tsEl.textContent = "\u0429\u0435 \u043D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0432\u0430\u043B\u0430\u0441\u044C";
     }
     const sc = settings.schedule || {};
