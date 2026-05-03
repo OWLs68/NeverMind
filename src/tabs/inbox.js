@@ -21,7 +21,7 @@ import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
   createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
 import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
-import { getProjects, saveProjects, startProjectInboxInterview } from './projects.js';
+import { getProjects, saveProjects, startProjectInboxInterview, createProjectProgrammatic } from './projects.js';
 import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 import { renderChips } from '../owl/chips.js';
@@ -594,27 +594,7 @@ ${aiContext}`;
           }
         } else if (action.action === 'create_project' && !fromChip) {
           addInboxChatMsg('agent', t('inbox.proj.creating', 'Створюю проект "{name}"...', { name: action.name || text }));
-          const projects = getProjects();
-          const newProject = {
-            id: Date.now(),
-            name: action.name || text,
-            subtitle: action.subtitle || '',
-            progress: 0,
-            steps: [],
-            budget: { total: 0, spent: 0, items: [] },
-            metrics: [],
-            decisions: [],
-            resources: [],
-            risks: '',
-            tempoNow: '?',
-            tempoMore: '?',
-            tempoIdeal: '?',
-            notesPreview: '',
-            lastActivity: Date.now(),
-            createdAt: Date.now(),
-          };
-          projects.unshift(newProject);
-          saveProjects(projects);
+          const newProject = createProjectProgrammatic(action.name || text, action.subtitle || '');
           addInboxChatMsg('agent', t('inbox.proj.created', '✅ Проект "{name}" створено', { name: newProject.name }));
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
         } else if (action.action === 'create_event') {

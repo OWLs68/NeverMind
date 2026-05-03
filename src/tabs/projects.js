@@ -23,6 +23,34 @@ import { attachSwipeDelete } from '../ui/swipe-delete.js';
 export function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
 export function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'projects' })); }
 
+// Створити проект програмно. Використовується у inbox.js (create_project tool flow)
+// та tool-dispatcher.js (create_project з будь-якого чату). Виносимо щоб не дублювати
+// 18-рядковий schema в кількох місцях.
+export function createProjectProgrammatic(name, subtitle = '') {
+  const projects = getProjects();
+  const newProject = {
+    id: Date.now(),
+    name: name,
+    subtitle: subtitle,
+    progress: 0,
+    steps: [],
+    budget: { total: 0, spent: 0, items: [] },
+    metrics: [],
+    decisions: [],
+    resources: [],
+    risks: '',
+    tempoNow: '?',
+    tempoMore: '?',
+    tempoIdeal: '?',
+    notesPreview: '',
+    lastActivity: Date.now(),
+    createdAt: Date.now(),
+  };
+  projects.unshift(newProject);
+  saveProjects(projects);
+  return newProject;
+}
+
 // State
 let activeProjectId = null;
 let projectsBarLoading = false;
