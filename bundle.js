@@ -4579,6 +4579,30 @@ ${lines.join("\n")}`;
     localStorage.setItem("nm_projects", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "projects" }));
   }
+  function createProjectProgrammatic(name, subtitle = "") {
+    const projects = getProjects();
+    const newProject = {
+      id: Date.now(),
+      name,
+      subtitle,
+      progress: 0,
+      steps: [],
+      budget: { total: 0, spent: 0, items: [] },
+      metrics: [],
+      decisions: [],
+      resources: [],
+      risks: "",
+      tempoNow: "?",
+      tempoMore: "?",
+      tempoIdeal: "?",
+      notesPreview: "",
+      lastActivity: Date.now(),
+      createdAt: Date.now()
+    };
+    projects.unshift(newProject);
+    saveProjects(projects);
+    return newProject;
+  }
   function renderProjects() {
     if (activeProjectId !== null) {
       renderProjectWorkspace(activeProjectId);
@@ -8277,9 +8301,39 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         any = true;
         continue;
       }
+      if (name === "create_project") {
+        const projectName = args.name || originalText || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438";
+        const newProject = createProjectProgrammatic(projectName, args.subtitle || "");
+        addMsg("agent", `\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "${newProject.name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E`);
+        if (currentTab !== "inbox") {
+          setTimeout(() => {
+            try {
+              switchTab("inbox");
+            } catch (e) {
+            }
+          }, 400);
+        }
+        setTimeout(() => {
+          try {
+            startProjectInboxInterview(newProject.name, newProject.subtitle);
+          } catch (e) {
+          }
+        }, 700);
+        any = true;
+        continue;
+      }
       const acts = _toolCallToUniversalAction(name, args);
+      let universalHandled = false;
       for (const a of acts) {
-        if (processUniversalAction(a, originalText, addMsg)) any = true;
+        if (processUniversalAction(a, originalText, addMsg)) {
+          any = true;
+          universalHandled = true;
+        }
+      }
+      if (acts.length === 0 || !universalHandled) {
+        console.warn("[tool-dispatcher] Unknown tool \u2014 silent failure prevented:", name, args);
+        addMsg("agent", `\u26A0\uFE0F \u041D\u0435 \u0437\u043C\u0456\u0433 \u0432\u0438\u043A\u043E\u043D\u0430\u0442\u0438 "${name}". \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u0430\u0431\u043E \u0432 Inbox.`);
+        any = true;
       }
     }
     return any;
@@ -16347,27 +16401,7 @@ ${aiContext}`;
             }
           } else if (action.action === "create_project" && !fromChip) {
             addInboxChatMsg("agent", t("inbox.proj.creating", '\u0421\u0442\u0432\u043E\u0440\u044E\u044E \u043F\u0440\u043E\u0435\u043A\u0442 "{name}"...', { name: action.name || text }));
-            const projects = getProjects();
-            const newProject = {
-              id: Date.now(),
-              name: action.name || text,
-              subtitle: action.subtitle || "",
-              progress: 0,
-              steps: [],
-              budget: { total: 0, spent: 0, items: [] },
-              metrics: [],
-              decisions: [],
-              resources: [],
-              risks: "",
-              tempoNow: "?",
-              tempoMore: "?",
-              tempoIdeal: "?",
-              notesPreview: "",
-              lastActivity: Date.now(),
-              createdAt: Date.now()
-            };
-            projects.unshift(newProject);
-            saveProjects(projects);
+            const newProject = createProjectProgrammatic(action.name || text, action.subtitle || "");
             addInboxChatMsg("agent", t("inbox.proj.created", '\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E', { name: newProject.name }));
             setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
           } else if (action.action === "create_event") {
