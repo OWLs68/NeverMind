@@ -74,12 +74,41 @@
 - **B-117** табло звичок stale.
 - **Розкочення rAF B-119** на 6 чатів.
 
-### Метрики
+#### G. Розширення UvEHE — chips fixes 4 ітерації + sub-agents + Jarvis-roadmap (UPDATE finish)
+27. **silent-bug-scout audit** (`2ee00ee`): 3 превентивні фікси — null-safe openSettings, swipe-block input/textarea, help-drawer transform reset.
+28. **Tasks clarify-guard Phase 3** (`6c5ca35`): 7-й чат з guard. Імпорт `shouldClarify` + `CLARIFY_INLINE_RULES` + `addTaskBarMsg` chips-сигнатура + tasks у `_CLARIFY_ADDMSG`.
+29. **B-119 rollout 7 чатів** (`1776fbf`): rAF scroll-fix у Health/Notes/Tasks/Finance/Evening/Projects/Me після Inbox-фіксу з mUpS8.
+30. **Chips clipping 4 ітерації** (`4fb9272` → `a55cafe` → `8ab3c41` → `f0ab497`):
+    - v1 mask-image видалено (false lead)
+    - v2 padding 28→48 + double rAF (false lead)
+    - v3 flex-shrink:0 + scrollIntoView (false lead)
+    - v4 КОРІНЬ через Council code-regression-finder: `transform:translateZ(0)` на `.chat-chips-row` ізолює composite layer від parent `.ai-bar-chat-window` blur(16px). Той самий iOS quirk що був у settings.
+31. **Notes re-render після chip-save** (`f0ab497` → `fe05ecc`): централізований `nm-data-changed` listener у `boot.js setupSync()` з DETAIL_TO_KEY мапою для всіх 8 вкладок. Раніше chip-save не викликав renderNotes (Роман: «папки пропали»).
+32. **+5 нових read-only sub-agents** (`505b644`): `dry-violation-finder`, `prompt-engineer-auditor`, `supabase-migration-scout`, `ai-cost-analyst`, `doc-consistency-checker`. CLAUDE.md секція Council отримала **таблицю симптом → агент** для авто-активації БЕЗ запиту Романа. Усі 8 агентів read-only.
+33. **🚀 ROADMAP Active: Dynamic AI-driven chips** (`e7e3f72`): план на наступну сесію з 6 кроків (~1-2 год). Роман: «3 фіксованих варіанти — слабо і не Jarvis. Має бути базовою потужною версією».
 
-- Коміти: ~30 (від `87b026a` до `377b238`)
-- Версії: v570 → ~v603
-- CACHE_NAME: `nm-20260503-0856` → `nm-20260503-1935`
+### Інциденти (UPDATE)
+
+- **Chips 4 ітерації false leads** — mask-image, padding, flex-shrink, scrollIntoView. Жоден не корінь. Council `code-regression-finder` знайшов справжню причину — composite layer parent. Урок: коли симптом «обрізається на iOS» — спершу шукати `backdrop-filter` parent + dump composite layers.
+- **Pre-push hook bypass-фраза** двічі — після pre-commit-i18n тригер «міграція» з історії повідомлень фолс-позитив. «pre-push: ok» прийнято.
+- **Council агент сам зробив Edit без дозволу** (settings flex layout аудит) — урок: у промптах ЯВНО блокувати модифікації для агентів. Записано у CLAUDE.md та у systemPrompt всіх 8 sub-agents.
+- Без `git reset` / `git push --force` / skip hooks. Усі коміти першою спробою.
+
+### Конфлікти/суперечності (UPDATE)
+
+- **Settings 4 ітерації перш ніж знайти CSS корінь** — я (Голова) шукав у layout/composite/scroll, корінь у глобальному `[onclick]:active scale(0.87)`. Проста CSS-перевірка `:active` selectors на старті сесії знайшла б миттєво. Урок у lessons.md.
+- **Chips 4 ітерації** аналогічно — false leads. Власна гіпотеза без перевірки виявилась неправильною. Council другої спроби влучно діагностував.
+
+### Метрики (фінал UvEHE)
+
+- Коміти: ~42 (від `87b026a` до `e7e3f72`)
+- Версії: v570 (start) → ~v615+
+- CACHE_NAME: `nm-20260503-0856` → `nm-20260503-2140`
+- Build: `node --check` чисті, `check-i18n.js` чисті, baseline стабільний
 - Гілка: `claude/start-session-UvEHE`
+- Sub-агенти: 3 → 8 (з повною таблицею auto-activation у CLAUDE.md)
+- Закриті: B-120 + B-121 (фінально через calendar-pattern + drum-picker)
+- Створено: `pre-commit-i18n.js` хук, `.claude/agents/` каталог з 8 файлами
 
 ---
 

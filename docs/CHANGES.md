@@ -49,11 +49,26 @@
 ### Закриті баги
 - B-120, B-121 (Health модалка)
 
-### Відкладене
-- Smoke-test v600+ Health AI-інтерв'ю.
-- B-117 (табло звичок stale) — потребує live DevTools.
-- Розкочення rAF B-119 на 6 інших чатів.
-- Перший Read CLAUDE.md у новому чаті.
+### Розширення UvEHE (continue до /finish)
+- silent-bug-scout audit → 3 превентивні фікси (null-safe openSettings, swipe-block input/textarea, help-drawer reset)
+- **Tasks clarify-guard Phase 3** — 7-й чат з guard
+- **B-119 rollout** на 7 чатів (rAF scroll-fix)
+- **Chips clipping 4 ітерації** → корінь `transform:translateZ(0)` на `.chat-chips-row` (composite layer ізоляція від parent blur)
+- **Notes re-render після chip-save** через централізований nm-data-changed listener у boot.js (DETAIL_TO_KEY мапа для всіх вкладок)
+- **+5 нових read-only sub-agents:** dry-violation-finder, prompt-engineer-auditor, supabase-migration-scout, ai-cost-analyst, doc-consistency-checker. CLAUDE.md отримав таблицю симптом → агент для auto-activation.
+- **🚀 ROADMAP Active: Dynamic AI-driven chips** — план на наступну сесію (Роман: «3 фіксованих — не Jarvis. Має бути потужний AI-driven варіант основним»)
+
+### Відкладене (фінал)
+- 🚀 **Active**: Dynamic AI-driven chips (наступна сесія, план у ROADMAP)
+- Smoke-test v600+ Health AI-інтерв'ю
+- B-117 (табло звичок stale) — потребує live DevTools
+- Перший Read CLAUDE.md у новому чаті
+
+### Метрики UvEHE фінальні
+- Коміти: ~42 (від `87b026a` до `e7e3f72`)
+- Версії: v570 → ~v615+
+- CACHE_NAME: nm-20260503-0856 → nm-20260503-2140
+- Sub-agents: 3 → 8
 
 ---
 
