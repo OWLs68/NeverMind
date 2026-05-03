@@ -1059,6 +1059,17 @@ function _fillHealthCardModal(card) {
   setVal('health-card-appt-date', c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : '');
   setVal('health-card-appt-time', c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : '');
 
+  // B-121 v2: за замовчуванням type="text" з placeholder.
+  // Якщо value є — переключаємо на нативний date/time щоб дата відображалась нативно.
+  const _swapType = (id, nativeType) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.type = el.value ? nativeType : 'text';
+  };
+  _swapType('health-card-start-date', 'date');
+  _swapType('health-card-appt-date', 'date');
+  _swapType('health-card-appt-time', 'time');
+
   // Статус (модалка створення статус не показує — кнопок нема, цикл порожній.
   // Лишається для backwards-сумісності якщо колись повернеться UI.)
   const status = c.status || 'treatment';
