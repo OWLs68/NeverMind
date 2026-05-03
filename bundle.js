@@ -3169,6 +3169,9 @@ ${lines.join("\n")}`;
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (role !== "agent") healthBarHistory.push({ role: "user", content: text });
     else healthBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("health", role, text, chips);
@@ -4977,6 +4980,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
     else projectsBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("projects", role, text);
@@ -6738,6 +6744,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
     else financeBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("finance", role, text);
@@ -9090,6 +9099,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (role !== "agent") notesBarHistory.push({ role: "user", content: text });
     else notesBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("notes", role, text);
@@ -10058,6 +10070,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
     else eveningBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("evening", role, text);
@@ -10740,6 +10755,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (!_noSave) saveChatMsg("me", role, text);
   }
   var meChatHistory, INSIGHTS_KEY, _insightsGenerating, _insightsRegenTimer, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating;
@@ -14706,6 +14724,9 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       el.appendChild(chipsRow);
     }
     el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
     if (role !== "agent") taskBarHistory.push({ role: "user", content: text });
     else taskBarHistory.push({ role: "assistant", content: text });
     if (!_noSave) saveChatMsg("tasks", role, text);
