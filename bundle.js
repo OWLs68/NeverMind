@@ -2630,6 +2630,14 @@ ${lines.join("\n")}`;
     setVal("health-card-start-date", c.startDate);
     setVal("health-card-appt-date", c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : "");
     setVal("health-card-appt-time", c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : "");
+    const _swapType = (id, nativeType) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.type = el.value ? nativeType : "text";
+    };
+    _swapType("health-card-start-date", "date");
+    _swapType("health-card-appt-date", "date");
+    _swapType("health-card-appt-time", "time");
     const status = c.status || "treatment";
     document.querySelectorAll(".health-status-btn").forEach((btn) => {
       const isActive = btn.dataset.status === status;
