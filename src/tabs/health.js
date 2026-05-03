@@ -1013,7 +1013,7 @@ let _editingHealthCardId = null;
 function openAddHealthCard() {
   _editingHealthCardId = null;
   _fillHealthCardModal(null);
-  _showHealthCardModal('Новий стан', false);
+  _showHealthCardModal(t('health.modal.title_new', 'Новий стан'), false);
 }
 
 function openEditHealthCard(id) {
@@ -1021,7 +1021,7 @@ function openEditHealthCard(id) {
   if (!card) return;
   _editingHealthCardId = id;
   _fillHealthCardModal(card);
-  _showHealthCardModal('Редагувати стан', true);
+  _showHealthCardModal(t('health.modal.title_edit', 'Редагувати стан'), true);
 }
 
 function _showHealthCardModal(title, showDelete) {
@@ -1111,10 +1111,12 @@ function _hdpInitDate(dateStr) {
   _hdp.month = d.getMonth();
   _hdp.year = d.getFullYear();
   const days = Array.from({length: 31}, (_, i) => String(i + 1));
-  const years = Array.from({length: 8}, (_, i) => String(2024 + i));
+  // Роки: 1990-2035 (46 років) — покриває хроніки з дитинства + 10 років вперед.
+  const YEAR_START = 1990, YEAR_LEN = 46;
+  const years = Array.from({length: YEAR_LEN}, (_, i) => String(YEAR_START + i));
   _initDrumCol('hdp-day', days, _hdp.day - 1, i => { _hdp.day = i + 1; });
   _initDrumCol('hdp-month', Array.from({length: 12}, (_, i) => monthShort(i)), _hdp.month, i => { _hdp.month = i; });
-  _initDrumCol('hdp-year', years, Math.max(0, _hdp.year - 2024), i => { _hdp.year = 2024 + i; });
+  _initDrumCol('hdp-year', years, Math.max(0, Math.min(YEAR_LEN - 1, _hdp.year - YEAR_START)), i => { _hdp.year = YEAR_START + i; });
 }
 
 function _hdpInitTime(timeStr) {
@@ -1219,17 +1221,17 @@ function _appendMedicationRow(m) {
   const schedStr = Array.isArray(m.schedule) ? m.schedule.join(', ') : (m.schedule || '');
   row.innerHTML = `
     <div style="display:flex;gap:6px;align-items:center">
-      <input type="text" class="med-name" placeholder="Назва (Омез)" value="${escapeHtml(m.name || '')}"
+      <input type="text" class="med-name" placeholder="${escapeHtml(t('health.med.name_placeholder', 'Назва (Омез)'))}" value="${escapeHtml(m.name || '')}"
         style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
       <button type="button" onclick="this.closest('.health-med-row').remove()" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">×</button>
     </div>
     <div style="display:flex;gap:6px">
-      <input type="text" class="med-dosage" placeholder="Дозування (20мг)" value="${escapeHtml(m.dosage || '')}"
+      <input type="text" class="med-dosage" placeholder="${escapeHtml(t('health.med.dosage_placeholder', 'Дозування (20мг)'))}" value="${escapeHtml(m.dosage || '')}"
         style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
-      <input type="text" class="med-course" placeholder="Курс (14 днів)" value="${escapeHtml(m.courseDuration || '')}"
+      <input type="text" class="med-course" placeholder="${escapeHtml(t('health.med.course_placeholder', 'Курс (14 днів)'))}" value="${escapeHtml(m.courseDuration || '')}"
         style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
     </div>
-    <input type="text" class="med-schedule" placeholder="Графік (08:00, 20:00)" value="${escapeHtml(schedStr)}"
+    <input type="text" class="med-schedule" placeholder="${escapeHtml(t('health.med.schedule_placeholder', 'Графік (08:00, 20:00)'))}" value="${escapeHtml(schedStr)}"
       style="width:100%;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
   `;
   list.appendChild(row);
@@ -1385,7 +1387,7 @@ function _syncEventDatesToCards() {
 function saveHealthCardFromModal() {
   const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const name = getVal('health-card-name');
-  if (!name) { showToast('Потрібна назва'); return; }
+  if (!name) { showToast(t('health.modal.name_required', 'Потрібна назва')); return; }
 
   const subtitle = getVal('health-card-subtitle');
   const doctor = getVal('health-card-doctor');
@@ -1475,7 +1477,7 @@ function saveHealthCardFromModal() {
 
 function deleteHealthCardFromModal() {
   if (!_editingHealthCardId) return;
-  if (!confirm('Видалити картку назавжди?')) return;
+  if (!confirm(t('health.modal.delete_confirm', 'Видалити картку назавжди?'))) return;
   const cards = getHealthCards();
   const idx = cards.findIndex(c => c.id === _editingHealthCardId);
   if (idx !== -1) {
