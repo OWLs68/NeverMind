@@ -779,14 +779,17 @@ function owlGuideNextTip() {
   // Не питаємо якщо вкладка не Inbox
   if (typeof currentTab !== 'undefined' && currentTab !== 'inbox') return;
 
-  // Продовження інтерв'ю по проекту
+  // Продовження інтерв'ю по проекту (NpBmN 04.05: розширено 3→5 питань —
+  // команда + метрики успіху додано, щоб збір був повноцінним а не «коротким»).
   const projectStep = parseInt(localStorage.getItem('nm_project_interview_step') || '0');
   const projectName = localStorage.getItem('nm_project_interview_name') || '';
   if (projectStep > 0 && projectName) {
     const projectQuestions = [
-      `Скільки годин на тиждень реально можеш вкладати в "${projectName}"?`,
-      `Що найбільше лякає або турбує тебе в цьому проекті?`,
-      `Чому саме "${projectName}" — що тебе мотивує?`,
+      t('projects.iv.q_hours', 'Скільки годин на тиждень реально можеш вкладати в "{name}"?', { name: projectName }),
+      t('projects.iv.q_team', 'Хто допомагатиме — це соло-проект чи є команда/партнери?'),
+      t('projects.iv.q_deadline', 'Який реалістичний дедлайн для першого результату?'),
+      t('projects.iv.q_fears', 'Що найбільше лякає або турбує тебе в цьому проекті?'),
+      t('projects.iv.q_metric', 'Як зрозумієш що "{name}" вдався — за яким одним показником?', { name: projectName }),
     ];
     if (projectStep <= projectQuestions.length) {
       addInboxChatMsg('agent', projectQuestions[projectStep - 1]);
@@ -831,13 +834,19 @@ export function maybeAskGuideQuestion() {
   if (!localStorage.getItem('nm_gemini_key')) return;
   if (surveyWaiting) return;
 
-  // Органічно — не кожного разу, а з вірогідністю ~25% і не частіше ніж раз на 3 хв
-  const lastGuideTs = parseInt(localStorage.getItem('nm_guide_last_ts') || '0');
-  const elapsed = Date.now() - lastGuideTs;
-  if (elapsed < 3 * 60 * 1000) return; // не частіше 3 хвилин
-  if (Math.random() > 0.25) return; // 25% шанс
+  // NpBmN 04.05: коли активне інтерв'ю по проекту — пропускаємо random/cooldown.
+  // Раніше 25% × 3хв = 12+ хв між питаннями → юзер вважав інтерв'ю з 1 питання.
+  // Тепер 5 питань ідуть підряд після створення проекту.
+  const projectStepActive = parseInt(localStorage.getItem('nm_project_interview_step') || '0') > 0;
+  if (!projectStepActive) {
+    // Органічно — не кожного разу, а з вірогідністю ~25% і не частіше ніж раз на 3 хв
+    const lastGuideTs = parseInt(localStorage.getItem('nm_guide_last_ts') || '0');
+    const elapsed = Date.now() - lastGuideTs;
+    if (elapsed < 3 * 60 * 1000) return; // не частіше 3 хвилин
+    if (Math.random() > 0.25) return; // 25% шанс
+    localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+  }
 
-  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
   setTimeout(() => owlGuideNextTip(), 1200); // невелика пауза після відповіді агента
 }
 

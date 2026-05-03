@@ -915,6 +915,11 @@ ${aiContext}`;
     addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
   }
 
+  // NpBmN 04.05: тригерим інтерв'ю-провідник (project interview / owl tips).
+  // Раніше функція імпортувалась але ніколи не викликалась — тому інтерв'ю
+  // проектів закінчувалось після першого питання у `startProjectInboxInterview`.
+  try { maybeAskGuideQuestion(); } catch(e) {}
+
   aiLoading = false;
   btn.disabled = false;
   btn.innerHTML = SEND_SVG;

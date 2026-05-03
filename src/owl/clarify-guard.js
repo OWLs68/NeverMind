@@ -30,6 +30,12 @@ const BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\- ]{2,30}$/;
 // "хімчистка") — додаємо 4-й чіп ПЕРЕД стандартним набором [Щоденник/Момент/Не зберігати].
 const BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
 
+// Лікарські згадки — Шар 2 Dynamic chips (NpBmN 04.05). Якщо текст містить
+// згадку медспеціаліста або візит до лікарні — підтягуємо реальних лікарів з
+// nm_health_cards.doctor + 1 «Інший лікар» замість стандартного [Щоденник/Момент/Не зберігати].
+// Покриваємо ~15 спеціальностей + загальні терміни.
+const DOCTOR_MENTION_RE = /(лікар\w*|стомат\w*|дантист\w*|дерматолог\w*|кардіолог\w*|терапевт\w*|хірург\w*|невролог\w*|невропатолог\w*|окуліст\w*|офтальмолог\w*|гінеколог\w*|уролог\w*|ортопед\w*|ендокринолог\w*|психіатр\w*|психотерапевт\w*|педіатр\w*|алерголог\w*|онколог\w*|гастроентеролог\w*|лор|клінік\w*|лікарн\w*|поліклінік\w*|медцентр\w*|шпиталь\w*)/i;
+
 // Явна команда — пропускаємо guard, AI правий.
 const COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|купи|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
 
@@ -43,6 +49,8 @@ const SUSPICIOUS_TOOLS = new Set([
   'save_task',
   'save_moment',
   'save_note',
+  'add_health_history_entry',
+  'create_health_card',
 ]);
 
 // Перевіряє чи треба показати clarify-чіпи замість виконання tool_calls.
@@ -61,6 +69,16 @@ export function shouldClarify(text, toolCalls, tab) {
 
   // Наявне число (сума/дата) → AI вирішує (save_finance, create_event)
   if (HAS_NUMBER_RE.test(trimmed)) return null;
+
+  // Шар 2 Dynamic chips (NpBmN 04.05) — згадка лікаря/клініки. Працює
+  // незалежно від isPastTense/isBareNoun ("Був у дерматолога" не ловиться
+  // звичайними правилами). Активується якщо у nm_health_cards є хоч один
+  // непорожній doctor — інакше нема з чого збирати реальні чіпи.
+  if (DOCTOR_MENTION_RE.test(trimmed)) {
+    const doctorChips = _buildDoctorChips(trimmed);
+    if (doctorChips) return doctorChips;
+    // Якщо лікарів у картках нема — провалюємось у стандартний flow нижче.
+  }
 
   // Минулий час + 2+ слова АБО голий іменник
   const isPastTense = PAST_VERBS_RE.test(trimmed);
@@ -108,6 +126,47 @@ export function shouldClarify(text, toolCalls, tab) {
     },
   ];
 
+  return { question, chips };
+}
+
+// Шар 2: збирає чіпи з реальних лікарів у картках Здоров'я. Читає
+// localStorage напряму щоб уникнути circular import (health.js → clarify-guard.js).
+// Повертає {question, chips} або null якщо немає жодного непорожнього doctor.
+function _buildDoctorChips(text) {
+  let cards = [];
+  try { cards = JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
+  catch (e) { return null; }
+  if (!Array.isArray(cards) || cards.length === 0) return null;
+
+  // Унікальні непорожні doctor → беремо до 3 найсвіжіших карток.
+  const seen = new Set();
+  const doctors = [];
+  for (const c of cards) {
+    const d = (c.doctor || '').trim();
+    if (!d || seen.has(d.toLowerCase())) continue;
+    seen.add(d.toLowerCase());
+    doctors.push({ name: d, cardId: c.id, cardName: c.name });
+    if (doctors.length >= 3) break;
+  }
+  if (doctors.length === 0) return null;
+
+  const question = t('clarify.where_save_doctor', '"{text}" — до якого лікаря записати?', { text });
+  const chips = doctors.map(d => ({
+    label: d.name.length > 24 ? d.name.slice(0, 24) + '…' : d.name,
+    action: 'clarify_save',
+    target: 'add_health_history_entry',
+    payload: {
+      card_id: d.cardId,
+      entry_type: 'doctor_visit',
+      text,
+    },
+  }));
+  chips.push({
+    label: t('clarify.chip.other_doctor', 'Інший лікар'),
+    action: 'clarify_save',
+    target: 'save_moment',
+    payload: { text },
+  });
   return { question, chips };
 }
 
