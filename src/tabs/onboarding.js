@@ -556,7 +556,11 @@ function openHelp(tab) {
       panel.style.transition = 'transform 0.24s cubic-bezier(0.32,0.72,0,1)';
       if (dx > 80) {
         panel.style.transform = 'translateX(100%)';
-        setTimeout(() => { drawer.style.display = 'none'; panel.style.transition = ''; }, 240);
+        setTimeout(() => {
+          drawer.style.display = 'none';
+          panel.style.transition = '';
+          panel.style.transform = ''; // UvEHE sweep: reset щоб наступне відкриття не починалось з translateX(100%)
+        }, 240);
         _helpOpen = false;
       } else {
         panel.style.transform = 'translateX(0)';
@@ -576,7 +580,10 @@ function closeHelp() {
   setTimeout(() => {
     const drawer = document.getElementById('help-drawer');
     if (drawer) drawer.style.display = 'none';
-    if (panel) panel.style.transition = '';
+    if (panel) {
+      panel.style.transition = '';
+      panel.style.transform = ''; // UvEHE sweep: reset для наступного відкриття
+    }
   }, 240);
   _helpOpen = false;
 }
