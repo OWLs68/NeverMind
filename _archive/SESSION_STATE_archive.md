@@ -1,5 +1,28 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія MIeXK — Health AI-інтерв'ю Phase A+B+C (03.05.2026)
+
+### Зроблено
+
+0. **i18n-фікс після CI fail** (`1a5e4c5` + `9ad8ee2`): build впав на check-i18n.js — Phase C додав 24 нових українських рядки у `health.js` без `t()`. Імпорт `t` з `core/utils.js`. Baseline 1033→1006. Ключі `health.iv.{step}.{value}`. Деплой v568+ пройшов.
+1. **Phase A — 6-статусна шкала** (`7b8fba4`): константа `HEALTH_STATUS_DEFS`. Helper `_statusDef()` + `_isActiveHealthStatus()`. Workspace picker — 6 кнопок з `flex-wrap`. Boot.js v9 міграція legacy через `nm_health_status_v2_done`.
+2. **Phase B — `update_health_card_status` tool** (`8e41fc0`): декларація у `INBOX_TOOLS` + handler у `tool-dispatcher.js _handleHealthTool`. Helper `updateHealthCardStatusProgrammatic()`. Enum 6 значень.
+3. **Phase C — 3-крокове AI-інтерв'ю з чіпами** (`fa1d569`): `startHealthInterview(card)` після створення картки. 3 кроки: «Що зараз?» → «Лікар?» → «Симптоми?» → агрегація. Cross-tab notification через `showUnreadBadge('health')`. State у `nm_health_interview_pending`.
+
+### Знайдено баги
+
+- **B-120** фон модалки рухається при свайпі (iOS rubber-band) — закрито у UvEHE через top-level overlay sibling.
+- **B-121** horizontal scroll + перекриття полів дат — закрито у UvEHE drum-picker заміною native input.
+
+### Метрики
+
+- Коміти: 8 (`7b8fba4` Phase A → `9ad8ee2` i18n обгортка)
+- Версії: v567 → v568
+- CACHE_NAME: `nm-20260503-0030` → `nm-20260503-0713`
+- Гілка: `claude/start-session-MIeXK`
+
+---
+
 ## 🔧 Сесія 4xJ7n — iPhone smoke-test + B-118/B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю (03.05.2026)
 
 ### Зроблено

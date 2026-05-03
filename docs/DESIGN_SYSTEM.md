@@ -566,6 +566,8 @@ JS (як `_zoomIn`/`_zoomOut` у `calendar.js:80-90`):
 - НЕ ставити `<div class="X-backdrop">` всередині модалки (той самий quirk)
 - НЕ використовувати `margin-bottom` transition для slide-in (iOS clip artifact). Замість того — `transform:scale`.
 - НЕ використовувати `overscroll-behavior:contain` на скрол-контейнерах модалки — `contain` дозволяє bounce самого контейнера (контент потягується + mask-image = ілюзія що модалка стискається). Використовуй `overscroll-behavior:none` (повна блокіровка bounce).
+- **НЕ вкладати `backdrop-filter:blur` всередині модалки яка вже має blur на panel** (UvEHE 03.05 урок). Settings мав 13 `.s-group` з `blur(16px)` всередині panel з `blur(32px)` — стопка 14 nested composite layers → iOS re-rasterize при momentum scroll → subpixel rounding glitch. **Правило: max 1 blur layer на стек.** Дочірні картки/групи всередині модалки — solid fill (`rgba(255,255,255,0.92)`), не translucent.
+- **НЕ використовувати глобальні CSS селектори з `:active` що зачіпають root-модалок** (UvEHE 03.05 урок). `style.css:1551`: `[onclick]:active { transform: scale(0.87); }` зачіпало settings-overlay (має onclick для тапу по фону) — tap всередині модалки bubbled до root → scale на ВСІЙ модалці. Якщо потрібно scale-feedback — `button:active` (специфічний) або opt-in клас `.tap-shrink:active`. Override для модалок: `#settings-overlay:active, [id$="-modal"]:active { transform: none }`.
 
 Усі три способи закриття + iOS-фікси працюють АВТОМАТИЧНО завдяки `src/ui/modal-overlay-sync.js`:
 - При додаванні модалки `[id$="-modal"]` (статичної в HTML або динамічної через `appendChild`) helper:
