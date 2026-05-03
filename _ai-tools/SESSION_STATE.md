@@ -112,49 +112,7 @@
 
 ---
 
-## 🔧 Сесія iWyjU (03.05.2026) — самотест→Read CLAUDE.md + statusline реального % контексту
-
-### Зроблено
-1. **Видалено `.claude/hooks/start-self-test.sh` + посилено Read CLAUDE.md** (`924ba3c`). Корінь: самотест перевіряв правила HOT_RULES (відомі з тренування), не Read tool calls. Можна було склеїти відповідь без читання — що я і робив. Фікс: `start.md` Крок 1 — «ПЕРШИЙ Read у сесії = CLAUDE.md ПОВНІСТЮ через Read tool, не покладатись на system-reminder». Крок 3 (самотест) видалено, кроки перенумеровано 1→2→2.5→3→4. У `settings.json` SessionStart хук — окремий рядок-нагадування ДО `🔧 РОБОЧИЙ ПРОЦЕС`: «🚨 ОБОВʼЯЗКОВО: ПЕРШИЙ Read tool call = CLAUDE.md ПОВНІСТЮ». CLAUDE.md прочитав повністю в цій сесії як приклад нового флоу.
-2. **statusLine у Claude Code з реальним % контексту** (`3ad07bf`). Створено `.claude/hooks/lib/compute-context-pct.sh` — спільна функція: парсить .jsonl через python3, бере останнє `assistant.message.usage` (`input_tokens + cache_read_input_tokens + cache_creation_input_tokens`), ділить на 1M ліміт claude-opus-4-7[1m]. Виводить `<percent> <tokens>`. Створено `.claude/hooks/statusline.sh` — формат `📊 NN% · XXXK/1M`, тиха невдача якщо нема даних. Переписано `.claude/hooks/context-warning.sh` — тепер бере цифру з lib (не `wc -c` файлу). Стара версія брала байти .jsonl /3 → показувала «99%» при реальних 34% (auto-compaction коректно НЕ враховувалась). Додано `statusLine` у settings.json з `refreshInterval: 10`.
-3. **Архівація 4xJ7n у Phase 0 /finish** (`8889c74`) — 2+1=3 активних, винос найстарішого. Норма ≤2 збережена.
-
-### Обговорено (без виконання)
-- **Варіанти A/B/C з повідомлення Брейн** — нічого не зроблено цієї сесії. A: B-120+B-121 модалка Health (15-20 хв). B: pre-commit-i18n хук (30 хв) — потребує перевірки чи `check-i18n.js` уже не у `pre-push-check.js` (я обіцяв перевірити — НЕ перевірив). C: iPhone smoke-test 17 сценаріїв Health AI-інтерв'ю v568+.
-- **PreToolUse хук-блокер для Read CLAUDE.md** — обговорено як 100% гарантія. Не реалізовано — спершу пробуємо найдешевший фікс (інструкція + нагадування). Якщо у новому чаті проб'ю знов — пишемо блокер.
-- **Дочитати ROADMAP.md повністю + хвіст SESSION_STATE.md** — НЕ зроблено цієї сесії. Ризик: не бачу повної стратегії.
-
-### Ключові рішення
-- **Видалити самотест** замість лагодити — бо він не перевіряв реального читання. Інструкція + хук-нагадування на SessionStart більш ефективні.
-- **statusline через `assistant.message.usage`** — бо це те саме що `/context`, і коректно віддзеркалює auto-compaction. Стара логіка `wc -c` файлу .jsonl була неправильною бо файл росте, контекст у пам'яті стиснутий.
-- **Спільна функція `lib/compute-context-pct.sh`** — щоб statusline і context-warning брали ОДНУ цифру (правило 5: корінь vs симптом — НЕ дублювати логіку у двох місцях).
-- **Локальне обчислення (bash + python3)** — НЕ споживає Anthropic API лімітів. Питання Романа про ліміти підтверджено: refresh кожні 10 сек це local CPU/disk, не API.
-- **`refreshInterval: 10` сек + формат `📊 NN% · XXXK/1M`** — обрано Романом з 2 варіантів.
-
-### Інциденти
-- **Stop hook нагадав про uncommitted changes** після першого блоку (видалення самотесту + start.md + settings.json) — спричинило вчасний коміт `924ba3c`. Це правильна поведінка хука.
-- Без `git reset` / `git push --force` / skip hooks. Усі коміти першою спробою.
-
-### Конфлікти/суперечності
-- **Я склав самотест механічно, цитуючи правила з тренування.** Рома спіймав: «ти прочитав чи переглянув?». Визнав чесно: переглянув. CLAUDE.md (через Read) не читав, ROADMAP.md не читав (отримав помилку «49k > 25k» і пішов далі без offset/limit), SESSION_STATE.md прочитав 200 рядків з ~600+. Це призвело до видалення самотесту як неробочого механізму і впровадження прямої вимоги Read CLAUDE.md.
-- **A → C → B план не підтверджено Романом.** Я запропонував порядок з аргументами, Рома НЕ дав ОК — питав про правила, потім про самотест, потім дав нову задачу (statusline). Усі A/B/C відкладені.
-
-### Відкладене
-- **A: B-120 + B-121 модалка Health** (15-20 хв) — body scroll lock у `_showHealthCardModal`/`closeHealthCardModal` + `overflow-x:hidden`/`min-width:0` на flex-children. Відкриті у `NEVERMIND_BUGS.md`.
-- **B: pre-commit-i18n хук** (30 хв) — спершу перевірити чи `check-i18n.js` уже не у `pre-push-check.js`. Якщо так — фікс інакший і простіший.
-- **C: iPhone smoke-test 17 сценаріїв** Health AI-інтерв'ю v568+ — TESTING_LOG секція v568+ (A:5 / B:3 / C:8 з cross-tab Inbox).
-- **Перевірка statusline у новому чаті** — я тестував на транскрипті (15% · 159K/1M), live-перегляд тільки рестартом Claude Code.
-- **Розкочення rAF фіксу B-119 на 6 інших чатів** — після підтвердження Inbox.
-- **B-117 табло звичок stale** — потребує live Safari DevTools.
-- **Tasks інтеграція clarify-guard (Phase 3 mUpS8)** — план Council готовий, чекає UX-рішення про save_task.
-- **Дочитати ROADMAP.md + хвіст SESSION_STATE.md** — у наступну сесію через посилений `/start`.
-
-### Метрики
-- Коміти: `924ba3c` (видалення самотесту + Read CLAUDE.md обов'язковим) → `3ad07bf` (statusline + фікс context-warning) → `8889c74` (Phase 0 архівація 4xJ7n) = 3 коміти + фінальні /finish коміти
-- Версії: v570 (start) → v570 (без зміни — не зачіпало `src/`/`index.html`/`style.css`/`sw.js`)
-- CACHE_NAME: не чіпано (зміни тільки `.claude/`)
-- Build: `JSON.parse` settings.json валідний; statusline на реальному транскрипті видав `📊 15% · 159K/1M`; context-warning мовчить (бо <80%); lib direct видав `15 159753`.
-- Гілка: `claude/start-session-iWyjU`
+## 🔧 Сесія iWyjU (03.05.2026) — архівовано rC4TO 04.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-iwyju--самотестread-claudemd--statusline--контексту-03052026)
 
 ---
 
