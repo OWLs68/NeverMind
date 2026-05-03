@@ -2587,14 +2587,14 @@ ${lines.join("\n")}`;
   function openAddHealthCard() {
     _editingHealthCardId = null;
     _fillHealthCardModal(null);
-    _showHealthCardModal("\u041D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u043D", false);
+    _showHealthCardModal(t("health.modal.title_new", "\u041D\u043E\u0432\u0438\u0439 \u0441\u0442\u0430\u043D"), false);
   }
   function openEditHealthCard(id) {
     const card = getHealthCards().find((c) => c.id === id);
     if (!card) return;
     _editingHealthCardId = id;
     _fillHealthCardModal(card);
-    _showHealthCardModal("\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u0430\u043D", true);
+    _showHealthCardModal(t("health.modal.title_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u0430\u043D"), true);
   }
   function _showHealthCardModal(title, showDelete) {
     const modal = document.getElementById("health-card-modal");
@@ -2668,15 +2668,16 @@ ${lines.join("\n")}`;
     _hdp.month = d.getMonth();
     _hdp.year = d.getFullYear();
     const days = Array.from({ length: 31 }, (_, i) => String(i + 1));
-    const years = Array.from({ length: 8 }, (_, i) => String(2024 + i));
+    const YEAR_START = 1990, YEAR_LEN = 46;
+    const years = Array.from({ length: YEAR_LEN }, (_, i) => String(YEAR_START + i));
     _initDrumCol("hdp-day", days, _hdp.day - 1, (i) => {
       _hdp.day = i + 1;
     });
     _initDrumCol("hdp-month", Array.from({ length: 12 }, (_, i) => monthShort(i)), _hdp.month, (i) => {
       _hdp.month = i;
     });
-    _initDrumCol("hdp-year", years, Math.max(0, _hdp.year - 2024), (i) => {
-      _hdp.year = 2024 + i;
+    _initDrumCol("hdp-year", years, Math.max(0, Math.min(YEAR_LEN - 1, _hdp.year - YEAR_START)), (i) => {
+      _hdp.year = YEAR_START + i;
     });
   }
   function _hdpInitTime(timeStr) {
@@ -2773,17 +2774,17 @@ ${lines.join("\n")}`;
     const schedStr = Array.isArray(m.schedule) ? m.schedule.join(", ") : m.schedule || "";
     row.innerHTML = `
     <div style="display:flex;gap:6px;align-items:center">
-      <input type="text" class="med-name" placeholder="\u041D\u0430\u0437\u0432\u0430 (\u041E\u043C\u0435\u0437)" value="${escapeHtml(m.name || "")}"
+      <input type="text" class="med-name" placeholder="${escapeHtml(t("health.med.name_placeholder", "\u041D\u0430\u0437\u0432\u0430 (\u041E\u043C\u0435\u0437)"))}" value="${escapeHtml(m.name || "")}"
         style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
       <button type="button" onclick="this.closest('.health-med-row').remove()" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">\xD7</button>
     </div>
     <div style="display:flex;gap:6px">
-      <input type="text" class="med-dosage" placeholder="\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F (20\u043C\u0433)" value="${escapeHtml(m.dosage || "")}"
+      <input type="text" class="med-dosage" placeholder="${escapeHtml(t("health.med.dosage_placeholder", "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F (20\u043C\u0433)"))}" value="${escapeHtml(m.dosage || "")}"
         style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
-      <input type="text" class="med-course" placeholder="\u041A\u0443\u0440\u0441 (14 \u0434\u043D\u0456\u0432)" value="${escapeHtml(m.courseDuration || "")}"
+      <input type="text" class="med-course" placeholder="${escapeHtml(t("health.med.course_placeholder", "\u041A\u0443\u0440\u0441 (14 \u0434\u043D\u0456\u0432)"))}" value="${escapeHtml(m.courseDuration || "")}"
         style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
     </div>
-    <input type="text" class="med-schedule" placeholder="\u0413\u0440\u0430\u0444\u0456\u043A (08:00, 20:00)" value="${escapeHtml(schedStr)}"
+    <input type="text" class="med-schedule" placeholder="${escapeHtml(t("health.med.schedule_placeholder", "\u0413\u0440\u0430\u0444\u0456\u043A (08:00, 20:00)"))}" value="${escapeHtml(schedStr)}"
       style="width:100%;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
   `;
     list.appendChild(row);
@@ -2896,7 +2897,7 @@ ${lines.join("\n")}`;
     };
     const name = getVal("health-card-name");
     if (!name) {
-      showToast("\u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0430\u0437\u0432\u0430");
+      showToast(t("health.modal.name_required", "\u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0430\u0437\u0432\u0430"));
       return;
     }
     const subtitle = getVal("health-card-subtitle");
@@ -2993,7 +2994,7 @@ ${lines.join("\n")}`;
   }
   function deleteHealthCardFromModal() {
     if (!_editingHealthCardId) return;
-    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438?")) return;
+    if (!confirm(t("health.modal.delete_confirm", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438?"))) return;
     const cards = getHealthCards();
     const idx = cards.findIndex((c) => c.id === _editingHealthCardId);
     if (idx !== -1) {
