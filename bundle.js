@@ -1606,6 +1606,10 @@ ${lines.join("\n")}`;
     if (!SUSPICIOUS_TOOLS.has(firstName)) return null;
     if (COMMAND_RE.test(trimmed)) return null;
     if (HAS_NUMBER_RE.test(trimmed)) return null;
+    if (DOCTOR_MENTION_RE.test(trimmed)) {
+      const doctorChips = _buildDoctorChips(trimmed);
+      if (doctorChips) return doctorChips;
+    }
     const isPastTense = PAST_VERBS_RE.test(trimmed);
     const isBareNoun = BARE_NOUN_RE.test(trimmed) && !PAST_VERBS_RE.test(trimmed);
     if (!isPastTense && !isBareNoun) return null;
@@ -1643,6 +1647,43 @@ ${lines.join("\n")}`;
     ];
     return { question, chips };
   }
+  function _buildDoctorChips(text) {
+    let cards = [];
+    try {
+      cards = JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
+    } catch (e) {
+      return null;
+    }
+    if (!Array.isArray(cards) || cards.length === 0) return null;
+    const seen = /* @__PURE__ */ new Set();
+    const doctors = [];
+    for (const c of cards) {
+      const d = (c.doctor || "").trim();
+      if (!d || seen.has(d.toLowerCase())) continue;
+      seen.add(d.toLowerCase());
+      doctors.push({ name: d, cardId: c.id, cardName: c.name });
+      if (doctors.length >= 3) break;
+    }
+    if (doctors.length === 0) return null;
+    const question = t("clarify.where_save_doctor", '"{text}" \u2014 \u0434\u043E \u044F\u043A\u043E\u0433\u043E \u043B\u0456\u043A\u0430\u0440\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text });
+    const chips = doctors.map((d) => ({
+      label: d.name.length > 24 ? d.name.slice(0, 24) + "\u2026" : d.name,
+      action: "clarify_save",
+      target: "add_health_history_entry",
+      payload: {
+        card_id: d.cardId,
+        entry_type: "doctor_visit",
+        text
+      }
+    }));
+    chips.push({
+      label: t("clarify.chip.other_doctor", "\u0406\u043D\u0448\u0438\u0439 \u043B\u0456\u043A\u0430\u0440"),
+      action: "clarify_save",
+      target: "save_moment",
+      payload: { text }
+    });
+    return { question, chips };
+  }
   function applyClarifyChoice(target, payload, tab, addMsg) {
     if (target === "none" || !target) {
       addMsg("agent", t("clarify.skipped", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E."));
@@ -1660,7 +1701,7 @@ ${lines.join("\n")}`;
     }
     return ok;
   }
-  var PAST_VERBS_RE, BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
+  var PAST_VERBS_RE, BARE_NOUN_RE, BUSINESS_NOUN_RE, DOCTOR_MENTION_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
   var init_clarify_guard = __esm({
     "src/owl/clarify-guard.js"() {
       init_utils();
@@ -1668,6 +1709,7 @@ ${lines.join("\n")}`;
       PAST_VERBS_RE = /\b(відкрив|купив|зробив|написав|зателефонував|з[’']їв|сходив|помив|поправ|виправ|запустив|створив|закінчив|почав|поставив|віддав|отримав|продав|замовив|скачав|встановив|подивився|прочитав|випив|забув|знайшов|вивчив|відремонтував|посадив|зустрів|приготував|зварив|спік|закрив|відкупив|оновив|вилікував)\b/i;
       BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\- ]{2,30}$/;
       BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
+      DOCTOR_MENTION_RE = /(лікар\w*|стомат\w*|дантист\w*|дерматолог\w*|кардіолог\w*|терапевт\w*|хірург\w*|невролог\w*|невропатолог\w*|окуліст\w*|офтальмолог\w*|гінеколог\w*|уролог\w*|ортопед\w*|ендокринолог\w*|психіатр\w*|психотерапевт\w*|педіатр\w*|алерголог\w*|онколог\w*|гастроентеролог\w*|лор|клінік\w*|лікарн\w*|поліклінік\w*|медцентр\w*|шпиталь\w*)/i;
       COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|купи|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
       HAS_NUMBER_RE = /\d/;
       SUSPICIOUS_TOOLS = /* @__PURE__ */ new Set([
@@ -1675,7 +1717,9 @@ ${lines.join("\n")}`;
         "create_event",
         "save_task",
         "save_moment",
-        "save_note"
+        "save_note",
+        "add_health_history_entry",
+        "create_health_card"
       ]);
     }
   });
@@ -11886,6 +11930,7 @@ ${signalLines}
 - \u042F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043A\u043E\u0440\u043E\u0442\u043A\u0435 (\u22643 \u0441\u043B\u043E\u0432\u0430) \u0410\u0411\u041E \u041C\u0418\u041D\u0423\u041B\u0418\u0419 \u0447\u0430\u0441 \u0434\u0456\u0454\u0441\u043B\u043E\u0432\u0430 \u0431\u0435\u0437 \u0441\u0443\u043C\u0438/\u0434\u0430\u0442\u0438 \u0431\u0435\u0437 \u044F\u0432\u043D\u043E\u0457 \u043A\u043E\u043C\u0430\u043D\u0434\u0438 ("\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443", "\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0432 \u0441\u0430\u0439\u0442", "\u041A\u0443\u043F\u0438\u0432 \u043A\u043E\u0441\u0442\u044E\u043C") \u0410\u0411\u041E \u0433\u043E\u043B\u0438\u0439 \u0456\u043C\u0435\u043D\u043D\u0438\u043A \u0431\u0435\u0437 \u0434\u0456\u0454\u0441\u043B\u043E\u0432\u0430 \u0456 \u0447\u0438\u0441\u043B\u0430 ("\u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0430", "\u041E\u043B\u0435\u0433") \u2014 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A save_task/save_note/save_moment/create_project/create_event \u043E\u0434\u0440\u0430\u0437\u0443. \u0417\u0430\u043C\u0456\u0441\u0442\u044C \u0446\u044C\u043E\u0433\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0443 content + \u0456\u043D\u043B\u0430\u0439\u043D-\u0447\u0456\u043F\u0438 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456\u0432 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F.
 - \u0424\u043E\u0440\u043C\u0430\u0442 \u0447\u0456\u043F\u0430: {"label":"\u0442\u0435\u043A\u0441\u0442","action":"clarify_save","target":"save_note|save_moment|create_project|none","payload":{...}}
 - \u2B50 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422\u041D\u0418\u0419 \u0427\u0406\u041F "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442" (\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422): \u044F\u043A\u0449\u043E \u0442\u0435\u043A\u0441\u0442 \u2014 \u041C\u0418\u041D\u0423\u041B\u0418\u0419 \u0427\u0410\u0421 "\u0432\u0456\u0434\u043A\u0440\u0438\u0432/\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0432/\u043F\u043E\u0431\u0443\u0434\u0443\u0432\u0430\u0432/\u0441\u0442\u0432\u043E\u0440\u0438\u0432/\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u043B\u0430" + \u0411\u0406\u0417\u041D\u0415\u0421-\u0406\u041C\u0415\u041D\u041D\u0418\u041A ("\u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443/\u0441\u0430\u043B\u043E\u043D/\u0441\u0430\u0439\u0442/\u043C\u0430\u0433\u0430\u0437\u0438\u043D/\u0441\u0442\u0443\u0434\u0456\u044E/\u043A\u0443\u0440\u0441\u0438/\u0448\u043A\u043E\u043B\u0443/\u043A\u0430\u0432'\u044F\u0440\u043D\u044E/\u043C\u0430\u0439\u0441\u0442\u0435\u0440\u043D\u044E") \u0410\u0411\u041E \u0433\u043E\u043B\u0438\u0439 \u0431\u0456\u0437\u043D\u0435\u0441-\u0456\u043C\u0435\u043D\u043D\u0438\u043A \u0431\u0435\u0437 \u0447\u0438\u0441\u043B\u0430 \u2014 \u0414\u041E\u0414\u0410\u0419 \u043F\u0435\u0440\u0448\u0438\u0439 \u0447\u0456\u043F {"label":"\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442","action":"clarify_save","target":"create_project","payload":{"name":"<\u0431\u0456\u0437\u043D\u0435\u0441-\u0456\u043C\u0435\u043D\u043D\u0438\u043A \u0443 \u043D\u0430\u0437\u0438\u0432\u043D\u043E\u043C\u0443 \u0432\u0456\u0434\u043C\u0456\u043D\u043A\u0443>","subtitle":"<\u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0430\u0431\u043E \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E>"}}. \u0420\u0435\u0448\u0442\u0430 \u0447\u0456\u043F\u0456\u0432 \u2014 \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0456 (\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A/\u041C\u043E\u043C\u0435\u043D\u0442/\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438). \u0412\u0438\u0445\u043E\u0434\u0438\u0442\u044C 4 \u0447\u0456\u043F\u0438 \u0437\u0430\u043C\u0456\u0441\u0442\u044C 3.
+- \u2B50 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422\u041D\u0406 \u0427\u0406\u041F\u0418 "\u041B\u0456\u043A\u0430\u0440" (\u041F\u0420\u0406\u041E\u0420\u0418\u0422\u0415\u0422, \u0428\u0430\u0440 2): \u044F\u043A\u0449\u043E \u0442\u0435\u043A\u0441\u0442 \u0437\u0433\u0430\u0434\u0443\u0454 \u043B\u0456\u043A\u0430\u0440\u044F/\u043A\u043B\u0456\u043D\u0456\u043A\u0443 ("\u0431\u0443\u0432 \u0443 \u0434\u0435\u0440\u043C\u0430\u0442\u043E\u043B\u043E\u0433\u0430", "\u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0432 \u0442\u0435\u0440\u0430\u043F\u0435\u0432\u0442", "\u0445\u043E\u0434\u0438\u043B\u0430 \u0434\u043E \u0441\u0442\u043E\u043C\u0430\u0442\u043E\u043B\u043E\u0433\u0430", "\u0443 \u043F\u043E\u043B\u0456\u043A\u043B\u0456\u043D\u0456\u0446\u0456", "\u043F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F") \u2014 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, \u0411\u0415\u0417 \u044F\u0432\u043D\u043E\u0457 \u043A\u043E\u043C\u0430\u043D\u0434\u0438 \u2014 \u0456 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0454 \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043F\u043E\u043B\u0435\u043C doctor \u2014 \u0417\u0410\u041C\u0406\u0421\u0422\u042C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0438\u0445 3 \u0447\u0456\u043F\u0456\u0432 \u0434\u0430\u0439 \u0447\u0456\u043F\u0438 \u0437 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0445 \u0456\u043C\u0435\u043D \u043B\u0456\u043A\u0430\u0440\u0456\u0432 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443: \u0434\u043B\u044F \u043A\u043E\u0436\u043D\u043E\u0457 \u0443\u043D\u0456\u043A\u0430\u043B\u044C\u043D\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 \u043D\u0435\u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C doctor (\u043C\u0430\u043A\u0441 3) \u2192 {"label":"<doctor 24 \u0441\u0438\u043C\u0432>","action":"clarify_save","target":"add_health_history_entry","payload":{"card_id":<ID \u043A\u0430\u0440\u0442\u043A\u0438>,"entry_type":"doctor_visit","text":"<\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u044E\u0437\u0435\u0440\u0430>"}}. \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0447\u0456\u043F: {"label":"\u0406\u043D\u0448\u0438\u0439 \u043B\u0456\u043A\u0430\u0440","action":"clarify_save","target":"save_moment","payload":{"text":"<\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u044E\u0437\u0435\u0440\u0430>"}}. content="<text>" \u2014 \u0434\u043E \u044F\u043A\u043E\u0433\u043E \u043B\u0456\u043A\u0430\u0440\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?". \u042F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0416\u041E\u0414\u041D\u041E\u0407 \u043A\u0430\u0440\u0442\u043A\u0438 \u0437 doctor \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438 \u0446\u0435\u0439 \u0431\u043B\u043E\u043A, fallback \u043D\u0430 \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0456 \u0447\u0456\u043F\u0438.
 - \u0421\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0438\u0439 \u043D\u0430\u0431\u0456\u0440 (\u0431\u0435\u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443, 3 \u0447\u0456\u043F\u0438): [{"label":"\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A","action":"clarify_save","target":"save_note","payload":{"text":"<text>","folder":"\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435"}},{"label":"\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442","action":"clarify_save","target":"save_moment","payload":{"text":"<text>"}},{"label":"\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438","action":"clarify_save","target":"none","payload":{}}]
 - \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0411\u0415\u0417 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443: "\\"\u0425\u0456\u043C\u0447\u0438\u0441\u0442\u043A\u0430\\" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438? {\\"chips\\":[\u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0456 3]}"
 - \u041F\u0440\u0438\u043A\u043B\u0430\u0434 \u0417 \u0431\u0456\u0437\u043D\u0435\u0441-\u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u043E\u043C: "\\"\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443\\" \u2014 \u0446\u0435 \u043F\u0440\u043E\u0435\u043A\u0442 \u0447\u0438 \u0437\u0430\u043F\u0438\u0441? {\\"chips\\":[{\\"label\\":\\"\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"create_project\\",\\"payload\\":{\\"name\\":\\"\u0410\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0430\\",\\"subtitle\\":\\"\\"}},{\\"label\\":\\"\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"save_note\\",\\"payload\\":{\\"text\\":\\"\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443\\",\\"folder\\":\\"\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435\\"}},{\\"label\\":\\"\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"save_moment\\",\\"payload\\":{\\"text\\":\\"\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0430\u0432\u0442\u043E\u043C\u0438\u0439\u043A\u0443\\"}},{\\"label\\":\\"\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438\\",\\"action\\":\\"clarify_save\\",\\"target\\":\\"none\\",\\"payload\\":{}}]}"
@@ -15324,9 +15369,11 @@ ${answersText}
     const projectName = localStorage.getItem("nm_project_interview_name") || "";
     if (projectStep > 0 && projectName) {
       const projectQuestions = [
-        `\u0421\u043A\u0456\u043B\u044C\u043A\u0438 \u0433\u043E\u0434\u0438\u043D \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0440\u0435\u0430\u043B\u044C\u043D\u043E \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438 \u0432 "${projectName}"?`,
-        `\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0430\u0431\u043E \u0442\u0443\u0440\u0431\u0443\u0454 \u0442\u0435\u0431\u0435 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?`,
-        `\u0427\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 "${projectName}" \u2014 \u0449\u043E \u0442\u0435\u0431\u0435 \u043C\u043E\u0442\u0438\u0432\u0443\u0454?`
+        t("projects.iv.q_hours", '\u0421\u043A\u0456\u043B\u044C\u043A\u0438 \u0433\u043E\u0434\u0438\u043D \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0440\u0435\u0430\u043B\u044C\u043D\u043E \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438 \u0432 "{name}"?', { name: projectName }),
+        t("projects.iv.q_team", "\u0425\u0442\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0442\u0438\u043C\u0435 \u2014 \u0446\u0435 \u0441\u043E\u043B\u043E-\u043F\u0440\u043E\u0435\u043A\u0442 \u0447\u0438 \u0454 \u043A\u043E\u043C\u0430\u043D\u0434\u0430/\u043F\u0430\u0440\u0442\u043D\u0435\u0440\u0438?"),
+        t("projects.iv.q_deadline", "\u042F\u043A\u0438\u0439 \u0440\u0435\u0430\u043B\u0456\u0441\u0442\u0438\u0447\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043B\u044F \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0443?"),
+        t("projects.iv.q_fears", "\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0430\u0431\u043E \u0442\u0443\u0440\u0431\u0443\u0454 \u0442\u0435\u0431\u0435 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?"),
+        t("projects.iv.q_metric", '\u042F\u043A \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0454\u0448 \u0449\u043E "{name}" \u0432\u0434\u0430\u0432\u0441\u044F \u2014 \u0437\u0430 \u044F\u043A\u0438\u043C \u043E\u0434\u043D\u0438\u043C \u043F\u043E\u043A\u0430\u0437\u043D\u0438\u043A\u043E\u043C?', { name: projectName })
       ];
       if (projectStep <= projectQuestions.length) {
         addInboxChatMsg("agent", projectQuestions[projectStep - 1]);
@@ -15356,6 +15403,20 @@ ${answersText}
       localStorage.setItem("nm_guide_shown_topics", JSON.stringify(shownTopics));
       localStorage.setItem("nm_guide_waiting_topic", nextTopic.key);
     }
+  }
+  function maybeAskGuideQuestion() {
+    if (!localStorage.getItem("nm_survey_done")) return;
+    if (!localStorage.getItem("nm_gemini_key")) return;
+    if (surveyWaiting) return;
+    const projectStepActive = parseInt(localStorage.getItem("nm_project_interview_step") || "0") > 0;
+    if (!projectStepActive) {
+      const lastGuideTs = parseInt(localStorage.getItem("nm_guide_last_ts") || "0");
+      const elapsed = Date.now() - lastGuideTs;
+      if (elapsed < 3 * 60 * 1e3) return;
+      if (Math.random() > 0.25) return;
+      localStorage.setItem("nm_guide_last_ts", Date.now().toString());
+    }
+    setTimeout(() => owlGuideNextTip(), 1200);
   }
   async function generateProjectFirstSteps(projectName) {
     const key = localStorage.getItem("nm_gemini_key");
@@ -16751,6 +16812,10 @@ ${aiContext}`;
       console.error("Tool call processing error:", e);
       saveOffline(text);
       addInboxChatMsg("agent", t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
+    }
+    try {
+      maybeAskGuideQuestion();
+    } catch (e) {
     }
     aiLoading = false;
     btn.disabled = false;
