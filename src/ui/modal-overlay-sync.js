@@ -78,7 +78,12 @@ function _externalizeOverlay(modal, childOverlay) {
 
 // Універсальний swipe-to-close для модалок. Не реєструється якщо tasks.js
 // setupModalSwipeClose вже додав свій (прапорець contentEl._swipeClose).
+// УВАГА: ТІЛЬКИ для bottom-sheet (align-items:flex-end) — повноекранні
+// модалки (note-view, task-chat, health-export) НЕ повинні мати swipe-close
+// бо там transform тягне шапку вниз.
 function _setupSwipeClose(modal) {
+  const style = modal.getAttribute('style') || '';
+  if (!/align-items\s*:\s*flex-end/i.test(style)) return; // не bottom-sheet
   // Шукаємо картку (єдину non-overlay дитину) — після _externalizeOverlay
   // overlay винесений, тож children[0] зазвичай це картка.
   const card = modal.querySelector(':scope > div');
