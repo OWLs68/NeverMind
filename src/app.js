@@ -14,6 +14,7 @@ import './ui/keyboard.js';
 import './ui/swipe-delete.js';
 import './ui/voice-input.js';
 import './ui/unread-badge.js';
+import './ui/modal-overlay-sync.js';
 
 // AI (штучний інтелект)
 import './ai/ui-tools.js';

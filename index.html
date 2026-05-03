@@ -1167,8 +1167,8 @@
 </div>
 
 <!-- NOTE MODAL -->
-<div id="note-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeNoteModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+<div id="note-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
+<div id="note-modal" onclick="if(event.target===this)closeNoteModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px calc(env(safe-area-inset-bottom)+40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="note-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
@@ -1183,8 +1183,8 @@
 </div>
 
 <!-- TASK MODAL -->
-<div id="task-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeTaskModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+<div id="task-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
+<div id="task-modal" onclick="if(event.target===this)closeTaskModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
