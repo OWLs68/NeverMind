@@ -1679,8 +1679,7 @@
 <!-- HEALTH CARD EDIT/CREATE MODAL (B-27 + B-30, 15.04 6v2eR).
      Одна модалка у двох режимах: create (новий стан) / edit (редагування існуючого).
      Замінює рідний prompt() + додає UI редагування полів Фази 1. -->
-<div id="health-card-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeHealthCardModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);touch-action:none"></div>
+<div id="health-card-modal" onclick="if(event.target===this)closeHealthCardModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:88vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div class="health-modal-scroll" style="overflow-y:auto;overflow-x:hidden;max-height:88vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
