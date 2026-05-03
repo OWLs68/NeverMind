@@ -20075,11 +20075,17 @@ ${legacy}`;
     const commit = badge.dataset.commit || "local";
     const source = badge.dataset.source || "dev";
     const branch = badge.dataset.branch || "dev";
-    let modal = document.getElementById("deploy-info-modal");
-    if (modal) modal.remove();
-    modal = document.createElement("div");
+    let oldModal = document.getElementById("deploy-info-modal");
+    if (oldModal) oldModal.remove();
+    let oldOverlay = document.getElementById("deploy-info-modal-overlay");
+    if (oldOverlay) oldOverlay.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "deploy-info-modal-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:299;background:rgba(30,16,64,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none;opacity:0;transition:opacity 0.2s";
+    document.body.appendChild(overlay);
+    const modal = document.createElement("div");
     modal.id = "deploy-info-modal";
-    modal.style.cssText = "position:fixed;inset:0;z-index:300;background:rgba(30,16,64,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0 20px;opacity:0;transition:opacity 0.2s";
+    modal.style.cssText = "position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:0 20px;opacity:0;transition:opacity 0.2s";
     modal.onclick = (e) => {
       if (e.target === modal) closeDeployInfo();
     };
@@ -20501,6 +20507,44 @@ ${legacy}`;
     childOverlay.remove();
     return newOverlay;
   }
+  function _setupSwipeClose(modal) {
+    const card = modal.querySelector(":scope > div");
+    if (!card || card._swipeClose) return;
+    card._swipeClose = true;
+    let startY = 0, startX = 0, dy = 0, blocked = false;
+    modal.addEventListener("touchstart", (e) => {
+      blocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, input, textarea, select");
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      dy = 0;
+      if (!blocked) card.style.transition = "none";
+    }, { passive: true });
+    modal.addEventListener("touchmove", (e) => {
+      if (blocked) return;
+      dy = e.touches[0].clientY - startY;
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      if (dy > 0 && dy > dx) {
+        card.style.transform = `translateY(${dy}px)`;
+      }
+    }, { passive: true });
+    modal.addEventListener("touchend", () => {
+      if (blocked) {
+        blocked = false;
+        return;
+      }
+      card.style.transition = "transform 0.25s ease";
+      if (dy > 80) {
+        card.style.transform = "translateY(100%)";
+        setTimeout(() => {
+          card.style.transform = "";
+          modal.click();
+        }, 250);
+      } else {
+        card.style.transform = "";
+      }
+      dy = 0;
+    }, { passive: true });
+  }
   function _registerModal(modal) {
     if (!modal || _registered.has(modal)) return;
     _registered.add(modal);
@@ -20508,6 +20552,7 @@ ${legacy}`;
       const child = _findChildOverlay(modal);
       if (child) _externalizeOverlay(modal, child);
     }
+    _setupSwipeClose(modal);
     syncOverlay(modal);
     new MutationObserver(() => syncOverlay(modal)).observe(modal, { attributes: true, attributeFilter: ["style"] });
   }
