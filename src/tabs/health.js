@@ -1030,6 +1030,8 @@ function _showHealthCardModal(title, showDelete) {
   if (titleEl) titleEl.textContent = title;
   if (delBtn) delBtn.style.display = showDelete ? 'block' : 'none';
   modal.style.display = 'flex';
+  // B-120: блокуємо скрол сторінки під модалкою (iOS rubber-band)
+  document.body.style.overflow = 'hidden';
   // iOS fix — фокус на перше поле з затримкою
   setTimeout(() => {
     const nameEl = document.getElementById('health-card-name');
@@ -1040,6 +1042,7 @@ function _showHealthCardModal(title, showDelete) {
 function closeHealthCardModal() {
   const modal = document.getElementById('health-card-modal');
   if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
   _editingHealthCardId = null;
 }
 

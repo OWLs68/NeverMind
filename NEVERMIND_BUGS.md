@@ -17,8 +17,6 @@ _Немає відкритих критичних багів станом на 0
 
 | ID | Файл | Симптом | Аналіз |
 |---|---|---|---|
-| **B-120** | `src/tabs/health.js` `_showHealthCardModal`/`closeHealthCardModal` + `index.html:1682` модалка | Свайп вниз по затемненому фону за модалкою «Новий стан» Health скролить вкладку Здоров'я під ним. Знайдено MIeXK iPhone v568. | iOS rubber-band scroll: touchmove на blur-overlay не блокує body. Фікс: `document.body.style.overflow='hidden'` при відкритті + повернути при закритті. Розглянути helper `lockBodyScroll/unlockBodyScroll` для всіх модалок (борг). |
-| **B-121** | `index.html:1684-1685` модалка `#health-card-modal` + flex поля дат `1714-1727` | Модалка скролиться горизонтально (вправо/вліво — не повинна), поля «Початок» / «Наст. прийом» виходять за flex-контейнери і перекриваються. Знайдено MIeXK iPhone v568. | Inputs з `width:100%; box-sizing:border-box` всередині `flex:1` div без `min-width:0` → flex-child розширюється до natural width → overflow на батька. Фікс: `overflow-x:hidden` на скрол-контейнері (1685) + `min-width:0` на двох flex:1 діви (1715, 1720). |
 | **B-117** | `src/owl/proactive.js:1091` (м'який кеш 5хв) + `_pickMessageForTab` + Pruning без entityRefs | Юзер виконав 2/2 звичок (зелені ✓ у вкладці Продуктивність), але сова в табло показує застаріле «Сьогодні не виконано жодну звичку. Активізуйся — 5 присідань або 2 хв розтяжки». Скріншот mUpS8 16:47. Дані оновлені (заголовок «Звички 2 з 2 сьогодні» правильний), застаріле тільки повідомлення сови. | **Знайдено гілки розслідування, не зафіксовано корінь:** (1) `tryTabBoardUpdate` рядок 1091 блокує генерацію якщо latestMsg молодше 5 хв (м'який кеш для економії API); (2) listener `nm-data-changed: habits` рядок 1185 викликає `generateBoardMessage` через 5 сек **повз кеш**, але якщо `_boardGenerating[tab]=true` (рядок 625) — пропускається; (3) Pruning Engine (`isMessageRelevant` у `getTabBoardMsgs`) перевіряє `entityRefs`, а повідомлення «не виконано звичку» не має ref на конкретні `habit_X` → не фільтрується; (4) `_pickMessageForTab` міг обирати критичне повідомлення з історії навіть після генерації нового. **Потребує live debug у DevTools на iPhone:** `localStorage.nm_unified_board` (повний stack повідомлень для tab=tasks) + `_boardGenerating` стан + чи створено новий запис після `complete_habit`. Фікс наосліп = ризик зламати Brain Pulse. **Опції фіксу:** (а) додати `force` параметр у `tryBoardUpdate`, listener викликає з `force:true` для `e.detail !== 'chat'`; (б) розширити `entityRefs` для habit-related повідомлень щоб Pruning ловив; (в) у listener для `habits/tasks/...` детайл — інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js`. Найбезпечніше — (в). |
 
 ---
@@ -36,6 +34,10 @@ _Зберігаються закриті у 2 останніх активних 
 _Сесія **MIeXK** (03.05.2026) — Health AI-інтерв'ю Phase A+B+C: 0 закритих багів (тільки фічі), знайдено B-120+B-121 (відкриті, у 🟡 секції)._
 
 _Сесія **iWyjU** (03.05.2026) — самотест→Read CLAUDE.md + statusline % контексту: 0 закритих багів (інфраструктурна сесія, зміни тільки `.claude/`)._
+
+_Сесія **UvEHE** (03.05.2026) — `/c` slash + context-warning ≥75% + B-120/B-121 фікси модалки Health:_
+- **B-120 закрито** — `src/tabs/health.js`: `document.body.style.overflow='hidden'` у `_showHealthCardModal` + `''` у `closeHealthCardModal`. iOS rubber-band scroll більше не пробиває overlay. Helper для всіх модалок НЕ робили (точкове рішення; борг).
+- **B-121 закрито** — `index.html:1685` `overflow-x:hidden` на скрол-контейнері + `min-width:0` на двох flex:1 діви полів дат (1715, 1720). Inputs з `width:100%` перестали розширювати flex-children за межі.
 
 _Старіші сесії (4xJ7n з B-118+B-119, mUpS8 з B-116, BqTWF з B-115, rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
