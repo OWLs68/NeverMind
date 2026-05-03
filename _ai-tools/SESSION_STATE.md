@@ -66,51 +66,7 @@
 
 ---
 
-## 🔧 Сесія 4xJ7n — iPhone smoke-test + B-118/B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю (03.05.2026)
-
-### Зроблено
-1. **B-118 ✅ back button у Projects elevation** (`59067ce`) — `index.html:174` (workspace проекту). `closeProjectWorkspace` функція OK і експортована, але back-кнопка без z-index/hit-area → OWL board overlay перехоплював клік. Фікс: `position:relative; z-index:10; padding:8px 4px; margin:-8px -4px 4px -4px` = 44px hit-area за Apple HIG.
-2. **B-119 ✅ chips clipped в Inbox** (`0b4ed28`) — `src/tabs/inbox.js:96` (`addInboxChatMsg`). iOS Safari не встигав порахувати висоту chipsRow до синхронного scrollTop. Фікс: подвійний scrollTop (sync + `requestAnimationFrame`). ⚠️ Можлива аналогічна регресія у 6 інших чатах — не перевірено.
-3. **UI Health modal — зелена палітра → бурштин** (`13df504`) — `index.html:1732,1747`. Кнопка «Зберегти» `#4ade80→#16a34a` → `#d68f1c→#c2790a`. «+ Додати» Препарати color → `#c2790a`. Статус-tag-кнопки не змінено.
-4. **Прибрано блок Статус з модалки створення Health** (`8f15871`) — `index.html:1736-1742`. JS не падає (`_getHealthCardModalStatus()` має `'active'` fallback).
-5. **ROADMAP Блок 2 — Health AI-інтерв'ю** (`8f15871`) — велика фіча: розширена шкала 6 статусів (🆕 Гостра / 💊 Лікування / 📈 Покращення / 🟢 Контроль / ♾️ Хронічна / ✅ Завершено) + AI-інтерв'ю 3 кроки з чіпами після створення картки + новий tool `update_health_card_status`. Перший юзкейс «AI пише першим» з mUpS8.
-6. **B-118 + B-119 у NEVERMIND_BUGS** (`005b28d`) — записано як 🔴 з file:line, аналізом, фіксом.
-7. **Council 5 агентів — огляд плану clarify-guard для Tasks** (без коду). 6 серйозних дірок: (1) `tasks` ВІДСУТНІЙ у `_CLARIFY_ADDMSG` map; (2) `save_task` у SUSPICIOUS_TOOLS = false positive у Tasks; (3) `habits.js` керує і задачами і звичками — `PAST_VERBS_RE` ловить класичні звички; (4) CLARIFY_INLINE_RULES правка йде у `habits.js:1424` (промпт inline), НЕ `prompts.js`; (5) cleanup попередніх chips забутий; (6) guard-блок місце уточнено. Стратег: спочатку iPhone smoke-test 6 чатів.
-
-### Обговорено (без виконання)
-- **Прописати всі тригери для clarify-чіпів?** Ні. Українська має нескінченні форми, regex покриває ~90%. Замість — журнал false positives/negatives у TESTING_LOG.
-- **Питання save_task у Tasks-чаті** — НЕ обрано рішення (3 варіанти: 4-й чіп / виключити / залишити). Окремої сесії.
-- **Tasks інтеграція clarify-guard** — план Council готовий (6 кроків замість 3+1) — НЕ виконано. Стратегічна рекомендація: спочатку smoke-test.
-
-### Ключові рішення
-- **Архівація LW3j8 у Фазі 0** /finish — 2+1 = 3 активних → винос найстарішого. Правило ≤2 збережене.
-- **B-119 фікс через подвійний scrollTop (sync + rAF)** — стандартний iOS-патерн.
-- **Health-модалка статус прибрано** замість «додати підказку» — спрощення UX. Статус виставить пізніше через картку АБО через AI-інтерв'ю.
-- **ROADMAP Health AI-інтерв'ю у Блок 2** — частковий випадок «AI пише першим» з mUpS8.
-- **Розширена шкала 6 статусів** замість 3 — Роман: «3 замало бо не відображають реальний стан хвороби».
-
-### Інциденти
-- **Локальний репо застарілий v431 vs origin v563.** Pull 490 комітів дійшов чисто. Робоче дерево чисте.
-- **pre-push хук false positive 2 рази** (B-118+B-119 фікси, Health-modal UI) — хук виявляв «міграція/tool/UUID/схема» де було UI/CSS. «pre-push: ok» — пройшло з другої спроби.
-- Без `git reset` / `git push --force` / skip hooks.
-
-### Конфлікти/суперечності
-- **Council Оптиміст vs Критик про CLARIFY_INLINE_RULES у промпті Tasks** — Оптиміст сказав «викинути», Критик через Read prompts.js довів що 6 інших чатів МАЮТЬ ці правила (через білдер). **Критик правий** — підтверджено реальним кодом.
-
-### Відкладене
-- **Tasks інтеграція clarify-guard** — після iPhone smoke-test 6 чатів (Council Стратег). 30-40 хв коду + UX-рішення про save_task.
-- **Pattern Learning Engine** (Phase 3 mUpS8) — горизонтальний шар, не блокується Tasks.
-- **B-117 табло звичок stale** — потребує live Safari DevTools. 5 хв.
-- **Розкочення rAF фіксу B-119 на 6 інших чатів** — після підтвердження що B-119 виправлено в Inbox.
-
-### Метрики
-- Коміти: `005b28d` → `8f15871` (5 фіч-комітів) + `9fe9525` (Phase 0 архівація) = 6
-- Версії: v563 (start) → v565+ (after auto-merge of Health UI)
-- CACHE_NAME: `nm-20260502-1900` → `nm-20260502-2200` → `nm-20260503-0010` → `nm-20260503-0030` (3 bumps)
-- Build: `node --check` чисті, push з retry (false positive хука)
-- Гілка: `claude/start-session-4xJ7n`
-
----
+## 🔧 Сесія 4xJ7n (03.05.2026) — архівовано iWyjU 03.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-4xj7n--iphone-smoke-test--b-118b-119-фікси--health-modal-ui--roadmap-ai-інтервю-03052026)
 
 ## 🔧 Сесія mUpS8 (02.05.2026) — архівовано MIeXK 03.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-mups8--universal-clarify-guard--pattern-learning-roadmap--b-116-02052026)
 
