@@ -1086,7 +1086,7 @@ function _setHealthDtTrigger(target, value, type) {
     el.textContent = type === 'time' ? value : _formatHealthDate(value);
     el.style.color = '#1e1040';
   } else {
-    el.textContent = type === 'time' ? 'Вибери час' : 'Вибери дату';
+    el.textContent = type === 'time' ? t('health.dtpicker.placeholder_time', 'Вибери час') : t('health.dtpicker.placeholder_date', 'Вибери дату');
     el.style.color = 'rgba(30,16,64,0.4)';
   }
 }
@@ -1095,7 +1095,7 @@ function openHealthDtPicker(target, type) {
   _hdpTarget = target;
   _hdpType = type;
   document.getElementById('health-dt-picker-modal').style.display = 'flex';
-  document.getElementById('health-dt-picker-title').textContent = type === 'date' ? 'Виберіть дату' : 'Виберіть час';
+  document.getElementById('health-dt-picker-title').textContent = type === 'date' ? t('health.dtpicker.title_date', 'Виберіть дату') : t('health.dtpicker.title_time', 'Виберіть час');
   document.getElementById('health-dt-date-wrap').style.display = type === 'date' ? 'flex' : 'none';
   document.getElementById('health-dt-time-wrap').style.display = type === 'time' ? 'flex' : 'none';
   const trigger = document.getElementById(`health-card-${target}-trigger`);
