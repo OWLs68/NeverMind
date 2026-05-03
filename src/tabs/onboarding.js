@@ -904,15 +904,14 @@ export async function saveGuideTopicAnswer(userText) {
   const waitingTopic = localStorage.getItem('nm_guide_waiting_topic');
   if (!waitingTopic) return;
   localStorage.removeItem('nm_guide_waiting_topic');
-  // NpBmN audit fix #6: блокуємо подвійне питання за один обмін.
-  // Без цього після консумації Q1 → maybeAskGuideQuestion міг (25% шанс)
-  // одразу поставити Q2 у тій самій відповіді AI. Тепер cooldown 3хв
-  // активний рахується від моменту консумації — наступний guide-tip
-  // буде не раніше ніж через 3 хв.
-  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
 
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
+  // NpBmN audit fix #6+#F: блокуємо подвійне питання за один обмін.
+  // Cooldown ставимо ПІСЛЯ key check — інакше у юзера без ключа cooldown
+  // «виплачувався» даремно. Тепер last_ts оновлюється тільки коли реально
+  // консумуємо topic answer (є шанс що fetch успішно оновить пам'ять).
+  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
 
   const currentMemory = localStorage.getItem('nm_memory') || '';
   const topicData = OWL_GUIDE_TOPICS.find(t => t.key === waitingTopic);
