@@ -1650,6 +1650,10 @@ button:active,
   /* UvEHE 03.05: НЕ стискатися як flex-item у chat-messages (flex-direction:column).
      Без цього flex-shrink:1 за замовчуванням → chipsRow обрізається знизу. */
   flex-shrink: 0;
+  /* UvEHE 03.05 (Council code-regression-finder): translateZ(0) піднімає chipsRow
+     у власний composite layer — виходить з-під materialized .ai-bar-chat-window
+     (backdrop-filter:blur(16px) parent), що ріже last-child у padding-bottom зоні. */
+  transform: translateZ(0);
 }
 .chat-chips-row::-webkit-scrollbar { display: none; }
 .chat-chips-row .owl-chip {
