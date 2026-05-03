@@ -8,6 +8,7 @@ import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getProjects, saveProjects } from './projects.js';
+import { t } from '../core/utils.js';
 
 // === SLIDES TOUR ===
 const UPDATE_VERSION = 'v065';
@@ -413,6 +414,46 @@ const HELP_CONTENT = {
       { title: 'Агент', items: [
         { icon: 'wallet', title: 'Запити', desc: null,
           cmds: ['скільки витратив цього тижня', 'де найбільше трачу', 'встанови бюджет 2000 на місяць', 'видали останню витрату'] },
+      ]},
+    ]
+  },
+  health: {
+    title: t('help.health.title', 'Здоровʼя'),
+    subtitle: t('help.health.subtitle', 'Стани, прийоми, препарати — все в одному місці.'),
+    color: 'linear-gradient(135deg, #bbf7d0, #16a34a)',
+    accent: '#15803d',
+    sections: [
+      { title: t('help.health.s1', 'Стани здоровʼя'), items: [
+        { icon: 'plus',   title: t('help.health.add_card', 'Додати стан'), desc: t('help.health.add_desc', '«+» вгорі — створи картку: назва, лікар, рекомендації, дати, препарати.') },
+        { icon: 'limit',  title: t('help.health.statuses', 'Статуси картки'), desc: t('help.health.statuses_desc', 'Гострий → Лікування → Покращення → Контроль → Хронічний → Завершено. Прогрес курсу видно автоматично.') },
+        { icon: 'chat',   title: t('help.health.interview', 'AI-інтервʼю'), desc: t('help.health.interview_desc', 'Після створення картки Агент задасть 3 питання у Health-чаті щоб уточнити статус.') },
+      ]},
+      { title: t('help.health.s2', 'Алергії'), items: [
+        { icon: 'folder', title: t('help.health.allergies', 'Список алергій'), desc: t('help.health.allergies_desc', 'Окремий блок зверху — додай реакції щоб Агент памʼятав і попереджав про їжу/ліки.') },
+      ]},
+      { title: t('help.health.s3', 'Агент'), items: [
+        { icon: 'wallet', title: t('help.health.queries', 'Запити'), desc: null,
+          cmds: [t('help.health.cmd1', 'як мій тиск останнім часом'), t('help.health.cmd2', 'що з шкірою'), t('help.health.cmd3', 'наступний прийом коли'), t('help.health.cmd4', 'я приймаю омез')] },
+      ]},
+    ]
+  },
+  projects: {
+    title: t('help.projects.title', 'Проєкти'),
+    subtitle: t('help.projects.subtitle', 'Великі цілі що складаються з задач і записів.'),
+    color: 'linear-gradient(135deg, #ddd6fe, #7c3aed)',
+    accent: '#5b21b6',
+    sections: [
+      { title: t('help.projects.s1', 'Створення'), items: [
+        { icon: 'plus',   title: t('help.projects.create', 'Створити проєкт'), desc: t('help.projects.create_desc', '«+» вгорі. Агент задасть стартові питання: бюджет, дедлайн, мета.') },
+        { icon: 'chat',   title: t('help.projects.via_inbox', 'Через Inbox'), desc: t('help.projects.via_inbox_desc', 'Напиши «Хочу запустити салон» — Агент створить проєкт з інтервʼю.') },
+      ]},
+      { title: t('help.projects.s2', 'Робота з проєктом'), items: [
+        { icon: 'folder', title: t('help.projects.notes', 'Записи проєкту'), desc: t('help.projects.notes_desc', 'Все що пишеш у чаті проєкту автоматично прив’язано — задачі, нотатки, фінанси.') },
+        { icon: 'limit',  title: t('help.projects.budget', 'Бюджет проєкту'), desc: t('help.projects.budget_desc', 'Витрати з тегом проєкту враховуються окремо. Агент сповіщає коли наближається ліміт.') },
+      ]},
+      { title: t('help.projects.s3', 'Агент'), items: [
+        { icon: 'wallet', title: t('help.projects.queries', 'Запити'), desc: null,
+          cmds: [t('help.projects.cmd1', 'як справи з ремонтом'), t('help.projects.cmd2', 'що залишилось по салону'), t('help.projects.cmd3', 'скільки витратив на проєкт'), t('help.projects.cmd4', 'найближчі задачі ремонту')] },
       ]},
     ]
   },
