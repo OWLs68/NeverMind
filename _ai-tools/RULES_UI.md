@@ -75,7 +75,25 @@
 
 ---
 
-## 5. Священні корови UI (з `docs/DO_NOT_TOUCH.md`)
+## 5. iOS Safari візуальний баг — обов'язковий чек ДО CSS-патчів
+
+**Тригер:** симптом на iPhone «модалка глючить / стискається / мерехтить / обрізається / стрибає / реагує на тап». Перш ніж писати CSS-патч — пройти 3 точки. 30 секунд роботи замість 4 ітерацій false leads.
+
+**Чек:**
+
+1. **`grep ":active\|:focus\|:hover" style.css`** на universal selectors (`button`, `[onclick]`, `*`). Глобальне правило `[onclick]:active { transform: scale(0.87); }` чіпляється до **всіх** елементів з onclick — включно з root-модалками. Якщо знайшов — корінь скоріше за все тут.
+
+2. **`grep "backdrop-filter" style.css`** + перевірка чи символ скаржиться має `backdrop-filter` parent. iOS Safari nested blur layers (parent + child) при momentum scroll re-rasterize → subpixel rounding glitch / clipping. Фікс — або `translateZ(0)` на дитині (ізолює composite layer), або solid fill замість translucent.
+
+3. **Composite layers + parent transform.** Якщо елемент обрізається — перевір чи parent має `transform`/`backdrop-filter`/`filter`. Це створює новий containing block який клипає absolutely-positioned дітей. Виносити overlay як sibling top-level (calendar-pattern), не дитину.
+
+**Тільки після цих 3 кроків** — починай гіпотези CSS-патчів (mask-image, flex layout, body-lock, padding).
+
+**Підтверджені кейси (UvEHE 03.05):** Settings scale-glitch — 4 ітерації false leads (mask, flex, nested blur, body-lock). Корінь у пункті 1: глобальне `[onclick]:active`. Chips clipping — теж 4 ітерації (mask, padding, flex-shrink, scrollIntoView). Корінь у пункті 2: parent `.ai-bar-chat-window` з `backdrop-filter:blur(16px)` клипав chips, фікс `translateZ(0)`. Обидва знайдені Council `code-regression-finder` — порівняння робочого vs зламаного компоненту.
+
+---
+
+## 6. Священні корови UI (з `docs/DO_NOT_TOUCH.md`)
 
 - **Чат-бари на ВСІХ вкладках обов'язкові.** Не прибирати ні з одної вкладки.
 - **Глобальна анімація натискання у `style.css`** — не розширювати селектор без обговорення.
@@ -85,7 +103,7 @@
 
 ---
 
-## 6. Скіли під UI-задачі
+## 7. Скіли під UI-задачі
 
 | Запит Романа | Скіл |
 |--------------|------|

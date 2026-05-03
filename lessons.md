@@ -18,6 +18,7 @@
 - **UI-задача** → читаю `docs/DESIGN_SYSTEM.md` секцію модалок/кольорів → пропоную ескіз/макет Роману словами (описую **вигляд**, не HEX-коди) → чекаю підтвердження → тільки тоді код. Скіл `/mockup` або `/ux-ui` допомагає.
 - **Промптинг OWL** → `/prompt-engineer` → правлю `src/ai/prompts.js` (не `core.js`) → тестую на конкретному юзерському прикладі.
 - **iOS-специфічний баг** → `/pwa-ios-fix` чеклист (bfcache, SW, keyboard, overscroll) → читаю відповідну секцію `src/core/boot.js setupSW()`.
+- **iOS Safari ВІЗУАЛЬНИЙ баг** (модалка глючить / стискається / мерехтить / обрізається / реагує на тап) → ПЕРШИМ ділом 3 grep-перевірки (детальний чек у `_ai-tools/RULES_UI.md` секція 5), ТІЛЬКИ ПОТІМ CSS-патчі: (1) `grep ":active\|:focus\|:hover" style.css` на universal selectors, (2) `grep "backdrop-filter" style.css` + перевірка чи symptomний елемент має parent з blur, (3) перевірка composite layers / parent transform. 30 секунд замість 4 ітерацій false leads (доведено UvEHE 03.05 — Settings + Chips, по 4 ітерації кожен).
 
 ### Великі файли / багатофазна робота
 - **Файл >250 рядків** → Write skeleton (~20-30 рядків з плейсхолдерами) → по одному Edit замінює плейсхолдер реалізацією → після всіх Edit — `node build.js` перевірка.
@@ -169,6 +170,16 @@
 **Що сталось:** Settings мав 13 `.s-group` з `backdrop-filter:blur(16px)` всередині panel з `blur(32px)`. Здавалось OK візуально, але iOS Safari при momentum scroll re-rasterize всю стопку 14 nested composite layers → subpixel rounding glitch.
 
 **Правило:** **max 1 backdrop-filter layer на стек**. Дочірні картки — solid fill, не translucent. Записано у DESIGN_SYSTEM.md.
+
+### Chips clipping — parent backdrop-filter clips children (UvEHE 03.05)
+
+**Що сталось:** AI-chips у chat-bar частково обрізались знизу на iOS. 4 ітерації false leads: (1) `mask-image` видалено, (2) padding 28→48 + double rAF, (3) `flex-shrink:0` + `scrollIntoView`, (4) корінь — parent `.ai-bar-chat-window` має `backdrop-filter:blur(16px)` що створює новий containing block і клипає absolutely-positioned дітей. Фікс — `transform:translateZ(0)` на `.chat-chips-row` ізолює composite layer від parent. Той самий iOS quirk що Settings.
+
+**Чому 4 ітерації?** Шукав корінь у самих chips (mask, padding, flex, scroll). Жодна гіпотеза не дивилась на parent. Council `code-regression-finder` за 30 сек знайшов parent blur + порадив `translateZ(0)`.
+
+**Правило:** для **обрізання / clipping на iOS** першим ділом перевір `backdrop-filter` / `transform` / `filter` на parent дереві. Це створює новий containing block. Фікс через `translateZ(0)` на дитині (ізолює composite). Записано у `_ai-tools/RULES_UI.md` секція 5 пункт 3.
+
+**Корінь обох UvEHE інцидентів (Settings + Chips):** я шукав корінь у самому проблемному елементі, не на сусідах і не на parent дереві. Council code-regression-finder робить це за секунди — порівняння робочого vs зламаного компоненту дає різницю. Урок — при візуальних iOS багах одразу залучати `code-regression-finder` agent, не патчити навмання.
 
 ### Council-агент сам зробив Edit + commit (UvEHE 03.05)
 
