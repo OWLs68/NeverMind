@@ -171,6 +171,28 @@
 
 **Правило:** **max 1 backdrop-filter layer на стек**. Дочірні картки — solid fill, не translucent. Записано у DESIGN_SYSTEM.md.
 
+### Silent failure — tool/action генерується одним шаром, не оброблений іншим (rC4TO 04.05)
+
+**Що сталось (3 кейси за одну сесію):**
+
+1. **Chips Phase C health_interview** — `health.js:_interviewChips` генерує `action:'health_interview'`, але `chips.js renderChips` whitelist пропускає тільки `nav`/`clarify_save` → action тихо переписується у `'chat'` → handler у `handleChipClick` ніколи не спрацьовує → fall through у `sendChipToChat` → AI отримує label як user-message без контексту → інтерв'ю застрягає. **Юзер бачить:** чіп зникає, нічого не відбувається.
+
+2. **Payload escape `"` у data-attr** — `escapeHtml(utils.js)` не кодує `"` → JSON payload `{"step":1,...}` ламає HTML-атрибут передчасно → `JSON.parse` отримує `"{"` → SyntaxError → silent return у handler. Проявляється як той самий симптом 1.
+
+3. **create_project у Фінансах** — `tool-dispatcher.js` навмисно НЕ обробляв `create_project` (коментар «Inbox-specific interview flow»). У Finance/Notes/Tasks AI повертає create_project → dispatcher silent skip → `addMsg` ніколи не викликається → **typing-індикатор крутиться вічно** (бо прибирається тільки при наступному `addMsg`).
+
+**Спільний патерн:** один шар генерує, інший не знає → тиша. Без `addMsg` у chat-handler typing висне; без `console.warn` баг ніким не помічається.
+
+**Правило (універсальне):** для будь-якого dispatcher/handler-ланцюга — **завжди** мати default case з:
+1. `console.warn('[<module>] Unknown <thing>:', name)` — щоб діагностика в DevTools показала що сталось.
+2. **Видимий feedback юзеру** — `addMsg('agent', '⚠️ Не зміг X. Спробуй Y')` або еквівалент. Тиша — найгірший UX.
+
+**Втілення rC4TO:**
+- `chips.js:317` — `console.warn` для невідомого action у `handleChipClick`.
+- `tool-dispatcher.js:530` — guard у кінці `dispatchChatToolCalls`: якщо НІ один шар не обробив tool → `addMsg('agent', '⚠️ Не зміг виконати X. Спробуй переформулювати або в Inbox.')` + `console.warn`.
+
+**Як діагностувати такі баги швидко:** Council `code-regression-finder` (порівняння робочого vs зламаного) — у rC4TO знайшов корінь chips за секунди. Альтернатива (хвилини): `grep -rn "action:" src/owl src/ai src/tabs` для збору списку згенерованих actions vs покритих у dispatcher.
+
 ### Chips clipping — parent backdrop-filter clips children (UvEHE 03.05)
 
 **Що сталось:** AI-chips у chat-bar частково обрізались знизу на iOS. 4 ітерації false leads: (1) `mask-image` видалено, (2) padding 28→48 + double rAF, (3) `flex-shrink:0` + `scrollIntoView`, (4) корінь — parent `.ai-bar-chat-window` має `backdrop-filter:blur(16px)` що створює новий containing block і клипає absolutely-positioned дітей. Фікс — `transform:translateZ(0)` на `.chat-chips-row` ізолює composite layer від parent. Той самий iOS quirk що Settings.
