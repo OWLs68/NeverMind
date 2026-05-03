@@ -8,6 +8,7 @@ import { openChatBar, saveChatMsg } from '../ai/core.js';
 import { escapeHtml, logRecentAction } from '../core/utils.js';
 import { sendToAI, addInboxChatMsg } from '../tabs/inbox.js';
 import { sendTasksBarMessage } from '../tabs/habits.js';
+import { addTaskBarMsg } from '../tabs/tasks.js';
 import { downgradeBriefingPriority } from './unified-storage.js';
 import { renderTabBoard } from './board.js';
 import { sendNotesBarMessage, addNotesChatMsg } from '../tabs/notes.js';
@@ -418,6 +419,7 @@ const _CLARIFY_ADDMSG = {
   evening:  (role, text) => addEveningBarMsg(role, text),
   projects: (role, text) => addProjectsChatMsg(role, text),
   me:       (role, text) => addMeChatMsg(role, text),
+  tasks:    (role, text) => addTaskBarMsg(role, text),
 };
 
 function handleClarifySaveChip(tab, target, payload) {

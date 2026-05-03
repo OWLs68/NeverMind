@@ -592,7 +592,7 @@ function showTasksChatMessages() {
 
 let _taskTypingEl = null;
 
-export function addTaskBarMsg(role, text, _noSave = false) {
+export function addTaskBarMsg(role, text, _noSave = false, chips = null) {
   const el = document.getElementById('tasks-chat-messages');
   if (!el) return;
   if (_taskTypingEl) { _taskTypingEl.remove(); _taskTypingEl = null; }
@@ -605,12 +605,19 @@ export function addTaskBarMsg(role, text, _noSave = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   if (!_noSave) { try { openChatBar('tasks'); } catch(e) {} }
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
   div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text)}</div>`;
   el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'tasks');
+    el.appendChild(chipsRow);
+  }
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
   else taskBarHistory.push({ role: 'assistant', content: text });
