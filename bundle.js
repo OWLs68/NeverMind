@@ -9286,6 +9286,14 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_habits();
       editingNoteId = null;
       _migrateFoldersApostrophes();
+      window.addEventListener("nm-data-changed", (e) => {
+        if (e.detail === "notes" && currentTab === "notes") {
+          try {
+            renderNotes();
+          } catch (err) {
+          }
+        }
+      });
       currentNotesFolder = null;
       ICON_SVG = {
         folder: _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
