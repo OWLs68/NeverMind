@@ -20553,6 +20553,15 @@ ${legacy}`;
       dy = 0;
     }, { passive: true });
   }
+  function _containOverscroll(modal) {
+    modal.querySelectorAll("*").forEach((el) => {
+      const s = el.getAttribute("style") || "";
+      if (/overflow-y\s*:\s*(auto|scroll)/i.test(s) && !el._overscrollContained) {
+        el.style.overscrollBehavior = "contain";
+        el._overscrollContained = true;
+      }
+    });
+  }
   function _registerModal(modal) {
     if (!modal || _registered.has(modal)) return;
     _registered.add(modal);
@@ -20561,6 +20570,7 @@ ${legacy}`;
       if (child) _externalizeOverlay(modal, child);
     }
     _setupSwipeClose(modal);
+    _containOverscroll(modal);
     syncOverlay(modal);
     new MutationObserver(() => syncOverlay(modal)).observe(modal, { attributes: true, attributeFilter: ["style"] });
   }
