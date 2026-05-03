@@ -1224,8 +1224,7 @@
 </div>
 
 <!-- SETTINGS OVERLAY -->
-<div id="settings-overlay">
-  <div class="settings-backdrop" onclick="closeSettings()"></div>
+<div id="settings-overlay" onclick="if(event.target===this)closeSettings()">
   <div class="settings-panel" id="settings-panel-el">
     <div class="settings-handle" style="cursor:grab"></div>
     <div class="settings-title">Налаштування</div>
