@@ -6,7 +6,7 @@
 
 import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, parseContentChips, t } from '../core/utils.js';
-import { addToTrash } from '../core/trash.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
@@ -18,6 +18,7 @@ import { setupModalSwipeClose } from './tasks.js';
 import { monthShort } from '../data/months.js';
 import { saveTasks } from './tasks.js';
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { currentTab } from '../core/nav.js';
 
 // === HEALTH STATUSES (6-статусна шкала, 03.05.2026 4xJ7n→MIeXK) ===
@@ -181,19 +182,23 @@ function renderHealthList() {
       const nextStep = card.nextStep || '';
       const pills = (card.treatments || []).slice(0, 4);
       const isDone = card.status === 'done';
-      return `<div onclick="openHealthCard(${card.id})" class="card-glass" style="cursor:pointer;opacity:${st.opacity}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-          <div style="flex:1">
-            <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
-            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
+      // .health-card-wrap — обгортка для swipe-видалення (як у notes/tasks/finance).
+      // margin-bottom переїжджає з картки на wrap; card-glass лишається без margin.
+      return `<div class="health-card-wrap" data-id="${card.id}" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:8px">
+        <div onclick="openHealthCard(${card.id})" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <div style="flex:1">
+              <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
+              <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
+            </div>
+            <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.icon} ${st.label}</div>
           </div>
-          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.icon} ${st.label}</div>
+          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
+            <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
+          </div>
+          ${!isDone && nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:${pills.length ? 7 : 0}px">→ ${escapeHtml(nextStep)}</div>` : ''}
+          ${pills.length > 0 && !isDone ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${pills.map(p => `<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(30,16,64,0.07);color:rgba(30,16,64,0.5)">${escapeHtml(p)}</div>`).join('')}</div>` : ''}
         </div>
-        <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
-          <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
-        </div>
-        ${!isDone && nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:${pills.length ? 7 : 0}px">→ ${escapeHtml(nextStep)}</div>` : ''}
-        ${pills.length > 0 && !isDone ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${pills.map(p => `<div style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(30,16,64,0.07);color:rgba(30,16,64,0.5)">${escapeHtml(p)}</div>`).join('')}</div>` : ''}
       </div>`;
     }).join('');
 
@@ -206,6 +211,54 @@ function renderHealthList() {
   const missedBannerHtml = _buildMissedDosesBannerHtml();
 
   scrollEl.innerHTML = allergiesHtml + missedBannerHtml + disclaimerHtml + cardsHtml;
+  _attachHealthSwipeDelete();
+}
+
+// === HEALTH SWIPE TO DELETE ===
+// Підключається після кожного renderHealthList. Свайп вліво на картці → кнопка-кошик
+// справа → тап = видалення з undo-toast (5 сек). Дзеркало notes/tasks/finance.
+function _animateHealthSwipeRemoval(wrap, doRemove) {
+  if (!wrap) { doRemove(); return; }
+  wrap.style.maxHeight = wrap.offsetHeight + 'px';
+  setTimeout(() => wrap.classList.add('swipe-deleting'), 30);
+  setTimeout(doRemove, 310);
+}
+
+function _attachHealthSwipeDelete() {
+  document.querySelectorAll('.health-card-wrap').forEach(wrap => {
+    const card = wrap.querySelector('.health-card-item');
+    if (!card) return;
+    const id = Number(wrap.dataset.id);
+    attachSwipeDelete(wrap, card, () => {
+      const cards = getHealthCards();
+      const removed = cards.find(c => c.id === id);
+      if (!removed) return;
+      // Зберігаємо знімок event'а ДО видалення для можливого undo.
+      let removedEvent = null;
+      const eventId = removed.nextAppointment && removed.nextAppointment.eventId;
+      if (eventId) {
+        const events = getEvents();
+        const eIdx = events.findIndex(e => e.id === eventId);
+        if (eIdx !== -1) removedEvent = events[eIdx];
+      }
+      _animateHealthSwipeRemoval(wrap, () => {
+        deleteHealthCardProgrammatic(id);
+        if (activeHealthCardId === id) activeHealthCardId = null;
+        renderHealth();
+        showUndoToast(t('health.toast.card_deleted', 'Картку видалено'), () => {
+          const arr = getHealthCards();
+          arr.unshift(removed);
+          saveHealthCards(arr);
+          if (removedEvent) {
+            const events = getEvents();
+            events.push(removedEvent);
+            saveEvents(events);
+          }
+          renderHealth();
+        });
+      });
+    });
+  });
 }
 
 // B-31 (15.04 6v2eR): функції _renderHealthWeekBars / _renderHealthTodayScales / setHealthScale
