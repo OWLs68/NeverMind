@@ -522,7 +522,7 @@ function openAllTransactions() {
   }).join('');
   modal.innerHTML = `
     <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
-    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom)+16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
+    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
       <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">Всі операції (${allTxs.length})</div>
       ${rows || '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">Немає операцій</div>'}
