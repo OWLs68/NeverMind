@@ -29,13 +29,9 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (MIeXK + iWyjU). Старіші (4xJ7n + mUpS8 + BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (rC4TO + UvEHE). Старіші (MIeXK з 0 багів + iWyjU з 0 багів + 4xJ7n + mUpS8 + BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
-_Сесія **MIeXK** (03.05.2026) — Health AI-інтерв'ю Phase A+B+C: 0 закритих багів (тільки фічі), знайдено B-120+B-121 (відкриті, у 🟡 секції)._
-
-_Сесія **iWyjU** (03.05.2026) — самотест→Read CLAUDE.md + statusline % контексту: 0 закритих багів (інфраструктурна сесія, зміни тільки `.claude/`)._
-
-_Сесія **rC4TO** (04.05.2026) — silent failures фіксовано (chips Phase C + dispatcher) + swipe-delete карток Здоров'я + iOS діагноз правило:_
+_Сесія **rC4TO** (04.05.2026) — silent failures фіксовано (chips Phase C + dispatcher) + swipe-delete карток Здоров'я + iOS діагноз правило + Notes render guard:_
 - **B-122 закрито** (`8a05ada`) — Health Phase C інтерв'ю чіпи мовчать. Корінь у `src/owl/chips.js:199-204`: (1) whitelist action переписував `health_interview` у `'chat'` → handler ніколи не спрацьовував, (2) `escapeHtml` не кодує `"` → JSON payload ламав HTML-атрибут. Фікс: додано `health_interview` у whitelist + локальний escape `"` → `&quot;` для payloadAttr + `console.warn` у fallback `handleChipClick` для майбутніх silent failures. Юзер підтвердив: «Чіпи працюють».
 - **B-123 закрито** (`431b433`) — `create_project` у Фінансах висне (typing-індикатор крутиться вічно). Корінь у `src/ai/tool-dispatcher.js`: tool навмисно НЕ оброблявся (коментар «Inbox-specific interview flow») → silent skip → `addMsg` ніколи не викликається → typing висне. Фікс: новий handler `create_project` ПЕРЕД universal loop (створює проект з будь-якого чату через `createProjectProgrammatic` helper з projects.js + `switchTab('inbox')` + `startProjectInboxInterview`) + універсальний SILENT FAILURE GUARD у кінці `dispatchChatToolCalls` для будь-яких unknown tools.
 - **B-124 закрито** (`2f96593`) — вкладка Нотатки порожня попри 30 записів у `nm_notes`. Симптом (Роман v626): порожній екран без empty state, «+» каже «збережено» але список не оновлюється. Корінь з логів діагностики (`bundle.js:8661`): `items[0].text.length` throws у `renderNotes:333` бо хоч один запис у nm_notes без поля `text` (AI через clarify-chip path міг згенерувати save_note з payload без text → `addNoteFromInbox(undefined)` → запис з `text: undefined`). Один битий запис → throws всередині `.map()` → весь HTML не формується → `content.innerHTML` лишається порожнім → empty state не показується (бо `notes.length > 0`). Фікс: 3 захисти у `notes.js` — (1) `addNoteFromInbox` return early якщо text falsy, (2) `renderNotes` фільтрує битих + one-time cleanup `saveNotes(validNotes)` в localStorage, (3) safe-read `items[0]?.text` у preview generation. Юзер підтвердив: «Папки повернулися». Розблоковано всі 5+ папок з 30 нотатками.
