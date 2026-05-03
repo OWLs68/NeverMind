@@ -617,10 +617,12 @@ export function addTaskBarMsg(role, text, _noSave = false, chips = null) {
     chipsRow.className = 'chat-chips-row';
     renderChips(chipsRow, chips, 'tasks');
     el.appendChild(chipsRow);
+    // B-119 + UvEHE chips clipping fix: scrollIntoView надійніше за scrollTop+rAF
+    // на iOS Safari — браузер сам рахує реальний layout після append.
+    requestAnimationFrame(() => chipsRow.scrollIntoView({ block: 'end', inline: 'nearest' }));
   }
-  // B-119 (UvEHE розкочення): rAF щоб iOS Safari порахував висоту chipsRow ДО scrollу.
   el.scrollTop = el.scrollHeight;
-  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; }); });
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
   else taskBarHistory.push({ role: 'assistant', content: text });
   if (!_noSave) saveChatMsg('tasks', role, text);

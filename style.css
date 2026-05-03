@@ -1647,6 +1647,9 @@ button:active,
   max-width: 92%;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  /* UvEHE 03.05: НЕ стискатися як flex-item у chat-messages (flex-direction:column).
+     Без цього flex-shrink:1 за замовчуванням → chipsRow обрізається знизу. */
+  flex-shrink: 0;
 }
 .chat-chips-row::-webkit-scrollbar { display: none; }
 .chat-chips-row .owl-chip {

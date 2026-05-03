@@ -993,10 +993,12 @@ export function addNotesChatMsg(role, text, _noSave = false, chips = null) {
     chipsRow.className = 'chat-chips-row';
     renderChips(chipsRow, chips, 'notes');
     el.appendChild(chipsRow);
+    // B-119 + UvEHE chips clipping fix: scrollIntoView надійніше за scrollTop+rAF
+    // на iOS Safari — браузер сам рахує реальний layout після append.
+    requestAnimationFrame(() => chipsRow.scrollIntoView({ block: 'end', inline: 'nearest' }));
   }
-  // B-119 (UvEHE розкочення): rAF щоб iOS Safari порахував висоту chipsRow ДО scrollу.
   el.scrollTop = el.scrollHeight;
-  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; }); });
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
   else notesBarHistory.push({ role: 'assistant', content: text });
   if (!_noSave) saveChatMsg('notes', role, text);
