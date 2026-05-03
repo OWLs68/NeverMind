@@ -16,6 +16,22 @@ import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
 import { saveTasks } from './tasks.js';
 
+// === HEALTH STATUSES (6-статусна шкала, 03.05.2026 4xJ7n→MIeXK) ===
+// Замінили старі 3 (active/controlled/done) — Роман: «3 замало бо не відображають
+// реальний стан хвороби». Міграція legacy → у boot.js runMigrations прапором
+// `nm_health_status_v2_done`. Без фіолету (заборонений колір — у chronic темно-індиго).
+export const HEALTH_STATUS_DEFS = {
+  acute:     { icon: '🆕',  label: 'Гостра',     bg: 'rgba(239,68,68,0.10)',  color: '#ef4444', bar: '#ef4444', isActive: true,  opacity: 1 },
+  treatment: { icon: '💊',  label: 'Лікування',  bg: 'rgba(234,88,12,0.10)',  color: '#ea580c', bar: '#ea580c', isActive: true,  opacity: 1 },
+  improving: { icon: '📈',  label: 'Покращення', bg: 'rgba(217,119,6,0.10)',  color: '#d97706', bar: '#d97706', isActive: true,  opacity: 1 },
+  remission: { icon: '🟢',  label: 'Контроль',   bg: 'rgba(22,163,74,0.10)',  color: '#16a34a', bar: '#16a34a', isActive: true,  opacity: 1 },
+  chronic:   { icon: '♾️', label: 'Хронічна',   bg: 'rgba(30,16,64,0.10)',   color: '#1e1040', bar: '#1e1040', isActive: true,  opacity: 1 },
+  done:      { icon: '✅',  label: 'Завершено',  bg: 'rgba(100,116,139,0.10)', color: '#64748b', bar: '#64748b', isActive: false, opacity: 0.5 },
+};
+export const HEALTH_STATUS_KEYS = Object.keys(HEALTH_STATUS_DEFS);
+function _statusDef(s) { return HEALTH_STATUS_DEFS[s] || HEALTH_STATUS_DEFS.treatment; }
+function _isActiveHealthStatus(s) { return _statusDef(s).isActive; }
+
 // === STORAGE ===
 
 // Lazy-міграція старої структури картки у нову (Фаза 1, 15.04 jMR6m).
@@ -148,12 +164,6 @@ function renderHealthList() {
   const cards = getHealthCards();
   const allergiesHtml = _buildAllergiesCardHtml();
 
-  const statusColors = {
-    active: { bg: 'rgba(234,88,12,0.1)', color: '#ea580c', label: 'Активне', bar: '#ea580c', opacity: 1 },
-    controlled: { bg: 'rgba(217,119,6,0.1)', color: '#d97706', label: 'Під контролем', bar: '#d97706', opacity: 1 },
-    done: { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', label: 'Завершено ✓', bar: '#16a34a', opacity: 0.5 },
-  };
-
   const cardsHtml = cards.length === 0
     ? `<div style="text-align:center;padding:32px 0">
         <div style="font-size:36px;margin-bottom:10px">🫀</div>
@@ -162,7 +172,7 @@ function renderHealthList() {
         <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Додати картку</button>
       </div>`
     : cards.map(card => {
-      const st = statusColors[card.status] || statusColors.active;
+      const st = _statusDef(card.status);
       const pct = card.progress || 0;
       const nextStep = card.nextStep || '';
       const pills = (card.treatments || []).slice(0, 4);
@@ -173,7 +183,7 @@ function renderHealthList() {
             <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
           </div>
-          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.label}</div>
+          <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};flex-shrink:0;margin-left:8px">${st.icon} ${st.label}</div>
         </div>
         <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:${nextStep || pills.length ? 7 : 0}px">
           <div style="height:100%;width:${pct}%;background:${st.bar};border-radius:3px;transition:width 0.5s"></div>
@@ -217,7 +227,7 @@ export function createHealthCardProgrammatic(opts) {
     id: Date.now() + Math.floor(Math.random() * 1000),
     name: name.trim(),
     subtitle: (subtitle || '').trim(),
-    status: status || 'active',
+    status: HEALTH_STATUS_DEFS[status] ? status : 'treatment',
     progress: 0,
     nextStep: '',
     treatments: [],
@@ -383,7 +393,7 @@ export function addHealthHistoryEntry(cardId, type, text) {
 function buildHealthExportText() {
   const allergies = getAllergies();
   const cards = getHealthCards();
-  const active = cards.filter(c => c.status === 'active' || c.status === 'controlled');
+  const active = cards.filter(c => _isActiveHealthStatus(c.status));
   const done = cards.filter(c => c.status === 'done');
   const todayStr = new Date().toLocaleDateString('uk-UA');
   const lines = [];
@@ -411,7 +421,7 @@ function buildHealthExportText() {
     lines.push(``);
     active.forEach((card, i) => {
       lines.push(`${i + 1}. ${card.name.toUpperCase()}${card.subtitle ? ' — ' + card.subtitle : ''}`);
-      lines.push(`   Статус: ${card.status === 'active' ? 'активне' : 'під контролем'} · прогрес курсу: ${card.progress || 0}%`);
+      lines.push(`   Статус: ${_statusDef(card.status).label} · прогрес курсу: ${card.progress || 0}%`);
       if (card.startDate) {
         const d = new Date(card.startDate);
         if (!isNaN(d)) {
@@ -584,7 +594,7 @@ export function syncHealthFinanceToHistory(amount, category, comment) {
     const hasHealthMarker = category === "Здоров'я" || /аптек|ліки|препарат|лікар|аналіз|тест|рецепт/i.test(commentLower);
     if (!hasHealthMarker) return false;
     const cards = getHealthCards();
-    const active = cards.filter(c => c.status === 'active' || c.status === 'controlled');
+    const active = cards.filter(c => _isActiveHealthStatus(c.status));
     if (active.length === 0) return false;
     // Fuzzy match: шукаємо картку чия назва або назви ліків згадуються у comment
     let target = null;
@@ -760,12 +770,7 @@ function renderHealthWorkspace(id) {
   const card = cards.find(c => c.id === id);
   if (!card) { closeHealthCard(); return; }
 
-  const statusColors = {
-    active: { bg: 'rgba(234,88,12,0.1)', color: '#ea580c', label: 'Активне', bar: '#ea580c' },
-    controlled: { bg: 'rgba(217,119,6,0.1)', color: '#d97706', label: 'Під контролем', bar: '#d97706' },
-    done: { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', label: 'Завершено ✓', bar: '#16a34a' },
-  };
-  const st = statusColors[card.status] || statusColors.active;
+  const st = _statusDef(card.status);
   const pct = card.progress || 0;
   const meds = card.medications || [];
   // Фаза 1 (15.04 jMR6m): doctorNotes мігровано в history. Читаємо записи лікаря з history.
@@ -816,11 +821,9 @@ function renderHealthWorkspace(id) {
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5);margin-bottom:8px">
         Курс ${pct}%${trendLabel ? ` · <span style="color:${trendColor};font-weight:800">${trendLabel}</span>` : ''}
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color}">${st.label}</div>
-        <div style="display:flex;gap:6px">
-          ${['active','controlled','done'].map(s => `<button onclick="setHealthCardStatus(${id},'${s}')" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;border:1px solid ${s === card.status ? st.color : 'rgba(30,16,64,0.15)'};background:${s === card.status ? st.bg : 'transparent'};color:${s === card.status ? st.color : 'rgba(30,16,64,0.4)'};cursor:pointer">${s === 'active' ? 'Активне' : s === 'controlled' ? 'Контроль' : 'Завершено'}</button>`).join('')}
-        </div>
+      <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};display:inline-block;margin-bottom:8px">${st.icon} ${st.label}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${HEALTH_STATUS_KEYS.map(s => { const d = _statusDef(s); const on = s === card.status; return `<button onclick="setHealthCardStatus(${id},'${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : 'rgba(30,16,64,0.15)'};background:${on ? d.bg : 'transparent'};color:${on ? d.color : 'rgba(30,16,64,0.45)'};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`; }).join('')}
       </div>
     </div>
 
@@ -957,11 +960,18 @@ function logHealthMedDose(cardId, medId) {
 }
 
 function setHealthCardStatus(id, status) {
+  if (!HEALTH_STATUS_DEFS[status]) return;
   const cards = getHealthCards();
   const idx = cards.findIndex(c => c.id === id);
   if (idx !== -1) {
-    const progress = status === 'done' ? 100 : status === 'controlled' ? 70 : cards[idx].progress || 0;
+    const progressMap = { acute: 20, treatment: 40, improving: 60, remission: 80, done: 100 };
+    const progress = progressMap[status] !== undefined ? progressMap[status] : (cards[idx].progress || 0);
+    const oldStatus = cards[idx].status;
     cards[idx] = { ...cards[idx], status, progress };
+    if (oldStatus !== status) {
+      cards[idx].history = cards[idx].history || [];
+      cards[idx].history.unshift({ ts: Date.now(), type: 'status_change', text: `${_statusDef(oldStatus).label} → ${_statusDef(status).label}` });
+    }
     saveHealthCards(cards);
     renderHealthWorkspace(id);
   }
@@ -1024,8 +1034,9 @@ function _fillHealthCardModal(card) {
   setVal('health-card-appt-date', c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : '');
   setVal('health-card-appt-time', c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : '');
 
-  // Статус
-  const status = c.status || 'active';
+  // Статус (модалка створення статус не показує — кнопок нема, цикл порожній.
+  // Лишається для backwards-сумісності якщо колись повернеться UI.)
+  const status = c.status || 'treatment';
   document.querySelectorAll('.health-status-btn').forEach(btn => {
     const isActive = btn.dataset.status === status;
     btn.dataset.active = isActive ? '1' : '0';
@@ -1058,7 +1069,7 @@ function _getHealthCardModalStatus() {
   for (const btn of document.querySelectorAll('.health-status-btn')) {
     if (btn.dataset.active === '1') return btn.dataset.status;
   }
-  return 'active';
+  return 'treatment';
 }
 
 function addHealthMedicationRow() {
@@ -1452,11 +1463,11 @@ export function getHealthContext() {
 
   // Картки стану
   const cards = getHealthCards();
-  const active = cards.filter(c => c.status === 'active' || c.status === 'controlled');
+  const active = cards.filter(c => _isActiveHealthStatus(c.status));
   if (active.length > 0) {
     parts.push(`Активні стани здоров'я (${active.length}):`);
     active.slice(0, 5).forEach(card => {
-      const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? ' — ' + card.subtitle : ''} [${card.status}, прогрес: ${card.progress || 0}%]`];
+      const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? ' — ' + card.subtitle : ''} [${_statusDef(card.status).label}, прогрес: ${card.progress || 0}%]`];
       if (card.startDate) {
         const d = new Date(card.startDate);
         if (!isNaN(d)) {

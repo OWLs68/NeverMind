@@ -373,7 +373,31 @@ function runMigrations() {
       }
     }
   }
-  // v9: нові міграції додавати тут
+  // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
+  // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
+  // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,
+  // done → done. Інтерв'ю після створення картки уточнить точний статус.
+  if (!localStorage.getItem('nm_health_status_v2_done')) {
+    try {
+      const raw = localStorage.getItem('nm_health_cards');
+      if (raw) {
+        const cards = JSON.parse(raw);
+        if (Array.isArray(cards)) {
+          const map = { active: 'treatment', controlled: 'remission', done: 'done' };
+          let migrated = 0;
+          cards.forEach(c => {
+            if (map[c.status]) { c.status = map[c.status]; migrated++; }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_health_cards', JSON.stringify(cards));
+            console.log(`[boot] v9 migration: ${migrated} health cards migrated to 6-status scale`);
+          }
+        }
+      }
+      localStorage.setItem('nm_health_status_v2_done', '1');
+    } catch (e) { console.error('[boot] v9 migration failed:', e); }
+  }
+  // v10: нові міграції додавати тут
 }
 
 // === INIT ===
