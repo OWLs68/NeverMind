@@ -140,6 +140,16 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
+**🚀 ПРІОРИТЕТ #1 (UvEHE 03.05): Dynamic AI-driven chips — Jarvis-level interaction.** Роман сформулював як ключовий: «3 фіксовані варіанти — слабо і не Jarvis. Має бути базовою потужною версією. Фіксовані тільки як допоміжні». **План у ROADMAP.md секція 🚀 Active** — 6 кроків (~1-2 год):
+1. Запустити `prompt-engineer-auditor` агент → аудит `prompts.js` (~700 рядків)
+2. Розширити `CLARIFY_INLINE_RULES` (`src/ai/prompts.js:241`) прикладами AI-driven chips з контексту (лікарі/час/підтвердження)
+3. Додати правила у системні промпти 8 чатів — КОЛИ генерувати chips
+4. Розширити `chips.js handleChipClick` нові action: `multi_step`, `set_field`, `confirm_action`
+5. i18n обгортки нових прикладів через `t()`
+6. Тестування у 7 чатах
+
+Технічна база вже працює: `parseContentChips` parse'ує `{"text":"...","chips":[...]}` з AI content. `clarify-guard` 3-фіксованих лишається як safety net (B-115 захист).
+
 **🔍 ПЕРЕВІРИТИ statusline + хук після рестарту Claude Code (з iWyjU 03.05).** У новому чаті знизу екрану має з'явитись рядок типу `📊 34% · 342K/1M`, оновлюється кожні 10 сек. Хук `context-warning.sh` тепер бере цифру з `lib/compute-context-pct.sh` (assistant.message.usage), а не з `wc -c` файлу — тому не покаже «99%» при реальних 34%. Якщо statusline НЕ з'являється — перевірити який саме формат stdin Claude Code передає (зараз скрипт чекає `{"transcript_path": "..."}`); можливо потрібно інше поле.
 
 **🔍 ПЕРЕВІРИТИ що CLAUDE.md дійсно читається першим (з iWyjU 03.05).** Самотест видалено, замість нього — інструкція у `start.md` Крок 1 + хук-нагадування на `SessionStart`. Якщо у новому чаті Claude знов проб'є («переглянув замість прочитав») — пишемо `PreToolUse` блокер: всі tools крім `Read CLAUDE.md` блокуються поки CLAUDE.md не Read'нуто.
