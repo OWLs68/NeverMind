@@ -1032,6 +1032,8 @@ function _showHealthCardModal(title, showDelete) {
   if (titleEl) titleEl.textContent = title;
   if (delBtn) delBtn.style.display = showDelete ? 'block' : 'none';
   modal.style.display = 'flex';
+  const overlay = document.getElementById('health-card-modal-overlay');
+  if (overlay) overlay.style.display = 'block';
   // B-120: повний iOS scroll lock через position:fixed (overflow:hidden Safari ігнорує).
   // Зберігаємо scrollY у dataset щоб відновити при закритті.
   const scrollY = window.scrollY;
@@ -1054,6 +1056,8 @@ function _showHealthCardModal(title, showDelete) {
 function closeHealthCardModal() {
   const modal = document.getElementById('health-card-modal');
   if (modal) modal.style.display = 'none';
+  const overlay = document.getElementById('health-card-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
   // B-120: знімаємо scroll lock + повертаємо scrollY
   const savedY = parseInt(document.body.dataset.scrollLock || '0', 10);
   document.body.style.position = '';
