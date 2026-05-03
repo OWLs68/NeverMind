@@ -9,8 +9,9 @@ import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
-import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE, CLARIFY_INLINE_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { monthGenitive } from '../data/months.js';
@@ -1421,7 +1422,8 @@ export async function sendTasksBarMessage() {
     + 'Інакше — текст 1-3 речення українською. НЕ вигадуй даних яких немає.\n\n'
     + GLOBAL_TOOLS_RULE + '\n\n'
     + REMINDER_RULES + '\n\n'
-    + UI_TOOLS_RULES
+    + UI_TOOLS_RULES + '\n\n'
+    + CLARIFY_INLINE_RULES
     + (aiContext ? '\n\n' + aiContext : '');
 
   try {
@@ -1431,6 +1433,13 @@ export async function sendTasksBarMessage() {
 
     // Tool dispatch — UI tool або CRUD через universal action
     if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      // Clarify guard (UvEHE 03.05 Phase 3) — інлайн-чіпи замість галюцинації типу B-115
+      const guard = shouldClarify(text, msg.tool_calls, 'tasks');
+      if (guard) {
+        addTaskBarMsg('agent', guard.question, false, guard.chips);
+        setTaskBarLoading(false);
+        return;
+      }
       const handled = dispatchChatToolCalls(msg.tool_calls, addTaskBarMsg, text);
       // B-106 safety net: якщо жоден з tool-обробників не запалив addMsg —
       // точки друку залишились би назавжди. Покажемо текст-fallback або помилку.
