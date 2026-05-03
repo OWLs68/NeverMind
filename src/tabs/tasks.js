@@ -55,11 +55,16 @@ function openEditTask(id) {
 }
 
 // === SWIPE DOWN TO CLOSE MODALS ===
+// UvEHE 03.05: touch listeners на parentElement (root модалки) — щоб свайп
+// вниз ПО ФОНУ теж закривав модалку, не лише по самій картці. Transform
+// застосовуємо до contentEl (картка). Працює тому що картка — єдина
+// дитина root після винесення overlay як top-level sibling (Phase 1-4).
 export function setupModalSwipeClose(contentEl, closeFn) {
   if (!contentEl || contentEl._swipeClose) return;
   contentEl._swipeClose = true;
+  const swipeRoot = contentEl.parentElement || contentEl;
   let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
-  contentEl.addEventListener('touchstart', e => {
+  swipeRoot.addEventListener('touchstart', e => {
     // Не перехоплювати свайп на скролюваних елементах (барабан, чат, прокрутка Налаштувань)
     _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll');
     startY = e.touches[0].clientY;
@@ -67,7 +72,7 @@ export function setupModalSwipeClose(contentEl, closeFn) {
     dy = 0;
     if (!_swipeBlocked) contentEl.style.transition = 'none';
   }, { passive: true });
-  contentEl.addEventListener('touchmove', e => {
+  swipeRoot.addEventListener('touchmove', e => {
     if (_swipeBlocked) return;
     dy = e.touches[0].clientY - startY;
     const dx = Math.abs(e.touches[0].clientX - startX);
@@ -75,7 +80,7 @@ export function setupModalSwipeClose(contentEl, closeFn) {
       contentEl.style.transform = `translateY(${dy}px)`;
     }
   }, { passive: true });
-  contentEl.addEventListener('touchend', () => {
+  swipeRoot.addEventListener('touchend', () => {
     if (_swipeBlocked) { _swipeBlocked = false; return; }
     contentEl.style.transition = 'transform 0.25s ease';
     if (dy > 80) {
