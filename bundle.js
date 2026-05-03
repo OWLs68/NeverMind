@@ -3159,9 +3159,7 @@ ${lines.join("\n")}`;
     } catch {
     }
     const chips = _interviewChips(1, STEP1_OPTIONS);
-    const text = `\u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "${card.name}". 3 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u0432\u0438\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0441\u0442\u0430\u0442\u0443\u0441.
-
-\u0429\u043E \u0437\u0430\u0440\u0430\u0437?`;
+    const text = t("health.iv.intro", '\u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}". 3 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u0432\u0438\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0441\u0442\u0430\u0442\u0443\u0441.\n\n\u0429\u043E \u0437\u0430\u0440\u0430\u0437?', { name: card.name });
     if (currentTab === "health") {
       addHealthChatMsg("agent", text, false, chips);
     } else {
@@ -3182,16 +3180,16 @@ ${lines.join("\n")}`;
     }
     if (!state || !state.card_id) return;
     const labelMap = {
-      recent: "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C",
-      treating: "\u{1F48A} \u041B\u0456\u043A\u0443\u044E",
-      chronic: "\u267E\uFE0F \u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430",
-      skip: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438",
-      doctor_yes: "\u0422\u0430\u043A \u2014 \u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432",
-      doctor_no: "\u041D\u0435 \u0431\u0443\u0432 \u0443 \u043B\u0456\u043A\u0430\u0440\u044F",
-      self: "\u0421\u0430\u043C \u043B\u0456\u043A\u0443\u044E",
-      severe: "\u0421\u0438\u043B\u044C\u043D\u0456",
-      moderate: "\u041F\u043E\u043C\u0456\u0440\u043D\u0456",
-      mild: "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430"
+      recent: t("health.iv.s1.recent", "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C"),
+      treating: t("health.iv.s1.treating", "\u{1F48A} \u041B\u0456\u043A\u0443\u044E"),
+      chronic: t("health.iv.s1.chronic", "\u267E\uFE0F \u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430"),
+      skip: t("health.iv.skip", "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438"),
+      doctor_yes: t("health.iv.s2.yes_full", "\u0422\u0430\u043A \u2014 \u043B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432"),
+      doctor_no: t("health.iv.s2.no", "\u041D\u0435 \u0431\u0443\u0432 \u0443 \u043B\u0456\u043A\u0430\u0440\u044F"),
+      self: t("health.iv.s2.self", "\u0421\u0430\u043C \u043B\u0456\u043A\u0443\u044E"),
+      severe: t("health.iv.s3.severe", "\u0421\u0438\u043B\u044C\u043D\u0456"),
+      moderate: t("health.iv.s3.moderate", "\u041F\u043E\u043C\u0456\u0440\u043D\u0456"),
+      mild: t("health.iv.s3.mild", "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430")
     };
     const userText = labelMap[payload.value] || payload.value;
     if (currentTab === "health") addHealthChatMsg("user", userText);
@@ -3205,7 +3203,7 @@ ${lines.join("\n")}`;
       } catch {
       }
       const chips = _interviewChips(2, STEP2_OPTIONS);
-      const q = "\u041B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F?";
+      const q = t("health.iv.q2", "\u041B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F?");
       if (currentTab === "health") addHealthChatMsg("agent", q, false, chips);
       else saveChatMsg("health", "agent", q, chips);
       return;
@@ -3219,7 +3217,7 @@ ${lines.join("\n")}`;
       } catch {
       }
       const chips = _interviewChips(3, STEP3_OPTIONS);
-      const q = "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u0437\u0430\u0440\u0430\u0437?";
+      const q = t("health.iv.q3", "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u0437\u0430\u0440\u0430\u0437?");
       if (currentTab === "health") addHealthChatMsg("agent", q, false, chips);
       else saveChatMsg("health", "agent", q, chips);
       return;
@@ -3235,7 +3233,7 @@ ${lines.join("\n")}`;
     } catch {
     }
     if (skipped && Object.keys(state.answers).length === 0) {
-      const text2 = "\u0413\u0430\u0440\u0430\u0437\u0434, \u0431\u0435\u0437 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F. \u0421\u0442\u0430\u0442\u0443\u0441 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0437 \u043A\u0430\u0440\u0442\u043A\u0438.";
+      const text2 = t("health.iv.skipped", "\u0413\u0430\u0440\u0430\u0437\u0434, \u0431\u0435\u0437 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F. \u0421\u0442\u0430\u0442\u0443\u0441 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0437 \u043A\u0430\u0440\u0442\u043A\u0438.");
       if (currentTab === "health") addHealthChatMsg("agent", text2);
       else saveChatMsg("health", "agent", text2);
       try {
@@ -3248,7 +3246,7 @@ ${lines.join("\n")}`;
     const updated = updateHealthCardStatusProgrammatic(state.card_id, finalStatus);
     if (!updated) return;
     const def = HEALTH_STATUS_DEFS[finalStatus] || {};
-    const text = `\u0417\u0430\u043F\u0438\u0441\u0430\u0432. \u0421\u0442\u0430\u0442\u0443\u0441 "${updated.name}": ${def.icon || ""} ${def.label || finalStatus}.`;
+    const text = t("health.iv.done", '\u0417\u0430\u043F\u0438\u0441\u0430\u0432. \u0421\u0442\u0430\u0442\u0443\u0441 "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || "", label: def.label || finalStatus });
     if (currentTab === "health") addHealthChatMsg("agent", text);
     else saveChatMsg("health", "agent", text);
     try {
@@ -3306,22 +3304,22 @@ ${lines.join("\n")}`;
       }, 5 * 60 * 1e3);
       HEALTH_INTERVIEW_KEY = "nm_health_interview_pending";
       STEP1_OPTIONS = [
-        { label: "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C", value: "recent" },
-        { label: "\u{1F48A} \u041B\u0456\u043A\u0443\u044E", value: "treating" },
-        { label: "\u267E\uFE0F \u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430", value: "chronic" },
-        { label: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438", value: "skip" }
+        { label: t("health.iv.s1.recent", "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C"), value: "recent" },
+        { label: t("health.iv.s1.treating", "\u{1F48A} \u041B\u0456\u043A\u0443\u044E"), value: "treating" },
+        { label: t("health.iv.s1.chronic", "\u267E\uFE0F \u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430"), value: "chronic" },
+        { label: t("health.iv.skip", "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438"), value: "skip" }
       ];
       STEP2_OPTIONS = [
-        { label: "\u0422\u0430\u043A", value: "doctor_yes" },
-        { label: "\u041D\u0435 \u0431\u0443\u0432 \u0443 \u043B\u0456\u043A\u0430\u0440\u044F", value: "doctor_no" },
-        { label: "\u0421\u0430\u043C \u043B\u0456\u043A\u0443\u044E", value: "self" },
-        { label: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438", value: "skip" }
+        { label: t("health.iv.s2.yes", "\u0422\u0430\u043A"), value: "doctor_yes" },
+        { label: t("health.iv.s2.no", "\u041D\u0435 \u0431\u0443\u0432 \u0443 \u043B\u0456\u043A\u0430\u0440\u044F"), value: "doctor_no" },
+        { label: t("health.iv.s2.self", "\u0421\u0430\u043C \u043B\u0456\u043A\u0443\u044E"), value: "self" },
+        { label: t("health.iv.skip", "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438"), value: "skip" }
       ];
       STEP3_OPTIONS = [
-        { label: "\u0421\u0438\u043B\u044C\u043D\u0456", value: "severe" },
-        { label: "\u041F\u043E\u043C\u0456\u0440\u043D\u0456", value: "moderate" },
-        { label: "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430", value: "mild" },
-        { label: "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438", value: "skip" }
+        { label: t("health.iv.s3.severe", "\u0421\u0438\u043B\u044C\u043D\u0456"), value: "severe" },
+        { label: t("health.iv.s3.moderate", "\u041F\u043E\u043C\u0456\u0440\u043D\u0456"), value: "moderate" },
+        { label: t("health.iv.s3.mild", "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430"), value: "mild" },
+        { label: t("health.iv.skip", "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438"), value: "skip" }
       ];
       Object.assign(window, {
         openAddHealthCard,
