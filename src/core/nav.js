@@ -730,19 +730,22 @@ export function openSettings() {
   const memory = localStorage.getItem('nm_memory') || '';
   const memoryTs = localStorage.getItem('nm_memory_ts');
 
-  document.getElementById('input-api-key').value = key;
-  document.getElementById('input-name').value = settings.name || '';
-  document.getElementById('input-age').value = settings.age || '';
-  document.getElementById('input-weight').value = settings.weight || '';
-  document.getElementById('input-height').value = settings.height || '';
-  document.getElementById('input-profile-notes').value = settings.profileNotes || '';
-  document.getElementById('input-memory').value = memory;
+  // null-safe (UvEHE 03.05): один null-input не повинен ламати весь openSettings.
+  // Той самий патерн як у closeSettings → fcebe88.
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  setVal('input-api-key', key);
+  setVal('input-name', settings.name || '');
+  setVal('input-age', settings.age || '');
+  setVal('input-weight', settings.weight || '');
+  setVal('input-height', settings.height || '');
+  setVal('input-profile-notes', settings.profileNotes || '');
+  setVal('input-memory', memory);
 
   const tsEl = document.getElementById('memory-last-updated');
-  if (memoryTs) {
+  if (memoryTs && tsEl) {
     const d = new Date(parseInt(memoryTs));
     tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
-  } else {
+  } else if (tsEl) {
     tsEl.textContent = 'Ще не оновлювалась';
   }
 

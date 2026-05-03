@@ -65,8 +65,11 @@ export function setupModalSwipeClose(contentEl, closeFn) {
   const swipeRoot = contentEl.parentElement || contentEl;
   let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
   swipeRoot.addEventListener('touchstart', e => {
-    // Не перехоплювати свайп на скролюваних елементах (барабан, чат, прокрутка Налаштувань)
-    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll');
+    // Не перехоплювати свайп на скролюваних/інтерактивних елементах:
+    // барабан, чат, прокрутка Налаштувань, input/textarea/select (UvEHE 03.05 sweep —
+    // inconsistent з modal-overlay-sync.js _setupSwipeClose; dragging textarea модалки
+    // переривав edit замість редагування).
+    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, input, textarea, select');
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     dy = 0;
