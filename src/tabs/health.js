@@ -1040,8 +1040,10 @@ function _showHealthCardModal(title, showDelete) {
   document.body.style.top = `-${scrollY}px`;
   document.body.style.left = '0';
   document.body.style.right = '0';
-  // Swipe-to-close на картці модалки (як у task-modal).
-  setupModalSwipeClose(document.querySelector('#health-card-modal > div:last-child'), closeHealthCardModal);
+  // Swipe-to-close: слухаємо touch на ROOT модалки (фон + картка),
+  // translateY застосовуємо ТІЛЬКИ до картки (overlay лишається статичним).
+  // Свайп вгору → preventDefault блокує iOS rubber-band bounce.
+  _setupHealthModalSwipe();
   // iOS fix — фокус на перше поле з затримкою
   setTimeout(() => {
     const nameEl = document.getElementById('health-card-name');
@@ -1061,6 +1063,46 @@ function closeHealthCardModal() {
   delete document.body.dataset.scrollLock;
   window.scrollTo(0, savedY);
   _editingHealthCardId = null;
+}
+
+// Swipe-handler ЛИШЕ для Health-модалки. Touch слухаємо на root (#health-card-modal),
+// transform застосовуємо тільки до картки. Свайп вниз будь-де → закриває.
+// Свайп вгору → preventDefault блокує iOS rubber-band на root.
+function _setupHealthModalSwipe() {
+  const root = document.getElementById('health-card-modal');
+  if (!root || root._healthSwipeBound) return;
+  root._healthSwipeBound = true;
+  let startY = 0, startX = 0, dy = 0, blocked = false;
+  const getCard = () => root.querySelector('div:last-child');
+  root.addEventListener('touchstart', e => {
+    blocked = !!e.target.closest('.drum-col, .drum-item, input, textarea, button, select');
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    dy = 0;
+    if (!blocked) { const c = getCard(); if (c) c.style.transition = 'none'; }
+  }, { passive: true });
+  root.addEventListener('touchmove', e => {
+    if (blocked) return;
+    dy = e.touches[0].clientY - startY;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    if (dy < 0) { e.preventDefault(); return; } // блок iOS bounce вгору
+    if (dy > 0 && dy > dx) {
+      const c = getCard();
+      if (c) c.style.transform = `translateY(${dy}px)`;
+    }
+  }, { passive: false });
+  root.addEventListener('touchend', () => {
+    if (blocked) { blocked = false; return; }
+    const c = getCard();
+    if (c) c.style.transition = 'transform 0.25s ease';
+    if (dy > 80) {
+      if (c) c.style.transform = 'translateY(100%)';
+      setTimeout(() => { if (c) c.style.transform = ''; closeHealthCardModal(); }, 250);
+    } else {
+      if (c) c.style.transform = '';
+    }
+    dy = 0;
+  }, { passive: true });
 }
 
 // === HEALTH DATE/TIME PICKER (drum-picker замість native iOS picker) ===
