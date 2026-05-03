@@ -1,9 +1,8 @@
 #!/bin/bash
 # context-warning.sh
-# UserPromptSubmit hook: попереджає коли контекст наближається до ліміту.
-# Те саме джерело цифри що statusline.sh — через lib/compute-context-pct.sh
-# (assistant.message.usage у транскрипті, НЕ байти файлу).
-# Стара версія брала wc -c і показувала «99%» при реальних 34% — фікс.
+# UserPromptSubmit hook: коротке попередження про % контексту.
+# Мовчить при <75%. При 75-89% жовте, при ≥90% червоне з підказкою /finish.
+# Цифра з lib/compute-context-pct.sh (assistant.message.usage — те саме що /context).
 
 input=$(cat)
 
@@ -32,23 +31,11 @@ percent=$(echo "$result" | awk '{print $1}')
 tokens=$(echo "$result" | awk '{print $2}')
 tokens_k=$((tokens / 1000))
 
-WARN_THRESHOLD=80
+WARN_THRESHOLD=75
 CRITICAL_THRESHOLD=90
 
-if [[ $percent -gt $CRITICAL_THRESHOLD ]]; then
-  cat <<EOF
-🚨 КОНТЕКСТ КРИТИЧНО ЗАПОВНЕНИЙ (${percent}% · ${tokens_k}K/1M)
-
-Час викликати /finish і починати новий чат. Auto-compaction (автоматичне стиснення старих повідомлень) почнеться близько 95% — Claude може втратити контекст.
-
-Точне значення: /context
-EOF
-elif [[ $percent -gt $WARN_THRESHOLD ]]; then
-  cat <<EOF
-⚠️ КОНТЕКСТ ${percent}% (${tokens_k}K/1M)
-
-Скоро доцільно завершувати сесію через /finish. Auto-compaction почнеться близько 95%.
-
-Точне значення: /context
-EOF
+if [[ $percent -ge $CRITICAL_THRESHOLD ]]; then
+  echo "🚨 📊 ${percent}% · ${tokens_k}K/1M — час /finish"
+elif [[ $percent -ge $WARN_THRESHOLD ]]; then
+  echo "⚠️ 📊 ${percent}% · ${tokens_k}K/1M"
 fi
