@@ -477,9 +477,10 @@ body {
      bounce у самому скрол-контейнері (контент потягується + mask-image fade =
      ілюзія що модалка зменшується). `none` блокує bounce повністю. */
   overscroll-behavior: none;
-  /* Плавний fade зверху у зоні padding-top — перша картка не перекривається */
-  mask-image: linear-gradient(to bottom, transparent 0, black 20px);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 20px);
+  /* mask-image видалено (UvEHE 03.05) — Council підтвердив: mask-image
+     + backdrop-filter:blur(32px) parent + iOS Safari momentum scroll =
+     composite layer re-rasterize кожен кадр = панель візуально
+     стискається. Calendar не має mask-image — не глючить. */
 }
 .settings-handle {
   width: 36px; height: 4px;
