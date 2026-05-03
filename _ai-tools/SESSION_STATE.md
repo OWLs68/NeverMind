@@ -4,11 +4,57 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-02 (сесія **mUpS8** — універсальний clarify-guard у 7 чатах: новий `src/owl/clarify-guard.js` + `chips.js` тип `clarify_save` з payload + `CLARIFY_INLINE_RULES` блок промпта. ROADMAP 4.29.1 ✅ Done, 4.29.2 Pattern Learning Engine NEXT. CLAUDE.md правило #11 i18n. B-116 swipe-delete для картки проекту. B-117 (табло звичок stale) записано детально — не закрите бо потребує live DevTools. CACHE `nm-20260502-1900`, v561).
+**Оновлено:** 2026-05-03 (сесія **4xJ7n** — iPhone smoke-test v563+: 2 критичні баги (B-118 back button у Projects + B-119 chips clipped в Inbox) — обидва закрито. UI fix модалки «Новий стан» Health: зелена палітра → бурштин. Прибрано блок Статус з модалки створення (default 'active'). ROADMAP Блок 2 — нова велика фіча Health AI-інтерв'ю з шкалою 6 статусів. Council 5 агентів — огляд плану clarify-guard для Tasks: 6 серйозних дірок (`tasks` відсутній у `_CLARIFY_ADDMSG`, `save_task` у SUSPICIOUS_TOOLS = false positive у Tasks). CACHE `nm-20260503-0030`, v565+).
 
 ---
 
-## 🔧 Поточна сесія mUpS8 — Universal clarify-guard + Pattern Learning roadmap + B-116 (02.05.2026)
+## 🔧 Поточна сесія 4xJ7n — iPhone smoke-test + B-118/B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю (03.05.2026)
+
+### Зроблено
+1. **B-118 ✅ back button у Projects elevation** (`59067ce`) — `index.html:174` (workspace проекту). `closeProjectWorkspace` функція OK і експортована, але back-кнопка без z-index/hit-area → OWL board overlay перехоплював клік. Фікс: `position:relative; z-index:10; padding:8px 4px; margin:-8px -4px 4px -4px` = 44px hit-area за Apple HIG.
+2. **B-119 ✅ chips clipped в Inbox** (`0b4ed28`) — `src/tabs/inbox.js:96` (`addInboxChatMsg`). iOS Safari не встигав порахувати висоту chipsRow до синхронного scrollTop. Фікс: подвійний scrollTop (sync + `requestAnimationFrame`). ⚠️ Можлива аналогічна регресія у 6 інших чатах — не перевірено.
+3. **UI Health modal — зелена палітра → бурштин** (`13df504`) — `index.html:1732,1747`. Кнопка «Зберегти» `#4ade80→#16a34a` → `#d68f1c→#c2790a`. «+ Додати» Препарати color → `#c2790a`. Статус-tag-кнопки не змінено.
+4. **Прибрано блок Статус з модалки створення Health** (`8f15871`) — `index.html:1736-1742`. JS не падає (`_getHealthCardModalStatus()` має `'active'` fallback).
+5. **ROADMAP Блок 2 — Health AI-інтерв'ю** (`8f15871`) — велика фіча: розширена шкала 6 статусів (🆕 Гостра / 💊 Лікування / 📈 Покращення / 🟢 Контроль / ♾️ Хронічна / ✅ Завершено) + AI-інтерв'ю 3 кроки з чіпами після створення картки + новий tool `update_health_card_status`. Перший юзкейс «AI пише першим» з mUpS8.
+6. **B-118 + B-119 у NEVERMIND_BUGS** (`005b28d`) — записано як 🔴 з file:line, аналізом, фіксом.
+7. **Council 5 агентів — огляд плану clarify-guard для Tasks** (без коду). 6 серйозних дірок: (1) `tasks` ВІДСУТНІЙ у `_CLARIFY_ADDMSG` map; (2) `save_task` у SUSPICIOUS_TOOLS = false positive у Tasks; (3) `habits.js` керує і задачами і звичками — `PAST_VERBS_RE` ловить класичні звички; (4) CLARIFY_INLINE_RULES правка йде у `habits.js:1424` (промпт inline), НЕ `prompts.js`; (5) cleanup попередніх chips забутий; (6) guard-блок місце уточнено. Стратег: спочатку iPhone smoke-test 6 чатів.
+
+### Обговорено (без виконання)
+- **Прописати всі тригери для clarify-чіпів?** Ні. Українська має нескінченні форми, regex покриває ~90%. Замість — журнал false positives/negatives у TESTING_LOG.
+- **Питання save_task у Tasks-чаті** — НЕ обрано рішення (3 варіанти: 4-й чіп / виключити / залишити). Окремої сесії.
+- **Tasks інтеграція clarify-guard** — план Council готовий (6 кроків замість 3+1) — НЕ виконано. Стратегічна рекомендація: спочатку smoke-test.
+
+### Ключові рішення
+- **Архівація LW3j8 у Фазі 0** /finish — 2+1 = 3 активних → винос найстарішого. Правило ≤2 збережене.
+- **B-119 фікс через подвійний scrollTop (sync + rAF)** — стандартний iOS-патерн.
+- **Health-модалка статус прибрано** замість «додати підказку» — спрощення UX. Статус виставить пізніше через картку АБО через AI-інтерв'ю.
+- **ROADMAP Health AI-інтерв'ю у Блок 2** — частковий випадок «AI пише першим» з mUpS8.
+- **Розширена шкала 6 статусів** замість 3 — Роман: «3 замало бо не відображають реальний стан хвороби».
+
+### Інциденти
+- **Локальний репо застарілий v431 vs origin v563.** Pull 490 комітів дійшов чисто. Робоче дерево чисте.
+- **pre-push хук false positive 2 рази** (B-118+B-119 фікси, Health-modal UI) — хук виявляв «міграція/tool/UUID/схема» де було UI/CSS. «pre-push: ok» — пройшло з другої спроби.
+- Без `git reset` / `git push --force` / skip hooks.
+
+### Конфлікти/суперечності
+- **Council Оптиміст vs Критик про CLARIFY_INLINE_RULES у промпті Tasks** — Оптиміст сказав «викинути», Критик через Read prompts.js довів що 6 інших чатів МАЮТЬ ці правила (через білдер). **Критик правий** — підтверджено реальним кодом.
+
+### Відкладене
+- **Tasks інтеграція clarify-guard** — після iPhone smoke-test 6 чатів (Council Стратег). 30-40 хв коду + UX-рішення про save_task.
+- **Pattern Learning Engine** (Phase 3 mUpS8) — горизонтальний шар, не блокується Tasks.
+- **B-117 табло звичок stale** — потребує live Safari DevTools. 5 хв.
+- **Розкочення rAF фіксу B-119 на 6 інших чатів** — після підтвердження що B-119 виправлено в Inbox.
+
+### Метрики
+- Коміти: `005b28d` → `8f15871` (5 фіч-комітів) + `9fe9525` (Phase 0 архівація) = 6
+- Версії: v563 (start) → v565+ (after auto-merge of Health UI)
+- CACHE_NAME: `nm-20260502-1900` → `nm-20260502-2200` → `nm-20260503-0010` → `nm-20260503-0030` (3 bumps)
+- Build: `node --check` чисті, push з retry (false positive хука)
+- Гілка: `claude/start-session-4xJ7n`
+
+---
+
+## 🔧 Сесія mUpS8 — Universal clarify-guard + Pattern Learning roadmap + B-116 (02.05.2026)
 
 ### Зроблено
 1. **Phase 1 Inbox clarify-guard** (`9eb9edc`) — `src/owl/clarify-guard.js` `shouldClarify(text, toolCalls, tab)` ловить минулий час дієслова (20+ типових українських) АБО голий іменник без числа/команди. Замість виконання `create_project/create_event/save_task/save_moment/save_note` → 3 інлайн-чіпи [У щоденник] [Як момент] [Не зберігати]. `applyClarifyChoice` локально через `dispatchChatToolCalls` без round-trip до AI. Новий тип `action: 'clarify_save'` з payload через `data-chip-payload`. Спільний `CLARIFY_INLINE_RULES` інжектиться у 5 промптів.
@@ -52,15 +98,28 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚨 iPhone smoke-test v561** — 17 пунктів TESTING_LOG.md секція v559+ (clarify-guard у 7 чатах, виключення для сум/дат/команд, B-115 повторний тест, B-116 свайп проекту). Плюс продовжити 61-пунктову шпаргалку BqTWF з пункту 2.
+**🚨 iPhone smoke-test v565+ продовжити** — 17 пунктів TESTING_LOG.md секція v559+ (clarify-guard у 7 чатах). У 4xJ7n зробили пункт 0 (Inbox «Відкрив автомийку» → guard спрацював, але чіпи були візуально обрізані — це ❌ B-119 закрито). **ПЕРЕВІРИТИ ПІСЛЯ ДЕПЛОЮ v566+:**
+   1. Inbox чат → «Відкрив автомийку» → 3 чіпи [У щоденник] [Як момент] [Не зберігати] **повністю видимі**
+   2. Проекти → відкрити «Хімчистка» → тап «< Проекти» → повернувся на список (B-118)
+   3. Health → «+» → модалка «Новий стан» → кнопка «Зберегти» **бурштинова**, **немає блоку Статус**
 
-**🟡 B-117 — табло звичок не оновлюється після виконання звички.** Корінь: `inbox-board.js:1185` має SAFETY NET 60хв тільки для Inbox; `proactive.js:1091` (tab-boards) — НЕ має, лише 5хв-кеш блокує. Юзер виконав 2/2 звичок (✓ зелені), сова показує застаріле «не виконано». Потребує live DevTools: `localStorage.nm_unified_board` для tab=tasks + `_boardGenerating` стан + перевірка `_pickMessageForTab` чи обирає critical-priority зі старого. **Опції фіксу** (з NEVERMIND_BUGS): (а) `force` параметр у `tryBoardUpdate`, listener викликає з `force:true` для `e.detail !== 'chat'`; (б) розширити `entityRefs` для habit-related повідомлень щоб Pruning ловив; (в) інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js`. Найбезпечніше — (в).
+**🚀 Tasks інтеграція clarify-guard (Phase 3 з mUpS8)** — НЕ робити поки не пройде smoke-test 6 існуючих чатів (Council Стратег). Оновлений план з 6 кроками (з огляду Council 4xJ7n):
+1. **`chips.js`** — додати `tasks: (r,t) => addTaskBarMsg(r,t)` у `_CLARIFY_ADDMSG` мапу (без цього чіпи у Tasks-чаті йдуть в Inbox-чат!)
+2. **`tasks.js:587`** — розширити сигнатуру `addTaskBarMsg(role, text, _noSave, chips)` + cleanup попередніх chips + рендер (~10 рядків з `notes.js:984-996`)
+3. **`habits.js`** — імпорт `shouldClarify` + guard-блок 6 рядків ВСЕРЕДИНІ існуючого `if (msg.tool_calls)` + `CLARIFY_INLINE_RULES` у промпт inline (`:1424`, НЕ в `prompts.js`!)
+4. **UX-питання save_task** — обговорити перш ніж кодити: 4-й чіп [Як задачу] / виключити save_task для tab=tasks / залишити (Tasks це РІДНА вкладка для save_task — guard буде блокувати легітимні задачі)
+5. CACHE bump
+6. 1 коміт замість 3 (це точкова інтеграція)
 
-**🚀 Phase 3 Pattern Learning Engine** — поріг 7-10 виборів = вивчений патерн, `nm_clarify_patterns`, decay 90 днів, мікро-індикатор «✨ за паттерном», reset UI у «Я», + Tasks інтеграція (додати chips параметр у `addTaskBarMsg`).
+**🐛 Розкочення rAF фіксу B-119 на 6 інших чатів** — після підтвердження що Inbox OK, перевірити `addNotesChatMsg` / `addHealthChatMsg` тощо чи мають той самий синхронний scrollTop без rAF.
 
-**🐛 Чіпи у Inbox чаті не показуються** (Роман повідомив під час smoke-test). Окремий баг рендерингу `parseContentChips` — мало бути зроблено в L67Xf, чомусь не активне у Inbox. Потребує окремого фіксу.
+**🟡 B-117 — табло звичок не оновлюється після виконання звички.** Корінь: `inbox-board.js:1185` має SAFETY NET 60хв тільки для Inbox; `proactive.js:1091` (tab-boards) — НЕ має, лише 5хв-кеш блокує. Потребує live DevTools: `localStorage.nm_unified_board` для tab=tasks + `_boardGenerating` стан. **Опції фіксу:** (в) інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js` — найбезпечніше.
 
-**🚀 Концептуальна фіча (новий ROADMAP-пункт):** «AI пише першим у чат для інтерв'ю / збору профілю». Зараз агент тільки реактивний — Роман просить ініціативу (дізнаватись користувача глибше, питання-чіпи у потрібний момент).
+**🚀 ROADMAP Блок 2 — Health AI-інтерв'ю (нова фіча у 4xJ7n).** Після створення картки здоров'я — 3-крокове AI-інтерв'ю з чіпами (стан / лікар / симптоми) → виставляє точний статус через новий tool `update_health_card_status`. Розширена шкала 6 статусів: 🆕 Гостра / 💊 Лікування / 📈 Покращення / 🟢 Контроль / ♾️ Хронічна / ✅ Завершено. Перший юзкейс концепції «AI пише першим» з mUpS8.
+
+**🚀 Phase 3 Pattern Learning Engine (з mUpS8)** — поріг 7-10 виборів = вивчений патерн, `nm_clarify_patterns`, decay 90 днів, мікро-індикатор «✨ за паттерном», reset UI у «Я». Не блокується Tasks інтеграцією (горизонтальний шар).
+
+**🐛 Чіпи у Inbox чаті не показуються** (з mUpS8) — окремий баг рендерингу `parseContentChips`, мало бути в L67Xf. Окремий фікс.
 
 **✅ ЗРОБЛЕНО У BqTWF 02.05 (15 комітів — продовження bOqdI: повний CLEANUP + iPhone smoke + B-115 фікс):**
 
@@ -176,11 +235,11 @@
 
 | Параметр | Значення |
 |---|---|
-| **Версія** | **v553** (deploy 02.05 15:20, commit `7c1275b`) |
+| **Версія** | **v565+** (deploy 03.05 after auto-merge of `8f15871`) |
 | **URL** | owls68.github.io/NeverMind |
 | **AI модель** | OpenAI GPT-4o-mini з Tool Calling (60 tools, всі з обовʼязковим `_reasoning_log:string`) |
-| **Гілка** | `claude/start-session-BqTWF` (cleanup плану bOqdI у 9 фаз) |
-| **CACHE_NAME** | `nm-20260502-1235` (без bump у BqTWF — docs-only) |
+| **Гілка** | `claude/start-session-4xJ7n` (B-118+B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю) |
+| **CACHE_NAME** | `nm-20260503-0030` (Health modal status removed) |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
 
 ---
