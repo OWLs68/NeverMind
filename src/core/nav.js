@@ -1185,12 +1185,22 @@ export function showDeployInfo() {
   const source  = badge.dataset.source  || 'dev';
   const branch  = badge.dataset.branch  || 'dev';
 
-  // Створюємо модалку через createElement щоб не додавати HTML у index.html
-  let modal = document.getElementById('deploy-info-modal');
-  if (modal) modal.remove();
-  modal = document.createElement('div');
+  // Створюємо модалку через createElement щоб не додавати HTML у index.html.
+  // UvEHE 03.05: overlay як top-level sibling (НЕ background на root) — щоб
+  // backdrop-filter не клипався при transform картки (iOS Safari quirk).
+  let oldModal = document.getElementById('deploy-info-modal');
+  if (oldModal) oldModal.remove();
+  let oldOverlay = document.getElementById('deploy-info-modal-overlay');
+  if (oldOverlay) oldOverlay.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'deploy-info-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:299;background:rgba(30,16,64,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none;opacity:0;transition:opacity 0.2s';
+  document.body.appendChild(overlay);
+
+  const modal = document.createElement('div');
   modal.id = 'deploy-info-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(30,16,64,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0 20px;opacity:0;transition:opacity 0.2s';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:0 20px;opacity:0;transition:opacity 0.2s';
   modal.onclick = (e) => { if (e.target === modal) closeDeployInfo(); };
 
   const repoUrl = 'https://github.com/OWLs68/NeverMind';

@@ -542,30 +542,53 @@ navigator.vibrate?.(10);
 
 **Поведінка:**
 - Виїжджає знизу екрану
-- Закривається тапом по backdrop або свайпом вниз
 - `max-height: 85vh` + scroll якщо вміст не влізає
 - `env(safe-area-inset-bottom)` у нижньому padding
 
-**Два типи за прозорістю:**
+**🚪 ТРИ СПОСОБИ ЗАКРИТТЯ (UvEHE 03.05 — обов'язково для всіх модалок):**
+1. **Тап по затемненому фону** (overlay) — `onclick` на root з `event.target===this`
+2. **Свайп вниз по фону** (overlay) — touch-handler ловить на root, transform на картку
+3. **Свайп вниз по картці** (drag handle / тіло) — той самий handler
+
+Усі три працюють АВТОМАТИЧНО завдяки `src/ui/modal-overlay-sync.js`:
+- При додаванні модалки `[id$="-modal"]` (статичної в HTML або динамічної через `appendChild`) helper:
+  - виносить дитячий overlay-div як top-level sibling з id `#X-modal-overlay` (фікс iOS Safari quirk де `backdrop-filter:blur` клипається при transform картки)
+  - реєструє `_setupSwipeClose` що слухає touch на root і transform translateY на картку (єдину дитину)
+  - синхронізує `display` overlay з модалкою через MutationObserver на style
+
+**Структура HTML модалки (для статичних):**
+```html
+<div id="X-modal-overlay" style="display:none;position:fixed;inset:0;z-index:N-1;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
+<div id="X-modal" onclick="if(event.target===this)closeX()" style="display:none;position:fixed;inset:0;z-index:N;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+  <div style="position:relative;...картка з backdrop-filter:blur(32px)...">
+    <!-- handle 36×4 → заголовок → поля → кнопки -->
+  </div>
+</div>
+```
+
+**Для динамічних модалок** (створюваних через `document.createElement` + `appendChild(document.body)`):
+- helper автоматично виявляє дитячий overlay і виносить його як sibling
+- АБО створюйте overlay і модалку як два окремі sibling-елементи у body (eg. `nav.js` `deploy-info-modal`)
+- onclick на modal має містити `if(event.target===modal)closeFn()` (не просто closeFn — інакше клік по картці теж закриє)
+
+**Два типи за прозорістю картки:**
 | Тип | Де | background | blur |
 |---|---|---|---|
 | Glass | задача, звичка | `rgba(255,255,255,0.30)` | 32px |
 | Opaque | проект, момент, нотатка | `rgba(255,255,255,0.88)` | 24px |
 
-**Свайп закриття:**
-```javascript
-import { setupModalSwipeClose } from './tasks.js';
-setupModalSwipeClose(panelEl, closeFn);
-```
-- Тригериться при `dy > 120px` АБО `velocity > 0.5px/ms`
-- Анімація поверну до 0 — `transition: transform 0.25s ease`
+**Свайп-параметри (universal handler у `modal-overlay-sync.js`):**
+- Тригер закриття при `dy > 80px`
+- Анімація: `transition: transform 0.25s ease`
+- Не перехоплюємо touch на: `.drum-col, .drum-item, .settings-scroll, input, textarea, select`
 
 **Acceptance criteria для нової модалки:**
-- [ ] Має `padding: 0 20px` на outer panel (не на scroll-контейнері)
-- [ ] Має `padding-bottom: calc(env(safe-area-inset-bottom) + 28px)` на scroll
-- [ ] Має handle `width:36px height:4px` зверху
-- [ ] Backdrop клікабельний, закриває модалку
-- [ ] Свайп вниз закриває
+- [ ] HTML має id `X-modal` (для авто-реєстрації helper'ом)
+- [ ] Або винесений overlay `X-modal-overlay` як sibling, або дитячий overlay-div (helper витягне)
+- [ ] Має handle `width:36px height:4px` зверху картки
+- [ ] **3 способи закриття працюють** (тап по фону, свайп по фону, свайп по картці)
+- [ ] `padding: 0 20px` на outer panel (не на scroll-контейнері)
+- [ ] `padding-bottom: calc(env(safe-area-inset-bottom) + 28px)` на scroll
 - [ ] Кнопка «Зберегти» — primary градієнт за типом (див. токени)
 - [ ] Кнопка «Скасувати» — secondary стиль
 - [ ] При відкритті фокус на перше поле через 350мс (для iOS keyboard)

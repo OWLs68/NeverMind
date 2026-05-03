@@ -76,6 +76,47 @@ function _externalizeOverlay(modal, childOverlay) {
   return newOverlay;
 }
 
+// Універсальний swipe-to-close для модалок. Не реєструється якщо tasks.js
+// setupModalSwipeClose вже додав свій (прапорець contentEl._swipeClose).
+function _setupSwipeClose(modal) {
+  // Шукаємо картку (єдину non-overlay дитину) — після _externalizeOverlay
+  // overlay винесений, тож children[0] зазвичай це картка.
+  const card = modal.querySelector(':scope > div');
+  if (!card || card._swipeClose) return; // tasks.js вже зареєстрував
+  card._swipeClose = true;
+  let startY = 0, startX = 0, dy = 0, blocked = false;
+  modal.addEventListener('touchstart', e => {
+    blocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, input, textarea, select');
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    dy = 0;
+    if (!blocked) card.style.transition = 'none';
+  }, { passive: true });
+  modal.addEventListener('touchmove', e => {
+    if (blocked) return;
+    dy = e.touches[0].clientY - startY;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    if (dy > 0 && dy > dx) {
+      card.style.transform = `translateY(${dy}px)`;
+    }
+  }, { passive: true });
+  modal.addEventListener('touchend', () => {
+    if (blocked) { blocked = false; return; }
+    card.style.transition = 'transform 0.25s ease';
+    if (dy > 80) {
+      card.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        card.style.transform = '';
+        // Симуляція click на root з target=root → спрацьовує onclick="if(event.target===this){closeXxx()}"
+        modal.click();
+      }, 250);
+    } else {
+      card.style.transform = '';
+    }
+    dy = 0;
+  }, { passive: true });
+}
+
 function _registerModal(modal) {
   if (!modal || _registered.has(modal)) return;
   _registered.add(modal);
@@ -85,6 +126,9 @@ function _registerModal(modal) {
     const child = _findChildOverlay(modal);
     if (child) _externalizeOverlay(modal, child);
   }
+
+  // Універсальний swipe-close (якщо tasks.js не зареєстрував)
+  _setupSwipeClose(modal);
 
   syncOverlay(modal); // початковий стан
   new MutationObserver(() => syncOverlay(modal))
