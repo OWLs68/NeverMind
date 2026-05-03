@@ -533,24 +533,24 @@ function openHelp(tab) {
   });
   _helpOpen = true;
 
-  // Свайп вправо — закрити
-  if (!panel._helpSwipe) {
-    panel._helpSwipe = true;
+  // Свайп вправо — закрити (touch на drawer щоб ловити і panel, і dim)
+  if (!drawer._helpSwipe) {
+    drawer._helpSwipe = true;
     let _sx = 0, _sy = 0, _dragging = false;
-    panel.addEventListener('touchstart', e => {
+    drawer.addEventListener('touchstart', e => {
       _sx = e.touches[0].clientX;
       _sy = e.touches[0].clientY;
       _dragging = false;
       panel.style.transition = 'none';
     }, { passive: true });
-    panel.addEventListener('touchmove', e => {
+    drawer.addEventListener('touchmove', e => {
       const dx = e.touches[0].clientX - _sx;
       const dy = Math.abs(e.touches[0].clientY - _sy);
       if (!_dragging && dx > 8 && dy < dx) _dragging = true;
       if (!_dragging) return;
       if (dx > 0) panel.style.transform = `translateX(${dx}px)`;
     }, { passive: true });
-    panel.addEventListener('touchend', e => {
+    drawer.addEventListener('touchend', e => {
       if (!_dragging) { panel.style.transition = ''; panel.style.transform = 'translateX(0)'; return; }
       const dx = e.changedTouches[0].clientX - _sx;
       panel.style.transition = 'transform 0.24s cubic-bezier(0.32,0.72,0,1)';
