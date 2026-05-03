@@ -1552,6 +1552,15 @@ button:active,
 [onclick]:active {
   transform: scale(0.87);
 }
+/* UvEHE 03.05: КРИТИЧНИЙ override — root-модалки мають onclick для тапу
+   по фону, але глобальне [onclick]:active scale(0.87) скейлило ВСЮ
+   модалку при будь-якому tap всередині (event bubbles до overlay).
+   Це 4-й корінь scale-glitch у settings (mask-image, flex, nested
+   backdrop-filter, body-lock були false leads). */
+#settings-overlay:active,
+[id$="-modal"]:active {
+  transform: none;
+}
 
 /* =====================================================================
    EVENING LOCK OVERLAY — матове скло поверх вкладки Вечір до 18:00
