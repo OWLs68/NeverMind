@@ -2604,6 +2604,7 @@ ${lines.join("\n")}`;
     if (titleEl) titleEl.textContent = title;
     if (delBtn) delBtn.style.display = showDelete ? "block" : "none";
     modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
     setTimeout(() => {
       const nameEl = document.getElementById("health-card-name");
       if (nameEl && !showDelete) nameEl.focus();
@@ -2612,6 +2613,7 @@ ${lines.join("\n")}`;
   function closeHealthCardModal() {
     const modal = document.getElementById("health-card-modal");
     if (modal) modal.style.display = "none";
+    document.body.style.overflow = "";
     _editingHealthCardId = null;
   }
   function _fillHealthCardModal(card) {
