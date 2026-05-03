@@ -185,7 +185,7 @@ function _inboxDateLabel(ts) {
 // Тап: перекинути на відповідну вкладку (блокування після свайпу — у attachSwipeDelete)
 const INBOX_NAV_MAP = {
   task: 'tasks',
-  habit: 'habits',
+  habit: 'tasks', // habit — підвкладка всередині tasks; switchProdTab('habits') викликається у navigateInboxItem
   note: 'notes',
   idea: 'notes',
   finance: 'finance',
@@ -196,7 +196,13 @@ function navigateInboxItem(id) {
   const cat = el.dataset.cat;
   if (cat === 'event' || cat === 'reminder') { window.openCalendarModal(); return; }
   const tab = INBOX_NAV_MAP[cat];
-  if (tab) switchTab(tab);
+  if (tab) {
+    switchTab(tab);
+    // Habit живе як підвкладка всередині #page-tasks → переключаємо subtab.
+    if (cat === 'habit' && typeof window.switchProdTab === 'function') {
+      window.switchProdTab('habits');
+    }
+  }
 }
 
 // ============================================================
