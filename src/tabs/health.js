@@ -5,7 +5,7 @@
 // ============================================================
 
 import { switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, parseContentChips } from '../core/utils.js';
+import { escapeHtml, parseContentChips, t } from '../core/utils.js';
 import { addToTrash } from '../core/trash.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -1657,22 +1657,22 @@ function _interviewChips(step, options) {
 }
 
 const STEP1_OPTIONS = [
-  { label: '🆕 Щойно з\'явилось', value: 'recent' },
-  { label: '💊 Лікую',            value: 'treating' },
-  { label: '♾️ Хронічна',         value: 'chronic' },
-  { label: 'Пропустити',          value: 'skip' },
+  { label: t('health.iv.s1.recent',   '🆕 Щойно з\'явилось'), value: 'recent' },
+  { label: t('health.iv.s1.treating', '💊 Лікую'),             value: 'treating' },
+  { label: t('health.iv.s1.chronic',  '♾️ Хронічна'),         value: 'chronic' },
+  { label: t('health.iv.skip',        'Пропустити'),          value: 'skip' },
 ];
 const STEP2_OPTIONS = [
-  { label: 'Так',                 value: 'doctor_yes' },
-  { label: 'Не був у лікаря',     value: 'doctor_no' },
-  { label: 'Сам лікую',           value: 'self' },
-  { label: 'Пропустити',          value: 'skip' },
+  { label: t('health.iv.s2.yes',  'Так'),             value: 'doctor_yes' },
+  { label: t('health.iv.s2.no',   'Не був у лікаря'), value: 'doctor_no' },
+  { label: t('health.iv.s2.self', 'Сам лікую'),       value: 'self' },
+  { label: t('health.iv.skip',    'Пропустити'),      value: 'skip' },
 ];
 const STEP3_OPTIONS = [
-  { label: 'Сильні',              value: 'severe' },
-  { label: 'Помірні',             value: 'moderate' },
-  { label: 'Майже нема',          value: 'mild' },
-  { label: 'Пропустити',          value: 'skip' },
+  { label: t('health.iv.s3.severe',   'Сильні'),       value: 'severe' },
+  { label: t('health.iv.s3.moderate', 'Помірні'),      value: 'moderate' },
+  { label: t('health.iv.s3.mild',     'Майже нема'),   value: 'mild' },
+  { label: t('health.iv.skip',        'Пропустити'),   value: 'skip' },
 ];
 
 function _aggregateInterviewStatus(answers) {
@@ -1712,7 +1712,7 @@ export function startHealthInterview(card) {
   } catch {}
 
   const chips = _interviewChips(1, STEP1_OPTIONS);
-  const text = `Створив картку "${card.name}". 3 короткі питання щоб виставити статус.\n\nЩо зараз?`;
+  const text = t('health.iv.intro', 'Створив картку "{name}". 3 короткі питання щоб виставити статус.\n\nЩо зараз?', { name: card.name });
 
   if (currentTab === 'health') {
     // Юзер у Здоров'ї — рендеримо одразу у DOM (addHealthChatMsg сам викличе
@@ -1739,9 +1739,16 @@ export function applyHealthInterviewChoice(payload) {
 
   // Чіп вже візуально пропадає у chips.js. Тут — рідер user-вибору + наступний крок.
   const labelMap = {
-    recent: '🆕 Щойно з\'явилось', treating: '💊 Лікую', chronic: '♾️ Хронічна', skip: 'Пропустити',
-    doctor_yes: 'Так — лікар призначив', doctor_no: 'Не був у лікаря', self: 'Сам лікую',
-    severe: 'Сильні', moderate: 'Помірні', mild: 'Майже нема',
+    recent:     t('health.iv.s1.recent',   '🆕 Щойно з\'явилось'),
+    treating:   t('health.iv.s1.treating', '💊 Лікую'),
+    chronic:    t('health.iv.s1.chronic',  '♾️ Хронічна'),
+    skip:       t('health.iv.skip',        'Пропустити'),
+    doctor_yes: t('health.iv.s2.yes_full', 'Так — лікар призначив'),
+    doctor_no:  t('health.iv.s2.no',       'Не був у лікаря'),
+    self:       t('health.iv.s2.self',     'Сам лікую'),
+    severe:     t('health.iv.s3.severe',   'Сильні'),
+    moderate:   t('health.iv.s3.moderate', 'Помірні'),
+    mild:       t('health.iv.s3.mild',     'Майже нема'),
   };
   const userText = labelMap[payload.value] || payload.value;
   // Записуємо вибір у Health-чат як user-message (видно при відкритті)
@@ -1754,7 +1761,7 @@ export function applyHealthInterviewChoice(payload) {
     state.step = 2;
     try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
     const chips = _interviewChips(2, STEP2_OPTIONS);
-    const q = 'Лікар призначив лікування?';
+    const q = t('health.iv.q2', 'Лікар призначив лікування?');
     if (currentTab === 'health') addHealthChatMsg('agent', q, false, chips);
     else saveChatMsg('health', 'agent', q, chips);
     return;
@@ -1765,7 +1772,7 @@ export function applyHealthInterviewChoice(payload) {
     state.step = 3;
     try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
     const chips = _interviewChips(3, STEP3_OPTIONS);
-    const q = 'Симптоми зараз?';
+    const q = t('health.iv.q3', 'Симптоми зараз?');
     if (currentTab === 'health') addHealthChatMsg('agent', q, false, chips);
     else saveChatMsg('health', 'agent', q, chips);
     return;
@@ -1780,7 +1787,7 @@ function _finishInterview(state, skipped) {
   try { localStorage.removeItem(HEALTH_INTERVIEW_KEY); } catch {}
   if (skipped && Object.keys(state.answers).length === 0) {
     // Юзер повністю пропустив — нічого не змінюємо, статус лишається 'treatment' (default)
-    const text = 'Гаразд, без опитування. Статус можна змінити з картки.';
+    const text = t('health.iv.skipped', 'Гаразд, без опитування. Статус можна змінити з картки.');
     if (currentTab === 'health') addHealthChatMsg('agent', text);
     else saveChatMsg('health', 'agent', text);
     try { clearUnreadBadge('health'); } catch {}
@@ -1790,7 +1797,7 @@ function _finishInterview(state, skipped) {
   const updated = updateHealthCardStatusProgrammatic(state.card_id, finalStatus);
   if (!updated) return;
   const def = HEALTH_STATUS_DEFS[finalStatus] || {};
-  const text = `Записав. Статус "${updated.name}": ${def.icon || ''} ${def.label || finalStatus}.`;
+  const text = t('health.iv.done', 'Записав. Статус "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || '', label: def.label || finalStatus });
   if (currentTab === 'health') addHealthChatMsg('agent', text);
   else saveChatMsg('health', 'agent', text);
   try { clearUnreadBadge('health'); } catch {}
