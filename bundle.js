@@ -15835,7 +15835,12 @@ ${userText}
       return;
     }
     const tab = INBOX_NAV_MAP[cat];
-    if (tab) switchTab(tab);
+    if (tab) {
+      switchTab(tab);
+      if (cat === "habit" && typeof window.switchProdTab === "function") {
+        window.switchProdTab("habits");
+      }
+    }
   }
   function _renderUpcoming() {
     const now = /* @__PURE__ */ new Date();
@@ -16949,7 +16954,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       };
       INBOX_NAV_MAP = {
         task: "tasks",
-        habit: "habits",
+        habit: "tasks",
+        // habit — підвкладка всередині tasks; switchProdTab('habits') викликається у navigateInboxItem
         note: "notes",
         idea: "notes",
         finance: "finance"
