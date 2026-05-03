@@ -651,7 +651,8 @@ let _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
 const DRUM_H = 40;
 // MONTHS_SHORT — через canonical monthShort() з src/data/months.js.
 
-function _initDrumCol(colId, items, selectedIdx, onSelect) {
+// Експортується для перевикористання в інших модалках (Health date/time picker).
+export function _initDrumCol(colId, items, selectedIdx, onSelect) {
   const col = document.getElementById(colId);
   if (!col) return;
   col.innerHTML = '<div class="drum-spacer"></div>' +
