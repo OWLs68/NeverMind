@@ -3171,6 +3171,9 @@ ${lines.join("\n")}`;
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (role !== "agent") healthBarHistory.push({ role: "user", content: text });
     else healthBarHistory.push({ role: "assistant", content: text });
@@ -4982,6 +4985,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
     else projectsBarHistory.push({ role: "assistant", content: text });
@@ -6746,6 +6752,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
     else financeBarHistory.push({ role: "assistant", content: text });
@@ -9101,6 +9110,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (role !== "agent") notesBarHistory.push({ role: "user", content: text });
     else notesBarHistory.push({ role: "assistant", content: text });
@@ -10072,6 +10084,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
     else eveningBarHistory.push({ role: "assistant", content: text });
@@ -10757,6 +10772,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (!_noSave) saveChatMsg("me", role, text);
   }
@@ -14726,6 +14744,9 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     if (role !== "agent") taskBarHistory.push({ role: "user", content: text });
     else taskBarHistory.push({ role: "assistant", content: text });
@@ -15884,6 +15905,9 @@ ${userText}
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     });
     saveChatMsg("inbox", role, text);
     if (role === "agent") {
