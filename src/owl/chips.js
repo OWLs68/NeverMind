@@ -198,10 +198,13 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     // через payload без round-trip до AI. Запобігає галюцинаціям типу B-115.
     const action = c.action === 'nav' ? 'nav'
                  : c.action === 'clarify_save' ? 'clarify_save'
+                 : c.action === 'health_interview' ? 'health_interview'
                  : 'chat';
     const target = c.target || '';
     const payload = c.payload ? JSON.stringify(c.payload) : '';
-    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${escapeHtml(payload)}">${escapeHtml(label)}</div>`;
+    // escapeHtml не кодує `"` — payload з лапками ламає атрибут. Додаємо &quot; локально.
+    const payloadAttr = escapeHtml(payload).replace(/"/g, '&quot;');
+    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
   });
 
   if (options.showSpeak) {
@@ -314,6 +317,11 @@ export function handleChipClick(tab, text, action, target, payloadRaw) {
   }
 
   // 3. Чат-чіп — відправити в чат відповідної вкладки
+  // Silent failure detector: якщо action не chat і не nav з валідним target,
+  // це майже точно невідомий action (як було з health_interview до фіксу).
+  if (action && action !== 'chat' && action !== 'nav') {
+    console.warn('[chips] Unknown action — fell through to sendChipToChat:', action, '| text:', text);
+  }
   sendChipToChat(tab, text);
 }
 
