@@ -14952,23 +14952,23 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       document.getElementById("help-drawer-panel").style.transform = "translateX(0)";
     });
     _helpOpen = true;
-    if (!panel._helpSwipe) {
-      panel._helpSwipe = true;
+    if (!drawer._helpSwipe) {
+      drawer._helpSwipe = true;
       let _sx = 0, _sy = 0, _dragging = false;
-      panel.addEventListener("touchstart", (e) => {
+      drawer.addEventListener("touchstart", (e) => {
         _sx = e.touches[0].clientX;
         _sy = e.touches[0].clientY;
         _dragging = false;
         panel.style.transition = "none";
       }, { passive: true });
-      panel.addEventListener("touchmove", (e) => {
+      drawer.addEventListener("touchmove", (e) => {
         const dx = e.touches[0].clientX - _sx;
         const dy = Math.abs(e.touches[0].clientY - _sy);
         if (!_dragging && dx > 8 && dy < dx) _dragging = true;
         if (!_dragging) return;
         if (dx > 0) panel.style.transform = `translateX(${dx}px)`;
       }, { passive: true });
-      panel.addEventListener("touchend", (e) => {
+      drawer.addEventListener("touchend", (e) => {
         if (!_dragging) {
           panel.style.transition = "";
           panel.style.transform = "translateX(0)";
