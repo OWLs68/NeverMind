@@ -550,7 +550,24 @@ navigator.vibrate?.(10);
 2. **Свайп вниз по фону** (overlay) — touch-handler ловить на root, transform на картку
 3. **Свайп вниз по картці** (drag handle / тіло) — той самий handler
 
-Усі три працюють АВТОМАТИЧНО завдяки `src/ui/modal-overlay-sync.js`:
+**📐 ЕТАЛОН — calendar-modal patern (UvEHE 03.05):**
+
+Структура:
+- `<div id="X-modal-overlay" style="display:none;position:fixed;inset:0;z-index:N-1;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);pointer-events:none">` — TOP-LEVEL sibling (НЕ дитина модалки), без padding (повний viewport)
+- `<div id="X-modal" onclick="if(event.target===this)closeX()" style="display:none;position:fixed;inset:0;z-index:N;align-items:flex-end;justify-content:center;padding:0 16px 16px">` — root з flex-end
+- `<div class="X-panel" style="position:relative;...max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);border-radius:24px;...transform:scale(0);opacity:0;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease">` — картка з scale-animation
+
+JS (як `_zoomIn`/`_zoomOut` у `calendar.js:80-90`):
+- Open: `bg.style.display='block'` → `modal.style.display='flex'` → `requestAnimationFrame(()=>{ panel.style.transform='scale(1)'; panel.style.opacity='1'; })`
+- Close: `panel.style.transform='scale(0)'; panel.style.opacity='0'` → `setTimeout(300ms, ()=> { modal.display='none'; bg.display='none' })`
+
+**❌ ЧОГО НЕ робити:**
+- НЕ ставити `background+blur` прямо на root модалки (iOS Safari quirk — клипається при scroll/transform)
+- НЕ ставити `<div class="X-backdrop">` всередині модалки (той самий quirk)
+- НЕ використовувати `margin-bottom` transition для slide-in (iOS clip artifact). Замість того — `transform:scale`.
+- НЕ використовувати `overscroll-behavior:contain` на скрол-контейнерах модалки — `contain` дозволяє bounce самого контейнера (контент потягується + mask-image = ілюзія що модалка стискається). Використовуй `overscroll-behavior:none` (повна блокіровка bounce).
+
+Усі три способи закриття + iOS-фікси працюють АВТОМАТИЧНО завдяки `src/ui/modal-overlay-sync.js`:
 - При додаванні модалки `[id$="-modal"]` (статичної в HTML або динамічної через `appendChild`) helper:
   - виносить дитячий overlay-div як top-level sibling з id `#X-modal-overlay` (фікс iOS Safari quirk де `backdrop-filter:blur` клипається при transform картки)
   - реєструє `_setupSwipeClose` що слухає touch на root і transform translateY на картку (єдину дитину)

@@ -128,7 +128,7 @@ function _containOverscroll(modal) {
   modal.querySelectorAll('*').forEach(el => {
     const s = el.getAttribute('style') || '';
     if (/overflow-y\s*:\s*(auto|scroll)/i.test(s) && !el._overscrollContained) {
-      el.style.overscrollBehavior = 'contain';
+      el.style.overscrollBehavior = 'none';
       el._overscrollContained = true;
     }
   });
