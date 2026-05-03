@@ -19767,8 +19767,11 @@ ${logLines}
     });
   }
   function closeSettings() {
-    const memory = document.getElementById("input-memory").value;
-    localStorage.setItem("nm_memory", memory);
+    try {
+      const memEl = document.getElementById("input-memory");
+      if (memEl) localStorage.setItem("nm_memory", memEl.value);
+    } catch (e) {
+    }
     const overlay = document.getElementById("settings-overlay");
     const bg = document.getElementById("settings-overlay-bg");
     const panel = document.getElementById("settings-panel-el");
