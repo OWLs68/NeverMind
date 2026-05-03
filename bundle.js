@@ -2610,6 +2610,7 @@ ${lines.join("\n")}`;
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = "0";
     document.body.style.right = "0";
+    setupModalSwipeClose(document.querySelector("#health-card-modal > div:last-child"), closeHealthCardModal);
     setTimeout(() => {
       const nameEl = document.getElementById("health-card-name");
       if (nameEl && !showDelete) nameEl.focus();
@@ -3288,6 +3289,7 @@ ${lines.join("\n")}`;
       init_chips();
       init_notes();
       init_calendar();
+      init_tasks();
       init_tasks();
       init_unread_badge();
       init_nav();
