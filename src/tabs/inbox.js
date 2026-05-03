@@ -91,12 +91,11 @@ export function addInboxChatMsg(role, text, chips = null) {
     chipsRow.className = 'chat-chips-row';
     renderChips(chipsRow, chips, 'inbox');
     el.appendChild(chipsRow);
+    requestAnimationFrame(() => chipsRow.scrollIntoView({ block: 'end', inline: 'nearest' }));
   }
 
-  // B-119 (mUpS8 02.05): rAF щоб iOS Safari порахував висоту chipsRow ДО scrollу.
-  // Синхронний scrollTop ігнорував свіжододаний chipsRow → чіпи залишались поза viewport.
   el.scrollTop = el.scrollHeight;
-  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; }); });
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   saveChatMsg('inbox', role, text);
 
   // Якщо агент надіслав повідомлення а чат закритий — показуємо бейдж
