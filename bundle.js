@@ -10909,10 +10909,11 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
     const chipsHTML = normChips.map((c) => {
       const label = c.label || "";
-      const action = c.action === "nav" ? "nav" : c.action === "clarify_save" ? "clarify_save" : "chat";
+      const action = c.action === "nav" ? "nav" : c.action === "clarify_save" ? "clarify_save" : c.action === "health_interview" ? "health_interview" : "chat";
       const target = c.target || "";
       const payload = c.payload ? JSON.stringify(c.payload) : "";
-      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${escapeHtml(payload)}">${escapeHtml(label)}</div>`;
+      const payloadAttr = escapeHtml(payload).replace(/"/g, "&quot;");
+      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
     });
     if (options.showSpeak) {
       chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
@@ -10993,6 +10994,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     if (text.includes("\u2714\uFE0F")) {
       const handled = handleCompletionChip(text, tab);
       if (handled) return;
+    }
+    if (action && action !== "chat" && action !== "nav") {
+      console.warn("[chips] Unknown action \u2014 fell through to sendChipToChat:", action, "| text:", text);
     }
     sendChipToChat(tab, text);
   }
