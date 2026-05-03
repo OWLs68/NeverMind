@@ -471,17 +471,17 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
+  /* UvEHE 03.05: background+blur тут (не в окремому .settings-backdrop)
+     щоб уникнути iOS Safari quirk де backdrop-filter клипається при
+     transform/margin transition на settings-panel sibling. Той самий
+     патерн як у решти модалок. */
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 #settings-overlay.open {
   opacity: 1;
   pointer-events: all;
-}
-.settings-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 .settings-panel {
   position: relative;
