@@ -221,6 +221,8 @@ body {
   visibility: hidden;
 }
 .page::-webkit-scrollbar { display: none; }
+.health-modal-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.health-modal-scroll::-webkit-scrollbar { display: none; }
 .page.active {
   opacity: 1;
   pointer-events: all;

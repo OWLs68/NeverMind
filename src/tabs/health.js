@@ -1030,8 +1030,14 @@ function _showHealthCardModal(title, showDelete) {
   if (titleEl) titleEl.textContent = title;
   if (delBtn) delBtn.style.display = showDelete ? 'block' : 'none';
   modal.style.display = 'flex';
-  // B-120: блокуємо скрол сторінки під модалкою (iOS rubber-band)
-  document.body.style.overflow = 'hidden';
+  // B-120: повний iOS scroll lock через position:fixed (overflow:hidden Safari ігнорує).
+  // Зберігаємо scrollY у dataset щоб відновити при закритті.
+  const scrollY = window.scrollY;
+  document.body.dataset.scrollLock = String(scrollY);
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
   // iOS fix — фокус на перше поле з затримкою
   setTimeout(() => {
     const nameEl = document.getElementById('health-card-name');
@@ -1042,7 +1048,14 @@ function _showHealthCardModal(title, showDelete) {
 function closeHealthCardModal() {
   const modal = document.getElementById('health-card-modal');
   if (modal) modal.style.display = 'none';
-  document.body.style.overflow = '';
+  // B-120: знімаємо scroll lock + повертаємо scrollY
+  const savedY = parseInt(document.body.dataset.scrollLock || '0', 10);
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  delete document.body.dataset.scrollLock;
+  window.scrollTo(0, savedY);
   _editingHealthCardId = null;
 }
 
@@ -1127,9 +1140,9 @@ function _appendMedicationRow(m) {
     </div>
     <div style="display:flex;gap:6px">
       <input type="text" class="med-dosage" placeholder="Дозування (20мг)" value="${escapeHtml(m.dosage || '')}"
-        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+        style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
       <input type="text" class="med-course" placeholder="Курс (14 днів)" value="${escapeHtml(m.courseDuration || '')}"
-        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+        style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
     </div>
     <input type="text" class="med-schedule" placeholder="Графік (08:00, 20:00)" value="${escapeHtml(schedStr)}"
       style="width:100%;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
