@@ -1680,7 +1680,7 @@
      Одна модалка у двох режимах: create (новий стан) / edit (редагування існуючого).
      Замінює рідний prompt() + додає UI редагування полів Фази 1. -->
 <div id="health-card-modal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeHealthCardModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  <div onclick="closeHealthCardModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);touch-action:none"></div>
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:88vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div class="health-modal-scroll" style="overflow-y:auto;overflow-x:hidden;max-height:88vh;padding:28px 0 calc(env(safe-area-inset-bottom)+28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
@@ -1710,22 +1710,22 @@
       <textarea id="health-card-conclusion" rows="2" placeholder="Висновок лікаря"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 16px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;resize:none;min-height:60px;box-sizing:border-box;background:rgba(255,255,255,0.7)"></textarea>
 
-      <!-- Дати -->
+      <!-- Дати — тригери-кнопки що відкривають drum-picker (заміна native iOS picker) -->
       <div style="display:flex;gap:10px;margin-bottom:14px">
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Початок</div>
-          <input id="health-card-start-date" type="text" placeholder="Вибери дату"
-            onfocus="this.type='date'" onblur="if(!this.value)this.type='text'"
-            style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+          <div id="health-card-start-date-trigger" data-value=""
+            onclick="openHealthDtPicker('start-date','date')"
+            style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;color:rgba(30,16,64,0.4);box-sizing:border-box;background:rgba(255,255,255,0.7);cursor:pointer;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Вибери дату</div>
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Наст. прийом</div>
-          <input id="health-card-appt-date" type="text" placeholder="Вибери дату"
-            onfocus="this.type='date'" onblur="if(!this.value)this.type='text'"
-            style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7);margin-bottom:6px">
-          <input id="health-card-appt-time" type="text" placeholder="Вибери час"
-            onfocus="this.type='time'" onblur="if(!this.value)this.type='text'"
-            style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;box-sizing:border-box;background:rgba(255,255,255,0.7)">
+          <div id="health-card-appt-date-trigger" data-value=""
+            onclick="openHealthDtPicker('appt-date','date')"
+            style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;color:rgba(30,16,64,0.4);box-sizing:border-box;background:rgba(255,255,255,0.7);cursor:pointer;margin-bottom:6px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Вибери дату</div>
+          <div id="health-card-appt-time-trigger" data-value=""
+            onclick="openHealthDtPicker('appt-time','time')"
+            style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;color:rgba(30,16,64,0.4);box-sizing:border-box;background:rgba(255,255,255,0.7);cursor:pointer;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Вибери час</div>
         </div>
       </div>
 
@@ -1742,6 +1742,31 @@
         <button onclick="closeHealthCardModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
         <button onclick="saveHealthCardFromModal()" style="flex:2;background:linear-gradient(135deg,#d68f1c,#c2790a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEALTH DATE/TIME PICKER MODAL — drum-picker над health-card-modal (z-index:300 > 200) -->
+<div id="health-dt-picker-modal" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+  <div onclick="closeHealthDtPicker()" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px)"></div>
+  <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;border:1.5px solid rgba(255,255,255,0.5);padding:28px 20px calc(env(safe-area-inset-bottom) + 20px)">
+    <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
+    <div id="health-dt-picker-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Виберіть дату</div>
+    <div id="health-dt-date-wrap" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative;margin-bottom:16px">
+      <div id="hdp-day" class="drum-col"></div>
+      <div id="hdp-month" class="drum-col" style="flex:1.5"></div>
+      <div id="hdp-year" class="drum-col"></div>
+      <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(194,121,10,0.3);border-bottom:1.5px solid rgba(194,121,10,0.3);pointer-events:none"></div>
+    </div>
+    <div id="health-dt-time-wrap" style="display:none;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative;margin-bottom:16px">
+      <div id="hdp-hour" class="drum-col"></div>
+      <div style="display:flex;align-items:center;font-size:18px;font-weight:700;color:#1e1040;flex-shrink:0">:</div>
+      <div id="hdp-min" class="drum-col"></div>
+      <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(194,121,10,0.3);border-bottom:1.5px solid rgba(194,121,10,0.3);pointer-events:none"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeHealthDtPicker()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button onclick="saveHealthDtPicker()" style="flex:2;background:linear-gradient(135deg,#d68f1c,#c2790a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Готово</button>
     </div>
   </div>
 </div>

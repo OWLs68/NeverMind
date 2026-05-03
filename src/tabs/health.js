@@ -13,8 +13,9 @@ import { shouldClarify } from '../owl/clarify-guard.js';
 import { getHealthChatSystem } from '../ai/prompts.js';
 import { renderChips } from '../owl/chips.js';
 import { openNotesFolder } from './notes.js';
-import { getEvents, saveEvents } from './calendar.js';
+import { getEvents, saveEvents, _initDrumCol } from './calendar.js';
 import { setupModalSwipeClose } from './tasks.js';
+import { monthShort } from '../data/months.js';
 import { saveTasks } from './tasks.js';
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
 import { currentTab } from '../core/nav.js';
@@ -1062,6 +1063,96 @@ function closeHealthCardModal() {
   _editingHealthCardId = null;
 }
 
+// === HEALTH DATE/TIME PICKER (drum-picker замість native iOS picker) ===
+// State локальний (НЕ перетинається з calendar.js _drumValues, бо різні modalки).
+let _hdpTarget = null;   // 'start-date' | 'appt-date' | 'appt-time'
+let _hdpType = 'date';   // 'date' | 'time'
+const _hdp = { day: 1, month: 0, year: 2026, hour: 9, min: 0 };
+
+// Форматує "2026-05-03" → "3 трав. 2026"
+function _formatHealthDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  return `${d.getDate()} ${monthShort(d.getMonth())}. ${d.getFullYear()}`;
+}
+
+// Заповнює тригер: показує форматовану дату/час або placeholder.
+function _setHealthDtTrigger(target, value, type) {
+  const el = document.getElementById(`health-card-${target}-trigger`);
+  if (!el) return;
+  el.dataset.value = value || '';
+  if (value) {
+    el.textContent = type === 'time' ? value : _formatHealthDate(value);
+    el.style.color = '#1e1040';
+  } else {
+    el.textContent = type === 'time' ? t('health.dtpicker.placeholder_time', 'Вибери час') : t('health.dtpicker.placeholder_date', 'Вибери дату');
+    el.style.color = 'rgba(30,16,64,0.4)';
+  }
+}
+
+function openHealthDtPicker(target, type) {
+  _hdpTarget = target;
+  _hdpType = type;
+  document.getElementById('health-dt-picker-modal').style.display = 'flex';
+  document.getElementById('health-dt-picker-title').textContent = type === 'date' ? t('health.dtpicker.title_date', 'Виберіть дату') : t('health.dtpicker.title_time', 'Виберіть час');
+  document.getElementById('health-dt-date-wrap').style.display = type === 'date' ? 'flex' : 'none';
+  document.getElementById('health-dt-time-wrap').style.display = type === 'time' ? 'flex' : 'none';
+  const trigger = document.getElementById(`health-card-${target}-trigger`);
+  const currentValue = trigger ? (trigger.dataset.value || '') : '';
+  if (type === 'date') _hdpInitDate(currentValue);
+  else _hdpInitTime(currentValue);
+}
+
+function _hdpInitDate(dateStr) {
+  const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  if (isNaN(d.getTime())) { _hdpInitDate(''); return; }
+  _hdp.day = d.getDate();
+  _hdp.month = d.getMonth();
+  _hdp.year = d.getFullYear();
+  const days = Array.from({length: 31}, (_, i) => String(i + 1));
+  const years = Array.from({length: 8}, (_, i) => String(2024 + i));
+  _initDrumCol('hdp-day', days, _hdp.day - 1, i => { _hdp.day = i + 1; });
+  _initDrumCol('hdp-month', Array.from({length: 12}, (_, i) => monthShort(i)), _hdp.month, i => { _hdp.month = i; });
+  _initDrumCol('hdp-year', years, Math.max(0, _hdp.year - 2024), i => { _hdp.year = 2024 + i; });
+}
+
+function _hdpInitTime(timeStr) {
+  const hours = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0'));
+  const mins = Array.from({length: 12}, (_, i) => String(i * 5).padStart(2, '0'));
+  if (timeStr && /^\d{1,2}:\d{2}$/.test(timeStr)) {
+    const [h, m] = timeStr.split(':').map(Number);
+    _hdp.hour = h;
+    _hdp.min = Math.round(m / 5);
+  } else {
+    _hdp.hour = 9;
+    _hdp.min = 0;
+  }
+  _initDrumCol('hdp-hour', hours, _hdp.hour, i => { _hdp.hour = i; });
+  _initDrumCol('hdp-min', mins, _hdp.min, i => { _hdp.min = i; });
+}
+
+function saveHealthDtPicker() {
+  if (!_hdpTarget) return;
+  let value;
+  if (_hdpType === 'date') {
+    const y = _hdp.year;
+    const m = String(_hdp.month + 1).padStart(2, '0');
+    const maxDay = new Date(y, _hdp.month + 1, 0).getDate();
+    const d = String(Math.min(_hdp.day, maxDay)).padStart(2, '0');
+    value = `${y}-${m}-${d}`;
+  } else {
+    value = `${String(_hdp.hour).padStart(2, '0')}:${String(_hdp.min * 5).padStart(2, '0')}`;
+  }
+  _setHealthDtTrigger(_hdpTarget, value, _hdpType);
+  closeHealthDtPicker();
+}
+
+function closeHealthDtPicker() {
+  document.getElementById('health-dt-picker-modal').style.display = 'none';
+  _hdpTarget = null;
+}
+
 // Заповнити поля модалки. Якщо card=null — порожня форма (режим create).
 function _fillHealthCardModal(card) {
   const c = card || {};
@@ -1071,20 +1162,11 @@ function _fillHealthCardModal(card) {
   setVal('health-card-doctor', c.doctor);
   setVal('health-card-recommendations', c.doctorRecommendations);
   setVal('health-card-conclusion', c.doctorConclusion);
-  setVal('health-card-start-date', c.startDate);
-  setVal('health-card-appt-date', c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : '');
-  setVal('health-card-appt-time', c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : '');
-
-  // B-121 v2: за замовчуванням type="text" з placeholder.
-  // Якщо value є — переключаємо на нативний date/time щоб дата відображалась нативно.
-  const _swapType = (id, nativeType) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.type = el.value ? nativeType : 'text';
-  };
-  _swapType('health-card-start-date', 'date');
-  _swapType('health-card-appt-date', 'date');
-  _swapType('health-card-appt-time', 'time');
+  // Тригери дат/часу (заміна native iOS picker на drum-picker модалку).
+  // Зберігають value у dataset, відображають форматовано або placeholder.
+  _setHealthDtTrigger('start-date', c.startDate, 'date');
+  _setHealthDtTrigger('appt-date', c.nextAppointment && c.nextAppointment.date ? c.nextAppointment.date : '', 'date');
+  _setHealthDtTrigger('appt-time', c.nextAppointment && c.nextAppointment.time ? c.nextAppointment.time : '', 'time');
 
   // Статус (модалка створення статус не показує — кнопок нема, цикл порожній.
   // Лишається для backwards-сумісності якщо колись повернеться UI.)
@@ -1309,9 +1391,11 @@ function saveHealthCardFromModal() {
   const doctor = getVal('health-card-doctor');
   const doctorRecommendations = getVal('health-card-recommendations');
   const doctorConclusion = getVal('health-card-conclusion');
-  const startDate = getVal('health-card-start-date');
-  const apptDate = getVal('health-card-appt-date');
-  const apptTime = getVal('health-card-appt-time');
+  // Тригери дат/часу зберігають value у data-value (drum-picker замість native input)
+  const getTriggerVal = id => { const el = document.getElementById(id); return el ? (el.dataset.value || '') : ''; };
+  const startDate = getTriggerVal('health-card-start-date-trigger');
+  const apptDate = getTriggerVal('health-card-appt-date-trigger');
+  const apptTime = getTriggerVal('health-card-appt-time-trigger');
   const nextAppointment = apptDate ? { date: apptDate, time: apptTime } : null;
   const status = _getHealthCardModalStatus();
 
@@ -1842,6 +1926,8 @@ Object.assign(window, {
   // B-27 + B-30 (15.04 6v2eR): модалка створення/редагування
   openEditHealthCard, closeHealthCardModal, saveHealthCardFromModal,
   deleteHealthCardFromModal, addHealthMedicationRow,
+  // Drum-picker для дат/часу у Health-картці (UvEHE 03.05) — заміна native iOS picker
+  openHealthDtPicker, closeHealthDtPicker, saveHealthDtPicker,
   // Фаза 3 (15.04 6v2eR): focused-режим + лог дози з UI
   askOwlAboutHealthCard, logHealthMedDose,
   // Фаза 4 (15.04 6v2eR): пропуск дози
