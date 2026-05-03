@@ -26,7 +26,7 @@ import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 import { renderChips } from '../owl/chips.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
-import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, updateHealthCardStatusProgrammatic, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry, HEALTH_STATUS_DEFS } from './health.js';
+import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, updateHealthCardStatusProgrammatic, startHealthInterview, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry, HEALTH_STATUS_DEFS } from './health.js';
 import { monthGenitive, monthShortCaps } from '../data/months.js';
 // Unread badge (універсальна червона крапка — QV1n2 19.04 Фаза 0)
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
@@ -729,7 +729,9 @@ ${aiContext}`;
           if (created) {
             if (currentTab === 'health') renderHealth();
             const items = getInbox(); items.unshift({ id: Date.now() + 1, text: t('inbox.health.state_inbox', '🏥 Стан: {name}', { name: created.name }), category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
-            addInboxChatMsg('agent', t('inbox.health.card_created', '🏥 Створив картку "{name}" у Здоровʼї. {comment}', { name: created.name, comment: action.comment || '' }));
+            addInboxChatMsg('agent', t('inbox.health.card_created_redirect', '🏥 Створив картку "{name}" у Здоровʼї. Пройди коротке опитування там — 3 чіпи виставлять точний статус.', { name: created.name }));
+            // Phase C: запуск інтерв'ю (записує у Health-чат + червона крапка над Health-кнопкою)
+            setTimeout(() => { try { startHealthInterview(created); } catch(e) {} }, 300);
           } else {
             addInboxChatMsg('agent', t('inbox.chat.health_no_name', 'Не вдалось створити картку — потрібна назва.'));
           }

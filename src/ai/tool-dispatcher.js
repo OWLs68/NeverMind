@@ -29,6 +29,7 @@ import {
   editHealthCardProgrammatic,
   deleteHealthCardProgrammatic,
   updateHealthCardStatusProgrammatic,
+  startHealthInterview,
   addMedicationToCard,
   editMedicationInCard,
   logMedicationDose,
@@ -139,7 +140,14 @@ function _handleHealthTool(name, args, addMsg) {
       });
       if (created) {
         if (currentTab === 'health') renderHealth();
-        addMsg('agent', `🏥 Створив картку "${created.name}". ${args.comment || ''}`.trim());
+        if (currentTab === 'health') {
+          // Юзер уже у Здоров'ї — інтерв'ю одразу у Health-чаті, без redirect-повідомлення
+          addMsg('agent', `🏥 Створив картку "${created.name}".`);
+        } else {
+          // Юзер у іншому чаті — повідомлення-вказівник + інтерв'ю чекає у Health-чаті
+          addMsg('agent', `🏥 Створив картку "${created.name}" у Здоровʼї. Пройди коротке опитування там — 3 чіпи виставлять точний статус.`);
+        }
+        setTimeout(() => { try { startHealthInterview(created); } catch(e) {} }, 300);
       } else {
         addMsg('agent', 'Не вдалось створити картку — потрібна назва.');
       }

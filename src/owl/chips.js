@@ -264,6 +264,18 @@ export function handleChipClick(tab, text, action, target, payloadRaw) {
     return;
   }
 
+  // 0.5. Health-interview chip (MIeXK 03.05) — детерміноване 3-крокове опитування
+  // після створення картки. Локальна обробка без AI — payload містить step/value.
+  if (action === 'health_interview') {
+    let payload = {};
+    try { payload = payloadRaw ? JSON.parse(payloadRaw) : {}; } catch {}
+    // Динамічний import щоб уникнути circular dependency (health.js імпортує chips.js).
+    import('../tabs/health.js').then(m => {
+      if (m.applyHealthInterviewChoice) m.applyHealthInterviewChoice(payload);
+    }).catch(e => console.warn('[chips] health_interview load failed:', e));
+    return;
+  }
+
   // Спеціальний target:'calendar' → відкриваємо модалку календаря + пульсація
   // (rJYkw 21.04.2026). Календар не є вкладкою — це модалка, тому окремо.
   if (action === 'nav' && target === 'calendar') {

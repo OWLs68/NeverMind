@@ -15,6 +15,8 @@ import { renderChips } from '../owl/chips.js';
 import { openNotesFolder } from './notes.js';
 import { getEvents, saveEvents } from './calendar.js';
 import { saveTasks } from './tasks.js';
+import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
+import { currentTab } from '../core/nav.js';
 
 // === HEALTH STATUSES (6-статусна шкала, 03.05.2026 4xJ7n→MIeXK) ===
 // Замінили старі 3 (active/controlled/done) — Роман: «3 замало бо не відображають
@@ -1346,6 +1348,11 @@ function saveHealthCardFromModal() {
     newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, name, nextAppointment, null);
     cards.unshift(newCard);
     saveHealthCards(cards);
+    // Phase C: запуск AI-інтерв'ю після створення нової картки (тільки create-режим).
+    closeHealthCardModal();
+    renderHealth();
+    setTimeout(() => { try { startHealthInterview(newCard); } catch(e) {} }, 300);
+    return;
   }
 
   closeHealthCardModal();
@@ -1548,7 +1555,7 @@ export function addHealthChatMsg(role, text, _noSave = false, chips = null) {
   el.scrollTop = el.scrollHeight;
   if (role !== 'agent') healthBarHistory.push({ role: 'user', content: text });
   else healthBarHistory.push({ role: 'assistant', content: text });
-  if (!_noSave) saveChatMsg('health', role, text);
+  if (!_noSave) saveChatMsg('health', role, text, chips);
 }
 
 export async function sendHealthBarMessage() {
@@ -1627,6 +1634,167 @@ setInterval(() => {
     }
   } catch (e) {}
 }, 5 * 60 * 1000);
+
+// === HEALTH AI-INTERVIEW (Phase C — детерміноване 3-крокове опитування, MIeXK 03.05) ===
+// Запускається після створення картки. Послідовність:
+// step 1 «Що зараз?»  → recent / treating / chronic / skip
+// step 2 «Лікар?»     → doctor_yes / doctor_no / self / skip
+// step 3 «Симптоми?»  → severe / moderate / mild / skip
+// Агрегація відповідей → один з 6 статусів через updateHealthCardStatusProgrammatic.
+// Стан зберігається у localStorage `nm_health_interview_pending`. Якщо юзер не
+// відповідає — інтерв'ю просто висить у Health-чаті до наступного разу. Чіпи з
+// payload зберігаються у nm_chat_health (saveChatMsg розширено), тож при
+// відкритті чату renderChips видасть їх знову.
+
+const HEALTH_INTERVIEW_KEY = 'nm_health_interview_pending';
+
+function _interviewChips(step, options) {
+  return options.map(o => ({
+    label: o.label,
+    action: 'health_interview',
+    payload: { step, value: o.value },
+  }));
+}
+
+const STEP1_OPTIONS = [
+  { label: '🆕 Щойно з\'явилось', value: 'recent' },
+  { label: '💊 Лікую',            value: 'treating' },
+  { label: '♾️ Хронічна',         value: 'chronic' },
+  { label: 'Пропустити',          value: 'skip' },
+];
+const STEP2_OPTIONS = [
+  { label: 'Так',                 value: 'doctor_yes' },
+  { label: 'Не був у лікаря',     value: 'doctor_no' },
+  { label: 'Сам лікую',           value: 'self' },
+  { label: 'Пропустити',          value: 'skip' },
+];
+const STEP3_OPTIONS = [
+  { label: 'Сильні',              value: 'severe' },
+  { label: 'Помірні',             value: 'moderate' },
+  { label: 'Майже нема',          value: 'mild' },
+  { label: 'Пропустити',          value: 'skip' },
+];
+
+function _aggregateInterviewStatus(answers) {
+  const stage = answers.stage || 'treating';
+  const symptoms = answers.symptoms;
+  const doctor = answers.doctor;
+  if (stage === 'chronic') {
+    if (symptoms === 'severe') return 'treatment';
+    if (symptoms === 'mild')   return 'remission';
+    return 'chronic';
+  }
+  if (stage === 'recent') {
+    if (symptoms === 'mild') return 'improving';
+    if (doctor === 'doctor_yes') return 'treatment';
+    return 'acute';
+  }
+  // stage === 'treating' (default)
+  if (symptoms === 'mild') return 'improving';
+  return 'treatment';
+}
+
+// Запуск інтерв'ю після створення картки. Викликається з модалки + tool handlers.
+// inCurrentChat=true коли картка створена через AI у чаті відмінному від health —
+// тоді тут НЕ рендеримо у Health-DOM (його може не бути), тільки записуємо state +
+// чіпи у `nm_chat_health` (відобразяться при відкритті чату), і ставимо unread badge.
+export function startHealthInterview(card) {
+  if (!card || !card.id || !card.name) return;
+  // state у localStorage (на випадок reload, або відкриття чату пізніше)
+  try {
+    localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify({
+      card_id: card.id,
+      card_name: card.name,
+      step: 1,
+      answers: {},
+      ts: Date.now(),
+    }));
+  } catch {}
+
+  const chips = _interviewChips(1, STEP1_OPTIONS);
+  const text = `Створив картку "${card.name}". 3 короткі питання щоб виставити статус.\n\nЩо зараз?`;
+
+  if (currentTab === 'health') {
+    // Юзер у Здоров'ї — рендеримо одразу у DOM (addHealthChatMsg сам викличе
+    // openChatBar, але якщо чат закритий — це теж нормально, повідомлення
+    // лишається у nm_chat_health через saveChatMsg і відобразиться при відкритті).
+    addHealthChatMsg('agent', text, false, chips);
+  } else {
+    // Юзер не у Здоров'ї — DOM Health-чату не існує, addHealthChatMsg верне
+    // без побічних ефектів. Зберігаємо у nm_chat_health напряму через saveChatMsg.
+    saveChatMsg('health', 'agent', text, chips);
+    healthBarHistory.push({ role: 'assistant', content: text });
+    // Червона крапка над кнопкою Send у Health чат-барі (видна коли юзер
+    // переходить на вкладку Здоров'я, до відкриття чату).
+    try { showUnreadBadge('health', 'health-send-btn'); } catch {}
+  }
+}
+
+// Обробка кліку чіпа інтерв'ю. Експортується для виклику з chips.js (action='health_interview').
+export function applyHealthInterviewChoice(payload) {
+  if (!payload || typeof payload.step !== 'number') return;
+  let state = null;
+  try { state = JSON.parse(localStorage.getItem(HEALTH_INTERVIEW_KEY) || 'null'); } catch {}
+  if (!state || !state.card_id) return;
+
+  // Чіп вже візуально пропадає у chips.js. Тут — рідер user-вибору + наступний крок.
+  const labelMap = {
+    recent: '🆕 Щойно з\'явилось', treating: '💊 Лікую', chronic: '♾️ Хронічна', skip: 'Пропустити',
+    doctor_yes: 'Так — лікар призначив', doctor_no: 'Не був у лікаря', self: 'Сам лікую',
+    severe: 'Сильні', moderate: 'Помірні', mild: 'Майже нема',
+  };
+  const userText = labelMap[payload.value] || payload.value;
+  // Записуємо вибір у Health-чат як user-message (видно при відкритті)
+  if (currentTab === 'health') addHealthChatMsg('user', userText);
+  else saveChatMsg('health', 'user', userText);
+
+  if (payload.step === 1) {
+    state.answers.stage = payload.value;
+    if (payload.value === 'skip') return _finishInterview(state, true);
+    state.step = 2;
+    try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
+    const chips = _interviewChips(2, STEP2_OPTIONS);
+    const q = 'Лікар призначив лікування?';
+    if (currentTab === 'health') addHealthChatMsg('agent', q, false, chips);
+    else saveChatMsg('health', 'agent', q, chips);
+    return;
+  }
+  if (payload.step === 2) {
+    state.answers.doctor = payload.value;
+    if (payload.value === 'skip') return _finishInterview(state, true);
+    state.step = 3;
+    try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
+    const chips = _interviewChips(3, STEP3_OPTIONS);
+    const q = 'Симптоми зараз?';
+    if (currentTab === 'health') addHealthChatMsg('agent', q, false, chips);
+    else saveChatMsg('health', 'agent', q, chips);
+    return;
+  }
+  if (payload.step === 3) {
+    state.answers.symptoms = payload.value;
+    return _finishInterview(state, payload.value === 'skip');
+  }
+}
+
+function _finishInterview(state, skipped) {
+  try { localStorage.removeItem(HEALTH_INTERVIEW_KEY); } catch {}
+  if (skipped && Object.keys(state.answers).length === 0) {
+    // Юзер повністю пропустив — нічого не змінюємо, статус лишається 'treatment' (default)
+    const text = 'Гаразд, без опитування. Статус можна змінити з картки.';
+    if (currentTab === 'health') addHealthChatMsg('agent', text);
+    else saveChatMsg('health', 'agent', text);
+    try { clearUnreadBadge('health'); } catch {}
+    return;
+  }
+  const finalStatus = _aggregateInterviewStatus(state.answers);
+  const updated = updateHealthCardStatusProgrammatic(state.card_id, finalStatus);
+  if (!updated) return;
+  const def = HEALTH_STATUS_DEFS[finalStatus] || {};
+  const text = `Записав. Статус "${updated.name}": ${def.icon || ''} ${def.label || finalStatus}.`;
+  if (currentTab === 'health') addHealthChatMsg('agent', text);
+  else saveChatMsg('health', 'agent', text);
+  try { clearUnreadBadge('health'); } catch {}
+}
 
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {

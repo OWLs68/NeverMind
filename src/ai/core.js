@@ -644,13 +644,15 @@ const CHAT_STORE_KEYS = {
   projects: 'nm_chat_projects',
 };
 
-export function saveChatMsg(tab, role, text) {
+export function saveChatMsg(tab, role, text, chips) {
   if (role === 'typing') return;
   const key = CHAT_STORE_KEYS[tab];
   if (!key) return;
   try {
     const msgs = JSON.parse(localStorage.getItem(key) || '[]');
-    msgs.push({ role, text, ts: Date.now() });
+    const entry = { role, text, ts: Date.now() };
+    if (Array.isArray(chips) && chips.length > 0) entry.chips = chips;
+    msgs.push(entry);
     if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
     localStorage.setItem(key, JSON.stringify(msgs));
     if (role === 'user') window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'chat' }));
@@ -755,14 +757,16 @@ export function restoreChatUI(tab) {
     health:   'health-chat-messages',
     projects: 'projects-chat-messages',
   };
+  // chips підтримуються у evening/finance/notes/projects/health (4-й параметр) +
+  // me (5-й параметр, 4-й — id). tasks поки без chips (Phase 3 mUpS8 інтеграції).
   const addMsgMap = {
-    tasks:    (r,t) => addTaskBarMsg(r,t,true),
-    notes:    (r,t) => addNotesChatMsg(r,t,true),
-    me:       (r,t) => addMeChatMsg(r,t,true),
-    evening:  (r,t) => addEveningBarMsg(r,t,true),
-    finance:  (r,t) => addFinanceChatMsg(r,t,true),
-    health:   (r,t) => addHealthChatMsg(r,t,true),
-    projects: (r,t) => addProjectsChatMsg(r,t,true),
+    tasks:    (r,t)   => addTaskBarMsg(r,t,true),
+    notes:    (r,t,c) => addNotesChatMsg(r,t,true,c),
+    me:       (r,t,c) => addMeChatMsg(r,t,true,'',c),
+    evening:  (r,t,c) => addEveningBarMsg(r,t,true,c),
+    finance:  (r,t,c) => addFinanceChatMsg(r,t,true,c),
+    health:   (r,t,c) => addHealthChatMsg(r,t,true,c),
+    projects: (r,t,c) => addProjectsChatMsg(r,t,true,c),
   };
   const containerId = containerMap[tab];
   if (!containerId) return;
@@ -791,7 +795,7 @@ export function restoreChatUI(tab) {
   if (tab === 'inbox') {
     msgs.forEach(m => _renderInboxChatMsg(m.role, m.text, el));
   } else if (addMsgMap[tab]) {
-    msgs.forEach(m => addMsgMap[tab](m.role, m.text));
+    msgs.forEach(m => addMsgMap[tab](m.role, m.text, m.chips));
   }
 }
 
