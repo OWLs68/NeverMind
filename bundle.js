@@ -2612,7 +2612,7 @@ ${lines.join("\n")}`;
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = "0";
     document.body.style.right = "0";
-    _setupHealthModalSwipe();
+    setupModalSwipeClose(document.querySelector("#health-card-modal > div:last-child"), closeHealthCardModal);
     setTimeout(() => {
       const nameEl = document.getElementById("health-card-name");
       if (nameEl && !showDelete) nameEl.focus();
@@ -2631,54 +2631,6 @@ ${lines.join("\n")}`;
     delete document.body.dataset.scrollLock;
     window.scrollTo(0, savedY);
     _editingHealthCardId = null;
-  }
-  function _setupHealthModalSwipe() {
-    const root = document.getElementById("health-card-modal");
-    if (!root || root._healthSwipeBound) return;
-    root._healthSwipeBound = true;
-    let startY = 0, startX = 0, dy = 0, blocked = false;
-    const getCard = () => root.querySelector("div:last-child");
-    root.addEventListener("touchstart", (e) => {
-      blocked = !!e.target.closest(".drum-col, .drum-item, input, textarea, button, select");
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-      dy = 0;
-      if (!blocked) {
-        const c = getCard();
-        if (c) c.style.transition = "none";
-      }
-    }, { passive: true });
-    root.addEventListener("touchmove", (e) => {
-      if (blocked) return;
-      dy = e.touches[0].clientY - startY;
-      const dx = Math.abs(e.touches[0].clientX - startX);
-      if (dy < 0) {
-        e.preventDefault();
-        return;
-      }
-      if (dy > 0 && dy > dx) {
-        const c = getCard();
-        if (c) c.style.transform = `translateY(${dy}px)`;
-      }
-    }, { passive: false });
-    root.addEventListener("touchend", () => {
-      if (blocked) {
-        blocked = false;
-        return;
-      }
-      const c = getCard();
-      if (c) c.style.transition = "transform 0.25s ease";
-      if (dy > 80) {
-        if (c) c.style.transform = "translateY(100%)";
-        setTimeout(() => {
-          if (c) c.style.transform = "";
-          closeHealthCardModal();
-        }, 250);
-      } else {
-        if (c) c.style.transform = "";
-      }
-      dy = 0;
-    }, { passive: true });
   }
   function _formatHealthDate(dateStr) {
     if (!dateStr) return "";
@@ -14288,15 +14240,16 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   function setupModalSwipeClose(contentEl, closeFn) {
     if (!contentEl || contentEl._swipeClose) return;
     contentEl._swipeClose = true;
+    const swipeRoot = contentEl.parentElement || contentEl;
     let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
-    contentEl.addEventListener("touchstart", (e) => {
+    swipeRoot.addEventListener("touchstart", (e) => {
       _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll");
       startY = e.touches[0].clientY;
       startX = e.touches[0].clientX;
       dy = 0;
       if (!_swipeBlocked) contentEl.style.transition = "none";
     }, { passive: true });
-    contentEl.addEventListener("touchmove", (e) => {
+    swipeRoot.addEventListener("touchmove", (e) => {
       if (_swipeBlocked) return;
       dy = e.touches[0].clientY - startY;
       const dx = Math.abs(e.touches[0].clientX - startX);
@@ -14304,7 +14257,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         contentEl.style.transform = `translateY(${dy}px)`;
       }
     }, { passive: true });
-    contentEl.addEventListener("touchend", () => {
+    swipeRoot.addEventListener("touchend", () => {
       if (_swipeBlocked) {
         _swipeBlocked = false;
         return;
