@@ -511,7 +511,9 @@ export function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
     renderChips(chipsRow, chips, 'projects');
     el.appendChild(chipsRow);
   }
+  // B-119 (UvEHE розкочення): rAF щоб iOS Safari порахував висоту chipsRow ДО scrollу.
   el.scrollTop = el.scrollHeight;
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') projectsBarHistory.push({ role: 'user', content: text });
   else projectsBarHistory.push({ role: 'assistant', content: text });
   if (!_noSave) saveChatMsg('projects', role, text);

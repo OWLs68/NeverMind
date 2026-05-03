@@ -721,7 +721,9 @@ export function addMeChatMsg(role, text, _noSave = false, id = '', chips = null)
     renderChips(chipsRow, chips, 'me');
     el.appendChild(chipsRow);
   }
+  // B-119 (UvEHE розкочення): rAF щоб iOS Safari порахував висоту chipsRow ДО scrollу.
   el.scrollTop = el.scrollHeight;
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (!_noSave) saveChatMsg('me', role, text);
 }
 // === WINDOW EXPORTS (HTML handlers only) ===
