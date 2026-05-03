@@ -6,6 +6,57 @@
 
 ---
 
+## 2026-05-03 — UvEHE: модалки calendar-pattern + Settings 4-ітерац scale-glitch + sub-агенти + pre-commit-i18n
+
+**Гілка:** `claude/start-session-UvEHE` · ~30 комітів · v570 → ~v603
+
+### Інфраструктура
+- `/c` slash команда — короткий індикатор `📊 NN% · XXXK/1M`. Видалено мертвий statusLine (не працює у Claude Code Web).
+- `context-warning.sh`: мовчить <75%, ⚠️ 75-89%, 🚨 ≥90%.
+- 3 read-only sub-агенти: `ios-bug-hunter`, `code-regression-finder`, `silent-bug-scout` у `.claude/agents/`.
+- `pre-commit-i18n.js` хук — блокує коміт локально якщо нові UI рядки без `t()`. БЕЗ bypass.
+
+### Health-картка модалка (B-120 + B-121)
+- Drum-picker mini-модалка замість native iOS picker. 3-кол date + 2-кол time (крок 5хв). Роки 1990-2035.
+- Поля-trigger показують форматовану дату «3 трав. 2026» / «09:00».
+- B-120/B-121 закрито фінально через перехід на calendar-pattern.
+
+### Усі 13 модалок на calendar-pattern
+- `src/ui/modal-overlay-sync.js` — MutationObserver авто-sync + auto-extract overlay для динамічних модалок.
+- Top-level `#X-modal-overlay` sibling замість дитячого backdrop-div.
+- `onclick="if(event.target===this)closeX()"` на root модалок.
+- Універсальний swipe-close (touch на root, transform на картку).
+- `overscroll-behavior:none` на скрол-контейнерах.
+- `_setupSwipeClose` ТІЛЬКИ для bottom-sheet (повноекранні пропускаються).
+
+### Settings 4-ітераційний scale-glitch
+- v1-v3: false leads (position:fixed body, flex layout, nested backdrop-filter).
+- v4 КОРІНЬ: глобальне CSS `[onclick]:active { transform: scale(0.87); }` зачіпало root модалок. Override `#settings-overlay:active, [id$="-modal"]:active { transform: none }`.
+- Settings переведено на повний calendar-pattern.
+- null-safe input-memory у closeSettings (фікс stuck overlay-bg).
+
+### Help-drawer (8 вкладок)
+- HELP_CONTENT для `health` і `projects` (раніше нічого не показувало).
+- Swipe-right на drawer (root) — ловить touch і на dim.
+- `#help-drawer-dim` у scale override.
+
+### Інше
+- Inbox→habit навігація: `INBOX_NAV_MAP.habit: 'tasks'` + `switchProdTab('habits')`.
+- 22 місця `calc(env(safe-area-inset-X)+Npx)` — додано пробіли (CSS spec).
+- DESIGN_SYSTEM.md: max 1 blur layer + НЕ використовувати global `[onclick]:active` для root модалок.
+- lessons.md: 3 нових анти-патерни.
+
+### Закриті баги
+- B-120, B-121 (Health модалка)
+
+### Відкладене
+- Smoke-test v600+ Health AI-інтерв'ю.
+- B-117 (табло звичок stale) — потребує live DevTools.
+- Розкочення rAF B-119 на 6 інших чатів.
+- Перший Read CLAUDE.md у новому чаті.
+
+---
+
 ## 2026-04-26 — UVKL1: B-103 + B-101 фікси + архітектурний план OWL Silence/Pruning Engine
 
 **Контекст:** початково планувалось закрити B-103 (дублі подій) → B-101 (туманне «Щось пішло не так») → B-100 (сова не реагує на «відчепись»). Перші два закрилися як планувалось. На B-100 Роман уточнив що сова в чат майже не пише першою — реальна проблема у **табло** яке не знає про закриті задачі. Це призвело до 2 раундів консультації з Gemini 3 Pro і **архітектурного плану OWL Silence + Pruning Engine** (3 фази, ~5 год).

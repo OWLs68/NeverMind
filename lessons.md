@@ -154,6 +154,28 @@
 
 ## ❌ Анти-патерни (як часто ламаюсь і чому)
 
+### CSS :active scale на root модалок (UvEHE 03.05)
+
+**Що сталось:** Settings модалка візуально стискалась при тапі всередині. 4 ітерації false leads: mask-image, flex layout, nested backdrop-filter, body-lock. Справжній корінь — глобальне CSS правило `style.css:1551`: `button:active, [onclick]:active { transform: scale(0.87); }`. Settings-overlay має onclick → tap всередині bubbles до root → scale на ВСІЙ модалці.
+
+**Чому 4 ітерації?** Шукав корінь у CSS layout (mask, flex, blur stack) і JS layout (body lock). Жодна гіпотеза не була неправдоподібна — всі мали правдивий механізм. Але всі помилкові. Пропустив **глобальні CSS правила з універсальними селекторами** (`[onclick]`, `button`).
+
+**Правило:** коли симптом «реакція на touch / tap» — ПЕРШИМ ділом `grep ":active\|:focus\|:hover" style.css` на universal selectors. Це 30 сек roботи що могло заощадити 4 ітерації фіксу.
+
+**Корінь анти-патерну:** глобальний `[onclick]:active` selector — анти-патерн сам по собі. Він зачіпає всі елементи з onclick включно з root-модалками. Має бути більш специфічним — `button:active` + opt-in клас `.tap-shrink:active`.
+
+### Nested backdrop-filter на iOS Safari (UvEHE 03.05)
+
+**Що сталось:** Settings мав 13 `.s-group` з `backdrop-filter:blur(16px)` всередині panel з `blur(32px)`. Здавалось OK візуально, але iOS Safari при momentum scroll re-rasterize всю стопку 14 nested composite layers → subpixel rounding glitch.
+
+**Правило:** **max 1 backdrop-filter layer на стек**. Дочірні картки — solid fill, не translucent. Записано у DESIGN_SYSTEM.md.
+
+### Council-агент сам зробив Edit + commit (UvEHE 03.05)
+
+**Що сталось:** Агенту я написав «old_string + new_string для Edit» — звучало як інструкція до редагування. Агент має tool Edit — використав. Самовільно зробив зміни + git commit.
+
+**Правило:** у промптах для Council/sub-агентів ЯВНО блокувати модифікації: «🚫 СУВОРА ЗАБОРОНА: Edit, Write, NotebookEdit, git commit, sed -i». Записано у CLAUDE.md секцію Council. У `.claude/agents/*.md` — read-only за конструкцією у systemPrompt кожного.
+
 ### Поверхневі відповіді "на пам'ять"
 
 **Що роблю:** Роман дає задачу → я одразу відповідаю з оцінкою складності або планом, не читаючи код.

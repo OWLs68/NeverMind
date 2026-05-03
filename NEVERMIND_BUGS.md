@@ -35,9 +35,12 @@ _Сесія **MIeXK** (03.05.2026) — Health AI-інтерв'ю Phase A+B+C: 0 
 
 _Сесія **iWyjU** (03.05.2026) — самотест→Read CLAUDE.md + statusline % контексту: 0 закритих багів (інфраструктурна сесія, зміни тільки `.claude/`)._
 
-_Сесія **UvEHE** (03.05.2026) — `/c` slash + context-warning ≥75% + B-120/B-121 фікси модалки Health:_
-- **B-120 закрито v2** — `src/tabs/health.js`: v1 (`overflow:hidden`) iOS Safari ігнорує — свайп вниз все одно «зменшував» задній фон через rubber-band. Замінено на `position:fixed` + збереження `scrollY` у `body.dataset.scrollLock` + відновлення `window.scrollTo` при закритті. Стандартний iOS scroll lock хак.
-- **B-121 закрито v2** — v1 додав `overflow-x:hidden` на скрол-контейнері + `min-width:0` на батьків flex:1 (1715, 1720), але `<input type=date/time>` мають intrinsic width на iOS — потрібно `min-width:0` на самих inputs. v2: додано `min-width:0` на 3 inputs дат/часу + `placeholder="Вибери дату/час"` через type swap text↔date/time на focus/blur (нативний placeholder для date ігнорується). Плюс кнопка «Додати препарат» переоформлена (біла, по центру під списком препаратів) + `min-width:0` на med-dosage/med-course inputs (та сама flex-проблема в рядку препарату). Плюс приховано native scrollbar модалки через клас `health-modal-scroll` у `style.css`.
+_Сесія **UvEHE** (03.05.2026) — фінал модалок (B-120/B-121 + drum-picker + Settings 4-ітерац):_
+- **B-120 закрито фінально** — модалка Health стала на calendar-pattern: top-level `#health-card-modal-overlay` як sibling (НЕ дитячий backdrop-div) + onclick на root з `event.target===this`. Окремий swipe-handler на root через `setupModalSwipeClose` (універсальний з `tasks.js`). iOS rubber-band повністю усунуто бо overlay не у transformed-context.
+- **B-121 закрито фінально** — заміна native `<input type=date/time>` на власний drum-picker mini-модалку (`#health-dt-picker-modal`) з 3-кол date drum + 2-кол time drum. Native iOS picker більше не відкривається — замість нього стилізована модалка з кроком 5 хв для часу. Роки 1990-2035. Поля-trigger показують форматовану дату «3 трав. 2026» / «09:00». Плюс `_initDrumCol` експортовано з calendar.js для перевикористання.
+- **Settings scale-glitch (4 ітерації — без B-номера, регресія)** — модалка візуально стискалась при тапі/скролі всередині. False leads: mask-image, flex layout, nested backdrop-filter, body-lock. **Справжній корінь:** глобальне CSS `style.css:1551`: `[onclick]:active { transform: scale(0.87); }` — settings-overlay має onclick → tap bubbles до root → scale(0.87) на ВСІЙ модалці. Фікс: override `#settings-overlay:active, [id$="-modal"]:active { transform: none }`.
+- **deploy-info-modal blur** — переніс blur з самого root на окремий top-level overlay-bg sibling (як calendar).
+- **Help-drawer** для всіх 8 вкладок: HELP_CONTENT для health/projects (раніше null → нічого не показувало) + swipe-right на drawer (root) щоб ловити touch на dim теж.
 
 _Старіші сесії (4xJ7n з B-118+B-119, mUpS8 з B-116, BqTWF з B-115, rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
