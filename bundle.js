@@ -2604,7 +2604,12 @@ ${lines.join("\n")}`;
     if (titleEl) titleEl.textContent = title;
     if (delBtn) delBtn.style.display = showDelete ? "block" : "none";
     modal.style.display = "flex";
-    document.body.style.overflow = "hidden";
+    const scrollY = window.scrollY;
+    document.body.dataset.scrollLock = String(scrollY);
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
     setTimeout(() => {
       const nameEl = document.getElementById("health-card-name");
       if (nameEl && !showDelete) nameEl.focus();
@@ -2613,7 +2618,13 @@ ${lines.join("\n")}`;
   function closeHealthCardModal() {
     const modal = document.getElementById("health-card-modal");
     if (modal) modal.style.display = "none";
-    document.body.style.overflow = "";
+    const savedY = parseInt(document.body.dataset.scrollLock || "0", 10);
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    delete document.body.dataset.scrollLock;
+    window.scrollTo(0, savedY);
     _editingHealthCardId = null;
   }
   function _fillHealthCardModal(card) {
@@ -2687,9 +2698,9 @@ ${lines.join("\n")}`;
     </div>
     <div style="display:flex;gap:6px">
       <input type="text" class="med-dosage" placeholder="\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F (20\u043C\u0433)" value="${escapeHtml(m.dosage || "")}"
-        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+        style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
       <input type="text" class="med-course" placeholder="\u041A\u0443\u0440\u0441 (14 \u0434\u043D\u0456\u0432)" value="${escapeHtml(m.courseDuration || "")}"
-        style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
+        style="flex:1;min-width:0;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
     </div>
     <input type="text" class="med-schedule" placeholder="\u0413\u0440\u0430\u0444\u0456\u043A (08:00, 20:00)" value="${escapeHtml(schedStr)}"
       style="width:100%;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white;box-sizing:border-box">
