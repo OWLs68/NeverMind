@@ -1103,8 +1103,8 @@
 
 <!-- NOTE CONTEXT MENU -->
 <!-- FOLDER EDIT MODAL (#20) -->
-<div id="folder-edit-modal" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeFolderEditModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+<div id="folder-edit-modal-overlay" style="display:none;position:fixed;inset:0;z-index:499;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
+<div id="folder-edit-modal" onclick="if(event.target===this)closeFolderEditModal()" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px calc(env(safe-area-inset-bottom)+32px);z-index:1;max-height:88vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6)">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 16px"></div>
     <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:16px">Редагувати папку</div>
@@ -1495,8 +1495,8 @@
 </div>
 
 <!-- MEMORY MODAL -->
-<div id="memory-modal" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
-  <div onclick="closeMemoryModal()" style="position:absolute;inset:0;background:rgba(20,10,50,0.45);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)"></div>
+<div id="memory-modal-overlay" style="display:none;position:fixed;inset:0;z-index:599;background:rgba(20,10,50,0.45);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);pointer-events:none"></div>
+<div id="memory-modal" onclick="if(event.target===this)closeMemoryModal()" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
   <div style="position:relative;width:100%;max-width:480px;background:linear-gradient(180deg,#f5f0e8 0%,#faf7f2 20%,#ffffff 100%);border-radius:24px 24px 0 0;z-index:1;max-height:88vh;display:flex;flex-direction:column">
     <!-- Handle -->
     <div style="padding:12px 20px 0;flex-shrink:0">
@@ -1748,8 +1748,8 @@
 </div>
 
 <!-- HEALTH DATE/TIME PICKER MODAL — drum-picker над health-card-modal (z-index:300 > 200) -->
-<div id="health-dt-picker-modal" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeHealthDtPicker()" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px)"></div>
+<div id="health-dt-picker-modal-overlay" style="display:none;position:fixed;inset:0;z-index:299;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
+<div id="health-dt-picker-modal" onclick="if(event.target===this)closeHealthDtPicker()" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;border:1.5px solid rgba(255,255,255,0.5);padding:28px 20px calc(env(safe-area-inset-bottom) + 20px)">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="health-dt-picker-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Виберіть дату</div>
@@ -1773,8 +1773,8 @@
 </div>
 
 <!-- CLARIFY MODAL — вікно уточнення від Агента -->
-<div id="clarify-modal" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 12px 12px">
-  <div onclick="closeClarify()" style="position:absolute;inset:0;background:rgba(10,5,30,0.3);backdrop-filter:blur(2px)"></div>
+<div id="clarify-modal-overlay" style="display:none;position:fixed;inset:0;z-index:499;background:rgba(10,5,30,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:none"></div>
+<div id="clarify-modal" onclick="if(event.target===this)closeClarify()" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:14px 18px calc(env(safe-area-inset-bottom)+24px);z-index:1;border:1.5px solid rgba(255,255,255,0.6);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
     <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(194,121,10,0.08);color:#c2790a;font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;margin-bottom:10px">OWL уточнює</div>
