@@ -757,10 +757,10 @@ export function restoreChatUI(tab) {
     health:   'health-chat-messages',
     projects: 'projects-chat-messages',
   };
-  // chips підтримуються у evening/finance/notes/projects/health (4-й параметр) +
-  // me (5-й параметр, 4-й — id). tasks поки без chips (Phase 3 mUpS8 інтеграції).
+  // chips підтримуються у всіх 7 чатів (Phase 1 Шар 6 04.05 RGisY — Р1 фікс).
+  // me має 5-й параметр (id посередині — '' дефолт), решта 4-й.
   const addMsgMap = {
-    tasks:    (r,t)   => addTaskBarMsg(r,t,true),
+    tasks:    (r,t,c) => addTaskBarMsg(r,t,true,c),
     notes:    (r,t,c) => addNotesChatMsg(r,t,true,c),
     me:       (r,t,c) => addMeChatMsg(r,t,true,'',c),
     evening:  (r,t,c) => addEveningBarMsg(r,t,true,c),

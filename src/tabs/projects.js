@@ -564,7 +564,7 @@ export function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') projectsBarHistory.push({ role: 'user', content: text });
   else projectsBarHistory.push({ role: 'assistant', content: text });
-  if (!_noSave) saveChatMsg('projects', role, text);
+  if (!_noSave) saveChatMsg('projects', role, text, chips);
 }
 
 export async function sendProjectsBarMessage() {
