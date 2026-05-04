@@ -40,14 +40,30 @@ const { execSync } = require('child_process');
 
 const N_RECENT_MESSAGES = 5; // дивимось у короткий хвіст щоб уникнути false positive
 
-const SMOKE_TRIGGERS = [
-  /міграц/i,
-  /\buuid[\s-]?(міграц|формат|схем)/i,
-  /формат[ауи]?\s+ідентифікатор/i,
-  /схем[уаи]?\s+(даних|localStorage)/i,
-  /\b(create|add|repeat|save)_[a-z]+\b/,
-  /нов[аиу]\s+(ai[\s-]?)?tool/i,
-  /bulk[\s-]?(операц|створ|генерац)/i,
+// === SMOKE/CLEANUP тригери шукають у GIT DIFF (реальних змінах коду),
+// НЕ у тексті відповіді Claude ===
+//
+// Корінь регресії 12+ false positives за UvEHE+rC4TO+NpBmN (RGisY 04.05):
+// старі регекси типу /міграц/ і /\b(create|add|repeat|save)_[a-z]+\b/
+// матчили слова «міграція», «save_note», «create_event» у звичайних
+// текстових поясненнях Claude (description комітів, обговорення змін).
+// Текст асистента ≠ реальні зміни схеми.
+//
+// Нова логіка: тригери = регекси на ДОДАНІ рядки (`^\+`) у diff src/+sw.js.
+// Якщо у diff є нова `name:'create_*'` у tools-array → справжня нова tool.
+// Якщо у тексті обговорення є слово «save_note» → ігнорується.
+
+const SMOKE_DIFF_TRIGGERS = [
+  // Нова AI-tool у src/ai/tools.js, prompts.js, *-tools.js (entry в схемі)
+  /^\+\s*name:\s*['"](create|add|repeat|save|update|delete|complete)_[a-z_]+['"]/m,
+  // Нова функція міграції у src/core/boot.js / utils.js
+  /^\+\s*(async\s+)?function\s+migrate[A-Z]/m,
+  // Новий прапор-стан міграції nm_*_v*_done / _wipe / _cleared
+  /^\+.*['"]nm_[a-z_]+_v\d+_(done|wipe|cleared|migrated)['"]/m,
+  // UUID-міграція ID-формату (нова точка генерації id у схемі)
+  /^\+\s*id:\s*generateUUID/m,
+  // Новий ключ localStorage nm_*
+  /^\+.*localStorage\.setItem\(\s*['"]nm_[a-z_]+['"]/m,
 ];
 
 const SMOKE_BYPASS = [
@@ -58,11 +74,11 @@ const SMOKE_BYPASS = [
   /\biphone\s+ok\b/i,
 ];
 
-const CLEANUP_TRIGGERS = [
-  /нов[аиу]\s+tool\s+(create|add|repeat|save)/i,
-  /tool\s+(create|add|repeat|save)_/i,
-  /ai\s+(створює|генерує)\s+(дан|записи|серії)/i,
-  /bulk[\s-]?(операц|створ|генерац)/i,
+const CLEANUP_DIFF_TRIGGERS = [
+  // Нова create_*/add_*/repeat_*/save_* tool у схемі (без delete-counterpart)
+  /^\+\s*name:\s*['"](create|add|repeat|save)_[a-z_]+['"]/m,
+  // Нова bulk-функція у src/
+  /^\+\s*(async\s+)?function\s+\w*[Bb]ulk\w*\s*\(/m,
 ];
 
 const CLEANUP_BYPASS = [
@@ -112,6 +128,30 @@ function isDocOnlyPush(repoRoot) {
     return files.every(f => DOC_FILE_REGEX.test(f));
   } catch {
     return false;
+  }
+}
+
+// Витягує git diff src/+index.html+sw.js проти origin/main (або @{u}, HEAD~1).
+// Використовується SMOKE/CLEANUP тригерами щоб шукати реальні зміни схеми,
+// а не слова у тексті асистента (false positive ×12 у UvEHE+rC4TO+NpBmN).
+function getRealCodeDiff(repoRoot) {
+  try {
+    let diffRange = null;
+    for (const candidate of ['origin/main...HEAD', '@{u}...HEAD', 'HEAD~1...HEAD']) {
+      try {
+        const left = candidate.split('...')[0];
+        execSync(`git -C "${repoRoot}" rev-parse "${left}"`, { stdio: 'pipe' });
+        diffRange = candidate;
+        break;
+      } catch {}
+    }
+    if (!diffRange) return '';
+    return execSync(
+      `git -C "${repoRoot}" diff ${diffRange} -- src/ index.html sw.js`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], maxBuffer: 10 * 1024 * 1024 }
+    );
+  } catch {
+    return '';
   }
 }
 
@@ -213,12 +253,13 @@ process.stdin.on('end', () => {
     const repoRoot = path.join(__dirname, '..', '..');
     const docOnly = isDocOnlyPush(repoRoot);
 
-    // Якщо doc-only пуш — пропускаємо SMOKE і CLEANUP тригери (false-positive
-    // на згадку слів у меседжі без реальних змін у src/). CACHE_NAME і
-    // SESSION_STATE checks лишаються активними — мають свою власну логіку.
-    const smokeTriggered = !docOnly && SMOKE_TRIGGERS.some(re => re.test(haystack));
+    // SMOKE/CLEANUP тригери шукають у git diff src/+sw.js (реальних змінах
+    // схеми/tools/міграцій), НЕ у тексті відповіді Claude. Bypass по тексту
+    // лишається (haystack) — щоб Роман міг сказати «протестував рукою».
+    const realCodeDiff = docOnly ? '' : getRealCodeDiff(repoRoot);
+    const smokeTriggered = !docOnly && SMOKE_DIFF_TRIGGERS.some(re => re.test(realCodeDiff));
     const smokeBypassed = SMOKE_BYPASS.some(re => re.test(haystack));
-    const cleanupTriggered = !docOnly && CLEANUP_TRIGGERS.some(re => re.test(haystack));
+    const cleanupTriggered = !docOnly && CLEANUP_DIFF_TRIGGERS.some(re => re.test(realCodeDiff));
     const cleanupBypassed = CLEANUP_BYPASS.some(re => re.test(haystack));
 
     const issues = [];
