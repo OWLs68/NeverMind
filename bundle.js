@@ -12835,36 +12835,65 @@ ${UI_TOOLS_RULES}`;
     const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
     if (habitCountEl) habitCountEl.textContent = totalHabits;
     if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? "\u0437\u0432\u0438\u0447\u043A\u0430" : "\u0437\u0432\u0438\u0447\u043E\u043A";
+    _attachProdTabSwipe();
   }
   function switchProdTab(tab) {
     currentProdTab = tab;
     const isHabits = tab === "habits";
+    const indicator = document.getElementById("prod-tab-indicator");
+    if (indicator) {
+      indicator.style.transform = isHabits ? "translateX(100%)" : "translateX(0)";
+      indicator.style.borderColor = isHabits ? "rgba(22,163,74,0.6)" : "rgba(234,88,12,0.6)";
+    }
     const tabTasks = document.getElementById("prod-tab-tasks");
-    const tabHabits = document.getElementById("prod-tab-habits");
-    const tasksCount = document.getElementById("prod-tab-tasks-count");
     const tasksTitle = tabTasks ? tabTasks.querySelector("div > div:first-child") : null;
-    const habitsCount = document.getElementById("prod-tab-habits-count");
+    const tasksCount = document.getElementById("prod-tab-tasks-count");
+    const tasksSub = document.getElementById("prod-tab-tasks-sub");
+    if (tasksTitle) tasksTitle.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
+    if (tasksCount) tasksCount.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
+    if (tasksSub) tasksSub.style.color = !isHabits ? "rgba(30,16,64,0.35)" : "rgba(30,16,64,0.3)";
+    const tabHabits = document.getElementById("prod-tab-habits");
     const habitsTitle = tabHabits ? tabHabits.querySelector("div > div:first-child") : null;
-    if (tabTasks) {
-      tabTasks.style.background = !isHabits ? "white" : "rgba(255,255,255,0.6)";
-      tabTasks.style.borderColor = !isHabits ? "rgba(234,88,12,0.6)" : "rgba(234,88,12,0.1)";
-      tabTasks.style.boxShadow = !isHabits ? "none" : "0 2px 12px rgba(30,16,64,0.06)";
-    }
-    if (tasksCount) tasksCount.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.35)";
-    if (tasksTitle) tasksTitle.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.35)";
-    if (tabHabits) {
-      tabHabits.style.background = isHabits ? "white" : "rgba(255,255,255,0.6)";
-      tabHabits.style.borderColor = isHabits ? "rgba(22,163,74,0.6)" : "rgba(22,163,74,0.1)";
-      tabHabits.style.boxShadow = isHabits ? "none" : "0 2px 12px rgba(30,16,64,0.06)";
-    }
-    if (habitsCount) habitsCount.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.35)";
-    if (habitsTitle) habitsTitle.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.35)";
+    const habitsCount = document.getElementById("prod-tab-habits-count");
+    const habitsSub = document.getElementById("prod-tab-habits-sub");
+    if (habitsTitle) habitsTitle.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
+    if (habitsCount) habitsCount.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
+    if (habitsSub) habitsSub.style.color = isHabits ? "rgba(30,16,64,0.35)" : "rgba(30,16,64,0.3)";
     document.getElementById("prod-page-tasks").style.display = isHabits ? "none" : "block";
     document.getElementById("prod-page-habits").style.display = isHabits ? "block" : "none";
     const addBtn = document.getElementById("prod-add-btn");
     if (addBtn) addBtn.onclick = isHabits ? openAddHabit : openAddTask;
     updateProdTabCounters();
     if (isHabits) renderProdHabits();
+    _attachProdTabSwipe();
+  }
+  function _attachProdTabSwipe() {
+    if (_prodSwipeAttached) return;
+    const toggle = document.getElementById("prod-tab-toggle");
+    if (!toggle) return;
+    _prodSwipeAttached = true;
+    let startX = 0, startY = 0, active = false;
+    toggle.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      active = true;
+    }, { passive: true });
+    toggle.addEventListener("touchmove", (e) => {
+      if (!active) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dy) > Math.abs(dx)) active = false;
+    }, { passive: true });
+    toggle.addEventListener("touchend", (e) => {
+      if (!active) return;
+      active = false;
+      const endX = e.changedTouches[0]?.clientX ?? startX;
+      const dx = endX - startX;
+      if (Math.abs(dx) < 30) return;
+      const target = dx > 0 ? "habits" : "tasks";
+      if (target !== currentProdTab) switchProdTab(target);
+    }, { passive: true });
   }
   function toggleProdHabitToday(id) {
     const today = (/* @__PURE__ */ new Date()).toDateString();
@@ -13771,7 +13800,7 @@ ${UI_TOOLS_RULES}`;
     }
     setTaskBarLoading(false);
   }
-  var editingHabitId, _habitModalType, currentProdTab;
+  var editingHabitId, _habitModalType, currentProdTab, _prodSwipeAttached;
   var init_habits = __esm({
     "src/tabs/habits.js"() {
       init_nav();
@@ -13799,6 +13828,7 @@ ${UI_TOOLS_RULES}`;
         }
       });
       currentProdTab = "tasks";
+      _prodSwipeAttached = false;
       Object.assign(window, {
         switchProdTab,
         saveHabit,
