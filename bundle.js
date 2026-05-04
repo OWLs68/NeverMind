@@ -12830,26 +12830,11 @@ ${UI_TOOLS_RULES}`;
     const habits = getHabits();
     const buildHabitsAll = habits.filter((h) => h.type !== "quit");
     const quitHabitsAll = habits.filter((h) => h.type === "quit");
-    const log = getHabitLog();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    const todayHabits = buildHabitsAll.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-    const doneToday = todayHabits.filter((h) => _habitDone(h, log[today])).length;
-    const quitHeldToday = quitHabitsAll.filter((h) => getQuitStatus(h.id).lastHeld === todayStr).length;
     const habitCountEl = document.getElementById("prod-tab-habits-count");
     const habitSubEl = document.getElementById("prod-tab-habits-sub");
     const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
     if (habitCountEl) habitCountEl.textContent = totalHabits;
-    if (habitSubEl) {
-      if (todayHabits.length > 0 || quitHabitsAll.length > 0) {
-        const total = todayHabits.length + quitHabitsAll.length;
-        const done = doneToday + quitHeldToday;
-        habitSubEl.textContent = `${done} \u0437 ${total} \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456`;
-      } else {
-        habitSubEl.textContent = "\u0437\u0432\u0438\u0447\u043E\u043A";
-      }
-    }
+    if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? "\u0437\u0432\u0438\u0447\u043A\u0430" : "\u0437\u0432\u0438\u0447\u043E\u043A";
   }
   function switchProdTab(tab) {
     currentProdTab = tab;
