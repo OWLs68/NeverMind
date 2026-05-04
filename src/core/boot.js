@@ -474,6 +474,7 @@ function runMigrations() {
       catch (e) { console.error('[boot] v10: nm_chip_payloads write failed', e); }
 
       localStorage.setItem('nm_chips_v10_done', '1');
+      localStorage.setItem('nm_chips_v10_done_ts', String(Date.now()));
       console.log(`[boot] v10 migration: chips=${chipsTouched}, payloads=${payloadsExtracted}, completions=${completionsRewired}, backupOk=${backupOk}`);
     } catch (e) {
       console.error('[boot] v10 migration failed:', e);
@@ -484,6 +485,22 @@ function runMigrations() {
         if (b) { try { localStorage.setItem(k, b); } catch {} }
       });
     }
+  }
+  // Phase 9 Шар 6 (RGisY 04.05) — Регресія 3 fix: cleanup v10 backups після 7 днів.
+  // Раніше бекапи nm_chat_<tab>_backup_v10 жили вічно (8 ключів × ~5-200KB) →
+  // QuotaExceededError на iPhone (lesson UvEHE 03.05 повторювався з v7). Тепер:
+  // якщо v10 завершено успішно >7 днів тому — видаляємо бекапи разом з timestamp.
+  const v10Done = localStorage.getItem('nm_chips_v10_done');
+  const v10DoneTs = +(localStorage.getItem('nm_chips_v10_done_ts') || 0);
+  if (v10Done === '1' && v10DoneTs > 0 && (Date.now() - v10DoneTs) > 7 * 24 * 60 * 60 * 1000) {
+    try {
+      ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+       'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'].forEach(k => {
+        localStorage.removeItem(k + '_backup_v10');
+      });
+      localStorage.removeItem('nm_chips_v10_done_ts'); // одноразовий cleanup
+      console.log('[boot] v10 backups cleanup: 8 ключів видалено (>7 днів старі)');
+    } catch (e) { console.warn('[boot] v10 backups cleanup failed', e); }
   }
 }
 

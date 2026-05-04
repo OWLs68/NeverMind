@@ -809,14 +809,14 @@ export function restoreChatUI(tab) {
   el.appendChild(sep);
 
   if (tab === 'inbox') {
-    msgs.forEach(m => _renderInboxChatMsg(m.role, m.text, el));
+    msgs.forEach(m => _renderInboxChatMsg(m.role, m.text, el, m.chips));
   } else if (addMsgMap[tab]) {
     msgs.forEach(m => addMsgMap[tab](m.role, m.text, m.chips));
   }
 }
 
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
-function _renderInboxChatMsg(role, text, el) {
+function _renderInboxChatMsg(role, text, el, chips = null) {
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
@@ -826,6 +826,19 @@ function _renderInboxChatMsg(role, text, el) {
     div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
   }
   el.appendChild(div);
+  // Phase 9 Шар 6 (RGisY 04.05) — Регресія 1 fix: chips render при restore історії.
+  // Раніше Phase 1 додала chips у saveChatMsg('inbox',...) але restore не відображав
+  // — _renderInboxChatMsg ігнорував. Тепер 4-й параметр + динамічний import щоб
+  // не створювати static circular dependency core.js ↔ chips.js (вже двостороння).
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    import('../owl/chips.js').then(m => {
+      const chipsRow = document.createElement('div');
+      chipsRow.className = 'chat-chips-row';
+      m.renderChips(chipsRow, chips, 'inbox');
+      el.appendChild(chipsRow);
+      el.scrollTop = el.scrollHeight;
+    }).catch(() => {});
+  }
   el.scrollTop = el.scrollHeight;
 }
 

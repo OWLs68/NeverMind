@@ -146,7 +146,12 @@ export function normalizeChips(chips) {
 function filterStaleChips(chips) {
   return chips.filter(c => {
     const label = (c.label || '').trim();
-    if (!label.includes('✔️')) return true; // не completion-чіп — залишаємо
+    // Phase 9 Шар 6 (RGisY 04.05) — Регресія 2 fix: фільтруємо КОЖНОГО completion-
+    // чіпа, не тільки тих що мають ✔️. Phase 2 додала action='complete' як
+    // explicit маркер. AI може порушити правило «обов'язковий ✔️» — тоді chip
+    // лишається привидом після виконання. Перевіряємо обидва: action ABO ✔️.
+    const isCompletion = c.action === 'complete' || label.includes('✔️');
+    if (!isCompletion) return true;
 
     const cleanText = label.replace(/✔️/g, '').trim().toLowerCase();
     if (!cleanText) return false;
