@@ -4,66 +4,101 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-04 (сесія **rC4TO** — silent failure trio фіксовано: chips Phase C (B-122) + dispatcher create_project (B-123) + Notes render через items[0].text undefined (B-124, розблокувало 30 нотаток + 5 папок). Health swipe-delete карток (свайп вліво → червоний кошик → undo 5 сек, через існуючий attachSwipeDelete). Dynamic AI-driven chips Шар 1 — контекстний 4-й чіп [Створити проект] для бізнес-іменників (Active ROADMAP). Lessons.md silent failure анти-патерн (3 кейси) + RULES_UI.md секція 5 «iOS Safari діагноз — 3 grep ДО CSS-патчів». Гілка `claude/start-session-rC4TO`, v620→v627, CACHE `nm-20260504-0005`).
+**Оновлено:** 2026-05-04 (сесія **NpBmN** — Шар 2 Dynamic chips «Лікарі» + інтерв'ю проектів 5 питань + Council-аудит 18 знахідок закрито у 5 фазах. `clarify-guard.js` отримав `DOCTOR_MENTION_RE` детектор + `_buildDoctorChips()` зчитує `nm_health_cards` через `getHealthCards()` з v2-міграцією. CLARIFY_INLINE_RULES переписано: ПРІОРИТЕТ-1 «Лікар» (з винятком для Health-чату+focused) > ПРІОРИТЕТ-2 «Створити проект». Інтерв'ю проектів 3→5 питань (команда + дедлайн + метрика) + активовано виклик `maybeAskGuideQuestion` (мертвий імпорт у inbox.js). Audit fixes по 5 фазах: zombie-interview cleanup при swipe-delete + undo restore через snapshot, race `nm_guide_waiting_topic`, stale card_id ⚠️ повідомлення, `tab=health` параметр активовано, DOCTOR check ПЕРЕД HAS_NUMBER, NM_KEYS.cache доповнено 7 guide-state ключами, `_bumpGuideCooldown` helper, focused-card consistency. Гілка `claude/start-session-NpBmN`, v627→v631+, CACHE `nm-20260504-0325`, 6 комітів `e136951`→`edc62e9`).
 
 ---
 
-## 🔧 Поточна сесія rC4TO — silent failures trio + Health swipe-delete + Dynamic chips Шар 1 (04.05.2026)
+## 🔧 Поточна сесія NpBmN — Шар 2 Dynamic chips «Лікарі» + 5-step project interview + Council audit 18 fixes (04.05.2026)
 
 ### Зроблено
 
-#### A. Документація і правила (1 коміт)
-1. **iOS Safari діагноз — 3-крядковий чек ДО CSS-патчів** (`dce16df`): нова секція 5 у `_ai-tools/RULES_UI.md` (grep universal `:active` / grep `backdrop-filter` parents / composite layers). lessons.md: робочий патерн «iOS Safari ВІЗУАЛЬНИЙ баг» + анти-патерн «Chips clipping — parent backdrop-filter clips children». Корінь: 8 ітерацій false leads UvEHE (Settings 4 + Chips 4) — шукав CSS-патчі навмання. Council code-regression-finder знаходить за секунди.
+#### A. Шар 2 Dynamic chips — Лікарі (1 коміт `e136951`)
+1. **DOCTOR_MENTION_RE** у `src/owl/clarify-guard.js` — ~25 спеціальностей (лікар/стомат/дерматолог/кардіолог/терапевт/хірург/невролог/окуліст/гінеколог/уролог/ортопед/ендокринолог/психіатр/педіатр/алерголог/онколог/гастроентеролог/лор) + клініки (клінік/лікарн/поліклінік/медцентр/шпиталь).
+2. **`_buildDoctorChips(text)`** — повертає до 3 чіпів з реальних `card.doctor` з `nm_health_cards` + 1 «Інший лікар» (target=`save_moment`). Payload автоматичний: `{card_id, entry_type:'doctor_visit', text}`.
+3. **SUSPICIOUS_TOOLS розширено** до 7 елементів — додано `add_health_history_entry`, `create_health_card`.
+4. **CLARIFY_INLINE_RULES блок** про лікарів додано у `prompts.js:245`.
 
-#### B. Silent failure trio (3 коміти + 1 doc)
-2. **B-122 chips Phase C** (`8a05ada`): Health AI-інтерв'ю чіпи мовчать. Корінь у `chips.js:199-204` — (1) whitelist action переписував `health_interview` у `'chat'` → handler ніколи не спрацьовував; (2) `escapeHtml` не кодує `"` → JSON payload ламав HTML-атрибут. Фікс: додано `health_interview` у whitelist + локальний escape `"` → `&quot;` для payloadAttr + `console.warn` у fallback `handleChipClick` для майбутніх silent failures. Юзер підтвердив рукою: «Чіпи працюють».
-3. **B-123 dispatcher create_project висне** (`431b433`): «Створи проект хімчистка» у Фінансах → typing-індикатор крутиться вічно. Корінь у `tool-dispatcher.js`: tool навмисно НЕ оброблявся («Inbox-specific interview flow») → silent skip → addMsg ніколи не викликається. Фікс: винесено `createProjectProgrammatic(name, subtitle)` з inbox.js у projects.js (helper) + новий handler create_project ПЕРЕД universal loop у dispatcher (працює з будь-якого чату + switchTab(inbox) + startProjectInboxInterview) + універсальний SILENT FAILURE GUARD у кінці dispatchChatToolCalls для unknown tools.
-4. **lessons.md silent failure анти-патерн** (`a738ade`): записано урок про 3 кейси (chips action whitelist, payload escape, dispatcher silent skip). Спільний патерн: один шар генерує, інший не знає → тиша. Універсальне правило: завжди default case з `console.warn` + видимим feedback (addMsg). NEVERMIND_BUGS.md: B-122 + B-123 закрито.
-5. **B-124 Notes порожня попри 30 записів** (`2f96593` + `e733be3`): діагностика юзера показала помилку `bundle.js:8661 → renderNotes → items[0].text.length`. Один запис без поля text ламав весь `.map()` → content.innerHTML лишається порожнім → empty state не показується (бо length>0). Фікс 3 захисти у `notes.js`: (1) `addNoteFromInbox` return early якщо text falsy; (2) `renderNotes` фільтрує битих + one-time `saveNotes(validNotes)` cleanup localStorage; (3) safe-read items[0]?.text у preview. Юзер: «Папки повернулися». Розблоковано 30 нотаток + 5+ папок.
+#### B. Інтерв'ю проектів — 5 питань замість 1 (1 коміт `e136951`)
+5. **`projectQuestions`** у `src/tabs/onboarding.js` 3→5: + «команда/партнери», + «реалістичний дедлайн», + «метрика успіху». Усі 5 обгорнуто у `t()` з `{name}`-плейсхолдерами.
+6. **Skip random+cooldown gate** коли `projectStepActive` — інтерв'ю йде підряд (раніше 25%×3хв = 12+хв між питаннями).
+7. **🔴 Корінь:** `maybeAskGuideQuestion` імпортувалась у `inbox.js:26` але НІДЕ не викликалась → інтерв'ю показувало тільки Q1 (з `startProjectInboxInterview`). Активовано виклик у `inbox.js:921`.
 
-#### C. Нова фіча — Health swipe-delete карток (1 коміт)
-6. **Свайп вліво на картці Здоров'я** (`26a541b`): обгортка `.health-card-wrap` навколо `.card-glass` + `_attachHealthSwipeDelete` за патерном notes.js:395-424. Через існуючий `attachSwipeDelete` (священна корова — не пишемо свій). Червона кнопка-кошик справа, тап → анімація схлопу + `deleteHealthCardProgrammatic` + 5-сек undo-toast. Undo повертає і картку, і пов'язаний event (наступний прийом). CSS клас `.health-card-wrap.swipe-deleting` додано у `.note-item-wrap` селектор у style.css. Юзер: «Видалення чотко».
+#### C. Phase 1 audit (коміт `be37491`) — 6 фіксів критичних
+8. **#1 Зомбі-інтерв'ю** — `_cleanupProjectInterviewIfMatches(item)` у swipe-delete handler. Раніше OWL ставив Q2-Q5 про неіснуючий проект.
+9. **#2 Ієрархія промпту** — «ПРІОРИТЕТ-1 Лікар» перемагає «ПРІОРИТЕТ-2 Створити проект» при перетинах.
+10. **#3 Виняток для Health-чату** з focused карткою — пряма дія без чіпів (промпт + код).
+11. **#4 Зламаний синтаксис лапок** у doctor-блоці прибрано.
+12. **#5 SUSPICIOUS_TOOLS check всі** — `toolCalls.some()` замість `firstName`. AI batch [save_X, save_note] тепер ловиться.
+13. **#10 Card_id мертвий вантаж** — прибрано з payload-інструкції промпту.
 
-#### D. Dynamic AI-driven chips Шар 1 (1 коміт)
-7. **Контекстний 4-й чіп [Створити проект]** (`a625539`): Active ROADMAP «Dynamic AI-driven chips» крок 1. Симптом: Роман у Inbox написав «Відкрив автомийку» — guard повертав 3 фіксованих чіпи без [Створити проект]. Фікс ДВА шари: (1) prompts.js `CLARIFY_INLINE_RULES` розширено блоком «КОНТЕКСТНИЙ ЧІП Створити проект (ПРІОРИТЕТ)» з тригером МИНУЛИЙ ЧАС + БІЗНЕС-ІМЕННИК; (2) clarify-guard.js `BUSINESS_NOUN_RE` детектор (~20 іменників: автомийка/салон/сайт/магазин/студія/курси/хімчистка/...) → у `shouldClarify` додає 4-й чіп `target:'create_project'` з capitalize-name на ПЕРШУ позицію. Без змін у chips.js — `applyClarifyChoice` уже використовує універсальний `dispatchChatToolCalls`, а `create_project` доданий у dispatcher комітом B-123. End-to-end демо: «Відкрив автомийку» → 4 чіпи → тап «Створити проект» → «✅ Проект Автомийка створено» + Inbox interview стартував.
+#### D. Phase 2 audit (коміт `3ae0510`) — 3 фікси race+fallback
+14. **#6 Race `nm_guide_waiting_topic`** — `saveGuideTopicAnswer` ставить `last_ts` → блокує подвійне питання за один обмін.
+15. **#7 Cooldown skip** — `last_ts` оновлюється на КОЖНОМУ показаному питанні (project/tip/topic).
+16. **#8 Stale card_id** — `add_health_history_entry` показує `⚠️ Картку видалено — записав у "<fallback>":` коли card_id передано але картки нема.
+
+#### E. Phase 3 audit (коміт `288bc52`) — 6 критичних з фінального аудиту
+17. **#A `tab` параметр активовано** — імпорт `getFocusedHealthCard`. У Health-tab з focused.doctor → guard повертає null (промпт обіцяв, код ігнорував).
+18. **#B Промпт `лікар:`** — `getHealthContext()` пише українською, промпт казав «doctor» → модель буквально не знаходила.
+19. **#C Об'єктивний маркер** — «у контексті НЕМАЄ блоку 🎯 ФОКУС РОЗМОВИ з непорожнім Лікар:» замість «ти у Health-чаті».
+20. **#D DOCTOR ПЕРЕД HAS_NUMBER** — «зустрів терапевта 200» більше не cut'иться числом.
+21. **#F `setItem` ПІСЛЯ key check** — у юзерів без ключа cooldown не виплачується даремно.
+22. **#H `save_finance` прибрано** з SUSPICIOUS — мертвий патерн (HAS_NUMBER завжди cuts).
+
+#### F. Phase 4 audit (коміт `230114f`) — 4 відкладених
+23. **#E Undo restore** — `_cleanupProjectInterviewIfMatches` повертає snapshot, undo callback викликає `_restoreProjectInterview`.
+24. **#I `_bumpGuideCooldown`** helper — 5 копій setItem → 1 helper.
+25. **#J NM_KEYS.cache** доповнено 7 guide-state ключами — `clearAllData()` тепер чистить interview-state.
+26. **#K `getHealthCards()`** замість прямого `JSON.parse('nm_health_cards')` у `_buildDoctorChips` — спрацьовує v2 міграція.
+
+#### G. Phase 5 audit (коміт `edc62e9`) — самоперевірка знайшла власну неповноту
+27. **#L Focused-card consistency** — друга гілка у `shouldClarify` (рядок 87) досі читала LS напряму. Тепер обидві через `getHealthCards()`.
 
 ### Обговорено (без виконання)
-- **Інтерв'ю проектів коротке** — після `startProjectInboxInterview` на запитання «Який стартовий капітал?» юзер відповів «Поки не знаю» → AI закрив розмову. Має бути серія 5+ питань: капітал → команда → строки → ризики → метрики. Окрема задача.
-- **Smoke-test шпаргалка пункти 15-38** — перевірив тільки автомийку (фактично пункт ≈18 з 24-го блоку chips). Решта (calendar-pattern модалки UvEHE, settings scale-glitch, chips clipping translateZ, help-drawer, drum-picker, safe-area pad) НЕ перевірена.
-- **Dynamic chips Шари 2-6** з ROADMAP — лікар (Health context), час [Зараз/Завтра], destructive [Так/Скасувати], multi-step інтерв'ю, оновлення 8 системних промптів. Прийшли через prompt-engineer-auditor аудит, але реалізовано тільки Шар 1.
+- **Архітектурний борг від dry-violation-finder:** 8 копій `addXChatMsg` (~280 рядків) — найвищий ROI; 11 прямих `fetch(openai)` повз `_fetchAI`. Окремі сесії, потребують UI smoke-test.
+- **Supabase міграції** — Date.now() IDs у 6 типах (тільки Task на UUID), `nm_finance_cats` setItem без dispatch. Окрема Pre-Migration сесія.
+- **Гіпотеза G (set_reminder без COMMAND-тригера)** — НЕ фіксується. Це захист, не баг: юзер дійсно неоднозначно висловився, chips дають вибір.
+- **Шари 3-6 Dynamic chips** — Час, Destructive confirm, Multi-step, уніфікація 8 системних промптів. Шар 3 (Час) рекомендується наступним.
 
 ### Ключові рішення
-- **Точкова реалізація Dynamic chips** замість 6 кроків з ROADMAP — спочатку Шар 1 (бізнес-іменник → проект), решта окремими сесіями за тим же патерном. Аргумент: 6 кроків стане «простирадлом промпта», швидкий ефект тестується легше.
-- **Універсальний SILENT FAILURE GUARD у dispatcher** — замість точкових fixes для кожної tool. Додає `console.warn` + addMsg для unknown actions. Запобігає типу B-123 для майбутніх tools (typing висне → юзер не розуміє).
-- **Винесення `createProjectProgrammatic` у helper** — інакше dublicate 18-рядкового schema у inbox.js + dispatcher. DRY-фікс під час B-123 фіксу.
-- **clarify-guard.js обовʼязково ОКРЕМО від prompts.js** — бо guard це safety net коли AI ігнорує промпт. Якщо AI послухався (генерує content з 4 chips) — guard не активується. Якщо AI генерує create_project tool безпосередньо — guard активується і має додати свої контекстні chips.
-- **One-time cleanup у renderNotes** — замість окремої міграції у boot.js. Спрацьовує при першому рендері в новій версії, виправляє нечисті дані юзера БЕЗ повторної міграції.
+- **Verify before commit** (правило Романа «Перевір гіпотези. Тоді ремонтуй») — Phase 4 запущено тільки після перевірки 5 гіпотез проти реального коду. Гіпотеза G відкинута з обґрунтуванням, інші 4 підтверджено і виправлено.
+- **Self-audit після Phase 4** знайшов власну неповноту (#L) — Phase 5 окремий коміт замість «затирання» історії в Phase 4.
+- **`getHealthCards()` через ESM circular import** — працює для function declarations (hoisted), не порушує bundler.
+- **Council-аудит у 2 раунди** — спершу 5 агентів знайшли 11 знахідок, фінальний аудит ще 11 нових (один false-positive — bundle.js stale, бо CI generates).
+- **Документи NpBmN не оновлено перед закриттям** — `/finish` робить це у єдиному заході (Фази 2-9), щоб не розривати контекст.
 
 ### Інциденти
-- **Pre-push hook бойкотував 3 рази** — фраза «нова tool» / «міграція» у тексті комітів = false positive. Додано «pre-push: ok» у відповідь, push пройшов з другої спроби кожен раз. Жоден коміт не пропустив через bypass без перевірки.
-- **Bash `&&` chain зломав push на B-123** — git add+commit+push зчеплено `&&`, хук блокує push → весь chain не виконався → потрібен був окремий commit потім push.
-- Без `git reset` / `git push --force` / skip hooks. Усі коміти першою спробою.
+- **Pre-push hook bypass-фраза** — 4 рази тригерилась на «міграція»/«UUID»/«схема» у тексті (false positive для AI-промпт фіксів). Додано «pre-push: ok» у текст відповіді — push пройшов з другої спроби. Жоден skip hooks без bypass-фрази.
+- **silent-bug-scout false positive** — ствердив що `bundle.js` stale → жодна сесія NpBmN не у проді. Перевірка показала: `bundle.js` у `.gitignore`, генерується CI на auto-merge (auto-merge.yml:108). Агент не знав про CI-flow.
+- Без `git reset` / `git push --force` / skip hooks. Всі 6 комітів першою спробою.
 
 ### Конфлікти/суперечності
-- **Юзер очікував чіп [Створити проект]** на «Відкрив автомийку» — перш ніж я фіксував dynamic chips. Сам прописав це у ROADMAP як Active. Реалізовано після нагадування.
-- **«Нотатки порожні»** — спочатку я підозрював регресію від мого dispatcher коміту, потім гонитва per-file. Корінь знайшовся через діагностичний звіт юзера (логи бандлу) — це було НЕ моя регресія, а старий битий запис у localStorage що ніколи не міг рендеритись. Урок: при «нічого не показується» — спершу попросити логи браузера а не гадати по коду.
+- **Phase 4 → Phase 5** — самоперевірка знайшла власну дірку фіксу #K. Виправлено окремим комітом замість «непомітного» виправлення у тому ж commit.
+- **Гіпотеза G** — silent-bug-scout вказав як середню регресію, я не погодився після аналізу: це **захист**, не баг. Юзер неоднозначно висловився («завтра прийом» без дієслова) — chips коректно дають вибір.
+- **Council агент сам зробив Edit** не виявлено — read-only заборона з UvEHE дотримана у всіх викликах.
 
 ### Відкладене
-- **Поглибити `startProjectInboxInterview`** — 5+ питань замість 1 (капітал/команда/строки/ризики/метрики).
-- **Dynamic chips Шари 2-6**: лікар (Health context), час, destructive confirm, multi-step інтерв'ю, оновлення 8 системних промптів.
-- **Smoke-test пункти 15-38**: clarify-guard у 7 чатах (Tasks інтеграція mUpS8 чекає UX-рішення save_task), calendar-pattern модалки UvEHE, chips clipping translateZ, help-drawer 8 вкладок, drum-picker date/time.
-- **B-117 табло звичок stale** — потребує live Safari DevTools.
-- **Tasks інтеграція clarify-guard Phase 3 mUpS8** — план Council готовий, чекає UX-рішення save_task.
-- **B-119 rAF rollout** — після smoke-test 7 чатів.
+- **Smoke-test на iPhone** — Роман на роботі, ввечері. Чек-ліст:
+  1. Inbox «Створи проект Тестовий» → Q1 капітал → відповідь → Q2 команда → Q3 дедлайн → Q4 страхи → Q5 метрика → 3 згенерованих кроки.
+  2. (Якщо є картка Health з doctor) Inbox «Був у дерматолога» → 2-4 чіпи з реальних лікарів + «Інший лікар».
+  3. Видалити проект під час інтерв'ю → undo → AI продовжує з наступного питання (snapshot restore).
+  4. Health-картку відкрити (focus) → у чаті «був у дерматолога» → одразу запис у фокусовану картку без чіпів.
+- **Архітектурний борг** — 8 копій `addXChatMsg` helper, 11 fetch openai → `_fetchAI`, Date.now → UUID міграції. Кожне зачіпає UI у >5 файлах — окремі сесії.
+- **Шари 3-6 Dynamic chips** — Час, Destructive, Multi-step, уніфікація промптів.
+- **B-117 табло звичок stale** — потребує live Safari DevTools на iPhone.
+- **Smoke-test шпаргалка пункти 2-38** — модалки UvEHE, settings, chips, drum-picker, help-drawer.
 
 ### Метрики
-- Коміти: `dce16df` → `e733be3` = 8 фічі/фікси + 1 архівація phase 0 + finish коміти
-- Версії: v620 (start) → v627 (live)
-- CACHE_NAME: `nm-20260503-2140` → `nm-20260504-0005` (5 bumps)
-- Build: всі коміти `node --check` чисті, deploy через CI пройшов кожен раз.
-- Гілка: `claude/start-session-rC4TO`
-- Закрито: B-122 (chips), B-123 (dispatcher), B-124 (notes render). 3 баги.
-- Нові фічі: Health swipe-delete карток + контекстний чіп [Створити проект].
+- Коміти: `e136951` → `edc62e9` (6 комітів — feat + 5 audit phases)
+- Версії: v627 (start) → v631+ (live після auto-merge edc62e9)
+- CACHE_NAME: `nm-20260504-0005` → `nm-20260504-0325` (5 bumps)
+- Build: всі коміти `node --check` + `check-i18n` + `check-imports` чисті, esbuild у CI
+- Гілка: `claude/start-session-NpBmN`
+- Аудит: 18 знахідок закрито (1 свідомо пропущена з обґрунтуванням), 5 фаз
+- Нові фічі: Шар 2 Dynamic chips «Лікарі» + інтерв'ю проектів 5 питань (з активацією мертвого імпорту)
+
+---
+
+## 🔧 Сесія rC4TO (04.05.2026) — архівовано NpBmN 04.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-rc4to--silent-failures-trio--health-swipe-delete--dynamic-chips-шар-1-04052026)
 
 ---
 
@@ -186,14 +221,29 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚀 ПРІОРИТЕТ #1 (rC4TO 04.05): Dynamic AI-driven chips Шари 2-6.** Шар 1 закрито (`a625539`) — контекстний 4-й чіп `[Створити проект]` для бізнес-іменників, end-to-end демо у Inbox підтверджено. Решта 5 шарів за тим же патерном (BUSINESS_NOUN_RE детектор + ChipGenerator у CLARIFY_INLINE_RULES):
-1. **Шар 2 — лікарі (Health context)**: `BUSINESS_NOUN_RE` стиль для лікарів з `nm_health_cards.history.doctor` → 3 чіпи з реальних імен + 1 «Інший лікар»
-2. **Шар 3 — час**: AI пише «Коли?» → `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat')
-3. **Шар 4 — destructive confirm**: «Видалити X?» → `[Так, видалити][Скасувати][Тільки сьогодні]`
-4. **Шар 5 — multi_step інтерв'ю**: новий action у `chips.js handleChipClick`, state у `nm_inline_interview_pending`
-5. **Шар 6 — оновлення 8 системних промптів** — додати посилання на CHIP_TRIGGER_TABLE як константу (зараз `INBOX_SYSTEM_PROMPT` має таблицю, інші не мають). prompt-engineer-auditor у rC4TO знайшов **3 несумісні chip-схеми** (action:"chat" / "clarify_save" / inline-JSON у Owl-chat) — варто уніфікувати.
+**🚀 ПРІОРИТЕТ #1 (NpBmN 04.05): Dynamic AI-driven chips Шари 3-6.** Шари 1+2 закриті. Решта 4 шарів за тим же патерном (детектор + блок у CLARIFY_INLINE_RULES + код у `_buildXChips`):
+1. **Шар 3 — час**: AI пише «Коли?» → `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat')
+2. **Шар 4 — destructive confirm**: «Видалити X?» → `[Так, видалити][Скасувати][Тільки сьогодні]`
+3. **Шар 5 — multi_step інтерв'ю**: новий action у `chips.js handleChipClick`, state у `nm_inline_interview_pending`
+4. **Шар 6 — уніфікація 8 системних промптів** — `CHIP_TRIGGER_TABLE` як константа. prompt-engineer-auditor у rC4TO знайшов **3 несумісні chip-схеми** (action:"chat" / "clarify_save" / inline-JSON у Owl-chat).
 
-**🚀 ПРІОРИТЕТ #2: Поглибити `startProjectInboxInterview`** — після створення проекту запитує тільки «Який стартовий капітал?», на «Поки не знаю» закриває розмову. Має бути серія 5+ питань: капітал → команда → строки → ризики → метрики. Юзер у rC4TO підтвердив що цикл працює, але інтерв'ю «дуже коротке».
+**🚀 ПРІОРИТЕТ #2 (NpBmN — рекомендація після ввечірнього smoke-test): Архітектурний борг.**
+- 8 копій `addXChatMsg` (~280 рядків) → helper у `src/ui/chat-msg.js` (найвищий ROI з аудиту dry-violation-finder)
+- 11 прямих `fetch(api.openai.com)` повз `_fetchAI` → блокер для Supabase ключа на бекенді
+- Date.now() IDs у 6 типах (тільки Task на UUID) → пілот для Pre-Migration
+
+**✅ ЗРОБЛЕНО у NpBmN 04.05** — Шар 2 Dynamic chips (Лікарі) + інтерв'ю проектів 3→5 питань + 18 audit fixes у 5 фазах. **Перевірити iPhone після ввечірнього деплою v632+:**
+1. Inbox «Створи проект Тестовий» → Q1 капітал → 5 питань підряд → 3 згенерованих кроки.
+2. (Якщо є картка Health з doctor) Inbox «Був у дерматолога» → 2-4 чіпи з реальних лікарів + «Інший лікар».
+3. Видалити проект під час інтерв'ю → undo → AI продовжує з наступного питання (snapshot restore).
+4. Health-картку відкрити (focus) → у чаті «був у дерматолога» → одразу запис у фокусовану картку без чіпів.
+
+**🚨 УРОКИ NpBmN (5 нових анти-патернів — у lessons.md):**
+1. Активація мертвого імпорту = відкриває нові race conditions (maybeAskGuideQuestion → race з saveGuideTopicAnswer + zombie interview).
+2. firstName check у guard ловить тільки first tool — AI може поставити галюцинацію 2-м у batch.
+3. Тихий fallback у dispatcher = юзер думає що зберіг куди хотів (stale card_id потребує видимого ⚠️).
+4. Промпт що каже AI генерувати ID з контексту = мертвий вантаж якщо JS-guard сам збирає payload.
+5. Consistency-фіксу мало одного callsite — перевір ВСІ повторення патерна у файлі (Phase 4 #K → Phase 5 #L дірка).
 
 **🔍 ПЕРЕВІРИТИ statusline + хук після рестарту Claude Code (з iWyjU 03.05).** У новому чаті знизу екрану має з'явитись рядок типу `📊 34% · 342K/1M`, оновлюється кожні 10 сек. Хук `context-warning.sh` тепер бере цифру з `lib/compute-context-pct.sh` (assistant.message.usage), а не з `wc -c` файлу — тому не покаже «99%» при реальних 34%. Якщо statusline НЕ з'являється — перевірити який саме формат stdin Claude Code передає (зараз скрипт чекає `{"transcript_path": "..."}`); можливо потрібно інше поле.
 

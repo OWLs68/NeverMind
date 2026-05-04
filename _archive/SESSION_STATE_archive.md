@@ -1,5 +1,44 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія rC4TO — silent failures trio + Health swipe-delete + Dynamic chips Шар 1 (04.05.2026)
+
+### Зроблено
+
+#### A. Документація і правила (1 коміт)
+1. **iOS Safari діагноз — 3-крядковий чек ДО CSS-патчів** (`dce16df`): нова секція 5 у `_ai-tools/RULES_UI.md` (grep universal `:active` / grep `backdrop-filter` parents / composite layers). lessons.md: робочий патерн «iOS Safari ВІЗУАЛЬНИЙ баг» + анти-патерн «Chips clipping — parent backdrop-filter clips children». Корінь: 8 ітерацій false leads UvEHE (Settings 4 + Chips 4) — шукав CSS-патчі навмання. Council code-regression-finder знаходить за секунди.
+
+#### B. Silent failure trio (3 коміти + 1 doc)
+2. **B-122 chips Phase C** (`8a05ada`): Health AI-інтерв'ю чіпи мовчать. Корінь у `chips.js:199-204` — whitelist action переписував `health_interview` у `'chat'` + `escapeHtml` не кодує `"`. Фікс: whitelist + локальний escape `"` → `&quot;`.
+3. **B-123 dispatcher create_project висне** (`431b433`): «Створи проект хімчистка» у Фінансах висне typing вічно. Корінь: tool навмисно не оброблявся → silent skip. Фікс: `createProjectProgrammatic` helper + handler create_project ПЕРЕД universal loop + універсальний SILENT FAILURE GUARD у dispatcher.
+4. **lessons.md silent failure анти-патерн** (`a738ade`): записано урок про 3 кейси.
+5. **B-124 Notes порожня попри 30 записів** (`2f96593` + `e733be3`): один запис без `text` ламав `renderNotes .map()`. Фікс 3 захисти у `notes.js`.
+
+#### C. Нова фіча — Health swipe-delete карток (1 коміт)
+6. **Свайп вліво на картці Здоров'я** (`26a541b`): `.health-card-wrap` + `_attachHealthSwipeDelete` через `attachSwipeDelete` helper. Червоний кошик + 5-сек undo.
+
+#### D. Dynamic AI-driven chips Шар 1 (1 коміт)
+7. **Контекстний 4-й чіп [Створити проект]** (`a625539`): `BUSINESS_NOUN_RE` детектор у `clarify-guard.js` (~20 іменників) + блок у `CLARIFY_INLINE_RULES`.
+
+### Ключові рішення
+- **Точкова реалізація Dynamic chips** замість 6 кроків з ROADMAP — спочатку Шар 1, решта окремими сесіями.
+- **Універсальний SILENT FAILURE GUARD у dispatcher** — замість точкових fixes для кожної tool.
+- **Винесення `createProjectProgrammatic` у helper** — DRY-фікс під час B-123.
+- **clarify-guard.js окремо від prompts.js** — guard це safety net коли AI ігнорує промпт.
+- **One-time cleanup у renderNotes** — замість окремої міграції у boot.js.
+
+### Інциденти
+- Pre-push hook 3 рази на «нова tool»/«міграція» — false positive, «pre-push: ok» прийнято.
+- Bash `&&` chain зламав push на B-123 — окремий commit + push.
+- Без `git reset` / `git push --force` / skip hooks.
+
+### Метрики
+- Коміти: `dce16df` → `e733be3` (8 фічі/фікси + finish)
+- Версії: v620 → v627
+- CACHE_NAME: `nm-20260503-2140` → `nm-20260504-0005` (5 bumps)
+- Закрито: B-122, B-123, B-124 (3 баги).
+
+---
+
 ## 🔧 Сесія iWyjU — самотест→Read CLAUDE.md + statusline % контексту (03.05.2026)
 
 ### Зроблено
