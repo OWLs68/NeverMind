@@ -123,11 +123,15 @@ export const CHIP_PROMPT_RULES = `- G11 (ЗАВЖДИ): chips НІКОЛИ не 
   • {"label":"Завтра вранці","action":"chat"}
   • {"label":"Інше","action":"chat"}
   Приклад: {"text":"Коли ти останній раз приймав ліки?","chips":[{"label":"Зараз","action":"chat"},{"label":"Через годину","action":"chat"},{"label":"Завтра вранці","action":"chat"},{"label":"Інше","action":"chat"}]}
-- ⚠️ DESTRUCTIVE-CHIP (Шар 4 Phase 9c — RGisY 04.05): коли ставиш юзеру деструктивне питання («Видалити X?», «Скасувати?», «Закрити проект?») — ОБОВ'ЯЗКОВО 3 чіпи у саме такому порядку (безпечний default ПЕРШИЙ або ОСТАННІЙ — залежно від тону):
-  • {"label":"Так, видалити","action":"chat"}
-  • {"label":"Скасувати","action":"chat"}
-  • {"label":"Тільки сьогодні","action":"chat"} (для повторюваних задач/звичок — варіант часткового скасування)
-  Приклад: {"text":"Видалити проект 'Хімчистка'? Це незворотно.","chips":[{"label":"Так, видалити","action":"chat"},{"label":"Скасувати","action":"chat"},{"label":"Архівувати замість","action":"chat"}]}
+- ⚠️ DESTRUCTIVE-CHIP (Шар 4 Phase 9c — RGisY 04.05, фікс QDIGl 04.05): коли ставиш юзеру деструктивне питання («Видалити X?», «Закрити проект?», «Стерти запис?») — ОБОВ'ЯЗКОВО 3 чіпи у саме такому порядку:
+  • Перший — destructive дія: {"label":"Так, видалити","action":"chat"} (або «Так, закрити», «Так, стерти» — підбирай під tool який буде викликаний)
+  • Другий — ЗАВЖДИ safe default (відмова): {"label":"Не треба","action":"chat"}
+  • Третій — softer alternative залежно від контексту:
+    - Незворотні (проект/нотатка/факт): {"label":"Архівувати замість","action":"chat"}
+    - Повторювані (звичка/задача): {"label":"Тільки сьогодні","action":"chat"}
+    - Подія/задача з датою: {"label":"Перенести","action":"chat"}
+  Приклад незворотний: {"text":"Видалити проект 'Хімчистка'? Це незворотно.","chips":[{"label":"Так, видалити","action":"chat"},{"label":"Не треба","action":"chat"},{"label":"Архівувати замість","action":"chat"}]}
+  Приклад повторюваний: {"text":"Скасувати звичку 'Зарядка' на сьогодні?","chips":[{"label":"Так, скасувати","action":"chat"},{"label":"Не треба","action":"chat"},{"label":"Тільки сьогодні","action":"chat"}]}
 - Приклади хороших JSON:
   • Задачі: {"text":"Маєш 3 відкриті задачі — декларація, одяг, продукти","chips":[{"label":"Подав декларацію ✔️","action":"complete"},{"label":"Купив продукти ✔️","action":"complete"},{"label":"Відкрити задачі","action":"nav","target":"tasks"}]}
   • Фінанси: {"text":"Бюджет місяця вже 85% — час звірити витрати","chips":[{"label":"Перевір фінанси","action":"nav","target":"finance"},{"label":"Пізніше","action":"chat"}]}
@@ -147,7 +151,33 @@ export function normalizeChips(chips) {
   if (!Array.isArray(chips)) return [];
   // Phase 3 Шар 6: гарантуємо chip.id (UUID) + виносимо inline payload у map
   // (nm_chip_payloads). Ідемпотентно — якщо id/payloadId уже є, не змінюємо.
-  return chips.map(_ensureChipIdAndExternalize);
+  const normalized = chips.map(_ensureChipIdAndExternalize);
+  // Шар 4 safety net (QDIGl 04.05): якщо AI згенерував destructive-чіп
+  // («Так, видалити»), але забув safe default — підставляємо «Не треба»
+  // автоматично. Без цього юзер міг отримати лише одну опцію [Так, видалити]
+  // у Шар 4 destructive — підвищений ризик випадкового видалення даних.
+  return _ensureDestructiveSafety(normalized);
+}
+
+// Розпізнаємо destructive-чіпи саме за патерном «Так, дієслово»: AI генерує
+// 1-й чіп як підтвердження дії. Це дозволяє відрізнити від нейтральних
+// «Скасувати» / «Не треба» (які можуть бути окремими 2-ми чіпами).
+const DESTRUCTIVE_LABEL_RE = /^так,?\s+(видалити|видалю|закрити|стерти|скасувати|видалит|архів|зняти|відключити|видали)/i;
+// Safe escape — будь-який чіп з відмовою. Не на ^ — може бути всередині label.
+const SAFE_LABEL_RE = /(не треба|не зараз|скасувати|пізніше|відмінити|залишити|нічого|ні[,.]?\s*дякую)/i;
+
+function _ensureDestructiveSafety(chips) {
+  const destructiveIdx = chips.findIndex(c => DESTRUCTIVE_LABEL_RE.test(c.label || ''));
+  if (destructiveIdx === -1) return chips;
+  // Перевіряємо safe ТІЛЬКИ серед НЕ-destructive — щоб не вважати «Так, скасувати»
+  // safe default для самого себе.
+  const hasSafe = chips.some((c, i) => i !== destructiveIdx && SAFE_LABEL_RE.test(c.label || ''));
+  if (hasSafe) return chips;
+  console.warn('[chips] DESTRUCTIVE chip без safe default — додано «Не треба»:', chips.map(c => c.label));
+  const safeChip = _ensureChipIdAndExternalize({ label: 'Не треба', action: 'chat' });
+  // Вставляємо одразу після destructive (не у кінець) — щоб юзер бачив escape
+  // прямо біля небезпечної кнопки.
+  return [...chips.slice(0, destructiveIdx + 1), safeChip, ...chips.slice(destructiveIdx + 1)];
 }
 
 // ============================================================
