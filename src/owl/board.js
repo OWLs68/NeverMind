@@ -1,6 +1,6 @@
 import { openChatBar } from '../ai/core.js';
 import { renderChips } from './chips.js';
-import { getCurrentMessage, getTabMessages, getUnifiedBoard, saveTabMessage, downgradeBriefingPriority } from './unified-storage.js';
+import { getCurrentMessage, getTabMessages, getUnifiedBoard, saveTabMessage, downgradeBriefingPriority, downgradeStaleCriticalPriority } from './unified-storage.js';
 import { isMessageRelevant } from './board-utils.js';
 
 // === OWL TAB BOARDS (#37) ===
@@ -132,7 +132,10 @@ function _pickMessageForTab(tab) {
     }
   });
   if (didDowngrade) {
-    try { downgradeBriefingPriority(); } catch(e) { console.warn('[board] downgradeBriefingPriority failed', e); }
+    // Phase 13 (RGisY 04.05) — Регресія 5 fix: downgradeStaleCriticalPriority
+    // покриває ВСІ critical, не тільки 'morning-briefing'. Раніше нагадування,
+    // дедлайни і тривоги healthу лишались у storage critical вічно.
+    try { downgradeStaleCriticalPriority(CRITICAL_TTL); } catch(e) { console.warn('[board] downgradeStaleCriticalPriority failed', e); }
   }
   if (raw.length === 0) return null;
   // 1. Найсвіжіше критичне (свіже <2 год) пробиває фільтр — Jarvis-пуш.

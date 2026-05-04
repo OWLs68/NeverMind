@@ -149,6 +149,29 @@ export function downgradeBriefingPriority() {
   return changed;
 }
 
+// Phase 13 (RGisY 04.05): downgrade ВСІХ critical старіших за TTL,
+// незалежно від topic (на відміну від downgradeBriefingPriority).
+// Використовується у board.js _pickMessageForTab для B-117 fix —
+// раніше тільки 'morning-briefing' downgrade'увалось → нагадування,
+// дедлайни, тривоги healthу лишались critical вічно.
+export function downgradeStaleCriticalPriority(maxAgeMs = 2 * 60 * 60 * 1000) {
+  _migrateOnce();
+  const all = getUnifiedBoard();
+  const now = Date.now();
+  let changed = false;
+  const updated = all.map(m => {
+    if (m && m.priority === 'critical' && (now - (m.ts || m.id || 0)) >= maxAgeMs) {
+      changed = true;
+      return { ...m, priority: 'normal' };
+    }
+    return m;
+  });
+  if (changed) {
+    try { localStorage.setItem(UNIFIED_KEY, JSON.stringify(updated)); } catch(e) {}
+  }
+  return changed;
+}
+
 // Замінити весь масив (використовується рідко — наприклад при clearStaleBoards).
 export function replaceUnified(arr) {
   _migrateOnce();

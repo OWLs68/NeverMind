@@ -108,14 +108,23 @@ const DOC_FILE_REGEX = /^(.*\.md|\.claude\/.+|_ai-tools\/.+|_archive\/.+|docs\/.
 
 function isDocOnlyPush(repoRoot) {
   try {
-    // Беремо ТІЛЬКИ коміти які зараз пушаться (нелижі у upstream).
-    // Якщо upstream нема (перший пуш гілки) — fallback на останній коміт.
+    // Phase 13 (RGisY 04.05) — Регресія 11 fix: той самий merge-base fallback
+    // що у getRealCodeDiff (B1.5 + Phase 11b). Раніше HEAD~1..HEAD пропускав
+    // N-1 коміти на feature-branch без upstream → SMOKE/CLEANUP тригери
+    // обходились якщо останній коміт doc-only а попередні code.
     let diffRange = null;
     try {
       execSync(`git -C "${repoRoot}" rev-parse @{u}`, { stdio: 'pipe' });
       diffRange = '@{u}..HEAD';
     } catch {
-      diffRange = 'HEAD~1..HEAD';
+      try {
+        const mergeBase = execSync(`git -C "${repoRoot}" merge-base HEAD origin/main`, {
+          encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore']
+        }).trim();
+        diffRange = mergeBase ? `${mergeBase}..HEAD` : 'HEAD~1..HEAD';
+      } catch {
+        diffRange = 'HEAD~1..HEAD';
+      }
     }
 
     const filesOutput = execSync(`git -C "${repoRoot}" diff --name-only ${diffRange}`, {
