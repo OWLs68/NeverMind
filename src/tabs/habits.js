@@ -554,36 +554,68 @@ function switchProdTab(tab) {
   _attachProdTabSwipe();
 }
 
-// Свайп вліво/вправо по segmented control перемикає Задачі ↔ Звички.
-// Threshold 30px, вертикальне домінування скасовує swipe (це scroll, не toggle).
+// Drag-to-toggle: повзунок рухається під пальцем у реальному часі.
+// touchstart — фіксуємо startX, вимикаємо transition. touchmove — translateX
+// в межах [0, indicatorWidth]. Direction lock після 8px (вертикальне → scroll).
+// touchend — snap до найближчої позиції (середина indicatorWidth = поріг).
 let _prodSwipeAttached = false;
 function _attachProdTabSwipe() {
   if (_prodSwipeAttached) return;
   const toggle = document.getElementById('prod-tab-toggle');
-  if (!toggle) return;
+  const indicator = document.getElementById('prod-tab-indicator');
+  if (!toggle || !indicator) return;
   _prodSwipeAttached = true;
 
-  let startX = 0, startY = 0, active = false;
+  let startX = 0, startY = 0;
+  let startTranslateX = 0;
+  let indicatorWidth = 0;
+  let dragging = false;
+  let lockedDir = null; // 'h' | 'v' | null
+
   toggle.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-    active = true;
+    indicatorWidth = indicator.offsetWidth;
+    startTranslateX = currentProdTab === 'habits' ? indicatorWidth : 0;
+    dragging = true;
+    lockedDir = null;
+    indicator.style.transition = 'border-color 0.3s ease';
   }, { passive: true });
+
   toggle.addEventListener('touchmove', (e) => {
-    if (!active) return;
+    if (!dragging) return;
     const dx = e.touches[0].clientX - startX;
     const dy = e.touches[0].clientY - startY;
-    if (Math.abs(dy) > Math.abs(dx)) active = false;
+    if (!lockedDir && Math.abs(dx) + Math.abs(dy) > 8) {
+      lockedDir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (lockedDir === 'v') {
+        // Вертикальний swipe — скрол сторінки. Повертаємо повзунок на місце.
+        dragging = false;
+        indicator.style.transition = '';
+        indicator.style.transform = currentProdTab === 'habits' ? 'translateX(100%)' : 'translateX(0)';
+        return;
+      }
+    }
+    if (lockedDir !== 'h') return;
+    let pos = startTranslateX + dx;
+    pos = Math.max(0, Math.min(pos, indicatorWidth));
+    indicator.style.transform = `translateX(${pos}px)`;
   }, { passive: true });
+
   toggle.addEventListener('touchend', (e) => {
-    if (!active) return;
-    active = false;
+    if (!dragging) return;
+    dragging = false;
+    indicator.style.transition = '';
+    if (lockedDir !== 'h') {
+      indicator.style.transform = currentProdTab === 'habits' ? 'translateX(100%)' : 'translateX(0)';
+      return;
+    }
     const endX = e.changedTouches[0]?.clientX ?? startX;
-    const dx = endX - startX;
-    if (Math.abs(dx) < 30) return;
-    const target = dx > 0 ? 'habits' : 'tasks';
-    if (target !== currentProdTab) switchProdTab(target);
+    const finalPos = startTranslateX + (endX - startX);
+    const target = finalPos > indicatorWidth / 2 ? 'habits' : 'tasks';
+    // switchProdTab сам встановить translateX(0/100%) через CSS transition.
+    switchProdTab(target);
   }, { passive: true });
 }
 
@@ -667,13 +699,21 @@ export function renderProdHabits() {
   const today = new Date().toDateString();
   const todayDow = (new Date().getDay() + 6) % 7;
 
-  const todayHabits = habits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
-  const doneTodayCount = todayHabits.filter(h => {
+  // QDIGl 04.05: «сьогодні» включає І scheduled-на-цей-день-тижня, І
+  // вручну виконані поза розкладом. Раніше — тільки scheduled, тому коли
+  // юзер тапав ✓ на не-scheduled звичку, вона все одно мала зелений ✓
+  // у списку, але шкала «3/3» (без неї). Тепер шкала збігається з реальним
+  // вмістом списку: 4 виконаних → «4/4».
+  const _isDone = (h) => {
     const target = h.targetCount || 1;
     const rawVal = log[today]?.[h.id];
     const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
     return cur >= target;
-  }).length;
+  };
+  const todayHabits = habits.filter(h =>
+    (h.days || [0,1,2,3,4]).includes(todayDow) || _isDone(h)
+  );
+  const doneTodayCount = todayHabits.filter(_isDone).length;
   const countEl = document.getElementById('habits-today-count');
   const barEl = document.getElementById('habits-today-bar');
   if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;

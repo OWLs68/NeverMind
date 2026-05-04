@@ -323,14 +323,16 @@
         <div style="padding:8px 0 6px">
           <div style="display:flex;margin:0 14px;gap:8px;align-items:stretch">
 
-            <!-- Segmented Control: Задачі ↔ Звички (свайп / тап) -->
-            <div id="prod-tab-toggle" style="flex:1;display:flex;border-radius:16px;background:rgba(255,255,255,0.6);box-shadow:0 2px 12px rgba(30,16,64,0.06);overflow:hidden;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;touch-action:pan-y">
-              <!-- Sliding indicator — біла половинка з кольоровою рамкою (помаранчевий tasks / зелений habits) -->
-              <div id="prod-tab-indicator" style="position:absolute;top:0;left:0;width:50%;height:100%;background:white;border-radius:16px;transition:transform 0.25s ease, border-color 0.25s ease;border:2px solid rgba(234,88,12,0.6);box-sizing:border-box;pointer-events:none;z-index:0"></div>
+            <!-- Segmented Control: Задачі ↔ Звички (drag-to-toggle).
+                 Track — «вдавлений» (inset shadow + темнуватий фон).
+                 Indicator — виступаючий білий pill з direction shadow + кольоровою рамкою. -->
+            <div id="prod-tab-toggle" style="flex:1;display:flex;border-radius:18px;background:rgba(30,16,64,0.06);box-shadow:inset 0 1px 3px rgba(30,16,64,0.08);padding:4px;position:relative;-webkit-tap-highlight-color:transparent;touch-action:pan-y">
+              <!-- Виступаючий повзунок — біла капсула з тінню вниз. translateX(0) для tasks, translateX(100%) для habits. -->
+              <div id="prod-tab-indicator" style="position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);background:white;border-radius:14px;border:2px solid rgba(234,88,12,0.6);box-shadow:0 4px 10px rgba(30,16,64,0.14), 0 1px 2px rgba(30,16,64,0.06);box-sizing:border-box;pointer-events:none;z-index:0;transform:translateX(0);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.3s ease;will-change:transform"></div>
 
               <!-- Половинка Задачі -->
               <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
-                style="flex:1;padding:10px 12px;cursor:pointer;position:relative;z-index:1">
+                style="flex:1;padding:8px 12px;cursor:pointer;position:relative;z-index:1">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
                   <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
                   <div id="prod-tab-tasks-count" style="font-size:18px;font-weight:800;color:#ea580c;line-height:1">0</div>
@@ -340,7 +342,7 @@
 
               <!-- Половинка Звички -->
               <div id="prod-tab-habits" onclick="switchProdTab('habits')"
-                style="flex:1;padding:10px 12px;cursor:pointer;position:relative;z-index:1">
+                style="flex:1;padding:8px 12px;cursor:pointer;position:relative;z-index:1">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
                   <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
                   <div id="prod-tab-habits-count" style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3);line-height:1">0</div>
