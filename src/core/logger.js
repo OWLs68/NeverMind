@@ -262,7 +262,9 @@ ${perfLines.join('\n')}
 ${logLines}
 \`\`\``;
 
-  navigator.clipboard?.writeText(text);
+  navigator.clipboard?.writeText(text)
+    .then(() => showToast(t('logger.copied', 'Скопійовано — встав у чат із Claude')))
+    .catch(() => showToast(t('logger.copy_failed', 'Не вдалось скопіювати')));
 }
 
 function closeLogPanel() {
@@ -279,7 +281,9 @@ function copyErrorLog() {
     const time = new Date(e.ts).toLocaleString('uk-UA');
     return `[${time}] [${e.type}] [${e.tab}] ${e.msg}${e.src ? ' → ' + e.src : ''}`;
   }).join('\n');
-  navigator.clipboard?.writeText('NeverMind Log\n' + '='.repeat(40) + '\n' + lines);
+  navigator.clipboard?.writeText('NeverMind Log\n' + '='.repeat(40) + '\n' + lines)
+    .then(() => showToast(t('logger.copied_short', 'Скопійовано')))
+    .catch(() => showToast(t('logger.copy_failed', 'Не вдалось скопіювати')));
 }
 
 function clearErrorLog() {
