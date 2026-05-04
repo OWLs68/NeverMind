@@ -39,6 +39,44 @@ function _writeChipPayloads(map) {
   try { localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map)); }
   catch (e) { console.warn('[chips] payload map write failed', e); }
 }
+// Garbage collector для nm_chip_payloads — викликається з boot.js init()
+// через setTimeout(_, 5000). Тригерить cleanup якщо >7 днів з останнього GC
+// АБО keys > 500. Сканує всі 8 chat_log[].chips[] збираючи referenced chipId,
+// видаляє non-referenced. Phase 3 Шар 6 розв'язка для росту payload-map.
+const CHIP_PAYLOADS_GC_KEY = 'nm_chip_payloads_lastGC';
+const CHAT_KEYS_FOR_GC = ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+                          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'];
+
+export function _gcChipPayloads() {
+  try {
+    const lastGC = +(localStorage.getItem(CHIP_PAYLOADS_GC_KEY) || 0);
+    const map = _readChipPayloads();
+    const keys = Object.keys(map);
+    const stale = (Date.now() - lastGC) > 7 * 24 * 60 * 60 * 1000;
+    if (!stale && keys.length < 500) return;
+
+    const referenced = new Set();
+    CHAT_KEYS_FOR_GC.forEach(k => {
+      try {
+        const msgs = JSON.parse(localStorage.getItem(k) || '[]');
+        if (!Array.isArray(msgs)) return;
+        msgs.forEach(m => {
+          if (Array.isArray(m.chips)) m.chips.forEach(c => {
+            if (c && c.payloadId) referenced.add(c.payloadId);
+            if (c && c.id) referenced.add(c.id); // chip.id === payloadId (1:1)
+          });
+        });
+      } catch {}
+    });
+
+    let removed = 0;
+    keys.forEach(id => { if (!referenced.has(id)) { delete map[id]; removed++; } });
+    if (removed > 0) _writeChipPayloads(map);
+    localStorage.setItem(CHIP_PAYLOADS_GC_KEY, String(Date.now()));
+    if (removed > 0) console.log(`[gc] chip payloads: removed ${removed}, kept ${keys.length - removed}`);
+  } catch (e) { console.warn('[gc] chip payloads failed', e); }
+}
+
 // Експорт для core.js saveChatMsg + boot.js _gcChipPayloads
 export function _ensureChipIdAndExternalize(c) {
   const obj = typeof c === 'string' ? { label: c, action: 'chat' } : { ...c };
