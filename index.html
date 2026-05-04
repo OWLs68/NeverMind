@@ -319,17 +319,37 @@
         <!-- OWL TAB BOARD: TASKS -->
         <div id="owl-tab-board-tasks" style="display:none;padding:0 14px"></div>
 
-        <!-- Inner tabs: Задачі / Звички -->
+        <!-- Inner tabs: Задачі / Звички (segmented control + іконки справа) -->
         <div style="padding:8px 0 6px">
-          <div style="display:flex;margin:0 14px;gap:8px">
-            <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
-              style="flex:0.8;border-radius:16px;padding:10px 12px;cursor:pointer;background:white;border:2px solid rgba(234,88,12,0.6);box-shadow:none;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-                <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
-                <div id="prod-tab-tasks-count" style="font-size:18px;font-weight:800;color:#ea580c;line-height:1">0</div>
+          <div style="display:flex;margin:0 14px;gap:8px;align-items:stretch">
+
+            <!-- Segmented Control: Задачі ↔ Звички (свайп / тап) -->
+            <div id="prod-tab-toggle" style="flex:1;display:flex;border-radius:16px;background:rgba(255,255,255,0.6);box-shadow:0 2px 12px rgba(30,16,64,0.06);overflow:hidden;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;touch-action:pan-y">
+              <!-- Sliding indicator — біла половинка з кольоровою рамкою (помаранчевий tasks / зелений habits) -->
+              <div id="prod-tab-indicator" style="position:absolute;top:0;left:0;width:50%;height:100%;background:white;border-radius:16px;transition:transform 0.25s ease, border-color 0.25s ease;border:2px solid rgba(234,88,12,0.6);box-sizing:border-box;pointer-events:none;z-index:0"></div>
+
+              <!-- Половинка Задачі -->
+              <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
+                style="flex:1;padding:10px 12px;cursor:pointer;position:relative;z-index:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+                  <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
+                  <div id="prod-tab-tasks-count" style="font-size:18px;font-weight:800;color:#ea580c;line-height:1">0</div>
+                </div>
+                <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.35)" id="prod-tab-tasks-sub">активних</div>
               </div>
-              <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.35)" id="prod-tab-tasks-sub">активних</div>
+
+              <!-- Половинка Звички -->
+              <div id="prod-tab-habits" onclick="switchProdTab('habits')"
+                style="flex:1;padding:10px 12px;cursor:pointer;position:relative;z-index:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+                  <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
+                  <div id="prod-tab-habits-count" style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3);line-height:1">0</div>
+                </div>
+                <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">звичок</div>
+              </div>
             </div>
+
+            <!-- Календар (іконка) -->
             <div onclick="openCalendarModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.6);border:2px solid rgba(234,88,12,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
               <svg id="cal-icon-svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <rect x="2" y="4" width="24" height="22" rx="4" stroke="#ea580c" stroke-width="2" fill="rgba(234,88,12,0.08)"/>
@@ -339,6 +359,8 @@
                 <text id="cal-icon-day" x="14" y="22" text-anchor="middle" font-size="11" font-weight="800" fill="#ea580c">9</text>
               </svg>
             </div>
+
+            <!-- Розпорядок дня (іконка) -->
             <div onclick="openRoutineModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.6);border:2px solid rgba(234,88,12,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <rect x="4" y="2" width="18" height="24" rx="3" stroke="#ea580c" stroke-width="1.8" fill="rgba(234,88,12,0.06)"/>
@@ -349,14 +371,6 @@
                 <line x1="21" y1="18" x2="21" y2="21" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
                 <line x1="21" y1="21" x2="23.5" y2="22" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-            </div>
-            <div id="prod-tab-habits" onclick="switchProdTab('habits')"
-              style="flex:0.8;border-radius:16px;padding:10px 12px;cursor:pointer;background:rgba(255,255,255,0.6);border:2px solid rgba(22,163,74,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);transition:all 0.2s;-webkit-tap-highlight-color:transparent">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-                <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
-                <div id="prod-tab-habits-count" style="font-size:18px;font-weight:800;color:rgba(30,16,64,0.3);line-height:1">0</div>
-              </div>
-              <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.3)" id="prod-tab-habits-sub">сьогодні</div>
             </div>
           </div>
         </div>
