@@ -12870,29 +12870,54 @@ ${UI_TOOLS_RULES}`;
   function _attachProdTabSwipe() {
     if (_prodSwipeAttached) return;
     const toggle = document.getElementById("prod-tab-toggle");
-    if (!toggle) return;
+    const indicator = document.getElementById("prod-tab-indicator");
+    if (!toggle || !indicator) return;
     _prodSwipeAttached = true;
-    let startX = 0, startY = 0, active = false;
+    let startX = 0, startY = 0;
+    let startTranslateX = 0;
+    let indicatorWidth = 0;
+    let dragging = false;
+    let lockedDir = null;
     toggle.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
-      active = true;
+      indicatorWidth = indicator.offsetWidth;
+      startTranslateX = currentProdTab === "habits" ? indicatorWidth : 0;
+      dragging = true;
+      lockedDir = null;
+      indicator.style.transition = "border-color 0.3s ease";
     }, { passive: true });
     toggle.addEventListener("touchmove", (e) => {
-      if (!active) return;
+      if (!dragging) return;
       const dx = e.touches[0].clientX - startX;
       const dy = e.touches[0].clientY - startY;
-      if (Math.abs(dy) > Math.abs(dx)) active = false;
+      if (!lockedDir && Math.abs(dx) + Math.abs(dy) > 8) {
+        lockedDir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (lockedDir === "v") {
+          dragging = false;
+          indicator.style.transition = "";
+          indicator.style.transform = currentProdTab === "habits" ? "translateX(100%)" : "translateX(0)";
+          return;
+        }
+      }
+      if (lockedDir !== "h") return;
+      let pos = startTranslateX + dx;
+      pos = Math.max(0, Math.min(pos, indicatorWidth));
+      indicator.style.transform = `translateX(${pos}px)`;
     }, { passive: true });
     toggle.addEventListener("touchend", (e) => {
-      if (!active) return;
-      active = false;
+      if (!dragging) return;
+      dragging = false;
+      indicator.style.transition = "";
+      if (lockedDir !== "h") {
+        indicator.style.transform = currentProdTab === "habits" ? "translateX(100%)" : "translateX(0)";
+        return;
+      }
       const endX = e.changedTouches[0]?.clientX ?? startX;
-      const dx = endX - startX;
-      if (Math.abs(dx) < 30) return;
-      const target = dx > 0 ? "habits" : "tasks";
-      if (target !== currentProdTab) switchProdTab(target);
+      const finalPos = startTranslateX + (endX - startX);
+      const target = finalPos > indicatorWidth / 2 ? "habits" : "tasks";
+      switchProdTab(target);
     }, { passive: true });
   }
   function toggleProdHabitToday(id) {
@@ -12966,13 +12991,16 @@ ${UI_TOOLS_RULES}`;
     const log = getHabitLog();
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    const todayHabits = habits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
-    const doneTodayCount = todayHabits.filter((h) => {
+    const _isDone = (h) => {
       const target = h.targetCount || 1;
       const rawVal = log[today]?.[h.id];
       const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
       return cur >= target;
-    }).length;
+    };
+    const todayHabits = habits.filter(
+      (h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow) || _isDone(h)
+    );
+    const doneTodayCount = todayHabits.filter(_isDone).length;
     const countEl = document.getElementById("habits-today-count");
     const barEl = document.getElementById("habits-today-bar");
     if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
