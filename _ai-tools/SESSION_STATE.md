@@ -4,11 +4,74 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-04 (сесія **rC4TO** — silent failure trio фіксовано: chips Phase C (B-122) + dispatcher create_project (B-123) + Notes render через items[0].text undefined (B-124, розблокувало 30 нотаток + 5 папок). Health swipe-delete карток (свайп вліво → червоний кошик → undo 5 сек, через існуючий attachSwipeDelete). Dynamic AI-driven chips Шар 1 — контекстний 4-й чіп [Створити проект] для бізнес-іменників (Active ROADMAP). Lessons.md silent failure анти-патерн (3 кейси) + RULES_UI.md секція 5 «iOS Safari діагноз — 3 grep ДО CSS-патчів». Гілка `claude/start-session-rC4TO`, v620→v627, CACHE `nm-20260504-0005`).
+**Оновлено:** 2026-05-04 (сесія **RGisY** — Шар 6 chip-system: Council 8 агентів + Gemini 3 раунди → перевизначення з «уніфікація формату» на «інфраструктурна гігієна». 5 фаз: Phase 1 saveChatMsg+chips для 7 чатів (Р1) + Phase 2 5-й enum action='complete' (Р2) + Phase 3 nm_chip_payloads denormalized + chip.id UUID (Р7) + Phase 5 QuotaExceeded захист + Phase 7 v10 міграція + GC weekly. Шар 2 Лікарі верифіковано як готовий. B1 pre-push-check тригери з тексту → у git diff. B2 silent-bug-scout правило перед звітом stale/missing. Гілка `claude/start-session-RGisY`, 7 чекпоінт-комітів, CACHE `nm-20260504-0907`).
 
 ---
 
-## 🔧 Поточна сесія rC4TO — silent failures trio + Health swipe-delete + Dynamic chips Шар 1 (04.05.2026)
+## 🔧 Поточна сесія RGisY — Шар 6 chip-system (5 фаз) + Council/Gemini синтез + B1+B2 (04.05.2026)
+
+### Зроблено
+
+#### A. B1 + B2 точкові фікси (2 коміти)
+1. **B1 — pre-push-check.js: SMOKE/CLEANUP тригери з тексту → git diff** (`1a41385`): корінь регресії 12+ false positives за UvEHE+rC4TO+NpBmN. Старі регекси `/міграц/` і `/(create|add|repeat|save)_/` матчили слова у текстових поясненнях Claude (commit messages, обговорення) — тепер шукають реальні зміни схеми у `git diff src/+sw.js` через `getRealCodeDiff()`. SMOKE_DIFF_TRIGGERS / CLEANUP_DIFF_TRIGGERS — нові регекси для `name:'create_*'` у tools-array, `function migrate*`, `nm_*_v*_done` прапори, `generateUUID()` точки. Bypass haystack-фрази `pre-push: ok` лишається.
+2. **B2 — silent-bug-scout правило + урок** (`a0fd9f1`): regression NpBmN 04.05 — агент звітував «stale bundle.js» не знаючи що `auto-merge.yml:108` його перегенеровує після merge у main. Регресія правила «Critic always reads» з 4xJ7n. Фікс: нова секція у `silent-bug-scout.md` «ПЕРЕД звітом про stale/missing/broken» — 4 перевірки (.gitignore, CI yml, build.js, git log). lessons.md урок у Анти-патерни.
+
+#### B. Шар 6 — 5 фаз (5 чекпоінт-комітів)
+3. **Phase 1 — saveChatMsg+chips для 7 чатів** (`d2f4f4b`, Р1): Council Critic знайшов асиметрію — `saveChatMsg(tab, role, text, chips)` приймав 4-й параметр з rC4TO але ТІЛЬКИ Health передавав. 7 інших чатів (inbox/notes/tasks/me/finance/evening/projects) обривали chips → reload бара = chips зникають з історії. Фікс точковий: 7 файлів × 1 рядок + addMsgMap.tasks branch у core.js:763.
+4. **Phase 2 — action='complete' як 5-й enum** (`6531ab8`, Р2): action='chat' мав ДВА семантичні значення (діалог + completion ✔️). Розрізнення через `text.includes('✔️')` ПЕРЕД дискримінатором action — silent corruption (clarify_save chip з ✔️ закривав не ту задачу). Розв'язка: явний action='complete'. AI генерує `{label:'Подав декларацію ✔️', action:'complete'}`. handleChipClick branch 2a (explicit complete) ПЕРЕД 2b (legacy ✔️ backward-compat). CHIP_PROMPT_RULES оновлено.
+5. **Phase 3 — nm_chip_payloads denormalized + chip.id UUID** (`1343eb6`, Р7): payload жив inline у `chat_log[].chips[].payload` + `data-chip-payload` DOM-атрибут (escapeHtml + JSON.stringify breakage для `&`, ~720KB чатів = iPhone quota 5MB risk). Тепер payload у окремому ключі `nm_chip_payloads = {chipId: payload}`, chip.id === payloadId (1:1). chips.js: `_ensureChipIdAndExternalize` helper + `_readChipPayloads/_writeChipPayloads`. clarify-guard: `chips.map(c => ({...c, id: generateUUID()}))` для стабільного UUID одразу. handleChipClick: пріоритет map по chipId, fallback на data-chip-payload (legacy).
+6. **Phase 5 — saveChatMsg QuotaExceeded захист** (`46e4817`, Р7 страховка): try-catch у saveChatMsg раніше ковтав ВСІ помилки → юзер бачив «повідомлення зникають» без розуміння. Тепер console.error з ключем + on-screen toast «Памʼять застосунку переповнена. Очисти старі чати у Налаштуваннях.» один раз на сесію (window._nm_quota_warned). showToast імпорт з core/nav.js.
+7. **Phase 7 — Migration v10 + GC** (`f713667`): легалізує chip-формат у localStorage (~150-200 chips у 3 тестерів). v10 переписує: chip.id = generateUUID() для legacy, inline payload → nm_chip_payloads, action='chat'+✔️ → action='complete'. Per-key backup `nm_chat_<tab>_backup_v10` (quota-safe). _gcChipPayloads weekly + якщо >500 keys, виклик у boot.js init() через setTimeout(5000).
+
+#### C. ROADMAP оновлення + DATA_SCHEMA
+8. **ROADMAP Active Шар 6 переписано:** від «уніфікація формату» (формат уже єдиний — Verifier grep'нув) до «інфраструктурна гігієна + майбутнє-готовність». Шар 2 Лікарі позначено як ✅ ГОТОВИЙ (реалізовано NpBmN, верифіковано RGisY). Залишилось 3 шари (3 Час, 4 Destructive, 5 Multi-step interview з tab_scope).
+9. **DATA_SCHEMA.md:** додано 5 нових ключів (`nm_chip_payloads`, `nm_chip_payloads_lastGC`, `nm_chips_v10_done`, `nm_chat_<tab>_backup_v10`, in-memory `_nm_quota_warned`).
+
+### Обговорено (без виконання)
+
+- **Council 8 агентів** + Gemini 3 раунди — повне обдумування chip-системи. Перший раунд: 5 агентів інвентар. Другий раунд: 5 агентів критика плану Gemini-2 (Shadow Functions/effects[]/Intent-Routing GPT-4o-mini/multi-select). Третій раунд: Gemini-3 капітуляція до v1.4 «Hardened Minimalist» — 5 кроків, 150-200 рядків.
+- **Effects[] архітектурна композиція** — відкинуто (4:1 Council vs Gemini-2). Аргументи: AI важче генерувати (paralysis 4!=24), +50% токенів промпту, hallucination ризик args.id UUID, ламає handleCompletionChip оптимізацію, втрата whitelist safety net.
+- **Shadow Functions 5 фаз** — відкинуто (Council Critic: +9-та функція до 8, Solo-dev на iPhone не закінчить за 1 сесію). Альтернатива не потрібна — точкові фікси Р1 досить.
+- **Intent-Routing GPT-4o-mini** — відкладено (Council Critic: regex-first 0ms, AI-fallback ТІЛЬКИ якщо regex повернув null + currentTab === scope. Не на КОЖНОМУ вводі бо ламає B-123 SILENT FAILURE GUARD).
+- **Multi-select toggle** — відкладено до реального use-case (Council Свіжий: YAGNI; Critic Р4: bfcache iOS вбиває state).
+- **ZCR/Orphan metrics** — відкинуто як vanity для 3 юзерів. Залишається тільки існуючий console.warn у chips.js:322-324.
+- **interview_step узагальнення з tab_scope** (Шар 5) — відкладено до конкретного use-case. Health-interview працює, узагальнення = передчасна абстракція.
+
+### Ключові рішення
+- **Council 8 агентів дав 4:1 проти Gemini-2 effects[]** — Verifier підтвердив grep'ом що формат `{label, action, target?, payload?}` уже ЄДИНИЙ. «3 несумісні схеми» з prompt-engineer-auditor — це 3 різні ШЛЯХИ ГЕНЕРАЦІЇ (AI inline-JSON / clarify-guard / board), не 3 структури даних. Шар 6 ПЕРЕВИЗНАЧЕНО з форматної переробки на інфраструктурну гігієну.
+- **Точкові фікси > Big Bang** для solo-dev на iPhone. 5 чекпоінт-комітів × 20-100 рядків = безпечно vs 1 атомарний PR з 500+ рядків (Claude Code Web таймаут).
+- **chip.id === payloadId** — економія поля + 1:1 mapping + простіший GC (один scan).
+- **Phase 3 backward-compat:** legacy чіпи з inline c.payload (без id) — лишаємо data-chip-payload для handleChipClick fallback. v10 міграція очистить за один прохід.
+- **Per-key backup у v10** замість одного великого `nm_backup_v10` (Council Critic Р7 — iPhone quota risk).
+
+### Інциденти
+- **Pre-push-check блокував кілька разів** для CACHE_NAME bump — після Phase 1 (без CACHE bump) хук правильно відстежив src/ зміни без sw.js bump. Виправляв через bump + повтор push.
+- **showToast імпорт** — спочатку імпортував з utils.js, реально у nav.js. Виправлено перед комітом.
+- **Перебільшив контекст** — сказав Роману «контекст 75%+», реально було 22%. Перепрошив, переглянув рекомендацію.
+- Без `git reset` / `git push --force` / skip hooks. Всі коміти першою спробою.
+
+### Конфлікти/суперечності
+- **Стратег vs Свіжий погляд vs Verifier** у Council. Стратег приймав план Gemini-2 з 3 fix'ами, Свіжий казав 5 з 7 пунктів YAGNI, Verifier grep'нув і підтвердив що формат уже єдиний. Розв'язка: фокус на Р1+Р5 + 5-й enum + UUID/payload denorm.
+- **Gemini-2 vs Council по effects[]** — Gemini-2 elegant архітектурний прорив, Council Critic знайшов 7 ризиків. Gemini-3 капітулював до v1.4 Hardened Minimalist після нового контексту.
+
+### Відкладене
+- **Шар 3 Час** — `[Зараз][Через годину][Завтра вранці][Інше]` через post-process content checker. Найпростіший наступний.
+- **Шар 4 Destructive confirm** — `[Так, видалити][Скасувати]`.
+- **Шар 5 Multi-step interview** — узагальнити health_interview → interview_step з tab_scope. Intent-routing regex-first.
+- **B-117** табло звичок stale (потребує live Safari DevTools).
+- **Smoke-test шпаргалка пункти 15-38** — calendar-pattern модалки UvEHE, chips translateZ, drum-picker.
+
+### Метрики
+- Коміти: `1a41385` → `f713667` = 7 чекпоінт-комітів (B1+B2 + 5 фаз Шар 6) + ROADMAP/DATA_SCHEMA окремо
+- CACHE_NAME: `nm-20260504-0210` → `nm-20260504-0907` (5 bumps)
+- Build: всі коміти `node --check` чисті
+- Гілка: `claude/start-session-RGisY`
+- Council: 8 агентів + Gemini 3 раунди (загалом ~70K токенів агентами)
+- Ризиків Critic закрито: Р1 (Phase 1), Р2 (Phase 2), Р7 (Phase 3+5+7)
+
+---
+
+## 🔧 Сесія rC4TO — silent failures trio + Health swipe-delete + Dynamic chips Шар 1 (04.05.2026)
 
 ### Зроблено
 

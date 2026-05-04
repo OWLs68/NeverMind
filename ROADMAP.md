@@ -16,26 +16,25 @@
 
 ---
 
-**🚀 Dynamic AI-driven chips — Jarvis-level interaction** (UvEHE 03.05 → Шар 1 закрито у rC4TO 04.05 → Шари 2-6 для наступних сесій)
+**🚀 Dynamic AI-driven chips — Jarvis-level interaction** (UvEHE 03.05 → Шар 1 rC4TO 04.05 → Шар 2 + Шар 6 RGisY 04.05 → Шари 3-5 наступні сесії)
 
-**Прогрес rC4TO 04.05:**
-- ✅ **Шар 1: Контекстний чіп [Створити проект] для бізнес-іменників** (`a625539`) — `BUSINESS_NOUN_RE` детектор у `clarify-guard.js` (~20 іменників: автомийка/салон/сайт/магазин/студія/курси/хімчистка/...) + розширено `CLARIFY_INLINE_RULES` блоком «КОНТЕКСТНИЙ ЧІП Створити проект (ПРІОРИТЕТ)». End-to-end демо у Inbox підтверджено: «Відкрив автомийку» → 4 чіпи → тап `[Створити проект]` → «✅ Проект Автомийка створено» + Inbox interview.
+**Прогрес RGisY 04.05 — Шар 2 + Шар 6 (5 фаз):**
+- ✅ **Шар 1: Контекстний чіп [Створити проект]** (`a625539` rC4TO) — `BUSINESS_NOUN_RE` детектор + `CLARIFY_INLINE_RULES`.
+- ✅ **Шар 2: Лікарі (Health context)** (`clarify-guard.js:33-37, 81-89, 143-179`, частково реалізовано NpBmN, верифіковано RGisY) — `DOCTOR_MENTION_RE` (~26 спеціальностей) + `_buildDoctorChips` читає `nm_health_cards[].doctor` → до 3 унікальних імен + 1 «Інший лікар». payload `target:'add_health_history_entry'`. Інтегровано у `shouldClarify` ПЕРЕД BUSINESS_NOUN_RE check. Dispatcher handler `add_health_history_entry` готовий.
+- ✅ **Шар 6: ПЕРЕВИЗНАЧЕНО** після Council 8 агентів + Gemini 3 раунди. **Не «уніфікація формату»** (формат `{label, action, target?, payload?}` уже єдиний — Verifier підтвердив grep'ом). А «**інфраструктурна гігієна + майбутнє-готовність**»:
+  - **Phase 1** (`d2f4f4b`): saveChatMsg+chips для 7 чатів (Р1 — chips втрачались у localStorage)
+  - **Phase 2** (`6531ab8`): 5-й enum `action='complete'` для ✔️-чіпів — розщеплення action='chat' overload (Р2)
+  - **Phase 3** (`1343eb6`): `nm_chip_payloads` denormalized + `chip.id` через `crypto.randomUUID()` — quota-safe + Supabase-ready (Р7)
+  - **Phase 5** (`46e4817`): saveChatMsg QuotaExceededError захист + on-screen toast
+  - **Phase 7** (`f713667`): Migration v10 (chip.id UUID + payload externalization + ✔️→complete) + GC `_gcChipPayloads` weekly
 
-**Проблема (вихідна):** зараз `clarify-guard` повертає **3 фіксованих chips** [У щоденник / Як момент / Не зберігати]. Примітивно і часто несумісно з контекстом. Має бути потужний AI-driven варіант основним; фіксовані — тільки safety net.
+**Залишилось 3 шари** (Шар 4 FSM узагальнення відкладено до реального use-case):
 
-**Архітектура (працює):**
-1. **Первинний шлях — AI генерує dynamic chips** за контекстом через `parseContentChips` (`content` повертає `{"text":"...","chips":[{"label":"...","action":"...","payload":"..."}]}`).
-2. **Fallback — `clarify-guard` BUSINESS_NOUN_RE + 3-фіксовані** спрацьовує коли AI ігнорує промпт. Тепер додає 4-й контекстний чіп якщо матчиться бізнес-іменник.
-
-**Залишилось 5 шарів** (за тим же патерном):
-
-2. **Шар 2 — Лікарі (Health context)** ⏸️ Next: детектор `DOCTOR_MENTION_RE` (приходив/був/у|до|в...лікар|стомат|хірург|терапевт) + `getHealthCards().history.doctor` → 3 чіпи з реальних імен лікарів + 1 «Інший лікар». payload `target:'add_health_history_entry'`.
 3. **Шар 3 — Час** ⏸️ Next: коли AI пише «Коли?» / «О котрій?» — додає `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat'). Активується через post-process content checker якщо AI не згенерував chips сам.
 4. **Шар 4 — Destructive confirm** ⏸️ Next: «Видалити X?» / «Скасувати?» → `[Так, видалити][Скасувати][Тільки сьогодні]`. Знов через post-process checker.
-5. **Шар 5 — Multi-step інтерв'ю** ⏸️ Next: новий action `multi_step` у `chips.js handleChipClick`. State у `nm_inline_interview_pending`. Дозволяє AI запускати 3-крокові інтерв'ю у будь-якому чаті, не тільки Health Phase C.
-6. **Шар 6 — Уніфікація 8 системних промптів** ⏸️ Next: prompt-engineer-auditor у rC4TO знайшов **3 несумісні chip-схеми** (action:"chat" / "clarify_save" / inline-JSON у Owl-chat). Створити `CHIP_TRIGGER_TABLE` константу як у `getEveningChatSystem` і інжектити у всі 8 промптів. Параметризація фолдеру `Особисте → активний чат`.
+5. **Шар 5 — Multi-step інтерв'ю** ⏸️ Next: узагальнити `health_interview` → `interview_step` з обов'язковим `tab_scope` (Council Critic Р5 — без scope cross-chat memory ламає FSM). State у `nm_active_interview = {id, tab_scope, currentStep, totalSteps, context, chips_history, expiresAt}`. Intent-routing: regex-first (0ms) → AI-fallback ТІЛЬКИ якщо regex повернув null + currentTab === scope (Council Р2 — не AI на КОЖНОМУ вводі бо $9/міс + 200ms latency + ламає B-123 SILENT FAILURE GUARD).
 
-**Тригер для наступної сесії:** `/start` → виконати Шар 2 (Лікарі) як наступний — він використовує реальний контекст з `nm_health_cards` і має найбільший ROI після Шару 1.
+**Тригер для наступної сесії:** `/start` → Шар 3 (Час) — найпростіший, post-process checker без архітектурних змін. ROI швидкий.
 
 ---
 
