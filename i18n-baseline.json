@@ -1,6 +1,6 @@
 {
-  "src/core/diagnostics.js": 81,
-  "src/core/logger.js": 16,
+  "src/core/diagnostics.js": 84,
+  "src/core/logger.js": 17,
   "src/core/nav.js": 65,
   "src/core/usage-meter.js": 2,
   "src/tabs/calendar.js": 26,

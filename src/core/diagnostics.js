@@ -2,6 +2,8 @@
 // Використовується у панелі логу (logger.js) і може викликатись програмно
 // з будь-якого модуля через runHealthCheck().
 
+import { t } from './utils.js';
+
 function getLocalStorageSize() {
   let total = 0;
   for (const key in localStorage) {
@@ -302,6 +304,65 @@ export function runSmokeTests() {
   tests.push(_runTest('Clipboard API', () => {
     if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
       throw new Error('недоступний');
+    }
+  }));
+
+  // 10. Chips pipeline — id+payloadId externalization (Phase 3 Шар 6 RGisY 04.05)
+  // v10 міграція має винести inline payload у nm_chip_payloads. Перевіряємо
+  // що chat_log[].chips[] не мають payload inline (тільки payloadId або без).
+  tests.push(_runTest(t('diag.smoke.chips_pipeline', 'Chips pipeline (Шар 6)'), () => {
+    const v10Done = localStorage.getItem('nm_chips_v10_done') === '1';
+    if (!v10Done) return; // міграція ще не виконалась — тест пропускається (boot do migration)
+    const CHAT_KEYS = ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+                       'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'];
+    let inlinePayloadFound = 0;
+    for (const k of CHAT_KEYS) {
+      try {
+        const msgs = JSON.parse(localStorage.getItem(k) || '[]');
+        if (!Array.isArray(msgs)) continue;
+        msgs.forEach(m => {
+          if (!Array.isArray(m.chips)) return;
+          m.chips.forEach(c => {
+            if (c && c.payload && typeof c.payload === 'object') inlinePayloadFound++;
+          });
+        });
+      } catch {}
+    }
+    if (inlinePayloadFound > 0) throw new Error(`${inlinePayloadFound} chips мають inline payload (мали б бути у nm_chip_payloads)`);
+  }));
+
+  // 11. Board TTL — priority='critical' старіші 2 год мають бути downgraded
+  // (B-117 fix Phase 11+11b RGisY 04.05). Якщо знайшли stale critical — порушення.
+  tests.push(_runTest(t('diag.smoke.board_ttl', 'Board TTL (critical 2h)'), () => {
+    try {
+      const board = JSON.parse(localStorage.getItem('nm_owl_board_unified') || '[]');
+      if (!Array.isArray(board) || board.length === 0) return;
+      const now = Date.now();
+      const TTL = 2 * 60 * 60 * 1000;
+      const staleCritical = board.filter(m =>
+        m.priority === 'critical' && (now - (m.ts || m.id || 0)) >= TTL
+      );
+      if (staleCritical.length > 0) {
+        throw new Error(`${staleCritical.length} stale critical (>2h) — auto-downgrade не спрацював`);
+      }
+    } catch (e) {
+      if (e.message.startsWith('stale')) throw e;
+      // JSON.parse fail — інший тест ловить
+    }
+  }));
+
+  // 12. Schedule валідність — workStart < workEnd та явні значення
+  // (Schedule context fix Phase 11 RGisY 04.05). Якщо schedule зламаний —
+  // proactive.js дає неправильну ФАЗУ → AI пропонує присідати на роботі.
+  tests.push(_runTest(t('diag.smoke.schedule_valid', 'Schedule валідність'), () => {
+    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    const sc = settings.schedule;
+    if (!sc) return; // не задано — норма для нових юзерів
+    const parseHM = s => { if (!s) return null; const [h, m] = s.split(':'); return parseInt(h) + parseInt(m || '0') / 60; };
+    const ws = parseHM(sc.workStart);
+    const we = parseHM(sc.workEnd);
+    if (ws != null && we != null && ws >= we) {
+      throw new Error(`workStart (${sc.workStart}) >= workEnd (${sc.workEnd}) — phase=work не спрацює`);
     }
   }));
 
@@ -606,6 +667,114 @@ function togglePerfDetails() {
   details.style.display = isOpen ? 'none' : 'flex';
   if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
 }
+
+// ============================================================
+// State Snapshot — ключовий стан застосунку для діагностики
+// (RGisY 04.05 Фаза B: збираємо найважливіше у Налаштування → Логи)
+// Використовується у copyLogForClaude (logger.js) щоб Claude бачив
+// real state без кабельного DevTools.
+// ============================================================
+export function getStateSnapshot() {
+  const safe = (k, def = null) => {
+    try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(def)); }
+    catch { return def; }
+  };
+  const tasks = safe('nm_tasks', []);
+  const habits = safe('nm_habits2', []);
+  const projects = safe('nm_projects', []);
+  const notes = safe('nm_notes', []);
+  const cards = safe('nm_health_cards', []);
+  const settings = safe('nm_settings', {});
+  const board = safe('nm_owl_board_unified', []);
+  const chipPayloads = safe('nm_chip_payloads', {});
+
+  // Активне табло — приоритет + вік
+  const top = board[0] || null;
+  const topAge = top ? Math.round((Date.now() - (top.ts || top.id || 0)) / 60000) : null;
+
+  // Поточна phase з огляду на schedule
+  const sc = settings.schedule || {};
+  const now = new Date();
+  const hh = now.getHours() + now.getMinutes() / 60;
+  const parseHM = s => { if (!s) return null; const [h, m] = s.split(':'); return parseInt(h) + parseInt(m || '0') / 60; };
+  const wakeUp = parseHM(sc.wakeUp);
+  const workStart = parseHM(sc.workStart);
+  const workEnd = parseHM(sc.workEnd);
+  const bedTime = parseHM(sc.bedTime);
+  let phase = 'unknown';
+  if (workStart != null && workEnd != null && hh >= workStart && hh < workEnd) phase = 'work';
+  else if (workEnd != null && bedTime != null && hh >= workEnd && hh < bedTime - 1) phase = 'evening';
+  else if (wakeUp != null && workStart != null && hh >= wakeUp && hh < workStart) phase = 'morning';
+  else if (bedTime != null && hh >= bedTime - 1) phase = 'night';
+  else if (wakeUp != null && hh < wakeUp) phase = 'dawn';
+
+  return {
+    counts: {
+      tasksActive: tasks.filter(t => t.status === 'active').length,
+      tasksDone: tasks.filter(t => t.status === 'done').length,
+      habits: habits.length,
+      projects: projects.filter(p => p.active !== false).length,
+      notes: notes.length,
+      healthCards: cards.length,
+    },
+    chipsPipeline: {
+      v10Done: localStorage.getItem('nm_chips_v10_done') === '1',
+      v10DoneTs: parseInt(localStorage.getItem('nm_chips_v10_done_ts') || '0'),
+      payloadsCount: Object.keys(chipPayloads).length,
+      payloadsSizeKB: Math.round((localStorage.getItem('nm_chip_payloads')?.length || 0) / 1024),
+    },
+    board: top ? {
+      priority: top.priority || 'normal',
+      ageMin: topAge,
+      forTab: top.forTab || '?',
+      topic: top.topic || '?',
+    } : null,
+    schedule: {
+      phase,
+      now: now.toTimeString().slice(0, 5),
+      wakeUp: sc.wakeUp || '?',
+      workStart: sc.workStart || '?',
+      workEnd: sc.workEnd || '?',
+      bedTime: sc.bedTime || '?',
+    },
+  };
+}
+
+export function renderStateSnapshot() {
+  const s = getStateSnapshot();
+  const c = s.counts;
+  const cp = s.chipsPipeline;
+  const b = s.board;
+  const sc = s.schedule;
+  const v10AgeDays = cp.v10DoneTs > 0 ? Math.floor((Date.now() - cp.v10DoneTs) / (24 * 3600 * 1000)) : null;
+
+  return `<div style="margin:12px 14px 0;padding:14px 16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:12px">
+    <div onclick="toggleStateDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:22px;color:#16a34a;line-height:1;flex-shrink:0">📊</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.5px">${t('diag.state.title', 'Стан застосунку')}</div>
+        <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${sc.phase} · ${sc.now} · ${cp.payloadsCount} chip-payloads</div>
+      </div>
+      <span id="state-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">▸</span>
+    </div>
+    <div id="state-details" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(34,197,94,0.2);flex-direction:column;gap:6px;font-size:13px;line-height:1.5;color:#1e1040">
+      <div><b>${t('diag.state.entities', '📦 Сутності:')}</b> ${c.tasksActive} ${t('diag.state.tasks', 'задач')} (${c.tasksDone} done) · ${c.habits} ${t('diag.state.habits', 'звичок')} · ${c.projects} ${t('diag.state.projects', 'проектів')} · ${c.notes} ${t('diag.state.notes', 'нотаток')} · ${c.healthCards} ${t('diag.state.cards', 'карток')}</div>
+      <div><b>${t('diag.state.chips_pipeline', '🔗 Chips pipeline:')}</b> v10 ${cp.v10Done ? '✓ done' : '✗ pending'}${v10AgeDays != null ? ` (${v10AgeDays} ${t('diag.state.days_ago', 'д тому')})` : ''} · ${cp.payloadsCount} payloads (${cp.payloadsSizeKB} KB)</div>
+      ${b ? `<div><b>${t('diag.state.board', '📋 Табло:')}</b> priority=<b>${b.priority}</b> · age=<b>${b.ageMin}${t('diag.state.min', 'хв')}</b> · forTab=${b.forTab} · topic=${b.topic}</div>` : `<div><b>${t('diag.state.board', '📋 Табло:')}</b> ${t('diag.state.empty', 'порожнє')}</div>`}
+      <div><b>${t('diag.state.schedule', '🕐 Розклад:')}</b> phase=<b>${sc.phase}</b> · ${t('diag.state.now', 'зараз')} ${sc.now} · wake ${sc.wakeUp} → work ${sc.workStart}-${sc.workEnd} → bed ${sc.bedTime}</div>
+    </div>
+  </div>`;
+}
+
+function toggleStateDetails() {
+  const details = document.getElementById('state-details');
+  const arrow = document.getElementById('state-expand-arrow');
+  if (!details) return;
+  const isOpen = details.style.display === 'flex';
+  details.style.display = isOpen ? 'none' : 'flex';
+  if (arrow) arrow.textContent = isOpen ? '▸' : '▾';
+}
+window.toggleStateDetails = toggleStateDetails;
 
 // Functions called from HTML event handlers
 Object.assign(window, { toggleHealthDetails, toggleSmokeDetails, togglePerfDetails });

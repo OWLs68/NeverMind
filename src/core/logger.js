@@ -1,6 +1,6 @@
 import { currentTab, showToast } from './nav.js';
 import { t } from './utils.js';
-import { runHealthCheck, renderHealthCheck, runSmokeTests, renderSmokeTests, getPerformanceData, renderPerformance } from './diagnostics.js';
+import { runHealthCheck, renderHealthCheck, runSmokeTests, renderSmokeTests, getPerformanceData, renderPerformance, getStateSnapshot, renderStateSnapshot } from './diagnostics.js';
 
 // === LOGGER ===
 const NM_LOG_KEY = 'nm_error_log';
@@ -103,15 +103,16 @@ function showErrorLog() {
   // Health Check + Smoke Tests + Performance зверху панелі — завжди рендеримо
   const healthHtml = renderHealthCheck();
   const smokeHtml = renderSmokeTests();
+  const stateHtml = renderStateSnapshot();
   const perfHtml = renderPerformance();
   const logsHeader = `<div style="margin:16px 14px 8px;font-size:11px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px">${t('logger.section_title', 'Логи помилок')}</div>`;
 
   if (log.length === 0) {
-    list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader +
+    list.innerHTML = healthHtml + smokeHtml + stateHtml + perfHtml + logsHeader +
       `<div style="text-align:center;padding:40px 20px 48px;color:rgba(30,16,64,0.45);font-size:14px">${t('logger.empty', 'Лог порожній — помилок не знайдено 👍')}</div>`;
   } else {
     const grouped = _groupConsecutive(log);
-    list.innerHTML = healthHtml + smokeHtml + perfHtml + logsHeader +
+    list.innerHTML = healthHtml + smokeHtml + stateHtml + perfHtml + logsHeader +
       '<div style="padding:0 14px 32px;display:flex;flex-direction:column;gap:10px">' +
       [...grouped].reverse().map((e, idx) => {
         const d = new Date(e.lastTs || e.ts);
@@ -253,6 +254,20 @@ ${healthLines}
 
 ━━━ SMOKE ТЕСТИ: ${smokeSummary} ━━━
 ${smokeLines}
+
+━━━ ${t('logger.state_section', 'СТАН ЗАСТОСУНКУ')} ━━━
+${(() => {
+  const s = getStateSnapshot();
+  const c = s.counts;
+  const cp = s.chipsPipeline;
+  const b = s.board;
+  const sc = s.schedule;
+  const v10AgeDays = cp.v10DoneTs > 0 ? Math.floor((Date.now() - cp.v10DoneTs) / (24 * 3600 * 1000)) : null;
+  return `${t('logger.state_entities', 'Сутності')}: ${c.tasksActive} ${t('logger.state_tasks', 'задач')} (${c.tasksDone} done) · ${c.habits} ${t('logger.state_habits', 'звичок')} · ${c.projects} ${t('logger.state_projects', 'проектів')} · ${c.notes} ${t('logger.state_notes', 'нотаток')} · ${c.healthCards} ${t('logger.state_cards', 'карток')}
+Chips pipeline: v10 ${cp.v10Done ? 'done' : 'pending'}${v10AgeDays != null ? ` (${v10AgeDays}${t('logger.state_d_ago', 'д тому')})` : ''} · ${cp.payloadsCount} payloads (${cp.payloadsSizeKB} KB)
+${t('logger.state_board', 'Табло')}: ${b ? `priority=${b.priority} · age=${b.ageMin}${t('logger.state_min', 'хв')} · forTab=${b.forTab} · topic=${b.topic}` : t('logger.state_empty', 'порожнє')}
+${t('logger.state_schedule', 'Розклад')}: phase=${sc.phase} · ${t('logger.state_now', 'зараз')} ${sc.now} · wake ${sc.wakeUp} → work ${sc.workStart}-${sc.workEnd} → bed ${sc.bedTime}`;
+})()}
 
 ━━━ PERFORMANCE ━━━
 ${perfLines.join('\n')}
