@@ -28,13 +28,13 @@
   - **Phase 5** (`46e4817`): saveChatMsg QuotaExceededError захист + on-screen toast
   - **Phase 7** (`f713667`): Migration v10 (chip.id UUID + payload externalization + ✔️→complete) + GC `_gcChipPayloads` weekly
 
-**Залишилось 3 шари** (Шар 4 FSM узагальнення відкладено до реального use-case):
+**Залишилось 1 шар** (Шар 5 — узагальнення FSM):
 
-3. **Шар 3 — Час** ⏸️ Next: коли AI пише «Коли?» / «О котрій?» — додає `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat'). Активується через post-process content checker якщо AI не згенерував chips сам.
-4. **Шар 4 — Destructive confirm** ⏸️ Next: «Видалити X?» / «Скасувати?» → `[Так, видалити][Скасувати][Тільки сьогодні]`. Знов через post-process checker.
+3. **Шар 3 — Час** ✅ **ПРОМПТ-ЧАСТИНА ГОТОВА** (Phase 9c `bd862d5`): додано секцію у `CHIP_PROMPT_RULES` (`src/owl/chips.js`) — коли AI ставить питання про час («Коли?», «О котрій?», «Через скільки?») → 4 чіпи `[Зараз][Через годину][Завтра вранці][Інше]` з action='chat'. **Post-process fallback відкладено** до реального ignored-кейсу — Council Свіжий погляд: YAGNI до підтвердження проблеми.
+4. **Шар 4 — Destructive confirm** ✅ **ПРОМПТ-ЧАСТИНА ГОТОВА** (Phase 9c `bd862d5`): секція у `CHIP_PROMPT_RULES` — для «Видалити X?» / «Скасувати?» → 3 чіпи `[Так, видалити][Скасувати][Архівувати замість/Тільки сьогодні]` action='chat'. Fallback так само відкладено.
 5. **Шар 5 — Multi-step інтерв'ю** ⏸️ Next: узагальнити `health_interview` → `interview_step` з обов'язковим `tab_scope` (Council Critic Р5 — без scope cross-chat memory ламає FSM). State у `nm_active_interview = {id, tab_scope, currentStep, totalSteps, context, chips_history, expiresAt}`. Intent-routing: regex-first (0ms) → AI-fallback ТІЛЬКИ якщо regex повернув null + currentTab === scope (Council Р2 — не AI на КОЖНОМУ вводі бо $9/міс + 200ms latency + ламає B-123 SILENT FAILURE GUARD).
 
-**Тригер для наступної сесії:** `/start` → Шар 3 (Час) — найпростіший, post-process checker без архітектурних змін. ROI швидкий.
+**Тригер для наступної сесії:** Smoke-test на iPhone v633+ — перевірити чи AI справді генерує time/destructive чіпи за CHIP_PROMPT_RULES. Якщо НЕ генерує — додати code-side fallback (`TIME_QUESTION_RE` + `DESTRUCTIVE_RE` детектори у normalizeChips). Якщо генерує — переходити до Шару 5.
 
 ---
 
