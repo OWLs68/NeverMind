@@ -1645,7 +1645,7 @@ ${lines.join("\n")}`;
         payload: {}
       }
     ];
-    return { question, chips };
+    return { question, chips: chips.map((c) => ({ ...c, id: generateUUID() })) };
   }
   function _buildDoctorChips(text) {
     let cards = [];
@@ -1682,7 +1682,7 @@ ${lines.join("\n")}`;
       target: "save_moment",
       payload: { text }
     });
-    return { question, chips };
+    return { question, chips: chips.map((c) => ({ ...c, id: generateUUID() })) };
   }
   function applyClarifyChoice(target, payload, tab, addMsg) {
     if (target === "none" || !target) {
@@ -1706,6 +1706,7 @@ ${lines.join("\n")}`;
     "src/owl/clarify-guard.js"() {
       init_utils();
       init_tool_dispatcher();
+      init_uuid();
       PAST_VERBS_RE = /\b(відкрив|купив|зробив|написав|зателефонував|з[’']їв|сходив|помив|поправ|виправ|запустив|створив|закінчив|почав|поставив|віддав|отримав|продав|замовив|скачав|встановив|подивився|прочитав|випив|забув|знайшов|вивчив|відремонтував|посадив|зустрів|приготував|зварив|спік|закрив|відкупив|оновив|вилікував)\b/i;
       BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\- ]{2,30}$/;
       BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
@@ -11005,11 +11006,35 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   });
 
   // src/owl/chips.js
+  function _readChipPayloads() {
+    try {
+      return JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function _writeChipPayloads(map) {
+    try {
+      localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map));
+    } catch (e) {
+      console.warn("[chips] payload map write failed", e);
+    }
+  }
+  function _ensureChipIdAndExternalize(c) {
+    const obj = typeof c === "string" ? { label: c, action: "chat" } : { ...c };
+    if (!obj.id) obj.id = generateUUID();
+    if (obj.payload && typeof obj.payload === "object") {
+      const map = _readChipPayloads();
+      map[obj.id] = obj.payload;
+      _writeChipPayloads(map);
+      obj.payloadId = obj.id;
+      delete obj.payload;
+    }
+    return obj;
+  }
   function normalizeChips(chips) {
     if (!Array.isArray(chips)) return [];
-    return chips.map(
-      (c) => typeof c === "string" ? { label: c, action: "chat" } : c
-    );
+    return chips.map(_ensureChipIdAndExternalize);
   }
   function filterStaleChips(chips) {
     return chips.filter((c) => {
@@ -11096,12 +11121,16 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       return;
     }
     const chipsHTML = normChips.map((c) => {
+      const id = c.id || "";
       const label = c.label || "";
       const action = c.action === "nav" ? "nav" : c.action === "clarify_save" ? "clarify_save" : c.action === "health_interview" ? "health_interview" : c.action === "complete" ? "complete" : "chat";
       const target = c.target || "";
-      const payload = c.payload ? JSON.stringify(c.payload) : "";
-      const payloadAttr = escapeHtml(payload).replace(/"/g, "&quot;");
-      return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
+      let payloadAttr = "";
+      if (c.payload && typeof c.payload === "object") {
+        const payload = JSON.stringify(c.payload);
+        payloadAttr = escapeHtml(payload).replace(/"/g, "&quot;");
+      }
+      return `<div class="owl-chip" data-chip-id="${escapeHtml(id)}" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
     });
     if (options.showSpeak) {
       chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
@@ -11121,7 +11150,15 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const text = chipEl.dataset.chipText || "";
       const action = chipEl.dataset.chipAction;
       const target = chipEl.dataset.chipTarget;
-      const payloadRaw = chipEl.dataset.chipPayload || "";
+      const chipId = chipEl.dataset.chipId || "";
+      let payloadRaw = chipEl.dataset.chipPayload || "";
+      if (chipId) {
+        try {
+          const map = _readChipPayloads();
+          if (map[chipId]) payloadRaw = JSON.stringify(map[chipId]);
+        } catch {
+        }
+      }
       trackChipClick(action, text);
       chipEl.style.transition = "opacity 0.2s, transform 0.2s";
       chipEl.style.opacity = "0";
@@ -11291,7 +11328,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       }
     }));
   }
-  var VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED, _CLARIFY_ADDMSG;
+  var CHIP_PAYLOADS_KEY, VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED, _CLARIFY_ADDMSG;
   var init_chips = __esm({
     "src/owl/chips.js"() {
       init_nav();
@@ -11312,6 +11349,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_tasks();
       init_habits();
       init_clarify_guard();
+      init_uuid();
+      CHIP_PAYLOADS_KEY = "nm_chip_payloads";
       VALID_NAV_TARGETS = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
       CHIP_PROMPT_RULES = `- G11 (\u0417\u0410\u0412\u0416\u0414\u0418): chips \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456 (\u043C\u0456\u043D\u0456\u043C\u0443\u043C 1, \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 3). \u042F\u043A\u0449\u043E \u0441\u0442\u0430\u0432\u0438\u0448 \u044E\u0437\u0435\u0440\u0443 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u2014 \u041E\u0411\u041E\u0412'\u042F\u0417\u041A\u041E\u0412\u041E \u0434\u043E\u0434\u0430\u0439 \u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044F\u043A \u0447\u0456\u043F\u0438. \u041D\u0435 \u0437\u0430\u043B\u0438\u0448\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0435\u0440\u0435\u0434 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u0456\u043D\u043F\u0443\u0442\u043E\u043C. \u041F\u0438\u0442\u0430\u043D\u043D\u044F \u0431\u0435\u0437 \u0447\u0456\u043F\u0456\u0432 = \u0431\u0430\u0433. \u0417\u0430\u043C\u0456\u0441\u0442\u044C "\u042F\u043A \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F?" \u2192 \u0442\u0435\u043A\u0441\u0442 "\u041A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0430\u0446\u0456\u044F \u043F\u0440\u043E\u0439\u0448\u043B\u0430 \u2014 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0430\u043C\u0438?" + chips: ["\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438", "\u041D\u0435 \u0442\u0440\u0435\u0431\u0430"].
 - chips \u2014 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0448\u0432\u0438\u0434\u043A\u043E\u0457 \u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 (\u043D\u0435 \u0437\u0430\u043A\u043B\u0438\u043A\u0438 \u0434\u043E \u0434\u0456\u0457!). \u041C\u0430\u0441\u0438\u0432 \u043E\u0431'\u0454\u043A\u0442\u0456\u0432. \u041A\u043E\u0436\u0435\u043D \u043C\u0430\u0454 label (\u0434\u043E 3 \u0441\u043B\u0456\u0432) \u0456 action:
