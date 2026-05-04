@@ -493,31 +493,18 @@ export function updateProdTabCounters() {
   if (taskCountEl) taskCountEl.textContent = taskCount;
   if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? 'активна' : 'активних';
 
-  // Лічильник звичок — тільки build звички в основному лічильнику
+  // Лічильник звичок — загальна кількість (build + quit). QDIGl 04.05:
+  // прибрано підпис «X з Y сьогодні» — створював невідповідність з великим
+  // числом (4 vs 3/3) коли частина звичок не scheduled на поточний день.
+  // Прогрес-бар «Звички сьогодні X/Y» лишається окремим блоком нижче карток.
   const habits = getHabits();
   const buildHabitsAll = habits.filter(h => h.type !== 'quit');
   const quitHabitsAll = habits.filter(h => h.type === 'quit');
-  const log = getHabitLog();
-  const today = new Date().toDateString();
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const todayDow = (new Date().getDay() + 6) % 7;
-  const todayHabits = buildHabitsAll.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
-  const doneToday = todayHabits.filter(h => _habitDone(h, log[today])).length;
-  // Quit звички — скільки тримається сьогодні
-  const quitHeldToday = quitHabitsAll.filter(h => getQuitStatus(h.id).lastHeld === todayStr).length;
   const habitCountEl = document.getElementById('prod-tab-habits-count');
   const habitSubEl = document.getElementById('prod-tab-habits-sub');
   const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
   if (habitCountEl) habitCountEl.textContent = totalHabits;
-  if (habitSubEl) {
-    if (todayHabits.length > 0 || quitHabitsAll.length > 0) {
-      const total = todayHabits.length + quitHabitsAll.length;
-      const done = doneToday + quitHeldToday;
-      habitSubEl.textContent = `${done} з ${total} сьогодні`;
-    } else {
-      habitSubEl.textContent = 'звичок';
-    }
-  }
+  if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? 'звичка' : 'звичок';
 }
 
 function switchProdTab(tab) {
