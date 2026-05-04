@@ -219,6 +219,21 @@
   });
 
   // src/owl/unified-storage.js
+  function _normalizeChipForStorage(c) {
+    const obj = typeof c === "string" ? { label: c, action: "chat" } : { ...c };
+    if (!obj.id) obj.id = generateUUID();
+    if (obj.payload && typeof obj.payload === "object") {
+      try {
+        const map = JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY) || "{}");
+        map[obj.id] = obj.payload;
+        localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map));
+      } catch {
+      }
+      obj.payloadId = obj.id;
+      delete obj.payload;
+    }
+    return obj;
+  }
   function _migrateOnce() {
     if (localStorage.getItem(MIGRATION_FLAG)) return;
     try {
@@ -275,7 +290,7 @@
       text: msg.text || "",
       topic: msg.topic || "",
       priority: msg.priority || "normal",
-      chips: Array.isArray(msg.chips) ? msg.chips : [],
+      chips: Array.isArray(msg.chips) ? msg.chips.map(_normalizeChipForStorage) : [],
       // Pruning Engine (Фаза 2 UVKL1) — посилання на активні сутності.
       // Порожній масив = загальне повідомлення (не фільтрується).
       entityRefs: Array.isArray(msg.entityRefs) ? msg.entityRefs : [],
@@ -318,13 +333,15 @@
     } catch (e) {
     }
   }
-  var UNIFIED_KEY, UNIFIED_TS_KEY, MIGRATION_FLAG, MAX_HISTORY, ALL_TABS;
+  var UNIFIED_KEY, UNIFIED_TS_KEY, MIGRATION_FLAG, MAX_HISTORY, CHIP_PAYLOADS_KEY, ALL_TABS;
   var init_unified_storage = __esm({
     "src/owl/unified-storage.js"() {
+      init_uuid();
       UNIFIED_KEY = "nm_owl_board_unified";
       UNIFIED_TS_KEY = "nm_owl_board_unified_ts";
       MIGRATION_FLAG = "nm_owl_board_migrated_v2";
       MAX_HISTORY = 50;
+      CHIP_PAYLOADS_KEY = "nm_chip_payloads";
       ALL_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
     }
   });
@@ -11019,14 +11036,14 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   });
   function _readChipPayloads() {
     try {
-      return JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY) || "{}");
+      return JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY2) || "{}");
     } catch {
       return {};
     }
   }
   function _writeChipPayloads(map) {
     try {
-      localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map));
+      localStorage.setItem(CHIP_PAYLOADS_KEY2, JSON.stringify(map));
     } catch (e) {
       console.warn("[chips] payload map write failed", e);
     }
@@ -11085,7 +11102,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   function filterStaleChips(chips) {
     return chips.filter((c) => {
       const label = (c.label || "").trim();
-      if (!label.includes("\u2714\uFE0F")) return true;
+      const isCompletion = c.action === "complete" || label.includes("\u2714\uFE0F");
+      if (!isCompletion) return true;
       const cleanText = label.replace(/✔️/g, "").trim().toLowerCase();
       if (!cleanText) return false;
       const words = cleanText.split(/\s+/).filter((w) => w.length >= 3);
@@ -11374,7 +11392,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       }
     }));
   }
-  var CHIP_PAYLOADS_KEY, CHIP_PAYLOADS_GC_KEY, CHAT_KEYS_FOR_GC, VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED, _CLARIFY_ADDMSG;
+  var CHIP_PAYLOADS_KEY2, CHIP_PAYLOADS_GC_KEY, CHAT_KEYS_FOR_GC, VALID_NAV_TARGETS, CHIP_PROMPT_RULES, CHIP_JSON_FORMAT, NM_CHIP_STATS_KEY, CHIP_STATS_MAX_CLICKED, _CLARIFY_ADDMSG;
   var init_chips = __esm({
     "src/owl/chips.js"() {
       init_nav();
@@ -11396,7 +11414,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_habits();
       init_clarify_guard();
       init_uuid();
-      CHIP_PAYLOADS_KEY = "nm_chip_payloads";
+      CHIP_PAYLOADS_KEY2 = "nm_chip_payloads";
       CHIP_PAYLOADS_GC_KEY = "nm_chip_payloads_lastGC";
       CHAT_KEYS_FOR_GC = [
         "nm_chat_inbox",
@@ -14333,12 +14351,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F \u0440\u043E\u0437\u043C\u043E\u0432\u0430</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
     el.appendChild(sep);
     if (tab === "inbox") {
-      msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el));
+      msgs.forEach((m) => _renderInboxChatMsg(m.role, m.text, el, m.chips));
     } else if (addMsgMap[tab]) {
       msgs.forEach((m) => addMsgMap[tab](m.role, m.text, m.chips));
     }
   }
-  function _renderInboxChatMsg(role, text, el) {
+  function _renderInboxChatMsg(role, text, el, chips = null) {
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "gap:8px;align-items:flex-start" : "justify-content:flex-end"}`;
@@ -14348,6 +14366,16 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
     }
     el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      Promise.resolve().then(() => (init_chips(), chips_exports)).then((m) => {
+        const chipsRow = document.createElement("div");
+        chipsRow.className = "chat-chips-row";
+        m.renderChips(chipsRow, chips, "inbox");
+        el.appendChild(chipsRow);
+        el.scrollTop = el.scrollHeight;
+      }).catch(() => {
+      });
+    }
     el.scrollTop = el.scrollHeight;
   }
   function openChatBar(tab) {
@@ -19374,6 +19402,7 @@ ${logLines}
           console.error("[boot] v10: nm_chip_payloads write failed", e);
         }
         localStorage.setItem("nm_chips_v10_done", "1");
+        localStorage.setItem("nm_chips_v10_done_ts", String(Date.now()));
         console.log(`[boot] v10 migration: chips=${chipsTouched}, payloads=${payloadsExtracted}, completions=${completionsRewired}, backupOk=${backupOk}`);
       } catch (e) {
         console.error("[boot] v10 migration failed:", e);
@@ -19395,6 +19424,28 @@ ${logLines}
             }
           }
         });
+      }
+    }
+    const v10Done = localStorage.getItem("nm_chips_v10_done");
+    const v10DoneTs = +(localStorage.getItem("nm_chips_v10_done_ts") || 0);
+    if (v10Done === "1" && v10DoneTs > 0 && Date.now() - v10DoneTs > 7 * 24 * 60 * 60 * 1e3) {
+      try {
+        [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_health",
+          "nm_chat_projects"
+        ].forEach((k) => {
+          localStorage.removeItem(k + "_backup_v10");
+        });
+        localStorage.removeItem("nm_chips_v10_done_ts");
+        console.log("[boot] v10 backups cleanup: 8 \u043A\u043B\u044E\u0447\u0456\u0432 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (>7 \u0434\u043D\u0456\u0432 \u0441\u0442\u0430\u0440\u0456)");
+      } catch (e) {
+        console.warn("[boot] v10 backups cleanup failed", e);
       }
     }
   }
